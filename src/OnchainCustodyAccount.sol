@@ -3,7 +3,8 @@ pragma solidity ^0.8.24;
 
 import { OnchainCustodyOrganization } from "./OnchainCustodyOrganization.sol";
 import { Policies } from "./libraries/Policies.sol";
-import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title  Onchain Custody Smart Account
@@ -128,7 +129,7 @@ contract OnchainCustodyAccount {
                 // Get transaction hash for signature verification
                 bytes32 txHash = _getTransactionHash(to, value, data, operation);
                 uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
-                uint256 validApprovals = _verifySignatures(onchainCustody, signatures, txHash);
+                uint256 validApprovals = _getValidApprovals(onchainCustody, policies[i], signatures, txHash);
 
                 // Case: Transaction does not have enough valid approvals
                 // Revert the transaction
@@ -540,12 +541,14 @@ contract OnchainCustodyAccount {
     /**
      * @notice Verifies signatures and returns the number of valid approvals
      * @param onchainCustody The custody contract instance
+     * @param policy The policy requiring approval
      * @param signatures The signatures to verify
      * @param txHash The hash of the transaction
      * @return The number of valid approvals
      */
-    function _verifySignatures(
+    function _getValidApprovals(
         OnchainCustodyOrganization onchainCustody,
+        Policies.Policy memory policy,
         bytes memory signatures,
         bytes32 txHash
     )
@@ -560,18 +563,33 @@ contract OnchainCustodyAccount {
         uint8 signatureCount = uint8(signatures.length / 65);
         uint8 validApprovals = 0;
 
+        // Track last signer to prevent duplicates (similar to Safe contracts)
+        address lastSigner = address(0);
+
         // Iterate over signatures to count valid approvals
         for (uint8 i = 0; i < signatureCount; ++i) {
             bytes memory signature = _extractSignature(signatures, i);
-            address signer = ECDSA.recover(txHash, signature);
 
-            // TODO: @ittai: Add support for EIP-1271 signatures
-            // TODO: @ittai: Only consider signatures valid if they are from a member of the group specified in the
-            //       policy, or from the individual specified in the policy
+            // Extract signer address from signature using ERC-1271 compatible verification
+            address signer = _getSigner(signature, txHash);
 
-            // Case: The signature is valid
-            // Increment valid approvals
-            if (onchainCustody.addressToMemberId(signer) != 0) {
+            // Skip if signer is invalid
+            if (signer == address(0)) continue;
+
+            // Check for duplicate signers - signers must be unique and in ascending order
+            // This prevents both duplicate signatures and replay attacks
+            if (signer <= lastSigner) continue;
+
+            // Update last signer for next iteration
+            lastSigner = signer;
+
+            // Verify the signature using ERC-1271
+            if (!SignatureChecker.isValidSignatureNow(signer, txHash, signature)) {
+                continue;
+            }
+
+            // Check if signer is authorized based on policy
+            if (_isSignerAuthorizedForPolicy(onchainCustody, policy, signer)) {
                 ++validApprovals;
             }
         }
@@ -604,12 +622,72 @@ contract OnchainCustodyAccount {
     }
 
     /**
-     * @notice Creates a hash of the transaction for signature verification
+     * @notice Gets the signer address from a signature
+     * @param signature The signature to extract the signer from
+     * @param txHash The hash that was signed (unused for ERC-1271 signatures with signer prefix)
+     * @return The signer address, or address(0) if invalid
+     */
+    function _getSigner(bytes memory signature, bytes32 txHash) internal pure returns (address) {
+        // Silence unused parameter warning
+        txHash;
+        // For ERC-1271, we assume the first 20 bytes of the signature contain the signer address
+        // This is a common pattern where the signature is prefixed with the signer address
+        if (signature.length < 20) {
+            return address(0);
+        }
+
+        address signer;
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            signer := mload(add(signature, 20))
+        }
+        return signer;
+    }
+
+    /**
+     * @notice Checks if a signer is authorized for the given policy
+     * @param onchainCustody The custody contract instance
+     * @param policy The policy to check against
+     * @param signer The signer address to validate
+     * @return True if the signer is authorized, false otherwise
+     */
+    function _isSignerAuthorizedForPolicy(
+        OnchainCustodyOrganization onchainCustody,
+        Policies.Policy memory policy,
+        address signer
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Get the member ID for the signer
+        uint8 memberId = onchainCustody.addressToMemberId(signer);
+
+        // Case: Signer is not a member of the organization
+        if (memberId == 0) {
+            return false;
+        }
+
+        // Case: Policy requires approval from a specific member
+        if (policy.approverType == Policies.ApproverType.Member) {
+            return memberId == policy.approverId;
+        }
+
+        // Case: Policy requires approval from any member of a specific group
+        if (policy.approverType == Policies.ApproverType.Group) {
+            return onchainCustody.isMemberInGroup(memberId, policy.approverId);
+        }
+
+        return false;
+    }
+
+    /**
+     * @notice Creates a hash of the transaction for signature verification using EIP-712 typed data
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param operation The operation of the transaction
-     * @return The hash of the transaction
+     * @return The hash of the transaction formatted for ERC-1271 signature verification
      */
     function _getTransactionHash(
         address to,
@@ -621,7 +699,34 @@ contract OnchainCustodyAccount {
         view
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(address(this), to, value, data, operation, block.chainid));
+        // Create EIP-712 structured data hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "ExecuteTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 chainId,address account)"
+                ),
+                to,
+                value,
+                keccak256(data),
+                uint8(operation),
+                block.chainid,
+                address(this)
+            )
+        );
+
+        // Return EIP-712 compatible hash for ERC-1271 signature verification
+        return MessageHashUtils.toTypedDataHash(
+            keccak256(
+                abi.encode(
+                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                    keccak256("OnchainCustodyAccount"),
+                    keccak256("1"),
+                    block.chainid,
+                    address(this)
+                )
+            ),
+            structHash
+        );
     }
 
     /**
