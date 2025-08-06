@@ -279,7 +279,7 @@ contract OnchainCustodyAccount {
         // Case: Policy matches only transactions that are token transfers
         if (policy.transactionType == Policies.TransactionType.TokenTransfers) {
             // Case: The transaction is not a token transfer
-            if (!_isTransactionTokenTransfer(data)) return false;
+            if (!_isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The Policy matches only transactions that are token transfers that are of a
             //       specific token, and the transaction is not transferring that token
@@ -298,7 +298,7 @@ contract OnchainCustodyAccount {
         else if (policy.transactionType == Policies.TransactionType.ContractInteractions) {
             // Case: The policy matches only transactions that are contract interactions that are not token transfers,
             //       but the transaction is a token transfer
-            if (_isTransactionTokenTransfer(data)) return false;
+            if (_isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The policy matches only transactions that are contract interactions that call a specific function,
             //       but the transaction is not calling that function
@@ -417,7 +417,7 @@ contract OnchainCustodyAccount {
         OnchainCustodyOrganization onchainCustody,
         Policies.Policy memory policy,
         address to,
-        uint256, /* value */
+        uint256 value,
         bytes memory data
     )
         internal
@@ -428,7 +428,7 @@ contract OnchainCustodyAccount {
         if (policy.destinationType == Policies.DestinationType.Any) return true;
 
         // Determine the actual destination address based on transaction type
-        address actualDestination = _getActualDestination(to, data);
+        address actualDestination = _getActualDestination(to, data, value);
 
         // Case: Policy matches only transactions that are sent to whitelisted addresses
         if (policy.destinationType == Policies.DestinationType.WhitelistedOnly) {
@@ -459,16 +459,17 @@ contract OnchainCustodyAccount {
      *      For ERC-20 transfers, extracts and returns the recipient address from the transaction data.
      * @param to The destination address of the transaction
      * @param data The data of the transaction
+     * @param value The value of the transaction
      * @return The actual destination address
      */
-    function _getActualDestination(address to, bytes memory data) internal pure returns (address) {
+    function _getActualDestination(address to, bytes memory data, uint256 value) internal pure returns (address) {
         // Case: The transaction is a native token transfer
         if (data.length == 0) {
             return to;
         }
 
         // Case: The transaction is a contract interaction
-        if (!_isTransactionTokenTransfer(data)) {
+        if (!_isTransactionTokenTransfer(data, value)) {
             return to;
         }
 
@@ -746,25 +747,38 @@ contract OnchainCustodyAccount {
     /**
      * @notice Checks if a transaction is a token transfer
      * @param data The data of the transaction
+     * @param value The value of the transaction
      * @return True if the transaction is a token transfer, false otherwise
      */
-    function _isTransactionTokenTransfer(bytes memory data) internal pure returns (bool) {
-        // TODO: @ittai: Check that the `value` is > 0 for native token transfers
+    function _isTransactionTokenTransfer(bytes memory data, uint256 value) internal pure returns (bool) {
         // Case: The transaction is a native token transfer
-        if (data.length == 0) {
-            return true; // Native token transfer
+        if (data.length == 0 && value > 0) {
+            return true;
         }
 
-        // TODO: @ittai: Check that the `value` is 0 for ERC-20 token transfers
-        // Case: The transaction is not a token transfer
+        // Case: The transaction data is too short to call a function
         if (data.length < 4) {
+            return false;
+        }
+
+        // Case: The transaction is not a native token transfer, but the value is greater than zero
+        if (value > 0) {
             return false;
         }
 
         // Case: The transaction is a token transfer
         bytes4 selector = bytes4(data);
-        return selector == bytes4(keccak256("transfer(address,uint256)"))
-            || selector == bytes4(keccak256("transferFrom(address,address,uint256)"));
+
+        // Case: The transaction is a token transfer
+        if (
+            selector == bytes4(keccak256("transfer(address,uint256)"))
+                || selector == bytes4(keccak256("transferFrom(address,address,uint256)"))
+        ) {
+            return true;
+        }
+
+        // Case: The transaction is not a token transfer
+        return false;
     }
 
     /**
