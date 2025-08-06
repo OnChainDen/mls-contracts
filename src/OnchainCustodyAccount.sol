@@ -604,21 +604,35 @@ contract OnchainCustodyAccount {
      * @return The extracted signature
      */
     function _extractSignature(bytes memory signatures, uint256 index) internal pure returns (bytes memory) {
-        bytes memory signature = new bytes(65);
-        uint256 offset = index * 65;
+        // Initialize a new bytes array to store the signature
+        // Note: The signature is 65 bytes (r: 32, s: 32, v: 1)
+        bytes memory extractedSignature = new bytes(65);
+        uint256 signatureStartPosition = index * 65;
 
         /* solhint-disable no-inline-assembly */
         assembly {
-            let dataPtr := add(signatures, 0x20)
-            let sigPtr := add(signature, 0x20)
+            // Initialize pointer to the start of the signatures array
+            // Note: First 32 bytes (0x20) are the length of the array
+            let signaturesPosition := add(signatures, 0x20)
 
-            // Copy 65 bytes
-            mstore(sigPtr, mload(add(dataPtr, offset)))
-            mstore(add(sigPtr, 0x20), mload(add(dataPtr, add(offset, 0x20))))
-            mstore8(add(sigPtr, 0x40), byte(0, mload(add(dataPtr, add(offset, 0x40)))))
+            // Initialize pointer to the start of the extracted signature
+            // Note: First 32 bytes (0x20) are the length of the array
+            let extractedSignaturePosition := add(extractedSignature, 0x20)
+
+            // Copy first 32 bytes (r)
+            mstore(extractedSignaturePosition, mload(add(signaturesPosition, signatureStartPosition)))
+            // Copy second 32 bytes (s)
+            mstore(
+                add(extractedSignaturePosition, 0x20), mload(add(signaturesPosition, add(signatureStartPosition, 0x20)))
+            )
+            // Copy last byte (v)
+            mstore8(
+                add(extractedSignaturePosition, 0x40),
+                byte(0, mload(add(signaturesPosition, add(signatureStartPosition, 0x40))))
+            )
         }
 
-        return signature;
+        return extractedSignature;
     }
 
     /**
