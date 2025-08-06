@@ -22,6 +22,8 @@ contract OnchainCustodyOrganization {
 
     Policies.Policy[] private _policies;
 
+    mapping(address => bool) private _whitelistedAddresses;
+
     /**
      * @notice Checks if a member is in a group
      * @param memberId The ID of the member
@@ -48,5 +50,14 @@ contract OnchainCustodyOrganization {
      */
     function getPolicies() public view returns (Policies.Policy[] memory) {
         return _policies;
+    }
+
+    /**
+     * @notice Checks if an address is whitelisted
+     * @param addressToCheck The address to check
+     * @return True if the address is whitelisted, false otherwise
+     */
+    function isAddressWhitelisted(address addressToCheck) public view returns (bool) {
+        return _whitelistedAddresses[addressToCheck];
     }
 }

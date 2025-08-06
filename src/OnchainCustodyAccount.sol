@@ -186,7 +186,7 @@ contract OnchainCustodyAccount {
         }
 
         // Case: Transaction doesn't match policy's transaction destination filter
-        if (!_doesTransactionMatchPolicyDestination(policy, to)) {
+        if (!_doesTransactionMatchPolicyDestination(onchainCustody, policy, to, value, data)) {
             return false;
         }
 
@@ -406,40 +406,43 @@ contract OnchainCustodyAccount {
 
     /**
      * @notice Checks if the transaction matches the destination filter
+     * @param onchainCustody The custody contract instance
      * @param policy The policy to check
      * @param to The destination address of the transaction
+     * @param data The data of the transaction
      * @return True if the transaction matches the destination filter, false otherwise
      */
     function _doesTransactionMatchPolicyDestination(
+        OnchainCustodyOrganization onchainCustody,
         Policies.Policy memory policy,
-        address to
+        address to,
+        uint256, /* value */
+        bytes memory data
     )
         internal
-        pure
+        view
         returns (bool)
     {
         // Case: Policy matches transaction to any address
         if (policy.destinationType == Policies.DestinationType.Any) return true;
 
+        // Determine the actual destination address based on transaction type
+        address actualDestination = _getActualDestination(to, data);
+
         // Case: Policy matches only transactions that are sent to whitelisted addresses
         if (policy.destinationType == Policies.DestinationType.WhitelistedOnly) {
-            // TODO: @ittai: Add support for whitelistedOnly destinations
-            // Note: Make sure to account for token transfer and contract interaction destinations
-            //       separately
+            return onchainCustody.isAddressWhitelisted(actualDestination);
         }
 
         // Case: Policy matches only transactions that are sent to non-whitelisted addresses
         if (policy.destinationType == Policies.DestinationType.NonWhitelistedOnly) {
-            // TODO: @ittai: Add support for nonWhitelistedOnly destinations
-            // Note: Make sure to account for token transfer and contract interaction destinations
-            //       separately
+            return !onchainCustody.isAddressWhitelisted(actualDestination);
         }
 
         // Case: Policy matches only transactions that are sent to a specific list of addresses
         if (policy.destinationType == Policies.DestinationType.CustomList) {
             for (uint256 i = 0; i < policy.customDestinations.length; ++i) {
-                // TODO: @ittai: Account for token transfer and contract interaction destinations separately
-                if (policy.customDestinations[i] == to) {
+                if (policy.customDestinations[i] == actualDestination) {
                     return true;
                 }
             }
@@ -447,6 +450,76 @@ contract OnchainCustodyAccount {
 
         // Case: The policy does not match the transaction destination
         return false;
+    }
+
+    /**
+     * @notice Gets the actual destination address of a transaction
+     * @dev For contract interactions and native transfers, returns the `to` address.
+     *      For ERC-20 transfers, extracts and returns the recipient address from the transaction data.
+     * @param to The destination address of the transaction
+     * @param data The data of the transaction
+     * @return The actual destination address
+     */
+    function _getActualDestination(address to, bytes memory data) internal pure returns (address) {
+        // Case: The transaction is a native token transfer
+        if (data.length == 0) {
+            return to;
+        }
+
+        // Case: The transaction is a contract interaction
+        if (!_isTransactionTokenTransfer(data)) {
+            return to;
+        }
+
+        // Case: The transaction is an ERC-20 token transfer
+        // Extract the recipient address from the transfer function call
+        return _extractTokenRecipient(data);
+    }
+
+    /**
+     * @notice Extracts the recipient address from an ERC-20 transfer transaction
+     * @dev This function assumes that the transaction is an ERC-20 token transfer
+     * @param data The data of the transaction
+     * @return The recipient address
+     */
+    function _extractTokenRecipient(bytes memory data) internal pure returns (address) {
+        // Case: Transaction data is too short to contain a valid selector
+        if (data.length < 36) {
+            return address(0);
+        }
+
+        bytes4 selector = bytes4(data);
+
+        // Case: The transaction is calling the `transfer` function
+        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
+            // transfer(address to, uint256 amount)
+            // The recipient is the first parameter after the selector
+            address recipient;
+            /* solhint-disable no-inline-assembly */
+            assembly {
+                // Load recipient (memory location of `data` + 4 bytes to skip the function selector )
+                recipient := mload(add(data, 4))
+            }
+            return recipient;
+        }
+
+        // Case: The transaction is calling the `transferFrom` function
+        if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
+            // Case: Transaction data is too short to contain a valid recipient
+            // Note: The recipient is the second address parameter after the selector
+            if (data.length < 68) {
+                return address(0);
+            }
+            address recipient;
+            /* solhint-disable no-inline-assembly */
+            assembly {
+                recipient := mload(add(data, 36)) // Skip selector (4) + from address (32)
+            }
+            return recipient;
+        }
+
+        // Case: The transaction is not a valid ERC-20 transfer
+        return address(0);
     }
 
     /**
