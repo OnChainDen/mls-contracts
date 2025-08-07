@@ -23,13 +23,26 @@ contract OnchainCustodyAccount {
     address public onchainCustodyAddress;
 
     /**
+     * @notice Mapping of nonces for replay protection. Each nonce can only be used once.
+     */
+    mapping(uint256 => bool) private _usedNonces;
+
+    /**
+     * @notice The current nonce for transactions from this account
+     */
+    uint256 public _currentNonce;
+
+    /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param operation The operation of the transaction
+     * @param nonce The nonce used for this transaction
      */
-    event TransactionExecuted(address indexed to, uint256 value, bytes data, Operation operation);
+    event TransactionExecuted(
+        address indexed to, uint256 value, bytes data, Operation operation, uint256 indexed nonce
+    );
 
     /**
      * @notice Emitted when a transaction is rejected
@@ -56,11 +69,44 @@ contract OnchainCustodyAccount {
     error InvalidSignature();
 
     /**
+     * @notice Emitted when a transaction is rejected because the nonce provided is not the current nonce
+     * @param currentNonce The current nonce
+     * @param nonce The nonce that was attempted to be used
+     */
+    error InvalidNonce(uint256 currentNonce, uint256 nonce);
+
+    /**
+     * @notice Emitted when a transaction is rejected because of wrong chain ID
+     * @param expected The expected chain ID
+     * @param provided The provided chain ID
+     */
+    error InvalidChainId(uint256 expected, uint256 provided);
+
+    /**
+     * @notice Returns the current nonce for this account
+     * @return The current nonce value
+     */
+    function getNonce() external view returns (uint256) {
+        return _currentNonce;
+    }
+
+    /**
+     * @notice Checks if a nonce has been used
+     * @param nonce The nonce to check
+     * @return True if the nonce has been used, false otherwise
+     */
+    function isNonceUsed(uint256 nonce) external view returns (bool) {
+        return _usedNonces[nonce];
+    }
+
+    /**
      * @notice Executes a transaction from this account based on the policies of the onchain custody contract
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param operation The operation of the transaction
+     * @param nonce The nonce for replay protection - must be the current nonce for this account
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures of the transaction
      */
     function executeTransaction(
@@ -68,10 +114,25 @@ contract OnchainCustodyAccount {
         uint256 value,
         bytes calldata data,
         Operation operation,
+        uint256 nonce,
+        uint256 chainId,
         bytes memory signatures
     )
         public
     {
+        // Validate chain ID for cross-chain replay protection
+        if (chainId != block.chainid) {
+            revert InvalidChainId(block.chainid, chainId);
+        }
+
+        // Validate and consume nonce for replay protection
+        if (nonce != _currentNonce) {
+            revert InvalidNonce(_currentNonce, nonce);
+        }
+
+        // Increment the current nonce
+        ++_currentNonce;
+
         // Get the onchain custody contract that this account is associated with
         OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(onchainCustodyAddress);
 
@@ -79,12 +140,12 @@ contract OnchainCustodyAccount {
         Policies.Policy[] memory policies = onchainCustody.getPolicies();
 
         // Check policies to make sure this transaction can be executed
-        _validateTransaction(onchainCustody, policies, to, value, data, operation, signatures);
+        _validateTransaction(onchainCustody, policies, to, value, data, operation, nonce, chainId, signatures);
 
         // Execute the transaction
         _execute(to, value, data, operation, gasleft());
 
-        emit TransactionExecuted(to, value, data, operation);
+        emit TransactionExecuted(to, value, data, operation, nonce);
     }
 
     /**
@@ -95,6 +156,8 @@ contract OnchainCustodyAccount {
      * @param value Transaction value
      * @param data Transaction data
      * @param operation Transaction operation type
+     * @param nonce Transaction nonce for replay protection
+     * @param chainId Transaction chain ID for cross-chain replay protection
      * @param signatures Signatures for approval verification
      */
     function _validateTransaction(
@@ -104,6 +167,8 @@ contract OnchainCustodyAccount {
         uint256 value,
         bytes memory data,
         Operation operation,
+        uint256 nonce,
+        uint256 chainId,
         bytes memory signatures
     )
         internal
@@ -127,7 +192,7 @@ contract OnchainCustodyAccount {
             // Check if the transaction has enough valid approvals
             if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
                 // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, operation);
+                bytes32 txHash = _getTransactionHash(to, value, data, operation, nonce, chainId);
                 uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
                 uint256 validApprovals = _getValidApprovals(onchainCustody, policies[i], signatures, txHash);
 
@@ -702,29 +767,39 @@ contract OnchainCustodyAccount {
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param operation The operation of the transaction
+     * @param nonce The nonce for replay protection
+     * @param chainId The chain ID for cross-chain replay protection
      * @return The hash of the transaction formatted for ERC-1271 signature verification
      */
     function _getTransactionHash(
         address to,
         uint256 value,
         bytes memory data,
-        Operation operation
+        Operation operation,
+        uint256 nonce,
+        uint256 chainId
     )
         internal
         view
         returns (bytes32)
     {
+        // Validate chain ID matches current chain
+        if (chainId != block.chainid) {
+            revert InvalidChainId(block.chainid, chainId);
+        }
+
         // Create EIP-712 structured data hash
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "ExecuteTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 chainId,address account)"
+                    "ExecuteTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 nonce,uint256 chainId,address account)"
                 ),
                 to,
                 value,
                 keccak256(data),
                 uint8(operation),
-                block.chainid,
+                nonce,
+                chainId,
                 address(this)
             )
         );
