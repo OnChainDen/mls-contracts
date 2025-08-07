@@ -28,11 +28,6 @@ contract OnchainCustodyAccount {
     mapping(uint256 => bool) private _usedNonces;
 
     /**
-     * @notice The current nonce for transactions from this account
-     */
-    uint256 public _currentNonce;
-
-    /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
      * @param value The value of the transaction
@@ -69,11 +64,10 @@ contract OnchainCustodyAccount {
     error InvalidSignature();
 
     /**
-     * @notice Emitted when a transaction is rejected because the nonce provided is not the current nonce
-     * @param currentNonce The current nonce
+     * @notice Emitted when a transaction is rejected because the nonce provided has already been used
      * @param nonce The nonce that was attempted to be used
      */
-    error InvalidNonce(uint256 currentNonce, uint256 nonce);
+    error NonceAlreadyUsed(uint256 nonce);
 
     /**
      * @notice Emitted when a transaction is rejected because of wrong chain ID
@@ -81,14 +75,6 @@ contract OnchainCustodyAccount {
      * @param provided The provided chain ID
      */
     error InvalidChainId(uint256 expected, uint256 provided);
-
-    /**
-     * @notice Returns the current nonce for this account
-     * @return The current nonce value
-     */
-    function getNonce() external view returns (uint256) {
-        return _currentNonce;
-    }
 
     /**
      * @notice Checks if a nonce has been used
@@ -126,12 +112,12 @@ contract OnchainCustodyAccount {
         }
 
         // Validate and consume nonce for replay protection
-        if (nonce != _currentNonce) {
-            revert InvalidNonce(_currentNonce, nonce);
+        if (_usedNonces[nonce]) {
+            revert NonceAlreadyUsed(nonce);
         }
 
-        // Increment the current nonce
-        ++_currentNonce;
+        // Mark nonce as used
+        _usedNonces[nonce] = true;
 
         // Get the onchain custody contract that this account is associated with
         OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(onchainCustodyAddress);
