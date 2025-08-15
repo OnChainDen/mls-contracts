@@ -86,12 +86,35 @@ contract OnchainCustodyAccount {
     }
 
     /**
+     * @notice Computes a deterministic nonce from transaction data and salt
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param operation The operation of the transaction
+     * @param salt A user-provided salt for nonce computation
+     * @return The computed nonce
+     */
+    function computeNonce(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        Operation operation,
+        uint256 salt
+    )
+        public
+        view
+        returns (uint256)
+    {
+        return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), uint8(operation), salt)));
+    }
+
+    /**
      * @notice Executes a transaction from this account based on the policies of the onchain custody contract
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param operation The operation of the transaction
-     * @param nonce The nonce for replay protection - must be the current nonce for this account
+     * @param salt A user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures of the transaction
      */
@@ -100,7 +123,7 @@ contract OnchainCustodyAccount {
         uint256 value,
         bytes calldata data,
         Operation operation,
-        uint256 nonce,
+        uint256 salt,
         uint256 chainId,
         bytes memory signatures
     )
@@ -110,6 +133,9 @@ contract OnchainCustodyAccount {
         if (chainId != block.chainid) {
             revert InvalidChainId(block.chainid, chainId);
         }
+
+        // Compute deterministic nonce from transaction data and salt
+        uint256 nonce = computeNonce(to, value, data, operation, salt);
 
         // Validate and consume nonce for replay protection
         if (_usedNonces[nonce]) {
@@ -126,7 +152,7 @@ contract OnchainCustodyAccount {
         Policies.Policy[] memory policies = onchainCustody.getPolicies();
 
         // Check policies to make sure this transaction can be executed
-        _validateTransaction(onchainCustody, policies, to, value, data, operation, nonce, chainId, signatures);
+        _validateTransaction(onchainCustody, policies, to, value, data, operation, salt, chainId, signatures);
 
         // Execute the transaction
         _execute(to, value, data, operation, gasleft());
@@ -142,7 +168,7 @@ contract OnchainCustodyAccount {
      * @param value Transaction value
      * @param data Transaction data
      * @param operation Transaction operation type
-     * @param nonce Transaction nonce for replay protection
+     * @param salt User-provided salt for nonce computation
      * @param chainId Transaction chain ID for cross-chain replay protection
      * @param signatures Signatures for approval verification
      */
@@ -153,7 +179,7 @@ contract OnchainCustodyAccount {
         uint256 value,
         bytes memory data,
         Operation operation,
-        uint256 nonce,
+        uint256 salt,
         uint256 chainId,
         bytes memory signatures
     )
@@ -178,7 +204,7 @@ contract OnchainCustodyAccount {
             // Check if the transaction has enough valid approvals
             if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
                 // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, operation, nonce, chainId);
+                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
                 uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
                 uint256 validApprovals = _getValidApprovals(onchainCustody, policies[i], signatures, txHash);
 
@@ -753,7 +779,7 @@ contract OnchainCustodyAccount {
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param operation The operation of the transaction
-     * @param nonce The nonce for replay protection
+     * @param salt The user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection
      * @return The hash of the transaction formatted for ERC-1271 signature verification
      */
@@ -762,7 +788,7 @@ contract OnchainCustodyAccount {
         uint256 value,
         bytes memory data,
         Operation operation,
-        uint256 nonce,
+        uint256 salt,
         uint256 chainId
     )
         internal
@@ -778,13 +804,13 @@ contract OnchainCustodyAccount {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "ExecuteTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 nonce,uint256 chainId,address account)"
+                    "ExecuteTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 salt,uint256 chainId,address account)"
                 ),
                 to,
                 value,
                 keccak256(data),
                 uint8(operation),
-                nonce,
+                salt,
                 chainId,
                 address(this)
             )
