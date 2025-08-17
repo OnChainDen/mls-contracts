@@ -52,6 +52,19 @@ contract OnchainCustodyAccount {
     error TransactionRejectedByPolicy(string reason);
 
     /**
+     * @notice Emitted when a transaction is rejected by authorized users
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param operation The operation of the transaction
+     * @param nonce The nonce used for this transaction
+     * @param rejectedBy The address that rejected the transaction
+     */
+    event TransactionRejectedByUser(
+        address indexed to, uint256 value, bytes data, Operation operation, uint256 indexed nonce, address rejectedBy
+    );
+
+    /**
      * @notice Emitted when a transaction is rejected because it has insufficient approvals
      * @param required The number of required approvals
      * @param provided The number of provided approvals
@@ -161,6 +174,55 @@ contract OnchainCustodyAccount {
     }
 
     /**
+     * @notice Rejects a transaction that has been signed but not yet executed
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param operation The operation of the transaction
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures of the transaction
+     */
+    function rejectTransaction(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        Operation operation,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+    {
+        // Validate chain ID for cross-chain replay protection
+        if (chainId != block.chainid) {
+            revert InvalidChainId(block.chainid, chainId);
+        }
+
+        // Compute deterministic nonce from transaction data and salt
+        uint256 nonce = computeNonce(to, value, data, operation, salt);
+
+        // Validate and consume nonce for replay protection
+        if (_usedNonces[nonce]) {
+            revert NonceAlreadyUsed(nonce);
+        }
+
+        // Mark nonce as used to prevent execution
+        _usedNonces[nonce] = true;
+
+        // Get the onchain custody contract that this account is associated with
+        OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(onchainCustodyAddress);
+
+        // Get all policies from the onchain custody contract that this account is associated with
+        Policies.Policy[] memory policies = onchainCustody.getPolicies();
+
+        // Check if the caller is authorized to reject this transaction
+        _validateRejectionAuthorization(onchainCustody, policies, to, value, data, operation, salt, chainId, signatures);
+
+        emit TransactionRejectedByUser(to, value, data, operation, nonce, msg.sender);
+    }
+
+    /**
      * @notice Validates a transaction against all applicable policies
      * @param onchainCustody The custody contract instance
      * @param policies Array of all policies to check
@@ -224,6 +286,94 @@ contract OnchainCustodyAccount {
         // Case: No policies match the transaction
         // If no policies match, reject the transaction
         revert TransactionRejectedByPolicy("No applicable policy found for transaction");
+    }
+
+    /**
+     * @notice Validates that the caller is authorized to reject the given transaction
+     * @param onchainCustody The custody contract instance
+     * @param policies Array of all policies to check
+     * @param to Transaction destination address
+     * @param value Transaction value
+     * @param data Transaction data
+     * @param operation Transaction operation type
+     * @param salt User-provided salt for nonce computation
+     * @param chainId Transaction chain ID for cross-chain replay protection
+     * @param signatures Signatures for approval verification
+     */
+    function _validateRejectionAuthorization(
+        OnchainCustodyOrganization onchainCustody,
+        Policies.Policy[] memory policies,
+        address to,
+        uint256 value,
+        bytes memory data,
+        Operation operation,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        internal
+        view
+    {
+        // Iterate over policies to find the first matching policy
+        for (uint256 i = 0; i < policies.length; i++) {
+            // Case: Current policy does not apply to transaction
+            // Skip to next policy
+            if (!_doesPolicyApplyToTransaction(onchainCustody, policies[i], to, value, data, msg.sender)) {
+                continue;
+            }
+
+            // Case: Current policy applies to transaction and is an automatic approval policy
+            // Only valid transaction initiators (as defined by policy) can reject it
+            if (policies[i].policyType == Policies.PolicyType.AutoApprove) {
+                // Get transaction hash for signature verification
+                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+
+                // Check if we have at least one valid signature from an authorized initiator
+                if (_hasValidInitiatorSignature(onchainCustody, policies[i], signatures, txHash)) {
+                    return;
+                } else {
+                    revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
+                }
+            }
+
+            // Case: Current policy applies to transaction and is an automatic rejection policy
+            // Only valid transaction initiators (as defined by policy) can reject it
+            if (policies[i].policyType == Policies.PolicyType.AutoReject) {
+                // Get transaction hash for signature verification
+                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+
+                // Check if we have at least one valid signature from an authorized initiator
+                if (_hasValidInitiatorSignature(onchainCustody, policies[i], signatures, txHash)) {
+                    return;
+                } else {
+                    revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
+                }
+            }
+
+            // Case: Current policy applies to transaction and is a manual approval policy
+            // Check if the caller has sufficient rejection authority
+            if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
+                // Get transaction hash for signature verification
+                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+                uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
+                uint256 validApprovals = _getValidApprovals(onchainCustody, policies[i], signatures, txHash);
+
+                // Case: Transaction does not have enough valid rejections
+                // Revert the transaction
+                if (validApprovals < requiredApprovals) {
+                    revert InsufficientApprovals(requiredApprovals, validApprovals);
+                }
+                // Case: Transaction has enough valid rejections
+                // Return
+                else {
+                    return;
+                }
+            }
+        }
+
+        // Case: No policies match the transaction
+        // If no policies match, reject the rejection attempt
+        revert TransactionRejectedByPolicy("No applicable policy found for transaction rejection");
     }
 
     /**
@@ -768,6 +918,94 @@ contract OnchainCustodyAccount {
         // Case: Policy requires approval from any member of a specific group
         if (policy.approverType == Policies.ApproverType.Group) {
             return onchainCustody.isMemberInGroup(memberId, policy.approverId);
+        }
+
+        return false;
+    }
+
+    /**
+     * @notice Checks if there is at least one valid signature from an authorized transaction initiator
+     * @param onchainCustody The custody contract instance
+     * @param policy The policy to check against
+     * @param signatures The signatures to verify
+     * @param txHash The hash of the transaction
+     * @return True if there is at least one valid signature from an authorized initiator, false otherwise
+     */
+    function _hasValidInitiatorSignature(
+        OnchainCustodyOrganization onchainCustody,
+        Policies.Policy memory policy,
+        bytes memory signatures,
+        bytes32 txHash
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: No signatures provided
+        if (signatures.length == 0) return false;
+
+        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
+        uint8 signatureCount = uint8(signatures.length / 65);
+
+        // Iterate over signatures to find at least one valid initiator signature
+        for (uint8 i = 0; i < signatureCount; ++i) {
+            bytes memory signature = _extractSignature(signatures, i);
+
+            // Extract signer address from signature using ERC-1271 compatible verification
+            address signer = _getSigner(signature, txHash);
+
+            // Skip if signer is invalid
+            if (signer == address(0)) continue;
+
+            // Verify the signature using ERC-1271
+            if (!SignatureChecker.isValidSignatureNow(signer, txHash, signature)) {
+                continue;
+            }
+
+            // Check if signer is authorized as a transaction initiator based on policy
+            if (_isSignerAuthorizedAsInitiator(onchainCustody, policy, signer)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @notice Checks if a signer is authorized as a transaction initiator for the given policy
+     * @param onchainCustody The custody contract instance
+     * @param policy The policy to check against
+     * @param signer The signer address to validate
+     * @return True if the signer is authorized as an initiator, false otherwise
+     */
+    function _isSignerAuthorizedAsInitiator(
+        OnchainCustodyOrganization onchainCustody,
+        Policies.Policy memory policy,
+        address signer
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: Policy allows any initiator
+        if (policy.anyInitiator) return true;
+
+        // Get the member ID for the signer
+        uint8 memberId = onchainCustody.addressToMemberId(signer);
+
+        // Case: Signer is not a member of the organization
+        if (memberId == 0) {
+            return false;
+        }
+
+        // Case: Policy requires initiation by a specific member
+        if (policy.initiatorType == Policies.ApproverType.Member) {
+            return memberId == policy.initiatorId;
+        }
+
+        // Case: Policy requires initiation by any member of a specific group
+        if (policy.initiatorType == Policies.ApproverType.Group) {
+            return onchainCustody.isMemberInGroup(memberId, policy.initiatorId);
         }
 
         return false;
