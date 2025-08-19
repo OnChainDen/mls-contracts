@@ -253,19 +253,14 @@ contract OnchainCustodyOrganization {
         AdminOperationType operationType = AdminOperationType.UpdateAdmin;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
-        // Validate and consume nonce for replay protection
-        if (_usedAdminNonces[nonce]) {
-            revert AdminNonceAlreadyUsed(nonce);
-        }
-
-        // Mark nonce as used
-        _usedAdminNonces[nonce] = true;
-
         // Validate that the current admin has authorized this change
-        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
         if (!isAuthorized) {
             revert AdminOperationRejected("Insufficient authorization to update admin permissions");
         }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
 
         // Validate the new admin configuration
         if (newAdminType == AdminType.Group && newVotingThreshold == 0) {
@@ -327,19 +322,14 @@ contract OnchainCustodyOrganization {
         AdminOperationType operationType = AdminOperationType.CreateGroup;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
-        // Validate and consume nonce for replay protection
-        if (_usedAdminNonces[nonce]) {
-            revert AdminNonceAlreadyUsed(nonce);
-        }
-
-        // Mark nonce as used
-        _usedAdminNonces[nonce] = true;
-
         // Validate that the current admin has authorized this operation
-        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
         if (!isAuthorized) {
             revert AdminOperationRejected("Insufficient authorization to create group");
         }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
 
         // Update member-to-group mappings and group membership flags
         for (uint256 i = 0; i < memberIds.length; ++i) {
@@ -396,19 +386,14 @@ contract OnchainCustodyOrganization {
         AdminOperationType operationType = AdminOperationType.ModifyGroup;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
-        // Validate and consume nonce for replay protection
-        if (_usedAdminNonces[nonce]) {
-            revert AdminNonceAlreadyUsed(nonce);
-        }
-
-        // Mark nonce as used
-        _usedAdminNonces[nonce] = true;
-
         // Validate that the current admin has authorized this operation
-        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
         if (!isAuthorized) {
             revert AdminOperationRejected("Insufficient authorization to modify group");
         }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
 
         // Add new members
         for (uint256 i = 0; i < membersToAdd.length; ++i) {
@@ -451,19 +436,14 @@ contract OnchainCustodyOrganization {
         AdminOperationType operationType = AdminOperationType.RemoveGroup;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
-        // Validate and consume nonce for replay protection
-        if (_usedAdminNonces[nonce]) {
-            revert AdminNonceAlreadyUsed(nonce);
-        }
-
-        // Mark nonce as used
-        _usedAdminNonces[nonce] = true;
-
         // Validate that the current admin has authorized this operation
-        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
         if (!isAuthorized) {
             revert AdminOperationRejected("Insufficient authorization to remove group");
         }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
 
         // Mark group as not existing
         _groupIdToExists[groupId] = false;
@@ -475,12 +455,13 @@ contract OnchainCustodyOrganization {
     /**
      * @notice Validates that the provided signatures meet the admin authorization requirements
      * @dev This function verifies that the signatures are from authorized admin members/group
-     *      and meet the required voting threshold
+     *      and meet the required voting threshold. Also checks nonce for replay protection.
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures to validate
+     * @param nonce The nonce for replay protection
      * @return True if the signatures are valid and meet the threshold, false otherwise
      */
     function _validateAdminAuthorization(
@@ -488,12 +469,18 @@ contract OnchainCustodyOrganization {
         bytes memory operationData,
         uint256 salt,
         uint256 chainId,
-        bytes memory signatures
+        bytes memory signatures,
+        uint256 nonce
     )
         internal
         view
         returns (bool)
     {
+        // Validate and check nonce for replay protection
+        if (_usedAdminNonces[nonce]) {
+            revert AdminNonceAlreadyUsed(nonce);
+        }
+
         // Validate chain ID for cross-chain replay protection
         if (chainId != block.chainid) {
             revert InvalidAdminChainId(block.chainid, chainId);
