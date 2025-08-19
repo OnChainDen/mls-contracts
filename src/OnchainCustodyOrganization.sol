@@ -118,6 +118,11 @@ contract OnchainCustodyOrganization {
     mapping(uint8 => mapping(uint8 => bool)) private _groupIdToMemberIdToInGroup;
     mapping(uint8 => bool) private _groupIdToExists;
 
+    /**
+     * @notice Counter for auto-incrementing group IDs
+     */
+    uint8 private _nextGroupId = 1;
+
     Policies.Policy[] private _policies;
 
     mapping(address => bool) private _whitelistedAddresses;
@@ -175,6 +180,15 @@ contract OnchainCustodyOrganization {
      */
     function getMemberAddress(uint8 memberId) external view returns (address) {
         return _memberIdToAddress[memberId];
+    }
+
+    /**
+     * @notice Checks if a group exists
+     * @param groupId The ID of the group to check
+     * @return True if the group exists, false otherwise
+     */
+    function groupExists(uint8 groupId) external view returns (bool) {
+        return _groupIdToExists[groupId];
     }
 
     /**
@@ -266,30 +280,29 @@ contract OnchainCustodyOrganization {
     /**
      * @notice Creates a new group with the specified member IDs
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     * @param groupId The ID for the new group
      * @param memberIds The array of member IDs to include in the group
      * @param salt A user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
+     * @return groupId The auto-generated ID of the created group
      */
     function createGroup(
-        uint8 groupId,
         uint8[] memory memberIds,
         uint256 salt,
         uint256 chainId,
         bytes memory signatures
     )
         public
+        returns (uint8 groupId)
     {
         // Validate input parameters
         if (memberIds.length == 0) {
             revert GroupOperationRejected("Group must have at least one member");
         }
 
-        // Check if group already exists (has members)
-        if (_groupIdToExists[groupId]) {
-            revert GroupOperationRejected("Group ID already exists");
-        }
+        // Auto-increment group ID
+        groupId = _nextGroupId;
+        _nextGroupId++;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(groupId, memberIds);
@@ -322,6 +335,9 @@ contract OnchainCustodyOrganization {
             // Mark member as being in the group
             _groupIdToMemberIdToInGroup[groupId][memberId] = true;
         }
+
+        // Mark group as existing
+        _groupIdToExists[groupId] = true;
 
         // Emit event
         emit GroupCreated(groupId, memberIds);
