@@ -26,7 +26,10 @@ contract OnchainCustodyOrganization {
         UpdateAdmin,
         CreateGroup,
         ModifyGroup,
-        RemoveGroup
+        RemoveGroup,
+        AddMembers,
+        ModifyMember,
+        RemoveMembers
     }
 
     /**
@@ -119,10 +122,38 @@ contract OnchainCustodyOrganization {
     event GroupRemoved(uint8 indexed groupId);
 
     /**
+     * @notice Emitted when members are added
+     * @param memberIds The IDs of the added members
+     * @param memberAddresses The addresses of the added members
+     */
+    event MembersAdded(uint8[] memberIds, address[] memberAddresses);
+
+    /**
+     * @notice Emitted when a member's address is modified
+     * @param memberId The ID of the modified member
+     * @param previousAddress The previous address of the member
+     * @param newAddress The new address of the member
+     */
+    event MemberModified(uint8 indexed memberId, address previousAddress, address newAddress);
+
+    /**
+     * @notice Emitted when members are removed
+     * @param memberIds The IDs of the removed members
+     * @param memberAddresses The addresses of the removed members
+     */
+    event MembersRemoved(uint8[] memberIds, address[] memberAddresses);
+
+    /**
      * @notice Emitted when a group operation is rejected due to invalid parameters
      * @param reason The reason for the rejection
      */
     error GroupOperationRejected(string reason);
+
+    /**
+     * @notice Emitted when a member operation is rejected due to invalid parameters
+     * @param reason The reason for the rejection
+     */
+    error MemberOperationRejected(string reason);
 
     mapping(uint8 => address) private _memberIdToAddress;
 
@@ -139,6 +170,11 @@ contract OnchainCustodyOrganization {
      */
     uint8 private _nextGroupId = 1;
 
+    /**
+     * @notice Counter for auto-incrementing member IDs
+     */
+    uint8 private _nextMemberId = 1;
+
     Policies.Policy[] private _policies;
 
     mapping(address => bool) private _whitelistedAddresses;
@@ -150,6 +186,9 @@ contract OnchainCustodyOrganization {
      * @return True if the member is in the group, false otherwise
      */
     function isMemberInGroup(uint8 memberId, uint8 groupId) public view returns (bool) {
+        // Case: Member does not exist
+        if (_memberIdToAddress[memberId] == address(0)) return false;
+
         return _groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
@@ -160,7 +199,12 @@ contract OnchainCustodyOrganization {
      * @return True if the member is in the group, false otherwise
      */
     function isMemberInGroup(address memberAddress, uint8 groupId) public view returns (bool) {
-        return _groupIdToMemberIdToInGroup[groupId][addressToMemberId[memberAddress]];
+        uint8 memberId = addressToMemberId[memberAddress];
+
+        // Case: Member does not exist
+        if (memberId == 0) return false;
+
+        return _groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     /**
@@ -205,6 +249,15 @@ contract OnchainCustodyOrganization {
      */
     function groupExists(uint8 groupId) external view returns (bool) {
         return _groupIdToExists[groupId];
+    }
+
+    /**
+     * @notice Checks if a member exists
+     * @param memberId The ID of the member to check
+     * @return True if the member exists, false otherwise
+     */
+    function memberExists(uint8 memberId) external view returns (bool) {
+        return _memberIdToAddress[memberId] != address(0);
     }
 
     /**
@@ -450,6 +503,199 @@ contract OnchainCustodyOrganization {
 
         // Emit event
         emit GroupRemoved(groupId);
+    }
+
+    /**
+     * @notice Adds new members to the organization
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     * @param memberAddresses The array of addresses to add as new members
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     * @return memberIds The auto-generated IDs of the added members
+     */
+    function addMembers(
+        address[] memory memberAddresses,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+        returns (uint8[] memory memberIds)
+    {
+        // Validate input parameters
+        if (memberAddresses.length == 0) {
+            revert MemberOperationRejected("Must specify at least one member address");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(memberAddresses, memberIds);
+
+        // Compute deterministic nonce from operation data and salt
+        AdminOperationType operationType = AdminOperationType.AddMembers;
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to add members");
+        }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
+
+        // Pre-allocate member IDs array for event and return value
+        memberIds = new uint8[](memberAddresses.length);
+
+        // Add members to mappings
+        for (uint256 i = 0; i < memberAddresses.length; ++i) {
+            // Get current member ID and address
+            address memberAddress = memberAddresses[i];
+            uint8 memberId = _nextMemberId;
+
+            // Increment next member ID
+            _nextMemberId++;
+
+            // Pre-allocate member IDs array for event and return value
+            memberIds[i] = memberId;
+
+            // Validate member address
+            if (memberAddress == address(0)) {
+                revert MemberOperationRejected("Invalid member address provided");
+            }
+
+            // Check if address is already a member
+            if (addressToMemberId[memberAddress] != 0) {
+                revert MemberOperationRejected("Address is already a member");
+            }
+
+            // Update mappings
+            _memberIdToAddress[memberId] = memberAddress;
+            addressToMemberId[memberAddress] = memberId;
+        }
+
+        // Emit event
+        emit MembersAdded(memberIds, memberAddresses);
+    }
+
+    /**
+     * @notice Modifies a member's address
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     * @param memberId The ID of the member to modify
+     * @param newAddress The new address for the member
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function modifyMember(
+        uint8 memberId,
+        address newAddress,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+    {
+        // Validate input parameters
+        if (newAddress == address(0)) {
+            revert MemberOperationRejected("Invalid new address provided");
+        }
+
+        // Check if member exists
+        address previousAddress = _memberIdToAddress[memberId];
+        if (previousAddress == address(0)) {
+            revert MemberOperationRejected("Member does not exist");
+        }
+
+        // Check if new address is already a member (and it's not the same member)
+        uint8 existingMemberId = addressToMemberId[newAddress];
+        if (existingMemberId != 0 && existingMemberId != memberId) {
+            revert MemberOperationRejected("New address is already assigned to another member");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(memberId, newAddress);
+
+        // Compute deterministic nonce from operation data and salt
+        AdminOperationType operationType = AdminOperationType.ModifyMember;
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to modify member");
+        }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
+
+        // Update mappings
+        // Remove old address mapping
+        addressToMemberId[previousAddress] = 0;
+        // Add new address mapping
+        addressToMemberId[newAddress] = memberId;
+        // Update member address
+        _memberIdToAddress[memberId] = newAddress;
+
+        // Emit event
+        emit MemberModified(memberId, previousAddress, newAddress);
+    }
+
+    /**
+     * @notice Removes members from the organization
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     *      Members are also automatically removed from all groups they belong to.
+     * @param memberIds The array of member IDs to remove
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function removeMembers(uint8[] memory memberIds, uint256 salt, uint256 chainId, bytes memory signatures) public {
+        // Validate input parameters
+        if (memberIds.length == 0) {
+            revert MemberOperationRejected("Must specify at least one member ID");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(memberIds);
+
+        // Compute deterministic nonce from operation data and salt
+        AdminOperationType operationType = AdminOperationType.RemoveMembers;
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to remove members");
+        }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
+
+        // Preallocate member addresses for event
+        address[] memory memberAddresses = new address[](memberIds.length);
+
+        // Remove members from organization and all groups
+        for (uint256 i = 0; i < memberIds.length; ++i) {
+            // Get member ID and address
+            uint8 memberId = memberIds[i];
+            address memberAddress = _memberIdToAddress[memberId];
+
+            // Case: Member does not exist
+            if (memberAddress == address(0)) {
+                revert MemberOperationRejected("Member does not exist");
+            }
+
+            // Preallocate member addresses for event
+            memberAddresses[i] = memberAddress;
+
+            // Remove member from organization mappings
+            _memberIdToAddress[memberId] = address(0);
+            addressToMemberId[memberAddress] = 0;
+        }
+
+        // Emit event
+        emit MembersRemoved(memberIds, memberAddresses);
     }
 
     /**
