@@ -20,6 +20,15 @@ contract OnchainCustodyOrganization {
     }
 
     /**
+     * @notice Enum to specify the type of admin operation being performed
+     */
+    enum AdminOperationType {
+        UpdateAdmin,
+        CreateGroup,
+        ModifyGroup
+    }
+
+    /**
      * @notice Structure to define admin permissions
      */
     struct AdminPermission {
@@ -193,13 +202,13 @@ contract OnchainCustodyOrganization {
 
     /**
      * @notice Computes a deterministic nonce for admin operations from operation data and salt
-     * @param operationType A string identifier for the type of operation (e.g., "updateAdmin")
+     * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
      * @return The computed nonce
      */
     function computeAdminNonce(
-        string memory operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt
     )
@@ -234,7 +243,7 @@ contract OnchainCustodyOrganization {
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
         // Compute deterministic nonce from operation data and salt
-        string memory operationType = "updateAdmin";
+        AdminOperationType operationType = AdminOperationType.UpdateAdmin;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
         // Validate and consume nonce for replay protection
@@ -308,7 +317,7 @@ contract OnchainCustodyOrganization {
         bytes memory operationData = abi.encode(groupId, memberIds);
 
         // Compute deterministic nonce from operation data and salt
-        string memory operationType = "createGroup";
+        AdminOperationType operationType = AdminOperationType.CreateGroup;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
         // Validate and consume nonce for replay protection
@@ -377,7 +386,7 @@ contract OnchainCustodyOrganization {
         bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
 
         // Compute deterministic nonce from operation data and salt
-        string memory operationType = "modifyGroup";
+        AdminOperationType operationType = AdminOperationType.ModifyGroup;
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
         // Validate and consume nonce for replay protection
@@ -418,7 +427,7 @@ contract OnchainCustodyOrganization {
      * @notice Validates that the provided signatures meet the admin authorization requirements
      * @dev This function verifies that the signatures are from authorized admin members/group
      *      and meet the required voting threshold
-     * @param operationType A string identifier for the type of operation (e.g., "updateAdmin")
+     * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
@@ -426,7 +435,7 @@ contract OnchainCustodyOrganization {
      * @return True if the signatures are valid and meet the threshold, false otherwise
      */
     function _validateAdminAuthorization(
-        string memory operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId,
@@ -607,14 +616,14 @@ contract OnchainCustodyOrganization {
 
     /**
      * @notice Creates a hash of the admin operation for signature verification using EIP-712 typed data
-     * @param operationType A string identifier for the type of operation
+     * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt The user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection
      * @return The hash of the admin operation formatted for ERC-1271 signature verification
      */
     function _getAdminOperationHash(
-        string memory operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId
@@ -627,9 +636,9 @@ contract OnchainCustodyOrganization {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "AdminOperation(string operationType,bytes operationData,uint256 salt,uint256 chainId,address organization)"
+                    "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 chainId,address organization)"
                 ),
-                keccak256(bytes(operationType)),
+                uint8(operationType),
                 keccak256(operationData),
                 salt,
                 chainId,
