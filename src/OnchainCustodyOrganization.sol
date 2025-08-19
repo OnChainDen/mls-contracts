@@ -300,7 +300,7 @@ contract OnchainCustodyOrganization {
         if (adminMemberAddress == address(0)) return false;
 
         // Extract signer address from signature using ERC-1271 compatible verification
-        address signer = _getAdminSigner(signatures, operationHash);
+        address signer = _getAdminSigner(signatures);
 
         // Check if signer is the admin member
         if (signer != adminMemberAddress) return false;
@@ -338,7 +338,7 @@ contract OnchainCustodyOrganization {
             bytes memory signature = _extractAdminSignature(signatures, i);
 
             // Extract signer address from signature using ERC-1271 compatible verification
-            address signer = _getAdminSigner(signature, operationHash);
+            address signer = _getAdminSigner(signature);
 
             // Skip if signer is invalid
             if (signer == address(0)) continue;
