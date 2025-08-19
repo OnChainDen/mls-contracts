@@ -25,7 +25,8 @@ contract OnchainCustodyOrganization {
     enum AdminOperationType {
         UpdateAdmin,
         CreateGroup,
-        ModifyGroup
+        ModifyGroup,
+        RemoveGroup
     }
 
     /**
@@ -110,6 +111,12 @@ contract OnchainCustodyOrganization {
      * @param removedMemberIds The member IDs that were removed from the group
      */
     event GroupModified(uint8 indexed groupId, uint8[] addedMemberIds, uint8[] removedMemberIds);
+
+    /**
+     * @notice Emitted when a group is removed
+     * @param groupId The ID of the removed group
+     */
+    event GroupRemoved(uint8 indexed groupId);
 
     /**
      * @notice Emitted when a group operation is rejected due to invalid parameters
@@ -421,6 +428,48 @@ contract OnchainCustodyOrganization {
 
         // Emit event
         emit GroupModified(groupId, membersToAdd, membersToRemove);
+    }
+
+    /**
+     * @notice Removes an existing group by marking it as not existing
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     * @param groupId The ID of the group to remove
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public {
+        // Check if group exists
+        if (!_groupIdToExists[groupId]) {
+            revert GroupOperationRejected("Group does not exist");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(groupId);
+
+        // Compute deterministic nonce from operation data and salt
+        AdminOperationType operationType = AdminOperationType.RemoveGroup;
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate and consume nonce for replay protection
+        if (_usedAdminNonces[nonce]) {
+            revert AdminNonceAlreadyUsed(nonce);
+        }
+
+        // Mark nonce as used
+        _usedAdminNonces[nonce] = true;
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to remove group");
+        }
+
+        // Mark group as not existing
+        _groupIdToExists[groupId] = false;
+
+        // Emit event
+        emit GroupRemoved(groupId);
     }
 
     /**
