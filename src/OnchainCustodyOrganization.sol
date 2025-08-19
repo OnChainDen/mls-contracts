@@ -87,6 +87,27 @@ contract OnchainCustodyOrganization {
      */
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
+    /**
+     * @notice Emitted when a group is created
+     * @param groupId The ID of the created group
+     * @param memberIds The initial member IDs in the group
+     */
+    event GroupCreated(uint8 indexed groupId, uint8[] memberIds);
+
+    /**
+     * @notice Emitted when a group is modified (members added or removed)
+     * @param groupId The ID of the modified group
+     * @param addedMemberIds The member IDs that were added to the group
+     * @param removedMemberIds The member IDs that were removed from the group
+     */
+    event GroupModified(uint8 indexed groupId, uint8[] addedMemberIds, uint8[] removedMemberIds);
+
+    /**
+     * @notice Emitted when a group operation is rejected due to invalid parameters
+     * @param reason The reason for the rejection
+     */
+    error GroupOperationRejected(string reason);
+
     mapping(uint8 => address) private _memberIdToAddress;
 
     /**
@@ -94,9 +115,8 @@ contract OnchainCustodyOrganization {
      */
     mapping(address => uint8) public addressToMemberId;
 
-    mapping(uint8 => uint8[]) private _groupIdToMemberIds;
-    mapping(uint8 => uint8[]) private _memberIdToGroupIds;
     mapping(uint8 => mapping(uint8 => bool)) private _groupIdToMemberIdToInGroup;
+    mapping(uint8 => bool) private _groupIdToExists;
 
     Policies.Policy[] private _policies;
 
@@ -146,6 +166,15 @@ contract OnchainCustodyOrganization {
      */
     function isAdminNonceUsed(uint256 nonce) external view returns (bool) {
         return _usedAdminNonces[nonce];
+    }
+
+    /**
+     * @notice Gets the address of a member by their ID
+     * @param memberId The ID of the member
+     * @return The address of the member
+     */
+    function getMemberAddress(uint8 memberId) external view returns (address) {
+        return _memberIdToAddress[memberId];
     }
 
     /**
@@ -232,6 +261,141 @@ contract OnchainCustodyOrganization {
             newAdminId,
             adminPermission.votingThreshold
         );
+    }
+
+    /**
+     * @notice Creates a new group with the specified member IDs
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     * @param groupId The ID for the new group
+     * @param memberIds The array of member IDs to include in the group
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function createGroup(
+        uint8 groupId,
+        uint8[] memory memberIds,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+    {
+        // Validate input parameters
+        if (memberIds.length == 0) {
+            revert GroupOperationRejected("Group must have at least one member");
+        }
+
+        // Check if group already exists (has members)
+        if (_groupIdToExists[groupId]) {
+            revert GroupOperationRejected("Group ID already exists");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(groupId, memberIds);
+
+        // Compute deterministic nonce from operation data and salt
+        string memory operationType = "createGroup";
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate and consume nonce for replay protection
+        if (_usedAdminNonces[nonce]) {
+            revert AdminNonceAlreadyUsed(nonce);
+        }
+
+        // Mark nonce as used
+        _usedAdminNonces[nonce] = true;
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to create group");
+        }
+
+        // Update member-to-group mappings and group membership flags
+        for (uint256 i = 0; i < memberIds.length; ++i) {
+            uint8 memberId = memberIds[i];
+            if (_memberIdToAddress[memberId] == address(0)) {
+                revert GroupOperationRejected("Invalid member ID provided");
+            }
+
+            // Mark member as being in the group
+            _groupIdToMemberIdToInGroup[groupId][memberId] = true;
+        }
+
+        // Emit event
+        emit GroupCreated(groupId, memberIds);
+    }
+
+    /**
+     * @notice Modifies an existing group by adding or removing members
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     * @param groupId The ID of the group to modify
+     * @param membersToAdd Array of member IDs to add to the group
+     * @param membersToRemove Array of member IDs to remove from the group
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function modifyGroup(
+        uint8 groupId,
+        uint8[] memory membersToAdd,
+        uint8[] memory membersToRemove,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+    {
+        // Check if group exists
+        if (!_groupIdToExists[groupId]) {
+            revert GroupOperationRejected("Group does not exist");
+        }
+
+        // Validate that we're actually making changes
+        if (membersToAdd.length == 0 && membersToRemove.length == 0) {
+            revert GroupOperationRejected("Must specify members to add or remove");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
+
+        // Compute deterministic nonce from operation data and salt
+        string memory operationType = "modifyGroup";
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate and consume nonce for replay protection
+        if (_usedAdminNonces[nonce]) {
+            revert AdminNonceAlreadyUsed(nonce);
+        }
+
+        // Mark nonce as used
+        _usedAdminNonces[nonce] = true;
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to modify group");
+        }
+
+        // Add new members
+        for (uint256 i = 0; i < membersToAdd.length; ++i) {
+            uint8 memberId = membersToAdd[i];
+            if (_memberIdToAddress[memberId] == address(0)) {
+                revert GroupOperationRejected("Invalid member ID provided");
+            }
+
+            // Mark member as being in the group
+            _groupIdToMemberIdToInGroup[groupId][memberId] = true;
+        }
+
+        // Remove members
+        for (uint256 i = 0; i < membersToRemove.length; ++i) {
+            _groupIdToMemberIdToInGroup[groupId][membersToRemove[i]] = false;
+        }
+
+        // Emit event
+        emit GroupModified(groupId, membersToAdd, membersToRemove);
     }
 
     /**
