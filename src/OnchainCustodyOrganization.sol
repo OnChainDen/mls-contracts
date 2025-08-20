@@ -29,7 +29,8 @@ contract OnchainCustodyOrganization {
         RemoveGroup,
         AddMembers,
         ModifyMember,
-        RemoveMembers
+        RemoveMembers,
+        ModifyPolicies
     }
 
     /**
@@ -142,6 +143,14 @@ contract OnchainCustodyOrganization {
      * @param memberAddresses The addresses of the removed members
      */
     event MembersRemoved(uint8[] memberIds, address[] memberAddresses);
+
+    /**
+     * @notice Emitted when the organization's policies are modified
+     * @param previousPoliciesHash The hash of the previous policies array
+     * @param newPoliciesHash The hash of the new policies array
+     * @param newPoliciesCount The number of policies in the new policies array
+     */
+    event PoliciesModified(bytes32 previousPoliciesHash, bytes32 newPoliciesHash, uint256 newPoliciesCount);
 
     /**
      * @notice Emitted when a group operation is rejected due to invalid parameters
@@ -696,6 +705,64 @@ contract OnchainCustodyOrganization {
 
         // Emit event
         emit MembersRemoved(memberIds, memberAddresses);
+    }
+
+    /**
+     * @notice Modifies the organization's policies
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     *      The new policies array completely replaces the existing policies array, maintaining order importance.
+     * @param newPolicies The new array of policies to set for the organization
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function modifyPolicies(
+        Policies.Policy[] memory newPolicies,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+    {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newPolicies);
+
+        // Compute deterministic nonce from operation data and salt
+        AdminOperationType operationType = AdminOperationType.ModifyPolicies;
+        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+
+        // Validate that the current admin has authorized this operation
+        bool isAuthorized = _validateAdminAuthorization(operationType, operationData, salt, chainId, signatures, nonce);
+        if (!isAuthorized) {
+            revert AdminOperationRejected("Insufficient authorization to modify policies");
+        }
+
+        // Mark nonce as used after successful validation
+        _usedAdminNonces[nonce] = true;
+
+        // Store hash of previous policies for the event
+        bytes32 previousPoliciesHash = _getPoliciesHash(_policies);
+
+        // Replace the entire policies array with the new one
+        delete _policies;
+        for (uint256 i = 0; i < newPolicies.length; ++i) {
+            _policies.push(newPolicies[i]);
+        }
+
+        // Compute hash of new policies for the event
+        bytes32 newPoliciesHash = _getPoliciesHash(_policies);
+
+        // Emit event
+        emit PoliciesModified(previousPoliciesHash, newPoliciesHash, newPolicies.length);
+    }
+
+    /**
+     * @notice Computes a hash of the policies array for event logging and comparison
+     * @param policies The policies array to hash
+     * @return The hash of the policies array
+     */
+    function _getPoliciesHash(Policies.Policy[] memory policies) internal pure returns (bytes32) {
+        return keccak256(abi.encode(policies));
     }
 
     /**
