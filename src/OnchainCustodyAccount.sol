@@ -28,6 +28,18 @@ contract OnchainCustodyAccount {
     mapping(uint256 => bool) private _usedNonces;
 
     /**
+     * @notice Modifier to restrict function access to the guardian address only
+     */
+    modifier onlyGuardian() {
+        OnchainCustodyOrganization organization = OnchainCustodyOrganization(onchainCustodyAddress);
+        address guardian = organization.guardian();
+        if (msg.sender != guardian) {
+            revert UnauthorizedCaller(msg.sender, guardian);
+        }
+        _;
+    }
+
+    /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
      * @param value The value of the transaction
@@ -90,6 +102,13 @@ contract OnchainCustodyAccount {
     error InvalidChainId(uint256 expected, uint256 provided);
 
     /**
+     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
+     * @param caller The address that attempted to call the function
+     * @param guardian The current guardian address
+     */
+    error UnauthorizedCaller(address caller, address guardian);
+
+    /**
      * @notice Checks if a nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
@@ -141,6 +160,7 @@ contract OnchainCustodyAccount {
         bytes memory signatures
     )
         public
+        onlyGuardian
     {
         // Validate chain ID for cross-chain replay protection
         if (chainId != block.chainid) {
@@ -193,6 +213,7 @@ contract OnchainCustodyAccount {
         bytes memory signatures
     )
         public
+        onlyGuardian
     {
         // Validate chain ID for cross-chain replay protection
         if (chainId != block.chainid) {

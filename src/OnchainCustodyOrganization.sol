@@ -30,7 +30,8 @@ contract OnchainCustodyOrganization {
         AddMembers,
         ModifyMember,
         RemoveMembers,
-        ModifyPolicies
+        ModifyPolicies,
+        UpdateGuardian
     }
 
     /**
@@ -46,6 +47,11 @@ contract OnchainCustodyOrganization {
      * @notice The current admin permission configuration
      */
     AdminPermission public adminPermission;
+
+    /**
+     * @notice The guardian address that can execute functions on both organization and account contracts
+     */
+    address public guardian;
 
     /**
      * @notice Mapping of nonces for replay protection in admin operations. Each nonce can only be used once.
@@ -100,6 +106,20 @@ contract OnchainCustodyOrganization {
      * @param provided The provided chain ID
      */
     error InvalidAdminChainId(uint256 expected, uint256 provided);
+
+    /**
+     * @notice Emitted when the guardian address is updated
+     * @param previousGuardian The previous guardian address
+     * @param newGuardian The new guardian address
+     */
+    event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
+
+    /**
+     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
+     * @param caller The address that attempted to call the function
+     * @param guardian The current guardian address
+     */
+    error UnauthorizedCaller(address caller, address guardian);
 
     /**
      * @notice Emitted when a group is created
@@ -187,6 +207,16 @@ contract OnchainCustodyOrganization {
     Policies.Policy[] private _policies;
 
     mapping(address => bool) private _whitelistedAddresses;
+
+    /**
+     * @notice Modifier to restrict function access to the guardian address only
+     */
+    modifier onlyGuardian() {
+        if (msg.sender != guardian) {
+            revert UnauthorizedCaller(msg.sender, guardian);
+        }
+        _;
+    }
 
     /**
      * @notice Checks if a member is in a group
@@ -307,6 +337,7 @@ contract OnchainCustodyOrganization {
         bytes memory signatures
     )
         public
+        onlyGuardian
     {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
@@ -356,6 +387,7 @@ contract OnchainCustodyOrganization {
         bytes memory signatures
     )
         public
+        onlyGuardian
         returns (uint8 groupId)
     {
         // Validate input parameters
@@ -410,6 +442,7 @@ contract OnchainCustodyOrganization {
         bytes memory signatures
     )
         public
+        onlyGuardian
     {
         // Check if group exists
         if (!_groupIdToExists[groupId]) {
@@ -455,7 +488,7 @@ contract OnchainCustodyOrganization {
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public {
+    function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public onlyGuardian {
         // Check if group exists
         if (!_groupIdToExists[groupId]) {
             revert GroupOperationRejected("Group does not exist");
@@ -490,6 +523,7 @@ contract OnchainCustodyOrganization {
         bytes memory signatures
     )
         public
+        onlyGuardian
         returns (uint8[] memory memberIds)
     {
         // Validate input parameters
@@ -554,6 +588,7 @@ contract OnchainCustodyOrganization {
         bytes memory signatures
     )
         public
+        onlyGuardian
     {
         // Validate input parameters
         if (newAddress == address(0)) {
@@ -599,7 +634,15 @@ contract OnchainCustodyOrganization {
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeMembers(uint8[] memory memberIds, uint256 salt, uint256 chainId, bytes memory signatures) public {
+    function removeMembers(
+        uint8[] memory memberIds,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+        onlyGuardian
+    {
         // Validate input parameters
         if (memberIds.length == 0) {
             revert MemberOperationRejected("Must specify at least one member ID");
@@ -653,6 +696,7 @@ contract OnchainCustodyOrganization {
         bytes memory signatures
     )
         public
+        onlyGuardian
     {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newPolicies);
@@ -674,6 +718,44 @@ contract OnchainCustodyOrganization {
 
         // Emit event
         emit PoliciesModified(previousPoliciesHash, newPoliciesHash, newPolicies.length);
+    }
+
+    /**
+     * @notice Updates the guardian address for the organization
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     * @param newGuardian The new guardian address
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function updateGuardian(
+        address newGuardian,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+        onlyGuardian
+    {
+        // Validate input parameters
+        if (newGuardian == address(0)) {
+            revert AdminOperationRejected("Guardian address cannot be zero address");
+        }
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newGuardian);
+
+        // Validate that the current admin has authorized this operation
+        _validateAdminAuthorization(AdminOperationType.UpdateGuardian, operationData, salt, chainId, signatures);
+
+        // Store previous guardian for the event
+        address previousGuardian = guardian;
+
+        // Update guardian address
+        guardian = newGuardian;
+
+        // Emit event
+        emit GuardianUpdated(previousGuardian, newGuardian);
     }
 
     /**
