@@ -274,7 +274,7 @@ contract OnchainCustodyAccount {
         for (uint256 i = 0; i < policies.length; i++) {
             // Case: Current policy does not apply to transaction
             // Skip to next policy
-            if (!_doesPolicyApplyToTransaction(onchainCustody, policies[i], to, value, data, msg.sender)) {
+            if (!onchainCustody.doesPolicyApplyToTransaction(policies[i], address(this), to, value, data, msg.sender)) {
                 continue;
             }
 
@@ -289,7 +289,7 @@ contract OnchainCustodyAccount {
             if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
                 // Get transaction hash for signature verification
                 bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
-                uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
+                uint256 requiredApprovals = onchainCustody.getRequiredApprovals(policies[i]);
                 uint256 validApprovals = _getValidApprovals(onchainCustody, policies[i], signatures, txHash);
 
                 // Case: Transaction does not have enough valid approvals
@@ -340,7 +340,7 @@ contract OnchainCustodyAccount {
         for (uint256 i = 0; i < policies.length; i++) {
             // Case: Current policy does not apply to transaction
             // Skip to next policy
-            if (!_doesPolicyApplyToTransaction(onchainCustody, policies[i], to, value, data, msg.sender)) {
+            if (!onchainCustody.doesPolicyApplyToTransaction(policies[i], address(this), to, value, data, msg.sender)) {
                 continue;
             }
 
@@ -377,7 +377,7 @@ contract OnchainCustodyAccount {
             if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
                 // Get transaction hash for signature verification
                 bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
-                uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
+                uint256 requiredApprovals = onchainCustody.getRequiredApprovals(policies[i]);
                 uint256 validApprovals = _getValidApprovals(onchainCustody, policies[i], signatures, txHash);
 
                 // Case: Transaction does not have enough valid rejections
@@ -396,396 +396,6 @@ contract OnchainCustodyAccount {
         // Case: No policies match the transaction
         // If no policies match, reject the rejection attempt
         revert TransactionRejectedByPolicy("No applicable policy found for transaction rejection");
-    }
-
-    /**
-     * @notice Checks if a policy applies to the given transaction
-     * @param onchainCustody The custody contract instance
-     * @param policy The policy to check
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param initiator The initiator of the transaction
-     * @return True if the policy applies to the transaction, false otherwise
-     */
-    function _doesPolicyApplyToTransaction(
-        OnchainCustodyOrganization onchainCustody,
-        Policies.Policy memory policy,
-        address to,
-        uint256 value,
-        bytes memory data,
-        address initiator
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: Transaction doesn't match policy's source accounts filter
-        if (!_doesTransactionMatchPolicySourceAccounts(policy)) {
-            return false;
-        }
-
-        // Case: Transaction doesn't match policy's transaction initiator filter
-        if (!_doesTransactionMatchPolicyInitiator(onchainCustody, policy, initiator)) {
-            return false;
-        }
-
-        // Case: Transaction doesn't match policy's transaction type filter
-        if (!_doesTransactionMatchPolicyTransactionType(policy, to, value, data)) {
-            return false;
-        }
-
-        // Case: Transaction doesn't match policy's transaction destination filter
-        if (!_doesTransactionMatchPolicyDestination(onchainCustody, policy, to, value, data)) {
-            return false;
-        }
-
-        // Case: Transaction matches all filters
-        return true;
-    }
-
-    /**
-     * @notice Checks if the transaction matches the source account filter
-     * @param policy The policy to check
-     * @return True if the transaction matches the source account filter, false otherwise
-     */
-    function _doesTransactionMatchPolicySourceAccounts(Policies.Policy memory policy) internal view returns (bool) {
-        // Case: The policy matches transactions sent from any account
-        if (policy.anySourceAccount) return true;
-
-        // Case: The policy matches transactions sent from a list of specific source accounts
-        // Check if this account is in the list of specific source accounts
-        for (uint8 i = 0; i < policy.sourceAccountAddresses.length; ++i) {
-            address sourceAccount = policy.sourceAccountAddresses[i];
-            // Case: The policy matches transactions sent from a list of specific source accounts,
-            //       and this account is in the list
-            if (sourceAccount == address(this)) return true;
-        }
-
-        // Case: The policy matches transactions sent from a list of specific source accounts,
-        //       but this account is not in the list
-        return false;
-    }
-
-    /**
-     * @notice Checks if the transaction matches the initiator filter
-     * @param onchainCustody The custody contract instance
-     * @param policy The policy to check
-     * @param initiatorAddress The address of the initiator of the transaction
-     * @return True if the transaction matches the initiator filter, false otherwise
-     */
-    function _doesTransactionMatchPolicyInitiator(
-        OnchainCustodyOrganization onchainCustody,
-        Policies.Policy memory policy,
-        address initiatorAddress
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: The policy matches transactions with any initiator
-        if (policy.anyInitiator) return true;
-
-        // Case: The policy matches transactions made by a specific individual, and that inidividual
-        //        is the initiator of this transaction
-        if (
-            policy.initiatorType == Policies.ApproverType.Member
-                && onchainCustody.addressToMemberId(initiatorAddress) == policy.initiatorId
-        ) return true;
-
-        // Case: The policy matches transactions made by any individual from a specific group, and the initiator
-        //       is in that group
-        if (
-            policy.initiatorType == Policies.ApproverType.Group
-                && onchainCustody.isMemberInGroup(initiatorAddress, policy.initiatorId)
-        ) return true;
-
-        // Case: The policy does not match this transaction
-        return false;
-    }
-
-    /**
-     * @notice Checks if the transaction matches the transaction type filter
-     * @param policy The policy to check
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @return True if the transaction matches the transaction type filter, false otherwise
-     */
-    function _doesTransactionMatchPolicyTransactionType(
-        Policies.Policy memory policy,
-        address to,
-        uint256 value,
-        bytes memory data
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // Case: The policy matches any type of transaction
-        if (policy.transactionType == Policies.TransactionType.Any) return true;
-
-        // Case: Policy matches only transactions that are token transfers
-        if (policy.transactionType == Policies.TransactionType.TokenTransfers) {
-            // Case: The transaction is not a token transfer
-            if (!_isTransactionTokenTransfer(data, value)) return false;
-
-            // Case: The Policy matches only transactions that are token transfers that are of a
-            //       specific token, and the transaction is not transferring that token
-            if (!_doesTransactionMatchPolicyToken(policy, to, data)) {
-                return false;
-            }
-
-            // Case: The policy matches only transactions that are token transfers that are of a
-            //       specific token, and the transaction is transferring that token, but the
-            //       transaction amount is less than the amount threshold
-            if (!_doesTransactionMatchPolicyTransferAmount(policy, data, value)) {
-                return false;
-            }
-        }
-        // Case: The policy matches only transactions that are contract interactions that are not token transfers
-        else if (policy.transactionType == Policies.TransactionType.ContractInteractions) {
-            // Case: The policy matches only transactions that are contract interactions that are not token transfers,
-            //       but the transaction is a token transfer
-            if (_isTransactionTokenTransfer(data, value)) return false;
-
-            // Case: The policy matches only transactions that are contract interactions that call a specific function,
-            //       but the transaction is not calling that function
-            if (!_doesTransactionMatchPolicyFunction(policy, data)) {
-                return false;
-            }
-        }
-
-        // Case: The policy does not fail to match the transaction based on the transaction type filters
-        return true;
-    }
-
-    /**
-     * @notice Checks if the transaction matches the token filter
-     * @param policy The policy to check
-     * @param to The destination address of the transaction
-     * @param data The data of the transaction
-     * @return True if the transaction matches the token filter, false otherwise
-     */
-    function _doesTransactionMatchPolicyToken(
-        Policies.Policy memory policy,
-        address to,
-        bytes memory data
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // Case: Policy matches transfers of any token
-        if (policy.anyToken) return true;
-
-        address transferToken = _extractTokenAddress(to, data);
-
-        // Case: Policy matches transfers of the same token the transaction is transferring
-        if (transferToken == policy.tokenAddress) return true;
-
-        // Case: The policy matches transfers of a specific token, but the transaction is transferring a different token
-        return false;
-    }
-
-    /**
-     * @notice Checks if the transaction amount meets the threshold requirements
-     * @param policy The policy to check
-     * @param data The data of the transaction
-     * @param value The value of the transaction
-     * @return True if the transaction matches the transfer amount filter, false otherwise
-     */
-    function _doesTransactionMatchPolicyTransferAmount(
-        Policies.Policy memory policy,
-        bytes memory data,
-        uint256 value
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // Case: Policy matches token transfers regardless of amount transferred
-        if (!policy.hasAmountThreshold) return true;
-
-        uint256 transferAmount = _extractTransferAmount(data, value);
-
-        // Case: Policy matches token transfers below an amount threshold, and the transaction is below the threshold
-        if (transferAmount < policy.amountThreshold) return true;
-
-        // Case: Policy matches token transfers below an amount threshold, and the transaction is above or equal to the
-        //       threshold
-        return false;
-    }
-
-    /**
-     * @notice Checks if the transaction matches the function selector filter
-     * @param policy The policy to check
-     * @param data The data of the transaction
-     * @return True if the transaction matches the function selector filter, false otherwise
-     */
-    function _doesTransactionMatchPolicyFunction(
-        Policies.Policy memory policy,
-        bytes memory data
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // Case: Policy matches any function
-        if (policy.anyFunction) return true;
-
-        // Case: Policy matches only transactions that call a specific function, but the transaction is not calling
-        //       a function
-        if (data.length < 4) return false;
-
-        // Case: Policy matches only transactions that call a specific function, and the transaction is calling
-        //       a function
-        // Check if the transaction is calling the function specified in the policy
-        bytes4 selector = bytes4(data);
-        for (uint256 i = 0; i < policy.allowedFunctions.length; i++) {
-            // Case: The transaction is calling the function specified in the policy
-            if (policy.allowedFunctions[i].selector == selector) {
-                return true;
-            }
-        }
-
-        // Case: The policy matches only transactions that call a specific function, and the transaction is not calling
-        //       the function specified in the policy
-        return false;
-    }
-
-    /**
-     * @notice Checks if the transaction matches the destination filter
-     * @param onchainCustody The custody contract instance
-     * @param policy The policy to check
-     * @param to The destination address of the transaction
-     * @param data The data of the transaction
-     * @return True if the transaction matches the destination filter, false otherwise
-     */
-    function _doesTransactionMatchPolicyDestination(
-        OnchainCustodyOrganization onchainCustody,
-        Policies.Policy memory policy,
-        address to,
-        uint256 value,
-        bytes memory data
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: Policy matches transaction to any address
-        if (policy.destinationType == Policies.DestinationType.Any) return true;
-
-        // Determine the actual destination address based on transaction type
-        address actualDestination = _getActualDestination(to, data, value);
-
-        // Case: Policy matches only transactions that are sent to whitelisted addresses
-        if (policy.destinationType == Policies.DestinationType.WhitelistedOnly) {
-            return onchainCustody.isAddressWhitelisted(actualDestination);
-        }
-
-        // Case: Policy matches only transactions that are sent to non-whitelisted addresses
-        if (policy.destinationType == Policies.DestinationType.NonWhitelistedOnly) {
-            return !onchainCustody.isAddressWhitelisted(actualDestination);
-        }
-
-        // Case: Policy matches only transactions that are sent to a specific list of addresses
-        if (policy.destinationType == Policies.DestinationType.CustomList) {
-            for (uint256 i = 0; i < policy.customDestinations.length; ++i) {
-                if (policy.customDestinations[i] == actualDestination) {
-                    return true;
-                }
-            }
-        }
-
-        // Case: The policy does not match the transaction destination
-        return false;
-    }
-
-    /**
-     * @notice Gets the actual destination address of a transaction
-     * @dev For contract interactions and native transfers, returns the `to` address.
-     *      For ERC-20 transfers, extracts and returns the recipient address from the transaction data.
-     * @param to The destination address of the transaction
-     * @param data The data of the transaction
-     * @param value The value of the transaction
-     * @return The actual destination address
-     */
-    function _getActualDestination(address to, bytes memory data, uint256 value) internal pure returns (address) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0) {
-            return to;
-        }
-
-        // Case: The transaction is a contract interaction
-        if (!_isTransactionTokenTransfer(data, value)) {
-            return to;
-        }
-
-        // Case: The transaction is an ERC-20 token transfer
-        // Extract the recipient address from the transfer function call
-        return _extractTokenRecipient(data);
-    }
-
-    /**
-     * @notice Extracts the recipient address from an ERC-20 transfer transaction
-     * @dev This function assumes that the transaction is an ERC-20 token transfer
-     * @param data The data of the transaction
-     * @return The recipient address
-     */
-    function _extractTokenRecipient(bytes memory data) internal pure returns (address) {
-        // Case: Transaction data is too short to contain a valid selector
-        if (data.length < 36) {
-            return address(0);
-        }
-
-        bytes4 selector = bytes4(data);
-
-        // Case: The transaction is calling the `transfer` function
-        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
-            // transfer(address to, uint256 amount)
-            // The recipient is the first parameter after the selector
-            address recipient;
-            /* solhint-disable no-inline-assembly */
-            assembly {
-                // Load recipient (memory location of `data` + 4 bytes to skip the function selector )
-                recipient := mload(add(data, 4))
-            }
-            return recipient;
-        }
-
-        // Case: The transaction is calling the `transferFrom` function
-        if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
-            // Case: Transaction data is too short to contain a valid recipient
-            // Note: The recipient is the second address parameter after the selector
-            if (data.length < 68) {
-                return address(0);
-            }
-            address recipient;
-            /* solhint-disable no-inline-assembly */
-            assembly {
-                recipient := mload(add(data, 36)) // Skip selector (4) + from address (32)
-            }
-            return recipient;
-        }
-
-        // Case: The transaction is not a valid ERC-20 transfer
-        return address(0);
-    }
-
-    /**
-     * @notice Gets the number of required approvals for a policy
-     * @param policy The policy to check
-     * @return The number of required approvals for the policy
-     */
-    function _getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
-        // Case: Policy requires a single approval from a member
-        if (policy.approverType == Policies.ApproverType.Member) {
-            return 1;
-        }
-
-        // Case: Policy requires a threshold number of approvals from any individual
-        return policy.approvalThreshold;
     }
 
     /**
@@ -839,7 +449,7 @@ contract OnchainCustodyAccount {
             }
 
             // Check if signer is authorized based on policy
-            if (_isSignerAuthorizedForPolicy(onchainCustody, policy, signer)) {
+            if (onchainCustody.isSignerAuthorizedForPolicy(policy, signer)) {
                 ++validApprovals;
             }
         }
@@ -868,43 +478,6 @@ contract OnchainCustodyAccount {
             signer := mload(add(signature, 20))
         }
         return signer;
-    }
-
-    /**
-     * @notice Checks if a signer is authorized for the given policy
-     * @param onchainCustody The custody contract instance
-     * @param policy The policy to check against
-     * @param signer The signer address to validate
-     * @return True if the signer is authorized, false otherwise
-     */
-    function _isSignerAuthorizedForPolicy(
-        OnchainCustodyOrganization onchainCustody,
-        Policies.Policy memory policy,
-        address signer
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Get the member ID for the signer
-        uint8 memberId = onchainCustody.addressToMemberId(signer);
-
-        // Case: Signer is not a member of the organization
-        if (memberId == 0) {
-            return false;
-        }
-
-        // Case: Policy requires approval from a specific member
-        if (policy.approverType == Policies.ApproverType.Member) {
-            return memberId == policy.approverId;
-        }
-
-        // Case: Policy requires approval from any member of a specific group
-        if (policy.approverType == Policies.ApproverType.Group) {
-            return onchainCustody.isMemberInGroup(memberId, policy.approverId);
-        }
-
-        return false;
     }
 
     /**
@@ -947,49 +520,9 @@ contract OnchainCustodyAccount {
             }
 
             // Check if signer is authorized as a transaction initiator based on policy
-            if (_isSignerAuthorizedAsInitiator(onchainCustody, policy, signer)) {
+            if (onchainCustody.isSignerAuthorizedAsInitiator(policy, signer)) {
                 return true;
             }
-        }
-
-        return false;
-    }
-
-    /**
-     * @notice Checks if a signer is authorized as a transaction initiator for the given policy
-     * @param onchainCustody The custody contract instance
-     * @param policy The policy to check against
-     * @param signer The signer address to validate
-     * @return True if the signer is authorized as an initiator, false otherwise
-     */
-    function _isSignerAuthorizedAsInitiator(
-        OnchainCustodyOrganization onchainCustody,
-        Policies.Policy memory policy,
-        address signer
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: Policy allows any initiator
-        if (policy.anyInitiator) return true;
-
-        // Get the member ID for the signer
-        uint8 memberId = onchainCustody.addressToMemberId(signer);
-
-        // Case: Signer is not a member of the organization
-        if (memberId == 0) {
-            return false;
-        }
-
-        // Case: Policy requires initiation by a specific member
-        if (policy.initiatorType == Policies.ApproverType.Member) {
-            return memberId == policy.initiatorId;
-        }
-
-        // Case: Policy requires initiation by any member of a specific group
-        if (policy.initiatorType == Policies.ApproverType.Group) {
-            return onchainCustody.isMemberInGroup(memberId, policy.initiatorId);
         }
 
         return false;
@@ -1051,86 +584,6 @@ contract OnchainCustodyAccount {
             ),
             structHash
         );
-    }
-
-    /**
-     * @notice Checks if a transaction is a token transfer
-     * @param data The data of the transaction
-     * @param value The value of the transaction
-     * @return True if the transaction is a token transfer, false otherwise
-     */
-    function _isTransactionTokenTransfer(bytes memory data, uint256 value) internal pure returns (bool) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0 && value > 0) {
-            return true;
-        }
-
-        // Case: The transaction data is too short to call a function
-        if (data.length < 4) {
-            return false;
-        }
-
-        // Case: The transaction is not a native token transfer, but the value is greater than zero
-        if (value > 0) {
-            return false;
-        }
-
-        // Case: The transaction is a token transfer
-        bytes4 selector = bytes4(data);
-
-        // Case: The transaction is a token transfer
-        if (
-            selector == bytes4(keccak256("transfer(address,uint256)"))
-                || selector == bytes4(keccak256("transferFrom(address,address,uint256)"))
-        ) {
-            return true;
-        }
-
-        // Case: The transaction is not a token transfer
-        return false;
-    }
-
-    /**
-     * @notice Extracts the token address from a transfer transaction
-     * @dev This function assumes that the transaction is a token transfer
-     * @param to The destination address of the transaction
-     * @param data The data of the transaction
-     * @return The token address
-     */
-    function _extractTokenAddress(address to, bytes memory data) internal pure returns (address) {
-        if (data.length == 0) {
-            return address(0); // Native token
-        }
-        return to; // ERC20 token address
-    }
-
-    /**
-     * @notice Extracts the transfer amount from a transaction
-     * @dev This function assumes that the transaction is a token transfer
-     * @param data The data of the transaction
-     * @param value The value of the transaction
-     * @return The transfer amount
-     */
-    function _extractTransferAmount(bytes memory data, uint256 value) internal pure returns (uint256) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0) {
-            return value; // Native token transfer
-        }
-
-        // Case: The ERC-20 transaction is transfering a value of zero
-        // Note: 4 bytes selector + 32 bytes address + 32 bytes amount = 68 bytes
-        if (data.length < 68) {
-            return 0;
-        }
-
-        // Case: The ERC-20 transaction is transfering a non-zero value
-        bytes32 amount;
-
-        /* solhint-disable no-inline-assembly */
-        assembly {
-            amount := mload(add(data, 68)) // Skip selector (4) + address (32) + read amount (32)
-        }
-        return uint256(amount);
     }
 
     /**
