@@ -31,7 +31,8 @@ contract OnchainCustodyOrganization {
         ModifyMember,
         RemoveMembers,
         ModifyPolicies,
-        UpdateGuardian
+        UpdateGuardian,
+        ModifyWhitelist
     }
 
     /**
@@ -173,6 +174,13 @@ contract OnchainCustodyOrganization {
     event PoliciesModified(bytes32 previousPoliciesHash, bytes32 newPoliciesHash, uint256 newPoliciesCount);
 
     /**
+     * @notice Emitted when the organization's address whitelist is modified
+     * @param addedAddresses The addresses that were added to the whitelist
+     * @param removedAddresses The addresses that were removed from the whitelist
+     */
+    event WhitelistModified(address[] addedAddresses, address[] removedAddresses);
+
+    /**
      * @notice Emitted when a group operation is rejected due to invalid parameters
      * @param reason The reason for the rejection
      */
@@ -183,6 +191,12 @@ contract OnchainCustodyOrganization {
      * @param reason The reason for the rejection
      */
     error MemberOperationRejected(string reason);
+
+    /**
+     * @notice Emitted when a whitelist operation is rejected due to invalid parameters
+     * @param reason The reason for the rejection
+     */
+    error WhitelistOperationRejected(string reason);
 
     mapping(uint8 => address) private _memberIdToAddress;
 
@@ -756,6 +770,50 @@ contract OnchainCustodyOrganization {
 
         // Emit event
         emit GuardianUpdated(previousGuardian, newGuardian);
+    }
+
+    /**
+     * @notice Modifies the organization's address whitelist by adding and/or removing addresses
+     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
+     *      This is a batch operation that can add multiple addresses and remove multiple addresses in a single call.
+     * @param addressesToAdd The array of addresses to add to the whitelist
+     * @param addressesToRemove The array of addresses to remove from the whitelist
+     * @param salt A user-provided salt for nonce computation
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures from the current admin authorizing this operation
+     */
+    function modifyWhitelist(
+        address[] memory addressesToAdd,
+        address[] memory addressesToRemove,
+        uint256 salt,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        public
+        onlyGuardian
+    {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(addressesToAdd, addressesToRemove);
+
+        // Validate that the current admin has authorized this operation
+        _validateAdminAuthorization(AdminOperationType.ModifyWhitelist, operationData, salt, chainId, signatures);
+
+        // Add addresses to whitelist
+        for (uint256 i = 0; i < addressesToAdd.length; ++i) {
+            address addressToAdd = addressesToAdd[i];
+            if (addressToAdd == address(0)) {
+                revert WhitelistOperationRejected("Cannot add zero address to whitelist");
+            }
+            _whitelistedAddresses[addressToAdd] = true;
+        }
+
+        // Remove addresses from whitelist
+        for (uint256 i = 0; i < addressesToRemove.length; ++i) {
+            _whitelistedAddresses[addressesToRemove[i]] = false;
+        }
+
+        // Emit event
+        emit WhitelistModified(addressesToAdd, addressesToRemove);
     }
 
     /**
