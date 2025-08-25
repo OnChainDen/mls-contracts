@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import { OnchainCustodyOrganization } from "./OnchainCustodyOrganization.sol";
 import { Policies } from "./libraries/Policies.sol";
+import { SignatureUtils } from "./libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
@@ -817,7 +818,7 @@ contract OnchainCustodyAccount {
 
         // Iterate over signatures to count valid approvals
         for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = _extractSignature(signatures, i);
+            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
             // Extract signer address from signature using ERC-1271 compatible verification
             address signer = _getSigner(signature, txHash);
@@ -844,44 +845,6 @@ contract OnchainCustodyAccount {
         }
 
         return validApprovals;
-    }
-
-    /**
-     * @notice Extracts a single signature from the signatures array
-     * @param signatures The signatures to extract from
-     * @param index The index of the signature to extract
-     * @return The extracted signature
-     */
-    function _extractSignature(bytes memory signatures, uint256 index) internal pure returns (bytes memory) {
-        // Initialize a new bytes array to store the signature
-        // Note: The signature is 65 bytes (r: 32, s: 32, v: 1)
-        bytes memory extractedSignature = new bytes(65);
-        uint256 signatureStartPosition = index * 65;
-
-        /* solhint-disable no-inline-assembly */
-        assembly {
-            // Initialize pointer to the start of the signatures array
-            // Note: First 32 bytes (0x20) are the length of the array
-            let signaturesPosition := add(signatures, 0x20)
-
-            // Initialize pointer to the start of the extracted signature
-            // Note: First 32 bytes (0x20) are the length of the array
-            let extractedSignaturePosition := add(extractedSignature, 0x20)
-
-            // Copy first 32 bytes (r)
-            mstore(extractedSignaturePosition, mload(add(signaturesPosition, signatureStartPosition)))
-            // Copy second 32 bytes (s)
-            mstore(
-                add(extractedSignaturePosition, 0x20), mload(add(signaturesPosition, add(signatureStartPosition, 0x20)))
-            )
-            // Copy last byte (v)
-            mstore8(
-                add(extractedSignaturePosition, 0x40),
-                byte(0, mload(add(signaturesPosition, add(signatureStartPosition, 0x40))))
-            )
-        }
-
-        return extractedSignature;
     }
 
     /**
@@ -970,7 +933,7 @@ contract OnchainCustodyAccount {
 
         // Iterate over signatures to find at least one valid initiator signature
         for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = _extractSignature(signatures, i);
+            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
             // Extract signer address from signature using ERC-1271 compatible verification
             address signer = _getSigner(signature, txHash);
