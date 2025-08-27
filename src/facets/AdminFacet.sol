@@ -5,8 +5,6 @@ import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
 import { SignatureUtils } from "../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { IDiamondCut } from "../diamond/interfaces/IDiamondCut.sol";
-import { LibDiamond } from "../diamond/libraries/LibDiamond.sol";
 
 /**
  * @title Admin Facet
@@ -40,14 +38,6 @@ contract AdminFacet {
      * @param newGuardian The new guardian address
      */
     event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
-
-    /**
-     * @notice Emitted when a diamond cut operation is performed
-     * @param _diamondCut Array of FacetCut structs containing facet addresses and function selectors
-     * @param _init The address of the initialization contract
-     * @param _calldata The calldata for the initialization function
-     */
-    event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
     /**
      * @notice Emitted when an admin operation is rejected due to insufficient authorization
@@ -239,39 +229,6 @@ contract AdminFacet {
 
         // Emit event
         emit GuardianUpdated(previousGuardian, newGuardian);
-    }
-
-    /**
-     * @notice Cuts the diamond by adding/replacing/removing facets
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     * @param facetCuts Array of FacetCut structs containing facet addresses and function selectors
-     * @param init The address of the initialization contract
-     * @param initCalldata The calldata for the initialization function
-     * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
-     * @param signatures The signatures from the current admin authorizing this operation
-     */
-    function diamondCut(
-        IDiamondCut.FacetCut[] calldata facetCuts,
-        address init,
-        bytes calldata initCalldata,
-        uint256 salt,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        external
-        onlyGuardian
-    {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(facetCuts, init, initCalldata);
-
-        // Validate that the current admin has authorized this operation
-        _validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.DiamondCut, operationData, salt, chainId, signatures
-        );
-
-        // Perform the diamond cut operations
-        _performDiamondCut(facetCuts, init, initCalldata);
     }
 
     /**
@@ -489,52 +446,5 @@ contract AdminFacet {
             ),
             structHash
         );
-    }
-
-    /**
-     * @notice Performs the diamond cut operations without additional validation
-     * @dev This function directly calls LibDiamond functions to modify the diamond
-     * @param facetCuts Array of FacetCut structs containing facet addresses and function selectors
-     * @param init The address of the initialization contract
-     * @param initCalldata The calldata for the initialization function
-     */
-    function _performDiamondCut(
-        IDiamondCut.FacetCut[] calldata facetCuts,
-        address init,
-        bytes calldata initCalldata
-    )
-        internal
-    {
-        // Convert calldata to memory for processing
-        IDiamondCut.FacetCut[] memory facetCutsMemory = new IDiamondCut.FacetCut[](facetCuts.length);
-        for (uint256 i = 0; i < facetCuts.length; i++) {
-            facetCutsMemory[i] = facetCuts[i];
-        }
-
-        // Perform the diamond cut operations
-        for (uint256 facetIndex; facetIndex < facetCutsMemory.length; facetIndex++) {
-            IDiamondCut.FacetCutAction action = facetCutsMemory[facetIndex].action;
-            if (action == IDiamondCut.FacetCutAction.Add) {
-                LibDiamond.addFunctions(
-                    facetCutsMemory[facetIndex].facetAddress, facetCutsMemory[facetIndex].functionSelectors
-                );
-            } else if (action == IDiamondCut.FacetCutAction.Replace) {
-                LibDiamond.replaceFunctions(
-                    facetCutsMemory[facetIndex].facetAddress, facetCutsMemory[facetIndex].functionSelectors
-                );
-            } else if (action == IDiamondCut.FacetCutAction.Remove) {
-                LibDiamond.removeFunctions(
-                    facetCutsMemory[facetIndex].facetAddress, facetCutsMemory[facetIndex].functionSelectors
-                );
-            } else {
-                revert("AdminFacet: Invalid FacetCutAction");
-            }
-        }
-
-        // Emit the DiamondCut event (we need to define it locally since we can't emit from LibDiamond)
-        emit DiamondCut(facetCutsMemory, init, initCalldata);
-
-        // Initialize the diamond cut if init address is provided
-        LibDiamond.initializeDiamondCut(init, initCalldata);
     }
 }
