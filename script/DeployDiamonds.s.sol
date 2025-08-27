@@ -22,7 +22,6 @@ import { OrganizationStorage } from "../src/storage/OrganizationStorage.sol";
 import { IDiamondCut } from "../src/diamond/interfaces/IDiamondCut.sol";
 import { DiamondCutFacet } from "../src/diamond/facets/DiamondCutFacet.sol";
 import { DiamondLoupeFacet } from "../src/diamond/facets/DiamondLoupeFacet.sol";
-import { OwnershipFacet } from "../src/diamond/facets/OwnershipFacet.sol";
 import { Diamond } from "../src/diamond/Diamond.sol";
 
 /**
@@ -42,7 +41,6 @@ contract DeployDiamonds is Script {
         // Deploy diamond facets (diamond infrastructure)
         DiamondCutFacet diamondCutFacet = new DiamondCutFacet();
         DiamondLoupeFacet diamondLoupeFacet = new DiamondLoupeFacet();
-        OwnershipFacet ownershipFacet = new OwnershipFacet();
 
         // Deploy application facets
         AdminFacet adminFacet = new AdminFacet();
@@ -54,7 +52,6 @@ contract DeployDiamonds is Script {
 
         console.log("DiamondCutFacet deployed at:", address(diamondCutFacet));
         console.log("DiamondLoupeFacet deployed at:", address(diamondLoupeFacet));
-        console.log("OwnershipFacet deployed at:", address(ownershipFacet));
         console.log("AdminFacet deployed at:", address(adminFacet));
         console.log("MembersFacet deployed at:", address(membersFacet));
         console.log("GroupsFacet deployed at:", address(groupsFacet));
@@ -70,7 +67,7 @@ contract DeployDiamonds is Script {
         console.log("AccountInit deployed at:", address(accountInit));
 
         // Prepare initial facet cuts for organization diamond (diamond infrastructure)
-        IDiamondCut.FacetCut[] memory organizationInitialCuts = new IDiamondCut.FacetCut[](3);
+        IDiamondCut.FacetCut[] memory organizationInitialCuts = new IDiamondCut.FacetCut[](2);
 
         // Diamond Cut Facet
         bytes4[] memory diamondCutSelectors = new bytes4[](1);
@@ -94,38 +91,27 @@ contract DeployDiamonds is Script {
             functionSelectors: diamondLoupeSelectors
         });
 
-        // Ownership Facet
-        bytes4[] memory ownershipSelectors = new bytes4[](2);
-        ownershipSelectors[0] = OwnershipFacet.transferOwnership.selector;
-        ownershipSelectors[1] = OwnershipFacet.owner.selector;
-        organizationInitialCuts[2] = IDiamondCut.FacetCut({
-            facetAddress: address(ownershipFacet),
-            action: IDiamondCut.FacetCutAction.Add,
-            functionSelectors: ownershipSelectors
-        });
-
         // Deploy organization diamond with initial cuts
         OnchainCustodyOrganizationDiamond organizationDiamond =
-            new OnchainCustodyOrganizationDiamond(organizationInitialCuts, Diamond.DiamondArgs({ owner: deployer }));
+            new OnchainCustodyOrganizationDiamond(organizationInitialCuts, Diamond.DiamondArgs({ dummy: 0 }));
         console.log("Organization Diamond deployed at:", address(organizationDiamond));
 
         // Deploy account diamond with same initial cuts
         OnchainCustodyAccountDiamond accountDiamond =
-            new OnchainCustodyAccountDiamond(organizationInitialCuts, Diamond.DiamondArgs({ owner: deployer }));
+            new OnchainCustodyAccountDiamond(organizationInitialCuts, Diamond.DiamondArgs({ dummy: 0 }));
         console.log("Account Diamond deployed at:", address(accountDiamond));
 
         // Prepare facet cuts for organization diamond (application facets)
         IDiamondCut.FacetCut[] memory organizationFacetCuts = new IDiamondCut.FacetCut[](5);
 
         // Admin Facet
-        bytes4[] memory adminSelectors = new bytes4[](7);
+        bytes4[] memory adminSelectors = new bytes4[](6);
         adminSelectors[0] = AdminFacet.adminPermission.selector;
         adminSelectors[1] = AdminFacet.guardian.selector;
         adminSelectors[2] = AdminFacet.isAdminNonceUsed.selector;
         adminSelectors[3] = AdminFacet.computeAdminNonce.selector;
         adminSelectors[4] = AdminFacet.updateAdmin.selector;
         adminSelectors[5] = AdminFacet.updateGuardian.selector;
-        adminSelectors[6] = AdminFacet.diamondCut.selector;
 
         organizationFacetCuts[0] = IDiamondCut.FacetCut({
             facetAddress: address(adminFacet),

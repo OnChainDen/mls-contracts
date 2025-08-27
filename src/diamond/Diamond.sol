@@ -10,19 +10,17 @@ pragma solidity ^0.8.24;
 import "./libraries/LibDiamond.sol";
 import "./interfaces/IDiamondLoupe.sol";
 import "./interfaces/IDiamondCut.sol";
-import "./interfaces/IERC173.sol";
 import "./interfaces/IERC165.sol";
 
 contract Diamond {
     // more arguments are added to this struct
     // this avoids stack too deep errors
     struct DiamondArgs {
-        address owner;
+        uint256 dummy; // Placeholder to avoid empty struct
     }
 
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
         LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0), 0, 0, new bytes(0));
-        LibDiamond.setContractOwner(_args.owner);
 
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
 
@@ -30,7 +28,6 @@ contract Diamond {
         ds.supportedInterfaces[type(IERC165).interfaceId] = true;
         ds.supportedInterfaces[type(IDiamondCut).interfaceId] = true;
         ds.supportedInterfaces[type(IDiamondLoupe).interfaceId] = true;
-        ds.supportedInterfaces[type(IERC173).interfaceId] = true;
     }
 
     // Find facet for function that is called and execute the
