@@ -7,11 +7,11 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
- * @title Admin Facet
+ * @title Organization Admin Facet
  * @notice Handles admin-related operations for the OnchainCustodyOrganization diamond
  * @author Den Technologies Inc
  */
-contract AdminFacet {
+contract OrganizationAdminFacet {
     using OrganizationStorage for OrganizationStorage.Layout;
 
     /**
@@ -157,7 +157,7 @@ contract AdminFacet {
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
         // Validate that the current admin has authorized this change
-        _validateAdminAuthorization(
+        validateAdminAuthorization(
             OrganizationStorage.AdminOperationType.UpdateAdmin, operationData, salt, chainId, signatures
         );
 
@@ -215,7 +215,7 @@ contract AdminFacet {
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation
-        _validateAdminAuthorization(
+        validateAdminAuthorization(
             OrganizationStorage.AdminOperationType.UpdateGuardian, operationData, salt, chainId, signatures
         );
 
@@ -242,14 +242,14 @@ contract AdminFacet {
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures to validate
      */
-    function _validateAdminAuthorization(
+    function validateAdminAuthorization(
         OrganizationStorage.AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId,
         bytes memory signatures
     )
-        internal
+        public
     {
         // Compute deterministic nonce from operation data and salt
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);

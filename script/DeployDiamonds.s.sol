@@ -7,7 +7,8 @@ import { console } from "forge-std/console.sol";
 import { OnchainCustodyOrganizationDiamond } from "../src/OnchainCustodyOrganizationDiamond.sol";
 import { OnchainCustodyAccountDiamond } from "../src/OnchainCustodyAccountDiamond.sol";
 
-import { AdminFacet } from "../src/facets/AdminFacet.sol";
+import { OrganizationAdminFacet } from "../src/facets/OrganizationAdminFacet.sol";
+import { AccountAdminFacet } from "../src/facets/AccountAdminFacet.sol";
 import { MembersFacet } from "../src/facets/MembersFacet.sol";
 import { GroupsFacet } from "../src/facets/GroupsFacet.sol";
 import { PolicyFacet } from "../src/facets/PolicyFacet.sol";
@@ -43,7 +44,8 @@ contract DeployDiamonds is Script {
         DiamondLoupeFacet diamondLoupeFacet = new DiamondLoupeFacet();
 
         // Deploy application facets
-        AdminFacet adminFacet = new AdminFacet();
+        OrganizationAdminFacet organizationAdminFacet = new OrganizationAdminFacet();
+        AccountAdminFacet accountAdminFacet = new AccountAdminFacet();
         MembersFacet membersFacet = new MembersFacet();
         GroupsFacet groupsFacet = new GroupsFacet();
         PolicyFacet policyFacet = new PolicyFacet();
@@ -52,7 +54,8 @@ contract DeployDiamonds is Script {
 
         console.log("DiamondCutFacet deployed at:", address(diamondCutFacet));
         console.log("DiamondLoupeFacet deployed at:", address(diamondLoupeFacet));
-        console.log("AdminFacet deployed at:", address(adminFacet));
+        console.log("OrganizationAdminFacet deployed at:", address(organizationAdminFacet));
+        console.log("AccountAdminFacet deployed at:", address(accountAdminFacet));
         console.log("MembersFacet deployed at:", address(membersFacet));
         console.log("GroupsFacet deployed at:", address(groupsFacet));
         console.log("PolicyFacet deployed at:", address(policyFacet));
@@ -104,17 +107,18 @@ contract DeployDiamonds is Script {
         // Prepare facet cuts for organization diamond (application facets)
         IDiamondCut.FacetCut[] memory organizationFacetCuts = new IDiamondCut.FacetCut[](5);
 
-        // Admin Facet
-        bytes4[] memory adminSelectors = new bytes4[](6);
-        adminSelectors[0] = AdminFacet.adminPermission.selector;
-        adminSelectors[1] = AdminFacet.guardian.selector;
-        adminSelectors[2] = AdminFacet.isAdminNonceUsed.selector;
-        adminSelectors[3] = AdminFacet.computeAdminNonce.selector;
-        adminSelectors[4] = AdminFacet.updateAdmin.selector;
-        adminSelectors[5] = AdminFacet.updateGuardian.selector;
+        // Organization Admin Facet
+        bytes4[] memory adminSelectors = new bytes4[](7);
+        adminSelectors[0] = OrganizationAdminFacet.adminPermission.selector;
+        adminSelectors[1] = OrganizationAdminFacet.guardian.selector;
+        adminSelectors[2] = OrganizationAdminFacet.isAdminNonceUsed.selector;
+        adminSelectors[3] = OrganizationAdminFacet.computeAdminNonce.selector;
+        adminSelectors[4] = OrganizationAdminFacet.updateAdmin.selector;
+        adminSelectors[5] = OrganizationAdminFacet.updateGuardian.selector;
+        adminSelectors[6] = OrganizationAdminFacet.validateAdminAuthorization.selector;
 
         organizationFacetCuts[0] = IDiamondCut.FacetCut({
-            facetAddress: address(adminFacet),
+            facetAddress: address(organizationAdminFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: adminSelectors
         });
@@ -200,7 +204,7 @@ contract DeployDiamonds is Script {
         console.log("Organization diamond configured");
 
         // Prepare facet cuts for account diamond
-        IDiamondCut.FacetCut[] memory accountFacetCuts = new IDiamondCut.FacetCut[](1);
+        IDiamondCut.FacetCut[] memory accountFacetCuts = new IDiamondCut.FacetCut[](2);
 
         // Transaction Facet
         bytes4[] memory transactionSelectors = new bytes4[](5);
@@ -214,6 +218,18 @@ contract DeployDiamonds is Script {
             facetAddress: address(transactionFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: transactionSelectors
+        });
+
+        // Account Admin Facet
+        bytes4[] memory accountAdminSelectors = new bytes4[](3);
+        accountAdminSelectors[0] = AccountAdminFacet.guardian.selector;
+        accountAdminSelectors[1] = AccountAdminFacet.getOrganizationAddress.selector;
+        accountAdminSelectors[2] = AccountAdminFacet.validateAdminAuthorization.selector;
+
+        accountFacetCuts[1] = IDiamondCut.FacetCut({
+            facetAddress: address(accountAdminFacet),
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: accountAdminSelectors
         });
 
         // Initialize account diamond
