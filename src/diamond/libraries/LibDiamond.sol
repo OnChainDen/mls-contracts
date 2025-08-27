@@ -238,24 +238,8 @@ library LibDiamond {
 
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
-    // Internal function version of diamondCut with guardian and admin protection
-    function diamondCut(
-        IDiamondCut.FacetCut[] memory _diamondCut,
-        address _init,
-        bytes memory _calldata,
-        uint256 salt,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        internal
-    {
-        // Enforce guardian protection
-        enforceIsGuardian();
-
-        // Validate admin authorization
-        bytes memory operationData = abi.encode(_diamondCut, _init, _calldata);
-        validateAdminAuthorization(operationData, salt, chainId, signatures);
-
+    // Internal function version of diamondCut without admin protection (for constructor use)
+    function diamondCut(IDiamondCut.FacetCut[] memory _diamondCut, address _init, bytes memory _calldata) internal {
         // Perform the diamond cut
         for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
             IDiamondCut.FacetCutAction action = _diamondCut[facetIndex].action;
