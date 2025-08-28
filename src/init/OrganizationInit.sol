@@ -10,34 +10,49 @@ import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
  */
 contract OrganizationInit {
     /**
+     * @notice Emitted when an invalid admin address is provided
+     */
+    error InvalidAdminAddress();
+
+    /**
      * @notice Initializes the organization contract with admin and guardian
-     * @param adminType The admin type (Member or Group)
-     * @param adminId The admin ID (member ID or group ID)
-     * @param votingThreshold The voting threshold (only used when adminType is Group)
+     * @dev Creates the first admin member with ID 1 and sets up admin permissions
+     * @param adminAddress The address of the admin member
      * @param guardian The guardian address
      */
     function init(
-        OrganizationStorage.AdminType adminType,
-        uint8 adminId,
-        uint256 votingThreshold,
+        address adminAddress,
         address guardian
     )
         external
     {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationStorage.Layout storage layout = OrganizationStorage.layout();
 
-        // Initialize admin permission
-        l.adminPermission = OrganizationStorage.AdminPermission({
-            adminType: adminType,
+        // Validate admin address
+        if (adminAddress == address(0)) {
+            revert InvalidAdminAddress();
+        }
+
+        // Initialize counters
+        layout.nextMemberId = 1;
+        layout.nextGroupId = 1;
+
+        // Create the first admin member with ID 1
+        uint8 adminId = 1;
+        layout.memberIdToAddress[adminId] = adminAddress;
+        layout.addressToMemberId[adminAddress] = adminId;
+        
+        // Increment the next member ID
+        layout.nextMemberId++;
+
+        // Initialize admin permission (always Member type with voting threshold 0)
+        layout.adminPermission = OrganizationStorage.AdminPermission({
+            adminType: OrganizationStorage.AdminType.Member,
             adminId: adminId,
-            votingThreshold: adminType == OrganizationStorage.AdminType.Group ? votingThreshold : 0
+            votingThreshold: 0
         });
 
         // Initialize guardian
-        l.guardian = guardian;
-
-        // Initialize counters
-        l.nextMemberId = 1;
-        l.nextGroupId = 1;
+        layout.guardian = guardian;
     }
 }

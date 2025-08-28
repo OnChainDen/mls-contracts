@@ -18,8 +18,6 @@ import { TransactionFacet } from "../src/facets/TransactionFacet.sol";
 import { OrganizationInit } from "../src/init/OrganizationInit.sol";
 import { AccountInit } from "../src/init/AccountInit.sol";
 
-import { OrganizationStorage } from "../src/storage/OrganizationStorage.sol";
-
 import { IDiamondCut } from "../src/diamond/interfaces/IDiamondCut.sol";
 import { DiamondCutFacet } from "../src/diamond/facets/DiamondCutFacet.sol";
 import { DiamondLoupeFacet } from "../src/diamond/facets/DiamondLoupeFacet.sol";
@@ -189,9 +187,7 @@ contract DeployDiamonds is Script {
         // Initialize organization diamond
         bytes memory organizationInitData = abi.encodeWithSelector(
             OrganizationInit.init.selector,
-            OrganizationStorage.AdminType.Member,
-            uint8(1), // Admin will be member ID 1
-            uint256(0), // No voting threshold for individual admin
+            deployer, // Admin member address (deployer will be the initial admin member)
             deployer // Guardian is the deployer
         );
 
