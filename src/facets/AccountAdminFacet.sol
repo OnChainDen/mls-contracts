@@ -80,18 +80,6 @@ contract AccountAdminFacet {
     }
 
     /**
-     * @notice Gets the current guardian address from the organization
-     * @return The current guardian address
-     */
-    function guardian() external view returns (address) {
-        AccountStorage.Layout storage l = AccountStorage.layout();
-        if (l.organizationAddress == address(0)) {
-            revert OrganizationNotSet();
-        }
-        return IOrganizationAdminFacet(l.organizationAddress).guardian();
-    }
-
-    /**
      * @notice Gets the organization address that this account is associated with
      * @return The organization address
      */

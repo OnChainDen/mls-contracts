@@ -34,37 +34,6 @@ contract GroupsFacet {
     event GroupRemoved(uint8 indexed groupId);
 
     /**
-     * @notice Emitted when an admin operation is rejected due to insufficient authorization
-     * @param reason The reason for the rejection
-     */
-    error AdminOperationRejected(string reason);
-
-    /**
-     * @notice Emitted when an admin operation has insufficient signatures
-     * @param required The number of required signatures
-     * @param provided The number of provided signatures
-     */
-    error InsufficientAdminSignatures(uint256 required, uint256 provided);
-
-    /**
-     * @notice Emitted when an admin operation has an invalid signature
-     */
-    error InvalidAdminSignature();
-
-    /**
-     * @notice Emitted when an admin operation uses a nonce that has already been used
-     * @param nonce The nonce that was attempted to be used
-     */
-    error AdminNonceAlreadyUsed(uint256 nonce);
-
-    /**
-     * @notice Emitted when an admin operation has wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidAdminChainId(uint256 expected, uint256 provided);
-
-    /**
      * @notice Emitted when a function is called by an unauthorized address (not the guardian)
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
@@ -126,25 +95,6 @@ contract GroupsFacet {
      */
     function groupExists(uint8 groupId) external view returns (bool) {
         return OrganizationStorage.layout().groupIdToExists[groupId];
-    }
-
-    /**
-     * @notice Computes a deterministic nonce for admin operations from operation data and salt
-     * @param operationType The type of operation being performed
-     * @param operationData The ABI-encoded data of the operation
-     * @param salt A user-provided salt for nonce computation
-     * @return The computed nonce
-     */
-    function computeAdminNonce(
-        OrganizationStorage.AdminOperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return uint256(keccak256(abi.encode(address(this), operationType, keccak256(operationData), salt)));
     }
 
     /**

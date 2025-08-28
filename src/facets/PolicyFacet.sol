@@ -67,25 +67,6 @@ contract PolicyFacet {
     }
 
     /**
-     * @notice Computes a deterministic nonce for admin operations from operation data and salt
-     * @param operationType The type of operation being performed
-     * @param operationData The ABI-encoded data of the operation
-     * @param salt A user-provided salt for nonce computation
-     * @return The computed nonce
-     */
-    function computeAdminNonce(
-        OrganizationStorage.AdminOperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
-        public
-        view
-        returns (uint256)
-    {
-        return uint256(keccak256(abi.encode(address(this), operationType, keccak256(operationData), salt)));
-    }
-
-    /**
      * @notice Modifies the organization's policies
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      *      The new policies array completely replaces the existing policies array, maintaining order importance.

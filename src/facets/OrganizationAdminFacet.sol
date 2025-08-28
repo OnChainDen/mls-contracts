@@ -97,14 +97,6 @@ contract OrganizationAdminFacet {
     }
 
     /**
-     * @notice Gets the current guardian address
-     * @return The current guardian address
-     */
-    function guardian() external view returns (address) {
-        return OrganizationStorage.layout().guardian;
-    }
-
-    /**
      * @notice Checks if an admin nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
