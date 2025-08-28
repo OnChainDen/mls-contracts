@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
-import { IGuardianFacet } from "./IGuardianFacet.sol";
+import { OrganizationStorage } from "../OrganizationStorage.sol";
+import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
  * @title Organization Guardian Facet

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
-import { IAdminFacet } from "./IAdminFacet.sol";
-import { IGuardianFacet } from "./IGuardianFacet.sol";
+import { OrganizationStorage } from "../OrganizationStorage.sol";
+import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
- * @title Groups Facet
+ * @title Organization Groups Facet
  * @notice Handles group-related operations for the OnchainCustodyOrganization diamond
  * @author Den Technologies Inc
  */
-contract GroupsFacet {
+contract OrganizationGroupsFacet {
     using OrganizationStorage for OrganizationStorage.Layout;
 
     /**

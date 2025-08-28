@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
+import { OrganizationStorage } from "../organization/OrganizationStorage.sol";
 
 /**
  * @notice Interface for calling admin validation functions

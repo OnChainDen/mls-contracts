@@ -4,19 +4,19 @@ pragma solidity ^0.8.24;
 import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
 
-import { OnchainCustodyOrganizationDiamond } from "../src/OnchainCustodyOrganizationDiamond.sol";
-import { OnchainCustodyAccountDiamond } from "../src/OnchainCustodyAccountDiamond.sol";
+import { OnchainCustodyOrganizationDiamond } from "../src/organization/OnchainCustodyOrganizationDiamond.sol";
+import { OnchainCustodyAccountDiamond } from "../src/account/OnchainCustodyAccountDiamond.sol";
 
-import { OrganizationAdminFacet } from "../src/facets/OrganizationAdminFacet.sol";
-import { AccountAdminFacet } from "../src/facets/AccountAdminFacet.sol";
-import { MembersFacet } from "../src/facets/MembersFacet.sol";
-import { GroupsFacet } from "../src/facets/GroupsFacet.sol";
-import { PolicyFacet } from "../src/facets/PolicyFacet.sol";
-import { WhitelistFacet } from "../src/facets/WhitelistFacet.sol";
-import { TransactionFacet } from "../src/facets/TransactionFacet.sol";
+import { OrganizationAdminFacet } from "../src/organization/facets/OrganizationAdminFacet.sol";
+import { AccountAdminFacet } from "../src/account/facets/AccountAdminFacet.sol";
+import { OrganizationMembersFacet } from "../src/organization/facets/OrganizationMembersFacet.sol";
+import { OrganizationGroupsFacet } from "../src/organization/facets/OrganizationGroupsFacet.sol";
+import { OrganizationPolicyFacet } from "../src/organization/facets/OrganizationPolicyFacet.sol";
+import { OrganizationWhitelistFacet } from "../src/organization/facets/OrganizationWhitelistFacet.sol";
+import { AccountTransactionFacet } from "../src/account/facets/AccountTransactionFacet.sol";
 
-import { OrganizationInit } from "../src/init/OrganizationInit.sol";
-import { AccountInit } from "../src/init/AccountInit.sol";
+import { OrganizationInit } from "../src/organization/OrganizationInit.sol";
+import { AccountInit } from "../src/account/AccountInit.sol";
 
 import { IDiamondCut } from "../src/diamond/interfaces/IDiamondCut.sol";
 import { DiamondCutFacet } from "../src/diamond/facets/DiamondCutFacet.sol";
@@ -44,21 +44,21 @@ contract DeployDiamonds is Script {
         // Deploy application facets
         OrganizationAdminFacet organizationAdminFacet = new OrganizationAdminFacet();
         AccountAdminFacet accountAdminFacet = new AccountAdminFacet();
-        MembersFacet membersFacet = new MembersFacet();
-        GroupsFacet groupsFacet = new GroupsFacet();
-        PolicyFacet policyFacet = new PolicyFacet();
-        WhitelistFacet whitelistFacet = new WhitelistFacet();
-        TransactionFacet transactionFacet = new TransactionFacet();
+        OrganizationMembersFacet membersFacet = new OrganizationMembersFacet();
+        OrganizationGroupsFacet groupsFacet = new OrganizationGroupsFacet();
+        OrganizationPolicyFacet policyFacet = new OrganizationPolicyFacet();
+        OrganizationWhitelistFacet whitelistFacet = new OrganizationWhitelistFacet();
+        AccountTransactionFacet transactionFacet = new AccountTransactionFacet();
 
         console.log("DiamondCutFacet deployed at:", address(diamondCutFacet));
         console.log("DiamondLoupeFacet deployed at:", address(diamondLoupeFacet));
         console.log("OrganizationAdminFacet deployed at:", address(organizationAdminFacet));
         console.log("AccountAdminFacet deployed at:", address(accountAdminFacet));
-        console.log("MembersFacet deployed at:", address(membersFacet));
-        console.log("GroupsFacet deployed at:", address(groupsFacet));
-        console.log("PolicyFacet deployed at:", address(policyFacet));
-        console.log("WhitelistFacet deployed at:", address(whitelistFacet));
-        console.log("TransactionFacet deployed at:", address(transactionFacet));
+        console.log("OrganizationMembersFacet deployed at:", address(membersFacet));
+        console.log("OrganizationGroupsFacet deployed at:", address(groupsFacet));
+        console.log("OrganizationPolicyFacet deployed at:", address(policyFacet));
+        console.log("OrganizationWhitelistFacet deployed at:", address(whitelistFacet));
+        console.log("AccountTransactionFacet deployed at:", address(transactionFacet));
 
         // Deploy initialization contracts
         OrganizationInit organizationInit = new OrganizationInit();
@@ -122,12 +122,12 @@ contract DeployDiamonds is Script {
 
         // Members Facet
         bytes4[] memory membersSelectors = new bytes4[](6);
-        membersSelectors[0] = MembersFacet.addressToMemberId.selector;
-        membersSelectors[1] = MembersFacet.getMemberAddress.selector;
-        membersSelectors[2] = MembersFacet.memberExists.selector;
-        membersSelectors[3] = MembersFacet.addMembers.selector;
-        membersSelectors[4] = MembersFacet.modifyMember.selector;
-        membersSelectors[5] = MembersFacet.removeMembers.selector;
+        membersSelectors[0] = OrganizationMembersFacet.addressToMemberId.selector;
+        membersSelectors[1] = OrganizationMembersFacet.getMemberAddress.selector;
+        membersSelectors[2] = OrganizationMembersFacet.memberExists.selector;
+        membersSelectors[3] = OrganizationMembersFacet.addMembers.selector;
+        membersSelectors[4] = OrganizationMembersFacet.modifyMember.selector;
+        membersSelectors[5] = OrganizationMembersFacet.removeMembers.selector;
 
         organizationFacetCuts[1] = IDiamondCut.FacetCut({
             facetAddress: address(membersFacet),
@@ -139,9 +139,9 @@ contract DeployDiamonds is Script {
         bytes4[] memory groupsSelectors = new bytes4[](5);
         groupsSelectors[0] = bytes4(keccak256("isMemberInGroup(uint8,uint8)"));
         groupsSelectors[1] = bytes4(keccak256("isMemberInGroup(address,uint8)"));
-        groupsSelectors[2] = GroupsFacet.groupExists.selector;
-        groupsSelectors[3] = GroupsFacet.createGroup.selector;
-        groupsSelectors[4] = GroupsFacet.modifyGroup.selector;
+        groupsSelectors[2] = OrganizationGroupsFacet.groupExists.selector;
+        groupsSelectors[3] = OrganizationGroupsFacet.createGroup.selector;
+        groupsSelectors[4] = OrganizationGroupsFacet.modifyGroup.selector;
 
         organizationFacetCuts[2] = IDiamondCut.FacetCut({
             facetAddress: address(groupsFacet),
@@ -151,21 +151,21 @@ contract DeployDiamonds is Script {
 
         // Policy Facet
         bytes4[] memory policySelectors = new bytes4[](15);
-        policySelectors[0] = PolicyFacet.getPolicies.selector;
-        policySelectors[1] = PolicyFacet.modifyPolicies.selector;
-        policySelectors[2] = PolicyFacet.doesPolicyApplyToTransaction.selector;
-        policySelectors[3] = PolicyFacet.doesTransactionMatchPolicySourceAccounts.selector;
-        policySelectors[4] = PolicyFacet.doesTransactionMatchPolicyInitiator.selector;
-        policySelectors[5] = PolicyFacet.doesTransactionMatchPolicyTransactionType.selector;
-        policySelectors[6] = PolicyFacet.doesTransactionMatchPolicyDestination.selector;
-        policySelectors[7] = PolicyFacet.getRequiredApprovals.selector;
-        policySelectors[8] = PolicyFacet.isSignerAuthorizedForPolicy.selector;
-        policySelectors[9] = PolicyFacet.isSignerAuthorizedAsInitiator.selector;
-        policySelectors[10] = PolicyFacet.getActualDestination.selector;
-        policySelectors[11] = PolicyFacet.extractTokenRecipient.selector;
-        policySelectors[12] = PolicyFacet.isTransactionTokenTransfer.selector;
-        policySelectors[13] = PolicyFacet.extractTokenAddress.selector;
-        policySelectors[14] = PolicyFacet.extractTransferAmount.selector;
+        policySelectors[0] = OrganizationPolicyFacet.getPolicies.selector;
+        policySelectors[1] = OrganizationPolicyFacet.modifyPolicies.selector;
+        policySelectors[2] = OrganizationPolicyFacet.doesPolicyApplyToTransaction.selector;
+        policySelectors[3] = OrganizationPolicyFacet.doesTransactionMatchPolicySourceAccounts.selector;
+        policySelectors[4] = OrganizationPolicyFacet.doesTransactionMatchPolicyInitiator.selector;
+        policySelectors[5] = OrganizationPolicyFacet.doesTransactionMatchPolicyTransactionType.selector;
+        policySelectors[6] = OrganizationPolicyFacet.doesTransactionMatchPolicyDestination.selector;
+        policySelectors[7] = OrganizationPolicyFacet.getRequiredApprovals.selector;
+        policySelectors[8] = OrganizationPolicyFacet.isSignerAuthorizedForPolicy.selector;
+        policySelectors[9] = OrganizationPolicyFacet.isSignerAuthorizedAsInitiator.selector;
+        policySelectors[10] = OrganizationPolicyFacet.getActualDestination.selector;
+        policySelectors[11] = OrganizationPolicyFacet.extractTokenRecipient.selector;
+        policySelectors[12] = OrganizationPolicyFacet.isTransactionTokenTransfer.selector;
+        policySelectors[13] = OrganizationPolicyFacet.extractTokenAddress.selector;
+        policySelectors[14] = OrganizationPolicyFacet.extractTransferAmount.selector;
 
         organizationFacetCuts[3] = IDiamondCut.FacetCut({
             facetAddress: address(policyFacet),
@@ -175,8 +175,8 @@ contract DeployDiamonds is Script {
 
         // Whitelist Facet
         bytes4[] memory whitelistSelectors = new bytes4[](2);
-        whitelistSelectors[0] = WhitelistFacet.isAddressWhitelisted.selector;
-        whitelistSelectors[1] = WhitelistFacet.modifyWhitelist.selector;
+        whitelistSelectors[0] = OrganizationWhitelistFacet.isAddressWhitelisted.selector;
+        whitelistSelectors[1] = OrganizationWhitelistFacet.modifyWhitelist.selector;
 
         organizationFacetCuts[4] = IDiamondCut.FacetCut({
             facetAddress: address(whitelistFacet),
@@ -203,10 +203,10 @@ contract DeployDiamonds is Script {
 
         // Transaction Facet
         bytes4[] memory transactionSelectors = new bytes4[](4);
-        transactionSelectors[0] = TransactionFacet.isNonceUsed.selector;
-        transactionSelectors[1] = TransactionFacet.computeNonce.selector;
-        transactionSelectors[2] = TransactionFacet.executeTransaction.selector;
-        transactionSelectors[3] = TransactionFacet.rejectTransaction.selector;
+        transactionSelectors[0] = AccountTransactionFacet.isNonceUsed.selector;
+        transactionSelectors[1] = AccountTransactionFacet.computeNonce.selector;
+        transactionSelectors[2] = AccountTransactionFacet.executeTransaction.selector;
+        transactionSelectors[3] = AccountTransactionFacet.rejectTransaction.selector;
 
         accountFacetCuts[0] = IDiamondCut.FacetCut({
             facetAddress: address(transactionFacet),

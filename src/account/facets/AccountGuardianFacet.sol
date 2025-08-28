@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountStorage } from "../storage/AccountStorage.sol";
-import { IGuardianFacet } from "./IGuardianFacet.sol";
+import { AccountStorage } from "../AccountStorage.sol";
+import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
  * @title Account Guardian Facet

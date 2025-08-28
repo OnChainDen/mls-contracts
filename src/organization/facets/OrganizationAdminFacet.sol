@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
-import { SignatureUtils } from "../libraries/SignatureUtils.sol";
+import { OrganizationStorage } from "../OrganizationStorage.sol";
+import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { IAdminFacet } from "./IAdminFacet.sol";
-import { IGuardianFacet } from "./IGuardianFacet.sol";
+import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
  * @title Organization Admin Facet

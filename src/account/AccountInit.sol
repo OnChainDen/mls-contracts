@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountStorage } from "../storage/AccountStorage.sol";
+import { AccountStorage } from "./AccountStorage.sol";
 
 /**
  * @title Account Initialization

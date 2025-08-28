@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountStorage } from "../storage/AccountStorage.sol";
-import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
-import { Policies } from "../libraries/Policies.sol";
-import { SignatureUtils } from "../libraries/SignatureUtils.sol";
+import { AccountStorage } from "../AccountStorage.sol";
+import { OrganizationStorage } from "../../organization/OrganizationStorage.sol";
+import { Policies } from "../../libraries/Policies.sol";
+import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { IGuardianFacet } from "./IGuardianFacet.sol";
+import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
- * @title Transaction Facet
+ * @title Account Transaction Facet
  * @notice Handles transaction-related operations for the OnchainCustodyAccount diamond
  * @author Den Technologies Inc
  */
-contract TransactionFacet {
+contract AccountTransactionFacet {
     using AccountStorage for AccountStorage.Layout;
 
     /**

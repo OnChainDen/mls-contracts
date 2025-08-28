@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./diamond/Diamond.sol";
-import "./diamond/interfaces/IDiamondCut.sol";
+import "../diamond/Diamond.sol";
+import "../diamond/interfaces/IDiamondCut.sol";
 
 /**
  * @title Onchain Custody Organization Diamond

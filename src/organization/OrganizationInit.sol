@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
+import { OrganizationStorage } from "./OrganizationStorage.sol";
 
 /**
  * @title Organization Initialization

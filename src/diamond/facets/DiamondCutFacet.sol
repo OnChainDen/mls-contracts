@@ -9,9 +9,9 @@ pragma solidity ^0.8.24;
  */
 import "../interfaces/IDiamondCut.sol";
 import "../libraries/LibDiamond.sol";
-import "../../storage/AccountStorage.sol";
-import "../../storage/OrganizationStorage.sol";
-import "../../facets/IGuardianFacet.sol";
+import "../../account/AccountStorage.sol";
+import "../../organization/OrganizationStorage.sol";
+import "../../interfaces/IGuardianFacet.sol";
 
 /**
  * @title Admin Facet Interface
