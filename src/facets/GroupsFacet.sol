@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
 import { IAdminFacet } from "./IAdminFacet.sol";
+import { IGuardianFacet } from "./IGuardianFacet.sol";
 
 /**
  * @title Groups Facet
@@ -34,28 +35,10 @@ contract GroupsFacet {
     event GroupRemoved(uint8 indexed groupId);
 
     /**
-     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
-     * @param caller The address that attempted to call the function
-     * @param guardian The current guardian address
-     */
-    error UnauthorizedCaller(address caller, address guardian);
-
-    /**
      * @notice Emitted when a group operation is rejected due to invalid parameters
      * @param reason The reason for the rejection
      */
     error GroupOperationRejected(string reason);
-
-    /**
-     * @notice Modifier to restrict function access to the guardian address only
-     */
-    modifier onlyGuardian() {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        if (msg.sender != l.guardian) {
-            revert UnauthorizedCaller(msg.sender, l.guardian);
-        }
-        _;
-    }
 
     /**
      * @notice Checks if a member is in a group
@@ -113,9 +96,10 @@ contract GroupsFacet {
         bytes memory signatures
     )
         public
-        onlyGuardian
         returns (uint8 groupId)
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Validate input parameters
         if (memberIds.length == 0) {
             revert GroupOperationRejected("Group must have at least one member");
@@ -172,8 +156,9 @@ contract GroupsFacet {
         bytes memory signatures
     )
         public
-        onlyGuardian
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         OrganizationStorage.Layout storage l = OrganizationStorage.layout();
 
         // Check if group exists
@@ -222,7 +207,9 @@ contract GroupsFacet {
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public onlyGuardian {
+    function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         OrganizationStorage.Layout storage l = OrganizationStorage.layout();
 
         // Check if group exists

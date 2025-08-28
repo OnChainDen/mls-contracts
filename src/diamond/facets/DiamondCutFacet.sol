@@ -11,6 +11,7 @@ import "../interfaces/IDiamondCut.sol";
 import "../libraries/LibDiamond.sol";
 import "../../storage/AccountStorage.sol";
 import "../../storage/OrganizationStorage.sol";
+import "../../facets/IGuardianFacet.sol";
 
 /**
  * @title Admin Facet Interface
@@ -33,14 +34,6 @@ contract DiamondCutFacet is IDiamondCut {
      */
     error AdminValidationFailed(string reason);
 
-    /**
-     * @notice Modifier to restrict function access to the guardian address only
-     */
-    modifier onlyGuardian() {
-        LibDiamond.enforceIsGuardian();
-        _;
-    }
-
     /// @notice Add/replace/remove any number of functions and optionally execute
     ///         a function with delegatecall
     /// @param _diamondCut Contains the facet addresses and function selectors
@@ -60,8 +53,9 @@ contract DiamondCutFacet is IDiamondCut {
     )
         external
         override
-        onlyGuardian
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Validate admin authorization
         _validateAdminAuthorization(_diamondCut, _init, _calldata, salt, chainId, signatures);
 

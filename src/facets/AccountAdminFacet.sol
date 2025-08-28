@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { AccountStorage } from "../storage/AccountStorage.sol";
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
 import { IAdminFacet } from "./IAdminFacet.sol";
+import { IGuardianFacet } from "./IGuardianFacet.sol";
 
 /**
  * @title Account Admin Facet
@@ -45,13 +46,6 @@ contract AccountAdminFacet is IAdminFacet {
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
-     * @param caller The address that attempted to call the function
-     * @param guardian The current guardian address
-     */
-    error UnauthorizedCaller(address caller, address guardian);
-
-    /**
      * @notice Error thrown when the organization address is not set
      */
     error OrganizationNotSet();
@@ -60,24 +54,6 @@ contract AccountAdminFacet is IAdminFacet {
      * @notice Error thrown when the call to the organization contract fails
      */
     error OrganizationCallFailed();
-
-    /**
-     * @notice Modifier to restrict function access to the guardian address only
-     */
-    modifier onlyGuardian() {
-        AccountStorage.Layout storage l = AccountStorage.layout();
-
-        // Get guardian from organization contract
-        if (l.organizationAddress == address(0)) {
-            revert OrganizationNotSet();
-        }
-
-        address organizationGuardian = IAdminFacet(l.organizationAddress).guardian();
-        if (msg.sender != organizationGuardian) {
-            revert UnauthorizedCaller(msg.sender, organizationGuardian);
-        }
-        _;
-    }
 
     /**
      * @notice Gets the organization address that this account is associated with

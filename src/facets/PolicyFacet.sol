@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IAdminFacet } from "./IAdminFacet.sol";
+import { IGuardianFacet } from "./IGuardianFacet.sol";
 
 /**
  * @title Policy Facet
@@ -41,24 +42,6 @@ contract PolicyFacet {
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
-     * @param caller The address that attempted to call the function
-     * @param guardian The current guardian address
-     */
-    error UnauthorizedCaller(address caller, address guardian);
-
-    /**
-     * @notice Modifier to restrict function access to the guardian address only
-     */
-    modifier onlyGuardian() {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        if (msg.sender != l.guardian) {
-            revert UnauthorizedCaller(msg.sender, l.guardian);
-        }
-        _;
-    }
-
-    /**
      * @notice Gets the policies for the organization
      * @return The policies for the organization
      */
@@ -82,8 +65,9 @@ contract PolicyFacet {
         bytes memory signatures
     )
         public
-        onlyGuardian
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newPolicies);
 

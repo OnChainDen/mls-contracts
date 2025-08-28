@@ -6,6 +6,7 @@ import { SignatureUtils } from "../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { IAdminFacet } from "./IAdminFacet.sol";
+import { IGuardianFacet } from "./IGuardianFacet.sol";
 
 /**
  * @title Organization Admin Facet
@@ -72,24 +73,6 @@ contract OrganizationAdminFacet is IAdminFacet {
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
-     * @param caller The address that attempted to call the function
-     * @param guardian The current guardian address
-     */
-    error UnauthorizedCaller(address caller, address guardian);
-
-    /**
-     * @notice Modifier to restrict function access to the guardian address only
-     */
-    modifier onlyGuardian() {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        if (msg.sender != l.guardian) {
-            revert UnauthorizedCaller(msg.sender, l.guardian);
-        }
-        _;
-    }
-
-    /**
      * @notice Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
@@ -144,8 +127,9 @@ contract OrganizationAdminFacet is IAdminFacet {
         bytes memory signatures
     )
         public
-        onlyGuardian
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
@@ -190,15 +174,9 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function updateGuardian(
-        address newGuardian,
-        uint256 salt,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        public
-        onlyGuardian
-    {
+    function updateGuardian(address newGuardian, uint256 salt, uint256 chainId, bytes memory signatures) public {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Validate input parameters
         if (newGuardian == address(0)) {
             revert AdminOperationRejected("Guardian address cannot be zero address");

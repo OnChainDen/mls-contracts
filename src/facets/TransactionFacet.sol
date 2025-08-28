@@ -7,6 +7,7 @@ import { Policies } from "../libraries/Policies.sol";
 import { SignatureUtils } from "../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import { IGuardianFacet } from "./IGuardianFacet.sol";
 
 /**
  * @title Transaction Facet
@@ -84,27 +85,6 @@ contract TransactionFacet {
     error InvalidChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
-     * @param caller The address that attempted to call the function
-     * @param guardian The current guardian address
-     */
-    error UnauthorizedCaller(address caller, address guardian);
-
-    /**
-     * @notice Modifier to restrict function access to the guardian address only
-     */
-    modifier onlyGuardian() {
-        AccountStorage.Layout storage l = AccountStorage.layout();
-        // Get guardian from organization contract
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
-        address guardian = orgStorage.guardian;
-        if (msg.sender != guardian) {
-            revert UnauthorizedCaller(msg.sender, guardian);
-        }
-        _;
-    }
-
-    /**
      * @notice Checks if a nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
@@ -156,8 +136,9 @@ contract TransactionFacet {
         bytes memory signatures
     )
         public
-        onlyGuardian
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Validate chain ID for cross-chain replay protection
         if (chainId != block.chainid) {
             revert InvalidChainId(block.chainid, chainId);
@@ -209,8 +190,9 @@ contract TransactionFacet {
         bytes memory signatures
     )
         public
-        onlyGuardian
     {
+        IGuardianFacet(address(this)).enforceOnlyGuardian();
+
         // Validate chain ID for cross-chain replay protection
         if (chainId != block.chainid) {
             revert InvalidChainId(block.chainid, chainId);

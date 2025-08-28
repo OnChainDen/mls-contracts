@@ -108,14 +108,13 @@ contract DeployDiamonds is Script {
         IDiamondCut.FacetCut[] memory organizationFacetCuts = new IDiamondCut.FacetCut[](5);
 
         // Organization Admin Facet
-        bytes4[] memory adminSelectors = new bytes4[](7);
+        bytes4[] memory adminSelectors = new bytes4[](6);
         adminSelectors[0] = OrganizationAdminFacet.adminPermission.selector;
-        adminSelectors[1] = OrganizationAdminFacet.guardian.selector;
-        adminSelectors[2] = OrganizationAdminFacet.isAdminNonceUsed.selector;
-        adminSelectors[3] = OrganizationAdminFacet.computeAdminNonce.selector;
-        adminSelectors[4] = OrganizationAdminFacet.updateAdmin.selector;
-        adminSelectors[5] = OrganizationAdminFacet.updateGuardian.selector;
-        adminSelectors[6] = OrganizationAdminFacet.validateAdminAuthorization.selector;
+        adminSelectors[1] = OrganizationAdminFacet.isAdminNonceUsed.selector;
+        adminSelectors[2] = OrganizationAdminFacet.computeAdminNonce.selector;
+        adminSelectors[3] = OrganizationAdminFacet.updateAdmin.selector;
+        adminSelectors[4] = OrganizationAdminFacet.updateGuardian.selector;
+        adminSelectors[5] = OrganizationAdminFacet.validateAdminAuthorization.selector;
 
         organizationFacetCuts[0] = IDiamondCut.FacetCut({
             facetAddress: address(organizationAdminFacet),
@@ -207,12 +206,11 @@ contract DeployDiamonds is Script {
         IDiamondCut.FacetCut[] memory accountFacetCuts = new IDiamondCut.FacetCut[](2);
 
         // Transaction Facet
-        bytes4[] memory transactionSelectors = new bytes4[](5);
-        transactionSelectors[0] = TransactionFacet.onchainCustodyAddress.selector;
-        transactionSelectors[1] = TransactionFacet.isNonceUsed.selector;
-        transactionSelectors[2] = TransactionFacet.computeNonce.selector;
-        transactionSelectors[3] = TransactionFacet.executeTransaction.selector;
-        transactionSelectors[4] = TransactionFacet.rejectTransaction.selector;
+        bytes4[] memory transactionSelectors = new bytes4[](4);
+        transactionSelectors[0] = TransactionFacet.isNonceUsed.selector;
+        transactionSelectors[1] = TransactionFacet.computeNonce.selector;
+        transactionSelectors[2] = TransactionFacet.executeTransaction.selector;
+        transactionSelectors[3] = TransactionFacet.rejectTransaction.selector;
 
         accountFacetCuts[0] = IDiamondCut.FacetCut({
             facetAddress: address(transactionFacet),
@@ -221,10 +219,9 @@ contract DeployDiamonds is Script {
         });
 
         // Account Admin Facet
-        bytes4[] memory accountAdminSelectors = new bytes4[](3);
-        accountAdminSelectors[0] = AccountAdminFacet.guardian.selector;
-        accountAdminSelectors[1] = AccountAdminFacet.getOrganizationAddress.selector;
-        accountAdminSelectors[2] = AccountAdminFacet.validateAdminAuthorization.selector;
+        bytes4[] memory accountAdminSelectors = new bytes4[](2);
+        accountAdminSelectors[0] = AccountAdminFacet.getOrganizationAddress.selector;
+        accountAdminSelectors[1] = AccountAdminFacet.validateAdminAuthorization.selector;
 
         accountFacetCuts[1] = IDiamondCut.FacetCut({
             facetAddress: address(accountAdminFacet),
