@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
-import { IOrganizationAdminFacet } from "./IOrganizationAdminFacet.sol";
+import { IAdminFacet } from "./IAdminFacet.sol";
 
 /**
  * @title Groups Facet
@@ -131,7 +131,7 @@ contract GroupsFacet {
         bytes memory operationData = abi.encode(groupId, memberIds);
 
         // Validate that the current admin has authorized this operation
-        IOrganizationAdminFacet(address(this)).validateAdminAuthorization(
+        IAdminFacet(address(this)).validateAdminAuthorization(
             OrganizationStorage.AdminOperationType.CreateGroup, operationData, salt, chainId, signatures
         );
 
@@ -190,7 +190,7 @@ contract GroupsFacet {
         bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
 
         // Validate that the current admin has authorized this operation
-        IOrganizationAdminFacet(address(this)).validateAdminAuthorization(
+        IAdminFacet(address(this)).validateAdminAuthorization(
             OrganizationStorage.AdminOperationType.ModifyGroup, operationData, salt, chainId, signatures
         );
 
@@ -234,7 +234,7 @@ contract GroupsFacet {
         bytes memory operationData = abi.encode(groupId);
 
         // Validate that the current admin has authorized this operation
-        IOrganizationAdminFacet(address(this)).validateAdminAuthorization(
+        IAdminFacet(address(this)).validateAdminAuthorization(
             OrganizationStorage.AdminOperationType.RemoveGroup, operationData, salt, chainId, signatures
         );
 

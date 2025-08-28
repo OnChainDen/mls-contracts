@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
 import { Policies } from "../libraries/Policies.sol";
-import { IOrganizationAdminFacet } from "./IOrganizationAdminFacet.sol";
+import { IAdminFacet } from "./IAdminFacet.sol";
 
 /**
  * @title Policy Facet
@@ -88,7 +88,7 @@ contract PolicyFacet {
         bytes memory operationData = abi.encode(newPolicies);
 
         // Validate that the current admin has authorized this operation
-        IOrganizationAdminFacet(address(this)).validateAdminAuthorization(
+        IAdminFacet(address(this)).validateAdminAuthorization(
             OrganizationStorage.AdminOperationType.ModifyPolicies, operationData, salt, chainId, signatures
         );
 

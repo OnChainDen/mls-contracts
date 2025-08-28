@@ -3,14 +3,14 @@ pragma solidity ^0.8.24;
 
 import { AccountStorage } from "../storage/AccountStorage.sol";
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
-import { IOrganizationAdminFacet } from "./IOrganizationAdminFacet.sol";
+import { IAdminFacet } from "./IAdminFacet.sol";
 
 /**
  * @title Account Admin Facet
  * @notice Handles admin-related operations for the OnchainCustodyAccount diamond by forwarding to the organization
  * @author Den Technologies Inc
  */
-contract AccountAdminFacet {
+contract AccountAdminFacet is IAdminFacet {
     using AccountStorage for AccountStorage.Layout;
 
     /**
@@ -72,7 +72,7 @@ contract AccountAdminFacet {
             revert OrganizationNotSet();
         }
 
-        address organizationGuardian = IOrganizationAdminFacet(l.organizationAddress).guardian();
+        address organizationGuardian = IAdminFacet(l.organizationAddress).guardian();
         if (msg.sender != organizationGuardian) {
             revert UnauthorizedCaller(msg.sender, organizationGuardian);
         }
@@ -115,7 +115,7 @@ contract AccountAdminFacet {
         }
 
         // Forward the call to the organization contract
-        try IOrganizationAdminFacet(l.organizationAddress).validateAdminAuthorization(
+        try IAdminFacet(l.organizationAddress).validateAdminAuthorization(
             operationType, operationData, salt, chainId, signatures
         ) {
             return;

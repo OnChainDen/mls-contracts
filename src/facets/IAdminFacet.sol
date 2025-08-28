@@ -4,11 +4,11 @@ pragma solidity ^0.8.24;
 import { OrganizationStorage } from "../storage/OrganizationStorage.sol";
 
 /**
- * @notice Interface for calling the organization admin validation function
- * @dev This interface allows other contracts to interact with the OrganizationAdminFacet
+ * @notice Interface for calling admin validation functions
+ * @dev This interface allows other contracts to interact with admin facets
  * @author Den Technologies Inc
  */
-interface IOrganizationAdminFacet {
+interface IAdminFacet {
     /**
      * @notice Validates that the provided signatures meet the admin authorization requirements
      * @param operationType The type of operation being performed
@@ -25,10 +25,4 @@ interface IOrganizationAdminFacet {
         bytes memory signatures
     )
         external;
-
-    /**
-     * @notice Gets the current guardian address
-     * @return The current guardian address
-     */
-    function guardian() external view returns (address);
 }
