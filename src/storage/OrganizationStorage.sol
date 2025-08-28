@@ -56,6 +56,7 @@ library OrganizationStorage {
         // Groups related storage
         mapping(uint8 => mapping(uint8 => bool)) groupIdToMemberIdToInGroup;
         mapping(uint8 => bool) groupIdToExists;
+        mapping(uint8 => uint256) groupIdToMemberCount;
         uint8 nextGroupId;
         // Policies related storage
         Policies.Policy[] policies;

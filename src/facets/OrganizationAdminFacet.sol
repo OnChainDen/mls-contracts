@@ -143,6 +143,17 @@ contract OrganizationAdminFacet is IAdminFacet {
             revert AdminOperationRejected("Group admin must have a voting threshold greater than 0");
         }
 
+        // Validate that the newAdminId points to a valid member or group
+        if (newAdminType == OrganizationStorage.AdminType.Member) {
+            if (!_isValidMember(newAdminId)) {
+                revert AdminOperationRejected("Invalid member ID: member does not exist");
+            }
+        } else if (newAdminType == OrganizationStorage.AdminType.Group) {
+            if (!_isValidGroupWithMembers(newAdminId)) {
+                revert AdminOperationRejected("Invalid group ID: group does not exist or has no members");
+            }
+        }
+
         OrganizationStorage.Layout storage l = OrganizationStorage.layout();
 
         // Store previous admin configuration for the event
@@ -417,5 +428,25 @@ contract OrganizationAdminFacet is IAdminFacet {
             ),
             structHash
         );
+    }
+
+    /**
+     * @notice Checks if a member ID is valid (points to an existing member)
+     * @param memberId The member ID to validate
+     * @return True if the member exists, false otherwise
+     */
+    function _isValidMember(uint8 memberId) internal view returns (bool) {
+        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        return l.memberIdToAddress[memberId] != address(0);
+    }
+
+    /**
+     * @notice Checks if a group ID is valid and has at least one member
+     * @param groupId The group ID to validate
+     * @return True if the group exists and has members, false otherwise
+     */
+    function _isValidGroupWithMembers(uint8 groupId) internal view returns (bool) {
+        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        return l.groupIdToExists[groupId] && l.groupIdToMemberCount[groupId] > 0;
     }
 }

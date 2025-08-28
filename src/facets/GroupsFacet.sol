@@ -130,8 +130,9 @@ contract GroupsFacet {
             l.groupIdToMemberIdToInGroup[groupId][memberId] = true;
         }
 
-        // Mark group as existing
+        // Mark group as existing and set initial member count
         l.groupIdToExists[groupId] = true;
+        l.groupIdToMemberCount[groupId] = memberIds.length;
 
         // Emit event
         emit GroupCreated(groupId, memberIds);
@@ -186,13 +187,20 @@ contract GroupsFacet {
                 revert GroupOperationRejected("Invalid member ID provided");
             }
 
-            // Mark member as being in the group
-            l.groupIdToMemberIdToInGroup[groupId][memberId] = true;
+            // Only add if not already in group to avoid double counting
+            if (!l.groupIdToMemberIdToInGroup[groupId][memberId]) {
+                l.groupIdToMemberIdToInGroup[groupId][memberId] = true;
+                l.groupIdToMemberCount[groupId]++;
+            }
         }
 
         // Remove members
         for (uint256 i = 0; i < membersToRemove.length; ++i) {
-            l.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]] = false;
+            // Only remove if currently in group to avoid negative counting
+            if (l.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]]) {
+                l.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]] = false;
+                l.groupIdToMemberCount[groupId]--;
+            }
         }
 
         // Emit event
@@ -225,8 +233,9 @@ contract GroupsFacet {
             OrganizationStorage.AdminOperationType.RemoveGroup, operationData, salt, chainId, signatures
         );
 
-        // Mark group as not existing
+        // Mark group as not existing and reset member count
         l.groupIdToExists[groupId] = false;
+        l.groupIdToMemberCount[groupId] = 0;
 
         // Emit event
         emit GroupRemoved(groupId);

@@ -279,6 +279,14 @@ contract MembersFacet {
             // Preallocate member addresses for event
             memberAddresses[i] = memberAddress;
 
+            // Remove member from all groups they belong to
+            for (uint8 groupId = 0; groupId < l.nextGroupId; ++groupId) {
+                if (l.groupIdToExists[groupId] && l.groupIdToMemberIdToInGroup[groupId][memberId]) {
+                    l.groupIdToMemberIdToInGroup[groupId][memberId] = false;
+                    l.groupIdToMemberCount[groupId]--;
+                }
+            }
+
             // Remove member from organization mappings
             l.memberIdToAddress[memberId] = address(0);
             l.addressToMemberId[memberAddress] = 0;
