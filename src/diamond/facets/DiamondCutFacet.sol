@@ -95,7 +95,7 @@ contract DiamondCutFacet is IDiamondCut {
         // Determine if this is an Account diamond by checking if AccountStorage has an organization address
         AccountStorage.Layout storage accountLayout = AccountStorage.layout();
 
-        if (accountLayout.onchainCustodyAddress != address(0)) {
+        if (accountLayout.organizationAddress != address(0)) {
             // This is an Account diamond - validate through AccountAdminFacet
             try IAdminFacet(address(this)).validateAdminAuthorization(
                 OrganizationStorage.AdminOperationType.DiamondCut, operationData, salt, chainId, signatures

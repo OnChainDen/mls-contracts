@@ -68,11 +68,11 @@ contract AccountAdminFacet {
         AccountStorage.Layout storage l = AccountStorage.layout();
 
         // Get guardian from organization contract
-        if (l.onchainCustodyAddress == address(0)) {
+        if (l.organizationAddress == address(0)) {
             revert OrganizationNotSet();
         }
 
-        address organizationGuardian = IOrganizationAdminFacet(l.onchainCustodyAddress).guardian();
+        address organizationGuardian = IOrganizationAdminFacet(l.organizationAddress).guardian();
         if (msg.sender != organizationGuardian) {
             revert UnauthorizedCaller(msg.sender, organizationGuardian);
         }
@@ -85,10 +85,10 @@ contract AccountAdminFacet {
      */
     function guardian() external view returns (address) {
         AccountStorage.Layout storage l = AccountStorage.layout();
-        if (l.onchainCustodyAddress == address(0)) {
+        if (l.organizationAddress == address(0)) {
             revert OrganizationNotSet();
         }
-        return IOrganizationAdminFacet(l.onchainCustodyAddress).guardian();
+        return IOrganizationAdminFacet(l.organizationAddress).guardian();
     }
 
     /**
@@ -96,7 +96,7 @@ contract AccountAdminFacet {
      * @return The organization address
      */
     function getOrganizationAddress() external view returns (address) {
-        return AccountStorage.layout().onchainCustodyAddress;
+        return AccountStorage.layout().organizationAddress;
     }
 
     /**
@@ -122,12 +122,12 @@ contract AccountAdminFacet {
         AccountStorage.Layout storage l = AccountStorage.layout();
 
         // Ensure organization address is set
-        if (l.onchainCustodyAddress == address(0)) {
+        if (l.organizationAddress == address(0)) {
             revert OrganizationNotSet();
         }
 
         // Forward the call to the organization contract
-        try IOrganizationAdminFacet(l.onchainCustodyAddress).validateAdminAuthorization(
+        try IOrganizationAdminFacet(l.organizationAddress).validateAdminAuthorization(
             operationType, operationData, salt, chainId, signatures
         ) {
             return;

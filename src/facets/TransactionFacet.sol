@@ -105,14 +105,6 @@ contract TransactionFacet {
     }
 
     /**
-     * @notice Gets the address of the onchain custody organization contract that this account is associated with
-     * @return The address of the onchain custody organization contract
-     */
-    function onchainCustodyAddress() external view returns (address) {
-        return AccountStorage.layout().onchainCustodyAddress;
-    }
-
-    /**
      * @notice Checks if a nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise

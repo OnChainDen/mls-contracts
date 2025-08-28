@@ -11,12 +11,12 @@ import { AccountStorage } from "../storage/AccountStorage.sol";
 contract AccountInit {
     /**
      * @notice Initializes the account contract with the organization address
-     * @param onchainCustodyAddress The address of the onchain custody organization contract
+     * @param organizationAddress The address of the onchain custody organization contract
      */
-    function init(address onchainCustodyAddress) external {
+    function init(address organizationAddress) external {
         AccountStorage.Layout storage l = AccountStorage.layout();
 
         // Initialize organization address
-        l.onchainCustodyAddress = onchainCustodyAddress;
+        l.organizationAddress = organizationAddress;
     }
 }

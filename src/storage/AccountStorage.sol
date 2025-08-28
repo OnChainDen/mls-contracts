@@ -14,7 +14,7 @@ library AccountStorage {
 
     struct Layout {
         // The address of the onchain custody organization contract that this account is associated with
-        address onchainCustodyAddress;
+        address organizationAddress;
         // Mapping of nonces for replay protection. Each nonce can only be used once.
         mapping(uint256 => bool) usedNonces;
     }

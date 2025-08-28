@@ -21,7 +21,7 @@ contract OnchainCustodyAccount {
     /**
      * @notice The address of the onchain custody contract that this account is associated with
      */
-    address public onchainCustodyAddress;
+    address public organizationAddress;
 
     /**
      * @notice Mapping of nonces for replay protection. Each nonce can only be used once.
@@ -32,7 +32,7 @@ contract OnchainCustodyAccount {
      * @notice Modifier to restrict function access to the guardian address only
      */
     modifier onlyGuardian() {
-        OnchainCustodyOrganization organization = OnchainCustodyOrganization(onchainCustodyAddress);
+        OnchainCustodyOrganization organization = OnchainCustodyOrganization(organizationAddress);
         address guardian = organization.guardian();
         if (msg.sender != guardian) {
             revert UnauthorizedCaller(msg.sender, guardian);
@@ -180,7 +180,7 @@ contract OnchainCustodyAccount {
         _usedNonces[nonce] = true;
 
         // Get the onchain custody contract that this account is associated with
-        OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(onchainCustodyAddress);
+        OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(organizationAddress);
 
         // Get all policies from the onchain custody contract that this account is associated with
         Policies.Policy[] memory policies = onchainCustody.getPolicies();
@@ -233,7 +233,7 @@ contract OnchainCustodyAccount {
         _usedNonces[nonce] = true;
 
         // Get the onchain custody contract that this account is associated with
-        OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(onchainCustodyAddress);
+        OnchainCustodyOrganization onchainCustody = OnchainCustodyOrganization(organizationAddress);
 
         // Get all policies from the onchain custody contract that this account is associated with
         Policies.Policy[] memory policies = onchainCustody.getPolicies();
