@@ -12,21 +12,7 @@ import "../libraries/LibDiamond.sol";
 import "../../account/AccountStorage.sol";
 import "../../organization/OrganizationStorage.sol";
 import "../../interfaces/IGuardianFacet.sol";
-
-/**
- * @title Admin Facet Interface
- * @notice Interface for admin validation functions
- */
-interface IAdminFacet {
-    function validateAdminAuthorization(
-        OrganizationStorage.AdminOperationType operationType,
-        bytes memory operationData,
-        uint256 salt,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        external;
-}
+import "../../interfaces/IAdminFacet.sol";
 
 contract DiamondCutFacet is IDiamondCut {
     /**
