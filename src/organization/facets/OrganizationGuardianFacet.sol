@@ -38,7 +38,7 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
      * @notice Enforces that the caller is the guardian address
      * @dev This function will revert if msg.sender is not the guardian
      */
-    function enforceOnlyGuardian() external view {
+    function enforceOnlyGuardian() public view {
         OrganizationStorage.Layout storage l = OrganizationStorage.layout();
         if (msg.sender != l.guardian) {
             revert UnauthorizedCaller(msg.sender, l.guardian);
@@ -62,7 +62,7 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
      * @param signatures The signatures from the current admin authorizing this operation
      */
     function updateGuardian(address newGuardian, uint256 salt, uint256 chainId, bytes memory signatures) public {
-        IGuardianFacet(address(this)).enforceOnlyGuardian();
+        enforceOnlyGuardian();
 
         // Validate input parameters
         if (newGuardian == address(0)) {
