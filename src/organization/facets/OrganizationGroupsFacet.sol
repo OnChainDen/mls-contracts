@@ -109,7 +109,7 @@ contract OrganizationGroupsFacet {
 
         // Auto-increment group ID
         groupId = l.nextGroupId;
-        l.nextGroupId++;
+        ++l.nextGroupId;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(groupId, memberIds);
