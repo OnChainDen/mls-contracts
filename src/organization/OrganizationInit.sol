@@ -33,22 +33,18 @@ contract OrganizationInit {
             revert InvalidAdminAddress();
         }
 
-        // Initialize counters
-        layout.nextMemberId = 1;
-        layout.nextGroupId = 1;
-
         // Create the first admin member with ID 1
-        uint8 adminId = 1;
-        layout.memberIdToAddress[adminId] = adminAddress;
-        layout.addressToMemberId[adminAddress] = adminId;
+        layout.memberIdToAddress[1] = adminAddress;
+        layout.addressToMemberId[adminAddress] = 1;
         
-        // Increment the next member ID
-        layout.nextMemberId++;
+        // Initialize counters
+        layout.nextGroupId = 1;
+        layout.nextMemberId = 2; // Start with 2 because initial admin is ID 1
 
         // Initialize admin permission (always Member type with voting threshold 0)
         layout.adminPermission = OrganizationStorage.AdminPermission({
             adminType: OrganizationStorage.AdminType.Member,
-            adminId: adminId,
+            adminId: 1,
             votingThreshold: 0
         });
 
