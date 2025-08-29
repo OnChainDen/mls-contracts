@@ -81,6 +81,16 @@ contract OrganizationGroupsFacet {
     }
 
     /**
+     * @notice Checks if a group ID is valid and has at least one member
+     * @param groupId The group ID to validate
+     * @return True if the group exists and has members, false otherwise
+     */
+    function isValidGroupWithMembers(uint8 groupId) external view returns (bool) {
+        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        return l.groupIdToExists[groupId] && l.groupIdToMemberCount[groupId] > 0;
+    }
+
+    /**
      * @notice Creates a new group with the specified member IDs
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param memberIds The array of member IDs to include in the group

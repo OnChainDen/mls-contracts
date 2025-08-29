@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
-import "../src/OnchainCustodyOrganization.sol";
+import "../src/organization/OnchainCustodyOrganizationDiamond.sol";
 
 /**
  * @title Deploy
@@ -19,14 +19,14 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy the OnchainCustodyOrganization contract
-        OnchainCustodyOrganization onchainCustody = new OnchainCustodyOrganization();
-        console.log("OnchainCustodyOrganization deployed at:", address(onchainCustody));
+        OnchainCustodyOrganizationDiamond onchainCustody = new OnchainCustodyOrganizationDiamond();
+        console.log("OnchainCustodyOrganizationDiamond deployed at:", address(onchainCustody));
 
         vm.stopBroadcast();
 
         // Log deployment summary
         console.log("\n=== Deployment Summary ===");
-        console.log("OnchainCustodyOrganization Address:", address(onchainCustody));
+        console.log("OnchainCustodyOrganizationDiamond Address:", address(onchainCustody));
 
         // Save deployment addresses to a file for future reference
         string memory deploymentInfo = string.concat(

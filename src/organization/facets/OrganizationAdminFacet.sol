@@ -7,6 +7,8 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
+import { IOrganizationMembersFacet } from "../interfaces/IOrganizationMembersFacet.sol";
+import { IOrganizationGroupsFacet } from "../interfaces/IOrganizationGroupsFacet.sol";
 
 /**
  * @title Organization Admin Facet
@@ -138,11 +140,11 @@ contract OrganizationAdminFacet is IAdminFacet {
 
         // Validate that the newAdminId points to a valid member or group
         if (newAdminType == OrganizationStorage.AdminType.Member) {
-            if (!_isValidMember(newAdminId)) {
+            if (!IOrganizationMembersFacet(address(this)).memberExists(newAdminId)) {
                 revert AdminOperationRejected("Invalid member ID: member does not exist");
             }
         } else if (newAdminType == OrganizationStorage.AdminType.Group) {
-            if (!_isValidGroupWithMembers(newAdminId)) {
+            if (!IOrganizationGroupsFacet(address(this)).isValidGroupWithMembers(newAdminId)) {
                 revert AdminOperationRejected("Invalid group ID: group does not exist or has no members");
             }
         }
@@ -385,25 +387,5 @@ contract OrganizationAdminFacet is IAdminFacet {
             ),
             structHash
         );
-    }
-
-    /**
-     * @notice Checks if a member ID is valid (points to an existing member)
-     * @param memberId The member ID to validate
-     * @return True if the member exists, false otherwise
-     */
-    function _isValidMember(uint8 memberId) internal view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        return l.memberIdToAddress[memberId] != address(0);
-    }
-
-    /**
-     * @notice Checks if a group ID is valid and has at least one member
-     * @param groupId The group ID to validate
-     * @return True if the group exists and has members, false otherwise
-     */
-    function _isValidGroupWithMembers(uint8 groupId) internal view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        return l.groupIdToExists[groupId] && l.groupIdToMemberCount[groupId] > 0;
     }
 }
