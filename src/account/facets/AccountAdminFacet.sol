@@ -21,31 +21,6 @@ contract AccountAdminFacet is IAdminFacet {
     error AdminOperationRejected(string reason);
 
     /**
-     * @notice Emitted when an admin operation has insufficient signatures
-     * @param required The number of required signatures
-     * @param provided The number of provided signatures
-     */
-    error InsufficientAdminSignatures(uint256 required, uint256 provided);
-
-    /**
-     * @notice Emitted when an admin operation has an invalid signature
-     */
-    error InvalidAdminSignature();
-
-    /**
-     * @notice Emitted when an admin operation uses a nonce that has already been used
-     * @param nonce The nonce that was attempted to be used
-     */
-    error AdminNonceAlreadyUsed(uint256 nonce);
-
-    /**
-     * @notice Emitted when an admin operation has wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidAdminChainId(uint256 expected, uint256 provided);
-
-    /**
      * @notice Error thrown when the organization address is not set
      */
     error OrganizationNotSet();
