@@ -42,25 +42,6 @@ contract OrganizationMembersFacet {
     error MemberOperationRejected(string reason);
 
     /**
-     * @notice Emitted when an admin operation is rejected due to insufficient authorization
-     * @param reason The reason for the rejection
-     */
-    error AdminOperationRejected(string reason);
-
-    /**
-     * @notice Emitted when an admin operation uses a nonce that has already been used
-     * @param nonce The nonce that was attempted to be used
-     */
-    error AdminNonceAlreadyUsed(uint256 nonce);
-
-    /**
-     * @notice Emitted when an admin operation has wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidAdminChainId(uint256 expected, uint256 provided);
-
-    /**
      * @notice A mapping from member addresses to their IDs
      * @param memberAddress The address to look up
      * @return The member ID (0 if not a member)
