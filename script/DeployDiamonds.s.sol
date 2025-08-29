@@ -8,7 +8,9 @@ import { OnchainCustodyOrganizationDiamond } from "../src/organization/OnchainCu
 import { OnchainCustodyAccountDiamond } from "../src/account/OnchainCustodyAccountDiamond.sol";
 
 import { OrganizationAdminFacet } from "../src/organization/facets/OrganizationAdminFacet.sol";
+import { OrganizationGuardianFacet } from "../src/organization/facets/OrganizationGuardianFacet.sol";
 import { AccountAdminFacet } from "../src/account/facets/AccountAdminFacet.sol";
+import { AccountGuardianFacet } from "../src/account/facets/AccountGuardianFacet.sol";
 import { OrganizationMembersFacet } from "../src/organization/facets/OrganizationMembersFacet.sol";
 import { OrganizationGroupsFacet } from "../src/organization/facets/OrganizationGroupsFacet.sol";
 import { OrganizationPolicyFacet } from "../src/organization/facets/OrganizationPolicyFacet.sol";
@@ -43,7 +45,9 @@ contract DeployDiamonds is Script {
 
         // Deploy application facets
         OrganizationAdminFacet organizationAdminFacet = new OrganizationAdminFacet();
+        OrganizationGuardianFacet organizationGuardianFacet = new OrganizationGuardianFacet();
         AccountAdminFacet accountAdminFacet = new AccountAdminFacet();
+        AccountGuardianFacet accountGuardianFacet = new AccountGuardianFacet();
         OrganizationMembersFacet membersFacet = new OrganizationMembersFacet();
         OrganizationGroupsFacet groupsFacet = new OrganizationGroupsFacet();
         OrganizationPolicyFacet policyFacet = new OrganizationPolicyFacet();
@@ -53,7 +57,9 @@ contract DeployDiamonds is Script {
         console.log("DiamondCutFacet deployed at:", address(diamondCutFacet));
         console.log("DiamondLoupeFacet deployed at:", address(diamondLoupeFacet));
         console.log("OrganizationAdminFacet deployed at:", address(organizationAdminFacet));
+        console.log("OrganizationGuardianFacet deployed at:", address(organizationGuardianFacet));
         console.log("AccountAdminFacet deployed at:", address(accountAdminFacet));
+        console.log("AccountGuardianFacet deployed at:", address(accountGuardianFacet));
         console.log("OrganizationMembersFacet deployed at:", address(membersFacet));
         console.log("OrganizationGroupsFacet deployed at:", address(groupsFacet));
         console.log("OrganizationPolicyFacet deployed at:", address(policyFacet));
@@ -103,21 +109,32 @@ contract DeployDiamonds is Script {
         console.log("Account Diamond deployed at:", address(accountDiamond));
 
         // Prepare facet cuts for organization diamond (application facets)
-        IDiamondCut.FacetCut[] memory organizationFacetCuts = new IDiamondCut.FacetCut[](5);
+        IDiamondCut.FacetCut[] memory organizationFacetCuts = new IDiamondCut.FacetCut[](6);
 
         // Organization Admin Facet
-        bytes4[] memory adminSelectors = new bytes4[](6);
+        bytes4[] memory adminSelectors = new bytes4[](5);
         adminSelectors[0] = OrganizationAdminFacet.adminPermission.selector;
         adminSelectors[1] = OrganizationAdminFacet.isAdminNonceUsed.selector;
         adminSelectors[2] = OrganizationAdminFacet.computeAdminNonce.selector;
         adminSelectors[3] = OrganizationAdminFacet.updateAdmin.selector;
-        adminSelectors[4] = OrganizationAdminFacet.updateGuardian.selector;
-        adminSelectors[5] = OrganizationAdminFacet.validateAdminAuthorization.selector;
+        adminSelectors[4] = OrganizationAdminFacet.validateAdminAuthorization.selector;
 
         organizationFacetCuts[0] = IDiamondCut.FacetCut({
             facetAddress: address(organizationAdminFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: adminSelectors
+        });
+
+        // Organization Guardian Facet
+        bytes4[] memory guardianSelectors = new bytes4[](3);
+        guardianSelectors[0] = OrganizationGuardianFacet.enforceOnlyGuardian.selector;
+        guardianSelectors[1] = OrganizationGuardianFacet.guardian.selector;
+        guardianSelectors[2] = OrganizationGuardianFacet.updateGuardian.selector;
+
+        organizationFacetCuts[1] = IDiamondCut.FacetCut({
+            facetAddress: address(organizationGuardianFacet),
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: guardianSelectors
         });
 
         // Members Facet
@@ -129,7 +146,7 @@ contract DeployDiamonds is Script {
         membersSelectors[4] = OrganizationMembersFacet.modifyMember.selector;
         membersSelectors[5] = OrganizationMembersFacet.removeMembers.selector;
 
-        organizationFacetCuts[1] = IDiamondCut.FacetCut({
+        organizationFacetCuts[2] = IDiamondCut.FacetCut({
             facetAddress: address(membersFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: membersSelectors
@@ -143,7 +160,7 @@ contract DeployDiamonds is Script {
         groupsSelectors[3] = OrganizationGroupsFacet.createGroup.selector;
         groupsSelectors[4] = OrganizationGroupsFacet.modifyGroup.selector;
 
-        organizationFacetCuts[2] = IDiamondCut.FacetCut({
+        organizationFacetCuts[5] = IDiamondCut.FacetCut({
             facetAddress: address(groupsFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: groupsSelectors
@@ -167,7 +184,7 @@ contract DeployDiamonds is Script {
         policySelectors[13] = OrganizationPolicyFacet.extractTokenAddress.selector;
         policySelectors[14] = OrganizationPolicyFacet.extractTransferAmount.selector;
 
-        organizationFacetCuts[3] = IDiamondCut.FacetCut({
+        organizationFacetCuts[5] = IDiamondCut.FacetCut({
             facetAddress: address(policyFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: policySelectors
@@ -178,7 +195,7 @@ contract DeployDiamonds is Script {
         whitelistSelectors[0] = OrganizationWhitelistFacet.isAddressWhitelisted.selector;
         whitelistSelectors[1] = OrganizationWhitelistFacet.modifyWhitelist.selector;
 
-        organizationFacetCuts[4] = IDiamondCut.FacetCut({
+        organizationFacetCuts[5] = IDiamondCut.FacetCut({
             facetAddress: address(whitelistFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: whitelistSelectors
@@ -199,7 +216,7 @@ contract DeployDiamonds is Script {
         console.log("Organization diamond configured");
 
         // Prepare facet cuts for account diamond
-        IDiamondCut.FacetCut[] memory accountFacetCuts = new IDiamondCut.FacetCut[](2);
+        IDiamondCut.FacetCut[] memory accountFacetCuts = new IDiamondCut.FacetCut[](3);
 
         // Transaction Facet
         bytes4[] memory transactionSelectors = new bytes4[](4);
@@ -223,6 +240,18 @@ contract DeployDiamonds is Script {
             facetAddress: address(accountAdminFacet),
             action: IDiamondCut.FacetCutAction.Add,
             functionSelectors: accountAdminSelectors
+        });
+
+        // Account Guardian Facet
+        bytes4[] memory accountGuardianSelectors = new bytes4[](3);
+        accountGuardianSelectors[0] = AccountGuardianFacet.enforceOnlyGuardian.selector;
+        accountGuardianSelectors[1] = AccountGuardianFacet.guardian.selector;
+        accountGuardianSelectors[2] = AccountGuardianFacet.getOrganizationAddress.selector;
+
+        accountFacetCuts[2] = IDiamondCut.FacetCut({
+            facetAddress: address(accountGuardianFacet),
+            action: IDiamondCut.FacetCutAction.Add,
+            functionSelectors: accountGuardianSelectors
         });
 
         // Initialize account diamond

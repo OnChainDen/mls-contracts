@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import { AccountStorage } from "../AccountStorage.sol";
 import { OrganizationStorage } from "../../organization/OrganizationStorage.sol";
 import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
-import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
  * @title Account Admin Facet
