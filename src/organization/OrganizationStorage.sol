@@ -31,8 +31,8 @@ library OrganizationStorage {
         ModifyPolicies,
         UpdateGuardian,
         ModifyWhitelist,
-        DiamondCut // Added for diamond cutting operations
-
+        DiamondCut,
+        DeployAccount
     }
 
     /**
@@ -48,6 +48,7 @@ library OrganizationStorage {
         // Admin related storage
         AdminPermission adminPermission;
         address guardian;
+        address deployerAddress; // Address authorized for post-deployment initialization
         mapping(uint256 => bool) usedAdminNonces;
         // Members related storage
         mapping(uint8 => address) memberIdToAddress;

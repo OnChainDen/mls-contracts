@@ -13,13 +13,7 @@ import "./interfaces/IDiamondCut.sol";
 import "./interfaces/IERC165.sol";
 
 contract Diamond {
-    // more arguments are added to this struct
-    // this avoids stack too deep errors
-    struct DiamondArgs {
-        uint256 dummy; // Placeholder to avoid empty struct
-    }
-
-    constructor(IDiamondCut.FacetCut[] memory _diamondCut, DiamondArgs memory _args) payable {
+    constructor(IDiamondCut.FacetCut[] memory _diamondCut) payable {
         LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0));
 
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();

@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import { Script } from "forge-std/Script.sol";
 import { console } from "forge-std/console.sol";
 import "../src/organization/OnchainCustodyOrganizationDiamond.sol";
+import "../src/diamond/interfaces/IDiamondCut.sol";
+import "../src/diamond/Diamond.sol";
 
 /**
  * @title Deploy
@@ -19,7 +21,9 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy the OnchainCustodyOrganization contract
-        OnchainCustodyOrganizationDiamond onchainCustody = new OnchainCustodyOrganizationDiamond();
+        IDiamondCut.FacetCut[] memory emptyFacetCuts = new IDiamondCut.FacetCut[](0);
+        OnchainCustodyOrganizationDiamond onchainCustody =
+            new OnchainCustodyOrganizationDiamond(emptyFacetCuts, deployer);
         console.log("OnchainCustodyOrganizationDiamond deployed at:", address(onchainCustody));
 
         vm.stopBroadcast();

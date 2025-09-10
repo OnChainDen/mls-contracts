@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "../diamond/Diamond.sol";
 import "../diamond/interfaces/IDiamondCut.sol";
+import "./OrganizationStorage.sol";
 
 /**
  * @title Onchain Custody Organization Diamond
@@ -10,11 +11,8 @@ import "../diamond/interfaces/IDiamondCut.sol";
  * @author Den Technologies Inc
  */
 contract OnchainCustodyOrganizationDiamond is Diamond {
-    constructor(
-        IDiamondCut.FacetCut[] memory _diamondCut,
-        Diamond.DiamondArgs memory _args
-    )
-        payable
-        Diamond(_diamondCut, _args)
-    { }
+    constructor(IDiamondCut.FacetCut[] memory _diamondCut, address _deployerAddress) payable Diamond(_diamondCut) {
+        // Set the deployer address
+        OrganizationStorage.layout().deployerAddress = _deployerAddress;
+    }
 }

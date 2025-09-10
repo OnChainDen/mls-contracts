@@ -100,12 +100,12 @@ contract DeployDiamonds is Script {
 
         // Deploy organization diamond with initial cuts
         OnchainCustodyOrganizationDiamond organizationDiamond =
-            new OnchainCustodyOrganizationDiamond(organizationInitialCuts, Diamond.DiamondArgs({ dummy: 0 }));
+            new OnchainCustodyOrganizationDiamond(organizationInitialCuts, deployer);
         console.log("Organization Diamond deployed at:", address(organizationDiamond));
 
         // Deploy account diamond with same initial cuts
         OnchainCustodyAccountDiamond accountDiamond =
-            new OnchainCustodyAccountDiamond(organizationInitialCuts, Diamond.DiamondArgs({ dummy: 0 }));
+            new OnchainCustodyAccountDiamond(organizationInitialCuts, address(organizationDiamond));
         console.log("Account Diamond deployed at:", address(accountDiamond));
 
         // Prepare facet cuts for organization diamond (application facets)
