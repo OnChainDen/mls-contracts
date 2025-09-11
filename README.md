@@ -184,3 +184,50 @@ The policy engine will support complex conditional logic:
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+
+# Onchain Custody Smart Contracts
+
+## Overview: What is Onchain Custody?
+Onchain Custody is a new category of cryptocurrency custody. It provides all the benefits of self-custody while being significanlty more secure than all other forms of custody (custody, self-custody, and MPC).
+
+At the heart of Onchain Custody is the **policy engine**, which allows users to specify rules that dictate what types of transactions can be executed and by whom. An example policy might allow a group to transfer up to $10,000 of USDC per month and require 2 out of 3 of the group members to approve those transactions.
+
+Onchain Custody is signficantly more secure than all other existing forms of custody, because it uses multiple redundant layers of security:
+1. onchain smart contracts
+2. offchain Guardian
+3. mobile signing application
+
+Onchain Custody combines onchain smart accounts with an offchain "guardian", an application that must explicitly approve transactions alongside the owners of a smart account. Owners must use the dedicated mobile signing application to approve transactions. The onchain smart contracts, the offchain Guardian, and the mobile signing app all run the policy engine independently and redundantly. In order to bypass the rules of the policy engine, all three must be compromised at the same time: the smart contracts must have an exploitable vulnerability, the offchain Guardian must be compromised, and the approving users' local mobile signing applications must all be compromised. These multiple redundant layers of security keep funds secure.
+
+## Smart contracts
+### Overview
+There are two main abstrations represented as smart contracts in Onchain Custody:
+1. Organizations (`src/organization/OnchainCustodyOrganizationDiamond.sol`)
+2. Accounts (`src/account/OnchainCustodyAccountDiamond.sol`)
+
+Each real world organization that uses Onchain Custody is represented onchain by a dedicated Organization contract. Each organization may have one or more Accounts (i.e. "smart accounts" or "smart contract wallets"), which are smart contracts that holds funds on behalf of the organization. 
+
+The contracts representing organizations and accounts are both ERC-2535 Diamond proxies, and all functionalities are implemented in facets.
+
+### Organizations
+#### Files
+```
+src/organization
+├── facets
+│   ├── OrganizationAccountFactoryFacet.sol
+│   ├── OrganizationAdminFacet.sol
+│   ├── OrganizationGroupsFacet.sol
+│   ├── OrganizationGuardianFacet.sol
+│   ├── OrganizationInitializationFacet.sol
+│   ├── OrganizationMembersFacet.sol
+│   ├── OrganizationPolicyFacet.sol
+│   └── OrganizationWhitelistFacet.sol
+├── interfaces
+│   ├── IOrganizationGroupsFacet.sol
+│   ├── IOrganizationGuardianFacet.sol
+│   └── IOrganizationMembersFacet.sol
+├── OnchainCustodyOrganizationDiamond.sol
+├── OnchainCustodyOrganizationFactory.sol
+├── OrganizationInit.sol
+└── OrganizationStorage.sol
+```
