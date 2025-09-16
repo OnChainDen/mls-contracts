@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountStorage } from "../AccountStorage.sol";
-import { OrganizationStorage } from "../../organization/OrganizationStorage.sol";
+import { AccountTransactionFacetStorage } from "./AccountTransactionFacetStorage.sol";
+import { OrganizationPolicyFacetStorage } from "../../organization/facets/OrganizationPolicyFacetStorage.sol";
+import { OrganizationMembersFacetStorage } from "../../organization/facets/OrganizationMembersFacetStorage.sol";
+import { OrganizationGroupsFacetStorage } from "../../organization/facets/OrganizationGroupsFacetStorage.sol";
+import { OrganizationWhitelistFacetStorage } from "../../organization/facets/OrganizationWhitelistFacetStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -15,7 +18,7 @@ import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
  * @author Den Technologies Inc
  */
 contract AccountTransactionFacet {
-    using AccountStorage for AccountStorage.Layout;
+    using AccountTransactionFacetStorage for AccountTransactionFacetStorage.Layout;
 
     /**
      * @notice Emitted when a transaction is executed
@@ -26,7 +29,11 @@ contract AccountTransactionFacet {
      * @param nonce The nonce used for this transaction
      */
     event TransactionExecuted(
-        address indexed to, uint256 value, bytes data, AccountStorage.Operation operation, uint256 indexed nonce
+        address indexed to,
+        uint256 value,
+        bytes data,
+        AccountTransactionFacetStorage.Operation operation,
+        uint256 indexed nonce
     );
 
     /**
@@ -54,7 +61,7 @@ contract AccountTransactionFacet {
         address indexed to,
         uint256 value,
         bytes data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 indexed nonce,
         address rejectedBy
     );
@@ -90,7 +97,7 @@ contract AccountTransactionFacet {
      * @return True if the nonce has been used, false otherwise
      */
     function isNonceUsed(uint256 nonce) external view returns (bool) {
-        return AccountStorage.layout().usedNonces[nonce];
+        return AccountTransactionFacetStorage.layout().usedNonces[nonce];
     }
 
     /**
@@ -106,7 +113,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes calldata data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 salt
     )
         public
@@ -130,7 +137,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes calldata data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
         uint256 chainId,
         bytes memory signatures
@@ -147,19 +154,19 @@ contract AccountTransactionFacet {
         // Compute deterministic nonce from transaction data and salt
         uint256 nonce = computeNonce(to, value, data, operation, salt);
 
-        AccountStorage.Layout storage l = AccountStorage.layout();
+        AccountTransactionFacetStorage.Layout storage layout = AccountTransactionFacetStorage.layout();
 
         // Validate and consume nonce for replay protection
-        if (l.usedNonces[nonce]) {
+        if (layout.usedNonces[nonce]) {
             revert NonceAlreadyUsed(nonce);
         }
 
         // Mark nonce as used
-        l.usedNonces[nonce] = true;
+        layout.usedNonces[nonce] = true;
 
         // Get all policies from the onchain custody contract that this account is associated with
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
-        Policies.Policy[] memory policies = orgStorage.policies;
+        OrganizationPolicyFacetStorage.Layout storage policyStorage = OrganizationPolicyFacetStorage.layout();
+        Policies.Policy[] memory policies = policyStorage.policies;
 
         // Check policies to make sure this transaction can be executed
         _validateTransaction(policies, to, value, data, operation, salt, chainId, signatures);
@@ -184,7 +191,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes calldata data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
         uint256 chainId,
         bytes memory signatures
@@ -201,19 +208,19 @@ contract AccountTransactionFacet {
         // Compute deterministic nonce from transaction data and salt
         uint256 nonce = computeNonce(to, value, data, operation, salt);
 
-        AccountStorage.Layout storage l = AccountStorage.layout();
+        AccountTransactionFacetStorage.Layout storage layout = AccountTransactionFacetStorage.layout();
 
         // Validate and consume nonce for replay protection
-        if (l.usedNonces[nonce]) {
+        if (layout.usedNonces[nonce]) {
             revert NonceAlreadyUsed(nonce);
         }
 
         // Mark nonce as used to prevent execution
-        l.usedNonces[nonce] = true;
+        layout.usedNonces[nonce] = true;
 
         // Get all policies from the onchain custody contract that this account is associated with
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
-        Policies.Policy[] memory policies = orgStorage.policies;
+        OrganizationPolicyFacetStorage.Layout storage policyStorage = OrganizationPolicyFacetStorage.layout();
+        Policies.Policy[] memory policies = policyStorage.policies;
 
         // Check if the caller is authorized to reject this transaction
         _validateRejectionAuthorization(policies, to, value, data, operation, salt, chainId, signatures);
@@ -237,7 +244,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
         uint256 chainId,
         bytes memory signatures
@@ -301,7 +308,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
         uint256 chainId,
         bytes memory signatures
@@ -511,7 +518,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
         uint256 chainId
     )
@@ -570,13 +577,13 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        AccountStorage.Operation operation,
+        AccountTransactionFacetStorage.Operation operation,
         uint256 txGas
     )
         internal
         returns (bool success)
     {
-        if (operation == AccountStorage.Operation.DelegateCall) {
+        if (operation == AccountTransactionFacetStorage.Operation.DelegateCall) {
             /* solhint-disable no-inline-assembly */
             /// @solidity memory-safe-assembly
             assembly {
@@ -689,13 +696,13 @@ contract AccountTransactionFacet {
         // Case: The policy matches transactions with any initiator
         if (policy.anyInitiator) return true;
 
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersStorage = OrganizationMembersFacetStorage.layout();
 
         // Case: The policy matches transactions made by a specific individual, and that individual
         //        is the initiator of this transaction
         if (
             policy.initiatorType == Policies.ApproverType.Member
-                && orgStorage.addressToMemberId[initiatorAddress] == policy.initiatorId
+                && membersStorage.addressToMemberId[initiatorAddress] == policy.initiatorId
         ) return true;
 
         // Case: The policy matches transactions made by any individual from a specific group, and the initiator
@@ -834,10 +841,10 @@ contract AccountTransactionFacet {
      * @return True if the signer is authorized, false otherwise
      */
     function _isSignerAuthorizedForPolicy(Policies.Policy memory policy, address signer) internal view returns (bool) {
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersStorage = OrganizationMembersFacetStorage.layout();
 
         // Get the member ID for the signer
-        uint8 memberId = orgStorage.addressToMemberId[signer];
+        uint8 memberId = membersStorage.addressToMemberId[signer];
 
         // Case: Signer is not a member of the organization
         if (memberId == 0) {
@@ -874,10 +881,10 @@ contract AccountTransactionFacet {
         // Case: Policy allows any initiator
         if (policy.anyInitiator) return true;
 
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersStorage = OrganizationMembersFacetStorage.layout();
 
         // Get the member ID for the signer
-        uint8 memberId = orgStorage.addressToMemberId[signer];
+        uint8 memberId = membersStorage.addressToMemberId[signer];
 
         // Case: Signer is not a member of the organization
         if (memberId == 0) {
@@ -1090,25 +1097,27 @@ contract AccountTransactionFacet {
     }
 
     function _isMemberInGroup(uint8 memberId, uint8 groupId) internal view returns (bool) {
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersStorage = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsStorage = OrganizationGroupsFacetStorage.layout();
 
         // Case: Member does not exist
-        if (orgStorage.memberIdToAddress[memberId] == address(0)) return false;
+        if (membersStorage.memberIdToAddress[memberId] == address(0)) return false;
 
-        return orgStorage.groupIdToMemberIdToInGroup[groupId][memberId];
+        return groupsStorage.groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     function _isMemberInGroup(address memberAddress, uint8 groupId) internal view returns (bool) {
-        OrganizationStorage.Layout storage orgStorage = OrganizationStorage.layout();
-        uint8 memberId = orgStorage.addressToMemberId[memberAddress];
+        OrganizationMembersFacetStorage.Layout storage membersStorage = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsStorage = OrganizationGroupsFacetStorage.layout();
+        uint8 memberId = membersStorage.addressToMemberId[memberAddress];
 
         // Case: Member does not exist
         if (memberId == 0) return false;
 
-        return orgStorage.groupIdToMemberIdToInGroup[groupId][memberId];
+        return groupsStorage.groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     function _isAddressWhitelisted(address addressToCheck) internal view returns (bool) {
-        return OrganizationStorage.layout().whitelistedAddresses[addressToCheck];
+        return OrganizationWhitelistFacetStorage.layout().whitelistedAddresses[addressToCheck];
     }
 }

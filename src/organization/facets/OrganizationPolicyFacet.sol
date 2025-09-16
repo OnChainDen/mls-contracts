@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../OrganizationStorage.sol";
+import { OrganizationPolicyFacetStorage } from "./OrganizationPolicyFacetStorage.sol";
+import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
+import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
+import { OrganizationWhitelistFacetStorage } from "./OrganizationWhitelistFacetStorage.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
@@ -12,7 +16,10 @@ import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
  * @author Den Technologies Inc
  */
 contract OrganizationPolicyFacet {
-    using OrganizationStorage for OrganizationStorage.Layout;
+    using OrganizationPolicyFacetStorage for OrganizationPolicyFacetStorage.Layout;
+    using OrganizationMembersFacetStorage for OrganizationMembersFacetStorage.Layout;
+    using OrganizationGroupsFacetStorage for OrganizationGroupsFacetStorage.Layout;
+    using OrganizationWhitelistFacetStorage for OrganizationWhitelistFacetStorage.Layout;
 
     /**
      * @notice Emitted when the organization's policies are modified
@@ -27,7 +34,7 @@ contract OrganizationPolicyFacet {
      * @return The policies for the organization
      */
     function getPolicies() public view returns (Policies.Policy[] memory) {
-        return OrganizationStorage.layout().policies;
+        return OrganizationPolicyFacetStorage.layout().policies;
     }
 
     /**
@@ -54,22 +61,22 @@ contract OrganizationPolicyFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.ModifyPolicies, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyPolicies, operationData, salt, chainId, signatures
         );
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
 
         // Store hash of previous policies for the event
-        bytes32 previousPoliciesHash = _getPoliciesHash(l.policies);
+        bytes32 previousPoliciesHash = _getPoliciesHash(policyLayout.policies);
 
         // Replace the entire policies array with the new one
-        delete l.policies;
+        delete policyLayout.policies;
         for (uint256 i = 0; i < newPolicies.length; ++i) {
-            l.policies.push(newPolicies[i]);
+            policyLayout.policies.push(newPolicies[i]);
         }
 
         // Compute hash of new policies for the event
-        bytes32 newPoliciesHash = _getPoliciesHash(l.policies);
+        bytes32 newPoliciesHash = _getPoliciesHash(policyLayout.policies);
 
         // Emit event
         emit PoliciesModified(previousPoliciesHash, newPoliciesHash, newPolicies.length);
@@ -169,13 +176,13 @@ contract OrganizationPolicyFacet {
         // Case: The policy matches transactions with any initiator
         if (policy.anyInitiator) return true;
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Case: The policy matches transactions made by a specific individual, and that individual
         //        is the initiator of this transaction
         if (
             policy.initiatorType == Policies.ApproverType.Member
-                && l.addressToMemberId[initiatorAddress] == policy.initiatorId
+                && membersLayout.addressToMemberId[initiatorAddress] == policy.initiatorId
         ) return true;
 
         // Case: The policy matches transactions made by any individual from a specific group, and the initiator
@@ -314,10 +321,10 @@ contract OrganizationPolicyFacet {
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicy(Policies.Policy memory policy, address signer) external view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Get the member ID for the signer
-        uint8 memberId = l.addressToMemberId[signer];
+        uint8 memberId = membersLayout.addressToMemberId[signer];
 
         // Case: Signer is not a member of the organization
         if (memberId == 0) {
@@ -354,10 +361,10 @@ contract OrganizationPolicyFacet {
         // Case: Policy allows any initiator
         if (policy.anyInitiator) return true;
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Get the member ID for the signer
-        uint8 memberId = l.addressToMemberId[signer];
+        uint8 memberId = membersLayout.addressToMemberId[signer];
 
         // Case: Signer is not a member of the organization
         if (memberId == 0) {
@@ -642,12 +649,13 @@ contract OrganizationPolicyFacet {
      * @return True if the member is in the group, false otherwise
      */
     function _isMemberInGroup(uint8 memberId, uint8 groupId) internal view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
 
         // Case: Member does not exist
-        if (l.memberIdToAddress[memberId] == address(0)) return false;
+        if (membersLayout.memberIdToAddress[memberId] == address(0)) return false;
 
-        return l.groupIdToMemberIdToInGroup[groupId][memberId];
+        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     /**
@@ -657,13 +665,14 @@ contract OrganizationPolicyFacet {
      * @return True if the member is in the group, false otherwise
      */
     function _isMemberInGroup(address memberAddress, uint8 groupId) internal view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        uint8 memberId = l.addressToMemberId[memberAddress];
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        uint8 memberId = membersLayout.addressToMemberId[memberAddress];
 
         // Case: Member does not exist
         if (memberId == 0) return false;
 
-        return l.groupIdToMemberIdToInGroup[groupId][memberId];
+        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     /**
@@ -672,6 +681,6 @@ contract OrganizationPolicyFacet {
      * @return True if the address is whitelisted, false otherwise
      */
     function _isAddressWhitelisted(address addressToCheck) internal view returns (bool) {
-        return OrganizationStorage.layout().whitelistedAddresses[addressToCheck];
+        return OrganizationWhitelistFacetStorage.layout().whitelistedAddresses[addressToCheck];
     }
 }

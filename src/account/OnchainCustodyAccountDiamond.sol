@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "../diamond/Diamond.sol";
 import "../diamond/interfaces/IDiamondCut.sol";
-import "./AccountStorage.sol";
+import { AccountOrganizationAddressStorage } from "./facets/AccountOrganizationAddressStorage.sol";
 import "./interfaces/INativeTokenReceivedEventEmitter.sol";
 
 /**
@@ -13,7 +13,7 @@ import "./interfaces/INativeTokenReceivedEventEmitter.sol";
  */
 contract OnchainCustodyAccountDiamond is Diamond, INativeTokenReceivedEventEmitter {
     constructor(IDiamondCut.FacetCut[] memory _diamondCut, address _organizationAddress) payable Diamond(_diamondCut) {
-        AccountStorage.layout().organizationAddress = _organizationAddress;
+        AccountOrganizationAddressStorage.layout().organizationAddress = _organizationAddress;
     }
 
     /**

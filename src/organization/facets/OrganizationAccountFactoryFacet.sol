@@ -5,8 +5,8 @@ import "../../account/OnchainCustodyAccountDiamond.sol";
 import "../../account/AccountInit.sol";
 import "../../diamond/interfaces/IDiamondCut.sol";
 import "../../diamond/Diamond.sol";
-import "../OrganizationStorage.sol";
-import "../../interfaces/IAdminFacet.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Organization Account Factory Facet
@@ -64,7 +64,7 @@ contract OrganizationAccountFactoryFacet {
         bytes memory operationData = abi.encode(create2Salt, keccak256(abi.encode(_diamondCut)), accountInit);
 
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.DeployAccount, operationData, adminSignatureSalt, chainId, signatures
+            AdminOperationType.DeployAccount, operationData, adminSignatureSalt, chainId, signatures
         );
 
         // Deploy the account diamond using CREATE2

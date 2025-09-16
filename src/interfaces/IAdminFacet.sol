@@ -1,7 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../organization/OrganizationStorage.sol";
+/**
+ * @notice Enum to specify whether admin permission is granted to an individual member or a group
+ */
+enum AdminType {
+    Member,
+    Group
+}
+
+/**
+ * @notice Enum to specify the type of admin operation being performed
+ */
+enum AdminOperationType {
+    UpdateAdmin,
+    CreateGroup,
+    ModifyGroup,
+    RemoveGroup,
+    AddMembers,
+    ModifyMember,
+    RemoveMembers,
+    ModifyPolicies,
+    UpdateGuardian,
+    ModifyWhitelist,
+    DiamondCut,
+    DeployAccount
+}
 
 /**
  * @notice Interface for calling admin validation functions
@@ -18,7 +42,7 @@ interface IAdminFacet {
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
-        OrganizationStorage.AdminOperationType operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId,

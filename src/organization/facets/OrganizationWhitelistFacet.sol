@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../OrganizationStorage.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { OrganizationWhitelistFacetStorage } from "./OrganizationWhitelistFacetStorage.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
@@ -11,7 +12,7 @@ import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
  * @author Den Technologies Inc
  */
 contract OrganizationWhitelistFacet {
-    using OrganizationStorage for OrganizationStorage.Layout;
+    using OrganizationWhitelistFacetStorage for OrganizationWhitelistFacetStorage.Layout;
 
     /**
      * @notice Emitted when the organization's address whitelist is modified
@@ -32,7 +33,7 @@ contract OrganizationWhitelistFacet {
      * @return True if the address is whitelisted, false otherwise
      */
     function isAddressWhitelisted(address addressToCheck) public view returns (bool) {
-        return OrganizationStorage.layout().whitelistedAddresses[addressToCheck];
+        return OrganizationWhitelistFacetStorage.layout().whitelistedAddresses[addressToCheck];
     }
 
     /**
@@ -61,10 +62,10 @@ contract OrganizationWhitelistFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.ModifyWhitelist, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyWhitelist, operationData, salt, chainId, signatures
         );
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationWhitelistFacetStorage.Layout storage whitelistLayout = OrganizationWhitelistFacetStorage.layout();
 
         // Add addresses to whitelist
         for (uint256 i = 0; i < addressesToAdd.length; ++i) {
@@ -72,12 +73,12 @@ contract OrganizationWhitelistFacet {
             if (addressToAdd == address(0)) {
                 revert WhitelistOperationRejected("Cannot add zero address to whitelist");
             }
-            l.whitelistedAddresses[addressToAdd] = true;
+            whitelistLayout.whitelistedAddresses[addressToAdd] = true;
         }
 
         // Remove addresses from whitelist
         for (uint256 i = 0; i < addressesToRemove.length; ++i) {
-            l.whitelistedAddresses[addressesToRemove[i]] = false;
+            whitelistLayout.whitelistedAddresses[addressesToRemove[i]] = false;
         }
 
         // Emit event

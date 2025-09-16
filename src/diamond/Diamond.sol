@@ -44,5 +44,5 @@ contract Diamond {
         }
     }
 
-    receive() external payable { }
+    receive() external payable virtual { }
 }

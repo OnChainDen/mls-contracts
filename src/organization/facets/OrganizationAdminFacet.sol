@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../OrganizationStorage.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
+import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
+import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { IAdminFacet, AdminType, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 import { IOrganizationMembersFacet } from "../interfaces/IOrganizationMembersFacet.sol";
 import { IOrganizationGroupsFacet } from "../interfaces/IOrganizationGroupsFacet.sol";
@@ -16,7 +18,9 @@ import { IOrganizationGroupsFacet } from "../interfaces/IOrganizationGroupsFacet
  * @author Den Technologies Inc
  */
 contract OrganizationAdminFacet is IAdminFacet {
-    using OrganizationStorage for OrganizationStorage.Layout;
+    using OrganizationAdminFacetStorage for OrganizationAdminFacetStorage.Layout;
+    using OrganizationMembersFacetStorage for OrganizationMembersFacetStorage.Layout;
+    using OrganizationGroupsFacetStorage for OrganizationGroupsFacetStorage.Layout;
 
     /**
      * @notice Emitted when admin permissions are updated
@@ -28,10 +32,10 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param newVotingThreshold The new voting threshold
      */
     event AdminPermissionUpdated(
-        OrganizationStorage.AdminType previousAdminType,
+        AdminType previousAdminType,
         uint8 previousAdminId,
         uint256 previousVotingThreshold,
-        OrganizationStorage.AdminType newAdminType,
+        AdminType newAdminType,
         uint8 newAdminId,
         uint256 newVotingThreshold
     );
@@ -71,8 +75,8 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @notice Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
-    function adminPermission() external view returns (OrganizationStorage.AdminPermission memory) {
-        return OrganizationStorage.layout().adminPermission;
+    function adminPermission() external view returns (OrganizationAdminFacetStorage.AdminPermission memory) {
+        return OrganizationAdminFacetStorage.layout().adminPermission;
     }
 
     /**
@@ -81,7 +85,7 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @return True if the nonce has been used, false otherwise
      */
     function isAdminNonceUsed(uint256 nonce) external view returns (bool) {
-        return OrganizationStorage.layout().usedAdminNonces[nonce];
+        return OrganizationAdminFacetStorage.layout().usedAdminNonces[nonce];
     }
 
     /**
@@ -92,7 +96,7 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @return The computed nonce
      */
     function computeAdminNonce(
-        OrganizationStorage.AdminOperationType operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt
     )
@@ -114,7 +118,7 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param signatures The signatures from the current admin authorizing this change
      */
     function updateAdmin(
-        OrganizationStorage.AdminType newAdminType,
+        AdminType newAdminType,
         uint8 newAdminId,
         uint256 newVotingThreshold,
         uint256 salt,
@@ -129,36 +133,34 @@ contract OrganizationAdminFacet is IAdminFacet {
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
         // Validate that the current admin has authorized this change
-        validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.UpdateAdmin, operationData, salt, chainId, signatures
-        );
+        validateAdminAuthorization(AdminOperationType.UpdateAdmin, operationData, salt, chainId, signatures);
 
         // Validate the new admin configuration
-        if (newAdminType == OrganizationStorage.AdminType.Group && newVotingThreshold == 0) {
+        if (newAdminType == AdminType.Group && newVotingThreshold == 0) {
             revert AdminOperationRejected("Group admin must have a voting threshold greater than 0");
         }
 
         // Validate that the newAdminId points to a valid member or group
-        if (newAdminType == OrganizationStorage.AdminType.Member) {
+        if (newAdminType == AdminType.Member) {
             if (!IOrganizationMembersFacet(address(this)).memberExists(newAdminId)) {
                 revert AdminOperationRejected("Invalid member ID: member does not exist");
             }
-        } else if (newAdminType == OrganizationStorage.AdminType.Group) {
+        } else if (newAdminType == AdminType.Group) {
             if (!IOrganizationGroupsFacet(address(this)).isValidGroupWithMembers(newAdminId)) {
                 revert AdminOperationRejected("Invalid group ID: group does not exist or has no members");
             }
         }
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
 
         // Store previous admin configuration for the event
-        OrganizationStorage.AdminPermission memory previousAdmin = l.adminPermission;
+        OrganizationAdminFacetStorage.AdminPermission memory previousAdmin = adminLayout.adminPermission;
 
         // Update admin permissions
-        l.adminPermission = OrganizationStorage.AdminPermission({
+        adminLayout.adminPermission = OrganizationAdminFacetStorage.AdminPermission({
             adminType: newAdminType,
             adminId: newAdminId,
-            votingThreshold: newAdminType == OrganizationStorage.AdminType.Group ? newVotingThreshold : 0
+            votingThreshold: newAdminType == AdminType.Group ? newVotingThreshold : 0
         });
 
         // Emit event
@@ -168,7 +170,7 @@ contract OrganizationAdminFacet is IAdminFacet {
             previousAdmin.votingThreshold,
             newAdminType,
             newAdminId,
-            l.adminPermission.votingThreshold
+            adminLayout.adminPermission.votingThreshold
         );
     }
 
@@ -184,7 +186,7 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
-        OrganizationStorage.AdminOperationType operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId,
@@ -195,10 +197,10 @@ contract OrganizationAdminFacet is IAdminFacet {
         // Compute deterministic nonce from operation data and salt
         uint256 nonce = computeAdminNonce(operationType, operationData, salt);
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
 
         // Validate and check nonce for replay protection
-        if (l.usedAdminNonces[nonce]) {
+        if (adminLayout.usedAdminNonces[nonce]) {
             revert AdminNonceAlreadyUsed(nonce);
         }
 
@@ -213,13 +215,13 @@ contract OrganizationAdminFacet is IAdminFacet {
         bool isAuthorized = false;
 
         // Case: Admin is an individual member
-        if (l.adminPermission.adminType == OrganizationStorage.AdminType.Member) {
+        if (adminLayout.adminPermission.adminType == AdminType.Member) {
             isAuthorized = _hasValidAdminMemberSignature(signatures, operationHash);
         }
         // Case: Admin is a group
-        else if (l.adminPermission.adminType == OrganizationStorage.AdminType.Group) {
+        else if (adminLayout.adminPermission.adminType == AdminType.Group) {
             uint256 validSignatures = _getValidAdminGroupSignatures(signatures, operationHash);
-            isAuthorized = validSignatures >= l.adminPermission.votingThreshold;
+            isAuthorized = validSignatures >= adminLayout.adminPermission.votingThreshold;
         }
 
         // Revert if not authorized
@@ -228,7 +230,7 @@ contract OrganizationAdminFacet is IAdminFacet {
         }
 
         // Mark nonce as used after successful validation
-        l.usedAdminNonces[nonce] = true;
+        adminLayout.usedAdminNonces[nonce] = true;
     }
 
     /**
@@ -248,10 +250,11 @@ contract OrganizationAdminFacet is IAdminFacet {
         // Check that we have exactly one signature (65 bytes: r: 32, s: 32, v: 1)
         if (signatures.length != 65) return false;
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Get the admin member's address
-        address adminMemberAddress = l.memberIdToAddress[l.adminPermission.adminId];
+        address adminMemberAddress = membersLayout.memberIdToAddress[adminLayout.adminPermission.adminId];
         if (adminMemberAddress == address(0)) return false;
 
         // Extract signer address from signature using ERC-1271 compatible verification
@@ -288,7 +291,9 @@ contract OrganizationAdminFacet is IAdminFacet {
         // Track last signer to prevent duplicates (similar to Safe contracts)
         address lastSigner = address(0);
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
 
         // Iterate over signatures to count valid ones from admin group members
         for (uint8 i = 0; i < signatureCount; ++i) {
@@ -313,8 +318,9 @@ contract OrganizationAdminFacet is IAdminFacet {
             }
 
             // Check if signer is a member of the admin group
-            uint8 memberId = l.addressToMemberId[signer];
-            if (memberId != 0 && l.groupIdToMemberIdToInGroup[l.adminPermission.adminId][memberId]) {
+            uint8 memberId = membersLayout.addressToMemberId[signer];
+            if (memberId != 0 && groupsLayout.groupIdToMemberIdToInGroup[adminLayout.adminPermission.adminId][memberId])
+            {
                 ++validSignatures;
             }
         }
@@ -351,7 +357,7 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @return The hash of the admin operation formatted for ERC-1271 signature verification
      */
     function _getAdminOperationHash(
-        OrganizationStorage.AdminOperationType operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountStorage } from "../AccountStorage.sol";
+import { AccountOrganizationAddressStorage } from "./AccountOrganizationAddressStorage.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
@@ -10,7 +10,7 @@ import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
  * @author Den Technologies Inc
  */
 contract AccountGuardianFacet is IGuardianFacet {
-    using AccountStorage for AccountStorage.Layout;
+    using AccountOrganizationAddressStorage for AccountOrganizationAddressStorage.Layout;
 
     /**
      * @notice Error thrown when the organization address is not set
@@ -27,15 +27,15 @@ contract AccountGuardianFacet is IGuardianFacet {
      * @dev This function forwards the call to the associated organization contract's enforceOnlyGuardian function
      */
     function enforceOnlyGuardian() external view {
-        AccountStorage.Layout storage l = AccountStorage.layout();
+        AccountOrganizationAddressStorage.Layout storage layout = AccountOrganizationAddressStorage.layout();
 
         // Ensure organization address is set
-        if (l.organizationAddress == address(0)) {
+        if (layout.organizationAddress == address(0)) {
             revert OrganizationNotSet();
         }
 
         // Forward the call to the organization contract
-        try IGuardianFacet(l.organizationAddress).enforceOnlyGuardian() {
+        try IGuardianFacet(layout.organizationAddress).enforceOnlyGuardian() {
             return;
             // Call succeeded - caller is authorized
         } catch Error(string memory reason) {
@@ -52,7 +52,7 @@ contract AccountGuardianFacet is IGuardianFacet {
      * @return The organization address
      */
     function getOrganizationAddress() external view returns (address) {
-        return AccountStorage.layout().organizationAddress;
+        return AccountOrganizationAddressStorage.layout().organizationAddress;
     }
 
     /**
@@ -60,14 +60,14 @@ contract AccountGuardianFacet is IGuardianFacet {
      * @return The guardian address from the organization contract
      */
     function guardian() external view returns (address) {
-        AccountStorage.Layout storage l = AccountStorage.layout();
+        AccountOrganizationAddressStorage.Layout storage layout = AccountOrganizationAddressStorage.layout();
 
         // Ensure organization address is set
-        if (l.organizationAddress == address(0)) {
+        if (layout.organizationAddress == address(0)) {
             revert OrganizationNotSet();
         }
 
         // Forward the call to get guardian from organization contract
-        return IGuardianFacet(l.organizationAddress).guardian();
+        return IGuardianFacet(layout.organizationAddress).guardian();
     }
 }

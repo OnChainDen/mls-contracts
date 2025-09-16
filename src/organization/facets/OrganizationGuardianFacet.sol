@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../OrganizationStorage.sol";
+import { OrganizationGuardianFacetStorage } from "./OrganizationGuardianFacetStorage.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { IOrganizationGuardianFacet } from "../interfaces/IOrganizationGuardianFacet.sol";
-import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Organization Guardian Facet
@@ -12,7 +12,7 @@ import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
  * @author Den Technologies Inc
  */
 contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
-    using OrganizationStorage for OrganizationStorage.Layout;
+    using OrganizationGuardianFacetStorage for OrganizationGuardianFacetStorage.Layout;
 
     /**
      * @notice Emitted when the guardian address is updated
@@ -39,9 +39,9 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
      * @dev This function will revert if msg.sender is not the guardian
      */
     function enforceOnlyGuardian() public view {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        if (msg.sender != l.guardian) {
-            revert UnauthorizedCaller(msg.sender, l.guardian);
+        OrganizationGuardianFacetStorage.Layout storage layout = OrganizationGuardianFacetStorage.layout();
+        if (msg.sender != layout.guardian) {
+            revert UnauthorizedCaller(msg.sender, layout.guardian);
         }
     }
 
@@ -50,7 +50,7 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
      * @return The current guardian address
      */
     function guardian() external view returns (address) {
-        return OrganizationStorage.layout().guardian;
+        return OrganizationGuardianFacetStorage.layout().guardian;
     }
 
     /**
@@ -74,16 +74,16 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.UpdateGuardian, operationData, salt, chainId, signatures
+            AdminOperationType.UpdateGuardian, operationData, salt, chainId, signatures
         );
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationGuardianFacetStorage.Layout storage layout = OrganizationGuardianFacetStorage.layout();
 
         // Store previous guardian for the event
-        address previousGuardian = l.guardian;
+        address previousGuardian = layout.guardian;
 
         // Update guardian address
-        l.guardian = newGuardian;
+        layout.guardian = newGuardian;
 
         // Emit event
         emit GuardianUpdated(previousGuardian, newGuardian);

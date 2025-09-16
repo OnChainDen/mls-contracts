@@ -8,7 +8,6 @@ pragma solidity ^0.8.24;
  * Modified for Solidity ^0.8.24 and enhanced with guardian protection
  */
 import "../interfaces/IDiamondCut.sol";
-import "../../organization/OrganizationStorage.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "../../libraries/SignatureUtils.sol";

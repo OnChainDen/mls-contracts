@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountStorage } from "../AccountStorage.sol";
-import { OrganizationStorage } from "../../organization/OrganizationStorage.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { AccountOrganizationAddressStorage } from "./AccountOrganizationAddressStorage.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Account Admin Facet
@@ -11,7 +10,7 @@ import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
  * @author Den Technologies Inc
  */
 contract AccountAdminFacet is IAdminFacet {
-    using AccountStorage for AccountStorage.Layout;
+    using AccountOrganizationAddressStorage for AccountOrganizationAddressStorage.Layout;
 
     /**
      * @notice Emitted when an admin operation is rejected due to insufficient authorization
@@ -34,7 +33,7 @@ contract AccountAdminFacet is IAdminFacet {
      * @return The organization address
      */
     function getOrganizationAddress() external view returns (address) {
-        return AccountStorage.layout().organizationAddress;
+        return AccountOrganizationAddressStorage.layout().organizationAddress;
     }
 
     /**
@@ -49,7 +48,7 @@ contract AccountAdminFacet is IAdminFacet {
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
-        OrganizationStorage.AdminOperationType operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
         uint256 chainId,
@@ -57,15 +56,15 @@ contract AccountAdminFacet is IAdminFacet {
     )
         public
     {
-        AccountStorage.Layout storage l = AccountStorage.layout();
+        AccountOrganizationAddressStorage.Layout storage layout = AccountOrganizationAddressStorage.layout();
 
         // Ensure organization address is set
-        if (l.organizationAddress == address(0)) {
+        if (layout.organizationAddress == address(0)) {
             revert OrganizationNotSet();
         }
 
         // Forward the call to the organization contract
-        try IAdminFacet(l.organizationAddress).validateAdminAuthorization(
+        try IAdminFacet(layout.organizationAddress).validateAdminAuthorization(
             operationType, operationData, salt, chainId, signatures
         ) {
             return;

@@ -9,10 +9,10 @@ pragma solidity ^0.8.24;
  */
 import "../interfaces/IDiamondCut.sol";
 import "../libraries/LibDiamond.sol";
-import "../../account/AccountStorage.sol";
-import "../../organization/OrganizationStorage.sol";
+import { AccountTransactionFacetStorage } from "../../account/facets/AccountTransactionFacetStorage.sol";
+import { OrganizationAdminFacetStorage } from "../../organization/facets/OrganizationAdminFacetStorage.sol";
 import "../../interfaces/IGuardianFacet.sol";
-import "../../interfaces/IAdminFacet.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 contract DiamondCutFacet is IDiamondCut {
     /**
@@ -74,7 +74,7 @@ contract DiamondCutFacet is IDiamondCut {
 
         // This is an Account diamond - validate through AccountAdminFacet
         try IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.DiamondCut, operationData, salt, chainId, signatures
+            AdminOperationType.DiamondCut, operationData, salt, chainId, signatures
         ) {
             return; // Validation successful
         } catch Error(string memory reason) {

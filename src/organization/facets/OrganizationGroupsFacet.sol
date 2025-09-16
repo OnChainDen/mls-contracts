@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../OrganizationStorage.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
+import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
@@ -11,7 +13,8 @@ import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
  * @author Den Technologies Inc
  */
 contract OrganizationGroupsFacet {
-    using OrganizationStorage for OrganizationStorage.Layout;
+    using OrganizationGroupsFacetStorage for OrganizationGroupsFacetStorage.Layout;
+    using OrganizationMembersFacetStorage for OrganizationMembersFacetStorage.Layout;
 
     /**
      * @notice Emitted when a group is created
@@ -47,12 +50,13 @@ contract OrganizationGroupsFacet {
      * @return True if the member is in the group, false otherwise
      */
     function isMemberInGroup(uint8 memberId, uint8 groupId) public view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Case: Member does not exist
-        if (l.memberIdToAddress[memberId] == address(0)) return false;
+        if (membersLayout.memberIdToAddress[memberId] == address(0)) return false;
 
-        return l.groupIdToMemberIdToInGroup[groupId][memberId];
+        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     /**
@@ -62,13 +66,14 @@ contract OrganizationGroupsFacet {
      * @return True if the member is in the group, false otherwise
      */
     function isMemberInGroup(address memberAddress, uint8 groupId) public view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        uint8 memberId = l.addressToMemberId[memberAddress];
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
+        uint8 memberId = membersLayout.addressToMemberId[memberAddress];
 
         // Case: Member does not exist
         if (memberId == 0) return false;
 
-        return l.groupIdToMemberIdToInGroup[groupId][memberId];
+        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
     }
 
     /**
@@ -77,7 +82,7 @@ contract OrganizationGroupsFacet {
      * @return True if the group exists, false otherwise
      */
     function groupExists(uint8 groupId) external view returns (bool) {
-        return OrganizationStorage.layout().groupIdToExists[groupId];
+        return OrganizationGroupsFacetStorage.layout().groupIdToExists[groupId];
     }
 
     /**
@@ -86,8 +91,8 @@ contract OrganizationGroupsFacet {
      * @return True if the group exists and has members, false otherwise
      */
     function isValidGroupWithMembers(uint8 groupId) external view returns (bool) {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-        return l.groupIdToExists[groupId] && l.groupIdToMemberCount[groupId] > 0;
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        return groupsLayout.groupIdToExists[groupId] && groupsLayout.groupIdToMemberCount[groupId] > 0;
     }
 
     /**
@@ -115,34 +120,35 @@ contract OrganizationGroupsFacet {
             revert GroupOperationRejected("Group must have at least one member");
         }
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Auto-increment group ID
-        groupId = l.nextGroupId;
-        ++l.nextGroupId;
+        groupId = groupsLayout.nextGroupId;
+        ++groupsLayout.nextGroupId;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(groupId, memberIds);
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.CreateGroup, operationData, salt, chainId, signatures
+            AdminOperationType.CreateGroup, operationData, salt, chainId, signatures
         );
 
         // Update member-to-group mappings and group membership flags
         for (uint256 i = 0; i < memberIds.length; ++i) {
             uint8 memberId = memberIds[i];
-            if (l.memberIdToAddress[memberId] == address(0)) {
+            if (membersLayout.memberIdToAddress[memberId] == address(0)) {
                 revert GroupOperationRejected("Invalid member ID provided");
             }
 
             // Mark member as being in the group
-            l.groupIdToMemberIdToInGroup[groupId][memberId] = true;
+            groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId] = true;
         }
 
         // Mark group as existing and set initial member count
-        l.groupIdToExists[groupId] = true;
-        l.groupIdToMemberCount[groupId] = memberIds.length;
+        groupsLayout.groupIdToExists[groupId] = true;
+        groupsLayout.groupIdToMemberCount[groupId] = memberIds.length;
 
         // Emit event
         emit GroupCreated(groupId, memberIds);
@@ -170,10 +176,11 @@ contract OrganizationGroupsFacet {
     {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Check if group exists
-        if (!l.groupIdToExists[groupId]) {
+        if (!groupsLayout.groupIdToExists[groupId]) {
             revert GroupOperationRejected("Group does not exist");
         }
 
@@ -187,29 +194,29 @@ contract OrganizationGroupsFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.ModifyGroup, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyGroup, operationData, salt, chainId, signatures
         );
 
         // Add new members
         for (uint256 i = 0; i < membersToAdd.length; ++i) {
             uint8 memberId = membersToAdd[i];
-            if (l.memberIdToAddress[memberId] == address(0)) {
+            if (membersLayout.memberIdToAddress[memberId] == address(0)) {
                 revert GroupOperationRejected("Invalid member ID provided");
             }
 
             // Only add if not already in group to avoid double counting
-            if (!l.groupIdToMemberIdToInGroup[groupId][memberId]) {
-                l.groupIdToMemberIdToInGroup[groupId][memberId] = true;
-                l.groupIdToMemberCount[groupId]++;
+            if (!groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId]) {
+                groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId] = true;
+                groupsLayout.groupIdToMemberCount[groupId]++;
             }
         }
 
         // Remove members
         for (uint256 i = 0; i < membersToRemove.length; ++i) {
             // Only remove if currently in group to avoid negative counting
-            if (l.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]]) {
-                l.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]] = false;
-                l.groupIdToMemberCount[groupId]--;
+            if (groupsLayout.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]]) {
+                groupsLayout.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]] = false;
+                groupsLayout.groupIdToMemberCount[groupId]--;
             }
         }
 
@@ -228,10 +235,10 @@ contract OrganizationGroupsFacet {
     function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
 
         // Check if group exists
-        if (!l.groupIdToExists[groupId]) {
+        if (!groupsLayout.groupIdToExists[groupId]) {
             revert GroupOperationRejected("Group does not exist");
         }
 
@@ -240,12 +247,12 @@ contract OrganizationGroupsFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.RemoveGroup, operationData, salt, chainId, signatures
+            AdminOperationType.RemoveGroup, operationData, salt, chainId, signatures
         );
 
         // Mark group as not existing and reset member count
-        l.groupIdToExists[groupId] = false;
-        l.groupIdToMemberCount[groupId] = 0;
+        groupsLayout.groupIdToExists[groupId] = false;
+        groupsLayout.groupIdToMemberCount[groupId] = 0;
 
         // Emit event
         emit GroupRemoved(groupId);

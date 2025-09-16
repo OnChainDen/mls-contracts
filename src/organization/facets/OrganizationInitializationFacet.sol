@@ -3,8 +3,12 @@ pragma solidity ^0.8.24;
 
 import "../../diamond/libraries/LibDiamond.sol";
 import "../../diamond/interfaces/IDiamondCut.sol";
-import "../OrganizationStorage.sol";
-import "../../interfaces/IAdminFacet.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
+import { OrganizationDeployerAddressStorage } from "./OrganizationDeployerAddressStorage.sol";
+import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
+import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
+import { OrganizationGuardianFacetStorage } from "./OrganizationGuardianFacetStorage.sol";
+import { IAdminFacet, AdminType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Organization Initialization Facet
@@ -18,7 +22,7 @@ contract OrganizationInitializationFacet {
      * @param adminAddresses The admin addresses set during initialization
      * @param guardian The guardian address set during initialization
      */
-    event OrganizationInitialized(OrganizationStorage.AdminType adminType, address[] adminAddresses, address guardian);
+    event OrganizationInitialized(AdminType adminType, address[] adminAddresses, address guardian);
 
     /**
      * @notice Error thrown when caller is not the authorized deployer
@@ -51,17 +55,15 @@ contract OrganizationInitializationFacet {
      */
     function initialize(
         IDiamondCut.FacetCut[] memory _diamondCut,
-        OrganizationStorage.AdminType adminType,
+        AdminType adminType,
         address[] memory adminAddresses,
         uint256 votingThreshold,
         address guardian
     )
         external
     {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
-
         // Only the authorized deployer can initialize
-        if (msg.sender != l.deployerAddress) {
+        if (msg.sender != OrganizationDeployerAddressStorage.layout().deployerAddress) {
             revert UnauthorizedDeployer();
         }
 
@@ -75,11 +77,11 @@ contract OrganizationInitializationFacet {
             revert InvalidAdminConfiguration();
         }
 
-        if (adminType == OrganizationStorage.AdminType.Group && votingThreshold == 0) {
+        if (adminType == AdminType.Group && votingThreshold == 0) {
             revert InvalidAdminConfiguration();
         }
 
-        if (adminType == OrganizationStorage.AdminType.Member && adminAddresses.length > 1) {
+        if (adminType == AdminType.Member && adminAddresses.length > 1) {
             revert InvalidAdminConfiguration();
         }
 
@@ -92,7 +94,7 @@ contract OrganizationInitializationFacet {
         _setAdminConfiguration(adminType, adminAddresses, votingThreshold);
 
         // Set guardian
-        l.guardian = guardian;
+        OrganizationGuardianFacetStorage.layout().guardian = guardian;
 
         emit OrganizationInitialized(adminType, adminAddresses, guardian);
     }
@@ -105,43 +107,45 @@ contract OrganizationInitializationFacet {
      * @return adminId The ID of the admin (member ID or group ID)
      */
     function _setAdminConfiguration(
-        OrganizationStorage.AdminType adminType,
+        AdminType adminType,
         address[] memory adminAddresses,
         uint256 votingThreshold
     )
         internal
         returns (uint8 adminId)
     {
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
 
         // Case: Individual admin
-        if (adminType == OrganizationStorage.AdminType.Member) {
+        if (adminType == AdminType.Member) {
             // Validate admin address
             if (adminAddresses[0] == address(0)) {
                 revert InvalidAdminConfiguration();
             }
 
             // Add member to mappings
-            l.memberIdToAddress[1] = adminAddresses[0];
-            l.addressToMemberId[adminAddresses[0]] = 1;
+            membersLayout.memberIdToAddress[1] = adminAddresses[0];
+            membersLayout.addressToMemberId[adminAddresses[0]] = 1;
 
             // Initialize the member and group counters
-            l.nextMemberId = 2;
-            l.nextGroupId = 1;
+            membersLayout.nextMemberId = 2;
+            groupsLayout.nextGroupId = 1;
 
             // Set admin permission
-            l.adminPermission =
-                OrganizationStorage.AdminPermission({ adminType: adminType, adminId: 1, votingThreshold: 0 });
+            adminLayout.adminPermission =
+                OrganizationAdminFacetStorage.AdminPermission({ adminType: adminType, adminId: 1, votingThreshold: 0 });
         }
         // Case: Group admin
         else {
             // Create a group with all members
-            l.groupIdToExists[1] = true;
-            l.groupIdToMemberCount[1] = uint256(adminAddresses.length);
+            groupsLayout.groupIdToExists[1] = true;
+            groupsLayout.groupIdToMemberCount[1] = uint256(adminAddresses.length);
 
             // Initialize the member and group counters
-            l.nextMemberId = uint8(adminAddresses.length + 1);
-            l.nextGroupId = 2;
+            membersLayout.nextMemberId = uint8(adminAddresses.length + 1);
+            groupsLayout.nextGroupId = 2;
 
             // Create members for all admin addresses
             for (uint256 i = 0; i < adminAddresses.length; ++i) {
@@ -153,13 +157,13 @@ contract OrganizationInitializationFacet {
                 uint8 memberId = uint8(i + 1);
 
                 // Add member to mappings
-                l.memberIdToAddress[memberId] = adminAddresses[i];
-                l.addressToMemberId[adminAddresses[i]] = memberId;
-                l.groupIdToMemberIdToInGroup[1][memberId] = true;
+                membersLayout.memberIdToAddress[memberId] = adminAddresses[i];
+                membersLayout.addressToMemberId[adminAddresses[i]] = memberId;
+                groupsLayout.groupIdToMemberIdToInGroup[1][memberId] = true;
             }
 
             // Set admin permission
-            l.adminPermission = OrganizationStorage.AdminPermission({
+            adminLayout.adminPermission = OrganizationAdminFacetStorage.AdminPermission({
                 adminType: adminType,
                 adminId: 1,
                 votingThreshold: votingThreshold
@@ -172,7 +176,7 @@ contract OrganizationInitializationFacet {
      * @return The deployer address
      */
     function getDeployerAddress() external view returns (address) {
-        return OrganizationStorage.layout().deployerAddress;
+        return OrganizationDeployerAddressStorage.layout().deployerAddress;
     }
 
     /**
@@ -180,6 +184,6 @@ contract OrganizationInitializationFacet {
      * @return True if initialized, false otherwise
      */
     function isInitialized() public view returns (bool) {
-        return OrganizationStorage.layout().adminPermission.adminId != 0;
+        return OrganizationAdminFacetStorage.layout().adminPermission.adminId != 0;
     }
 }

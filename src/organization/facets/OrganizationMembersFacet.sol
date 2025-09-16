@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationStorage } from "../OrganizationStorage.sol";
-import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
+import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
+import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
@@ -11,7 +13,8 @@ import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
  * @author Den Technologies Inc
  */
 contract OrganizationMembersFacet {
-    using OrganizationStorage for OrganizationStorage.Layout;
+    using OrganizationMembersFacetStorage for OrganizationMembersFacetStorage.Layout;
+    using OrganizationGroupsFacetStorage for OrganizationGroupsFacetStorage.Layout;
 
     /**
      * @notice Emitted when members are added
@@ -47,7 +50,7 @@ contract OrganizationMembersFacet {
      * @return The member ID (0 if not a member)
      */
     function addressToMemberId(address memberAddress) external view returns (uint8) {
-        return OrganizationStorage.layout().addressToMemberId[memberAddress];
+        return OrganizationMembersFacetStorage.layout().addressToMemberId[memberAddress];
     }
 
     /**
@@ -56,7 +59,7 @@ contract OrganizationMembersFacet {
      * @return The address of the member
      */
     function getMemberAddress(uint8 memberId) external view returns (address) {
-        return OrganizationStorage.layout().memberIdToAddress[memberId];
+        return OrganizationMembersFacetStorage.layout().memberIdToAddress[memberId];
     }
 
     /**
@@ -65,7 +68,7 @@ contract OrganizationMembersFacet {
      * @return True if the member exists, false otherwise
      */
     function memberExists(uint8 memberId) external view returns (bool) {
-        return OrganizationStorage.layout().memberIdToAddress[memberId] != address(0);
+        return OrganizationMembersFacetStorage.layout().memberIdToAddress[memberId] != address(0);
     }
 
     /**
@@ -76,7 +79,7 @@ contract OrganizationMembersFacet {
      * @return The computed nonce
      */
     function computeAdminNonce(
-        OrganizationStorage.AdminOperationType operationType,
+        AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt
     )
@@ -117,10 +120,10 @@ contract OrganizationMembersFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.AddMembers, operationData, salt, chainId, signatures
+            AdminOperationType.AddMembers, operationData, salt, chainId, signatures
         );
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Pre-allocate member IDs array for event and return value
         memberIds = new uint8[](memberAddresses.length);
@@ -129,10 +132,10 @@ contract OrganizationMembersFacet {
         for (uint256 i = 0; i < memberAddresses.length; ++i) {
             // Get current member ID and address
             address memberAddress = memberAddresses[i];
-            uint8 memberId = l.nextMemberId;
+            uint8 memberId = membersLayout.nextMemberId;
 
             // Increment next member ID
-            l.nextMemberId++;
+            membersLayout.nextMemberId++;
 
             // Pre-allocate member IDs array for event and return value
             memberIds[i] = memberId;
@@ -143,13 +146,13 @@ contract OrganizationMembersFacet {
             }
 
             // Check if address is already a member
-            if (l.addressToMemberId[memberAddress] != 0) {
+            if (membersLayout.addressToMemberId[memberAddress] != 0) {
                 revert MemberOperationRejected("Address is already a member");
             }
 
             // Update mappings
-            l.memberIdToAddress[memberId] = memberAddress;
-            l.addressToMemberId[memberAddress] = memberId;
+            membersLayout.memberIdToAddress[memberId] = memberAddress;
+            membersLayout.addressToMemberId[memberAddress] = memberId;
         }
 
         // Emit event
@@ -181,16 +184,16 @@ contract OrganizationMembersFacet {
             revert MemberOperationRejected("Invalid new address provided");
         }
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
 
         // Check if member exists
-        address previousAddress = l.memberIdToAddress[memberId];
+        address previousAddress = membersLayout.memberIdToAddress[memberId];
         if (previousAddress == address(0)) {
             revert MemberOperationRejected("Member does not exist");
         }
 
         // Check if new address is already a member (and it's not the same member)
-        uint8 existingMemberId = l.addressToMemberId[newAddress];
+        uint8 existingMemberId = membersLayout.addressToMemberId[newAddress];
         if (existingMemberId != 0 && existingMemberId != memberId) {
             revert MemberOperationRejected("New address is already assigned to another member");
         }
@@ -201,16 +204,16 @@ contract OrganizationMembersFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.ModifyMember, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyMember, operationData, salt, chainId, signatures
         );
 
         // Update mappings
         // Remove old address mapping
-        l.addressToMemberId[previousAddress] = 0;
+        membersLayout.addressToMemberId[previousAddress] = 0;
         // Add new address mapping
-        l.addressToMemberId[newAddress] = memberId;
+        membersLayout.addressToMemberId[newAddress] = memberId;
         // Update member address
-        l.memberIdToAddress[memberId] = newAddress;
+        membersLayout.memberIdToAddress[memberId] = newAddress;
 
         // Emit event
         emit MemberModified(memberId, previousAddress, newAddress);
@@ -238,10 +241,11 @@ contract OrganizationMembersFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            OrganizationStorage.AdminOperationType.RemoveMembers, operationData, salt, chainId, signatures
+            AdminOperationType.RemoveMembers, operationData, salt, chainId, signatures
         );
 
-        OrganizationStorage.Layout storage l = OrganizationStorage.layout();
+        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
+        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
 
         // Preallocate member addresses for event
         address[] memory memberAddresses = new address[](memberIds.length);
@@ -250,7 +254,7 @@ contract OrganizationMembersFacet {
         for (uint256 i = 0; i < memberIds.length; ++i) {
             // Get member ID and address
             uint8 memberId = memberIds[i];
-            address memberAddress = l.memberIdToAddress[memberId];
+            address memberAddress = membersLayout.memberIdToAddress[memberId];
 
             // Case: Member does not exist
             if (memberAddress == address(0)) {
@@ -261,16 +265,17 @@ contract OrganizationMembersFacet {
             memberAddresses[i] = memberAddress;
 
             // Remove member from all groups they belong to
-            for (uint8 groupId = 0; groupId < l.nextGroupId; ++groupId) {
-                if (l.groupIdToExists[groupId] && l.groupIdToMemberIdToInGroup[groupId][memberId]) {
-                    l.groupIdToMemberIdToInGroup[groupId][memberId] = false;
-                    l.groupIdToMemberCount[groupId]--;
+            for (uint8 groupId = 0; groupId < groupsLayout.nextGroupId; ++groupId) {
+                if (groupsLayout.groupIdToExists[groupId] && groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId])
+                {
+                    groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId] = false;
+                    groupsLayout.groupIdToMemberCount[groupId]--;
                 }
             }
 
             // Remove member from organization mappings
-            l.memberIdToAddress[memberId] = address(0);
-            l.addressToMemberId[memberAddress] = 0;
+            membersLayout.memberIdToAddress[memberId] = address(0);
+            membersLayout.addressToMemberId[memberAddress] = 0;
         }
 
         // Emit event
