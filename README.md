@@ -42,12 +42,18 @@ The order of operations is the following:
 
 
 ## Smart contracts
-### Overview
+### Organizations and Accounts
 There are two main abstrations represented as smart contracts in Onchain Custody:
 1. Organizations (`src/organization/OnchainCustodyOrganizationDiamond.sol`)
 2. Accounts (`src/account/OnchainCustodyAccountDiamond.sol`)
 
-Each real world organization that uses Onchain Custody is represented onchain by a dedicated Organization contract. Each organization may have one or more Accounts (i.e. "smart accounts" or "smart contract wallets"), which are smart contracts that holds funds on behalf of the organization. 
+
+
+Each real-world organization is represented onchain by a dedicated organization smart contract. That contract is a source of truth for the organization's state, such as its members, groups, policies, admins, etc. Funds are *not* stored in the organization contract.
+
+Instead, funds are stored in "account" smart contracts (i.e. "smart accounts" or "smart contract wallets"). Each organization can have one or more accounts. Account smart contracts interact with their corresponding organization contracts to access important information regarding the organization. For example, when executing a transaction, an account contract will fetch its  organization's policies from the organization contract.
+
+![Onchain Custody Core Contracts Diagram](docs/images/OnchainCustodyCoreContractsDiagram.svg)
 
 The contracts representing organizations and accounts are both ERC-2535 Diamond proxies, and all functionalities are implemented in facets.
 
