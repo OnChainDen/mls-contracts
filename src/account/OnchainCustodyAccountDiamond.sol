@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import "../diamond/Diamond.sol";
 import "../diamond/interfaces/IDiamondCut.sol";
+import "../diamond/interfaces/IFacetCutsWhitelist.sol";
+import "../diamond/libraries/LibDiamond.sol";
 import { AccountOrganizationAddressStorage } from "./facets/AccountOrganizationAddressStorage.sol";
 import "./interfaces/INativeTokenReceivedEventEmitter.sol";
 
@@ -12,8 +14,21 @@ import "./interfaces/INativeTokenReceivedEventEmitter.sol";
  * @author Den Technologies Inc
  */
 contract OnchainCustodyAccountDiamond is Diamond, INativeTokenReceivedEventEmitter {
-    constructor(IDiamondCut.FacetCut[] memory _diamondCut, address _organizationAddress) payable Diamond(_diamondCut) {
+    constructor(
+        IDiamondCut.FacetCut[] memory _diamondCut,
+        address _organizationAddress,
+        address _facetWhitelistAddress,
+        uint256 whitelistSetId
+    )
+        payable
+        Diamond(_diamondCut, whitelistSetId)
+    {
         AccountOrganizationAddressStorage.layout().organizationAddress = _organizationAddress;
+
+        // Set the facet whitelist address
+        LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
+        ds.facetWhitelistAddress = _facetWhitelistAddress;
+        ds.contractType = IFacetCutsWhitelist.ContractType.Account;
     }
 
     /**

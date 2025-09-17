@@ -48,6 +48,7 @@ contract OrganizationInitializationFacet {
      * @notice Initializes the organization diamond with facets and admin configuration
      * @dev Can only be called by the deployer address set during diamond construction
      * @param _diamondCut Array of facet cuts to apply to the diamond
+     * @param whitelistSetId The ID of the whitelisted facet set to validate against
      * @param adminType Type of admin (Member or Group)
      * @param adminAddresses Array of addresses to be added as admin members
      * @param votingThreshold Voting threshold (only used for Group admin type)
@@ -55,6 +56,7 @@ contract OrganizationInitializationFacet {
      */
     function initialize(
         IDiamondCut.FacetCut[] memory _diamondCut,
+        uint256 whitelistSetId,
         AdminType adminType,
         address[] memory adminAddresses,
         uint256 votingThreshold,
@@ -87,7 +89,7 @@ contract OrganizationInitializationFacet {
 
         // Apply diamond cuts using LibDiamond (internal function, no admin validation needed)
         if (_diamondCut.length > 0) {
-            LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0));
+            LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0), whitelistSetId);
         }
 
         // Set admin configuration - create members and optionally create group

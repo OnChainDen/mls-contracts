@@ -8,6 +8,7 @@ pragma solidity ^0.8.24;
  * Modified for Solidity ^0.8.24 and enhanced with guardian protection
  */
 import "../interfaces/IDiamondCut.sol";
+import "../interfaces/IFacetCutsWhitelist.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "../../libraries/SignatureUtils.sol";
@@ -26,6 +27,8 @@ library LibDiamond {
     }
 
     struct DiamondStorage {
+        IFacetCutsWhitelist.ContractType contractType;
+        address facetWhitelistAddress;
         // maps function selector to the facet address and
         // the position of the selector in the facetFunctionSelectors.selectors array
         mapping(bytes4 => FacetAddressAndPosition) selectorToFacetAndPosition;
@@ -48,7 +51,14 @@ library LibDiamond {
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
     // Internal function version of diamondCut without admin protection (for constructor use)
-    function diamondCut(IDiamondCut.FacetCut[] memory _diamondCut, address _init, bytes memory _calldata) internal {
+    function diamondCut(
+        IDiamondCut.FacetCut[] memory _diamondCut,
+        address _init,
+        bytes memory _calldata,
+        uint256 whitelistSetId
+    )
+        internal
+    {
         // Perform the diamond cut
         for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
             IDiamondCut.FacetCutAction action = _diamondCut[facetIndex].action;
@@ -62,8 +72,35 @@ library LibDiamond {
                 revert("LibDiamondCut: Incorrect FacetCutAction");
             }
         }
+
+        // Enforce that the facets are whitelisted
+        enforceFacetsAreWhitelisted(whitelistSetId);
+
         emit DiamondCut(_diamondCut, _init, _calldata);
         initializeDiamondCut(_init, _calldata);
+    }
+
+    function enforceFacetsAreWhitelisted(uint256 whitelistSetId) internal view {
+        DiamondStorage storage ds = diamondStorage();
+        require(ds.facetWhitelistAddress != address(0), "LibDiamond: Facet whitelist address not set");
+
+        IFacetCutsWhitelist facetWhitelist = IFacetCutsWhitelist(ds.facetWhitelistAddress);
+
+        // Collect current facet addresses and their function selectors
+        address[] memory currentFacetAddresses = ds.facetAddresses;
+        bytes4[][] memory currentFunctionSelectors = new bytes4[][](currentFacetAddresses.length);
+
+        for (uint256 i = 0; i < currentFacetAddresses.length; i++) {
+            address facetAddress = currentFacetAddresses[i];
+            currentFunctionSelectors[i] = ds.facetFunctionSelectors[facetAddress].functionSelectors;
+        }
+
+        // Validate that the current facets match the whitelisted set exactly
+        bool isValid = facetWhitelist.validateFacetSet(
+            ds.contractType, whitelistSetId, currentFacetAddresses, currentFunctionSelectors
+        );
+
+        require(isValid, "LibDiamond: Facet configuration not whitelisted");
     }
 
     function addFunctions(address _facetAddress, bytes4[] memory _functionSelectors) internal {

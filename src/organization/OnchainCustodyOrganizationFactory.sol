@@ -55,11 +55,14 @@ contract OnchainCustodyOrganizationFactory {
      * @dev Uses CREATE2 to ensure the same address across different chains
      * @param salt The salt for CREATE2 deployment
      * @param _diamondCut The initial diamond cuts to apply during deployment
+     * @param whitelistSetId The ID of the whitelisted facet set to validate against
      * @return organizationAddress The address of the deployed organization diamond
      */
     function deployOrganization(
         bytes32 salt,
-        IDiamondCut.FacetCut[] memory _diamondCut
+        IDiamondCut.FacetCut[] memory _diamondCut,
+        address _facetWhitelistAddress,
+        uint256 whitelistSetId
     )
         external
         returns (address organizationAddress)
@@ -71,7 +74,8 @@ contract OnchainCustodyOrganizationFactory {
 
         // Deploy the organization diamond using CREATE2
         bytes memory bytecode = abi.encodePacked(
-            type(OnchainCustodyOrganizationDiamond).creationCode, abi.encode(_diamondCut, deployerAddress)
+            type(OnchainCustodyOrganizationDiamond).creationCode,
+            abi.encode(_diamondCut, deployerAddress, _facetWhitelistAddress, whitelistSetId)
         );
 
         assembly {
@@ -84,7 +88,9 @@ contract OnchainCustodyOrganizationFactory {
         }
 
         // Check if the deployed address matches the computed address
-        if (organizationAddress != computeOrganizationAddress(salt, _diamondCut)) {
+        if (
+            organizationAddress != computeOrganizationAddress(salt, _diamondCut, _facetWhitelistAddress, whitelistSetId)
+        ) {
             revert DeploymentAddressMismatch();
         }
 
@@ -95,18 +101,22 @@ contract OnchainCustodyOrganizationFactory {
      * @notice Computes the address where an organization diamond would be deployed
      * @param salt The salt for CREATE2 deployment
      * @param _diamondCut The initial diamond cuts to apply during deployment
+     * @param whitelistSetId The ID of the whitelisted facet set to validate against
      * @return The computed address
      */
     function computeOrganizationAddress(
         bytes32 salt,
-        IDiamondCut.FacetCut[] memory _diamondCut
+        IDiamondCut.FacetCut[] memory _diamondCut,
+        address _facetWhitelistAddress,
+        uint256 whitelistSetId
     )
         public
         view
         returns (address)
     {
         bytes memory bytecode = abi.encodePacked(
-            type(OnchainCustodyOrganizationDiamond).creationCode, abi.encode(_diamondCut, deployerAddress)
+            type(OnchainCustodyOrganizationDiamond).creationCode,
+            abi.encode(_diamondCut, deployerAddress, _facetWhitelistAddress, whitelistSetId)
         );
 
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));

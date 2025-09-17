@@ -13,8 +13,8 @@ import "./interfaces/IDiamondCut.sol";
 import "./interfaces/IERC165.sol";
 
 contract Diamond {
-    constructor(IDiamondCut.FacetCut[] memory _diamondCut) payable {
-        LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0));
+    constructor(IDiamondCut.FacetCut[] memory _diamondCut, uint256 whitelistSetId) payable {
+        LibDiamond.diamondCut(_diamondCut, address(0), new bytes(0), whitelistSetId);
 
         LibDiamond.DiamondStorage storage ds = LibDiamond.diamondStorage();
 

@@ -26,6 +26,7 @@ contract DiamondCutFacet is IDiamondCut {
     /// @param _init The address of the contract or facet to execute _calldata
     /// @param _calldata A function call, including function selector and arguments
     ///                  _calldata is executed with delegatecall on _init
+    /// @param whitelistSetId The ID of the whitelisted facet set to validate against
     /// @param salt A user-provided salt for nonce computation (admin approval)
     /// @param chainId The chain ID for cross-chain replay protection
     /// @param signatures Admin signatures authorizing this diamond cut
@@ -33,6 +34,7 @@ contract DiamondCutFacet is IDiamondCut {
         FacetCut[] calldata _diamondCut,
         address _init,
         bytes calldata _calldata,
+        uint256 whitelistSetId,
         uint256 salt,
         uint256 chainId,
         bytes calldata signatures
@@ -43,10 +45,10 @@ contract DiamondCutFacet is IDiamondCut {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         // Validate admin authorization
-        _validateAdminAuthorization(_diamondCut, _init, _calldata, salt, chainId, signatures);
+        _validateAdminAuthorization(_diamondCut, _init, _calldata, whitelistSetId, salt, chainId, signatures);
 
         // Perform the diamond cut using the internal function (no admin validation)
-        LibDiamond.diamondCut(_diamondCut, _init, _calldata);
+        LibDiamond.diamondCut(_diamondCut, _init, _calldata, whitelistSetId);
     }
 
     /**
@@ -55,6 +57,7 @@ contract DiamondCutFacet is IDiamondCut {
      * @param _diamondCut The diamond cut operations
      * @param _init The initialization contract address
      * @param _calldata The initialization call data
+     * @param whitelistSetId The ID of the whitelisted facet set to validate against
      * @param salt A user-provided salt for nonce computation
      * @param chainId The chain ID for cross-chain replay protection
      * @param signatures The signatures from admin(s) authorizing this operation
@@ -63,6 +66,7 @@ contract DiamondCutFacet is IDiamondCut {
         FacetCut[] calldata _diamondCut,
         address _init,
         bytes calldata _calldata,
+        uint256 whitelistSetId,
         uint256 salt,
         uint256 chainId,
         bytes calldata signatures
@@ -70,7 +74,7 @@ contract DiamondCutFacet is IDiamondCut {
         internal
     {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(_diamondCut, _init, _calldata);
+        bytes memory operationData = abi.encode(_diamondCut, _init, _calldata, whitelistSetId);
 
         // This is an Account diamond - validate through AccountAdminFacet
         try IAdminFacet(address(this)).validateAdminAuthorization(
