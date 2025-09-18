@@ -1,5 +1,11 @@
 # Onchain Custody Smart Contracts
 This repository contains the smart contracts for Onchain Custody.
+
+> [!WARNING]
+> The contracts in this repository are a "rough draft" whose only purpose is to reason through how Onchain Custody might be implemented.
+>
+> **This code is not production-ready, or even audit-ready, and should not be trusted.**
+
 ## Onchain Custody Overview
 Onchain Custody is a new category of cryptocurrency custody. It is non-custodial and provides all the benefits of self-custody while being significantly more secure than all other forms of custody (traditional custody, self-custody, and MPC).
 
@@ -64,6 +70,9 @@ There are two main abstractions represented as smart contracts in Onchain Custod
 
 ### Upgradability (ERC-2535 Diamond Standard)
 
+> [!WARNING]
+> We are exploring using the [ERC-1822 Universal Upgradeable Proxy Standard (UUPS)](https://eips.ethereum.org/EIPS/eip-1822) instead of the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) for upgradability due to the heavy interdepencies between the diamond cut facets in Onchain Custody.
+
 The smart contracts are upgradable according to the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) by Nick Mudgen.
 
 The implementation of the ERC-2535 Diamond Standard for Onchain Custody can be found in the directory `src/diamond`:
@@ -101,6 +110,22 @@ Onchain Custody's implementation of the ERC-2535 Diamond Standard is based on Ni
 3. **Diamond cuts require approval the offchain Guardian service.**
 
     In order to cut a diamond, the offchain Guardian service must also explicitly approve the action. This is part of Onchain Custody's **"multiple redundant layers of security"** model.
+
+
+
+There are only two smart contracts in Onchain Custody that are upgradable:
+1. **The Organization smart contract**
+        
+    Diamond is located at `sr/corganization/OnchainCustodyOrganizationDiamond.sol`
+
+    Facets are located at `src/organization/facets/`
+
+2. **The Account smart contract**
+
+    Diamond is located at `src/account/OnchainCustodyAccountDiamond.sol`
+
+    Facets are located at `src/account/facets/`
+
 
 
 
