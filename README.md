@@ -4,7 +4,7 @@ This repository contains the smart contracts for Onchain Custody.
 > [!WARNING]
 > The contracts in this repository are a "rough draft" whose only purpose is to reason through how Onchain Custody might be implemented.
 >
-> **This code is not production-ready, or even audit-ready, and should not be trusted.**
+> **This code is not production-ready, or even audit-ready, and should not be trusted.** It is not gas-optimized, tested, or fully functional.
 
 ## Onchain Custody Overview
 Onchain Custody is a new category of cryptocurrency custody. It is non-custodial and provides all the benefits of self-custody while being significantly more secure than all other forms of custody (traditional custody, self-custody, and MPC).
@@ -47,9 +47,57 @@ The order of operations is the following:
 
     It will not allow the transaction to execute if its policy engines fails to validate the transaction. It will also prevent the transaction from executing if any approvals are missing from the account owners or the offchain Guardian service.
 
+## Core Concepts
+There are several core concepts in Onchain Custody:
+
+1. **Organizations**
+
+    An organization is a business or other non-individual entity that is using Onchain Custody.
+
+2. **Members**
+
+    Members are individuals who are a part of an Organization.
+
+3. **Groups**
+
+    Groups are collections of Members within an Organization. For example, an Organization might have a "Finance team" Group.
+
+4. **Accounts**
+    
+    Accounts are where funds are stored and where transactions are executed. An Organization can have many Accounts.
+
+5. **Policies**
+
+    Policies are rules that dictate what types of transactions can be executed and by whom.
+
+5. **Admins**
+
+    An organization's Admin is a privileged Member or Group that can modify the Organization. Specifically, Admins can manage an Organization's Members, Groups, Accounts, Policies, Whitelist, and Admins. 
+    
+    If the Admin for an Organization is set to a Group, then an Approval Threshold must also be set. The Approval Threshold dictates how many Members of the Admin Group must approve an operation. 
+    
+    Any Member of the Admin Group can *propose* a change to the Organization (e.g. adding a new Member), but the change will not take effect until enough Members in the Admin Group approve the proposed change.
+
+6. **Address Whitelists**
+
+    Address Whitelists are lists of trusted addresses. By default, transactions cannot be sent to non-whitelisted addresses, however this is a setting that Admins can change.
+
+7. **Transactions**
+
+    Transactions can send tokens, take a DeFi action, or interact with any arbitrary smart contract from an Account. A Transaction can only be executed if a Policy has been set that explicitly allows the Transaction. 
+    
+    Dependening on the Policy, the Transaction may be automatically approved, automatically rejected, or require other Members of the Organization to approve it.
 
 
-## Smart contracts
+
+## Policies
+TODO: @ittai Explain policies in depth. Outline all configurable parameters of a policy, how proposing and approving transactions are influenced by policies, and give specific examples with diagrams.
+
+## Mobile Wallet
+TODO: @ittai Explain the security and UX benefits of the Mobile Wallet, what the User Flow will look like, and specific security features we're implementing for it
+
+
+## Smart Contracts
 ### Organizations and Accounts
 There are two main abstractions represented as smart contracts in Onchain Custody:
 1. **Organizations**
@@ -75,6 +123,30 @@ There are two main abstractions represented as smart contracts in Onchain Custod
 
 The smart contracts are upgradable according to the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) by Nick Mudgen.
 
+
+Onchain Custody's implementation of the ERC-2535 Diamond Standard is based on Nick Mudgen's [diamond-3-hardhat](https://github.com/mudgen/diamond-3-hardhat) reference implementation, with some notable changes:
+
+1. **Facet cuts must be whitelisted.**
+
+    In order to "cut the diamond", the facet cuts (facet addresses and selectors) must be whitelisted by a separate and global whitelist. 
+
+    This is to negate attacks where users might be tricked into signing malicious payloads that cut the diamond in n efarious ways.
+
+    The whitelist is implemented by `src/diamond/FacetCutsWhitelist.sol`. It is referenced by `src/diamond/libraries/LibDiamond.sol` in the function `enforceFacetsAreWhitelisted`.
+
+2. **Diamond cuts require approval from an organization's admins.**
+
+    In order to cut a diamond, sufficient approval signatures must be provided from the organization's admins.
+
+    This is implemented in `src/diamond/facets/DiamondCutFacet.sol` in the function `diamondCut`.
+
+3. **Diamond cuts require approval the offchain Guardian service.**
+
+    In order to cut a diamond, the offchain Guardian service must also explicitly approve the action. This is part of Onchain Custody's **"multiple redundant layers of security"** model.
+
+    This is implemented in `src/diamond/facets/DiamondCutFacet.sol` in the function `diamondCut`.
+
+
 The implementation of the ERC-2535 Diamond Standard for Onchain Custody can be found in the directory `src/diamond`:
 ```
 src/
@@ -92,25 +164,6 @@ src/
 │   └── libraries/
 │       └── LibDiamond.sol
 ```
-
-Onchain Custody's implementation of the ERC-2535 Diamond Standard is based on Nick Mudgen's ERC-2535 [diamond-3-hardhat](https://github.com/mudgen/diamond-3-hardhat) reference implementation, with some notable changes:
-
-1. **Facet cuts must be whitelisted.**
-
-    In order to "cut the diamond", the facet cuts (facet addresses and selectors) must be whitelisted by a separate and global whitelist. 
-
-    The whitelist is implemented by `src/diamond/FacetCutsWhitelist.sol`.
-
-    This is to negate attacks where users might be tricked into signing malicious payloads that cut the diamond in n efarious ways.
-
-2. **Diamond cuts require approval from an organization's admins.**
-
-    In order to cut a diamond, sufficient approval signatures must be provided from the organization's admins.
-
-3. **Diamond cuts require approval the offchain Guardian service.**
-
-    In order to cut a diamond, the offchain Guardian service must also explicitly approve the action. This is part of Onchain Custody's **"multiple redundant layers of security"** model.
-
 
 
 There are only two smart contracts in Onchain Custody that are upgradable:
