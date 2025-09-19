@@ -94,7 +94,49 @@ There are several core concepts in Onchain Custody:
 TODO: @ittai Explain policies in depth. Outline all configurable parameters of a policy, how proposing and approving transactions are influenced by policies, and give specific examples with diagrams.
 
 ## Mobile Wallet
-TODO: @ittai Explain the security and UX benefits of the Mobile Wallet, what the User Flow will look like, and specific security features we're implementing for it
+Onchain Custody's dedicated mobile wallet is used by Organization Members and Admins to approve and reject transactions and other actions.
+
+Under the hood, the mobile wallet securely stores a private key on a Member's mobile device. That private key is used to cryptographically sign approvals and rejections. 
+
+The mobile wallet hosts a variety of features not found in other wallets that provide superior security and user experience.
+
+### Mobile Wallet Security Features
+The dedicated Onchain Custody mobile has a suite of security features that make it significantly more secure that other hardware and software wallets:
+
+1. **The mobile wallet can only be used with Onchain Custody to limit the attack surface.**
+
+    In other forms of custody, such a self-custody (i.e. multisignature wallets), users can manage their cryptographic private keys using any external wallet, like Metamask or Ledger. 
+    
+    Those wallets can be used to sign *any* transaction and can be used with *any* decentralized application. If the wallet is used with a malicious or compromised decentralized application, the user can be tricked into signing a malicious transaction with the same private key that manages their funds, potentially causing their funds to be stolen.
+
+    By having a dedicated mobile wallet that can only be used with Onchain Custody, user's private keys aren't being used to interact with other potentially dangerous applications.
+
+2. **The mobile wallet shows users what they're *actually* approving.**
+    
+    A well known security limitation of many wallets, especially hardware wallets like Ledger, is "blind signing". Instead of displaying a human-readable explanation of what is being signed, these wallets display an obscure technical string of letter and numbers that users can't interperet.
+
+    Users are therefore likely to accidentally approve malicious transactions.
+
+    In contrast, Onchain Custody's dedicate mobile wallet decodes transactions into a human-readable format locally on the user's device, so they know exactly what the transaction they're signing will do. This makes it possible for users to easily identify and reject malicious transactions.
+
+    ![Blind signing vs human-readable explanations](docs/images/OnchainCustodyMobileWalletDataDecodingDiagram.svg)
+
+3. **The mobile wallet runs the Policy Engine locally to verify that a transaction is actually valid.**
+
+    This is part of Onchain Custody's approach of having "multiple redundant layers of security". Before a user can approve a transaction, the Policy Engine runs locally on their device to determine if the transaction is valid to prevent them from being present malicious transactions in the first place.
+
+4. **The mobile wallet stores private keys in secure hardware enclaves and trusted execution environments (TEE).**
+
+    Similar to hardware wallets, the mobile wallet secure stores private keys in Secure Enclaves and Trusted Execution Environments (TEE) which isolate the private keys and prevent other applications from accessing them at a hardware level.
+
+5. **The mobile wallet is harder compromise with malware.**
+
+    Due to the locked-down and sandboxed nature of modern mobile operating systems, it is signficantly more difficult for attackers to install malware on a user's mobile device than it is on their desktop, and the scope of what the malware can accompolish is far more limited.
+
+    For example, in the Radiant Capital incident where over $50M was stolen, attackers compromised the computers used by Radiant Capital's mutlsig signers with malware. The malware intercepted transactions sent to their Ledger hardware wallets, replacing them with a malicious transaction. 
+    
+    Along with the "blind signing" limitations of their Ledger wallets, the signers were tricked into signing the malicious transaction that resulted in the theft of the organization's funds.
+
 
 
 ## Smart Contracts
