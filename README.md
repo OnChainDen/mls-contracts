@@ -172,7 +172,7 @@ This similarly protects against attack scenarios where an attacker compromises t
 
 In the event that the Offchain Guardian Service is unavailable, users can use the Disaster Recovery mechanism to withdraw their funds out of Onchain Custody without the Offchain Guardian Service's involvement. 
 
-> ![WARNING]
+> [!WARNING]
 > At the time of this writing, the Disaster Recovery mechanism has not yet been implemented. It will be implemented at the time of public release to ensure censorship resistance.
 
 
@@ -399,6 +399,28 @@ Note the ommission of the boolean that indicates whether the signature is for an
 
 The nonce is calculated onchain and is a function of the `to`, `value`, `data` fields (as well as other fields), so the `rejectTransaction` function cannot be tricked into applying a more lenient policy to determine who is allowed to reject the transaction.
 
+The contract keeps track of which nonces have already been used in a mapping:
+```solidity
+// src/account/facets/AccountTransactionFacetStorage.sol
+library AccountTransactionFacetStorage {
+
+    struct Layout {
+        // Mapping of nonces for replay protection. Each nonce can only be used once.
+        mapping(uint256 => bool) usedNonces;
+    }
+
+    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.account.transaction.storage");
+
+    function layout() internal pure returns (Layout storage l) {
+        bytes32 slot = STORAGE_SLOT;
+        assembly {
+            l.slot := slot
+        }
+    }
+}
+```
+
+When a transaction is executed or rejected, the `usedNonces` mapping is updated to reflect that the transaction's nonce has been used.
 
 
 #### Files
