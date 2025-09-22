@@ -172,7 +172,7 @@ This similarly protects against attack scenarios where an attacker compromises t
 
 In the event that the Offchain Guardian Service is unavailable, users can use the Disaster Recovery mechanism to withdraw their funds out of Onchain Custody without the Offchain Guardian Service's involvement. 
 
->![WARNING]
+> ![WARNING]
 > At the time of this writing, the Disaster Recovery mechanism has not yet been implemented. It will be implemented at the time of public release to ensure censorship resistance.
 
 
