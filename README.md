@@ -297,24 +297,107 @@ It has two external functions that are responsible for transaction execution and
 
 Both of these functions, like all other external or public functions in Onchain Custody, require `msg.sender` to be the Guardian service's EOA address.
 
+To determine who has permission to approve or reject a transaction, the `to`, `value`, and `data` function arguments are used to find the first Policy that matches the transaction. That Policy dictates who has permission to approve or reject the transaction.
 
-
-
-
-
-
+>[!WARNING]
+>The current approach to finding the first Policy that matches a transaction requires iterating through the list of policies until the first match is found.
+>
+>This approach is obviously very gas-intensive. It should either be heavily optimized for gas efficiency, or a replaced with a different approach overall.
 
 
 
 #### Signature replay protection
-> [!WARNING]
-> The use of non-sequential nonces to prevent signature replays is still in the investigation phase, and may be replaced with a traditional sequential nonce, like in Safe smart accounts, if issues are found during consultations with audit firms.
+
 
 Most self-custody smart accounts, like Safe, use a sequential nonce to prevent signature replay attacks. This however comes with an unituitive user experience, where transactions must be executed (or rejected) in the order they were proposed.
 
 Instead, Onchain custody uses a non-sequential nonce to prevent signature replay attacks, while providing a more intuitive user experience where transactions can be executed (or rejected) in any order.
 
+> [!WARNING]
+> The use of non-sequential nonces to prevent signature replays is still in the exploration phase, and may be replaced with a traditional sequential nonce, like in Safe smart accounts, if issues are found during consultations with audit firms.
 
+The hash that is signed by the user's wallet is a function of:
+1. The address of the Account
+2. `to`
+3. `value`
+4. `data`
+5. `salt`
+6. The chain ID
+7. A boolean which is `true` if the signature is for an approval, or `false` if it's for a rejection
+
+```solidity
+// src/account/facets/AccountTransactionFacet.sol
+function _getTransactionHash(
+    address to,
+    uint256 value,
+    bytes memory data,
+    uint256 salt,
+    bool isApproval
+)
+    internal
+    view
+    returns (bytes32)
+{
+
+    // Create EIP-712 structured data hash
+    bytes32 structHash = keccak256(
+        abi.encode(
+            keccak256(
+                "ExecuteTransaction(address account,address to,uint256 value,bytes data,uint256 salt,bool isApproval,uint256 chainId)"
+            ),
+            address(this)
+            to,
+            value,
+            keccak256(data),
+            salt,
+            isApproval,
+            chainId,
+        )
+    );
+
+    // Return EIP-712 compatible hash for ERC-1271 signature verification
+    return MessageHashUtils.toTypedDataHash(
+        keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("OnchainCustodyAccount"),
+                keccak256("1"),
+                block.chainid,
+                address(this)
+            )
+        ),
+        structHash
+    );
+}
+```
+
+The nonce that is "burned" onchain to prevent signature replays is calculated onchain and is a function of:
+1. The address of the Account
+2. `to`
+3. `value`
+4. `data`
+5. `salt`
+6. The chain ID
+
+```solidity
+// src/account/facets/AccountTransactionFacet.sol
+function computeNonce(
+    address to,
+    uint256 value,
+    bytes calldata data,
+    uint256 salt
+)
+    public
+    view
+    returns (uint256)
+{
+    return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), salt)));
+}
+```
+
+Note the ommission of the boolean that indicates whether the signature is for an approval or a rejection.
+
+The nonce is calculated onchain and is a function of the `to`, `value`, `data` fields (as well as other fields), so the `rejectTransaction` function cannot be tricked into applying a more lenient policy to determine who is allowed to reject the transaction.
 
 
 
