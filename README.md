@@ -265,7 +265,7 @@ src/organization
 └── OrganizationStorage.sol
 ```
 
-#### Accounts
+### Accounts
 
 Each Account is represented as a Diamond proxy, which can be found at `src/account/OnchainCustodyAccountDiamond.sol`.
 
@@ -307,7 +307,6 @@ To determine who has permission to approve or reject a transaction, the `to`, `v
 
 
 #### Signature replay protection
-
 
 Most self-custody smart accounts, like Safe, use a sequential nonce to prevent signature replay attacks. This however comes with an unituitive user experience, where transactions must be executed (or rejected) in the order they were proposed.
 
