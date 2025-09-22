@@ -158,6 +158,24 @@ There are two main abstractions represented as smart contracts in Onchain Custod
 
 ![Onchain Custody Core Contracts Diagram](docs/images/OnchainCustodyCoreContractsDiagram.svg)
 
+
+### Guardian protection
+Every external and public function on any Onchain Custody contract is protected by the Offchain Guardian.
+
+**That means that the first thing any external or public function does is check if `msg.sender` is the Offchain Guardian Service's EOA address.**
+
+This is an important component of Onchain Custody's philosophy of "multiple redundant layers of security". 
+
+In the unlikely scenario that an exploit is found further on in the smart contracts, a malicious actor would be unable to execute the exploit, unless they also simultaneously compromise the Offchain Guardian Service. This significantly increases the difficulty of an attack, and is a unique layer of security not provided by other custody solutions.
+
+This similarly protects against attack scenarios where an attacker compromises the mobile devices of all the transactions signers and tricks them into signing a malicious payload. The attacker would not be able to execute the malicious transaction without also simultaneoulsy compromising the Offchain Guardian Service.
+
+In the event that the Offchain Guardian Service is unavailable, users can use the Disaster Recovery mechanism to withdraw their funds out of Onchain Custody without the Offchain Guardian Service's involvement. 
+
+>![WARNING]
+> At the time of this writing, the Disaster Recovery mechanism has not yet been implemented. It will be implemented at the time of public release to ensure censorship resistance.
+
+
 ### Upgradability (ERC-2535 Diamond Standard)
 
 > [!WARNING]
@@ -245,4 +263,72 @@ src/organization
 ├── OnchainCustodyOrganizationFactory.sol
 ├── OrganizationInit.sol
 └── OrganizationStorage.sol
+```
+
+#### Accounts
+
+Each Account is represented as a Diamond proxy, which can be found at `src/account/OnchainCustodyAccountDiamond.sol`.
+
+All facets for Accounts are located at `src/account/facets/`.
+
+#### Transaction execution and rejection
+
+The facet that's responsible for transaction execution and rejection on an Account is `src/account/facets/AccountTransactionFacet.sol`.
+
+It has two external functions that are responsible for transaction execution and transaction rejection:
+
+```solidity
+ function executeTransaction(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 salt,
+        bytes memory signatures
+    ) external;
+
+ function rejectTransaction(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 salt,
+        bytes memory signatures
+    ) external;
+```
+
+Both of these functions, like all other external or public functions in Onchain Custody, require `msg.sender` to be the Guardian service's EOA address.
+
+
+
+
+
+
+
+
+
+
+#### Signature replay protection
+> [!WARNING]
+> The use of non-sequential nonces to prevent signature replays is still in the investigation phase, and may be replaced with a traditional sequential nonce, like in Safe smart accounts, if issues are found during consultations with audit firms.
+
+Most self-custody smart accounts, like Safe, use a sequential nonce to prevent signature replay attacks. This however comes with an unituitive user experience, where transactions must be executed (or rejected) in the order they were proposed.
+
+Instead, Onchain custody uses a non-sequential nonce to prevent signature replay attacks, while providing a more intuitive user experience where transactions can be executed (or rejected) in any order.
+
+
+
+
+
+#### Files
+```
+src/account
+├── AccountInit.sol
+├── OnchainCustodyAccountDiamond.sol
+├── facets
+│   ├── AccountAdminFacet.sol
+│   ├── AccountGuardianFacet.sol
+│   ├── AccountOrganizationAddressStorage.sol
+│   ├── AccountTransactionFacet.sol
+│   └── AccountTransactionFacetStorage.sol
+└── interfaces
+    └── INativeTokenReceivedEventEmitter.sol
 ```
