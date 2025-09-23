@@ -25,14 +25,12 @@ contract AccountTransactionFacet {
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
-     * @param operation The operation of the transaction
      * @param nonce The nonce used for this transaction
      */
     event TransactionExecuted(
         address indexed to,
         uint256 value,
         bytes data,
-        AccountTransactionFacetStorage.Operation operation,
         uint256 indexed nonce
     );
 
@@ -105,7 +103,6 @@ contract AccountTransactionFacet {
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
-     * @param operation The operation of the transaction
      * @param salt A user-provided salt for nonce computation
      * @return The computed nonce
      */
@@ -113,14 +110,13 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes calldata data,
-        AccountTransactionFacetStorage.Operation operation,
         uint256 salt
     )
         public
         view
         returns (uint256)
     {
-        return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), uint8(operation), salt)));
+        return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), salt)));
     }
 
     /**
@@ -128,31 +124,22 @@ contract AccountTransactionFacet {
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
-     * @param operation The operation of the transaction
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures of the transaction
      */
     function executeTransaction(
         address to,
         uint256 value,
         bytes calldata data,
-        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
     {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
-        // Validate chain ID for cross-chain replay protection
-        if (chainId != block.chainid) {
-            revert InvalidChainId(block.chainid, chainId);
-        }
-
         // Compute deterministic nonce from transaction data and salt
-        uint256 nonce = computeNonce(to, value, data, operation, salt);
+        uint256 nonce = computeNonce(to, value, data, salt);
 
         AccountTransactionFacetStorage.Layout storage layout = AccountTransactionFacetStorage.layout();
 
@@ -169,12 +156,12 @@ contract AccountTransactionFacet {
         Policies.Policy[] memory policies = policyStorage.policies;
 
         // Check policies to make sure this transaction can be executed
-        _validateTransaction(policies, to, value, data, operation, salt, chainId, signatures);
+        _validateTransaction(policies, to, value, data, salt, signatures);
 
         // Execute the transaction
-        _execute(to, value, data, operation, gasleft());
+        _execute(to, value, data, gasleft());
 
-        emit TransactionExecuted(to, value, data, operation, nonce);
+        emit TransactionExecuted(to, value, data, nonce);
     }
 
     /**
@@ -206,7 +193,7 @@ contract AccountTransactionFacet {
         }
 
         // Compute deterministic nonce from transaction data and salt
-        uint256 nonce = computeNonce(to, value, data, operation, salt);
+        uint256 nonce = computeNonce(to, value, data, salt);
 
         AccountTransactionFacetStorage.Layout storage layout = AccountTransactionFacetStorage.layout();
 
@@ -223,7 +210,7 @@ contract AccountTransactionFacet {
         Policies.Policy[] memory policies = policyStorage.policies;
 
         // Check if the caller is authorized to reject this transaction
-        _validateRejectionAuthorization(policies, to, value, data, operation, salt, chainId, signatures);
+        _validateRejectionAuthorization(policies, to, value, data, salt, signatures);
 
         emit TransactionRejectedByUser(to, value, data, operation, nonce, msg.sender);
     }
@@ -234,9 +221,7 @@ contract AccountTransactionFacet {
      * @param to Transaction destination address
      * @param value Transaction value
      * @param data Transaction data
-     * @param operation Transaction operation type
      * @param salt User-provided salt for nonce computation
-     * @param chainId Transaction chain ID for cross-chain replay protection
      * @param signatures Signatures for approval verification
      */
     function _validateTransaction(
@@ -244,9 +229,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         internal
@@ -270,7 +253,7 @@ contract AccountTransactionFacet {
             // Check if the transaction has enough valid approvals
             if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
                 // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+                bytes32 txHash = _getTransactionHash(to, value, data, salt, true);
                 uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
                 uint256 validApprovals = _getValidApprovals(policies[i], signatures, txHash);
 
@@ -298,9 +281,7 @@ contract AccountTransactionFacet {
      * @param to Transaction destination address
      * @param value Transaction value
      * @param data Transaction data
-     * @param operation Transaction operation type
      * @param salt User-provided salt for nonce computation
-     * @param chainId Transaction chain ID for cross-chain replay protection
      * @param signatures Signatures for approval verification
      */
     function _validateRejectionAuthorization(
@@ -308,9 +289,7 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         internal
@@ -328,7 +307,7 @@ contract AccountTransactionFacet {
             // Only valid transaction initiators (as defined by policy) can reject it
             if (policies[i].policyType == Policies.PolicyType.AutoApprove) {
                 // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+                bytes32 txHash = _getTransactionHash(to, value, data, salt, false);
 
                 // Check if we have at least one valid signature from an authorized initiator
                 if (_hasValidInitiatorSignature(policies[i], signatures, txHash)) {
@@ -342,7 +321,7 @@ contract AccountTransactionFacet {
             // Only valid transaction initiators (as defined by policy) can reject it
             if (policies[i].policyType == Policies.PolicyType.AutoReject) {
                 // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+                bytes32 txHash = _getTransactionHash(to, value, data, salt, false);
 
                 // Check if we have at least one valid signature from an authorized initiator
                 if (_hasValidInitiatorSignature(policies[i], signatures, txHash)) {
@@ -356,7 +335,7 @@ contract AccountTransactionFacet {
             // Check if the caller has sufficient rejection authority
             if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
                 // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, operation, salt, chainId);
+                bytes32 txHash = _getTransactionHash(to, value, data, salt, false);
                 uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
                 uint256 validApprovals = _getValidApprovals(policies[i], signatures, txHash);
 
@@ -509,41 +488,35 @@ contract AccountTransactionFacet {
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
-     * @param operation The operation of the transaction
      * @param salt The user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection
+     * @param isApproval Whether the signature is for an approval or a rejection
      * @return The hash of the transaction formatted for ERC-1271 signature verification
      */
     function _getTransactionHash(
         address to,
         uint256 value,
         bytes memory data,
-        AccountTransactionFacetStorage.Operation operation,
-        uint256 salt,
-        uint256 chainId
+        uint256 salt, 
+        bool isApproval
     )
         internal
         view
         returns (bytes32)
     {
-        // Validate chain ID matches current chain
-        if (chainId != block.chainid) {
-            revert InvalidChainId(block.chainid, chainId);
-        }
 
         // Create EIP-712 structured data hash
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "ExecuteTransaction(address to,uint256 value,bytes data,uint8 operation,uint256 salt,uint256 chainId,address account)"
+                    "ExecuteTransaction(address account,address to,uint256 value,bytes data,uint256 salt,bool isApproval,uint256 chainId)"
                 ),
+                address(this),
                 to,
                 value,
                 keccak256(data),
-                uint8(operation),
                 salt,
-                chainId,
-                address(this)
+                isApproval,
+                block.chainid
             )
         );
 
@@ -563,38 +536,29 @@ contract AccountTransactionFacet {
     }
 
     /**
-     * @notice Executes either a `CALL` or `DELEGATECALL` with provided parameters.
+     * @notice Executes a `CALL` with provided parameters.
      * @dev This method doesn't perform any sanity check of the transaction, such as:
      *      - if the contract at `to` address has code or not
      *      It is the responsibility of the caller to perform such checks.
      * @param to Destination address.
      * @param value Ether value.
      * @param data Data payload.
-     * @param operation Operation type (0 for `CALL`, 1 for `DELEGATECALL`).
      * @return success boolean flag indicating if the call succeeded.
      */
     function _execute(
         address to,
         uint256 value,
         bytes memory data,
-        AccountTransactionFacetStorage.Operation operation,
         uint256 txGas
     )
         internal
         returns (bool success)
     {
-        if (operation == AccountTransactionFacetStorage.Operation.DelegateCall) {
-            /* solhint-disable no-inline-assembly */
-            /// @solidity memory-safe-assembly
-            assembly {
-                success := delegatecall(txGas, to, add(data, 0x20), mload(data), 0, 0)
-            }
-        } else {
-            /* solhint-disable no-inline-assembly */
-            /// @solidity memory-safe-assembly
-            assembly {
-                success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
-            }
+       
+        /* solhint-disable no-inline-assembly */
+        /// @solidity memory-safe-assembly
+        assembly {
+            success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
         }
     }
 
