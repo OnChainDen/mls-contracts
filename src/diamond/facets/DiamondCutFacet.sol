@@ -28,7 +28,6 @@ contract DiamondCutFacet is IDiamondCut {
     ///                  _calldata is executed with delegatecall on _init
     /// @param whitelistSetId The ID of the whitelisted facet set to validate against
     /// @param salt A user-provided salt for nonce computation (admin approval)
-    /// @param chainId The chain ID for cross-chain replay protection
     /// @param signatures Admin signatures authorizing this diamond cut
     function diamondCut(
         FacetCut[] calldata _diamondCut,
@@ -36,7 +35,6 @@ contract DiamondCutFacet is IDiamondCut {
         bytes calldata _calldata,
         uint256 whitelistSetId,
         uint256 salt,
-        uint256 chainId,
         bytes calldata signatures
     )
         external
@@ -45,7 +43,7 @@ contract DiamondCutFacet is IDiamondCut {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         // Validate admin authorization
-        _validateAdminAuthorization(_diamondCut, _init, _calldata, whitelistSetId, salt, chainId, signatures);
+        _validateAdminAuthorization(_diamondCut, _init, _calldata, whitelistSetId, salt, signatures);
 
         // Perform the diamond cut using the internal function (no admin validation)
         LibDiamond.diamondCut(_diamondCut, _init, _calldata, whitelistSetId);
@@ -59,7 +57,6 @@ contract DiamondCutFacet is IDiamondCut {
      * @param _calldata The initialization call data
      * @param whitelistSetId The ID of the whitelisted facet set to validate against
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection
      * @param signatures The signatures from admin(s) authorizing this operation
      */
     function _validateAdminAuthorization(
@@ -68,7 +65,6 @@ contract DiamondCutFacet is IDiamondCut {
         bytes calldata _calldata,
         uint256 whitelistSetId,
         uint256 salt,
-        uint256 chainId,
         bytes calldata signatures
     )
         internal
@@ -78,7 +74,7 @@ contract DiamondCutFacet is IDiamondCut {
 
         // This is an Account diamond - validate through AccountAdminFacet
         try IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.DiamondCut, operationData, salt, chainId, signatures
+            AdminOperationType.DiamondCut, operationData, salt, signatures
         ) {
             return; // Validation successful
         } catch Error(string memory reason) {

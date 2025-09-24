@@ -14,8 +14,7 @@ interface IOrganizationGuardianFacet is IGuardianFacet {
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param newGuardian The new guardian address
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function updateGuardian(address newGuardian, uint256 salt, uint256 chainId, bytes memory signatures) external;
+    function updateGuardian(address newGuardian, uint256 salt, bytes memory signatures) external;
 }

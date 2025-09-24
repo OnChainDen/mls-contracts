@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { OrganizationGuardianFacetStorage } from "./OrganizationGuardianFacetStorage.sol";
-import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { IOrganizationGuardianFacet } from "../interfaces/IOrganizationGuardianFacet.sol";
 import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
@@ -58,10 +57,9 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param newGuardian The new guardian address
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function updateGuardian(address newGuardian, uint256 salt, uint256 chainId, bytes memory signatures) public {
+    function updateGuardian(address newGuardian, uint256 salt, bytes memory signatures) public {
         enforceOnlyGuardian();
 
         // Validate input parameters
@@ -74,7 +72,7 @@ contract OrganizationGuardianFacet is IOrganizationGuardianFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.UpdateGuardian, operationData, salt, chainId, signatures
+            AdminOperationType.UpdateGuardian, operationData, salt, signatures
         );
 
         OrganizationGuardianFacetStorage.Layout storage layout = OrganizationGuardianFacetStorage.layout();

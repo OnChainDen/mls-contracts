@@ -38,14 +38,12 @@ interface IAdminFacet {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
         AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         external;

@@ -43,14 +43,12 @@ contract OrganizationWhitelistFacet {
      * @param addressesToAdd The array of addresses to add to the whitelist
      * @param addressesToRemove The array of addresses to remove from the whitelist
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
     function modifyWhitelist(
         address[] memory addressesToAdd,
         address[] memory addressesToRemove,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -62,7 +60,7 @@ contract OrganizationWhitelistFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.ModifyWhitelist, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyWhitelist, operationData, salt, signatures
         );
 
         OrganizationWhitelistFacetStorage.Layout storage whitelistLayout = OrganizationWhitelistFacetStorage.layout();

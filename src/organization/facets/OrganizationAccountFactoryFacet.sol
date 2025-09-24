@@ -46,7 +46,6 @@ contract OrganizationAccountFactoryFacet {
      * @param whitelistSetId The ID of the whitelisted facet set to validate against
      * @param accountInit The AccountInit contract address for initialization
      * @param adminSignatureSalt A user-provided salt for admin nonce computation
-     * @param chainId The chain ID for cross-chain replay protection
      * @param signatures The signatures from admin authorizing this operation
      * @return accountAddress The address of the deployed account diamond
      */
@@ -57,7 +56,6 @@ contract OrganizationAccountFactoryFacet {
         uint256 whitelistSetId,
         address accountInit,
         uint256 adminSignatureSalt,
-        uint256 chainId,
         bytes memory signatures
     )
         external
@@ -68,7 +66,7 @@ contract OrganizationAccountFactoryFacet {
             abi.encode(create2Salt, keccak256(abi.encode(_diamondCut)), accountInit, whitelistSetId);
 
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.DeployAccount, operationData, adminSignatureSalt, chainId, signatures
+            AdminOperationType.DeployAccount, operationData, adminSignatureSalt, signatures
         );
 
         // Deploy the account diamond using CREATE2

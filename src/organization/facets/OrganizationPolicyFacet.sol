@@ -43,17 +43,9 @@ contract OrganizationPolicyFacet {
      *      The new policies array completely replaces the existing policies array, maintaining order importance.
      * @param newPolicies The new array of policies to set for the organization
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function modifyPolicies(
-        Policies.Policy[] memory newPolicies,
-        uint256 salt,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        public
-    {
+    function modifyPolicies(Policies.Policy[] memory newPolicies, uint256 salt, bytes memory signatures) public {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         // Encode the operation data for validation
@@ -61,7 +53,7 @@ contract OrganizationPolicyFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.ModifyPolicies, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyPolicies, operationData, salt, signatures
         );
 
         OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();

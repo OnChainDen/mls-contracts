@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
 import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
-import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
@@ -100,14 +99,12 @@ contract OrganizationGroupsFacet {
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param memberIds The array of member IDs to include in the group
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      * @return groupId The auto-generated ID of the created group
      */
     function createGroup(
         uint8[] memory memberIds,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -132,7 +129,7 @@ contract OrganizationGroupsFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.CreateGroup, operationData, salt, chainId, signatures
+            AdminOperationType.CreateGroup, operationData, salt, signatures
         );
 
         // Update member-to-group mappings and group membership flags
@@ -161,7 +158,6 @@ contract OrganizationGroupsFacet {
      * @param membersToAdd Array of member IDs to add to the group
      * @param membersToRemove Array of member IDs to remove from the group
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
     function modifyGroup(
@@ -169,7 +165,6 @@ contract OrganizationGroupsFacet {
         uint8[] memory membersToAdd,
         uint8[] memory membersToRemove,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -194,7 +189,7 @@ contract OrganizationGroupsFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.ModifyGroup, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyGroup, operationData, salt, signatures
         );
 
         // Add new members
@@ -229,10 +224,9 @@ contract OrganizationGroupsFacet {
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param groupId The ID of the group to remove
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeGroup(uint8 groupId, uint256 salt, uint256 chainId, bytes memory signatures) public {
+    function removeGroup(uint8 groupId, uint256 salt, bytes memory signatures) public {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
@@ -247,7 +241,7 @@ contract OrganizationGroupsFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.RemoveGroup, operationData, salt, chainId, signatures
+            AdminOperationType.RemoveGroup, operationData, salt, signatures
         );
 
         // Mark group as not existing and reset member count

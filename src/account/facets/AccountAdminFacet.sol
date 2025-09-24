@@ -44,14 +44,12 @@ contract AccountAdminFacet is IAdminFacet {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
         AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -65,7 +63,7 @@ contract AccountAdminFacet is IAdminFacet {
 
         // Forward the call to the organization contract
         try IAdminFacet(layout.organizationAddress).validateAdminAuthorization(
-            operationType, operationData, salt, chainId, signatures
+            operationType, operationData, salt, signatures
         ) {
             return;
             // Call succeeded - authorization is valid

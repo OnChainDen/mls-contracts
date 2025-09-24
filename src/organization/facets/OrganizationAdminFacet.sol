@@ -114,7 +114,6 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param newAdminId The new admin ID (member ID or group ID)
      * @param newVotingThreshold The new voting threshold (only used when newAdminType is Group)
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this change
      */
     function updateAdmin(
@@ -122,7 +121,6 @@ contract OrganizationAdminFacet is IAdminFacet {
         uint8 newAdminId,
         uint256 newVotingThreshold,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -133,7 +131,7 @@ contract OrganizationAdminFacet is IAdminFacet {
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
         // Validate that the current admin has authorized this change
-        validateAdminAuthorization(AdminOperationType.UpdateAdmin, operationData, salt, chainId, signatures);
+        validateAdminAuthorization(AdminOperationType.UpdateAdmin, operationData, salt, signatures);
 
         // Validate the new admin configuration
         if (newAdminType == AdminType.Group && newVotingThreshold == 0) {
@@ -182,14 +180,12 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
         AdminOperationType operationType,
         bytes memory operationData,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -204,13 +200,8 @@ contract OrganizationAdminFacet is IAdminFacet {
             revert AdminNonceAlreadyUsed(nonce);
         }
 
-        // Validate chain ID for cross-chain replay protection
-        if (chainId != block.chainid) {
-            revert InvalidAdminChainId(block.chainid, chainId);
-        }
-
         // Get operation hash for signature verification
-        bytes32 operationHash = _getAdminOperationHash(operationType, operationData, salt, chainId);
+        bytes32 operationHash = _getAdminOperationHash(operationType, operationData, salt);
 
         bool isAuthorized = false;
 
@@ -353,14 +344,12 @@ contract OrganizationAdminFacet is IAdminFacet {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt The user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection
      * @return The hash of the admin operation formatted for ERC-1271 signature verification
      */
     function _getAdminOperationHash(
         AdminOperationType operationType,
         bytes memory operationData,
-        uint256 salt,
-        uint256 chainId
+        uint256 salt
     )
         internal
         view
@@ -375,7 +364,7 @@ contract OrganizationAdminFacet is IAdminFacet {
                 uint8(operationType),
                 keccak256(operationData),
                 salt,
-                chainId,
+                block.chainid,
                 address(this)
             )
         );

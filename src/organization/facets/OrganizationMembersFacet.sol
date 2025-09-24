@@ -95,14 +95,12 @@ contract OrganizationMembersFacet {
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param memberAddresses The array of addresses to add as new members
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      * @return memberIds The auto-generated IDs of the added members
      */
     function addMembers(
         address[] memory memberAddresses,
         uint256 salt,
-        uint256 chainId,
         bytes memory signatures
     )
         public
@@ -120,7 +118,7 @@ contract OrganizationMembersFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.AddMembers, operationData, salt, chainId, signatures
+            AdminOperationType.AddMembers, operationData, salt, signatures
         );
 
         OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
@@ -165,18 +163,9 @@ contract OrganizationMembersFacet {
      * @param memberId The ID of the member to modify
      * @param newAddress The new address for the member
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function modifyMember(
-        uint8 memberId,
-        address newAddress,
-        uint256 salt,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        public
-    {
+    function modifyMember(uint8 memberId, address newAddress, uint256 salt, bytes memory signatures) public {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         // Validate input parameters
@@ -204,7 +193,7 @@ contract OrganizationMembersFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.ModifyMember, operationData, salt, chainId, signatures
+            AdminOperationType.ModifyMember, operationData, salt, signatures
         );
 
         // Update mappings
@@ -225,10 +214,9 @@ contract OrganizationMembersFacet {
      *      Members are also automatically removed from all groups they belong to.
      * @param memberIds The array of member IDs to remove
      * @param salt A user-provided salt for nonce computation
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeMembers(uint8[] memory memberIds, uint256 salt, uint256 chainId, bytes memory signatures) public {
+    function removeMembers(uint8[] memory memberIds, uint256 salt, bytes memory signatures) public {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         // Validate input parameters
@@ -241,7 +229,7 @@ contract OrganizationMembersFacet {
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.RemoveMembers, operationData, salt, chainId, signatures
+            AdminOperationType.RemoveMembers, operationData, salt, signatures
         );
 
         OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
