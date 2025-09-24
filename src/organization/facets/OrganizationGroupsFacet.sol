@@ -128,7 +128,7 @@ contract OrganizationGroupsFacet {
         ++groupsLayout.nextGroupId;
 
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(groupId, memberIds);
+        bytes memory operationData = abi.encode(memberIds);
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(

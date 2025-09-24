@@ -116,7 +116,7 @@ contract OrganizationMembersFacet {
         }
 
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberAddresses, memberIds);
+        bytes memory operationData = abi.encode(memberAddresses);
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
