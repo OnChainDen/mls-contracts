@@ -91,7 +91,125 @@ There are several core concepts in Onchain Custody:
 
 
 ## Policies
-TODO: @ittai Explain policies in depth. Outline all configurable parameters of a policy, how proposing and approving transactions are influenced by policies, and give specific examples with diagrams.
+Policies are "if-then" rules that dictate which transactions can be executed and by whom. 
+
+Example policies:
+- "if a transaction is sending more than $10,000, then require approval from 2 out of 3 members of the Finance team"
+- "if a transaction is sending less than $10,000, then require approval from 1 out of 3 members of the Finance team"
+- "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
+
+### Policy types
+There are three types of policies:
+1. **Auto-approval policies**
+
+    If a transaction is governed by an Auto-approval policy, then it is automatically approved and can be executed.
+
+2. **Auto-rejection policies**
+
+    If a transaction is governed by an Auto-rejection policy, then it is automatticaly rejected and cannot be executed.
+
+3. **Manual approval policies**
+
+    If a transaction is governed by a Manual approval policy, then it must be manually approved by a Member or Group before it can be executed.
+
+    Similarly, if a transaction is governed by a Manual approval policy, then it must be manually rejected by a Member or Group before it is discarded.
+
+    Manual approval policies must specifiy a Member or Group that is responsible for manually reviewing transactions. If a Group is specified, a voting threshold must also be specified (e.g. 2 out of 3 members of the group must approve or reject).
+
+
+### Policy filters for matching transactions
+Policies have the following configurable fields that can be used to determine which types of transactions they govern:
+
+- **Source Account**
+
+    The account from which the transaction is sent. 
+    This value can bet set to "any source account" or a custom user-defined list of accounts.
+
+- **Transaction Initiator**
+
+    The Member or Group who initiated the transaction.
+
+    This field can be set to one of the following values:
+    - "Any Member"
+    - A specific Member
+    - A specific Group
+
+    If the value for the Transaction Initiator field is a group, then the policy applies to any transactions where the initiator is any of the Members in the Group.
+
+
+- **Transaction Type** 
+    
+    This field can be set to one of the following values:
+    - "Any type of transaction"
+    - "Token transfers"
+    - "Contract interactions"
+
+- **Token** *(only available if  Transaction Type is "Token transfers")*
+
+    The token being transfered in the transaction.
+
+    This can be either "any token" or a specific token, e.g. USDC.
+
+- **Token Transfer Recipient** *(only available if  Transaction Type is "Token transfers")*
+
+    To whom the token is being sent to.
+
+    This value can be one of the following:
+    - "Any recipient"
+    - "Any whitelisted address"
+    - "Any non-whitelisted address"
+    - Any address in a custom list defined by the user
+    
+- **Token Amount Threshold** *(only available if  Transaction Type is "Token transfers")*
+
+    A threshold value for the amount of the token being transferred.
+
+    If this value is set, then the policy only applies to transactions that are transferring an amount *less than or equal* to this value.
+
+- **Contracts** *(only available if  Transaction Type is "Contract interactions")*
+
+    The contract that the transaction is interacting with.
+
+    This value can be one of the following:
+    - "Any contract"
+    - "Any whitelisted contract"
+    - "Any non-whitelisted contract"
+    - Any contract in a custom list defined by the user
+    
+
+- **Functions** *(only available if  Transaction Type is "Contract interactions")*
+
+    The function being called in the contract interaction.
+
+    This value can be one of the following:
+    - "Any function"
+    - Any function in a custom list defined by the user
+
+### Policy limitations
+Policies can be limited to either a single transaction at a time, or multiple transactions within a time interval.
+
+For example, a time-based limitation on a Policy can be used to craft a policy that only allows a certain amount of tokens to be transfered every month.
+
+![User interface for editing a Policy's limitation](docs/images/OnchainCustodyDemoPolicyLimitationsScreenshot.png)
+*The user interface for editing a Policy's limitation in the Onchain Custody web application*
+
+### Order of Policies
+The order of policies is important in determining which policy governs a transaction.
+
+Policies are defined by the user in an ordered list. The first policy that matches a transaction according to the policy's filters is the policy that governs the transaction.
+
+If no policy matches a transaction, then the transaction is automatically rejected.
+
+![User interface for reordering policies](docs/images/OnchainCustodyDemoPolicyOrderingScreenshot.png)
+*The user interface for re-ordering Policies in the Onchain Custody web application*
+
+### Demo of Policies
+We highly recommend viewing the demo web application for Onchain Custody to understand how policies are defined from the web application.
+
+To view a demo of Onchain Custody's user interface for modifying Policies, visit:
+https://onchain-custody-demo.onchainden.com/policies
+
+To view the demo, please request a username and password from the Den team.
 
 ## Mobile Wallet
 Onchain Custody's dedicated mobile wallet is used by Organization Members and Admins to approve and reject transactions and other actions.
@@ -304,6 +422,7 @@ To determine who has permission to approve or reject a transaction, the `to`, `v
 >
 >This approach is obviously very gas-intensive. It should either be heavily optimized for gas efficiency, or a replaced with a different approach overall.
 
+Note that transactions that are delegate calls are *not* allowed.
 
 
 #### Signature replay protection
@@ -350,7 +469,7 @@ function _getTransactionHash(
             keccak256(data),
             salt,
             isApproval,
-            chainId,
+            block.chainid
         )
     );
 
