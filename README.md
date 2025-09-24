@@ -264,11 +264,15 @@ There are two main abstractions represented as smart contracts in Onchain Custod
         
     Each real-world organization is represented onchain by a dedicated organization smart contract. That contract is a source of truth for the organization's state, such as its members, groups, policies, admins, etc. Funds are *not* stored in the organization contract.
 
+    Note: an Organization can be deployed on multiple networks. If an Organization is deployed on multiple networks, it is expected to have the same address on each network.
+
     *Located at `src/organization/OnchainCustodyOrganizationDiamond.sol`*
 
 2. **Accounts**
 
     Funds are stored in "account" smart contracts (i.e. "smart accounts" or "smart contract wallets"). Each organization can have one or more accounts. Account smart contracts interact with their corresponding organization contracts to access important information regarding the organization. For example, when executing a transaction, an account contract will fetch its  organization's policies from the organization contract.
+
+    Note: an Account can be deployed on multiple networks. If an Account is deployed on multiple networks, it is expected to have the same address on each network.
 
     *Located at `src/account/OnchainCustodyAccountDiamond.sol`*
 
@@ -539,6 +543,53 @@ library AccountTransactionFacetStorage {
 ```
 
 When a transaction is executed or rejected, the `usedNonces` mapping is updated to reflect that the transaction's nonce has been used.
+
+### Deterministic cross-chain deployment
+Both Organizations and Accounts can be deployed on multiple chains. When an Organization or Account is deployed on multiple chains, its corresponding contracts are expected to be deployed at the same address on each chain.
+
+#### Deploying Organizations
+
+Deploying an Organization is a two-step process:
+1. Deploying the Organization contract itself via the `CREATE2` opcode
+2. Initializing the Organization contract by calling an `initialize` function
+
+The two-step process is required to avoid using contructor arguments to set initial state, as constructor arguments influence the address of the deployed contract.
+
+
+Deploying an Organization is done via the contract `src/organization/OnchainCustodyOrganizationFactory.sol`, which has a function `deployOrganization` that uses the CREATE2 opcode to deploy an Organization at a deterministic address. This function deploys Organizations with almost no state or functionality.
+
+Organizations are deployed with the following facets only:
+1. **DiamondCutFacet**
+
+    The facet responsible for managing diamond cut facets
+
+    `src/diamond/DiamondCutFacet.sol`
+
+2. **DiamondLoupFacet**
+
+    The facet responsible for viewing diamond cut facets
+
+    `src/diamond/DiamondCutFacet.sol`
+
+3. **OrganizationInitializationFacet**
+
+    The facet responsible for later initializing the Organization contract
+
+    `src/organization/facets/OrganizationInitializationFacet.sol`
+
+After an Organization contract is deployed, the `deployer` (an address controlled by Den) must then initialize the contract by calling the `initialize` function on the facet `OrganizationInitializationFacet`.
+
+This `initialize` function can only be called by the `deployer`, and does the following:
+1. Adds the remaining diamond cut facets that make the Organization functional
+2. Removes the `OrganizationInitializationFacet` dimaond cut facet
+2. Sets the admins for the organization
+3. Sets the guardian address for the organization
+
+#### Deploying Accounts
+
+Deploying an Account is done via the Organization contract. Specifically, the Organization diamond uses a facet `src/organization/facets/OrganizationAccountFactory.sol`, which has a function `deployAccount` that uses the CREATE2 opcode to deploy an Account at a deterministic address.
+
+Unlike deploying an Organization, deploying an Account is a one-step process and no `initialize` function needs to be called.
 
 
 #### Files
