@@ -14,6 +14,7 @@ Onchain Custody is a new category of cryptocurrency custody. It is non-custodial
 The heart of Onchain Custody is the **policy engine**. The policy engine allows users to specify rules (a.k.a. "policies") that dictate:
 1. what transactions can be executed
 2. who can execute them
+3. how often they can be executed
 
  For example, an organization might set a policy that allows its finance team to transfer up to $100,000 in USDC per month, so long as 2 out of 3 members of the finance team approve the transaction.
 
@@ -185,6 +186,8 @@ Policies have the following configurable fields that can be used to determine wh
     - "Any function"
     - Any function in a custom list defined by the user
 
+    If a custom list of function is provided, each function can optionally have function arguments specified. If a function argument is specified, a policy will only match transactions that call the function with the specified argument. Not all arguments are required to be defined. If an argument is provided a value, than any value can be used to match the transaction.
+
 ### Policy limitations
 Policies can be limited to either a single transaction at a time, or multiple transactions within a time interval.
 
@@ -217,6 +220,9 @@ Onchain Custody's dedicated mobile wallet is used by Organization Members and Ad
 Under the hood, the mobile wallet securely stores a private key on a Member's mobile device. That private key is used to cryptographically sign approvals and rejections. 
 
 The mobile wallet hosts a variety of features not found in other wallets that provide superior security and user experience.
+
+> [!INFO]
+> We plan on also providing API support down the line as an alternative to mobile signing. Most users will still use the mobile wallet, but a subset will opt for the API to programatically control their accounts.
 
 ### Mobile Wallet Security Features
 The dedicated Onchain Custody mobile has a suite of security features that make it significantly more secure that other hardware and software wallets:
