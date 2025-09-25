@@ -221,7 +221,7 @@ Under the hood, the mobile wallet securely stores a private key on a Member's mo
 
 The mobile wallet hosts a variety of features not found in other wallets that provide superior security and user experience.
 
-> [!INFO]
+> [!NOTE]
 > We plan on also providing API support down the line as an alternative to mobile signing. Most users will still use the mobile wallet, but a subset will opt for the API to programatically control their accounts.
 
 ### Mobile Wallet Security Features
