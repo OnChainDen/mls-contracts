@@ -365,6 +365,113 @@ There are only two smart contracts in Onchain Custody that are upgradable:
 
 
 ### Organizations
+
+Each Organization is represented as a Diamond proxy, which can be found at `src/organization/OnchainCustodyOrganizationDiamond.sol`.
+
+All facets for Accounts are located at `src/organization/facets/`.
+
+#### Organization Operations
+Organizations are where organization-level concepts are stored and managed:
+1. Members
+2. Groups
+3. Admins
+4. Address Whitelists
+5. Policies
+
+Any actions that alter the state of those organization-level concepts are called "Organization Operations".
+
+Organization Operations require admin approval, meaning signatures must be provided from enough admins in order to execute the operation. If the Admin for an Organization is an individual Member, only one admin signature is required. If the Admin is a Group, then enough signatures must be provided from the Members in the Group to meet the "voting threshold".
+
+Each Organization Diamond is expected to use the diamond cut facet `src/organization/facets/OrganizationAdminFacet.sol`, which implements a function called `validateAdminAuthorization` that validates the admin signatures:
+
+```solidity
+// src/interfaces/IAdminFacet.sol
+/**
+ * @notice Enum to specify the type of admin operation being performed
+ */
+enum AdminOperationType {
+    UpdateAdmin,
+    CreateGroup,
+    ModifyGroup,
+    RemoveGroup,
+    AddMembers,
+    ModifyMember,
+    RemoveMembers,
+    ModifyPolicies,
+    UpdateGuardian,
+    ModifyWhitelist,
+    DiamondCut,
+    DeployAccount
+}
+
+/**
+    * @notice Validates that the provided signatures meet the admin authorization requirements
+    * @param operationType The type of operation being performed
+    * @param operationData The ABI-encoded data of the operation
+    * @param salt A user-provided salt for nonce computation
+    * @param signatures The signatures to validate
+    */
+function validateAdminAuthorization(
+    AdminOperationType operationType,
+    bytes memory operationData,
+    uint256 salt,
+    bytes memory signatures
+)
+    external;
+``` 
+
+The `validateAdminAuthorization` function checks that the admin signatures have signed the "Admin Operation Hash", which is computed in the following way below. This hash is also essentially the "nonce" that is used up on chain to prevent signature replay attacks.
+
+Note that the function argument `operationData` is an ABI packed-encoded byte string of the relevant fields for the operation (e.g. for adding a member, it is the bytes-encoding of the member's address).
+
+```solidity
+// src/organization/facets/OrganizationAdminFacet.sol
+/**
+    * @notice Creates a hash of the admin operation for signature verification using EIP-712 typed data
+    * @param operationType The type of operation being performed
+    * @param operationData The ABI-encoded data of the operation
+    * @param salt The user-provided salt for nonce computation
+    * @return The hash of the admin operation formatted for ERC-1271 signature verification
+    */
+function _getAdminOperationHash(
+    AdminOperationType operationType,
+    bytes memory operationData,
+    uint256 salt
+)
+    internal
+    view
+    returns (bytes32)
+{
+    // Create EIP-712 structured data hash
+    bytes32 structHash = keccak256(
+        abi.encode(
+            keccak256(
+                "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 chainId,address organization)"
+            ),
+            uint8(operationType),
+            keccak256(operationData),
+            salt,
+            block.chainid,
+            address(this)
+        )
+    );
+
+    // Return EIP-712 compatible hash for ERC-1271 signature verification
+    return MessageHashUtils.toTypedDataHash(
+        keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("OnchainCustodyOrganization"),
+                keccak256("1"),
+                block.chainid,
+                address(this)
+            )
+        ),
+        structHash
+    );
+}
+```
+
 #### Files
 ```
 src/organization
