@@ -217,6 +217,30 @@ https://onchain-custody-demo.onchainden.com/policies
 
 To view the demo, please request a username and password from the Den team.
 
+## User flow for executing a transaction
+The user flow for executing a transaction is the following:
+
+1. **A Member of the Organization queues up a transaction**
+
+    If the transaction does not match any policies, the Member will be unable to queue the transaction.
+
+2. **Other Members approve the transaction in the web application**
+
+    If the transaction is governed by a policy that requires manual approval by a Member or Group, then those Members must approve it in the web application.
+
+3. **Members approve the transaction in their dedicated mobile wallets**
+
+    After approving in the web application, Members must then also approve the transaction in their mobile wallets.
+
+    Before approving the transaction, the mobile wallet will independently run the policy engine to verify that the transaction is valid. If the policy engine fails to verify that the transaction is valid, the user will be warned and will be unable to approve the transaction.
+
+4. **After all approvals are provided, transaction can be executed via the web application**
+
+    Once all approvals are provided via both the web application and mobile wallet, the Transaction initiator or any of the reviewers can execute the transaction via the web application.
+
+    At this point, the Offchain Guardian Service will independently run the policy engine to verify that the transaction is valid. If the transaction is valid, it will submit it to the Onchain Smart Contracts, which will also independently run the policy engine onchain to verify the transaction before executing it.
+
+
 ## Mobile Wallet
 Onchain Custody's dedicated mobile wallet is used by Organization Members and Admins to approve and reject transactions and other actions.
 
