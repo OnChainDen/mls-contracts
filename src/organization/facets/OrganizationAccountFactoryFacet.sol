@@ -5,7 +5,6 @@ import "../../account/OnchainCustodyAccountDiamond.sol";
 import "../../account/AccountInit.sol";
 import "../../diamond/interfaces/IDiamondCut.sol";
 import "../../diamond/Diamond.sol";
-import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
