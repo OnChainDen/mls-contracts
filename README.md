@@ -9,6 +9,9 @@ This repository contains the smart contracts for Onchain Custody.
 ## Onchain Custody Overview
 Onchain Custody is a new category of cryptocurrency custody. It is non-custodial and provides all the benefits of self-custody while being significantly more secure than all other forms of custody (traditional custody, self-custody, and MPC).
 
+Onchain Custody stores assets in a smart contract. Users interact with it via a web application and dedicated mobile wallet.
+
+
 
 ### Policy Engine
 The heart of Onchain Custody is the **policy engine**. The policy engine allows users to specify rules (a.k.a. "policies") that dictate:
