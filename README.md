@@ -1,6 +1,9 @@
 # Onchain Custody Smart Contracts
 This repository contains the smart contracts for Onchain Custody.
 
+> [!IMPORTANT]
+> The contents of this document and this repository are confidential. Do not share without expressed written permission from the Den team.
+
 > [!WARNING]
 > The contracts in this repository are a "rough draft" whose only purpose is to reason through how Onchain Custody might be implemented.
 >
