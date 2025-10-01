@@ -749,3 +749,73 @@ src/account
 └── interfaces
     └── INativeTokenReceivedEventEmitter.sol
 ```
+
+## Questions blocking further development
+*Below are questions which are currently blocking further development of the Onchain Custody smart contracts. We are seeking external expert opinion to answer these questions.*
+
+**Transaction nonce questions**
+
+- Are there any unforeseen issues with using a nonce that isn’t auto-incremented, and is instead computed as a function of transaction data + a salt? See “rough draft” contracts for possible implementation
+
+**Gas optimizations**
+
+- What are low hanging fruit for gas optimizations?
+- What are the best resources for our team to learn about gas optimization best practices? Any coursed, books, guides?
+- Where can we go to see a list of things that would be better to implement in yul than in solidity for gas savings?
+- Is there an opportunity to use proofs to improve gas efficiency, particularly when executing a transaction and finding which policy matches the transaction being executed?
+- How can this be made more gas efficient?
+
+**Guardian protection**
+
+- Should the `guardianAddress` also be stored in the storage of the Account smart contracts, so that no external call to the organization needs to be made?
+- Should the check to see if `msg.sender == guardianAddress` live in the `fallback` function of the Organization and Account proxies (regardless of whether or not they’re diamond proxies or standard proxies), rather than being implemented inside of each function call in the facets / implementation contracts?
+
+**Upgradeable proxy questions**
+
+- Are there any issues with the diamond proxy architecture as currently designed?
+- Should we even be using diamond proxies? There’s a lot of interdependence between facets.
+- Should we be using the storage library of one facet in another facet to access state, or should the diamond be making external calls to itself to use public getters from the other facet?
+- Should we be using libraries to share functionality between facets, or being making external calls the contract itself to use facet functions?
+- If we shouldn’t be using diamond proxies, and instead should be using standard upgradeable proxies, how should we partition code? Libraries for functionality? Should we still use storage libraries as well?
+
+**Cross-chain deployment questions**
+
+- How can we make accounts truly cross-chain with the same addresses across chain?
+    - Problem
+        - If the constructor for the Organization contract accepts an argument for the initial admin address, then the account will always have that initial admin address when it’s deployed on a new chain. If the admin address is no longer valid or a part of the organization, this can result in frozen funds, unless the recovery mechanism is used. If the admin is compromised, then the account is compromised on the new chain.
+    - Possible solution
+        - Do not accept an argument for an initial admin address in the constructor for the Organization contract. Instead, Organization contracts are deployed with a totally empty state with no admin, and the guardian must call an `initialize` function that will initialize the contract’s state, setting state variables like the admin or admin group, policies, whitelist, etc.
+        - The CREATE2 factory contract in this case must only allow the guardian to deploy contracts, to prevent malicious actors from front running contract deployment on new chains
+        - Drawbacks
+            - Only one layer of protection against contract deployment front-run attacks (the guardian check)
+
+**Disaster recovery**
+
+- What are common patterns for disaster recovery for smart accounts?
+- How do MPC providers implement disaster recovery?
+- How do traditional custodians implement disaster recovery? Do they at all?
+- How do self-custody solutions like Safe implement disaster recovery?
+- What design for disaster recovery do you recommend for Onchain Custody?
+    - Additional context
+        - The approach we originally thought of
+            - We originally wanted to have organizations manage external wallets which could only be used to initiate disaster recovery. It would would look similar to a multisig transaction, but the transaction would only be able to send funds to a predetermined immutable recovery address.
+        - The problem with the original we thought of
+            - Making users manage external wallets is a very bad UX for non technical customers. This also makes it very difficult for us to onboard new customers.
+
+**Best practices**
+
+- Should we use custom errors or ordinary `require` statements with string revert messages? What are the pros and cons of both?
+- What are best practices for defining Interfaces in Solidy? Should we define an interface and interface file for every single contract?
+    - What about for every facet if we stick with the Diamond pattern?
+- Should we only ever define custom errors, events, structs and enums in interface files?
+    - If no, what is best practice for deciding where to define them?
+- When should we put logic into an external library? When should we put it into an internal library?
+
+**Compiler questions**
+
+- What version of the solidity compiler should we use? Why?
+- Should we have a fixed solidity compiler version for the contracts?
+
+**SPDX license questions**
+
+- What SPDX license should we use?
