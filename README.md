@@ -819,3 +819,89 @@ src/account
 **SPDX license questions**
 
 - What SPDX license should we use?
+
+# API
+## Overview
+Using the Onchain Custody API, an application can take any action that an ordinary member can take.
+
+The API can be used to:
+- build custom applications with custom user interfaces
+- programmatically execute transactions without human intervention
+- steamline workflows that require both manual human intervention and programatic actions
+
+... and much more.
+
+## API Members
+An application using the API is represented in its Organization as a special type of Member called an "API Member".
+
+The API Member is essentially an ordinary Member with all the same capabilities as an ordinary Member. 
+
+There are only two key differences between an API Member and an ordinary Member:
+1. An API Member must use the API to interact with the Organization, instead of the Web Application.
+2. An API Member manages its own private key (or uses the Onchain Custody SDK and CLI to automatically manage the private key), instead of using the Onchain Custody Mobile Wallet.
+
+If the API Member is given sole Admin permissions over the organization, it can be used to programatically take any action within the organization without human intervention. 
+
+
+## Programatic Actions Broken Down
+Using the API, an application can:
+- **Manage Transactions**
+
+    - Propose new Transactions
+    - Approve or reject Transactions proposed by another Member
+
+- **Manage Members**
+
+    - Propose the addition or removal of Members
+    - Approve or reject the addition or removal of Members proposed by another Member
+
+- **Manage Groups**
+
+    - Propose the creation, modification, or deletion of a Group
+    - Approve or reject the creation, modification, or deletion of a Group proposed by another Member
+
+- **Manage Policies**
+
+    - Propose the creation, modification, archival of a Policy
+    - Approve or reject the creation, modification, archival of a Policy proposed by another Member
+
+- **Manage Whitelisted Addresses**
+
+    - Propose the creation, modification, or archival of a Whitelisted Address
+    - Approve or reject the creation, modification, archival of a Whitelisted Address proposed by another Member
+
+- **Manage Organization Admin Settings**
+
+    - Propose changes to Organization Admin Settings
+    - Approve or reject changes to Organization Admin Settings proposed by another Member
+
+## Usage Guide
+### Create an API Member
+Create your API Member in the Onchain Custody web app:
+        
+1. Go to http://onchain-custody.onchainden.com/members.
+    
+2. Click "Add Member", then "Advanced", turn on "API Member", and click "Add".
+
+You'll be shown an API key that will be used in the next step to authenticate the CLI.
+
+### Generate the API Member's private key
+Use the CLI to setup the API Member's private key.
+
+To install the CLI:
+ 
+ ```bash
+ npm install -i @onchainden/onchaincustody-cli
+ ```
+
+Next, to generate the API Member's private key
+```bash
+onchaincustody-cli setup
+```
+
+You'll be prompted to enter the API Member's API key. This was generated when you created your API Member, and can be retrieved by viewing the API Member in the web application in your browser.
+
+Next, you'll be presented with the API Member's private key. Save this key in a secure location and keep it safe, as it can be used to critical messages on behalf of your API Member.
+
+### Get Admin approval
+
