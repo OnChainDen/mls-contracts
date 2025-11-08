@@ -922,13 +922,12 @@ import { OnchainCustodyClient } from "@onchainden/onchaincustody`
 const API_KEY = process.env.ONCHAIN_CUSTODY_API_KEY;
 const PRIVATE_KEY = process.env.ONCHAIN_CUSTODY_PRIVATE_KEY;
 
-const client = new OnchainCustodyClient(
-    API_KEY,        // Always required
-    PRIVATE_KEY     // Optional: required for write access, 
-                    // but not required for read-only access
-)
+const client = new OnchainCustodyClient({
+    apiKey:     API_KEY,        // Always required
+    privateKey: PRIVATE_KEY     // Optional: required for write access, 
+                                // but not required for read-only access
+});
 
 const policies = await client.getPolicies();
 console.log(policies)
-
 ```
