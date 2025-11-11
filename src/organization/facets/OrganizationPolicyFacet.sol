@@ -5,7 +5,6 @@ import { OrganizationPolicyFacetStorage } from "./OrganizationPolicyFacetStorage
 import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
 import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
 import { OrganizationWhitelistFacetStorage } from "./OrganizationWhitelistFacetStorage.sol";
-import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
@@ -23,33 +22,65 @@ contract OrganizationPolicyFacet {
 
     /**
      * @notice Emitted when the organization's policies are modified
-     * @param previousPoliciesHash The hash of the previous policies array
-     * @param newPoliciesHash The hash of the new policies array
-     * @param newPoliciesCount The number of policies in the new policies array
+     * @param policyIds The array of policy IDs that were modified
      */
-    event PoliciesModified(bytes32 previousPoliciesHash, bytes32 newPoliciesHash, uint256 newPoliciesCount);
+    event PoliciesModified(uint256[] policyIds);
 
     /**
-     * @notice Gets the policies for the organization
-     * @return The policies for the organization
+     * @notice Gets a policy by its ID
+     * @param policyId The ID of the policy to retrieve
+     * @return The policy with the given ID
      */
-    function getPolicies() public view returns (Policies.Policy[] memory) {
-        return OrganizationPolicyFacetStorage.layout().policies;
+    function getPolicy(uint256 policyId) external view returns (Policies.Policy memory) {
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+        require(policyLayout.policyExists[policyId], "Policy does not exist");
+        return policyLayout.policies[policyId];
+    }
+
+    /**
+     * @notice Checks if a policy exists
+     * @param policyId The ID of the policy to check
+     * @return True if the policy exists, false otherwise
+     */
+    function policyExists(uint256 policyId) external view returns (bool) {
+        return OrganizationPolicyFacetStorage.layout().policyExists[policyId];
+    }
+
+    /**
+     * @notice Gets all policies for the organization
+     * @return An array of all policies
+     * @dev This function is deprecated. Policy enumeration should be done off-chain by indexing events.
+     *      This function returns an empty array to maintain backward compatibility.
+     */
+    function getPolicies() public pure returns (Policies.Policy[] memory) {
+        // Return empty array - enumeration should be done off-chain via events
+        return new Policies.Policy[](0);
     }
 
     /**
      * @notice Modifies the organization's policies
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     *      The new policies array completely replaces the existing policies array, maintaining order importance.
-     * @param newPolicies The new array of policies to set for the organization
+     *      Policies are identified by explicit IDs rather than array indices.
+     * @param policyIds The array of policy IDs to set/modify
+     * @param newPolicies The array of policies corresponding to the policy IDs
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function modifyPolicies(Policies.Policy[] memory newPolicies, uint256 salt, bytes memory signatures) public {
+    function modifyPolicies(
+        uint256[] memory policyIds,
+        Policies.Policy[] memory newPolicies,
+        uint256 salt,
+        bytes memory signatures
+    )
+        public
+    {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
+        // Validate that policyIds and newPolicies arrays have the same length
+        require(policyIds.length == newPolicies.length, "Policy IDs and policies arrays must have the same length");
+
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newPolicies);
+        bytes memory operationData = abi.encode(policyIds, newPolicies);
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
@@ -58,20 +89,17 @@ contract OrganizationPolicyFacet {
 
         OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
 
-        // Store hash of previous policies for the event
-        bytes32 previousPoliciesHash = _getPoliciesHash(policyLayout.policies);
+        // Store policies in the mapping
+        for (uint256 i = 0; i < policyIds.length; ++i) {
+            uint256 policyId = policyIds[i];
 
-        // Replace the entire policies array with the new one
-        delete policyLayout.policies;
-        for (uint256 i = 0; i < newPolicies.length; ++i) {
-            policyLayout.policies.push(newPolicies[i]);
+            // Store the policy in the mapping
+            policyLayout.policies[policyId] = newPolicies[i];
+            policyLayout.policyExists[policyId] = true;
         }
 
-        // Compute hash of new policies for the event
-        bytes32 newPoliciesHash = _getPoliciesHash(policyLayout.policies);
-
         // Emit event
-        emit PoliciesModified(previousPoliciesHash, newPoliciesHash, newPolicies.length);
+        emit PoliciesModified(policyIds);
     }
 
     /**
@@ -623,15 +651,6 @@ contract OrganizationPolicyFacet {
             amount := mload(add(data, 68)) // Skip selector (4) + address (32) + read amount (32)
         }
         return uint256(amount);
-    }
-
-    /**
-     * @notice Computes a hash of the policies array for event logging and comparison
-     * @param policies The policies array to hash
-     * @return The hash of the policies array
-     */
-    function _getPoliciesHash(Policies.Policy[] memory policies) internal pure returns (bytes32) {
-        return keccak256(abi.encode(policies));
     }
 
     /**

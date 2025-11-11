@@ -10,7 +10,8 @@ import { Policies } from "../../libraries/Policies.sol";
  */
 library OrganizationPolicyFacetStorage {
     struct Layout {
-        Policies.Policy[] policies;
+        mapping(uint256 => Policies.Policy) policies;
+        mapping(uint256 => bool) policyExists;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.policy.storage");
