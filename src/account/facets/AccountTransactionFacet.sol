@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { AccountTransactionFacetStorage } from "./AccountTransactionFacetStorage.sol";
+import { AccountOrganizationAddressStorage } from "./AccountOrganizationAddressStorage.sol";
 import { OrganizationPolicyFacetStorage } from "../../organization/facets/OrganizationPolicyFacetStorage.sol";
 import { OrganizationMembersFacetStorage } from "../../organization/facets/OrganizationMembersFacetStorage.sol";
 import { OrganizationGroupsFacetStorage } from "../../organization/facets/OrganizationGroupsFacetStorage.sol";
@@ -11,6 +12,7 @@ import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
+import { IOrganizationMembersFacet } from "../../organization/interfaces/IOrganizationMembersFacet.sol";
 
 /**
  * @title Account Transaction Facet
@@ -264,12 +266,6 @@ contract AccountTransactionFacet {
             revert PolicyDoesNotApply(policyId);
         }
 
-        // Case: Policy is an automatic rejection policy
-        // Revert the transaction
-        if (policy.policyType == Policies.PolicyType.AutoReject) {
-            revert TransactionRejectedByPolicy("Transaction automatically rejected by policy");
-        }
-
         // Case: Policy is a manual approval policy
         // Check if the transaction has enough valid approvals
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
@@ -290,8 +286,17 @@ contract AccountTransactionFacet {
             }
         }
 
-        // Case: Policy is AutoApprove - no additional validation needed
-        // Return to allow transaction execution
+        // Case: Policy is AutoApprove
+        // Require a single signature from any organization member
+        if (policy.policyType == Policies.PolicyType.AutoApprove) {
+            bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, true);
+
+            // Check if we have a valid signature from any organization member
+            if (!_hasValidMemberSignature(signatures, txHash)) {
+                revert TransactionRejectedByPolicy("AutoApprove policy requires a signature from an organization member");
+            }
+            return;
+        }
     }
 
     /**
@@ -332,20 +337,6 @@ contract AccountTransactionFacet {
         // Case: Policy is an automatic approval policy
         // Only valid transaction initiators (as defined by policy) can reject it
         if (policy.policyType == Policies.PolicyType.AutoApprove) {
-            // Get transaction hash for signature verification
-            bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, false);
-
-            // Check if we have at least one valid signature from an authorized initiator
-            if (_hasValidInitiatorSignature(policy, signatures, txHash)) {
-                return;
-            } else {
-                revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
-            }
-        }
-
-        // Case: Policy is an automatic rejection policy
-        // Only valid transaction initiators (as defined by policy) can reject it
-        if (policy.policyType == Policies.PolicyType.AutoReject) {
             // Get transaction hash for signature verification
             bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, false);
 
@@ -502,6 +493,52 @@ contract AccountTransactionFacet {
         }
 
         return false;
+    }
+
+    /**
+     * @notice Checks if there is a valid signature from any organization member
+     * @dev For AutoApprove policies, assumes a single signature (65 bytes)
+     * @param signatures The signature to verify (expected to be exactly 65 bytes)
+     * @param txHash The hash of the transaction
+     * @return True if there is a valid signature from any organization member, false otherwise
+     */
+    function _hasValidMemberSignature(
+        bytes memory signatures,
+        bytes32 txHash
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: No signature provided or incorrect length (must be exactly 65 bytes)
+        if (signatures.length != 65) return false;
+
+        // Extract signer address from signature using ERC-1271 compatible verification
+        address signer = _getSigner(signatures, txHash);
+
+        // Case: Signer is invalid
+        if (signer == address(0)) return false;
+
+        // Verify the signature using ERC-1271
+        if (!SignatureChecker.isValidSignatureNow(signer, txHash, signatures)) {
+            return false;
+        }
+
+        // Get the organization address
+        AccountOrganizationAddressStorage.Layout storage orgLayout = AccountOrganizationAddressStorage.layout();
+        address organizationAddress = orgLayout.organizationAddress;
+
+        // Case: Organization address is not set
+        if (organizationAddress == address(0)) return false;
+
+        // Check if signer is a member of the organization by calling the organization contract
+        // Note: addressToMemberId returns 0 if the address is not a member, or the member ID if it is
+        try IOrganizationMembersFacet(organizationAddress).addressToMemberId(signer) returns (uint8 memberId) {
+            return memberId != 0;
+        } catch {
+            // If the call fails, assume the signer is not a member
+            return false;
+        }
     }
 
     /**

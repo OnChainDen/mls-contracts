@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 library Policies {
     enum PolicyType {
         AutoApprove,
-        AutoReject,
         RequireManualApproval
     }
 

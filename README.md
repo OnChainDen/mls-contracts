@@ -106,22 +106,20 @@ Example policies:
 - "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
 
 ### Policy types
-There are three types of policies:
+There are two types of policies:
 1. **Auto-approval policies**
 
-    If a transaction is governed by an Auto-approval policy, then it is automatically approved and can be executed.
+    If a transaction is governed by an Auto-approval policy, then it is automatically approved and can be executed. However, Auto-approval policies still require at least one signature from any organization member to ensure that transactions cannot be executed without explicit member approval.
 
-2. **Auto-rejection policies**
-
-    If a transaction is governed by an Auto-rejection policy, then it is automatticaly rejected and cannot be executed.
-
-3. **Manual approval policies**
+2. **Manual approval policies**
 
     If a transaction is governed by a Manual approval policy, then it must be manually approved by a Member or Group before it can be executed.
 
     Similarly, if a transaction is governed by a Manual approval policy, then it must be manually rejected by a Member or Group before it is discarded.
 
     Manual approval policies must specifiy a Member or Group that is responsible for manually reviewing transactions. If a Group is specified, a voting threshold must also be specified (e.g. 2 out of 3 members of the group must approve or reject).
+
+**Default behavior**: If a transaction does not match any Auto-approval or Manual approval policy, it is automatically rejected and cannot be executed.
 
 
 ### Policy filters for matching transactions
