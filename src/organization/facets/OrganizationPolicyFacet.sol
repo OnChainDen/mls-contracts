@@ -59,17 +59,6 @@ contract OrganizationPolicyFacet {
     }
 
     /**
-     * @notice Gets all policies for the organization
-     * @return An array of all policies
-     * @dev This function is deprecated. Policy enumeration should be done off-chain by indexing events.
-     *      This function returns an empty array to maintain backward compatibility.
-     */
-    function getPolicies() public pure returns (Policies.Policy[] memory) {
-        // Return empty array - enumeration should be done off-chain via events
-        return new Policies.Policy[](0);
-    }
-
-    /**
      * @notice Modifies the organization's policies by adding, modifying, or removing policies
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      *      - Adding policies: Provide policies in `addPolicies` array. IDs will be auto-assigned and emitted in event.
