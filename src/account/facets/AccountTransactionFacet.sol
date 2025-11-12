@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { AccountTransactionFacetStorage } from "./AccountTransactionFacetStorage.sol";
+import { AccountOrganizationAddressStorage } from "./AccountOrganizationAddressStorage.sol";
 import { OrganizationPolicyFacetStorage } from "../../organization/facets/OrganizationPolicyFacetStorage.sol";
 import { OrganizationMembersFacetStorage } from "../../organization/facets/OrganizationMembersFacetStorage.sol";
 import { OrganizationGroupsFacetStorage } from "../../organization/facets/OrganizationGroupsFacetStorage.sol";
@@ -11,6 +12,7 @@ import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
+import { IOrganizationMembersFacet } from "../../organization/interfaces/IOrganizationMembersFacet.sol";
 
 /**
  * @title Account Transaction Facet
@@ -26,12 +28,14 @@ contract AccountTransactionFacet {
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param nonce The nonce used for this transaction
+     * @param policyId The policy ID that governed this transaction
      */
     event TransactionExecuted(
         address indexed to,
         uint256 value,
         bytes data,
-        uint256 indexed nonce
+        uint256 indexed nonce,
+        uint256 indexed policyId
     );
 
     /**
@@ -54,6 +58,7 @@ contract AccountTransactionFacet {
      * @param operation The operation of the transaction
      * @param nonce The nonce used for this transaction
      * @param rejectedBy The address that rejected the transaction
+     * @param policyId The policy ID that governed this transaction
      */
     event TransactionRejectedByUser(
         address indexed to,
@@ -61,7 +66,8 @@ contract AccountTransactionFacet {
         bytes data,
         AccountTransactionFacetStorage.Operation operation,
         uint256 indexed nonce,
-        address rejectedBy
+        address rejectedBy,
+        uint256 indexed policyId
     );
 
     /**
@@ -90,6 +96,18 @@ contract AccountTransactionFacet {
     error InvalidChainId(uint256 expected, uint256 provided);
 
     /**
+     * @notice Emitted when a transaction is rejected because the policy does not exist
+     * @param policyId The policy ID that was not found
+     */
+    error PolicyNotFound(uint256 policyId);
+
+    /**
+     * @notice Emitted when a transaction is rejected because the policy does not apply to the transaction
+     * @param policyId The policy ID that does not apply
+     */
+    error PolicyDoesNotApply(uint256 policyId);
+
+    /**
      * @notice Checks if a nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
@@ -104,19 +122,21 @@ contract AccountTransactionFacet {
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param salt A user-provided salt for nonce computation
+     * @param policyId The policy ID governing this transaction
      * @return The computed nonce
      */
     function computeNonce(
         address to,
         uint256 value,
         bytes calldata data,
-        uint256 salt
+        uint256 salt,
+        uint256 policyId
     )
         public
         view
         returns (uint256)
     {
-        return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), salt)));
+        return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), salt, policyId)));
     }
 
     /**
@@ -125,6 +145,7 @@ contract AccountTransactionFacet {
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param salt A user-provided salt for nonce computation
+     * @param policyId The ID of the policy that governs this transaction
      * @param signatures The signatures of the transaction
      */
     function executeTransaction(
@@ -132,14 +153,15 @@ contract AccountTransactionFacet {
         uint256 value,
         bytes calldata data,
         uint256 salt,
+        uint256 policyId,
         bytes memory signatures
     )
         public
     {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
-        // Compute deterministic nonce from transaction data and salt
-        uint256 nonce = computeNonce(to, value, data, salt);
+        // Compute deterministic nonce from transaction data, salt, and policyId
+        uint256 nonce = computeNonce(to, value, data, salt, policyId);
 
         AccountTransactionFacetStorage.Layout storage layout = AccountTransactionFacetStorage.layout();
 
@@ -151,17 +173,13 @@ contract AccountTransactionFacet {
         // Mark nonce as used
         layout.usedNonces[nonce] = true;
 
-        // Get all policies from the onchain custody contract that this account is associated with
-        OrganizationPolicyFacetStorage.Layout storage policyStorage = OrganizationPolicyFacetStorage.layout();
-        Policies.Policy[] memory policies = policyStorage.policies;
-
         // Check policies to make sure this transaction can be executed
-        _validateTransaction(policies, to, value, data, salt, signatures);
+        _validateTransaction(policyId, to, value, data, salt, signatures);
 
         // Execute the transaction
         _execute(to, value, data, gasleft());
 
-        emit TransactionExecuted(to, value, data, nonce);
+        emit TransactionExecuted(to, value, data, nonce, policyId);
     }
 
     /**
@@ -171,6 +189,7 @@ contract AccountTransactionFacet {
      * @param data The data of the transaction
      * @param operation The operation of the transaction
      * @param salt A user-provided salt for nonce computation
+     * @param policyId The ID of the policy that governs this transaction
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures of the transaction
      */
@@ -180,6 +199,7 @@ contract AccountTransactionFacet {
         bytes calldata data,
         AccountTransactionFacetStorage.Operation operation,
         uint256 salt,
+        uint256 policyId,
         uint256 chainId,
         bytes memory signatures
     )
@@ -192,8 +212,8 @@ contract AccountTransactionFacet {
             revert InvalidChainId(block.chainid, chainId);
         }
 
-        // Compute deterministic nonce from transaction data and salt
-        uint256 nonce = computeNonce(to, value, data, salt);
+        // Compute deterministic nonce from transaction data, salt, and policyId
+        uint256 nonce = computeNonce(to, value, data, salt, policyId);
 
         AccountTransactionFacetStorage.Layout storage layout = AccountTransactionFacetStorage.layout();
 
@@ -205,19 +225,15 @@ contract AccountTransactionFacet {
         // Mark nonce as used to prevent execution
         layout.usedNonces[nonce] = true;
 
-        // Get all policies from the onchain custody contract that this account is associated with
-        OrganizationPolicyFacetStorage.Layout storage policyStorage = OrganizationPolicyFacetStorage.layout();
-        Policies.Policy[] memory policies = policyStorage.policies;
-
         // Check if the caller is authorized to reject this transaction
-        _validateRejectionAuthorization(policies, to, value, data, salt, signatures);
+        _validateRejectionAuthorization(policyId, to, value, data, salt, signatures);
 
-        emit TransactionRejectedByUser(to, value, data, operation, nonce, msg.sender);
+        emit TransactionRejectedByUser(to, value, data, operation, nonce, msg.sender, policyId);
     }
 
     /**
-     * @notice Validates a transaction against all applicable policies
-     * @param policies Array of all policies to check
+     * @notice Validates a transaction against the specified policy
+     * @param policyId The ID of the policy to validate against
      * @param to Transaction destination address
      * @param value Transaction value
      * @param data Transaction data
@@ -225,7 +241,7 @@ contract AccountTransactionFacet {
      * @param signatures Signatures for approval verification
      */
     function _validateTransaction(
-        Policies.Policy[] memory policies,
+        uint256 policyId,
         address to,
         uint256 value,
         bytes memory data,
@@ -235,49 +251,57 @@ contract AccountTransactionFacet {
         internal
         view
     {
-        // Iterate over policies to find the first matching policy
-        for (uint256 i = 0; i < policies.length; i++) {
-            // Case: Current policy does not apply to transaction
-            // Skip to next policy
-            if (!_doesPolicyApplyToTransaction(policies[i], address(this), to, value, data, msg.sender)) {
-                continue;
-            }
+        OrganizationPolicyFacetStorage.Layout storage policyStorage = OrganizationPolicyFacetStorage.layout();
 
-            // Case: Current policy applies to transaction and is an automatic rejection policy
+        // Validate that policy exists
+        if (!policyStorage.policyExists[policyId]) {
+            revert PolicyNotFound(policyId);
+        }
+
+        // Look up policy directly
+        Policies.Policy memory policy = policyStorage.policies[policyId];
+
+        // Validate that policy applies to transaction
+        if (!_doesPolicyApplyToTransaction(policy, address(this), to, value, data, msg.sender)) {
+            revert PolicyDoesNotApply(policyId);
+        }
+
+        // Case: Policy is a manual approval policy
+        // Check if the transaction has enough valid approvals
+        if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
+            // Get transaction hash for signature verification
+            bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, true);
+            uint256 requiredApprovals = _getRequiredApprovals(policy);
+            uint256 validApprovals = _getValidApprovals(policy, signatures, txHash);
+
+            // Case: Transaction does not have enough valid approvals
             // Revert the transaction
-            if (policies[i].policyType == Policies.PolicyType.AutoReject) {
-                revert TransactionRejectedByPolicy("Transaction automatically rejected by policy");
+            if (validApprovals < requiredApprovals) {
+                revert InsufficientApprovals(requiredApprovals, validApprovals);
             }
-
-            // Case: Current policy applies to transaction and is a manual approval policy
-            // Check if the transaction has enough valid approvals
-            if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
-                // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, salt, true);
-                uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
-                uint256 validApprovals = _getValidApprovals(policies[i], signatures, txHash);
-
-                // Case: Transaction does not have enough valid approvals
-                // Revert the transaction
-                if (validApprovals < requiredApprovals) {
-                    revert InsufficientApprovals(requiredApprovals, validApprovals);
-                }
-                // Case: Transaction has enough valid approvals
-                // Return
-                else {
-                    return;
-                }
+            // Case: Transaction has enough valid approvals
+            // Return
+            else {
+                return;
             }
         }
 
-        // Case: No policies match the transaction
-        // If no policies match, reject the transaction
-        revert TransactionRejectedByPolicy("No applicable policy found for transaction");
+        // Case: Policy is AutoApprove
+        // Require a single signature from any organization member
+        if (policy.policyType == Policies.PolicyType.AutoApprove) {
+            bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, true);
+
+            // Check if we have a valid signature from any organization member
+            if (!_hasValidMemberSignature(signatures, txHash)) {
+                revert TransactionRejectedByPolicy("AutoApprove policy requires a signature from an organization member");
+            }
+            return;
+        }
     }
 
     /**
      * @notice Validates that the caller is authorized to reject the given transaction
-     * @param policies Array of all policies to check
+     * @param policyId The ID of the policy to validate against
      * @param to Transaction destination address
      * @param value Transaction value
      * @param data Transaction data
@@ -285,7 +309,7 @@ contract AccountTransactionFacet {
      * @param signatures Signatures for approval verification
      */
     function _validateRejectionAuthorization(
-        Policies.Policy[] memory policies,
+        uint256 policyId,
         address to,
         uint256 value,
         bytes memory data,
@@ -295,66 +319,54 @@ contract AccountTransactionFacet {
         internal
         view
     {
-        // Iterate over policies to find the first matching policy
-        for (uint256 i = 0; i < policies.length; i++) {
-            // Case: Current policy does not apply to transaction
-            // Skip to next policy
-            if (!_doesPolicyApplyToTransaction(policies[i], address(this), to, value, data, msg.sender)) {
-                continue;
-            }
+        OrganizationPolicyFacetStorage.Layout storage policyStorage = OrganizationPolicyFacetStorage.layout();
 
-            // Case: Current policy applies to transaction and is an automatic approval policy
-            // Only valid transaction initiators (as defined by policy) can reject it
-            if (policies[i].policyType == Policies.PolicyType.AutoApprove) {
-                // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, salt, false);
+        // Validate that policy exists
+        if (!policyStorage.policyExists[policyId]) {
+            revert PolicyNotFound(policyId);
+        }
 
-                // Check if we have at least one valid signature from an authorized initiator
-                if (_hasValidInitiatorSignature(policies[i], signatures, txHash)) {
-                    return;
-                } else {
-                    revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
-                }
-            }
+        // Look up policy directly
+        Policies.Policy memory policy = policyStorage.policies[policyId];
 
-            // Case: Current policy applies to transaction and is an automatic rejection policy
-            // Only valid transaction initiators (as defined by policy) can reject it
-            if (policies[i].policyType == Policies.PolicyType.AutoReject) {
-                // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, salt, false);
+        // Validate that policy applies to transaction
+        if (!_doesPolicyApplyToTransaction(policy, address(this), to, value, data, msg.sender)) {
+            revert PolicyDoesNotApply(policyId);
+        }
 
-                // Check if we have at least one valid signature from an authorized initiator
-                if (_hasValidInitiatorSignature(policies[i], signatures, txHash)) {
-                    return;
-                } else {
-                    revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
-                }
-            }
+        // Case: Policy is an automatic approval policy
+        // Only valid transaction initiators (as defined by policy) can reject it
+        if (policy.policyType == Policies.PolicyType.AutoApprove) {
+            // Get transaction hash for signature verification
+            bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, false);
 
-            // Case: Current policy applies to transaction and is a manual approval policy
-            // Check if the caller has sufficient rejection authority
-            if (policies[i].policyType == Policies.PolicyType.RequireManualApproval) {
-                // Get transaction hash for signature verification
-                bytes32 txHash = _getTransactionHash(to, value, data, salt, false);
-                uint256 requiredApprovals = _getRequiredApprovals(policies[i]);
-                uint256 validApprovals = _getValidApprovals(policies[i], signatures, txHash);
-
-                // Case: Transaction does not have enough valid rejections
-                // Revert the transaction
-                if (validApprovals < requiredApprovals) {
-                    revert InsufficientApprovals(requiredApprovals, validApprovals);
-                }
-                // Case: Transaction has enough valid rejections
-                // Return
-                else {
-                    return;
-                }
+            // Check if we have at least one valid signature from an authorized initiator
+            if (_hasValidInitiatorSignature(policy, signatures, txHash)) {
+                return;
+            } else {
+                revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
             }
         }
 
-        // Case: No policies match the transaction
-        // If no policies match, reject the rejection attempt
-        revert TransactionRejectedByPolicy("No applicable policy found for transaction rejection");
+        // Case: Policy is a manual approval policy
+        // Check if the caller has sufficient rejection authority
+        if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
+            // Get transaction hash for signature verification
+            bytes32 txHash = _getTransactionHash(to, value, data, salt, policyId, false);
+            uint256 requiredApprovals = _getRequiredApprovals(policy);
+            uint256 validApprovals = _getValidApprovals(policy, signatures, txHash);
+
+            // Case: Transaction does not have enough valid rejections
+            // Revert the transaction
+            if (validApprovals < requiredApprovals) {
+                revert InsufficientApprovals(requiredApprovals, validApprovals);
+            }
+            // Case: Transaction has enough valid rejections
+            // Return
+            else {
+                return;
+            }
+        }
     }
 
     /**
@@ -484,11 +496,58 @@ contract AccountTransactionFacet {
     }
 
     /**
+     * @notice Checks if there is a valid signature from any organization member
+     * @dev For AutoApprove policies, assumes a single signature (65 bytes)
+     * @param signatures The signature to verify (expected to be exactly 65 bytes)
+     * @param txHash The hash of the transaction
+     * @return True if there is a valid signature from any organization member, false otherwise
+     */
+    function _hasValidMemberSignature(
+        bytes memory signatures,
+        bytes32 txHash
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: No signature provided or incorrect length (must be exactly 65 bytes)
+        if (signatures.length != 65) return false;
+
+        // Extract signer address from signature using ERC-1271 compatible verification
+        address signer = _getSigner(signatures, txHash);
+
+        // Case: Signer is invalid
+        if (signer == address(0)) return false;
+
+        // Verify the signature using ERC-1271
+        if (!SignatureChecker.isValidSignatureNow(signer, txHash, signatures)) {
+            return false;
+        }
+
+        // Get the organization address
+        AccountOrganizationAddressStorage.Layout storage orgLayout = AccountOrganizationAddressStorage.layout();
+        address organizationAddress = orgLayout.organizationAddress;
+
+        // Case: Organization address is not set
+        if (organizationAddress == address(0)) return false;
+
+        // Check if signer is a member of the organization by calling the organization contract
+        // Note: addressToMemberId returns 0 if the address is not a member, or the member ID if it is
+        try IOrganizationMembersFacet(organizationAddress).addressToMemberId(signer) returns (uint8 memberId) {
+            return memberId != 0;
+        } catch {
+            // If the call fails, assume the signer is not a member
+            return false;
+        }
+    }
+
+    /**
      * @notice Creates a hash of the transaction for signature verification using EIP-712 typed data
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param salt The user-provided salt for nonce computation
+     * @param policyId The policy ID governing this transaction
      * @param isApproval Whether the signature is for an approval or a rejection
      * @return The hash of the transaction formatted for ERC-1271 signature verification
      */
@@ -496,7 +555,8 @@ contract AccountTransactionFacet {
         address to,
         uint256 value,
         bytes memory data,
-        uint256 salt, 
+        uint256 salt,
+        uint256 policyId,
         bool isApproval
     )
         internal
@@ -508,13 +568,14 @@ contract AccountTransactionFacet {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "ExecuteTransaction(address account,address to,uint256 value,bytes data,uint256 salt,bool isApproval,uint256 chainId)"
+                    "ExecuteTransaction(address account,address to,uint256 value,bytes data,uint256 salt,uint256 policyId,bool isApproval,uint256 chainId)"
                 ),
                 address(this),
                 to,
                 value,
                 keccak256(data),
                 salt,
+                policyId,
                 isApproval,
                 block.chainid
             )

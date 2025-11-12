@@ -5,6 +5,7 @@ import { OrganizationAdminFacetStorage } from "./facets/OrganizationAdminFacetSt
 import { OrganizationMembersFacetStorage } from "./facets/OrganizationMembersFacetStorage.sol";
 import { OrganizationGroupsFacetStorage } from "./facets/OrganizationGroupsFacetStorage.sol";
 import { OrganizationGuardianFacetStorage } from "./facets/OrganizationGuardianFacetStorage.sol";
+import { OrganizationPolicyFacetStorage } from "./facets/OrganizationPolicyFacetStorage.sol";
 import { AdminType } from "../interfaces/IAdminFacet.sol";
 
 /**
@@ -29,6 +30,7 @@ contract OrganizationInit {
         OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
         OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
         OrganizationGuardianFacetStorage.Layout storage guardianLayout = OrganizationGuardianFacetStorage.layout();
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
 
         // Validate admin address
         if (adminAddress == address(0)) {
@@ -42,6 +44,7 @@ contract OrganizationInit {
         // Initialize counters
         membersLayout.nextMemberId = 2;
         groupsLayout.nextGroupId = 1;
+        policyLayout.nextPolicyId = 1;
 
         // Set admin permission
         adminLayout.adminPermission = OrganizationAdminFacetStorage.AdminPermission({

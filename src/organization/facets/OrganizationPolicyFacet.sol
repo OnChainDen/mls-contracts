@@ -5,7 +5,6 @@ import { OrganizationPolicyFacetStorage } from "./OrganizationPolicyFacetStorage
 import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
 import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
 import { OrganizationWhitelistFacetStorage } from "./OrganizationWhitelistFacetStorage.sol";
-import { OrganizationAdminFacetStorage } from "./OrganizationAdminFacetStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
@@ -22,56 +21,127 @@ contract OrganizationPolicyFacet {
     using OrganizationWhitelistFacetStorage for OrganizationWhitelistFacetStorage.Layout;
 
     /**
-     * @notice Emitted when the organization's policies are modified
-     * @param previousPoliciesHash The hash of the previous policies array
-     * @param newPoliciesHash The hash of the new policies array
-     * @param newPoliciesCount The number of policies in the new policies array
+     * @notice Emitted when new policies are added to the organization
+     * @param policyIds The array of auto-assigned policy IDs for the newly created policies
      */
-    event PoliciesModified(bytes32 previousPoliciesHash, bytes32 newPoliciesHash, uint256 newPoliciesCount);
+    event PoliciesAdded(uint256[] policyIds);
 
     /**
-     * @notice Gets the policies for the organization
-     * @return The policies for the organization
+     * @notice Emitted when existing policies are modified
+     * @param policyIds The array of policy IDs that were modified
      */
-    function getPolicies() public view returns (Policies.Policy[] memory) {
-        return OrganizationPolicyFacetStorage.layout().policies;
+    event PoliciesModified(uint256[] policyIds);
+
+    /**
+     * @notice Emitted when policies are removed from the organization
+     * @param policyIds The array of policy IDs that were removed
+     */
+    event PoliciesRemoved(uint256[] policyIds);
+
+    /**
+     * @notice Gets a policy by its ID
+     * @param policyId The ID of the policy to retrieve
+     * @return The policy with the given ID
+     */
+    function getPolicy(uint256 policyId) external view returns (Policies.Policy memory) {
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+        require(policyLayout.policyExists[policyId], "Policy does not exist");
+        return policyLayout.policies[policyId];
     }
 
     /**
-     * @notice Modifies the organization's policies
+     * @notice Checks if a policy exists
+     * @param policyId The ID of the policy to check
+     * @return True if the policy exists, false otherwise
+     */
+    function policyExists(uint256 policyId) external view returns (bool) {
+        return OrganizationPolicyFacetStorage.layout().policyExists[policyId];
+    }
+
+    /**
+     * @notice Modifies the organization's policies by adding, modifying, or removing policies
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     *      The new policies array completely replaces the existing policies array, maintaining order importance.
-     * @param newPolicies The new array of policies to set for the organization
+     *      - Adding policies: Provide policies in `addPolicies` array. IDs will be auto-assigned and emitted in event.
+     *      - Modifying policies: Provide policy IDs in `modifyPolicyIds` and corresponding policies in
+     * `policiesToModify`.
+     *      - Removing policies: Provide policy IDs in `removePolicyIds` array.
+     *      All three operations can be performed in a single transaction.
+     * @param modifyPolicyIds The array of policy IDs to modify (must match length of policiesToModify)
+     * @param policiesToModify The array of policies corresponding to modifyPolicyIds
+     * @param addPolicies The array of new policies to add (IDs will be auto-assigned)
+     * @param removePolicyIds The array of policy IDs to remove
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from the current admin authorizing this operation
      */
-    function modifyPolicies(Policies.Policy[] memory newPolicies, uint256 salt, bytes memory signatures) public {
+    function modifyPolicies(
+        uint256[] memory modifyPolicyIds,
+        Policies.Policy[] memory policiesToModify,
+        Policies.Policy[] memory addPolicies,
+        uint256[] memory removePolicyIds,
+        uint256 salt,
+        bytes memory signatures
+    )
+        public
+    {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+
+        // Validation: modifyPolicyIds and policiesToModify must have matching lengths
+        require(
+            modifyPolicyIds.length == policiesToModify.length,
+            "Modify policy IDs and policies arrays must have the same length"
+        );
+
+        // Validation: At least one operation must be performed
+        require(
+            modifyPolicyIds.length > 0 || addPolicies.length > 0 || removePolicyIds.length > 0,
+            "At least one operation must be performed"
+        );
+
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newPolicies);
+        bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
             AdminOperationType.ModifyPolicies, operationData, salt, signatures
         );
 
-        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+        // Add new policies with auto-assigned IDs
+        if (addPolicies.length > 0) {
+            uint256[] memory addedPolicyIds = new uint256[](addPolicies.length);
+            for (uint256 i = 0; i < addPolicies.length; ++i) {
+                uint256 newPolicyId = policyLayout.nextPolicyId;
+                policyLayout.policies[newPolicyId] = addPolicies[i];
+                policyLayout.policyExists[newPolicyId] = true;
+                addedPolicyIds[i] = newPolicyId;
+                policyLayout.nextPolicyId++;
+            }
 
-        // Store hash of previous policies for the event
-        bytes32 previousPoliciesHash = _getPoliciesHash(policyLayout.policies);
-
-        // Replace the entire policies array with the new one
-        delete policyLayout.policies;
-        for (uint256 i = 0; i < newPolicies.length; ++i) {
-            policyLayout.policies.push(newPolicies[i]);
+            emit PoliciesAdded(addedPolicyIds);
         }
 
-        // Compute hash of new policies for the event
-        bytes32 newPoliciesHash = _getPoliciesHash(policyLayout.policies);
+        // Modify existing policies
+        if (modifyPolicyIds.length > 0) {
+            for (uint256 i = 0; i < modifyPolicyIds.length; ++i) {
+                require(policyLayout.policyExists[modifyPolicyIds[i]], "Policy to modify does not exist");
+                uint256 policyId = modifyPolicyIds[i];
+                policyLayout.policies[policyId] = policiesToModify[i];
+                // policyExists[policyId] remains true
+            }
 
-        // Emit event
-        emit PoliciesModified(previousPoliciesHash, newPoliciesHash, newPolicies.length);
+            emit PoliciesModified(modifyPolicyIds);
+        }
+
+        // Remove policies
+        if (removePolicyIds.length > 0) {
+            for (uint256 i = 0; i < removePolicyIds.length; ++i) {
+                uint256 policyId = removePolicyIds[i];
+                policyLayout.policyExists[policyId] = false;
+            }
+
+            emit PoliciesRemoved(removePolicyIds);
+        }
     }
 
     /**
@@ -623,15 +693,6 @@ contract OrganizationPolicyFacet {
             amount := mload(add(data, 68)) // Skip selector (4) + address (32) + read amount (32)
         }
         return uint256(amount);
-    }
-
-    /**
-     * @notice Computes a hash of the policies array for event logging and comparison
-     * @param policies The policies array to hash
-     * @return The hash of the policies array
-     */
-    function _getPoliciesHash(Policies.Policy[] memory policies) internal pure returns (bytes32) {
-        return keccak256(abi.encode(policies));
     }
 
     /**
