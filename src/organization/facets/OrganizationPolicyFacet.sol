@@ -21,10 +21,22 @@ contract OrganizationPolicyFacet {
     using OrganizationWhitelistFacetStorage for OrganizationWhitelistFacetStorage.Layout;
 
     /**
-     * @notice Emitted when the organization's policies are modified
+     * @notice Emitted when new policies are added to the organization
+     * @param policyIds The array of auto-assigned policy IDs for the newly created policies
+     */
+    event PoliciesAdded(uint256[] policyIds);
+
+    /**
+     * @notice Emitted when existing policies are modified
      * @param policyIds The array of policy IDs that were modified
      */
     event PoliciesModified(uint256[] policyIds);
+
+    /**
+     * @notice Emitted when policies are removed from the organization
+     * @param policyIds The array of policy IDs that were removed
+     */
+    event PoliciesRemoved(uint256[] policyIds);
 
     /**
      * @notice Gets a policy by its ID
@@ -58,17 +70,25 @@ contract OrganizationPolicyFacet {
     }
 
     /**
-     * @notice Modifies the organization's policies
+     * @notice Modifies the organization's policies by adding, modifying, or removing policies
      * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     *      Policies are identified by explicit IDs rather than array indices.
-     * @param policyIds The array of policy IDs to set/modify
-     * @param newPolicies The array of policies corresponding to the policy IDs
+     *      - Adding policies: Provide policies in `addPolicies` array. IDs will be auto-assigned and emitted in event.
+     *      - Modifying policies: Provide policy IDs in `modifyPolicyIds` and corresponding policies in
+     * `policiesToModify`.
+     *      - Removing policies: Provide policy IDs in `removePolicyIds` array.
+     *      All three operations can be performed in a single transaction.
+     * @param modifyPolicyIds The array of policy IDs to modify (must match length of policiesToModify)
+     * @param policiesToModify The array of policies corresponding to modifyPolicyIds
+     * @param addPolicies The array of new policies to add (IDs will be auto-assigned)
+     * @param removePolicyIds The array of policy IDs to remove
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from the current admin authorizing this operation
      */
     function modifyPolicies(
-        uint256[] memory policyIds,
-        Policies.Policy[] memory newPolicies,
+        uint256[] memory modifyPolicyIds,
+        Policies.Policy[] memory policiesToModify,
+        Policies.Policy[] memory addPolicies,
+        uint256[] memory removePolicyIds,
         uint256 salt,
         bytes memory signatures
     )
@@ -76,30 +96,63 @@ contract OrganizationPolicyFacet {
     {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
-        // Validate that policyIds and newPolicies arrays have the same length
-        require(policyIds.length == newPolicies.length, "Policy IDs and policies arrays must have the same length");
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+
+        // Validation: modifyPolicyIds and policiesToModify must have matching lengths
+        require(
+            modifyPolicyIds.length == policiesToModify.length,
+            "Modify policy IDs and policies arrays must have the same length"
+        );
+
+        // Validation: At least one operation must be performed
+        require(
+            modifyPolicyIds.length > 0 || addPolicies.length > 0 || removePolicyIds.length > 0,
+            "At least one operation must be performed"
+        );
 
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(policyIds, newPolicies);
+        bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
 
         // Validate that the current admin has authorized this operation
         IAdminFacet(address(this)).validateAdminAuthorization(
             AdminOperationType.ModifyPolicies, operationData, salt, signatures
         );
 
-        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+        // Add new policies with auto-assigned IDs
+        if (addPolicies.length > 0) {
+            uint256[] memory addedPolicyIds = new uint256[](addPolicies.length);
+            for (uint256 i = 0; i < addPolicies.length; ++i) {
+                uint256 newPolicyId = policyLayout.nextPolicyId;
+                policyLayout.policies[newPolicyId] = addPolicies[i];
+                policyLayout.policyExists[newPolicyId] = true;
+                addedPolicyIds[i] = newPolicyId;
+                policyLayout.nextPolicyId++;
+            }
 
-        // Store policies in the mapping
-        for (uint256 i = 0; i < policyIds.length; ++i) {
-            uint256 policyId = policyIds[i];
-
-            // Store the policy in the mapping
-            policyLayout.policies[policyId] = newPolicies[i];
-            policyLayout.policyExists[policyId] = true;
+            emit PoliciesAdded(addedPolicyIds);
         }
 
-        // Emit event
-        emit PoliciesModified(policyIds);
+        // Modify existing policies
+        if (modifyPolicyIds.length > 0) {
+            for (uint256 i = 0; i < modifyPolicyIds.length; ++i) {
+                require(policyLayout.policyExists[modifyPolicyIds[i]], "Policy to modify does not exist");
+                uint256 policyId = modifyPolicyIds[i];
+                policyLayout.policies[policyId] = policiesToModify[i];
+                // policyExists[policyId] remains true
+            }
+
+            emit PoliciesModified(modifyPolicyIds);
+        }
+
+        // Remove policies
+        if (removePolicyIds.length > 0) {
+            for (uint256 i = 0; i < removePolicyIds.length; ++i) {
+                uint256 policyId = removePolicyIds[i];
+                policyLayout.policyExists[policyId] = false;
+            }
+
+            emit PoliciesRemoved(removePolicyIds);
+        }
     }
 
     /**

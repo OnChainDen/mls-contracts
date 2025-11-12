@@ -12,6 +12,7 @@ library OrganizationPolicyFacetStorage {
     struct Layout {
         mapping(uint256 => Policies.Policy) policies;
         mapping(uint256 => bool) policyExists;
+        uint256 nextPolicyId;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.policy.storage");

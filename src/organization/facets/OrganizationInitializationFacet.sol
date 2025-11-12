@@ -8,6 +8,7 @@ import { OrganizationDeployerAddressStorage } from "./OrganizationDeployerAddres
 import { OrganizationMembersFacetStorage } from "./OrganizationMembersFacetStorage.sol";
 import { OrganizationGroupsFacetStorage } from "./OrganizationGroupsFacetStorage.sol";
 import { OrganizationGuardianFacetStorage } from "./OrganizationGuardianFacetStorage.sol";
+import { OrganizationPolicyFacetStorage } from "./OrganizationPolicyFacetStorage.sol";
 import { IAdminFacet, AdminType } from "../../interfaces/IAdminFacet.sol";
 
 /**
@@ -119,6 +120,7 @@ contract OrganizationInitializationFacet {
         OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
         OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
         OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
+        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
 
         // Case: Individual admin
         if (adminType == AdminType.Member) {
@@ -131,9 +133,10 @@ contract OrganizationInitializationFacet {
             membersLayout.memberIdToAddress[1] = adminAddresses[0];
             membersLayout.addressToMemberId[adminAddresses[0]] = 1;
 
-            // Initialize the member and group counters
+            // Initialize the member, group, and policy counters
             membersLayout.nextMemberId = 2;
             groupsLayout.nextGroupId = 1;
+            policyLayout.nextPolicyId = 1;
 
             // Set admin permission
             adminLayout.adminPermission =
@@ -145,9 +148,10 @@ contract OrganizationInitializationFacet {
             groupsLayout.groupIdToExists[1] = true;
             groupsLayout.groupIdToMemberCount[1] = uint256(adminAddresses.length);
 
-            // Initialize the member and group counters
+            // Initialize the member, group, and policy counters
             membersLayout.nextMemberId = uint8(adminAddresses.length + 1);
             groupsLayout.nextGroupId = 2;
+            policyLayout.nextPolicyId = 1;
 
             // Create members for all admin addresses
             for (uint256 i = 0; i < adminAddresses.length; ++i) {
