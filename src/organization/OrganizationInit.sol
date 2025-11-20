@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationAdminFacetStorage } from "./facets/OrganizationAdminFacetStorage.sol";
-import { OrganizationMembersFacetStorage } from "./facets/OrganizationMembersFacetStorage.sol";
-import { OrganizationGroupsFacetStorage } from "./facets/OrganizationGroupsFacetStorage.sol";
-import { OrganizationGuardianFacetStorage } from "./facets/OrganizationGuardianFacetStorage.sol";
-import { OrganizationPolicyFacetStorage } from "./facets/OrganizationPolicyFacetStorage.sol";
+import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
+import { LibOrganizationMembersStorage } from "./libraries/storage/LibOrganizationMembersStorage.sol";
+import { LibOrganizationGroupsStorage } from "./libraries/storage/LibOrganizationGroupsStorage.sol";
+import { LibOrganizationGuardianStorage } from "./libraries/storage/LibOrganizationGuardianStorage.sol";
+import { LibOrganizationPolicyStorage } from "./libraries/storage/LibOrganizationPolicyStorage.sol";
 import { AdminType } from "../interfaces/IAdminFacet.sol";
 
 /**
@@ -26,11 +26,11 @@ contract OrganizationInit {
      * @param guardian The guardian address
      */
     function init(address adminAddress, address guardian) external {
-        OrganizationAdminFacetStorage.Layout storage adminLayout = OrganizationAdminFacetStorage.layout();
-        OrganizationMembersFacetStorage.Layout storage membersLayout = OrganizationMembersFacetStorage.layout();
-        OrganizationGroupsFacetStorage.Layout storage groupsLayout = OrganizationGroupsFacetStorage.layout();
-        OrganizationGuardianFacetStorage.Layout storage guardianLayout = OrganizationGuardianFacetStorage.layout();
-        OrganizationPolicyFacetStorage.Layout storage policyLayout = OrganizationPolicyFacetStorage.layout();
+        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
         // Validate admin address
         if (adminAddress == address(0)) {
@@ -47,11 +47,8 @@ contract OrganizationInit {
         policyLayout.nextPolicyId = 1;
 
         // Set admin permission
-        adminLayout.adminPermission = OrganizationAdminFacetStorage.AdminPermission({
-            adminType: AdminType.Member,
-            adminId: 1,
-            votingThreshold: 0
-        });
+        adminLayout.adminPermission =
+            LibOrganizationAdminStorage.AdminPermission({ adminType: AdminType.Member, adminId: 1, votingThreshold: 0 });
 
         // Set guardian
         guardianLayout.guardian = guardian;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountOrganizationAddressStorage } from "./facets/AccountOrganizationAddressStorage.sol";
+import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 
 /**
  * @title Account Initialization
@@ -14,9 +14,10 @@ contract AccountInit {
      * @param organizationAddress The address of the onchain custody organization contract
      */
     function init(address organizationAddress) external {
-        AccountOrganizationAddressStorage.Layout storage layout = AccountOrganizationAddressStorage.layout();
+        LibAccountOrganizationAddressStorage.Layout storage accountOrgLayout =
+            LibAccountOrganizationAddressStorage.layout();
 
         // Initialize organization address
-        layout.organizationAddress = organizationAddress;
+        accountOrgLayout.organizationAddress = organizationAddress;
     }
 }

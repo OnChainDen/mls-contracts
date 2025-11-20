@@ -1,0 +1,121 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
+import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
+import { AccountProxy } from "../../account/AccountProxy.sol";
+
+/**
+ * @title Lib Organization Account Factory
+ * @notice Library for deploying Account contracts with admin authorization
+ * @dev This library should ONLY be used by Organization contracts
+ * @author Den Technologies Inc
+ */
+library LibOrganizationAccountFactory {
+    /**
+     * @notice Emitted when a new account proxy is deployed
+     * @param accountAddress The address of the deployed account proxy
+     * @param organizationAddress The address of the organization that deployed it
+     * @param salt The salt used for CREATE2 deployment
+     */
+    event AccountDeployed(address indexed accountAddress, address indexed organizationAddress, bytes32 indexed salt);
+
+    /**
+     * @notice Error thrown when deployment fails
+     */
+    error AccountDeploymentFailed();
+
+    /**
+     * @notice Error thrown when the deployed address does not match the computed address
+     */
+    error AccountDeploymentAddressMismatch();
+
+    /**
+     * @notice Error thrown when account initialization fails
+     */
+    error AccountInitializationFailed();
+
+    /**
+     * @notice Deploys a new AccountProxy at a deterministic address
+     * @dev Uses CREATE2 to ensure the same address across different chains
+     * @dev Requires admin authorization through signatures
+     * @param create2Salt The salt for CREATE2 deployment
+     * @param implementationAddress The address of the AccountImplementation contract
+     * @param initializationData The initialization calldata for the AccountImplementation
+     * @param adminSignatureSalt A user-provided salt for admin nonce computation
+     * @param signatures The signatures from admin authorizing this operation
+     * @return accountAddress The address of the deployed account proxy
+     */
+    function deployAccount(
+        bytes32 create2Salt,
+        address implementationAddress,
+        bytes memory initializationData,
+        uint256 adminSignatureSalt,
+        bytes memory signatures
+    )
+        internal
+        returns (address accountAddress)
+    {
+        // Validate admin authorization for account deployment
+        bytes memory operationData =
+            abi.encode(create2Salt, keccak256(abi.encode(implementationAddress, keccak256(initializationData))));
+
+        LibOrganizationAdmin.validateAdminAuthorization(
+            AdminOperationType.DeployAccount, operationData, adminSignatureSalt, signatures
+        );
+
+        // Deploy the account proxy using CREATE2
+        bytes memory bytecode = abi.encodePacked(
+            type(AccountProxy).creationCode, abi.encode(implementationAddress, initializationData, address(this))
+        );
+
+        assembly {
+            accountAddress := create2(0, add(bytecode, 0x20), mload(bytecode), create2Salt)
+        }
+
+        // Check if deployment was successful
+        if (accountAddress == address(0)) {
+            revert AccountDeploymentFailed();
+        }
+
+        // Check if the deployed address matches the computed address
+        if (accountAddress != computeAccountAddress(create2Salt, implementationAddress, initializationData)) {
+            revert AccountDeploymentAddressMismatch();
+        }
+
+        emit AccountDeployed(accountAddress, address(this), create2Salt);
+    }
+
+    /**
+     * @notice Computes the address where an account proxy would be deployed
+     * @param salt The salt for CREATE2 deployment
+     * @param implementationAddress The address of the AccountImplementation contract
+     * @param initializationData The initialization calldata for the AccountImplementation
+     * @return The computed address
+     */
+    function computeAccountAddress(
+        bytes32 salt,
+        address implementationAddress,
+        bytes memory initializationData
+    )
+        internal
+        view
+        returns (address)
+    {
+        bytes memory bytecode = abi.encodePacked(
+            type(AccountProxy).creationCode, abi.encode(implementationAddress, initializationData, address(this))
+        );
+
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
+
+        return address(uint160(uint256(hash)));
+    }
+
+    /**
+     * @notice Gets the organization address (this contract)
+     * @return The organization address
+     */
+    function getOrganizationAddress() internal view returns (address) {
+        return address(this);
+    }
+}
