@@ -24,6 +24,14 @@ contract AccountImplementation is
     INativeTokenReceivedEventEmitter
 {
     /**
+     * @notice Modifier that enforces only the guardian can call the function
+     */
+    modifier onlyGuardian() {
+        LibAccountGuardian.enforceOnlyGuardian();
+        _;
+    }
+
+    /**
      * @notice Initialize the account implementation
      * @param whitelistAddress The address of the implementation whitelist contract
      * @param organizationAddress The address of the organization this account belongs to
@@ -99,6 +107,7 @@ contract AccountImplementation is
         bytes memory signatures
     )
         external
+        onlyGuardian
     {
         LibAccountTransaction.executeTransaction(to, value, data, salt, policyId, signatures);
     }
@@ -114,6 +123,7 @@ contract AccountImplementation is
         bytes memory signatures
     )
         external
+        onlyGuardian
     {
         LibAccountTransaction.rejectTransaction(to, value, data, operation, salt, policyId, chainId, signatures);
     }

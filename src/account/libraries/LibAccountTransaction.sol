@@ -12,7 +12,6 @@ import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { LibAccountGuardian } from "./LibAccountGuardian.sol";
 import { IOrganizationMembersFacet } from "../../organization/interfaces/IOrganizationMembersFacet.sol";
 
 /**
@@ -154,8 +153,6 @@ library LibAccountTransaction {
     )
         internal
     {
-        LibAccountGuardian.enforceOnlyGuardian();
-
         // Compute deterministic nonce from transaction data, salt, and policyId
         uint256 nonce = computeNonce(to, value, data, salt, policyId);
 
@@ -201,8 +198,6 @@ library LibAccountTransaction {
     )
         internal
     {
-        LibAccountGuardian.enforceOnlyGuardian();
-
         // Validate chain ID for cross-chain replay protection
         if (chainId != block.chainid) {
             revert InvalidChainId(block.chainid, chainId);
