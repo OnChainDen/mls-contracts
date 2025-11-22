@@ -140,10 +140,6 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         return LibOrganizationPolicy.policyExists(policyId);
     }
 
-    function getPolicies() external pure returns (Policies.Policy[] memory) {
-        return LibOrganizationPolicy.getPolicies();
-    }
-
     function modifyPolicies(
         uint256[] memory modifyPolicyIds,
         Policies.Policy[] memory policiesToModify,
