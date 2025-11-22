@@ -346,6 +346,11 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         external
         override
     {
+        // Only allow calls from AccountProxy contracts deployed by this organization
+        if (!LibOrganizationAccountFactory.isAccountDeployed(msg.sender)) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(msg.sender);
+        }
+
         LibOrganizationAdmin.validateAdminAuthorization(operationType, operationData, salt, signatures);
     }
 

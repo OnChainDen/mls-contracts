@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { AccountProxy } from "../../account/AccountProxy.sol";
+import { LibOrganizationAccountFactoryStorage } from "./storage/LibOrganizationAccountFactoryStorage.sol";
 
 /**
  * @title Lib Organization Account Factory
@@ -32,6 +33,12 @@ library LibOrganizationAccountFactory {
      * @notice Error thrown when account initialization fails
      */
     error AccountInitializationFailed();
+
+    /**
+     * @notice Error thrown when an account was not deployed by this organization
+     * @param accountAddress The address of the account that was not deployed by this organization
+     */
+    error AccountNotDeployedByOrganization(address accountAddress);
 
     /**
      * @notice Deploys a new AccountProxy at a deterministic address
@@ -68,6 +75,9 @@ library LibOrganizationAccountFactory {
             revert AccountDeploymentAddressMismatch();
         }
 
+        // Mark the account as deployed by this organization
+        LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress] = true;
+
         emit AccountDeployed(accountAddress, address(this), create2Salt);
     }
 
@@ -94,5 +104,14 @@ library LibOrganizationAccountFactory {
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
 
         return address(uint160(uint256(hash)));
+    }
+
+    /**
+     * @notice Checks if an account was deployed by this organization
+     * @param accountAddress The address of the account to check
+     * @return True if the account was deployed by this organization, false otherwise
+     */
+    function isAccountDeployed(address accountAddress) internal view returns (bool) {
+        return LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress];
     }
 }
