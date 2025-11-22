@@ -20,8 +20,6 @@ library UpgradeAuthorizationStorage {
         address whitelistAddress;
         // Contract type (Account or Organization)
         IImplementationWhitelist.ContractType contractType;
-        // Mapping of used upgrade nonces
-        mapping(uint256 => bool) usedUpgradeNonces;
     }
 
     /**
