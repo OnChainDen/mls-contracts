@@ -95,12 +95,7 @@ library LibOrganizationGroups {
      * @param memberIds The array of member IDs to include in the group
      * @return groupId The auto-generated ID of the created group
      */
-    function createGroup(
-        uint8[] memory memberIds
-    )
-        internal
-        returns (uint8 groupId)
-    {
+    function createGroup(uint8[] memory memberIds) internal returns (uint8 groupId) {
         // Validate input parameters
         if (memberIds.length == 0) {
             revert GroupOperationRejected("Group must have at least one member");
@@ -138,13 +133,7 @@ library LibOrganizationGroups {
      * @param membersToAdd Array of member IDs to add to the group
      * @param membersToRemove Array of member IDs to remove from the group
      */
-    function modifyGroup(
-        uint8 groupId,
-        uint8[] memory membersToAdd,
-        uint8[] memory membersToRemove
-    )
-        internal
-    {
+    function modifyGroup(uint8 groupId, uint8[] memory membersToAdd, uint8[] memory membersToRemove) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 

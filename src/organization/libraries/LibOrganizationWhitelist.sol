@@ -38,13 +38,7 @@ library LibOrganizationWhitelist {
      * @param addressesToAdd The array of addresses to add to the whitelist
      * @param addressesToRemove The array of addresses to remove from the whitelist
      */
-    function modifyWhitelist(
-        address[] memory addressesToAdd,
-        address[] memory addressesToRemove
-    )
-        internal
-    {
-
+    function modifyWhitelist(address[] memory addressesToAdd, address[] memory addressesToRemove) internal {
         LibOrganizationWhitelistStorage.Layout storage whitelistLayout = LibOrganizationWhitelistStorage.layout();
 
         // Add addresses to whitelist

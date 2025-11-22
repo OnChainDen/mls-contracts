@@ -49,7 +49,6 @@ library LibOrganizationAccountFactory {
         internal
         returns (address accountAddress)
     {
-
         // Deploy the account proxy using CREATE2
         bytes memory bytecode = abi.encodePacked(
             type(AccountProxy).creationCode, abi.encode(implementationAddress, initializationData, address(this))

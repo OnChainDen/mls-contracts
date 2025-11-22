@@ -28,13 +28,7 @@ library LibUpgradeAuthorization {
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
-    function validateUpgradeAuthorization(
-        address newImplementation,
-        uint256 salt,
-        bytes memory signatures
-    )
-        internal
-    {
+    function validateUpgradeAuthorization(address newImplementation, uint256 salt, bytes memory signatures) internal {
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
 
         // 1. Enforce guardian approval
@@ -57,13 +51,9 @@ library LibUpgradeAuthorization {
             revert UpgradeAuthorizationFailed("Whitelist address not set");
         }
 
-        IImplementationWhitelist.ContractType contractType = upgradeAuthLayout.contractType == 0
-            ? IImplementationWhitelist.ContractType.Account
-            : IImplementationWhitelist.ContractType.Organization;
-
         if (
             !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
-                contractType, newImplementation
+                upgradeAuthLayout.contractType, newImplementation
             )
         ) {
             revert ImplementationNotWhitelisted(newImplementation);

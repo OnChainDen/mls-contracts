@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { ERC7201Namespace } from "@openzeppelin/contracts/utils/ERC7201Namespace.sol";
+import { IImplementationWhitelist } from "../../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Upgrade Authorization Storage
@@ -18,7 +19,7 @@ library UpgradeAuthorizationStorage {
         // Address of the implementation whitelist contract
         address whitelistAddress;
         // Contract type (Account or Organization)
-        uint8 contractType; // 0 = Account, 1 = Organization
+        IImplementationWhitelist.ContractType contractType;
         // Mapping of used upgrade nonces
         mapping(uint256 => bool) usedUpgradeNonces;
     }

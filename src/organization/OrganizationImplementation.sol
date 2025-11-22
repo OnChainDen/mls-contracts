@@ -15,6 +15,7 @@ import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganization
 import { IAdminFacet, AdminType, AdminOperationType } from "../interfaces/IAdminFacet.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
+import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Organization Implementation
@@ -51,8 +52,8 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         external
         initializer
     {
-        // Initialize base UUPS implementation (contractType = 1 for Organization)
-        __BaseUUPSImplementation_init(whitelistAddress, 1);
+        // Initialize base UUPS implementation
+        __BaseUUPSImplementation_init(whitelistAddress, IImplementationWhitelist.ContractType.Organization);
 
         // Set deployer address
         LibOrganizationDeployerAddressStorage.layout().deployerAddress = deployerAddress;

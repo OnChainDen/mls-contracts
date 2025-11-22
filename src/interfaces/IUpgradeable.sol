@@ -13,12 +13,7 @@ interface IUpgradeable {
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
-    function upgradeToWithAuthorization(
-        address newImplementation,
-        uint256 salt,
-        bytes calldata signatures
-    )
-        external;
+    function upgradeToWithAuthorization(address newImplementation, uint256 salt, bytes calldata signatures) external;
 
     /**
      * @notice Upgrade the implementation to a new address and call a function with authorization

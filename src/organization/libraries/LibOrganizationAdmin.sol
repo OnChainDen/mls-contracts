@@ -109,14 +109,7 @@ library LibOrganizationAdmin {
      * @param newAdminId The new admin ID (member ID or group ID)
      * @param newVotingThreshold The new voting threshold (only used when newAdminType is Group)
      */
-    function updateAdmin(
-        AdminType newAdminType,
-        uint8 newAdminId,
-        uint256 newVotingThreshold
-    )
-        internal
-    {
-
+    function updateAdmin(AdminType newAdminType, uint8 newAdminId, uint256 newVotingThreshold) internal {
         // Validate the new admin configuration
         if (newAdminType == AdminType.Group && newVotingThreshold == 0) {
             revert AdminOperationRejected("Group admin must have a voting threshold greater than 0");

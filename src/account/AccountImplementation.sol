@@ -10,6 +10,7 @@ import { LibAccountTransactionStorage } from "./libraries/storage/LibAccountTran
 import { IAdminFacet, AdminOperationType } from "../interfaces/IAdminFacet.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
+import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Account Implementation
@@ -37,8 +38,8 @@ contract AccountImplementation is
      * @param organizationAddress The address of the organization this account belongs to
      */
     function initialize(address whitelistAddress, address organizationAddress) external initializer {
-        // Initialize base UUPS implementation (contractType = 0 for Account)
-        __BaseUUPSImplementation_init(whitelistAddress, 0);
+        // Initialize base UUPS implementation
+        __BaseUUPSImplementation_init(whitelistAddress, IImplementationWhitelist.ContractType.Account);
 
         // Set organization address
         LibAccountOrganizationAddressStorage.layout().organizationAddress = organizationAddress;

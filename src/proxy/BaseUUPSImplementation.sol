@@ -5,6 +5,7 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { LibUpgradeAuthorization } from "./libraries/LibUpgradeAuthorization.sol";
 import { UpgradeAuthorizationStorage } from "./libraries/UpgradeAuthorizationStorage.sol";
+import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Base UUPS Implementation
@@ -21,9 +22,15 @@ abstract contract BaseUUPSImplementation is UUPSUpgradeable, Initializable {
     /**
      * @notice Initialize the base UUPS implementation
      * @param whitelistAddress The address of the implementation whitelist contract
-     * @param contractType The contract type (0 = Account, 1 = Organization)
+     * @param contractType The contract type (Account or Organization)
      */
-    function __BaseUUPSImplementation_init(address whitelistAddress, uint8 contractType) internal onlyInitializing {
+    function __BaseUUPSImplementation_init(
+        address whitelistAddress,
+        IImplementationWhitelist.ContractType contractType
+    )
+        internal
+        onlyInitializing
+    {
         __UUPSUpgradeable_init();
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
         upgradeAuthLayout.whitelistAddress = whitelistAddress;
@@ -36,13 +43,7 @@ abstract contract BaseUUPSImplementation is UUPSUpgradeable, Initializable {
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
-    function upgradeToWithAuthorization(
-        address newImplementation,
-        uint256 salt,
-        bytes calldata signatures
-    )
-        external
-    {
+    function upgradeToWithAuthorization(address newImplementation, uint256 salt, bytes calldata signatures) external {
         LibUpgradeAuthorization.validateUpgradeAuthorization(newImplementation, salt, signatures);
         _upgradeToAndCallUUPS(newImplementation, "");
     }

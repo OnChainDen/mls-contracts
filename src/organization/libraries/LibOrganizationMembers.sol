@@ -65,18 +65,12 @@ library LibOrganizationMembers {
         return LibOrganizationMembersStorage.layout().memberIdToAddress[memberId] != address(0);
     }
 
-
     /**
      * @notice Adds new members to the organization
      * @param memberAddresses The array of addresses to add as new members
      * @return memberIds The auto-generated IDs of the added members
      */
-    function addMembers(
-        address[] memory memberAddresses
-    )
-        internal
-        returns (uint8[] memory memberIds)
-    {
+    function addMembers(address[] memory memberAddresses) internal returns (uint8[] memory memberIds) {
         // Validate input parameters
         if (memberAddresses.length == 0) {
             revert MemberOperationRejected("Must specify at least one member address");
