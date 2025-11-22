@@ -95,12 +95,22 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         return LibOrganizationMembers.addMembers(memberAddresses);
     }
 
-    function modifyMember(uint8 memberId, address newAddress, uint256 salt, bytes memory signatures) external onlyGuardian {
+    function modifyMember(
+        uint8 memberId,
+        address newAddress,
+        uint256 salt,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberId, newAddress);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.ModifyMember, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            AdminOperationType.ModifyMember, operationData, salt, signatures
+        );
 
         LibOrganizationMembers.modifyMember(memberId, newAddress);
     }
@@ -110,7 +120,9 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(memberIds);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.RemoveMembers, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            AdminOperationType.RemoveMembers, operationData, salt, signatures
+        );
 
         LibOrganizationMembers.removeMembers(memberIds);
     }
@@ -135,7 +147,15 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         return LibOrganizationGroups.isValidGroupWithMembers(groupId);
     }
 
-    function createGroup(uint8[] memory memberIds, uint256 salt, bytes memory signatures) external onlyGuardian returns (uint8) {
+    function createGroup(
+        uint8[] memory memberIds,
+        uint256 salt,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+        returns (uint8)
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberIds);
 
@@ -201,7 +221,9 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.ModifyPolicies, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            AdminOperationType.ModifyPolicies, operationData, salt, signatures
+        );
 
         LibOrganizationPolicy.modifyPolicies(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
     }
@@ -261,7 +283,9 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(addressesToAdd, addressesToRemove);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.ModifyWhitelist, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            AdminOperationType.ModifyWhitelist, operationData, salt, signatures
+        );
 
         LibOrganizationWhitelist.modifyWhitelist(addressesToAdd, addressesToRemove);
     }
@@ -338,7 +362,9 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.UpdateGuardian, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            AdminOperationType.UpdateGuardian, operationData, salt, signatures
+        );
 
         LibOrganizationGuardian.updateGuardian(newGuardian);
     }
@@ -355,6 +381,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory signatures
     )
         external
+        onlyGuardian
         returns (address)
     {
         // Validate admin authorization for account deployment
