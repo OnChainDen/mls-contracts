@@ -183,7 +183,6 @@ library LibOrganizationMembers {
             revert MemberOperationRejected("New address is already assigned to another member");
         }
 
-        // Check if new address is already a member (and it's not the same member)
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberId, newAddress);
 
