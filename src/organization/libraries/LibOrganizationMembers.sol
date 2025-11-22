@@ -29,9 +29,8 @@ library LibOrganizationMembers {
     /**
      * @notice Emitted when members are removed
      * @param memberIds The IDs of the removed members
-     * @param memberAddresses The addresses of the removed members
      */
-    event MembersRemoved(uint8[] memberIds, address[] memberAddresses);
+    event MembersRemoved(uint8[] memberIds);
 
     /**
      * @notice Emitted when a member operation is rejected due to invalid parameters
@@ -170,9 +169,6 @@ library LibOrganizationMembers {
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
 
-        // Preallocate member addresses for event
-        address[] memory memberAddresses = new address[](memberIds.length);
-
         // Remove members from organization and all groups
         for (uint256 i = 0; i < memberIds.length; ++i) {
             // Get member ID and address
@@ -183,9 +179,6 @@ library LibOrganizationMembers {
             if (memberAddress == address(0)) {
                 revert MemberOperationRejected("Member does not exist");
             }
-
-            // Preallocate member addresses for event
-            memberAddresses[i] = memberAddress;
 
             // Remove member from all groups they belong to
             for (uint8 groupId = 0; groupId < groupsLayout.nextGroupId; ++groupId) {
@@ -202,6 +195,6 @@ library LibOrganizationMembers {
         }
 
         // Emit event
-        emit MembersRemoved(memberIds, memberAddresses);
+        emit MembersRemoved(memberIds);
     }
 }
