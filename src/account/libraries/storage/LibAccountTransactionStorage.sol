@@ -7,11 +7,6 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library LibAccountTransactionStorage {
-    enum Operation {
-        Call,
-        DelegateCall
-    }
-
     struct Layout {
         // Mapping of nonces for replay protection. Each nonce can only be used once.
         mapping(uint256 => bool) usedNonces;

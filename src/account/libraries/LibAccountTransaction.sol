@@ -50,7 +50,6 @@ library LibAccountTransaction {
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
-     * @param operation The operation of the transaction
      * @param nonce The nonce used for this transaction
      * @param rejectedBy The address that rejected the transaction
      * @param policyId The policy ID that governed this transaction
@@ -59,7 +58,6 @@ library LibAccountTransaction {
         address indexed to,
         uint256 value,
         bytes data,
-        LibAccountTransactionStorage.Operation operation,
         uint256 indexed nonce,
         address rejectedBy,
         uint256 indexed policyId
@@ -180,7 +178,6 @@ library LibAccountTransaction {
      * @param to The destination address of the transaction
      * @param value The value of the transaction
      * @param data The data of the transaction
-     * @param operation The operation of the transaction
      * @param salt A user-provided salt for nonce computation
      * @param policyId The ID of the policy that governs this transaction
      * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
@@ -190,7 +187,6 @@ library LibAccountTransaction {
         address to,
         uint256 value,
         bytes calldata data,
-        LibAccountTransactionStorage.Operation operation,
         uint256 salt,
         uint256 policyId,
         uint256 chainId,
@@ -219,7 +215,7 @@ library LibAccountTransaction {
         // Check if the caller is authorized to reject this transaction
         _validateRejectionAuthorization(policyId, to, value, data, salt, signatures);
 
-        emit TransactionRejectedByUser(to, value, data, operation, nonce, msg.sender, policyId);
+        emit TransactionRejectedByUser(to, value, data, nonce, msg.sender, policyId);
     }
 
     /**

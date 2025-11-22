@@ -6,7 +6,6 @@ import { LibAccountAdmin } from "./libraries/LibAccountAdmin.sol";
 import { LibAccountGuardian } from "./libraries/LibAccountGuardian.sol";
 import { LibAccountTransaction } from "./libraries/LibAccountTransaction.sol";
 import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
-import { LibAccountTransactionStorage } from "./libraries/storage/LibAccountTransactionStorage.sol";
 import { IAdminFacet, AdminOperationType } from "../interfaces/IAdminFacet.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
@@ -117,7 +116,6 @@ contract AccountImplementation is
         address to,
         uint256 value,
         bytes calldata data,
-        LibAccountTransactionStorage.Operation operation,
         uint256 salt,
         uint256 policyId,
         uint256 chainId,
@@ -126,7 +124,7 @@ contract AccountImplementation is
         external
         onlyGuardian
     {
-        LibAccountTransaction.rejectTransaction(to, value, data, operation, salt, policyId, chainId, signatures);
+        LibAccountTransaction.rejectTransaction(to, value, data, salt, policyId, chainId, signatures);
     }
 
     // ================================
