@@ -6,9 +6,6 @@ import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersS
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationWhitelistStorage } from "./storage/LibOrganizationWhitelistStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
-import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Lib Organization Policy
@@ -57,8 +54,7 @@ library LibOrganizationPolicy {
 
     /**
      * @notice Modifies the organization's policies by adding, modifying, or removing policies
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     *      - Adding policies: Provide policies in `addPolicies` array. IDs will be auto-assigned and emitted in event.
+     * @dev - Adding policies: Provide policies in `addPolicies` array. IDs will be auto-assigned and emitted in event.
      *      - Modifying policies: Provide policy IDs in `modifyPolicyIds` and corresponding policies in
      * `policiesToModify`.
      *      - Removing policies: Provide policy IDs in `removePolicyIds` array.
@@ -67,21 +63,15 @@ library LibOrganizationPolicy {
      * @param policiesToModify The array of policies corresponding to modifyPolicyIds
      * @param addPolicies The array of new policies to add (IDs will be auto-assigned)
      * @param removePolicyIds The array of policy IDs to remove
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
     function modifyPolicies(
         uint256[] memory modifyPolicyIds,
         Policies.Policy[] memory policiesToModify,
         Policies.Policy[] memory addPolicies,
-        uint256[] memory removePolicyIds,
-        uint256 salt,
-        bytes memory signatures
+        uint256[] memory removePolicyIds
     )
         internal
     {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
         // Validation: modifyPolicyIds and policiesToModify must have matching lengths
@@ -94,14 +84,6 @@ library LibOrganizationPolicy {
         require(
             modifyPolicyIds.length > 0 || addPolicies.length > 0 || removePolicyIds.length > 0,
             "At least one operation must be performed"
-        );
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.ModifyPolicies, operationData, salt, signatures
         );
 
         // Add new policies with auto-assigned IDs

@@ -2,8 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Lib Organization Guardian
@@ -53,26 +51,13 @@ library LibOrganizationGuardian {
 
     /**
      * @notice Updates the guardian address for the organization
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param newGuardian The new guardian address
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
-    function updateGuardian(address newGuardian, uint256 salt, bytes memory signatures) internal {
-        enforceOnlyGuardian();
-
+    function updateGuardian(address newGuardian) internal {
         // Validate input parameters
         if (newGuardian == address(0)) {
             revert AdminOperationRejected("Guardian address cannot be zero address");
         }
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newGuardian);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.UpdateGuardian, operationData, salt, signatures
-        );
 
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
 

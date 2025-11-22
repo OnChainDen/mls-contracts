@@ -3,9 +3,6 @@ pragma solidity ^0.8.24;
 
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
-import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Lib Organization Members
@@ -69,53 +66,22 @@ library LibOrganizationMembers {
         return LibOrganizationMembersStorage.layout().memberIdToAddress[memberId] != address(0);
     }
 
-    /**
-     * @notice Computes a deterministic nonce for admin operations from operation data and salt
-     * @param operationType The type of operation being performed
-     * @param operationData The ABI-encoded data of the operation
-     * @param salt A user-provided salt for nonce computation
-     * @return The computed nonce
-     */
-    function computeAdminNonce(
-        AdminOperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        return uint256(keccak256(abi.encode(address(this), operationType, keccak256(operationData), salt)));
-    }
 
     /**
      * @notice Adds new members to the organization
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param memberAddresses The array of addresses to add as new members
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      * @return memberIds The auto-generated IDs of the added members
      */
     function addMembers(
-        address[] memory memberAddresses,
-        uint256 salt,
-        bytes memory signatures
+        address[] memory memberAddresses
     )
         internal
         returns (uint8[] memory memberIds)
     {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
         // Validate input parameters
         if (memberAddresses.length == 0) {
             revert MemberOperationRejected("Must specify at least one member address");
         }
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberAddresses);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.AddMembers, operationData, salt, signatures);
 
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
@@ -155,15 +121,10 @@ library LibOrganizationMembers {
 
     /**
      * @notice Modifies a member's address
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param memberId The ID of the member to modify
      * @param newAddress The new address for the member
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
-    function modifyMember(uint8 memberId, address newAddress, uint256 salt, bytes memory signatures) internal {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
+    function modifyMember(uint8 memberId, address newAddress) internal {
         // Validate input parameters
         if (newAddress == address(0)) {
             revert MemberOperationRejected("Invalid new address provided");
@@ -183,14 +144,6 @@ library LibOrganizationMembers {
             revert MemberOperationRejected("New address is already assigned to another member");
         }
 
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberId, newAddress);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.ModifyMember, operationData, salt, signatures
-        );
-
         // Update mappings
         // Remove old address mapping
         membersLayout.addressToMemberId[previousAddress] = 0;
@@ -205,27 +158,14 @@ library LibOrganizationMembers {
 
     /**
      * @notice Removes members from the organization
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     *      Members are also automatically removed from all groups they belong to.
+     * @dev Members are also automatically removed from all groups they belong to.
      * @param memberIds The array of member IDs to remove
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeMembers(uint8[] memory memberIds, uint256 salt, bytes memory signatures) internal {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
+    function removeMembers(uint8[] memory memberIds) internal {
         // Validate input parameters
         if (memberIds.length == 0) {
             revert MemberOperationRejected("Must specify at least one member ID");
         }
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberIds);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.RemoveMembers, operationData, salt, signatures
-        );
 
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();

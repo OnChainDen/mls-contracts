@@ -2,9 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationWhitelistStorage } from "./storage/LibOrganizationWhitelistStorage.sol";
-import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Lib Organization Whitelist
@@ -37,30 +34,16 @@ library LibOrganizationWhitelist {
 
     /**
      * @notice Modifies the organization's address whitelist by adding and/or removing addresses
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
-     *      This is a batch operation that can add multiple addresses and remove multiple addresses in a single call.
+     * @dev This is a batch operation that can add multiple addresses and remove multiple addresses in a single call.
      * @param addressesToAdd The array of addresses to add to the whitelist
      * @param addressesToRemove The array of addresses to remove from the whitelist
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
     function modifyWhitelist(
         address[] memory addressesToAdd,
-        address[] memory addressesToRemove,
-        uint256 salt,
-        bytes memory signatures
+        address[] memory addressesToRemove
     )
         internal
     {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(addressesToAdd, addressesToRemove);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.ModifyWhitelist, operationData, salt, signatures
-        );
 
         LibOrganizationWhitelistStorage.Layout storage whitelistLayout = LibOrganizationWhitelistStorage.layout();
 

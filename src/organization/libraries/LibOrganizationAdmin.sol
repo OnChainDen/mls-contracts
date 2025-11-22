@@ -8,7 +8,6 @@ import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { IAdminFacet, AdminType, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
-import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
 import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 
@@ -106,29 +105,17 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Updates the admin permissions for the organization
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param newAdminType The new admin type (Member or Group)
      * @param newAdminId The new admin ID (member ID or group ID)
      * @param newVotingThreshold The new voting threshold (only used when newAdminType is Group)
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this change
      */
     function updateAdmin(
         AdminType newAdminType,
         uint8 newAdminId,
-        uint256 newVotingThreshold,
-        uint256 salt,
-        bytes memory signatures
+        uint256 newVotingThreshold
     )
         internal
     {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
-
-        // Validate that the current admin has authorized this change
-        validateAdminAuthorization(AdminOperationType.UpdateAdmin, operationData, salt, signatures);
 
         // Validate the new admin configuration
         if (newAdminType == AdminType.Group && newVotingThreshold == 0) {

@@ -3,9 +3,6 @@ pragma solidity ^0.8.24;
 
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
-import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 
 /**
  * @title Lib Organization Groups
@@ -95,22 +92,15 @@ library LibOrganizationGroups {
 
     /**
      * @notice Creates a new group with the specified member IDs
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param memberIds The array of member IDs to include in the group
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      * @return groupId The auto-generated ID of the created group
      */
     function createGroup(
-        uint8[] memory memberIds,
-        uint256 salt,
-        bytes memory signatures
+        uint8[] memory memberIds
     )
         internal
         returns (uint8 groupId)
     {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
         // Validate input parameters
         if (memberIds.length == 0) {
             revert GroupOperationRejected("Group must have at least one member");
@@ -122,12 +112,6 @@ library LibOrganizationGroups {
         // Auto-increment group ID
         groupId = groupsLayout.nextGroupId;
         ++groupsLayout.nextGroupId;
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberIds);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.CreateGroup, operationData, salt, signatures);
 
         // Update member-to-group mappings and group membership flags
         for (uint256 i = 0; i < memberIds.length; ++i) {
@@ -150,24 +134,17 @@ library LibOrganizationGroups {
 
     /**
      * @notice Modifies an existing group by adding or removing members
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param groupId The ID of the group to modify
      * @param membersToAdd Array of member IDs to add to the group
      * @param membersToRemove Array of member IDs to remove from the group
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
     function modifyGroup(
         uint8 groupId,
         uint8[] memory membersToAdd,
-        uint8[] memory membersToRemove,
-        uint256 salt,
-        bytes memory signatures
+        uint8[] memory membersToRemove
     )
         internal
     {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
@@ -180,12 +157,6 @@ library LibOrganizationGroups {
         if (membersToAdd.length == 0 && membersToRemove.length == 0) {
             revert GroupOperationRejected("Must specify members to add or remove");
         }
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.ModifyGroup, operationData, salt, signatures);
 
         // Add new members
         for (uint256 i = 0; i < membersToAdd.length; ++i) {
@@ -216,26 +187,15 @@ library LibOrganizationGroups {
 
     /**
      * @notice Removes an existing group by marking it as not existing
-     * @dev This function can only be called by the current admin (individual or group with sufficient signatures)
      * @param groupId The ID of the group to remove
-     * @param salt A user-provided salt for nonce computation
-     * @param signatures The signatures from the current admin authorizing this operation
      */
-    function removeGroup(uint8 groupId, uint256 salt, bytes memory signatures) internal {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-
+    function removeGroup(uint8 groupId) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
 
         // Check if group exists
         if (!groupsLayout.groupIdToExists[groupId]) {
             revert GroupOperationRejected("Group does not exist");
         }
-
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(groupId);
-
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.RemoveGroup, operationData, salt, signatures);
 
         // Mark group as not existing and reset member count
         groupsLayout.groupIdToExists[groupId] = false;

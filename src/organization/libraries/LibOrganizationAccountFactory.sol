@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
 import { AccountProxy } from "../../account/AccountProxy.sol";
 
 /**
@@ -38,31 +36,19 @@ library LibOrganizationAccountFactory {
     /**
      * @notice Deploys a new AccountProxy at a deterministic address
      * @dev Uses CREATE2 to ensure the same address across different chains
-     * @dev Requires admin authorization through signatures
      * @param create2Salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the AccountImplementation contract
      * @param initializationData The initialization calldata for the AccountImplementation
-     * @param adminSignatureSalt A user-provided salt for admin nonce computation
-     * @param signatures The signatures from admin authorizing this operation
      * @return accountAddress The address of the deployed account proxy
      */
     function deployAccount(
         bytes32 create2Salt,
         address implementationAddress,
-        bytes memory initializationData,
-        uint256 adminSignatureSalt,
-        bytes memory signatures
+        bytes memory initializationData
     )
         internal
         returns (address accountAddress)
     {
-        // Validate admin authorization for account deployment
-        bytes memory operationData =
-            abi.encode(create2Salt, keccak256(abi.encode(implementationAddress, keccak256(initializationData))));
-
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.DeployAccount, operationData, adminSignatureSalt, signatures
-        );
 
         // Deploy the account proxy using CREATE2
         bytes memory bytecode = abi.encodePacked(
