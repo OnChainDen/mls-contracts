@@ -307,10 +307,6 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         return LibOrganizationAccountFactory.computeAccountAddress(salt, implementationAddress, initializationData);
     }
 
-    function getOrganizationAddress() external view returns (address) {
-        return LibOrganizationAccountFactory.getOrganizationAddress();
-    }
-
     // ================================
     // LibOrganizationInitialization wrappers
     // ================================

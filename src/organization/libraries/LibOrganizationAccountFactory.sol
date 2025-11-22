@@ -110,12 +110,4 @@ library LibOrganizationAccountFactory {
 
         return address(uint160(uint256(hash)));
     }
-
-    /**
-     * @notice Gets the organization address (this contract)
-     * @return The organization address
-     */
-    function getOrganizationAddress() internal view returns (address) {
-        return address(this);
-    }
 }
