@@ -23,6 +23,7 @@ abstract contract BaseUUPSImplementation is UUPSUpgradeable, Initializable {
      * @notice Initialize the base UUPS implementation
      * @param whitelistAddress The address of the implementation whitelist contract
      * @param contractType The contract type (Account or Organization)
+     * @dev If whitelistAddress is already set (e.g., by proxy constructor), it will not be overwritten
      */
     function __BaseUUPSImplementation_init(
         address whitelistAddress,
@@ -33,7 +34,11 @@ abstract contract BaseUUPSImplementation is UUPSUpgradeable, Initializable {
     {
         __UUPSUpgradeable_init();
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        upgradeAuthLayout.whitelistAddress = whitelistAddress;
+        // Only set whitelistAddress if it's not already set (allows proxy constructor to set it first)
+        if (upgradeAuthLayout.whitelistAddress == address(0)) {
+            upgradeAuthLayout.whitelistAddress = whitelistAddress;
+        }
+        // Always set contractType as it may not be set by proxy constructor
         upgradeAuthLayout.contractType = contractType;
     }
 

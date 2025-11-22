@@ -10,7 +10,6 @@ import { LibOrganizationAdmin } from "./libraries/LibOrganizationAdmin.sol";
 import { LibOrganizationGuardian } from "./libraries/LibOrganizationGuardian.sol";
 import { LibOrganizationAccountFactory } from "./libraries/LibOrganizationAccountFactory.sol";
 import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
-import { LibOrganizationDeployerAddressStorage } from "./libraries/storage/LibOrganizationDeployerAddressStorage.sol";
 import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
 import { IAdminFacet, AdminType, AdminOperationType } from "../interfaces/IAdminFacet.sol";
 import { Policies } from "../libraries/Policies.sol";
@@ -42,16 +41,13 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
 
     /**
      * @notice Initialize the organization implementation
-     * @param whitelistAddress The address of the implementation whitelist contract
-     * @param deployerAddress The address of the deployer (for initialization authorization)
      * @param adminType Type of admin (Member or Group)
      * @param adminAddresses Array of addresses to be added as admin members
      * @param votingThreshold Voting threshold (only used for Group admin type)
      * @param guardian Guardian address for the organization
+     * @dev whitelistAddress and deployerAddress are set in the proxy constructor and should not be passed here
      */
     function initialize(
-        address whitelistAddress,
-        address deployerAddress,
         AdminType adminType,
         address[] memory adminAddresses,
         uint256 votingThreshold,
@@ -62,10 +58,8 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         onlyDeployer
     {
         // Initialize base UUPS implementation
-        __BaseUUPSImplementation_init(whitelistAddress, IImplementationWhitelist.ContractType.Organization);
-
-        // Set deployer address
-        LibOrganizationDeployerAddressStorage.layout().deployerAddress = deployerAddress;
+        // whitelistAddress is already set in proxy constructor, so pass address(0) - it will be skipped if already set
+        __BaseUUPSImplementation_init(address(0), IImplementationWhitelist.ContractType.Organization);
 
         // Initialize organization
         LibOrganizationInitialization.initialize(adminType, adminAddresses, votingThreshold, guardian);

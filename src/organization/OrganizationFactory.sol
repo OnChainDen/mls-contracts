@@ -85,8 +85,9 @@ contract OrganizationFactory {
         }
 
         // Deploy the organization proxy using CREATE2
-        bytes memory bytecode =
-            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress));
+        bytes memory bytecode = abi.encodePacked(
+            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress, whitelistAddress)
+        );
 
         assembly {
             organizationAddress := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
@@ -98,7 +99,7 @@ contract OrganizationFactory {
         }
 
         // Check if the deployed address matches the computed address
-        if (organizationAddress != computeOrganizationAddress(salt, implementationAddress)) {
+        if (organizationAddress != computeOrganizationAddress(salt, implementationAddress, whitelistAddress)) {
             revert DeploymentAddressMismatch();
         }
 
@@ -109,11 +110,21 @@ contract OrganizationFactory {
      * @notice Computes the address where an organization proxy would be deployed
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the OrganizationImplementation contract
+     * @param whitelistAddress The address of the implementation whitelist contract
      * @return The computed address
      */
-    function computeOrganizationAddress(bytes32 salt, address implementationAddress) public view returns (address) {
-        bytes memory bytecode =
-            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress));
+    function computeOrganizationAddress(
+        bytes32 salt,
+        address implementationAddress,
+        address whitelistAddress
+    )
+        public
+        view
+        returns (address)
+    {
+        bytes memory bytecode = abi.encodePacked(
+            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress, whitelistAddress)
+        );
 
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
 
