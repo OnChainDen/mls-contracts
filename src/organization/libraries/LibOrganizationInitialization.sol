@@ -81,6 +81,9 @@ library LibOrganizationInitialization {
         // Set admin configuration - create members and optionally create group
         _setAdminConfiguration(adminType, adminAddresses, votingThreshold);
 
+        // Initialize policy counter
+        policyLayout.nextPolicyId = 1;
+
         // Set guardian
         LibOrganizationGuardianStorage.layout().guardian = guardian;
 
@@ -121,7 +124,6 @@ library LibOrganizationInitialization {
             // Initialize the member, group, and policy counters
             membersLayout.nextMemberId = 2;
             groupsLayout.nextGroupId = 1;
-            policyLayout.nextPolicyId = 1;
 
             // Set admin permission
             adminLayout.adminPermission =
@@ -136,7 +138,6 @@ library LibOrganizationInitialization {
             // Initialize the member, group, and policy counters
             membersLayout.nextMemberId = uint8(adminAddresses.length + 1);
             groupsLayout.nextGroupId = 2;
-            policyLayout.nextPolicyId = 1;
 
             // Create members for all admin addresses
             for (uint256 i = 0; i < adminAddresses.length; ++i) {
