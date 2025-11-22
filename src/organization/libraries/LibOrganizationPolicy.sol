@@ -124,7 +124,6 @@ library LibOrganizationPolicy {
                 require(policyLayout.policyExists[modifyPolicyIds[i]], "Policy to modify does not exist");
                 uint256 policyId = modifyPolicyIds[i];
                 policyLayout.policies[policyId] = policiesToModify[i];
-                // policyExists[policyId] remains true
             }
 
             emit PoliciesModified(modifyPolicyIds);
