@@ -2,8 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "./OrganizationProxy.sol";
-import { OrganizationImplementation } from "./OrganizationImplementation.sol";
-import { IAdminFacet, AdminType } from "../interfaces/IAdminFacet.sol";
+import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Organization Factory
@@ -42,6 +41,11 @@ contract OrganizationFactory {
     error DeploymentAddressMismatch();
 
     /**
+     * @notice Error thrown when implementation address is not whitelisted
+     */
+    error ImplementationNotWhitelisted(address implementation);
+
+    /**
      * @notice Constructor to set the deployer address
      * @param _deployerAddress The address authorized to deploy organization proxies
      */
@@ -52,23 +56,16 @@ contract OrganizationFactory {
     /**
      * @notice Deploys a new OrganizationProxy at a deterministic address
      * @dev Uses CREATE2 to ensure the same address across different chains
+     * @dev The proxy is deployed without initialization. Initialize must be called separately.
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the OrganizationImplementation contract
      * @param whitelistAddress The address of the implementation whitelist contract
-     * @param adminType Type of admin (Member or Group)
-     * @param adminAddresses Array of addresses to be added as admin members
-     * @param votingThreshold Voting threshold (only used for Group admin type)
-     * @param guardian Guardian address for the organization
      * @return organizationAddress The address of the deployed organization proxy
      */
     function deployOrganization(
         bytes32 salt,
         address implementationAddress,
-        address whitelistAddress,
-        AdminType adminType,
-        address[] memory adminAddresses,
-        uint256 votingThreshold,
-        address guardian
+        address whitelistAddress
     )
         external
         returns (address organizationAddress)
@@ -78,21 +75,18 @@ contract OrganizationFactory {
             revert UnauthorizedDeployer();
         }
 
-        // Encode initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            OrganizationImplementation.initialize.selector,
-            whitelistAddress,
-            deployerAddress,
-            adminType,
-            adminAddresses,
-            votingThreshold,
-            guardian
-        );
+        // Validate that the implementation is whitelisted
+        if (
+            !IImplementationWhitelist(whitelistAddress).validateImplementation(
+                IImplementationWhitelist.ContractType.Organization, implementationAddress
+            )
+        ) {
+            revert ImplementationNotWhitelisted(implementationAddress);
+        }
 
         // Deploy the organization proxy using CREATE2
-        bytes memory bytecode = abi.encodePacked(
-            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, initData, deployerAddress)
-        );
+        bytes memory bytecode =
+            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress));
 
         assembly {
             organizationAddress := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
@@ -104,12 +98,7 @@ contract OrganizationFactory {
         }
 
         // Check if the deployed address matches the computed address
-        if (
-            organizationAddress
-                != computeOrganizationAddress(
-                    salt, implementationAddress, whitelistAddress, adminType, adminAddresses, votingThreshold, guardian
-                )
-        ) {
+        if (organizationAddress != computeOrganizationAddress(salt, implementationAddress)) {
             revert DeploymentAddressMismatch();
         }
 
@@ -120,40 +109,11 @@ contract OrganizationFactory {
      * @notice Computes the address where an organization proxy would be deployed
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the OrganizationImplementation contract
-     * @param whitelistAddress The address of the implementation whitelist contract
-     * @param adminType Type of admin (Member or Group)
-     * @param adminAddresses Array of addresses to be added as admin members
-     * @param votingThreshold Voting threshold (only used for Group admin type)
-     * @param guardian Guardian address for the organization
      * @return The computed address
      */
-    function computeOrganizationAddress(
-        bytes32 salt,
-        address implementationAddress,
-        address whitelistAddress,
-        AdminType adminType,
-        address[] memory adminAddresses,
-        uint256 votingThreshold,
-        address guardian
-    )
-        public
-        view
-        returns (address)
-    {
-        // Encode initialization data
-        bytes memory initData = abi.encodeWithSelector(
-            OrganizationImplementation.initialize.selector,
-            whitelistAddress,
-            deployerAddress,
-            adminType,
-            adminAddresses,
-            votingThreshold,
-            guardian
-        );
-
-        bytes memory bytecode = abi.encodePacked(
-            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, initData, deployerAddress)
-        );
+    function computeOrganizationAddress(bytes32 salt, address implementationAddress) public view returns (address) {
+        bytes memory bytecode =
+            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress));
 
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
 

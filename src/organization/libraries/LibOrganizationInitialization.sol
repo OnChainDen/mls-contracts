@@ -40,8 +40,18 @@ library LibOrganizationInitialization {
     error InvalidAdminConfiguration();
 
     /**
+     * @notice Enforces that the caller is the deployer address
+     * @dev This function will revert if msg.sender is not the deployer
+     */
+    function enforceOnlyDeployer() internal view {
+        if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
+            revert UnauthorizedDeployer();
+        }
+    }
+
+    /**
      * @notice Initializes the organization contract with admin configuration
-     * @dev Can only be called by the deployer address set during proxy construction
+     * @dev Deployer authorization is enforced by the external wrapper function
      * @param adminType Type of admin (Member or Group)
      * @param adminAddresses Array of addresses to be added as admin members
      * @param votingThreshold Voting threshold (only used for Group admin type)
@@ -55,11 +65,6 @@ library LibOrganizationInitialization {
     )
         internal
     {
-        // Only the authorized deployer can initialize
-        if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
-            revert UnauthorizedDeployer();
-        }
-
         // Check if already initialized
         if (isInitialized()) {
             revert AlreadyInitialized();

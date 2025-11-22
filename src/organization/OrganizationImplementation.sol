@@ -33,6 +33,14 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
     }
 
     /**
+     * @notice Modifier that enforces only the deployer can call the function
+     */
+    modifier onlyDeployer() {
+        LibOrganizationInitialization.enforceOnlyDeployer();
+        _;
+    }
+
+    /**
      * @notice Initialize the organization implementation
      * @param whitelistAddress The address of the implementation whitelist contract
      * @param deployerAddress The address of the deployer (for initialization authorization)
@@ -51,6 +59,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
     )
         external
         initializer
+        onlyDeployer
     {
         // Initialize base UUPS implementation
         __BaseUUPSImplementation_init(whitelistAddress, IImplementationWhitelist.ContractType.Organization);

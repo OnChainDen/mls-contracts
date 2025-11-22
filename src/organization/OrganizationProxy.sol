@@ -11,18 +11,12 @@ import { LibOrganizationDeployerAddressStorage } from "./libraries/storage/LibOr
  */
 contract OrganizationProxy is ERC1967Proxy {
     /**
-     * @notice Initialize the proxy
+     * @notice Constructor for the proxy
      * @param implementation The implementation contract address
-     * @param data The initialization calldata
      * @param deployerAddress The deployer address (stored for initialization authorization)
+     * @dev The proxy is deployed without initialization. Initialize must be called separately.
      */
-    constructor(
-        address implementation,
-        bytes memory data,
-        address deployerAddress
-    )
-        ERC1967Proxy(implementation, data)
-    {
+    constructor(address implementation, address deployerAddress) ERC1967Proxy(implementation, "") {
         // Store deployer address in storage
         LibOrganizationDeployerAddressStorage.layout().deployerAddress = deployerAddress;
     }
