@@ -18,13 +18,12 @@ interface IImplementationWhitelist {
     /**
      * @notice Validates that an implementation address is whitelisted
      * @param contractType The type of contract (Account or Organization)
-     * @param whitelistSetId The whitelist set ID to validate against
      * @param implementation The implementation address to validate
      * @return True if the implementation is whitelisted, false otherwise
+     * @dev The contract maintains separate whitelists for Account and Organization implementations
      */
     function validateImplementation(
         ContractType contractType,
-        uint256 whitelistSetId,
         address implementation
     )
         external

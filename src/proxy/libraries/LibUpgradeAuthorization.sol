@@ -25,13 +25,11 @@ library LibUpgradeAuthorization {
     /**
      * @notice Validates upgrade authorization with guardian, admin, and whitelist checks
      * @param newImplementation The new implementation address
-     * @param whitelistSetId The whitelist set ID to validate against
      * @param salt A user-provided salt for nonce computation
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
     function validateUpgradeAuthorization(
         address newImplementation,
-        uint256 whitelistSetId,
         uint256 salt,
         bytes memory signatures
     )
@@ -43,7 +41,7 @@ library LibUpgradeAuthorization {
         IGuardianFacet(address(this)).enforceOnlyGuardian();
 
         // 2. Validate admin authorization
-        bytes memory operationData = abi.encode(newImplementation, whitelistSetId);
+        bytes memory operationData = abi.encode(newImplementation);
         try IAdminFacet(address(this)).validateAdminAuthorization(
             AdminOperationType.Upgrade, operationData, salt, signatures
         ) {
@@ -65,7 +63,7 @@ library LibUpgradeAuthorization {
 
         if (
             !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
-                contractType, whitelistSetId, newImplementation
+                contractType, newImplementation
             )
         ) {
             revert ImplementationNotWhitelisted(newImplementation);

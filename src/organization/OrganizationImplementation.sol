@@ -425,26 +425,24 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
 
     function upgradeToWithAuthorization(
         address newImplementation,
-        uint256 whitelistSetId,
         uint256 salt,
         bytes calldata signatures
     )
         external
         override
     {
-        super.upgradeToWithAuthorization(newImplementation, whitelistSetId, salt, signatures);
+        super.upgradeToWithAuthorization(newImplementation, salt, signatures);
     }
 
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes memory data,
-        uint256 whitelistSetId,
         uint256 salt,
         bytes calldata signatures
     )
         external
         override
     {
-        super.upgradeToAndCallWithAuthorization(newImplementation, data, whitelistSetId, salt, signatures);
+        super.upgradeToAndCallWithAuthorization(newImplementation, data, salt, signatures);
     }
 }
