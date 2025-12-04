@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { ERC7201Namespace } from "@openzeppelin/contracts/utils/ERC7201Namespace.sol";
 import { IImplementationWhitelist } from "../../interfaces/IImplementationWhitelist.sol";
 
 /**
@@ -10,8 +9,6 @@ import { IImplementationWhitelist } from "../../interfaces/IImplementationWhitel
  * @author Den Technologies Inc
  */
 library UpgradeAuthorizationStorage {
-    using ERC7201Namespace for bytes32;
-
     // Storage namespace for upgrade authorization
     bytes32 private constant STORAGE_NAMESPACE = keccak256("onchain.custody.upgrade.authorization");
 
@@ -25,9 +22,20 @@ library UpgradeAuthorizationStorage {
     /**
      * @notice Get the storage layout for upgrade authorization
      * @return layout The storage layout
+     * @dev Computes ERC-7201 location: keccak256(abi.encode(uint256(keccak256(namespace)) - 1)) &
+     * ~bytes32(uint256(0xff))
      */
     function layout() internal pure returns (Layout storage layout_) {
-        bytes32 slot = STORAGE_NAMESPACE.erc7201Location();
+        bytes32 slot;
+        assembly {
+            // Compute ERC-7201 location: keccak256(abi.encode(uint256(STORAGE_NAMESPACE) - 1)) &
+            // ~bytes32(uint256(0xff))
+            let namespaceHash := STORAGE_NAMESPACE
+            let adjustedHash := sub(namespaceHash, 1)
+            mstore(0x00, adjustedHash)
+            let hash := keccak256(0x00, 0x20)
+            slot := and(hash, not(0xff))
+        }
         assembly {
             layout_.slot := slot
         }

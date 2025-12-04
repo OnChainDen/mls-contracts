@@ -5,11 +5,9 @@ import { BaseUUPSImplementation } from "../proxy/BaseUUPSImplementation.sol";
 import { LibAccountAdmin } from "./libraries/LibAccountAdmin.sol";
 import { LibAccountGuardian } from "./libraries/LibAccountGuardian.sol";
 import { LibAccountTransaction } from "./libraries/LibAccountTransaction.sol";
-import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 import { IAdminFacet, AdminOperationType } from "../interfaces/IAdminFacet.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
-import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Account Implementation
@@ -29,19 +27,6 @@ contract AccountImplementation is
     modifier onlyGuardian() {
         LibAccountGuardian.enforceOnlyGuardian();
         _;
-    }
-
-    /**
-     * @notice Initialize the account implementation
-     * @param whitelistAddress The address of the implementation whitelist contract
-     * @param organizationAddress The address of the organization this account belongs to
-     */
-    function initialize(address whitelistAddress, address organizationAddress) external initializer {
-        // Initialize base UUPS implementation
-        __BaseUUPSImplementation_init(whitelistAddress, IImplementationWhitelist.ContractType.Account);
-
-        // Set organization address
-        LibAccountOrganizationAddressStorage.layout().organizationAddress = organizationAddress;
     }
 
     // ================================

@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import { AccountProxy } from "../../account/AccountProxy.sol";
 import { LibOrganizationAccountFactoryStorage } from "./storage/LibOrganizationAccountFactoryStorage.sol";
+import { UpgradeAuthorizationStorage } from "../../proxy/libraries/UpgradeAuthorizationStorage.sol";
 
 /**
  * @title Lib Organization Account Factory
@@ -30,11 +31,6 @@ library LibOrganizationAccountFactory {
     error AccountDeploymentAddressMismatch();
 
     /**
-     * @notice Error thrown when account initialization fails
-     */
-    error AccountInitializationFailed();
-
-    /**
      * @notice Error thrown when an account was not deployed by this organization
      * @param accountAddress The address of the account that was not deployed by this organization
      */
@@ -45,20 +41,21 @@ library LibOrganizationAccountFactory {
      * @dev Uses CREATE2 to ensure the same address across different chains
      * @param create2Salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the AccountImplementation contract
-     * @param initializationData The initialization calldata for the AccountImplementation
      * @return accountAddress The address of the deployed account proxy
      */
     function deployAccount(
         bytes32 create2Salt,
-        address implementationAddress,
-        bytes memory initializationData
+        address implementationAddress
     )
         internal
         returns (address accountAddress)
     {
+        // Read whitelistAddress from organization's storage
+        address whitelistAddress = UpgradeAuthorizationStorage.layout().whitelistAddress;
+
         // Deploy the account proxy using CREATE2
         bytes memory bytecode = abi.encodePacked(
-            type(AccountProxy).creationCode, abi.encode(implementationAddress, initializationData, address(this))
+            type(AccountProxy).creationCode, abi.encode(implementationAddress, address(this), whitelistAddress)
         );
 
         assembly {
@@ -71,7 +68,7 @@ library LibOrganizationAccountFactory {
         }
 
         // Check if the deployed address matches the computed address
-        if (accountAddress != computeAccountAddress(create2Salt, implementationAddress, initializationData)) {
+        if (accountAddress != computeAccountAddress(create2Salt, implementationAddress)) {
             revert AccountDeploymentAddressMismatch();
         }
 
@@ -85,20 +82,14 @@ library LibOrganizationAccountFactory {
      * @notice Computes the address where an account proxy would be deployed
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the AccountImplementation contract
-     * @param initializationData The initialization calldata for the AccountImplementation
      * @return The computed address
      */
-    function computeAccountAddress(
-        bytes32 salt,
-        address implementationAddress,
-        bytes memory initializationData
-    )
-        internal
-        view
-        returns (address)
-    {
+    function computeAccountAddress(bytes32 salt, address implementationAddress) internal view returns (address) {
+        // Read whitelistAddress from organization's storage
+        address whitelistAddress = UpgradeAuthorizationStorage.layout().whitelistAddress;
+
         bytes memory bytecode = abi.encodePacked(
-            type(AccountProxy).creationCode, abi.encode(implementationAddress, initializationData, address(this))
+            type(AccountProxy).creationCode, abi.encode(implementationAddress, address(this), whitelistAddress)
         );
 
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));

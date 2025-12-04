@@ -57,10 +57,6 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         initializer
         onlyDeployer
     {
-        // Initialize base UUPS implementation
-        // whitelistAddress is already set in proxy constructor, so pass address(0) - it will be skipped if already set
-        __BaseUUPSImplementation_init(address(0), IImplementationWhitelist.ContractType.Organization);
-
         // Initialize organization
         LibOrganizationInitialization.initialize(adminType, adminAddresses, votingThreshold, guardian);
     }
@@ -385,7 +381,6 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
     function deployAccount(
         bytes32 create2Salt,
         address implementationAddress,
-        bytes memory initializationData,
         uint256 adminSignatureSalt,
         bytes memory signatures
     )
@@ -394,26 +389,17 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         returns (address)
     {
         // Validate admin authorization for account deployment
-        bytes memory operationData =
-            abi.encode(create2Salt, keccak256(abi.encode(implementationAddress, keccak256(initializationData))));
+        bytes memory operationData = abi.encode(create2Salt, implementationAddress);
 
         LibOrganizationAdmin.validateAdminAuthorization(
             AdminOperationType.DeployAccount, operationData, adminSignatureSalt, signatures
         );
 
-        return LibOrganizationAccountFactory.deployAccount(create2Salt, implementationAddress, initializationData);
+        return LibOrganizationAccountFactory.deployAccount(create2Salt, implementationAddress);
     }
 
-    function computeAccountAddress(
-        bytes32 salt,
-        address implementationAddress,
-        bytes memory initializationData
-    )
-        external
-        view
-        returns (address)
-    {
-        return LibOrganizationAccountFactory.computeAccountAddress(salt, implementationAddress, initializationData);
+    function computeAccountAddress(bytes32 salt, address implementationAddress) external view returns (address) {
+        return LibOrganizationAccountFactory.computeAccountAddress(salt, implementationAddress);
     }
 
     // ================================

@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { LibUpgradeAuthorization } from "./libraries/LibUpgradeAuthorization.sol";
-import { UpgradeAuthorizationStorage } from "./libraries/UpgradeAuthorizationStorage.sol";
-import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Base UUPS Implementation
@@ -18,29 +16,6 @@ abstract contract BaseUUPSImplementation is UUPSUpgradeable, Initializable {
      * @notice Error thrown when upgrade authorization fails
      */
     error UpgradeAuthorizationFailed(string reason);
-
-    /**
-     * @notice Initialize the base UUPS implementation
-     * @param whitelistAddress The address of the implementation whitelist contract
-     * @param contractType The contract type (Account or Organization)
-     * @dev If whitelistAddress is already set (e.g., by proxy constructor), it will not be overwritten
-     */
-    function __BaseUUPSImplementation_init(
-        address whitelistAddress,
-        IImplementationWhitelist.ContractType contractType
-    )
-        internal
-        onlyInitializing
-    {
-        __UUPSUpgradeable_init();
-        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        // Only set whitelistAddress if it's not already set (allows proxy constructor to set it first)
-        if (upgradeAuthLayout.whitelistAddress == address(0)) {
-            upgradeAuthLayout.whitelistAddress = whitelistAddress;
-        }
-        // Always set contractType as it may not be set by proxy constructor
-        upgradeAuthLayout.contractType = contractType;
-    }
 
     /**
      * @notice Upgrade the implementation to a new address with authorization
