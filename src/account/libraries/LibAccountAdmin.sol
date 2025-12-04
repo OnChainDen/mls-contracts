@@ -28,14 +28,6 @@ library LibAccountAdmin {
     error OrganizationCallFailed();
 
     /**
-     * @notice Gets the organization address that this account is associated with
-     * @return The organization address
-     */
-    function getOrganizationAddress() internal view returns (address) {
-        return LibAccountOrganizationAddressStorage.layout().organizationAddress;
-    }
-
-    /**
      * @notice Validates that the provided signatures meet the admin authorization requirements by forwarding to
      * organization
      * @dev This function forwards the call to the associated organization contract's validateAdminAuthorization

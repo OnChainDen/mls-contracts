@@ -5,6 +5,7 @@ import { BaseUUPSImplementation } from "../proxy/BaseUUPSImplementation.sol";
 import { LibAccountAdmin } from "./libraries/LibAccountAdmin.sol";
 import { LibAccountGuardian } from "./libraries/LibAccountGuardian.sol";
 import { LibAccountTransaction } from "./libraries/LibAccountTransaction.sol";
+import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 import { IAdminFacet, AdminOperationType } from "../interfaces/IAdminFacet.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
@@ -33,8 +34,12 @@ contract AccountImplementation is
     // LibAccountAdmin wrappers
     // ================================
 
+    /**
+     * @notice Gets the organization address that this account is associated with
+     * @return The organization address
+     */
     function getOrganizationAddress() external view returns (address) {
-        return LibAccountAdmin.getOrganizationAddress();
+        return LibAccountOrganizationAddressStorage.layout().organizationAddress;
     }
 
     function validateAdminAuthorization(
