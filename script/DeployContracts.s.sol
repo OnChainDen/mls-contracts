@@ -2,25 +2,25 @@
 pragma solidity ^0.8.24;
 
 import { Script, console } from "forge-std/Script.sol";
-import { ImplementationWhitelist } from "../src/diamond/ImplementationWhitelist.sol";
+import { ImplementationWhitelist } from "../src/implementation-whitelist/ImplementationWhitelist.sol";
 import { OrganizationImplementation } from "../src/organization/OrganizationImplementation.sol";
 import { AccountImplementation } from "../src/account/AccountImplementation.sol";
 import { OrganizationFactory } from "../src/organization/OrganizationFactory.sol";
 import { IAdminFacet, AdminType } from "../src/interfaces/IAdminFacet.sol";
 
 /**
- * @title Deploy UUPS Contracts
- * @notice Script to deploy UUPS implementation contracts, whitelist, and factory
+ * @title Deploy Contracts
+ * @notice Script to deploy implementation contracts, whitelist, and factory
  * @author Den Technologies Inc
  */
-contract DeployUUPS is Script {
+contract DeployContracts is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        console.log("Deploying UUPS contracts with deployer:", deployer);
+        console.log("Deploying contracts with deployer:", deployer);
 
         // Deploy ImplementationWhitelist
         ImplementationWhitelist whitelist = new ImplementationWhitelist(deployer);
@@ -35,15 +35,13 @@ contract DeployUUPS is Script {
         console.log("AccountImplementation deployed at:", address(accountImplementation));
 
         // Add implementations to whitelist
-        uint256 orgSetId = whitelist.addWhitelistedImplementationSet(
+        whitelist.addImplementation(
             ImplementationWhitelist.ContractType.Organization, address(organizationImplementation)
         );
-        console.log("Organization implementation whitelisted with setId:", orgSetId);
+        console.log("Organization implementation whitelisted at:", address(organizationImplementation));
 
-        uint256 accountSetId = whitelist.addWhitelistedImplementationSet(
-            ImplementationWhitelist.ContractType.Account, address(accountImplementation)
-        );
-        console.log("Account implementation whitelisted with setId:", accountSetId);
+        whitelist.addImplementation(ImplementationWhitelist.ContractType.Account, address(accountImplementation));
+        console.log("Account implementation whitelisted at:", address(accountImplementation));
 
         // Deploy OrganizationFactory
         OrganizationFactory factory = new OrganizationFactory(deployer);
