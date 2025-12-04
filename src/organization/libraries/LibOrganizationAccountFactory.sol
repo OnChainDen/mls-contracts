@@ -1,0 +1,108 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { AccountProxy } from "../../account/AccountProxy.sol";
+import { LibOrganizationAccountFactoryStorage } from "./storage/LibOrganizationAccountFactoryStorage.sol";
+import { UpgradeAuthorizationStorage } from "../../proxy/libraries/UpgradeAuthorizationStorage.sol";
+
+/**
+ * @title Lib Organization Account Factory
+ * @notice Library for deploying Account contracts with admin authorization
+ * @dev This library should ONLY be used by Organization contracts
+ * @author Den Technologies Inc
+ */
+library LibOrganizationAccountFactory {
+    /**
+     * @notice Emitted when a new account proxy is deployed
+     * @param accountAddress The address of the deployed account proxy
+     * @param organizationAddress The address of the organization that deployed it
+     * @param salt The salt used for CREATE2 deployment
+     */
+    event AccountDeployed(address indexed accountAddress, address indexed organizationAddress, bytes32 indexed salt);
+
+    /**
+     * @notice Error thrown when deployment fails
+     */
+    error AccountDeploymentFailed();
+
+    /**
+     * @notice Error thrown when the deployed address does not match the computed address
+     */
+    error AccountDeploymentAddressMismatch();
+
+    /**
+     * @notice Error thrown when an account was not deployed by this organization
+     * @param accountAddress The address of the account that was not deployed by this organization
+     */
+    error AccountNotDeployedByOrganization(address accountAddress);
+
+    /**
+     * @notice Deploys a new AccountProxy at a deterministic address
+     * @dev Uses CREATE2 to ensure the same address across different chains
+     * @param create2Salt The salt for CREATE2 deployment
+     * @param implementationAddress The address of the AccountImplementation contract
+     * @return accountAddress The address of the deployed account proxy
+     */
+    function deployAccount(
+        bytes32 create2Salt,
+        address implementationAddress
+    )
+        internal
+        returns (address accountAddress)
+    {
+        // Read whitelistAddress from organization's storage
+        address whitelistAddress = UpgradeAuthorizationStorage.layout().whitelistAddress;
+
+        // Deploy the account proxy using CREATE2
+        bytes memory bytecode = abi.encodePacked(
+            type(AccountProxy).creationCode, abi.encode(implementationAddress, address(this), whitelistAddress)
+        );
+
+        assembly {
+            accountAddress := create2(0, add(bytecode, 0x20), mload(bytecode), create2Salt)
+        }
+
+        // Check if deployment was successful
+        if (accountAddress == address(0)) {
+            revert AccountDeploymentFailed();
+        }
+
+        // Check if the deployed address matches the computed address
+        if (accountAddress != computeAccountAddress(create2Salt, implementationAddress)) {
+            revert AccountDeploymentAddressMismatch();
+        }
+
+        // Mark the account as deployed by this organization
+        LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress] = true;
+
+        emit AccountDeployed(accountAddress, address(this), create2Salt);
+    }
+
+    /**
+     * @notice Computes the address where an account proxy would be deployed
+     * @param salt The salt for CREATE2 deployment
+     * @param implementationAddress The address of the AccountImplementation contract
+     * @return The computed address
+     */
+    function computeAccountAddress(bytes32 salt, address implementationAddress) internal view returns (address) {
+        // Read whitelistAddress from organization's storage
+        address whitelistAddress = UpgradeAuthorizationStorage.layout().whitelistAddress;
+
+        bytes memory bytecode = abi.encodePacked(
+            type(AccountProxy).creationCode, abi.encode(implementationAddress, address(this), whitelistAddress)
+        );
+
+        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
+
+        return address(uint160(uint256(hash)));
+    }
+
+    /**
+     * @notice Checks if an account was deployed by this organization
+     * @param accountAddress The address of the account to check
+     * @return True if the account was deployed by this organization, false otherwise
+     */
+    function isAccountDeployed(address accountAddress) internal view returns (bool) {
+        return LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress];
+    }
+}

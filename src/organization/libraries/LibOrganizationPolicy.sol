@@ -1,0 +1,717 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
+import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
+import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
+import { LibOrganizationWhitelistStorage } from "./storage/LibOrganizationWhitelistStorage.sol";
+import { Policies } from "../../libraries/Policies.sol";
+
+/**
+ * @title Lib Organization Policy
+ * @notice Library for policy-related operations for Organization contracts
+ * @dev This library should ONLY be used by Organization contracts
+ * @author Den Technologies Inc
+ */
+library LibOrganizationPolicy {
+    /**
+     * @notice Emitted when new policies are added to the organization
+     * @param policyIds The array of auto-assigned policy IDs for the newly created policies
+     */
+    event PoliciesAdded(uint256[] policyIds);
+
+    /**
+     * @notice Emitted when existing policies are modified
+     * @param policyIds The array of policy IDs that were modified
+     */
+    event PoliciesModified(uint256[] policyIds);
+
+    /**
+     * @notice Emitted when policies are removed from the organization
+     * @param policyIds The array of policy IDs that were removed
+     */
+    event PoliciesRemoved(uint256[] policyIds);
+
+    /**
+     * @notice Gets a policy by its ID
+     * @param policyId The ID of the policy to retrieve
+     * @return The policy with the given ID
+     */
+    function getPolicy(uint256 policyId) internal view returns (Policies.Policy memory) {
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
+        require(policyLayout.policyExists[policyId], "Policy does not exist");
+        return policyLayout.policies[policyId];
+    }
+
+    /**
+     * @notice Checks if a policy exists
+     * @param policyId The ID of the policy to check
+     * @return True if the policy exists, false otherwise
+     */
+    function policyExists(uint256 policyId) internal view returns (bool) {
+        return LibOrganizationPolicyStorage.layout().policyExists[policyId];
+    }
+
+    /**
+     * @notice Modifies the organization's policies by adding, modifying, or removing policies
+     * @dev - Adding policies: Provide policies in `addPolicies` array. IDs will be auto-assigned and emitted in event.
+     *      - Modifying policies: Provide policy IDs in `modifyPolicyIds` and corresponding policies in
+     * `policiesToModify`.
+     *      - Removing policies: Provide policy IDs in `removePolicyIds` array.
+     *      All three operations can be performed in a single transaction.
+     * @param modifyPolicyIds The array of policy IDs to modify (must match length of policiesToModify)
+     * @param policiesToModify The array of policies corresponding to modifyPolicyIds
+     * @param addPolicies The array of new policies to add (IDs will be auto-assigned)
+     * @param removePolicyIds The array of policy IDs to remove
+     */
+    function modifyPolicies(
+        uint256[] memory modifyPolicyIds,
+        Policies.Policy[] memory policiesToModify,
+        Policies.Policy[] memory addPolicies,
+        uint256[] memory removePolicyIds
+    )
+        internal
+    {
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
+
+        // Validation: modifyPolicyIds and policiesToModify must have matching lengths
+        require(
+            modifyPolicyIds.length == policiesToModify.length,
+            "Modify policy IDs and policies arrays must have the same length"
+        );
+
+        // Validation: At least one operation must be performed
+        require(
+            modifyPolicyIds.length > 0 || addPolicies.length > 0 || removePolicyIds.length > 0,
+            "At least one operation must be performed"
+        );
+
+        // Add new policies with auto-assigned IDs
+        if (addPolicies.length > 0) {
+            uint256[] memory addedPolicyIds = new uint256[](addPolicies.length);
+            for (uint256 i = 0; i < addPolicies.length; ++i) {
+                uint256 newPolicyId = policyLayout.nextPolicyId;
+                policyLayout.policies[newPolicyId] = addPolicies[i];
+                policyLayout.policyExists[newPolicyId] = true;
+                addedPolicyIds[i] = newPolicyId;
+                policyLayout.nextPolicyId++;
+            }
+
+            emit PoliciesAdded(addedPolicyIds);
+        }
+
+        // Modify existing policies
+        if (modifyPolicyIds.length > 0) {
+            for (uint256 i = 0; i < modifyPolicyIds.length; ++i) {
+                require(policyLayout.policyExists[modifyPolicyIds[i]], "Policy to modify does not exist");
+                uint256 policyId = modifyPolicyIds[i];
+                policyLayout.policies[policyId] = policiesToModify[i];
+            }
+
+            emit PoliciesModified(modifyPolicyIds);
+        }
+
+        // Remove policies
+        if (removePolicyIds.length > 0) {
+            for (uint256 i = 0; i < removePolicyIds.length; ++i) {
+                uint256 policyId = removePolicyIds[i];
+                policyLayout.policyExists[policyId] = false;
+            }
+
+            emit PoliciesRemoved(removePolicyIds);
+        }
+    }
+
+    /**
+     * @notice Checks if a policy applies to the given transaction
+     * @param policy The policy to check
+     * @param sourceAccount The source account address (smart account executing the transaction)
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param initiator The initiator of the transaction
+     * @return True if the policy applies to the transaction, false otherwise
+     */
+    function doesPolicyApplyToTransaction(
+        Policies.Policy memory policy,
+        address sourceAccount,
+        address to,
+        uint256 value,
+        bytes memory data,
+        address initiator
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: Transaction doesn't match policy's source accounts filter
+        if (!doesTransactionMatchPolicySourceAccounts(policy, sourceAccount)) {
+            return false;
+        }
+
+        // Case: Transaction doesn't match policy's transaction initiator filter
+        if (!doesTransactionMatchPolicyInitiator(policy, initiator)) {
+            return false;
+        }
+
+        // Case: Transaction doesn't match policy's transaction type filter
+        if (!doesTransactionMatchPolicyTransactionType(policy, to, value, data)) {
+            return false;
+        }
+
+        // Case: Transaction doesn't match policy's transaction destination filter
+        if (!doesTransactionMatchPolicyDestination(policy, to, value, data)) {
+            return false;
+        }
+
+        // Case: Transaction matches all filters
+        return true;
+    }
+
+    /**
+     * @notice Checks if the transaction matches the source account filter
+     * @param policy The policy to check
+     * @param sourceAccount The source account address (smart account executing the transaction)
+     * @return True if the transaction matches the source account filter, false otherwise
+     */
+    function doesTransactionMatchPolicySourceAccounts(
+        Policies.Policy memory policy,
+        address sourceAccount
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Case: The policy matches transactions sent from any account
+        if (policy.anySourceAccount) return true;
+
+        // Case: The policy matches transactions sent from a list of specific source accounts
+        // Check if this account is in the list of specific source accounts
+        for (uint8 i = 0; i < policy.sourceAccountAddresses.length; ++i) {
+            address policySourceAccount = policy.sourceAccountAddresses[i];
+            // Case: The policy matches transactions sent from a list of specific source accounts,
+            //       and this account is in the list
+            if (policySourceAccount == sourceAccount) return true;
+        }
+
+        // Case: The policy matches transactions sent from a list of specific source accounts,
+        //       but this account is not in the list
+        return false;
+    }
+
+    /**
+     * @notice Checks if the transaction matches the initiator filter
+     * @param policy The policy to check
+     * @param initiatorAddress The address of the initiator of the transaction
+     * @return True if the transaction matches the initiator filter, false otherwise
+     */
+    function doesTransactionMatchPolicyInitiator(
+        Policies.Policy memory policy,
+        address initiatorAddress
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: The policy matches transactions with any initiator
+        if (policy.anyInitiator) return true;
+
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+
+        // Case: The policy matches transactions made by a specific individual, and that individual
+        //        is the initiator of this transaction
+        if (
+            policy.initiatorType == Policies.ApproverType.Member
+                && membersLayout.addressToMemberId[initiatorAddress] == policy.initiatorId
+        ) return true;
+
+        // Case: The policy matches transactions made by any individual from a specific group, and the initiator
+        //       is in that group
+        if (
+            policy.initiatorType == Policies.ApproverType.Group
+                && _isMemberInGroup(initiatorAddress, policy.initiatorId)
+        ) return true;
+
+        // Case: The policy does not match this transaction
+        return false;
+    }
+
+    /**
+     * @notice Checks if the transaction matches the transaction type filter
+     * @param policy The policy to check
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @return True if the transaction matches the transaction type filter, false otherwise
+     */
+    function doesTransactionMatchPolicyTransactionType(
+        Policies.Policy memory policy,
+        address to,
+        uint256 value,
+        bytes memory data
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Case: The policy matches any type of transaction
+        if (policy.transactionType == Policies.TransactionType.Any) return true;
+
+        // Case: Policy matches only transactions that are token transfers
+        if (policy.transactionType == Policies.TransactionType.TokenTransfers) {
+            // Case: The transaction is not a token transfer
+            if (!isTransactionTokenTransfer(data, value)) return false;
+
+            // Case: The Policy matches only transactions that are token transfers that are of a
+            //       specific token, and the transaction is not transferring that token
+            if (!doesTransactionMatchPolicyToken(policy, to, data)) {
+                return false;
+            }
+
+            // Case: The policy matches only transactions that are token transfers that are of a
+            //       specific token, and the transaction is transferring that token, but the
+            //       transaction amount is less than the amount threshold
+            if (!doesTransactionMatchPolicyTransferAmount(policy, data, value)) {
+                return false;
+            }
+        }
+        // Case: The policy matches only transactions that are contract interactions that are not token transfers
+        else if (policy.transactionType == Policies.TransactionType.ContractInteractions) {
+            // Case: The policy matches only transactions that are contract interactions that are not token transfers,
+            //       but the transaction is a token transfer
+            if (isTransactionTokenTransfer(data, value)) return false;
+
+            // Case: The policy matches only transactions that are contract interactions that call a specific function,
+            //       but the transaction is not calling that function
+            if (!doesTransactionMatchPolicyFunction(policy, data)) {
+                return false;
+            }
+        }
+
+        // Case: The policy does not fail to match the transaction based on the transaction type filters
+        return true;
+    }
+
+    /**
+     * @notice Checks if the transaction matches the destination filter
+     * @param policy The policy to check
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @return True if the transaction matches the destination filter, false otherwise
+     */
+    function doesTransactionMatchPolicyDestination(
+        Policies.Policy memory policy,
+        address to,
+        uint256 value,
+        bytes memory data
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: Policy matches transaction to any address
+        if (policy.destinationType == Policies.DestinationType.Any) return true;
+
+        // Determine the actual destination address based on transaction type
+        address actualDestination = getActualDestination(to, data, value);
+
+        // Case: Policy matches only transactions that are sent to whitelisted addresses
+        if (policy.destinationType == Policies.DestinationType.WhitelistedOnly) {
+            return _isAddressWhitelisted(actualDestination);
+        }
+
+        // Case: Policy matches only transactions that are sent to non-whitelisted addresses
+        if (policy.destinationType == Policies.DestinationType.NonWhitelistedOnly) {
+            return !_isAddressWhitelisted(actualDestination);
+        }
+
+        // Case: Policy matches only transactions that are sent to a specific list of addresses
+        if (policy.destinationType == Policies.DestinationType.CustomList) {
+            for (uint256 i = 0; i < policy.customDestinations.length; ++i) {
+                if (policy.customDestinations[i] == actualDestination) {
+                    return true;
+                }
+            }
+        }
+
+        // Case: The policy does not match the transaction destination
+        return false;
+    }
+
+    /**
+     * @notice Gets the number of required approvals for a policy
+     * @param policy The policy to check
+     * @return The number of required approvals for the policy
+     */
+    function getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
+        // Case: Policy requires a single approval from a member
+        if (policy.approverType == Policies.ApproverType.Member) {
+            return 1;
+        }
+
+        // Case: Policy requires a threshold number of approvals from any individual
+        return policy.approvalThreshold;
+    }
+
+    /**
+     * @notice Checks if a signer is authorized for the given policy
+     * @param policy The policy to check against
+     * @param signer The signer address to validate
+     * @return True if the signer is authorized, false otherwise
+     */
+    function isSignerAuthorizedForPolicy(Policies.Policy memory policy, address signer) internal view returns (bool) {
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+
+        // Get the member ID for the signer
+        uint8 memberId = membersLayout.addressToMemberId[signer];
+
+        // Case: Signer is not a member of the organization
+        if (memberId == 0) {
+            return false;
+        }
+
+        // Case: Policy requires approval from a specific member
+        if (policy.approverType == Policies.ApproverType.Member) {
+            return memberId == policy.approverId;
+        }
+
+        // Case: Policy requires approval from any member of a specific group
+        if (policy.approverType == Policies.ApproverType.Group) {
+            return _isMemberInGroup(memberId, policy.approverId);
+        }
+
+        return false;
+    }
+
+    /**
+     * @notice Checks if a signer is authorized as a transaction initiator for the given policy
+     * @param policy The policy to check against
+     * @param signer The signer address to validate
+     * @return True if the signer is authorized as an initiator, false otherwise
+     */
+    function isSignerAuthorizedAsInitiator(
+        Policies.Policy memory policy,
+        address signer
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // Case: Policy allows any initiator
+        if (policy.anyInitiator) return true;
+
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+
+        // Get the member ID for the signer
+        uint8 memberId = membersLayout.addressToMemberId[signer];
+
+        // Case: Signer is not a member of the organization
+        if (memberId == 0) {
+            return false;
+        }
+
+        // Case: Policy requires initiation by a specific member
+        if (policy.initiatorType == Policies.ApproverType.Member) {
+            return memberId == policy.initiatorId;
+        }
+
+        // Case: Policy requires initiation by any member of a specific group
+        if (policy.initiatorType == Policies.ApproverType.Group) {
+            return _isMemberInGroup(memberId, policy.initiatorId);
+        }
+
+        return false;
+    }
+
+    // ================================
+    // HELPER FUNCTIONS
+    // ================================
+
+    /**
+     * @notice Gets the actual destination address of a transaction
+     * @dev For contract interactions and native transfers, returns the `to` address.
+     *      For ERC-20 transfers, extracts and returns the recipient address from the transaction data.
+     * @param to The destination address of the transaction
+     * @param data The data of the transaction
+     * @param value The value of the transaction
+     * @return The actual destination address
+     */
+    function getActualDestination(address to, bytes memory data, uint256 value) internal pure returns (address) {
+        // Case: The transaction is a native token transfer
+        if (data.length == 0) {
+            return to;
+        }
+
+        // Case: The transaction is a contract interaction
+        if (!isTransactionTokenTransfer(data, value)) {
+            return to;
+        }
+
+        // Case: The transaction is an ERC-20 token transfer
+        // Extract the recipient address from the transfer function call
+        return extractTokenRecipient(data);
+    }
+
+    /**
+     * @notice Extracts the recipient address from an ERC-20 transfer transaction
+     * @dev This function assumes that the transaction is an ERC-20 token transfer
+     * @param data The data of the transaction
+     * @return The recipient address
+     */
+    function extractTokenRecipient(bytes memory data) internal pure returns (address) {
+        // Case: Transaction data is too short to contain a valid selector
+        if (data.length < 36) {
+            return address(0);
+        }
+
+        bytes4 selector = bytes4(data);
+
+        // Case: The transaction is calling the `transfer` function
+        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
+            // transfer(address to, uint256 amount)
+            // The recipient is the first parameter after the selector
+            address recipient;
+            /* solhint-disable no-inline-assembly */
+            assembly {
+                // Load recipient (memory location of `data` + 4 bytes to skip the function selector )
+                recipient := mload(add(data, 4))
+            }
+            return recipient;
+        }
+
+        // Case: The transaction is calling the `transferFrom` function
+        if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
+            // Case: Transaction data is too short to contain a valid recipient
+            // Note: The recipient is the second address parameter after the selector
+            if (data.length < 68) {
+                return address(0);
+            }
+            address recipient;
+            /* solhint-disable no-inline-assembly */
+            assembly {
+                recipient := mload(add(data, 36)) // Skip selector (4) + from address (32)
+            }
+            return recipient;
+        }
+
+        // Case: The transaction is not a valid ERC-20 transfer
+        return address(0);
+    }
+
+    /**
+     * @notice Checks if a transaction is a token transfer
+     * @param data The data of the transaction
+     * @param value The value of the transaction
+     * @return True if the transaction is a token transfer, false otherwise
+     */
+    function isTransactionTokenTransfer(bytes memory data, uint256 value) internal pure returns (bool) {
+        // Case: The transaction is a native token transfer
+        if (data.length == 0 && value > 0) {
+            return true;
+        }
+
+        // Case: The transaction data is too short to call a function
+        if (data.length < 4) {
+            return false;
+        }
+
+        // Case: The transaction is not a native token transfer, but the value is greater than zero
+        if (value > 0) {
+            return false;
+        }
+
+        // Case: The transaction is a token transfer
+        bytes4 selector = bytes4(data);
+
+        // Case: The transaction is a token transfer
+        if (
+            selector == bytes4(keccak256("transfer(address,uint256)"))
+                || selector == bytes4(keccak256("transferFrom(address,address,uint256)"))
+        ) {
+            return true;
+        }
+
+        // Case: The transaction is not a token transfer
+        return false;
+    }
+
+    /**
+     * @notice Checks if the transaction matches the token filter
+     * @param policy The policy to check
+     * @param to The destination address of the transaction
+     * @param data The data of the transaction
+     * @return True if the transaction matches the token filter, false otherwise
+     */
+    function doesTransactionMatchPolicyToken(
+        Policies.Policy memory policy,
+        address to,
+        bytes memory data
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Case: Policy matches transfers of any token
+        if (policy.anyToken) return true;
+
+        address transferToken = extractTokenAddress(to, data);
+
+        // Case: Policy matches transfers of the same token the transaction is transferring
+        if (transferToken == policy.tokenAddress) return true;
+
+        // Case: The policy matches transfers of a specific token, but the transaction is transferring a different token
+        return false;
+    }
+
+    /**
+     * @notice Checks if the transaction amount meets the threshold requirements
+     * @param policy The policy to check
+     * @param data The data of the transaction
+     * @param value The value of the transaction
+     * @return True if the transaction matches the transfer amount filter, false otherwise
+     */
+    function doesTransactionMatchPolicyTransferAmount(
+        Policies.Policy memory policy,
+        bytes memory data,
+        uint256 value
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Case: Policy matches token transfers regardless of amount transferred
+        if (!policy.hasAmountThreshold) return true;
+
+        uint256 transferAmount = extractTransferAmount(data, value);
+
+        // Case: Policy matches token transfers below an amount threshold, and the transaction is below the threshold
+        if (transferAmount < policy.amountThreshold) return true;
+
+        // Case: Policy matches token transfers below an amount threshold, and the transaction is above or equal to the
+        //       threshold
+        return false;
+    }
+
+    /**
+     * @notice Checks if the transaction matches the function selector filter
+     * @param policy The policy to check
+     * @param data The data of the transaction
+     * @return True if the transaction matches the function selector filter, false otherwise
+     */
+    function doesTransactionMatchPolicyFunction(
+        Policies.Policy memory policy,
+        bytes memory data
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Case: Policy matches any function
+        if (policy.anyFunction) return true;
+
+        // Case: Policy matches only transactions that call a specific function, but the transaction is not calling
+        //       a function
+        if (data.length < 4) return false;
+
+        // Case: Policy matches only transactions that call a specific function, and the transaction is calling
+        //       a function
+        // Check if the transaction is calling the function specified in the policy
+        bytes4 selector = bytes4(data);
+        for (uint256 i = 0; i < policy.allowedFunctions.length; i++) {
+            // Case: The transaction is calling the function specified in the policy
+            if (policy.allowedFunctions[i].selector == selector) {
+                return true;
+            }
+        }
+
+        // Case: The policy matches only transactions that call a specific function, and the transaction is not calling
+        //       the function specified in the policy
+        return false;
+    }
+
+    /**
+     * @notice Extracts the token address from a transfer transaction
+     * @dev This function assumes that the transaction is a token transfer
+     * @param to The destination address of the transaction
+     * @param data The data of the transaction
+     * @return The token address
+     */
+    function extractTokenAddress(address to, bytes memory data) internal pure returns (address) {
+        if (data.length == 0) {
+            return address(0); // Native token
+        }
+        return to; // ERC20 token address
+    }
+
+    /**
+     * @notice Extracts the transfer amount from a transaction
+     * @dev This function assumes that the transaction is a token transfer
+     * @param data The data of the transaction
+     * @param value The value of the transaction
+     * @return The transfer amount
+     */
+    function extractTransferAmount(bytes memory data, uint256 value) internal pure returns (uint256) {
+        // Case: The transaction is a native token transfer
+        if (data.length == 0) {
+            return value; // Native token transfer
+        }
+
+        // Case: The ERC-20 transaction is transfering a value of zero
+        // Note: 4 bytes selector + 32 bytes address + 32 bytes amount = 68 bytes
+        if (data.length < 68) {
+            return 0;
+        }
+
+        // Case: The ERC-20 transaction is transfering a non-zero value
+        bytes32 amount;
+
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            amount := mload(add(data, 68)) // Skip selector (4) + address (32) + read amount (32)
+        }
+        return uint256(amount);
+    }
+
+    /**
+     * @notice Internal helper to check if a member is in a group
+     * @param memberId The ID of the member
+     * @param groupId The ID of the group
+     * @return True if the member is in the group, false otherwise
+     */
+    function _isMemberInGroup(uint8 memberId, uint8 groupId) private view returns (bool) {
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+
+        // Case: Member does not exist
+        if (membersLayout.memberIdToAddress[memberId] == address(0)) return false;
+
+        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
+    }
+
+    /**
+     * @notice Internal helper to check if a member is in a group by address
+     * @param memberAddress The address of the member
+     * @param groupId The ID of the group
+     * @return True if the member is in the group, false otherwise
+     */
+    function _isMemberInGroup(address memberAddress, uint8 groupId) private view returns (bool) {
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint8 memberId = membersLayout.addressToMemberId[memberAddress];
+
+        // Case: Member does not exist
+        if (memberId == 0) return false;
+
+        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
+    }
+
+    /**
+     * @notice Internal helper to check if an address is whitelisted
+     * @param addressToCheck The address to check
+     * @return True if the address is whitelisted, false otherwise
+     */
+    function _isAddressWhitelisted(address addressToCheck) private view returns (bool) {
+        return LibOrganizationWhitelistStorage.layout().whitelistedAddresses[addressToCheck];
+    }
+}

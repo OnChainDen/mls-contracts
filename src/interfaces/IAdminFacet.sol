@@ -23,7 +23,7 @@ enum AdminOperationType {
     ModifyPolicies,
     UpdateGuardian,
     ModifyWhitelist,
-    DiamondCut,
+    Upgrade,
     DeployAccount
 }
 
