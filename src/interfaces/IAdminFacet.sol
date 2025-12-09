@@ -1,30 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import { OperationType } from "./IOrganization.sol";
+
 /**
  * @notice Enum to specify whether admin permission is granted to an individual member or a group
  */
 enum AdminType {
     Member,
     Group
-}
-
-/**
- * @notice Enum to specify the type of admin operation being performed
- */
-enum AdminOperationType {
-    UpdateAdmin,
-    CreateGroup,
-    ModifyGroup,
-    RemoveGroup,
-    AddMembers,
-    ModifyMember,
-    RemoveMembers,
-    ModifyPolicies,
-    UpdateGuardian,
-    ModifyWhitelist,
-    Upgrade,
-    DeployAccount
 }
 
 /**
@@ -41,7 +25,7 @@ interface IAdminFacet {
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
-        AdminOperationType operationType,
+        OperationType operationType,
         bytes memory operationData,
         uint256 salt,
         bytes memory signatures

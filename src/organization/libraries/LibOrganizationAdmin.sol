@@ -4,10 +4,12 @@ pragma solidity ^0.8.24;
 import { LibOrganizationAdminStorage } from "./storage/LibOrganizationAdminStorage.sol";
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
+import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { IAdminFacet, AdminType, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
+import { AdminType } from "../../interfaces/IAdminFacet.sol";
+import { OperationType } from "../../interfaces/IOrganization.sol";
 import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 
@@ -55,12 +57,6 @@ library LibOrganizationAdmin {
     error InvalidAdminSignature();
 
     /**
-     * @notice Emitted when an admin operation uses a nonce that has already been used
-     * @param nonce The nonce that was attempted to be used
-     */
-    error AdminNonceAlreadyUsed(uint256 nonce);
-
-    /**
      * @notice Emitted when an admin operation has wrong chain ID
      * @param expected The expected chain ID
      * @param provided The provided chain ID
@@ -73,34 +69,6 @@ library LibOrganizationAdmin {
      */
     function adminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
         return LibOrganizationAdminStorage.layout().adminPermission;
-    }
-
-    /**
-     * @notice Checks if an admin nonce has been used
-     * @param nonce The nonce to check
-     * @return True if the nonce has been used, false otherwise
-     */
-    function isAdminNonceUsed(uint256 nonce) internal view returns (bool) {
-        return LibOrganizationAdminStorage.layout().usedAdminNonces[nonce];
-    }
-
-    /**
-     * @notice Computes a deterministic nonce for admin operations from operation data and salt
-     * @param operationType The type of operation being performed
-     * @param operationData The ABI-encoded data of the operation
-     * @param salt A user-provided salt for nonce computation
-     * @return The computed nonce
-     */
-    function computeAdminNonce(
-        AdminOperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        return uint256(keccak256(abi.encode(address(this), operationType, keccak256(operationData), salt)));
     }
 
     /**
@@ -160,7 +128,7 @@ library LibOrganizationAdmin {
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
-        AdminOperationType operationType,
+        OperationType operationType,
         bytes memory operationData,
         uint256 salt,
         bytes memory signatures
@@ -168,17 +136,15 @@ library LibOrganizationAdmin {
         internal
     {
         // Compute deterministic nonce from operation data and salt
-        uint256 nonce = computeAdminNonce(operationType, operationData, salt);
+        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
 
-        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-
-        // Validate and check nonce for replay protection
-        if (adminLayout.usedAdminNonces[nonce]) {
-            revert AdminNonceAlreadyUsed(nonce);
-        }
+        // Validate and consume nonce for replay protection (will revert if already used)
+        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
         // Get operation hash for signature verification
         bytes32 operationHash = _getAdminOperationHash(operationType, operationData, salt);
+
+        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
         bool isAuthorized = false;
 
@@ -196,9 +162,6 @@ library LibOrganizationAdmin {
         if (!isAuthorized) {
             revert AdminOperationRejected("Insufficient authorization for admin operation");
         }
-
-        // Mark nonce as used after successful validation
-        adminLayout.usedAdminNonces[nonce] = true;
     }
 
     /**
@@ -226,7 +189,7 @@ library LibOrganizationAdmin {
         if (adminMemberAddress == address(0)) return false;
 
         // Extract signer address from signature using ERC-1271 compatible verification
-        address signer = _getAdminSigner(signatures);
+        address signer = LibOrganizationSignatures.extractSigner(signatures);
 
         // Check if signer is the admin member
         if (signer != adminMemberAddress) return false;
@@ -268,7 +231,7 @@ library LibOrganizationAdmin {
             bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
             // Extract signer address from signature using ERC-1271 compatible verification
-            address signer = _getAdminSigner(signature);
+            address signer = LibOrganizationSignatures.extractSigner(signature);
 
             // Skip if signer is invalid
             if (signer == address(0)) continue;
@@ -297,26 +260,6 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Gets the signer address from a signature for admin operations
-     * @param signature The signature to extract the signer from
-     * @return The signer address, or address(0) if invalid
-     */
-    function _getAdminSigner(bytes memory signature) private pure returns (address) {
-        // For ERC-1271, we assume the first 20 bytes of the signature contain the signer address
-        // This is a common pattern where the signature is prefixed with the signer address
-        if (signature.length < 20) {
-            return address(0);
-        }
-
-        address signer;
-        /* solhint-disable no-inline-assembly */
-        assembly {
-            signer := mload(add(signature, 20))
-        }
-        return signer;
-    }
-
-    /**
      * @notice Creates a hash of the admin operation for signature verification using EIP-712 typed data
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
@@ -324,7 +267,7 @@ library LibOrganizationAdmin {
      * @return The hash of the admin operation formatted for ERC-1271 signature verification
      */
     function _getAdminOperationHash(
-        AdminOperationType operationType,
+        OperationType operationType,
         bytes memory operationData,
         uint256 salt
     )

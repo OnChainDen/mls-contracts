@@ -3,7 +3,8 @@ pragma solidity ^0.8.24;
 
 import { UpgradeAuthorizationStorage } from "./UpgradeAuthorizationStorage.sol";
 import { IImplementationWhitelist } from "../../interfaces/IImplementationWhitelist.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
+import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { OperationType } from "../../interfaces/IOrganization.sol";
 import { IGuardianFacet } from "../../interfaces/IGuardianFacet.sol";
 
 /**
@@ -37,7 +38,7 @@ library LibUpgradeAuthorization {
         // 2. Validate admin authorization
         bytes memory operationData = abi.encode(newImplementation);
         try IAdminFacet(address(this)).validateAdminAuthorization(
-            AdminOperationType.Upgrade, operationData, salt, signatures
+            OperationType.Upgrade, operationData, salt, signatures
         ) {
             // Validation successful
         } catch Error(string memory reason) {

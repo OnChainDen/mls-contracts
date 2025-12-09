@@ -10,8 +10,11 @@ import { LibOrganizationAdmin } from "./libraries/LibOrganizationAdmin.sol";
 import { LibOrganizationGuardian } from "./libraries/LibOrganizationGuardian.sol";
 import { LibOrganizationAccountFactory } from "./libraries/LibOrganizationAccountFactory.sol";
 import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
+import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures.sol";
+import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
 import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
-import { IAdminFacet, AdminType, AdminOperationType } from "../interfaces/IAdminFacet.sol";
+import { IAdminFacet, AdminType } from "../interfaces/IAdminFacet.sol";
+import { OperationType } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
@@ -90,7 +93,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(memberAddresses);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.AddMembers, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.AddMembers, operationData, salt, signatures);
 
         return LibOrganizationMembers.addMembers(memberAddresses);
     }
@@ -108,9 +111,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(memberId, newAddress);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.ModifyMember, operationData, salt, signatures
-        );
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyMember, operationData, salt, signatures);
 
         LibOrganizationMembers.modifyMember(memberId, newAddress);
     }
@@ -120,9 +121,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(memberIds);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.RemoveMembers, operationData, salt, signatures
-        );
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.RemoveMembers, operationData, salt, signatures);
 
         LibOrganizationMembers.removeMembers(memberIds);
     }
@@ -160,7 +159,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(memberIds);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.CreateGroup, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.CreateGroup, operationData, salt, signatures);
 
         return LibOrganizationGroups.createGroup(memberIds);
     }
@@ -179,7 +178,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.ModifyGroup, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyGroup, operationData, salt, signatures);
 
         LibOrganizationGroups.modifyGroup(groupId, membersToAdd, membersToRemove);
     }
@@ -189,7 +188,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(groupId);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.RemoveGroup, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.RemoveGroup, operationData, salt, signatures);
 
         LibOrganizationGroups.removeGroup(groupId);
     }
@@ -221,9 +220,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.ModifyPolicies, operationData, salt, signatures
-        );
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyPolicies, operationData, salt, signatures);
 
         LibOrganizationPolicy.modifyPolicies(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
     }
@@ -283,9 +280,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(addressesToAdd, addressesToRemove);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.ModifyWhitelist, operationData, salt, signatures
-        );
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyWhitelist, operationData, salt, signatures);
 
         LibOrganizationWhitelist.modifyWhitelist(addressesToAdd, addressesToRemove);
     }
@@ -298,12 +293,12 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         return LibOrganizationAdmin.adminPermission();
     }
 
-    function isAdminNonceUsed(uint256 nonce) external view returns (bool) {
-        return LibOrganizationAdmin.isAdminNonceUsed(nonce);
+    function isNonceUsed(uint256 nonce) external view returns (bool) {
+        return LibOrganizationSignatures.isNonceUsed(nonce);
     }
 
-    function computeAdminNonce(
-        AdminOperationType operationType,
+    function computeNonce(
+        OperationType operationType,
         bytes memory operationData,
         uint256 salt
     )
@@ -311,7 +306,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         view
         returns (uint256)
     {
-        return LibOrganizationAdmin.computeAdminNonce(operationType, operationData, salt);
+        return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
     }
 
     function updateAdmin(
@@ -328,13 +323,13 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
         // Validate that the current admin has authorized this change
-        LibOrganizationAdmin.validateAdminAuthorization(AdminOperationType.UpdateAdmin, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.UpdateAdmin, operationData, salt, signatures);
 
         LibOrganizationAdmin.updateAdmin(newAdminType, newAdminId, newVotingThreshold);
     }
 
     function validateAdminAuthorization(
-        AdminOperationType operationType,
+        OperationType operationType,
         bytes memory operationData,
         uint256 salt,
         bytes memory signatures
@@ -367,9 +362,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.UpdateGuardian, operationData, salt, signatures
-        );
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.UpdateGuardian, operationData, salt, signatures);
 
         LibOrganizationGuardian.updateGuardian(newGuardian);
     }
@@ -392,7 +385,7 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes memory operationData = abi.encode(create2Salt, implementationAddress);
 
         LibOrganizationAdmin.validateAdminAuthorization(
-            AdminOperationType.DeployAccount, operationData, adminSignatureSalt, signatures
+            OperationType.DeployAccount, operationData, adminSignatureSalt, signatures
         );
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt, implementationAddress);
@@ -400,6 +393,66 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
 
     function computeAccountAddress(bytes32 salt, address implementationAddress) external view returns (address) {
         return LibOrganizationAccountFactory.computeAccountAddress(salt, implementationAddress);
+    }
+
+    // ================================
+    // LibOrganizationAccountTransaction wrappers
+    // ================================
+
+    /**
+     * @notice Executes a transaction on an account through the organization
+     * @param account The account to execute the transaction from
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param salt A user-provided salt for nonce computation
+     * @param policyId The ID of the policy that governs this transaction
+     * @param signatures The signatures authorizing the transaction
+     */
+    function executeAccountTransaction(
+        address account,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 salt,
+        uint256 policyId,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
+        LibOrganizationAccountTransaction.executeAccountTransaction(
+            account, to, value, data, salt, policyId, signatures
+        );
+    }
+
+    /**
+     * @notice Rejects a transaction that has been signed but not yet executed
+     * @param account The account for which to reject the transaction
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param salt A user-provided salt for nonce computation
+     * @param policyId The ID of the policy that governs this transaction
+     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
+     * @param signatures The signatures authorizing the rejection
+     */
+    function rejectAccountTransaction(
+        address account,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 salt,
+        uint256 policyId,
+        uint256 chainId,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
+        LibOrganizationAccountTransaction.rejectAccountTransaction(
+            account, to, value, data, salt, policyId, chainId, signatures
+        );
     }
 
     // ================================

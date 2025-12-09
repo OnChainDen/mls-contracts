@@ -2,7 +2,8 @@
 pragma solidity ^0.8.24;
 
 import { LibAccountOrganizationAddressStorage } from "./storage/LibAccountOrganizationAddressStorage.sol";
-import { IAdminFacet, AdminOperationType } from "../../interfaces/IAdminFacet.sol";
+import { IAdminFacet } from "../../interfaces/IAdminFacet.sol";
+import { OperationType } from "../../interfaces/IOrganization.sol";
 
 /**
  * @title Lib Account Admin
@@ -38,7 +39,7 @@ library LibAccountAdmin {
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
-        AdminOperationType operationType,
+        OperationType operationType,
         bytes memory operationData,
         uint256 salt,
         bytes memory signatures

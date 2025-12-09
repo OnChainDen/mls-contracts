@@ -20,7 +20,6 @@ library LibOrganizationAdminStorage {
 
     struct Layout {
         AdminPermission adminPermission;
-        mapping(uint256 => bool) usedAdminNonces;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.admin.storage");
