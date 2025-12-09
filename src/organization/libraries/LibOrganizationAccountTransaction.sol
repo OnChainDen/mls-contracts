@@ -3,62 +3,20 @@ pragma solidity ^0.8.24;
 
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
-import { LibOrganizationAccountFactory } from "./LibOrganizationAccountFactory.sol";
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { OperationType } from "../../interfaces/IOrganization.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
- * @notice Interface for the Account contract's execute function
- */
-interface IAccountExecute {
-    function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 nonce,
-        uint256 policyId
-    )
-        external;
-}
-
-/**
  * @title Lib Organization Account Transaction
- * @notice Library for executing account transactions through the Organization contract
- * @dev This library handles validation and forwarding of transactions to Account contracts
+ * @notice Library for validating account transactions through the Organization contract
+ * @dev This library handles validation of transactions to Account contracts
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountTransaction {
-    /**
-     * @notice Emitted when a transaction is executed on an account
-     * @param account The account that executed the transaction
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param nonce The nonce used for this transaction
-     * @param policyId The policy ID that governed this transaction
-     */
-    event AccountTransactionExecuted(
-        address indexed account, address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 policyId
-    );
-
-    /**
-     * @notice Emitted when a transaction is rejected by authorized users
-     * @param account The account for which the transaction was rejected
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param nonce The nonce used for this transaction
-     * @param policyId The policy ID that governed this transaction
-     */
-    event AccountTransactionRejected(
-        address indexed account, address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 policyId
-    );
-
     /**
      * @notice Emitted when a transaction is rejected by a policy
      * @param reason The reason for the rejection
@@ -85,105 +43,6 @@ library LibOrganizationAccountTransaction {
     error PolicyDoesNotApply(uint256 policyId);
 
     /**
-     * @notice Emitted when a transaction is rejected because of wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidChainId(uint256 expected, uint256 provided);
-
-    /**
-     * @notice Executes a transaction on an account through the organization
-     * @param account The account to execute the transaction from
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param salt A user-provided salt for nonce computation
-     * @param policyId The ID of the policy that governs this transaction
-     * @param signatures The signatures authorizing the transaction
-     */
-    function executeAccountTransaction(
-        address account,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 salt,
-        uint256 policyId,
-        bytes memory signatures
-    )
-        internal
-    {
-        // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
-
-        // Encode operation data for nonce computation
-        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
-
-        // Compute and validate nonce
-        uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
-
-        // Validate and consume nonce (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
-
-        // Validate the transaction against the policy and signatures
-        _validateTransaction(account, to, value, data, salt, policyId, signatures);
-
-        // Execute the transaction on the account
-        IAccountExecute(account).executeTransaction(to, value, data, nonce, policyId);
-
-        emit AccountTransactionExecuted(account, to, value, data, nonce, policyId);
-    }
-
-    /**
-     * @notice Rejects a transaction that has been signed but not yet executed
-     * @param account The account for which to reject the transaction
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param salt A user-provided salt for nonce computation
-     * @param policyId The ID of the policy that governs this transaction
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
-     * @param signatures The signatures authorizing the rejection
-     */
-    function rejectAccountTransaction(
-        address account,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 salt,
-        uint256 policyId,
-        uint256 chainId,
-        bytes memory signatures
-    )
-        internal
-    {
-        // Validate chain ID for cross-chain replay protection
-        if (chainId != block.chainid) {
-            revert InvalidChainId(block.chainid, chainId);
-        }
-
-        // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
-
-        // Encode operation data for nonce computation (same as executeAccountTransaction)
-        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
-
-        // Compute nonce (same as for execution)
-        uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
-
-        // Validate and consume nonce (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
-
-        // Validate the rejection authorization
-        _validateRejectionAuthorization(account, to, value, data, salt, policyId, signatures);
-
-        emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
-    }
-
-    /**
      * @notice Validates a transaction against the specified policy
      * @param account The account executing the transaction
      * @param to Transaction destination address
@@ -193,7 +52,7 @@ library LibOrganizationAccountTransaction {
      * @param policyId The policy ID to validate against
      * @param signatures Signatures for approval verification
      */
-    function _validateTransaction(
+    function validateTransaction(
         address account,
         address to,
         uint256 value,
@@ -202,7 +61,7 @@ library LibOrganizationAccountTransaction {
         uint256 policyId,
         bytes memory signatures
     )
-        private
+        internal
         view
     {
         LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();
@@ -261,7 +120,7 @@ library LibOrganizationAccountTransaction {
      * @param policyId The policy ID to validate against
      * @param signatures Signatures for rejection verification
      */
-    function _validateRejectionAuthorization(
+    function validateRejectionAuthorization(
         address account,
         address to,
         uint256 value,
@@ -270,7 +129,7 @@ library LibOrganizationAccountTransaction {
         uint256 policyId,
         bytes memory signatures
     )
-        private
+        internal
         view
     {
         LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();

@@ -20,12 +20,59 @@ import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 
 /**
+ * @notice Interface for the Account contract's execute function
+ */
+interface IAccountExecute {
+    function executeTransaction(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 nonce,
+        uint256 policyId
+    )
+        external;
+}
+
+/**
  * @title Organization Implementation
  * @notice UUPS upgradeable implementation contract for Organization
  * @dev This contract exposes all Organization library functions as external wrappers
  * @author Den Technologies Inc
  */
 contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpgradeable {
+    /**
+     * @notice Emitted when a transaction is executed on an account
+     * @param account The account that executed the transaction
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param nonce The nonce used for this transaction
+     * @param policyId The policy ID that governed this transaction
+     */
+    event AccountTransactionExecuted(
+        address indexed account, address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 policyId
+    );
+
+    /**
+     * @notice Emitted when a transaction is rejected by authorized users
+     * @param account The account for which the transaction was rejected
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param nonce The nonce used for this transaction
+     * @param policyId The policy ID that governed this transaction
+     */
+    event AccountTransactionRejected(
+        address indexed account, address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 policyId
+    );
+
+    /**
+     * @notice Emitted when a transaction is rejected because of wrong chain ID
+     * @param expected The expected chain ID
+     * @param provided The provided chain ID
+     */
+    error InvalidChainId(uint256 expected, uint256 provided);
+
     /**
      * @notice Modifier that enforces only the guardian can call the function
      */
@@ -421,9 +468,27 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         external
         onlyGuardian
     {
-        LibOrganizationAccountTransaction.executeAccountTransaction(
-            account, to, value, data, salt, policyId, signatures
-        );
+        // Verify the account is deployed by this organization
+        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        // Encode operation data for nonce computation
+        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
+
+        // Compute nonce
+        uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
+
+        // Validate and consume nonce (will revert if already used)
+        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+
+        // Validate the transaction against the policy and signatures
+        LibOrganizationAccountTransaction.validateTransaction(account, to, value, data, salt, policyId, signatures);
+
+        // Execute the transaction on the account
+        IAccountExecute(account).executeTransaction(to, value, data, nonce, policyId);
+
+        emit AccountTransactionExecuted(account, to, value, data, nonce, policyId);
     }
 
     /**
@@ -444,15 +509,31 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         bytes calldata data,
         uint256 salt,
         uint256 policyId,
-        uint256 chainId,
         bytes memory signatures
     )
         external
         onlyGuardian
     {
-        LibOrganizationAccountTransaction.rejectAccountTransaction(
-            account, to, value, data, salt, policyId, chainId, signatures
+        // Verify the account is deployed by this organization
+        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        // Encode operation data for nonce computation (same as executeAccountTransaction)
+        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
+
+        // Compute nonce (same as for execution)
+        uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
+
+        // Validate and consume nonce (will revert if already used)
+        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+
+        // Validate the rejection authorization
+        LibOrganizationAccountTransaction.validateRejectionAuthorization(
+            account, to, value, data, salt, policyId, signatures
         );
+
+        emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
     }
 
     // ================================
