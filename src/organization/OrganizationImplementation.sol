@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { BaseUUPSImplementation } from "../proxy/BaseUUPSImplementation.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import { LibOrganizationMembers } from "./libraries/LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./libraries/LibOrganizationGroups.sol";
 import { LibOrganizationPolicy } from "./libraries/LibOrganizationPolicy.sol";
@@ -13,11 +14,12 @@ import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitia
 import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures.sol";
 import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
 import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
-import { IAdminFacet, AdminType } from "../interfaces/IAdminFacet.sol";
-import { OperationType } from "../interfaces/IOrganization.sol";
+import { AdminType, OperationType } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
+import { IAccountUpgradeable } from "../account/interfaces/IAccountUpgradeable.sol";
+import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
 
 /**
  * @notice Interface for the Account contract's execute function
@@ -39,7 +41,7 @@ interface IAccountExecute {
  * @dev This contract exposes all Organization library functions as external wrappers
  * @author Den Technologies Inc
  */
-contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpgradeable {
+contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradeable {
     /**
      * @notice Emitted when a transaction is executed on an account
      * @param account The account that executed the transaction
@@ -72,6 +74,19 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
      * @param provided The provided chain ID
      */
     error InvalidChainId(uint256 expected, uint256 provided);
+
+    /**
+     * @notice Emitted when an account is upgraded
+     * @param account The account that was upgraded
+     * @param newImplementation The new implementation address
+     */
+    event AccountUpgraded(address indexed account, address indexed newImplementation);
+
+    /**
+     * @notice Emitted when an implementation is not whitelisted
+     * @param implementation The implementation address that was not whitelisted
+     */
+    error ImplementationNotWhitelisted(address implementation);
 
     /**
      * @notice Modifier that enforces only the guardian can call the function
@@ -375,23 +390,6 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
         LibOrganizationAdmin.updateAdmin(newAdminType, newAdminId, newVotingThreshold);
     }
 
-    function validateAdminAuthorization(
-        OperationType operationType,
-        bytes memory operationData,
-        uint256 salt,
-        bytes memory signatures
-    )
-        external
-        override
-    {
-        // Only allow calls from AccountProxy contracts deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(msg.sender)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(msg.sender);
-        }
-
-        LibOrganizationAdmin.validateAdminAuthorization(operationType, operationData, salt, signatures);
-    }
-
     // ================================
     // LibOrganizationGuardian wrappers
     // ================================
@@ -440,6 +438,49 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
 
     function computeAccountAddress(bytes32 salt, address implementationAddress) external view returns (address) {
         return LibOrganizationAccountFactory.computeAccountAddress(salt, implementationAddress);
+    }
+
+    /**
+     * @notice Upgrades an account's implementation
+     * @param account The account to upgrade
+     * @param newImplementation The new implementation address
+     * @param data Optional calldata to call on the new implementation after upgrade
+     * @param salt A user-provided salt for nonce computation
+     * @param signatures The signatures from admin(s) authorizing this upgrade
+     */
+    function upgradeAccount(
+        address account,
+        address newImplementation,
+        bytes memory data,
+        uint256 salt,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
+        // 1. Verify the account is deployed by this organization
+        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        // 2. Validate admin authorization
+        bytes memory operationData = abi.encode(account, newImplementation, keccak256(data));
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.UpgradeAccount, operationData, salt, signatures);
+
+        // 3. Validate implementation against whitelist
+        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
+        if (
+            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
+                IImplementationWhitelist.ContractType.Account, newImplementation
+            )
+        ) {
+            revert ImplementationNotWhitelisted(newImplementation);
+        }
+
+        // 4. Call the account's upgrade function
+        IAccountUpgradeable(account).upgradeToFromOrganization(newImplementation, data);
+
+        emit AccountUpgraded(account, newImplementation);
     }
 
     // ================================
@@ -499,7 +540,6 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
      * @param data The data of the transaction
      * @param salt A user-provided salt for nonce computation
      * @param policyId The ID of the policy that governs this transaction
-     * @param chainId The chain ID for cross-chain replay protection - must match current chain ID
      * @param signatures The signatures authorizing the rejection
      */
     function rejectAccountTransaction(
@@ -552,6 +592,12 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
     // IUpgradeable interface
     // ================================
 
+    /**
+     * @notice Upgrade the implementation to a new address with authorization
+     * @param newImplementation The new implementation address
+     * @param salt A user-provided salt for nonce computation
+     * @param signatures The signatures from admin(s) authorizing this upgrade
+     */
     function upgradeToWithAuthorization(
         address newImplementation,
         uint256 salt,
@@ -559,10 +605,19 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
     )
         external
         override
+        onlyGuardian
     {
-        super.upgradeToWithAuthorization(newImplementation, salt, signatures);
+        _validateOrganizationUpgrade(newImplementation, salt, signatures);
+        upgradeToAndCall(newImplementation, "");
     }
 
+    /**
+     * @notice Upgrade the implementation to a new address and call a function with authorization
+     * @param newImplementation The new implementation address
+     * @param data The calldata to call on the new implementation
+     * @param salt A user-provided salt for nonce computation
+     * @param signatures The signatures from admin(s) authorizing this upgrade
+     */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes memory data,
@@ -571,7 +626,49 @@ contract OrganizationImplementation is BaseUUPSImplementation, IAdminFacet, IUpg
     )
         external
         override
+        onlyGuardian
     {
-        super.upgradeToAndCallWithAuthorization(newImplementation, data, salt, signatures);
+        _validateOrganizationUpgrade(newImplementation, salt, signatures);
+        upgradeToAndCall(newImplementation, data);
+    }
+
+    /**
+     * @notice Validates organization upgrade authorization
+     * @dev Checks admin signatures and implementation whitelist
+     * @param newImplementation The new implementation address
+     * @param salt A user-provided salt for nonce computation
+     * @param signatures The signatures from admin(s) authorizing this upgrade
+     */
+    function _validateOrganizationUpgrade(
+        address newImplementation,
+        uint256 salt,
+        bytes calldata signatures
+    )
+        internal
+    {
+        // 1. Validate admin authorization
+        bytes memory operationData = abi.encode(newImplementation);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.Upgrade, operationData, salt, signatures);
+
+        // 2. Validate implementation against whitelist
+        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
+        if (
+            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
+                IImplementationWhitelist.ContractType.Organization, newImplementation
+            )
+        ) {
+            revert ImplementationNotWhitelisted(newImplementation);
+        }
+    }
+
+    /**
+     * @notice Authorize an upgrade (required by UUPSUpgradeable)
+     * @dev Authorization is handled by upgradeToWithAuthorization and upgradeToAndCallWithAuthorization
+     *      which validate signatures before calling upgradeToAndCall
+     * @param newImplementation The new implementation address (unused)
+     */
+    function _authorizeUpgrade(address newImplementation) internal override {
+        // Authorization is already validated by upgradeToWithAuthorization or upgradeToAndCallWithAuthorization
+        // before this function is called via upgradeToAndCall
     }
 }

@@ -7,7 +7,7 @@ import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersS
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { IAdminFacet, AdminType } from "../../interfaces/IAdminFacet.sol";
+import { AdminType } from "../../interfaces/IOrganization.sol";
 
 /**
  * @title Lib Organization Initialization

@@ -8,8 +8,7 @@ import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { AdminType } from "../../interfaces/IAdminFacet.sol";
-import { OperationType } from "../../interfaces/IOrganization.sol";
+import { AdminType, OperationType } from "../../interfaces/IOrganization.sol";
 import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 

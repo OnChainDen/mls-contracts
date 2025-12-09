@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { BaseUUPSImplementation } from "../proxy/BaseUUPSImplementation.sol";
-import { LibAccountAdmin } from "./libraries/LibAccountAdmin.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { LibAccountGuardian } from "./libraries/LibAccountGuardian.sol";
 import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
-import { IAdminFacet } from "../interfaces/IAdminFacet.sol";
-import { OperationType } from "../interfaces/IOrganization.sol";
-import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
+import { IAccountUpgradeable } from "./interfaces/IAccountUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
 
 /**
@@ -16,12 +13,7 @@ import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenRecei
  * @dev This contract exposes all Account library functions as external wrappers
  * @author Den Technologies Inc
  */
-contract AccountImplementation is
-    BaseUUPSImplementation,
-    IAdminFacet,
-    IUpgradeable,
-    INativeTokenReceivedEventEmitter
-{
+contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeTokenReceivedEventEmitter {
     /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
@@ -63,7 +55,7 @@ contract AccountImplementation is
     }
 
     // ================================
-    // LibAccountAdmin wrappers
+    // Organization reference
     // ================================
 
     /**
@@ -72,18 +64,6 @@ contract AccountImplementation is
      */
     function getOrganizationAddress() external view returns (address) {
         return LibAccountOrganizationAddressStorage.layout().organizationAddress;
-    }
-
-    function validateAdminAuthorization(
-        OperationType operationType,
-        bytes memory operationData,
-        uint256 salt,
-        bytes memory signatures
-    )
-        external
-        override
-    {
-        LibAccountAdmin.validateAdminAuthorization(operationType, operationData, salt, signatures);
     }
 
     // ================================
@@ -151,31 +131,34 @@ contract AccountImplementation is
     }
 
     // ================================
-    // IUpgradeable interface
+    // IAccountUpgradeable interface (upgrades must go through Organization)
     // ================================
 
-    function upgradeToWithAuthorization(
+    /**
+     * @notice Upgrade the implementation, callable only by the Organization
+     * @dev This function is called by the Organization contract after performing all authorization checks
+     * @param newImplementation The new implementation address
+     * @param data The calldata to call on the new implementation (can be empty)
+     */
+    function upgradeToFromOrganization(
         address newImplementation,
-        uint256 salt,
-        bytes calldata signatures
+        bytes memory data
     )
         external
         override
+        onlyOrganization
     {
-        super.upgradeToWithAuthorization(newImplementation, salt, signatures);
+        // Call the public upgradeToAndCall which will invoke _authorizeUpgrade
+        upgradeToAndCall(newImplementation, data);
     }
 
-    function upgradeToAndCallWithAuthorization(
-        address newImplementation,
-        bytes memory data,
-        uint256 salt,
-        bytes calldata signatures
-    )
-        external
-        override
-    {
-        super.upgradeToAndCallWithAuthorization(newImplementation, data, salt, signatures);
-    }
+    /**
+     * @notice Authorize an upgrade (required by UUPSUpgradeable)
+     * @dev Only the Organization can authorize upgrades via upgradeToFromOrganization
+     * @param newImplementation The new implementation address (unused, authorization checked by onlyOrganization
+     * modifier)
+     */
+    function _authorizeUpgrade(address newImplementation) internal override onlyOrganization { }
 
     // ================================
     // INativeTokenReceivedEventEmitter
