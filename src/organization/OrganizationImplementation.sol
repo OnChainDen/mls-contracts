@@ -19,21 +19,8 @@ import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 import { IAccountUpgradeable } from "../account/interfaces/IAccountUpgradeable.sol";
+import { IAccountExecute } from "../account/interfaces/IAccountExecute.sol";
 import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
-
-/**
- * @notice Interface for the Account contract's execute function
- */
-interface IAccountExecute {
-    function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 nonce,
-        uint256 policyId
-    )
-        external;
-}
 
 /**
  * @title Organization Implementation
@@ -583,7 +570,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
         // Validate the transaction against the policy and signatures
-        LibOrganizationAccountTransaction.validateTransaction(account, to, value, data, salt, policyId, signatures);
+        LibOrganizationAccountTransaction.validateTransactionApproval(
+            account, to, value, data, salt, policyId, signatures
+        );
 
         // Execute the transaction on the account
         IAccountExecute(account).executeTransaction(to, value, data, nonce, policyId);
@@ -628,7 +617,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
         // Validate the rejection authorization
-        LibOrganizationAccountTransaction.validateRejectionAuthorization(
+        LibOrganizationAccountTransaction.validateTransactionRejection(
             account, to, value, data, salt, policyId, signatures
         );
 
