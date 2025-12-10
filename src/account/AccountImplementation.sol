@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { LibAccountGuardian } from "./libraries/LibAccountGuardian.sol";
 import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 import { IAccountUpgradeable } from "./interfaces/IAccountUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
@@ -37,14 +36,6 @@ contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeT
     error OnlyOrganization();
 
     /**
-     * @notice Modifier that enforces only the guardian can call the function
-     */
-    modifier onlyGuardian() {
-        LibAccountGuardian.enforceOnlyGuardian();
-        _;
-    }
-
-    /**
      * @notice Modifier that enforces only the associated organization can call the function
      */
     modifier onlyOrganization() {
@@ -64,18 +55,6 @@ contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeT
      */
     function getOrganizationAddress() external view returns (address) {
         return LibAccountOrganizationAddressStorage.layout().organizationAddress;
-    }
-
-    // ================================
-    // LibAccountGuardian wrappers
-    // ================================
-
-    function enforceOnlyGuardian() external view {
-        LibAccountGuardian.enforceOnlyGuardian();
-    }
-
-    function guardian() external view returns (address) {
-        return LibAccountGuardian.guardian();
     }
 
     // ================================
