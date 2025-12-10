@@ -70,6 +70,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     event AccountUpgraded(address indexed account, address indexed newImplementation);
 
     /**
+     * @notice Emitted when an admin operation is rejected by authorized admins
+     * @param operationType The type of admin operation that was rejected
+     * @param operationData The encoded operation data
+     * @param nonce The nonce that was consumed/burned
+     */
+    event AdminOperationRejected(OperationType indexed operationType, bytes operationData, uint256 indexed nonce);
+
+    /**
      * @notice Emitted when an implementation is not whitelisted
      * @param implementation The implementation address that was not whitelisted
      */
@@ -141,8 +149,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberAddresses);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.AddMembers, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.AddMembers, operationData, salt, true, signatures);
 
         return LibOrganizationMembers.addMembers(memberAddresses);
     }
@@ -159,8 +167,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberId, newAddress);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyMember, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.ModifyMember, operationData, salt, true, signatures
+        );
 
         LibOrganizationMembers.modifyMember(memberId, newAddress);
     }
@@ -169,8 +179,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberIds);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.RemoveMembers, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.RemoveMembers, operationData, salt, true, signatures
+        );
 
         LibOrganizationMembers.removeMembers(memberIds);
     }
@@ -207,8 +219,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberIds);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.CreateGroup, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.CreateGroup, operationData, salt, true, signatures
+        );
 
         return LibOrganizationGroups.createGroup(memberIds);
     }
@@ -226,8 +240,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyGroup, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.ModifyGroup, operationData, salt, true, signatures
+        );
 
         LibOrganizationGroups.modifyGroup(groupId, membersToAdd, membersToRemove);
     }
@@ -236,8 +252,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(groupId);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.RemoveGroup, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.RemoveGroup, operationData, salt, true, signatures
+        );
 
         LibOrganizationGroups.removeGroup(groupId);
     }
@@ -268,8 +286,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyPolicies, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.ModifyPolicies, operationData, salt, true, signatures
+        );
 
         LibOrganizationPolicy.modifyPolicies(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
     }
@@ -328,8 +348,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(addressesToAdd, addressesToRemove);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.ModifyWhitelist, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.ModifyWhitelist, operationData, salt, true, signatures
+        );
 
         LibOrganizationWhitelist.modifyWhitelist(addressesToAdd, addressesToRemove);
     }
@@ -371,10 +393,40 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminType, newAdminId, newVotingThreshold);
 
-        // Validate that the current admin has authorized this change
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.UpdateAdmin, operationData, salt, signatures);
+        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.UpdateAdmin, operationData, salt, true, signatures
+        );
 
         LibOrganizationAdmin.updateAdmin(newAdminType, newAdminId, newVotingThreshold);
+    }
+
+    /**
+     * @notice Rejects an admin operation by burning its nonce
+     * @dev This allows admins to explicitly cancel a previously signed operation
+     *      by consuming its nonce without executing the operation logic
+     * @param operationType The type of admin operation to reject
+     * @param operationData The ABI-encoded data of the operation
+     * @param salt The user-provided salt for nonce computation
+     * @param signatures The signatures from admin(s) authorizing this rejection
+     */
+    function rejectAdminOperation(
+        OperationType operationType,
+        bytes calldata operationData,
+        uint256 salt,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
+        // Compute nonce for this operation
+        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+
+        // Validate admin authorization and consume the nonce (isApproval = false for rejection)
+        // This verifies rejection-specific signatures and marks the nonce as used, effectively burning it
+        LibOrganizationAdmin.validateAdminAuthorization(operationType, operationData, salt, false, signatures);
+
+        emit AdminOperationRejected(operationType, operationData, nonce);
     }
 
     // ================================
@@ -393,8 +445,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
-        // Validate that the current admin has authorized this operation
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.UpdateGuardian, operationData, salt, signatures);
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.UpdateGuardian, operationData, salt, true, signatures
+        );
 
         LibOrganizationGuardian.updateGuardian(newGuardian);
     }
@@ -416,8 +470,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Validate admin authorization for account deployment
         bytes memory operationData = abi.encode(create2Salt, implementationAddress);
 
+        // isApproval = true for execution
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.DeployAccount, operationData, adminSignatureSalt, signatures
+            OperationType.DeployAccount, operationData, adminSignatureSalt, true, signatures
         );
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt, implementationAddress);
@@ -450,9 +505,11 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
         }
 
-        // 2. Validate admin authorization
+        // 2. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(account, newImplementation, keccak256(data));
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.UpgradeAccount, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.UpgradeAccount, operationData, salt, true, signatures
+        );
 
         // 3. Validate implementation against whitelist
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
@@ -635,9 +692,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     )
         internal
     {
-        // 1. Validate admin authorization
+        // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.Upgrade, operationData, salt, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(OperationType.Upgrade, operationData, salt, true, signatures);
 
         // 2. Validate implementation against whitelist
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
