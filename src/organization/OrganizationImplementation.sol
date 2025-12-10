@@ -17,7 +17,7 @@ import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganization
 import { AdminType, OperationType } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
-import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
+import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 import { IAccountUpgradeable } from "../account/interfaces/IAccountUpgradeable.sol";
 import { IAccountExecute } from "../account/interfaces/IAccountExecute.sol";
 import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";

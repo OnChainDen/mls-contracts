@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { IImplementationWhitelist } from "../../interfaces/IImplementationWhitelist.sol";
+import { IImplementationWhitelist } from "../../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Upgrade Authorization Storage

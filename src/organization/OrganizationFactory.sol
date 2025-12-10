@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "./OrganizationProxy.sol";
-import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
+import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Organization Factory
