@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AdminType } from "../../../interfaces/IAdminFacet.sol";
+import { AdminType } from "../../../interfaces/IOrganization.sol";
 
 /**
  * @title Organization Admin Storage
@@ -20,7 +20,6 @@ library LibOrganizationAdminStorage {
 
     struct Layout {
         AdminPermission adminPermission;
-        mapping(uint256 => bool) usedAdminNonces;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.admin.storage");
