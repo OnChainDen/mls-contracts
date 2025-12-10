@@ -19,21 +19,8 @@ import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../interfaces/IImplementationWhitelist.sol";
 import { IAccountUpgradeable } from "../account/interfaces/IAccountUpgradeable.sol";
+import { IAccountExecute } from "../account/interfaces/IAccountExecute.sol";
 import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
-
-/**
- * @notice Interface for the Account contract's execute function
- */
-interface IAccountExecute {
-    function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 nonce,
-        uint256 policyId
-    )
-        external;
-}
 
 /**
  * @title Organization Implementation
