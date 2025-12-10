@@ -52,7 +52,7 @@ library LibOrganizationAccountTransaction {
      * @param policyId The policy ID to validate against
      * @param signatures Signatures for approval verification
      */
-    function validateTransaction(
+    function validateTransactionApproval(
         address account,
         address to,
         uint256 value,
@@ -120,7 +120,7 @@ library LibOrganizationAccountTransaction {
      * @param policyId The policy ID to validate against
      * @param signatures Signatures for rejection verification
      */
-    function validateRejectionAuthorization(
+    function validateTransactionRejection(
         address account,
         address to,
         uint256 value,

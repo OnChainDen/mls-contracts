@@ -511,7 +511,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
         // Validate the transaction against the policy and signatures
-        LibOrganizationAccountTransaction.validateTransaction(account, to, value, data, salt, policyId, signatures);
+        LibOrganizationAccountTransaction.validateTransactionApproval(
+            account, to, value, data, salt, policyId, signatures
+        );
 
         // Execute the transaction on the account
         IAccountExecute(account).executeTransaction(to, value, data, nonce, policyId);
@@ -556,7 +558,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
         // Validate the rejection authorization
-        LibOrganizationAccountTransaction.validateRejectionAuthorization(
+        LibOrganizationAccountTransaction.validateTransactionRejection(
             account, to, value, data, salt, policyId, signatures
         );
 
