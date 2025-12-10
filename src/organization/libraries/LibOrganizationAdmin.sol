@@ -124,14 +124,14 @@ library LibOrganizationAdmin {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
-     * @param isRejection Whether this is a rejection (true) or execution (false)
+     * @param isApproval Whether this is an approval (true) or rejection (false)
      * @param signatures The signatures to validate
      */
     function validateAdminAuthorization(
         OperationType operationType,
         bytes memory operationData,
         uint256 salt,
-        bool isRejection,
+        bool isApproval,
         bytes memory signatures
     )
         internal
@@ -143,8 +143,8 @@ library LibOrganizationAdmin {
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
         // Get operation hash for signature verification
-        // Note: isRejection is included to ensure rejection signatures cannot be used for execution and vice versa
-        bytes32 operationHash = _getAdminOperationHash(operationType, operationData, salt, isRejection);
+        // Note: isApproval is included to ensure rejection signatures cannot be used for execution and vice versa
+        bytes32 operationHash = _getAdminOperationHash(operationType, operationData, salt, isApproval);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
@@ -266,30 +266,30 @@ library LibOrganizationAdmin {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt The user-provided salt for nonce computation
-     * @param isRejection Whether this is a rejection (true) or execution (false) signature
+     * @param isApproval Whether this is an approval (true) or rejection (false) signature
      * @return The hash of the admin operation formatted for ERC-1271 signature verification
      */
     function _getAdminOperationHash(
         OperationType operationType,
         bytes memory operationData,
         uint256 salt,
-        bool isRejection
+        bool isApproval
     )
         private
         view
         returns (bytes32)
     {
         // Create EIP-712 structured data hash
-        // Note: isRejection is included to differentiate execution signatures from rejection signatures
+        // Note: isApproval is included to differentiate execution signatures from rejection signatures
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isRejection,uint256 chainId,address organization)"
+                    "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)"
                 ),
                 uint8(operationType),
                 keccak256(operationData),
                 salt,
-                isRejection,
+                isApproval,
                 block.chainid,
                 address(this)
             )

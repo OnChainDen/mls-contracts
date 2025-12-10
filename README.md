@@ -459,20 +459,22 @@ The `validateAdminAuthorization` function checks that the admin signatures have 
 Note that the function argument `operationData` is an ABI packed-encoded byte string of the relevant fields for the operation (e.g. for adding a member, it is the bytes-encoding of the member's address).
 
 ```solidity
-// src/organization/facets/OrganizationAdminFacet.sol
+// src/organization/libraries/LibOrganizationAdmin.sol
 /**
     * @notice Creates a hash of the admin operation for signature verification using EIP-712 typed data
     * @param operationType The type of operation being performed
     * @param operationData The ABI-encoded data of the operation
     * @param salt The user-provided salt for nonce computation
+    * @param isApproval Whether this is an approval (true) or rejection (false) signature
     * @return The hash of the admin operation formatted for ERC-1271 signature verification
     */
 function _getAdminOperationHash(
-    AdminOperationType operationType,
+    OperationType operationType,
     bytes memory operationData,
-    uint256 salt
+    uint256 salt,
+    bool isApproval
 )
-    internal
+    private
     view
     returns (bytes32)
 {
@@ -480,11 +482,12 @@ function _getAdminOperationHash(
     bytes32 structHash = keccak256(
         abi.encode(
             keccak256(
-                "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 chainId,address organization)"
+                "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)"
             ),
             uint8(operationType),
             keccak256(operationData),
             salt,
+            isApproval,
             block.chainid,
             address(this)
         )
