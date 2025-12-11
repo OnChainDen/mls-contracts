@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { LibAccountGuardian } from "./libraries/LibAccountGuardian.sol";
 import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
-import { IAccountUpgradeable } from "./interfaces/IAccountUpgradeable.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
 
 /**
  * @title Account Implementation
- * @notice UUPS upgradeable implementation contract for Account
- * @dev This contract exposes all Account library functions as external wrappers
+ * @notice Implementation contract for Account (used with BeaconProxy)
+ * @dev This contract is used behind a BeaconProxy where the Organization acts as the beacon.
+ *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeTokenReceivedEventEmitter {
+contract AccountImplementation is INativeTokenReceivedEventEmitter {
     /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
@@ -37,18 +35,10 @@ contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeT
     error OnlyOrganization();
 
     /**
-     * @notice Modifier that enforces only the guardian can call the function
-     */
-    modifier onlyGuardian() {
-        LibAccountGuardian.enforceOnlyGuardian();
-        _;
-    }
-
-    /**
      * @notice Modifier that enforces only the associated organization can call the function
      */
     modifier onlyOrganization() {
-        if (msg.sender != LibAccountOrganizationAddressStorage.layout().organizationAddress) {
+        if (msg.sender != LibAccountOrganizationAddressStorage.getOrganizationAddress()) {
             revert OnlyOrganization();
         }
         _;
@@ -59,23 +49,11 @@ contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeT
     // ================================
 
     /**
-     * @notice Gets the organization address that this account is associated with
+     * @notice Gets the organization address that this account is associated with (the beacon)
      * @return The organization address
      */
     function getOrganizationAddress() external view returns (address) {
-        return LibAccountOrganizationAddressStorage.layout().organizationAddress;
-    }
-
-    // ================================
-    // LibAccountGuardian wrappers
-    // ================================
-
-    function enforceOnlyGuardian() external view {
-        LibAccountGuardian.enforceOnlyGuardian();
-    }
-
-    function guardian() external view returns (address) {
-        return LibAccountGuardian.guardian();
+        return LibAccountOrganizationAddressStorage.getOrganizationAddress();
     }
 
     // ================================
@@ -129,36 +107,6 @@ contract AccountImplementation is UUPSUpgradeable, IAccountUpgradeable, INativeT
             success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
         }
     }
-
-    // ================================
-    // IAccountUpgradeable interface (upgrades must go through Organization)
-    // ================================
-
-    /**
-     * @notice Upgrade the implementation, callable only by the Organization
-     * @dev This function is called by the Organization contract after performing all authorization checks
-     * @param newImplementation The new implementation address
-     * @param data The calldata to call on the new implementation (can be empty)
-     */
-    function upgradeToFromOrganization(
-        address newImplementation,
-        bytes memory data
-    )
-        external
-        override
-        onlyOrganization
-    {
-        // Call the public upgradeToAndCall which will invoke _authorizeUpgrade
-        upgradeToAndCall(newImplementation, data);
-    }
-
-    /**
-     * @notice Authorize an upgrade (required by UUPSUpgradeable)
-     * @dev Only the Organization can authorize upgrades via upgradeToFromOrganization
-     * @param newImplementation The new implementation address (unused, authorization checked by onlyOrganization
-     * modifier)
-     */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOrganization { }
 
     // ================================
     // INativeTokenReceivedEventEmitter
