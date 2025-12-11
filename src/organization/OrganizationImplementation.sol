@@ -153,8 +153,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         onlyGuardian
         returns (uint8[] memory)
     {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberAddresses);
+        // Encode the operation data for validation (hash variable-length data)
+        bytes memory operationData = abi.encode(keccak256(abi.encode(memberAddresses)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
@@ -194,8 +194,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         external
         onlyGuardian
     {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberIds);
+        // Encode the operation data for validation (hash variable-length data)
+        bytes memory operationData = abi.encode(keccak256(abi.encode(memberIds)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
@@ -235,8 +235,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         onlyGuardian
         returns (uint8)
     {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(memberIds);
+        // Encode the operation data for validation (hash variable-length data)
+        bytes memory operationData = abi.encode(keccak256(abi.encode(memberIds)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
@@ -257,8 +257,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         external
         onlyGuardian
     {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(groupId, membersToAdd, membersToRemove);
+        // Encode the operation data for validation (hash variable-length data)
+        bytes memory operationData =
+            abi.encode(groupId, keccak256(abi.encode(membersToAdd)), keccak256(abi.encode(membersToRemove)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
@@ -312,8 +313,13 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         external
         onlyGuardian
     {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
+        // Encode the operation data for validation (hash variable-length data)
+        bytes memory operationData = abi.encode(
+            keccak256(abi.encode(modifyPolicyIds)),
+            keccak256(abi.encode(policiesToModify)),
+            keccak256(abi.encode(addPolicies)),
+            keccak256(abi.encode(removePolicyIds))
+        );
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
@@ -375,8 +381,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         external
         onlyGuardian
     {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(addressesToAdd, addressesToRemove);
+        // Encode the operation data for validation (hash variable-length data)
+        bytes memory operationData =
+            abi.encode(keccak256(abi.encode(addressesToAdd)), keccak256(abi.encode(addressesToRemove)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
