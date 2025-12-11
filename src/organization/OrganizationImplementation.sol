@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { LibOrganizationMembers } from "./libraries/LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./libraries/LibOrganizationGroups.sol";
 import { LibOrganizationPolicy } from "./libraries/LibOrganizationPolicy.sol";
@@ -10,6 +11,7 @@ import { LibOrganizationWhitelist } from "./libraries/LibOrganizationWhitelist.s
 import { LibOrganizationAdmin } from "./libraries/LibOrganizationAdmin.sol";
 import { LibOrganizationGuardian } from "./libraries/LibOrganizationGuardian.sol";
 import { LibOrganizationAccountFactory } from "./libraries/LibOrganizationAccountFactory.sol";
+import { LibOrganizationAccountFactoryStorage } from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
 import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
 import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures.sol";
 import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
@@ -18,17 +20,17 @@ import { AdminType, OperationType } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import { IAccountUpgradeable } from "../account/interfaces/IAccountUpgradeable.sol";
 import { IAccountExecute } from "../account/interfaces/IAccountExecute.sol";
 import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
 
 /**
  * @title Organization Implementation
- * @notice UUPS upgradeable implementation contract for Organization
- * @dev This contract exposes all Organization library functions as external wrappers
+ * @notice UUPS upgradeable implementation contract for Organization that also acts as a Beacon for Account proxies
+ * @dev This contract exposes all Organization library functions as external wrappers.
+ *      It implements IBeacon to serve as the beacon for all Account BeaconProxies.
  * @author Den Technologies Inc
  */
-contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradeable {
+contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradeable, IBeacon {
     /**
      * @notice Emitted when a transaction is executed on an account
      * @param account The account that executed the transaction
@@ -63,11 +65,10 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     error InvalidChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when an account is upgraded
-     * @param account The account that was upgraded
-     * @param newImplementation The new implementation address
+     * @notice Emitted when the account implementation is updated (affects all accounts via beacon)
+     * @param newImplementation The new implementation address for all accounts
      */
-    event AccountUpgraded(address indexed account, address indexed newImplementation);
+    event AccountImplementationUpdated(address indexed newImplementation);
 
     /**
      * @notice Emitted when an admin operation is rejected by authorized admins
@@ -82,6 +83,11 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @param implementation The implementation address that was not whitelisted
      */
     error ImplementationNotWhitelisted(address implementation);
+
+    /**
+     * @notice Emitted when the account implementation has not been set
+     */
+    error AccountImplementationNotSet();
 
     /**
      * @notice Modifier that enforces only the guardian can call the function
@@ -491,48 +497,32 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     }
 
     // ================================
-    // LibOrganizationAccountFactory wrappers
+    // IBeacon interface (for Account BeaconProxies)
     // ================================
 
-    function deployAccount(
-        bytes32 create2Salt,
-        address implementationAddress,
-        uint256 adminSignatureSalt,
-        uint256 expirationTimestamp,
-        bytes memory signatures
-    )
-        external
-        onlyGuardian
-        returns (address)
-    {
-        // Validate admin authorization for account deployment
-        bytes memory operationData = abi.encode(create2Salt, implementationAddress);
-
-        // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.DeployAccount, operationData, adminSignatureSalt, expirationTimestamp, true, signatures
-        );
-
-        return LibOrganizationAccountFactory.deployAccount(create2Salt, implementationAddress);
-    }
-
-    function computeAccountAddress(bytes32 salt, address implementationAddress) external view returns (address) {
-        return LibOrganizationAccountFactory.computeAccountAddress(salt, implementationAddress);
+    /**
+     * @notice Returns the current implementation address for all Account BeaconProxies
+     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
+     * @return The current account implementation address
+     */
+    function implementation() external view override returns (address) {
+        address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
+        if (impl == address(0)) {
+            revert AccountImplementationNotSet();
+        }
+        return impl;
     }
 
     /**
-     * @notice Upgrades an account's implementation
-     * @param account The account to upgrade
+     * @notice Sets the account implementation address (upgrades all accounts at once)
+     * @dev This function updates the implementation for all Account BeaconProxies
      * @param newImplementation The new implementation address
-     * @param data Optional calldata to call on the new implementation after upgrade
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
-    function upgradeAccount(
-        address account,
+    function setAccountImplementation(
         address newImplementation,
-        bytes memory data,
         uint256 salt,
         uint256 expirationTimestamp,
         bytes memory signatures
@@ -540,18 +530,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         external
         onlyGuardian
     {
-        // 1. Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
-
-        // 2. Validate admin authorization (isApproval = true for execution)
-        bytes memory operationData = abi.encode(account, newImplementation, keccak256(data));
+        // 1. Validate admin authorization (isApproval = true for execution)
+        // Reuse UpgradeAccount operation type since the intent is similar
+        bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorization(
             OperationType.UpgradeAccount, operationData, salt, expirationTimestamp, true, signatures
         );
 
-        // 3. Validate implementation against whitelist
+        // 2. Validate implementation against whitelist
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
         if (
             !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
@@ -561,10 +547,52 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
             revert ImplementationNotWhitelisted(newImplementation);
         }
 
-        // 4. Call the account's upgrade function
-        IAccountUpgradeable(account).upgradeToFromOrganization(newImplementation, data);
+        // 3. Update the account implementation in storage
+        LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
 
-        emit AccountUpgraded(account, newImplementation);
+        emit AccountImplementationUpdated(newImplementation);
+    }
+
+    // ================================
+    // LibOrganizationAccountFactory wrappers
+    // ================================
+
+    /**
+     * @notice Deploys a new Account BeaconProxy at a deterministic address
+     * @dev The account uses this Organization as its beacon
+     * @param create2Salt The salt for CREATE2 deployment
+     * @param adminSignatureSalt A user-provided salt for nonce computation
+     * @param signatures The signatures from admin(s) authorizing this deployment
+     * @return The address of the deployed account proxy
+     */
+    function deployAccount(
+        bytes32 create2Salt,
+        uint256 adminSignatureSalt,
+        uint256 expirationTimestamp,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+        returns (address)
+    {
+        // Validate admin authorization for account deployment
+        bytes memory operationData = abi.encode(create2Salt);
+
+        // isApproval = true for execution
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.DeployAccount, operationData, adminSignatureSalt, expirationTimestamp, true, signatures
+        );
+
+        return LibOrganizationAccountFactory.deployAccount(create2Salt);
+    }
+
+    /**
+     * @notice Computes the address where an account proxy would be deployed
+     * @param salt The salt for CREATE2 deployment
+     * @return The computed address
+     */
+    function computeAccountAddress(bytes32 salt) external view returns (address) {
+        return LibOrganizationAccountFactory.computeAccountAddress(salt);
     }
 
     // ================================

@@ -3,21 +3,22 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Account Organization Address Storage
- * @notice Consolidated storage layout for the organization address used by account functionality
+ * @notice Reads the organization address from the EIP-1967 Beacon slot
+ * @dev Since the Account is a BeaconProxy and the Organization acts as the Beacon,
+ *      the organization address is stored in the standard EIP-1967 Beacon slot.
  * @author Den Technologies Inc
  */
 library LibAccountOrganizationAddressStorage {
-    struct Layout {
-        // The address of the onchain custody organization contract that this account is associated with
-        address organizationAddress;
-    }
+    // EIP-1967 Beacon slot: bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)
+    bytes32 internal constant BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.account.organization.storage");
-
-    function layout() internal pure returns (Layout storage l) {
-        bytes32 slot = STORAGE_SLOT;
+    /**
+     * @notice Gets the organization address (beacon address) from the EIP-1967 Beacon slot
+     * @return organizationAddress The address of the organization contract (beacon)
+     */
+    function getOrganizationAddress() internal view returns (address organizationAddress) {
         assembly {
-            l.slot := slot
+            organizationAddress := sload(BEACON_SLOT)
         }
     }
 }

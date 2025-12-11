@@ -9,6 +9,8 @@ pragma solidity ^0.8.24;
 library LibOrganizationAccountFactoryStorage {
     struct Layout {
         mapping(address => bool) deployedAccounts;
+        // The current implementation address for all Account beacon proxies
+        address accountImplementation;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.account.factory.storage");
