@@ -3,11 +3,10 @@ pragma solidity ^0.8.24;
 
 import { AccountProxy } from "../../account/AccountProxy.sol";
 import { LibOrganizationAccountFactoryStorage } from "./storage/LibOrganizationAccountFactoryStorage.sol";
-import { UpgradeAuthorizationStorage } from "../../proxy/libraries/UpgradeAuthorizationStorage.sol";
 
 /**
  * @title Lib Organization Account Factory
- * @notice Library for deploying Account contracts with admin authorization
+ * @notice Library for deploying Account contracts as BeaconProxies with the Organization as the beacon
  * @dev This library should ONLY be used by Organization contracts
  * @author Den Technologies Inc
  */
@@ -15,7 +14,7 @@ library LibOrganizationAccountFactory {
     /**
      * @notice Emitted when a new account proxy is deployed
      * @param accountAddress The address of the deployed account proxy
-     * @param organizationAddress The address of the organization that deployed it
+     * @param organizationAddress The address of the organization that deployed it (beacon)
      * @param salt The salt used for CREATE2 deployment
      */
     event AccountDeployed(address indexed accountAddress, address indexed organizationAddress, bytes32 indexed salt);
@@ -37,26 +36,16 @@ library LibOrganizationAccountFactory {
     error AccountNotDeployedByOrganization(address accountAddress);
 
     /**
-     * @notice Deploys a new AccountProxy at a deterministic address
-     * @dev Uses CREATE2 to ensure the same address across different chains
+     * @notice Deploys a new Account BeaconProxy at a deterministic address
+     * @dev Uses CREATE2 to ensure the same address across different chains.
+     *      The Organization (this contract) acts as the beacon.
      * @param create2Salt The salt for CREATE2 deployment
-     * @param implementationAddress The address of the AccountImplementation contract
      * @return accountAddress The address of the deployed account proxy
      */
-    function deployAccount(
-        bytes32 create2Salt,
-        address implementationAddress
-    )
-        internal
-        returns (address accountAddress)
-    {
-        // Read whitelistAddress from organization's storage
-        address whitelistAddress = UpgradeAuthorizationStorage.layout().whitelistAddress;
-
-        // Deploy the account proxy using CREATE2
-        bytes memory bytecode = abi.encodePacked(
-            type(AccountProxy).creationCode, abi.encode(implementationAddress, address(this), whitelistAddress)
-        );
+    function deployAccount(bytes32 create2Salt) internal returns (address accountAddress) {
+        // Deploy the AccountProxy (BeaconProxy) using CREATE2 with the Organization as the beacon
+        // The beacon is address(this), and we pass empty data (no initialization call)
+        bytes memory bytecode = abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(this), ""));
 
         assembly {
             accountAddress := create2(0, add(bytecode, 0x20), mload(bytecode), create2Salt)
@@ -68,7 +57,7 @@ library LibOrganizationAccountFactory {
         }
 
         // Check if the deployed address matches the computed address
-        if (accountAddress != computeAccountAddress(create2Salt, implementationAddress)) {
+        if (accountAddress != computeAccountAddress(create2Salt)) {
             revert AccountDeploymentAddressMismatch();
         }
 
@@ -81,16 +70,10 @@ library LibOrganizationAccountFactory {
     /**
      * @notice Computes the address where an account proxy would be deployed
      * @param salt The salt for CREATE2 deployment
-     * @param implementationAddress The address of the AccountImplementation contract
      * @return The computed address
      */
-    function computeAccountAddress(bytes32 salt, address implementationAddress) internal view returns (address) {
-        // Read whitelistAddress from organization's storage
-        address whitelistAddress = UpgradeAuthorizationStorage.layout().whitelistAddress;
-
-        bytes memory bytecode = abi.encodePacked(
-            type(AccountProxy).creationCode, abi.encode(implementationAddress, address(this), whitelistAddress)
-        );
+    function computeAccountAddress(bytes32 salt) internal view returns (address) {
+        bytes memory bytecode = abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(this), ""));
 
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
 
