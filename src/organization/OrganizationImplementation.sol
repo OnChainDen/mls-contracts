@@ -146,6 +146,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     function addMembers(
         address[] memory memberAddresses,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -156,7 +157,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         bytes memory operationData = abi.encode(memberAddresses);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.AddMembers, operationData, salt, true, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.AddMembers, operationData, salt, expirationTimestamp, true, signatures
+        );
 
         return LibOrganizationMembers.addMembers(memberAddresses);
     }
@@ -165,6 +168,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         uint8 memberId,
         address newAddress,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -175,19 +179,27 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyMember, operationData, salt, true, signatures
+            OperationType.ModifyMember, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationMembers.modifyMember(memberId, newAddress);
     }
 
-    function removeMembers(uint8[] memory memberIds, uint256 salt, bytes memory signatures) external onlyGuardian {
+    function removeMembers(
+        uint8[] memory memberIds,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(memberIds);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.RemoveMembers, operationData, salt, true, signatures
+            OperationType.RemoveMembers, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationMembers.removeMembers(memberIds);
@@ -216,6 +228,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     function createGroup(
         uint8[] memory memberIds,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -227,7 +240,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.CreateGroup, operationData, salt, true, signatures
+            OperationType.CreateGroup, operationData, salt, expirationTimestamp, true, signatures
         );
 
         return LibOrganizationGroups.createGroup(memberIds);
@@ -238,6 +251,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         uint8[] memory membersToAdd,
         uint8[] memory membersToRemove,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -248,19 +262,27 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyGroup, operationData, salt, true, signatures
+            OperationType.ModifyGroup, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationGroups.modifyGroup(groupId, membersToAdd, membersToRemove);
     }
 
-    function removeGroup(uint8 groupId, uint256 salt, bytes memory signatures) external onlyGuardian {
+    function removeGroup(
+        uint8 groupId,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(groupId);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.RemoveGroup, operationData, salt, true, signatures
+            OperationType.RemoveGroup, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationGroups.removeGroup(groupId);
@@ -284,6 +306,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         Policies.Policy[] memory addPolicies,
         uint256[] memory removePolicyIds,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -294,7 +317,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyPolicies, operationData, salt, true, signatures
+            OperationType.ModifyPolicies, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationPolicy.modifyPolicies(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
@@ -346,6 +369,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         address[] memory addressesToAdd,
         address[] memory addressesToRemove,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -356,7 +380,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyWhitelist, operationData, salt, true, signatures
+            OperationType.ModifyWhitelist, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationWhitelist.modifyWhitelist(addressesToAdd, addressesToRemove);
@@ -391,6 +415,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         uint8 newAdminId,
         uint256 newVotingThreshold,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -401,7 +426,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.UpdateAdmin, operationData, salt, true, signatures
+            OperationType.UpdateAdmin, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationAdmin.updateAdmin(newAdminType, newAdminId, newVotingThreshold);
@@ -414,12 +439,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @param operationType The type of admin operation to reject
      * @param operationData The ABI-encoded data of the operation
      * @param salt The user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this rejection
      */
     function rejectAdminOperation(
         OperationType operationType,
         bytes calldata operationData,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -430,7 +457,9 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
         // This verifies rejection-specific signatures and marks the nonce as used, effectively burning it
-        LibOrganizationAdmin.validateAdminAuthorization(operationType, operationData, salt, false, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            operationType, operationData, salt, expirationTimestamp, false, signatures
+        );
 
         emit AdminOperationRejected(operationType, operationData, nonce);
     }
@@ -447,13 +476,21 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         return LibOrganizationGuardian.guardian();
     }
 
-    function updateGuardian(address newGuardian, uint256 salt, bytes memory signatures) external onlyGuardian {
+    function updateGuardian(
+        address newGuardian,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        bytes memory signatures
+    )
+        external
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.UpdateGuardian, operationData, salt, true, signatures
+            OperationType.UpdateGuardian, operationData, salt, expirationTimestamp, true, signatures
         );
 
         LibOrganizationGuardian.updateGuardian(newGuardian);
@@ -481,11 +518,13 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @dev This function updates the implementation for all Account BeaconProxies
      * @param newImplementation The new implementation address
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
     function setAccountImplementation(
         address newImplementation,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -495,7 +534,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         // Reuse UpgradeAccount operation type since the intent is similar
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.UpgradeAccount, operationData, salt, true, signatures
+            OperationType.UpgradeAccount, operationData, salt, expirationTimestamp, true, signatures
         );
 
         // 2. Validate implementation against whitelist
@@ -529,6 +568,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
     function deployAccount(
         bytes32 create2Salt,
         uint256 adminSignatureSalt,
+        uint256 expirationTimestamp,
         bytes memory signatures
     )
         external
@@ -540,7 +580,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // isApproval = true for execution
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.DeployAccount, operationData, adminSignatureSalt, true, signatures
+            OperationType.DeployAccount, operationData, adminSignatureSalt, expirationTimestamp, true, signatures
         );
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
@@ -566,6 +606,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
      * @param signatures The signatures authorizing the transaction
      */
@@ -575,6 +616,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         uint256 value,
         bytes calldata data,
         uint256 salt,
+        uint256 expirationTimestamp,
         uint256 policyId,
         bytes memory signatures
     )
@@ -597,7 +639,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate the transaction against the policy and signatures
         LibOrganizationAccountTransaction.validateTransactionApproval(
-            account, to, value, data, salt, policyId, signatures
+            account, to, value, data, salt, expirationTimestamp, policyId, signatures
         );
 
         // Execute the transaction on the account
@@ -613,6 +655,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
      * @param signatures The signatures authorizing the rejection
      */
@@ -622,6 +665,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         uint256 value,
         bytes calldata data,
         uint256 salt,
+        uint256 expirationTimestamp,
         uint256 policyId,
         bytes memory signatures
     )
@@ -644,7 +688,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
 
         // Validate the rejection authorization
         LibOrganizationAccountTransaction.validateTransactionRejection(
-            account, to, value, data, salt, policyId, signatures
+            account, to, value, data, salt, expirationTimestamp, policyId, signatures
         );
 
         emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
@@ -670,18 +714,20 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @notice Upgrade the implementation to a new address with authorization
      * @param newImplementation The new implementation address
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
     function upgradeToWithAuthorization(
         address newImplementation,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes calldata signatures
     )
         external
         override
         onlyGuardian
     {
-        _validateOrganizationUpgrade(newImplementation, salt, signatures);
+        _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures);
         upgradeToAndCall(newImplementation, "");
     }
 
@@ -690,19 +736,21 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @param newImplementation The new implementation address
      * @param data The calldata to call on the new implementation
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes memory data,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes calldata signatures
     )
         external
         override
         onlyGuardian
     {
-        _validateOrganizationUpgrade(newImplementation, salt, signatures);
+        _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures);
         upgradeToAndCall(newImplementation, data);
     }
 
@@ -711,18 +759,22 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
      * @dev Checks admin signatures and implementation whitelist
      * @param newImplementation The new implementation address
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this upgrade
      */
     function _validateOrganizationUpgrade(
         address newImplementation,
         uint256 salt,
+        uint256 expirationTimestamp,
         bytes calldata signatures
     )
         internal
     {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorization(OperationType.Upgrade, operationData, salt, true, signatures);
+        LibOrganizationAdmin.validateAdminAuthorization(
+            OperationType.Upgrade, operationData, salt, expirationTimestamp, true, signatures
+        );
 
         // 2. Validate implementation against whitelist
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
