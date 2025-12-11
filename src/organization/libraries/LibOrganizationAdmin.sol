@@ -63,6 +63,13 @@ library LibOrganizationAdmin {
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
     /**
+     * @notice Emitted when an admin operation has expired
+     * @param expirationTimestamp The expiration timestamp that was exceeded
+     * @param currentTimestamp The current block timestamp
+     */
+    error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
+
+    /**
      * @notice Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
@@ -124,6 +131,7 @@ library LibOrganizationAdmin {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param isApproval Whether this is an approval (true) or rejection (false)
      * @param signatures The signatures to validate
      */
@@ -131,11 +139,17 @@ library LibOrganizationAdmin {
         OperationType operationType,
         bytes memory operationData,
         uint256 salt,
+        uint256 expirationTimestamp,
         bool isApproval,
         bytes memory signatures
     )
         internal
     {
+        // Check if the operation has expired
+        if (block.timestamp > expirationTimestamp) {
+            revert AdminOperationExpired(expirationTimestamp, block.timestamp);
+        }
+
         // Compute deterministic nonce from operation data and salt
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
 
@@ -144,7 +158,8 @@ library LibOrganizationAdmin {
 
         // Get operation hash for signature verification
         // Note: isApproval is included to ensure rejection signatures cannot be used for execution and vice versa
-        bytes32 operationHash = _getAdminOperationHash(operationType, operationData, salt, isApproval);
+        bytes32 operationHash =
+            _getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
@@ -266,6 +281,7 @@ library LibOrganizationAdmin {
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt The user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param isApproval Whether this is an approval (true) or rejection (false) signature
      * @return The hash of the admin operation formatted for ERC-1271 signature verification
      */
@@ -273,6 +289,7 @@ library LibOrganizationAdmin {
         OperationType operationType,
         bytes memory operationData,
         uint256 salt,
+        uint256 expirationTimestamp,
         bool isApproval
     )
         private
@@ -284,11 +301,12 @@ library LibOrganizationAdmin {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)"
+                    "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
                 ),
                 uint8(operationType),
                 keccak256(operationData),
                 salt,
+                expirationTimestamp,
                 isApproval,
                 block.chainid,
                 address(this)

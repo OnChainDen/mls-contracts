@@ -43,12 +43,20 @@ library LibOrganizationAccountTransaction {
     error PolicyDoesNotApply(uint256 policyId);
 
     /**
+     * @notice Emitted when a transaction has expired
+     * @param expirationTimestamp The expiration timestamp that was exceeded
+     * @param currentTimestamp The current block timestamp
+     */
+    error TransactionExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
+
+    /**
      * @notice Validates a transaction against the specified policy
      * @param account The account executing the transaction
      * @param to Transaction destination address
      * @param value Transaction value
      * @param data Transaction data
      * @param salt User-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The policy ID to validate against
      * @param signatures Signatures for approval verification
      */
@@ -58,12 +66,18 @@ library LibOrganizationAccountTransaction {
         uint256 value,
         bytes memory data,
         uint256 salt,
+        uint256 expirationTimestamp,
         uint256 policyId,
         bytes memory signatures
     )
         internal
         view
     {
+        // Check if the transaction has expired
+        if (block.timestamp > expirationTimestamp) {
+            revert TransactionExpired(expirationTimestamp, block.timestamp);
+        }
+
         LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();
 
         // Validate that policy exists
@@ -84,7 +98,7 @@ library LibOrganizationAccountTransaction {
         // Check if the transaction has enough valid approvals
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
             // Get transaction hash for signature verification
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, policyId, true);
+            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
             uint256 validApprovals = _getValidApprovals(policy, signatures, txHash);
 
@@ -98,7 +112,7 @@ library LibOrganizationAccountTransaction {
         // Case: Policy is AutoApprove
         // Require a single signature from any organization member
         if (policy.policyType == Policies.PolicyType.AutoApprove) {
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, policyId, true);
+            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
 
             // Check if we have a valid signature from any organization member
             if (!_hasValidMemberSignature(signatures, txHash)) {
@@ -117,6 +131,7 @@ library LibOrganizationAccountTransaction {
      * @param value Transaction value
      * @param data Transaction data
      * @param salt User-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The policy ID to validate against
      * @param signatures Signatures for rejection verification
      */
@@ -126,12 +141,18 @@ library LibOrganizationAccountTransaction {
         uint256 value,
         bytes memory data,
         uint256 salt,
+        uint256 expirationTimestamp,
         uint256 policyId,
         bytes memory signatures
     )
         internal
         view
     {
+        // Check if the transaction has expired
+        if (block.timestamp > expirationTimestamp) {
+            revert TransactionExpired(expirationTimestamp, block.timestamp);
+        }
+
         LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();
 
         // Validate that policy exists
@@ -151,7 +172,7 @@ library LibOrganizationAccountTransaction {
         // Only valid transaction initiators (as defined by policy) can reject it
         if (policy.policyType == Policies.PolicyType.AutoApprove) {
             // Get transaction hash for signature verification (isApproval = false for rejection)
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, policyId, false);
+            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
 
             // Check if we have at least one valid signature from an authorized initiator
             if (_hasValidInitiatorSignature(policy, signatures, txHash)) {
@@ -165,7 +186,7 @@ library LibOrganizationAccountTransaction {
         // Check if the caller has sufficient rejection authority
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
             // Get transaction hash for signature verification (isApproval = false for rejection)
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, policyId, false);
+            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
             uint256 validApprovals = _getValidApprovals(policy, signatures, txHash);
 
@@ -313,6 +334,7 @@ library LibOrganizationAccountTransaction {
      * @param value The value of the transaction
      * @param data The data of the transaction
      * @param salt The user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The policy ID governing this transaction
      * @param isApproval Whether the signature is for an approval or a rejection
      * @return The hash of the transaction formatted for ERC-1271 signature verification
@@ -323,6 +345,7 @@ library LibOrganizationAccountTransaction {
         uint256 value,
         bytes memory data,
         uint256 salt,
+        uint256 expirationTimestamp,
         uint256 policyId,
         bool isApproval
     )
@@ -334,7 +357,7 @@ library LibOrganizationAccountTransaction {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "ExecuteAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 policyId,bool isApproval,uint256 chainId)"
+                    "ExecuteAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
                 ),
                 address(this),
                 account,
@@ -342,6 +365,7 @@ library LibOrganizationAccountTransaction {
                 value,
                 keccak256(data),
                 salt,
+                expirationTimestamp,
                 policyId,
                 isApproval,
                 block.chainid
