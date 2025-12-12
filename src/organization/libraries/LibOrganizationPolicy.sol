@@ -594,10 +594,11 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks if the transaction matches the function selector filter
+     * @notice Checks if the transaction matches the function selector filter and parameter constraints
      * @param policy The policy to check
      * @param data The data of the transaction
-     * @return True if the transaction matches the function selector filter, false otherwise
+     * @return True if the transaction matches the function selector filter and all parameter constraints, false
+     * otherwise
      */
     function doesTransactionMatchPolicyFunction(
         Policies.Policy memory policy,
@@ -618,15 +619,28 @@ library LibOrganizationPolicy {
         //       a function
         // Check if the transaction is calling the function specified in the policy
         bytes4 selector = bytes4(data);
-        for (uint256 i = 0; i < policy.allowedFunctions.length; i++) {
+        for (uint256 i = 0; i < policy.allowedFunctions.length; ++i) {
             // Case: The transaction is calling the function specified in the policy
             if (policy.allowedFunctions[i].selector == selector) {
-                return true;
+                // Selector matches - now validate parameter constraints
+                bytes memory paramConstraints = policy.allowedFunctions[i].parameterConstraints;
+
+                // Case: No parameter constraints defined - selector match is sufficient
+                if (paramConstraints.length == 0) {
+                    return true;
+                }
+
+                // Case: Parameter constraints defined - validate them
+                if (doParametersMatchConstraints(paramConstraints, data)) {
+                    return true;
+                }
+                // If parameters don't match this allowed function entry, continue checking
+                // other entries (there might be multiple entries for same selector with different constraints)
             }
         }
 
         // Case: The policy matches only transactions that call a specific function, and the transaction is not calling
-        //       the function specified in the policy
+        //       the function specified in the policy (or parameters don't match any constraint set)
         return false;
     }
 
@@ -672,6 +686,430 @@ library LibOrganizationPolicy {
         }
         return uint256(amount);
     }
+
+    // ================================
+    // PARAMETER CONSTRAINT VALIDATION
+    // ================================
+
+    /**
+     * @notice Validates that transaction parameters match the policy's parameter constraints
+     * @dev Decodes the parameterConstraints bytes and validates each parameter against the transaction data
+     * @param parameterConstraints ABI-encoded ParameterConstraint[] array
+     * @param data The transaction calldata (including 4-byte selector)
+     * @return True if all parameters match their constraints, false otherwise
+     */
+    function doParametersMatchConstraints(
+        bytes memory parameterConstraints,
+        bytes memory data
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Case: No constraints defined, any parameters are accepted
+        if (parameterConstraints.length == 0) {
+            return true;
+        }
+
+        // Decode the constraints array
+        Policies.ParameterConstraint[] memory constraints =
+            abi.decode(parameterConstraints, (Policies.ParameterConstraint[]));
+
+        // Case: No constraints in the array
+        if (constraints.length == 0) {
+            return true;
+        }
+
+        // Validate each parameter against its constraint
+        // Parameters start at byte 4 (after the selector)
+        // Each basic parameter is 32 bytes in ABI encoding
+        uint256 paramOffset = 4; // Start after the 4-byte selector
+
+        for (uint256 i = 0; i < constraints.length; ++i) {
+            Policies.ParameterConstraint memory constraint = constraints[i];
+
+            // Case: Wildcard constraint - any value is accepted
+            if (constraint.constraintType == Policies.ConstraintType.Any) {
+                paramOffset += 32; // Move to next parameter slot
+                continue;
+            }
+
+            // Case: Transaction data is too short for this parameter
+            if (data.length < paramOffset + 32) {
+                return false;
+            }
+
+            // Extract the parameter value from transaction data
+            bytes32 paramValue;
+            /* solhint-disable no-inline-assembly */
+            assembly {
+                // data starts at data + 32 (length prefix), then add paramOffset
+                paramValue := mload(add(add(data, 32), paramOffset))
+            }
+
+            // Validate based on parameter type and constraint type
+            // Note: Dynamic types (Bytes, String) need access to the full data to dereference offsets
+            if (!_validateParameter(constraint, paramValue, data)) {
+                return false;
+            }
+
+            paramOffset += 32; // Move to next parameter slot
+        }
+
+        return true;
+    }
+
+    /**
+     * @notice Validates a single parameter against its constraint
+     * @param constraint The constraint to validate against
+     * @param paramValue The raw 32-byte parameter value from calldata (value for static types, offset for dynamic)
+     * @param data The full transaction calldata (needed for dynamic types to dereference offsets)
+     * @return True if the parameter matches the constraint, false otherwise
+     */
+    function _validateParameter(
+        Policies.ParameterConstraint memory constraint,
+        bytes32 paramValue,
+        bytes memory data
+    )
+        private
+        pure
+        returns (bool)
+    {
+        Policies.ParamType pType = constraint.paramType;
+        Policies.ConstraintType cType = constraint.constraintType;
+        bytes memory comparisonData = constraint.comparisonData;
+
+        // Handle Bool type
+        if (pType == Policies.ParamType.Bool) {
+            return _validateBool(cType, paramValue, comparisonData);
+        }
+
+        // Handle Uint type (and enums which are treated as uint)
+        if (pType == Policies.ParamType.Uint) {
+            return _validateUint(cType, paramValue, comparisonData);
+        }
+
+        // Handle Int type
+        if (pType == Policies.ParamType.Int) {
+            return _validateInt(cType, paramValue, comparisonData);
+        }
+
+        // Handle Address type
+        if (pType == Policies.ParamType.Address) {
+            return _validateAddress(cType, paramValue, comparisonData);
+        }
+
+        // Handle FixedBytes type (bytes1-bytes32, stored inline)
+        if (pType == Policies.ParamType.FixedBytes) {
+            return _validateFixedBytes(cType, paramValue, comparisonData);
+        }
+
+        // Handle Bytes type (dynamic bytes, stored as offset)
+        if (pType == Policies.ParamType.Bytes) {
+            return _validateDynamicBytes(cType, paramValue, comparisonData, data);
+        }
+
+        // Handle String type (dynamic string, stored as offset)
+        if (pType == Policies.ParamType.String) {
+            return _validateString(cType, paramValue, comparisonData, data);
+        }
+
+        // Handle Array and Struct types - only Any constraint is valid
+        if (pType == Policies.ParamType.Array || pType == Policies.ParamType.Struct) {
+            // These types can only have Any constraint, which is handled earlier
+            // If we reach here with a non-Any constraint, it's invalid configuration
+            return false;
+        }
+
+        // Unknown type - fail safe
+        return false;
+    }
+
+    /**
+     * @notice Validates a boolean parameter
+     * @param cType The constraint type (only Exact is valid for bool)
+     * @param paramValue The parameter value
+     * @param comparisonData ABI-encoded bool value
+     * @return True if valid, false otherwise
+     */
+    function _validateBool(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData
+    )
+        private
+        pure
+        returns (bool)
+    {
+        // Bool only supports Exact constraint
+        if (cType != Policies.ConstraintType.Exact) {
+            return false;
+        }
+
+        bool expectedValue = abi.decode(comparisonData, (bool));
+        bool actualValue = uint256(paramValue) != 0;
+        return actualValue == expectedValue;
+    }
+
+    /**
+     * @notice Validates an unsigned integer parameter
+     * @param cType The constraint type (Exact or Range)
+     * @param paramValue The parameter value
+     * @param comparisonData ABI-encoded uint256 (Exact) or (uint256, uint256) for Range
+     * @return True if valid, false otherwise
+     */
+    function _validateUint(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData
+    )
+        private
+        pure
+        returns (bool)
+    {
+        uint256 actualValue = uint256(paramValue);
+
+        if (cType == Policies.ConstraintType.Exact) {
+            uint256 expectedValue = abi.decode(comparisonData, (uint256));
+            return actualValue == expectedValue;
+        }
+
+        if (cType == Policies.ConstraintType.Range) {
+            (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
+            return actualValue >= minValue && actualValue <= maxValue;
+        }
+
+        // Uint doesn't support List constraint
+        return false;
+    }
+
+    /**
+     * @notice Validates a signed integer parameter
+     * @param cType The constraint type (Exact or Range)
+     * @param paramValue The parameter value
+     * @param comparisonData ABI-encoded int256 (Exact) or (int256, int256) for Range
+     * @return True if valid, false otherwise
+     */
+    function _validateInt(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData
+    )
+        private
+        pure
+        returns (bool)
+    {
+        int256 actualValue = int256(uint256(paramValue));
+
+        if (cType == Policies.ConstraintType.Exact) {
+            int256 expectedValue = abi.decode(comparisonData, (int256));
+            return actualValue == expectedValue;
+        }
+
+        if (cType == Policies.ConstraintType.Range) {
+            (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
+            return actualValue >= minValue && actualValue <= maxValue;
+        }
+
+        // Int doesn't support List constraint
+        return false;
+    }
+
+    /**
+     * @notice Validates an address parameter
+     * @param cType The constraint type (Exact or List)
+     * @param paramValue The parameter value
+     * @param comparisonData ABI-encoded address (Exact) or address[] (List)
+     * @return True if valid, false otherwise
+     */
+    function _validateAddress(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData
+    )
+        private
+        pure
+        returns (bool)
+    {
+        address actualValue = address(uint160(uint256(paramValue)));
+
+        if (cType == Policies.ConstraintType.Exact) {
+            address expectedValue = abi.decode(comparisonData, (address));
+            return actualValue == expectedValue;
+        }
+
+        if (cType == Policies.ConstraintType.List) {
+            address[] memory allowedAddresses = abi.decode(comparisonData, (address[]));
+            for (uint256 i = 0; i < allowedAddresses.length; ++i) {
+                if (actualValue == allowedAddresses[i]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Address doesn't support Range constraint
+        return false;
+    }
+
+    /**
+     * @notice Validates a fixed-size bytes parameter (bytes1-bytes32)
+     * @dev For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned)
+     * @param cType The constraint type (only Exact is valid)
+     * @param paramValue The parameter value (stored directly)
+     * @param comparisonData ABI-encoded bytes32 value
+     * @return True if valid, false otherwise
+     */
+    function _validateFixedBytes(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData
+    )
+        private
+        pure
+        returns (bool)
+    {
+        // FixedBytes only supports Exact constraint
+        if (cType != Policies.ConstraintType.Exact) {
+            return false;
+        }
+
+        // For fixed-size bytes (bytes1-bytes32), compare directly
+        bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
+        return paramValue == expectedValue;
+    }
+
+    /**
+     * @notice Validates a dynamic bytes parameter
+     * @dev The paramValue contains the offset to the data location in calldata.
+     *      The comparisonData should contain the keccak256 hash of the expected bytes.
+     * @param cType The constraint type (only Exact is valid)
+     * @param paramValue The offset to the bytes data (relative to start of encoded params)
+     * @param comparisonData ABI-encoded bytes32 hash of expected bytes
+     * @param data The full transaction calldata
+     * @return True if valid, false otherwise
+     */
+    function _validateDynamicBytes(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData,
+        bytes memory data
+    )
+        private
+        pure
+        returns (bool)
+    {
+        // Dynamic bytes only supports Exact constraint (hash comparison)
+        if (cType != Policies.ConstraintType.Exact) {
+            return false;
+        }
+
+        // paramValue is the offset (relative to start of encoded params, i.e., after selector)
+        uint256 offset = uint256(paramValue);
+
+        // The offset is relative to the start of the encoded parameters (after selector)
+        // So actual position in data = 4 (selector) + offset
+        uint256 dataPosition = 4 + offset;
+
+        // First 32 bytes at that position is the length
+        if (data.length < dataPosition + 32) {
+            return false;
+        }
+
+        uint256 bytesLength;
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            // data memory layout: first 32 bytes = length, then actual data
+            // So data + 32 gives us the start of actual calldata content
+            // Then add dataPosition to get to where the dynamic data length is stored
+            bytesLength := mload(add(add(data, 32), dataPosition))
+        }
+
+        // Check we have enough data for the bytes content
+        if (data.length < dataPosition + 32 + bytesLength) {
+            return false;
+        }
+
+        // Hash the actual bytes content
+        bytes32 actualHash;
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            // Start of bytes content = data + 32 (skip memory length) + dataPosition + 32 (skip bytes length)
+            let bytesStart := add(add(data, 32), add(dataPosition, 32))
+            actualHash := keccak256(bytesStart, bytesLength)
+        }
+
+        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
+        return actualHash == expectedHash;
+    }
+
+    /**
+     * @notice Validates a string parameter (hash comparison)
+     * @dev The paramValue contains the offset to the string data in calldata.
+     *      The comparisonData should contain the keccak256 hash of the expected string.
+     * @param cType The constraint type (only Exact is valid)
+     * @param paramValue The offset to the string data (relative to start of encoded params)
+     * @param comparisonData ABI-encoded bytes32 hash of expected string
+     * @param data The full transaction calldata
+     * @return True if valid, false otherwise
+     */
+    function _validateString(
+        Policies.ConstraintType cType,
+        bytes32 paramValue,
+        bytes memory comparisonData,
+        bytes memory data
+    )
+        private
+        pure
+        returns (bool)
+    {
+        // String only supports Exact constraint (hash comparison)
+        if (cType != Policies.ConstraintType.Exact) {
+            return false;
+        }
+
+        // paramValue is the offset (relative to start of encoded params, i.e., after selector)
+        uint256 offset = uint256(paramValue);
+
+        // The offset is relative to the start of the encoded parameters (after selector)
+        // So actual position in data = 4 (selector) + offset
+        uint256 dataPosition = 4 + offset;
+
+        // First 32 bytes at that position is the string length
+        if (data.length < dataPosition + 32) {
+            return false;
+        }
+
+        uint256 strLength;
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            // data memory layout: first 32 bytes = length, then actual data
+            // So data + 32 gives us the start of actual calldata content
+            // Then add dataPosition to get to where the string length is stored
+            strLength := mload(add(add(data, 32), dataPosition))
+        }
+
+        // Check we have enough data for the string content
+        if (data.length < dataPosition + 32 + strLength) {
+            return false;
+        }
+
+        // Hash the actual string content
+        bytes32 actualHash;
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            // Start of string content = data + 32 (skip memory length) + dataPosition + 32 (skip string length)
+            let strStart := add(add(data, 32), add(dataPosition, 32))
+            actualHash := keccak256(strStart, strLength)
+        }
+
+        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
+        return actualHash == expectedHash;
+    }
+
+    // ================================
+    // PRIVATE HELPER FUNCTIONS
+    // ================================
 
     /**
      * @notice Internal helper to check if a member is in a group

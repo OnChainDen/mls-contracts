@@ -36,9 +36,55 @@ library Policies {
         PerEntity
     }
 
+    // ================================
+    // PARAMETER CONSTRAINT TYPES
+    // ================================
+
+    /// @notice Types of function parameters that can be constrained
+    enum ParamType {
+        Uint, // uint8, uint16, ..., uint256 (and enums)
+        Int, // int8, int16, ..., int256
+        Address, // address
+        Bool, // bool
+        FixedBytes, // bytes1, bytes2, ..., bytes32 (static, stored inline)
+        Bytes, // bytes (dynamic, stored as offset)
+        String, // string (dynamic, stored as offset)
+        Array, // dynamic or fixed-size arrays
+        Struct // structs or tuples
+
+    }
+
+    /// @notice Types of constraints that can be applied to parameters
+    enum ConstraintType {
+        Any, // Wildcard - any value is accepted
+        Exact, // Must match exactly (for all types except Array/Struct)
+        Range, // Must be within range [min, max] inclusive (for Uint/Int only)
+        List // Must be one of the allowed values (for Address only)
+
+    }
+
+    /// @notice A constraint on a single function parameter
+    /// @dev The comparisonData field is ABI-encoded based on paramType and constraintType:
+    ///      - Any: empty bytes (no comparison needed)
+    ///      - Exact + Uint: abi.encode(uint256 value)
+    ///      - Exact + Int: abi.encode(int256 value)
+    ///      - Exact + Address: abi.encode(address value)
+    ///      - Exact + Bool: abi.encode(bool value)
+    ///      - Exact + FixedBytes: abi.encode(bytes32 value) - value is left-padded for bytes1-bytes31
+    ///      - Exact + Bytes: abi.encode(bytes32 keccak256Hash) - hash of expected dynamic bytes
+    ///      - Exact + String: abi.encode(bytes32 keccak256Hash) - hash of expected string
+    ///      - Range + Uint: abi.encode(uint256 min, uint256 max)
+    ///      - Range + Int: abi.encode(int256 min, int256 max)
+    ///      - List + Address: abi.encode(address[] allowedAddresses)
+    struct ParameterConstraint {
+        ParamType paramType;
+        ConstraintType constraintType;
+        bytes comparisonData;
+    }
+
     struct FunctionSelector {
         bytes4 selector;
-        bytes parameterConstraints; // ABI-encoded parameter matching rules
+        bytes parameterConstraints; // ABI-encoded ParameterConstraint[] array
     }
 
     struct Policy {
