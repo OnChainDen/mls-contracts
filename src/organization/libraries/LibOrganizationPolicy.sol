@@ -617,7 +617,7 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that call a specific function, and the transaction is calling
         //       a function
-        // Check if the transaction is calling the function specified in the policy
+        // Check if the transaction is calling any of the functions that are allowed by the policy
         bytes4 selector = bytes4(data);
         for (uint256 i = 0; i < policy.allowedFunctions.length; ++i) {
             // Case: The transaction is calling a function that's not the current function specified in the policy
@@ -735,22 +735,43 @@ library LibOrganizationPolicy {
                 continue;
             }
 
+            // Case: The parameter is a static-sized array or struct but the ConstraintType is not Any
+            // This is invalid configuration, so we return false (static-sized array and structs are 
+            // not allowed to have constraints other than Any)
+            if (slotsToSkip > 1) {
+                return false;
+            }
+
             // Case: Transaction data is too short for this parameter
             if (data.length < paramOffset + 32) {
                 return false;
             }
 
-            // Extract the parameter value from transaction data (first slot only for validation)
-            bytes32 paramValue;
+            // Extract the parameter value from the head section of the transaction data
+            //
+            // If the parameter is a static-sized type (e.g. uint, int, address, bool, bytes1-32), 
+            // the value in the head section of the transaction data is the value of the parameter itself,
+            // and is stored in a single 32-byte slot.
+            //
+            // If the parameter is a dynamic-sized type (e.g. bytes, string, dynamic array), 
+            // the value in the head section of the transaction data is the offset location of the value. The offset 
+            // location is stored in a single 32-byte slot. The offset location is relative to the start of the encoded 
+            // parameters (after the selector). The actual value(s) is/are stored in the tail section of the 
+            // transaction data, starting at the offset location.
+            //
+            // If the parameter is a static-sized array or struct, the value in the head section of the transaction 
+            // data is the value of the parameter itself, but may take up multiple slots. We only allow 
+            // ConstraintType.Any for static-sized arrays and structs, so we would have skipped over them already.
+            bytes32 paramHeadValue;
             /* solhint-disable no-inline-assembly */
             assembly {
                 // data starts at data + 32 (length prefix), then add paramOffset
-                paramValue := mload(add(add(data, 32), paramOffset))
+                paramHeadValue := mload(add(add(data, 32), paramOffset))
             }
 
             // Validate based on parameter type and constraint type
             // Note: Dynamic types (Bytes, String) need access to the full data to dereference offsets
-            if (!_validateParameter(constraint, paramValue, data)) {
+            if (!_validateParameter(constraint, paramHeadValue, data)) {
                 return false;
             }
 
@@ -763,13 +784,15 @@ library LibOrganizationPolicy {
     /**
      * @notice Validates a single parameter against its constraint
      * @param constraint The constraint to validate against
-     * @param paramValue The raw 32-byte parameter value from calldata (value for static types, offset for dynamic)
+     * @param paramHeadValue The value of the parameter in the head section of calldata.
+     *                       For static types, this is the value itself.
+     *                       For dynamic types, this is the offset to the value in the tail section.
      * @param data The full transaction calldata (needed for dynamic types to dereference offsets)
      * @return True if the parameter matches the constraint, false otherwise
      */
     function _validateParameter(
         Policies.ParameterConstraint memory constraint,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory data
     )
         private
@@ -782,37 +805,37 @@ library LibOrganizationPolicy {
 
         // Handle Bool type
         if (pType == Policies.ParamType.Bool) {
-            return _validateBool(cType, paramValue, comparisonData);
+            return _validateBool(cType, paramHeadValue, comparisonData);
         }
 
         // Handle Uint type (and enums which are treated as uint)
         if (pType == Policies.ParamType.Uint) {
-            return _validateUint(cType, paramValue, comparisonData);
+            return _validateUint(cType, paramHeadValue, comparisonData);
         }
 
         // Handle Int type
         if (pType == Policies.ParamType.Int) {
-            return _validateInt(cType, paramValue, comparisonData);
+            return _validateInt(cType, paramHeadValue, comparisonData);
         }
 
         // Handle Address type
         if (pType == Policies.ParamType.Address) {
-            return _validateAddress(cType, paramValue, comparisonData);
+            return _validateAddress(cType, paramHeadValue, comparisonData);
         }
 
         // Handle FixedBytes type (bytes1-bytes32, stored inline)
         if (pType == Policies.ParamType.FixedBytes) {
-            return _validateFixedBytes(cType, paramValue, comparisonData);
+            return _validateFixedBytes(cType, paramHeadValue, comparisonData);
         }
 
         // Handle Bytes type (dynamic bytes, stored as offset)
         if (pType == Policies.ParamType.Bytes) {
-            return _validateDynamicBytes(cType, paramValue, comparisonData, data);
+            return _validateDynamicBytes(cType, paramHeadValue, comparisonData, data);
         }
 
         // Handle String type (dynamic string, stored as offset)
         if (pType == Policies.ParamType.String) {
-            return _validateString(cType, paramValue, comparisonData, data);
+            return _validateString(cType, paramHeadValue, comparisonData, data);
         }
 
         // Handle Array and Struct types - only Any constraint is valid
@@ -829,13 +852,13 @@ library LibOrganizationPolicy {
     /**
      * @notice Validates a boolean parameter
      * @param cType The constraint type (only Exact is valid for bool)
-     * @param paramValue The parameter value
+     * @param paramHeadValue The parameter value from the head section (0 or 1)
      * @param comparisonData ABI-encoded bool value
      * @return True if valid, false otherwise
      */
     function _validateBool(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData
     )
         private
@@ -848,27 +871,27 @@ library LibOrganizationPolicy {
         }
 
         bool expectedValue = abi.decode(comparisonData, (bool));
-        bool actualValue = uint256(paramValue) != 0;
+        bool actualValue = uint256(paramHeadValue) != 0;
         return actualValue == expectedValue;
     }
 
     /**
      * @notice Validates an unsigned integer parameter
      * @param cType The constraint type (Exact or Range)
-     * @param paramValue The parameter value
+     * @param paramHeadValue The parameter value from the head section
      * @param comparisonData ABI-encoded uint256 (Exact) or (uint256, uint256) for Range
      * @return True if valid, false otherwise
      */
     function _validateUint(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData
     )
         private
         pure
         returns (bool)
     {
-        uint256 actualValue = uint256(paramValue);
+        uint256 actualValue = uint256(paramHeadValue);
 
         if (cType == Policies.ConstraintType.Exact) {
             uint256 expectedValue = abi.decode(comparisonData, (uint256));
@@ -887,20 +910,20 @@ library LibOrganizationPolicy {
     /**
      * @notice Validates a signed integer parameter
      * @param cType The constraint type (Exact or Range)
-     * @param paramValue The parameter value
+     * @param paramHeadValue The parameter value from the head section
      * @param comparisonData ABI-encoded int256 (Exact) or (int256, int256) for Range
      * @return True if valid, false otherwise
      */
     function _validateInt(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData
     )
         private
         pure
         returns (bool)
     {
-        int256 actualValue = int256(uint256(paramValue));
+        int256 actualValue = int256(uint256(paramHeadValue));
 
         if (cType == Policies.ConstraintType.Exact) {
             int256 expectedValue = abi.decode(comparisonData, (int256));
@@ -919,20 +942,20 @@ library LibOrganizationPolicy {
     /**
      * @notice Validates an address parameter
      * @param cType The constraint type (Exact or List)
-     * @param paramValue The parameter value
+     * @param paramHeadValue The parameter value from the head section
      * @param comparisonData ABI-encoded address (Exact) or address[] (List)
      * @return True if valid, false otherwise
      */
     function _validateAddress(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData
     )
         private
         pure
         returns (bool)
     {
-        address actualValue = address(uint160(uint256(paramValue)));
+        address actualValue = address(uint160(uint256(paramHeadValue)));
 
         if (cType == Policies.ConstraintType.Exact) {
             address expectedValue = abi.decode(comparisonData, (address));
@@ -957,13 +980,13 @@ library LibOrganizationPolicy {
      * @notice Validates a fixed-size bytes parameter (bytes1-bytes32)
      * @dev For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned)
      * @param cType The constraint type (only Exact is valid)
-     * @param paramValue The parameter value (stored directly)
+     * @param paramHeadValue The parameter value from the head section (stored directly)
      * @param comparisonData ABI-encoded bytes32 value
      * @return True if valid, false otherwise
      */
     function _validateFixedBytes(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData
     )
         private
@@ -977,22 +1000,22 @@ library LibOrganizationPolicy {
 
         // For fixed-size bytes (bytes1-bytes32), compare directly
         bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
-        return paramValue == expectedValue;
+        return paramHeadValue == expectedValue;
     }
 
     /**
      * @notice Validates a dynamic bytes parameter
-     * @dev The paramValue contains the offset to the data location in calldata.
+     * @dev The paramHeadValue contains the offset to the data location in calldata.
      *      The comparisonData should contain the keccak256 hash of the expected bytes.
      * @param cType The constraint type (only Exact is valid)
-     * @param paramValue The offset to the bytes data (relative to start of encoded params)
+     * @param paramHeadValue The offset to the bytes data in the tail section (relative to start of encoded params)
      * @param comparisonData ABI-encoded bytes32 hash of expected bytes
      * @param data The full transaction calldata
      * @return True if valid, false otherwise
      */
     function _validateDynamicBytes(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData,
         bytes memory data
     )
@@ -1005,8 +1028,8 @@ library LibOrganizationPolicy {
             return false;
         }
 
-        // paramValue is the offset (relative to start of encoded params, i.e., after selector)
-        uint256 offset = uint256(paramValue);
+        // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
+        uint256 offset = uint256(paramHeadValue);
 
         // The offset is relative to the start of the encoded parameters (after selector)
         // So actual position in data = 4 (selector) + offset
@@ -1046,17 +1069,17 @@ library LibOrganizationPolicy {
 
     /**
      * @notice Validates a string parameter (hash comparison)
-     * @dev The paramValue contains the offset to the string data in calldata.
+     * @dev The paramHeadValue contains the offset to the string data in calldata.
      *      The comparisonData should contain the keccak256 hash of the expected string.
      * @param cType The constraint type (only Exact is valid)
-     * @param paramValue The offset to the string data (relative to start of encoded params)
+     * @param paramHeadValue The offset to the string data in the tail section (relative to start of encoded params)
      * @param comparisonData ABI-encoded bytes32 hash of expected string
      * @param data The full transaction calldata
      * @return True if valid, false otherwise
      */
     function _validateString(
         Policies.ConstraintType cType,
-        bytes32 paramValue,
+        bytes32 paramHeadValue,
         bytes memory comparisonData,
         bytes memory data
     )
@@ -1069,8 +1092,8 @@ library LibOrganizationPolicy {
             return false;
         }
 
-        // paramValue is the offset (relative to start of encoded params, i.e., after selector)
-        uint256 offset = uint256(paramValue);
+        // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
+        uint256 offset = uint256(paramHeadValue);
 
         // The offset is relative to the start of the encoded parameters (after selector)
         // So actual position in data = 4 (selector) + offset
