@@ -722,15 +722,20 @@ library LibOrganizationPolicy {
 
         // Validate each parameter against its constraint
         // Parameters start at byte 4 (after the selector)
-        // Each basic parameter is 32 bytes in ABI encoding
+        // Each basic parameter is 32 bytes in ABI encoding, but static arrays/structs may span multiple slots
         uint256 paramOffset = 4; // Start after the 4-byte selector
 
         for (uint256 i = 0; i < constraints.length; ++i) {
             Policies.ParameterConstraint memory constraint = constraints[i];
 
-            // Case: Wildcard constraint - any value is accepted
+            // Determine how many 32-byte slots this parameter occupies
+            // slotsToSkip of 0 defaults to 1 (most common case for basic and dynamic types)
+            uint256 slotsToSkip = constraint.slotsToSkip > 0 ? uint256(constraint.slotsToSkip) : 1;
+            uint256 bytesToSkip = slotsToSkip * 32;
+
+            // Case: Wildcard constraint - any value is accepted, skip all slots for this parameter
             if (constraint.constraintType == Policies.ConstraintType.Any) {
-                paramOffset += 32; // Move to next parameter slot
+                paramOffset += bytesToSkip;
                 continue;
             }
 
@@ -739,7 +744,7 @@ library LibOrganizationPolicy {
                 return false;
             }
 
-            // Extract the parameter value from transaction data
+            // Extract the parameter value from transaction data (first slot only for validation)
             bytes32 paramValue;
             /* solhint-disable no-inline-assembly */
             assembly {
@@ -753,7 +758,7 @@ library LibOrganizationPolicy {
                 return false;
             }
 
-            paramOffset += 32; // Move to next parameter slot
+            paramOffset += bytesToSkip; // Move past all slots for this parameter
         }
 
         return true;
