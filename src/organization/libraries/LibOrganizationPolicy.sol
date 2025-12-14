@@ -620,23 +620,19 @@ library LibOrganizationPolicy {
         // Check if the transaction is calling the function specified in the policy
         bytes4 selector = bytes4(data);
         for (uint256 i = 0; i < policy.allowedFunctions.length; ++i) {
-            // Case: The transaction is calling the function specified in the policy
-            if (policy.allowedFunctions[i].selector == selector) {
-                // Selector matches - now validate parameter constraints
-                bytes memory paramConstraints = policy.allowedFunctions[i].parameterConstraints;
+            // Case: The transaction is calling a function that's not the current function specified in the policy
+            // Continue to the next function that's allowed in the policy
+            if (policy.allowedFunctions[i].selector != selector) continue;
 
-                // Case: No parameter constraints defined - selector match is sufficient
-                if (paramConstraints.length == 0) {
-                    return true;
-                }
+            // Selector matches - now validate parameter constraints
+            bytes memory paramConstraints = policy.allowedFunctions[i].parameterConstraints;
 
-                // Case: Parameter constraints defined - validate them
-                if (doParametersMatchConstraints(paramConstraints, data)) {
-                    return true;
-                }
-                // If parameters don't match this allowed function entry, continue checking
-                // other entries (there might be multiple entries for same selector with different constraints)
+            // Case: Parameter constraints defined - validate them
+            if (doParametersMatchConstraints(paramConstraints, data)) {
+                return true;
             }
+            // If parameters don't match this allowed function entry, continue checking
+            // other entries (there might be multiple entries for same selector with different constraints)
         }
 
         // Case: The policy matches only transactions that call a specific function, and the transaction is not calling
