@@ -724,9 +724,11 @@ library LibOrganizationPolicy {
         for (uint256 i = 0; i < constraints.length; ++i) {
             Policies.ParameterConstraint memory constraint = constraints[i];
 
-            // Determine how many 32-byte slots this parameter occupies
-            // slotsToSkip of 0 defaults to 1 (most common case for basic and dynamic types)
-            uint256 slotsToSkip = constraint.slotsToSkip > 0 ? uint256(constraint.slotsToSkip) : 1;
+            // Determine how many 32-byte slots this parameter occupies (must be >= 1)
+            uint256 slotsToSkip = uint256(constraint.slotsToSkip);
+            if (slotsToSkip == 0) {
+                return false; // Invalid constraint configuration
+            }
             uint256 bytesToSkip = slotsToSkip * 32;
 
             // Case: Wildcard constraint - any value is accepted, skip all slots for this parameter
@@ -736,7 +738,7 @@ library LibOrganizationPolicy {
             }
 
             // Case: The parameter is a static-sized array or struct but the ConstraintType is not Any
-            // This is invalid configuration, so we return false (static-sized array and structs are 
+            // This is invalid configuration, so we return false (static-sized array and structs are
             // not allowed to have constraints other than Any)
             if (slotsToSkip > 1) {
                 return false;
@@ -749,18 +751,18 @@ library LibOrganizationPolicy {
 
             // Extract the parameter value from the head section of the transaction data
             //
-            // If the parameter is a static-sized type (e.g. uint, int, address, bool, bytes1-32), 
+            // If the parameter is a static-sized type (e.g. uint, int, address, bool, bytes1-32),
             // the value in the head section of the transaction data is the value of the parameter itself,
             // and is stored in a single 32-byte slot.
             //
-            // If the parameter is a dynamic-sized type (e.g. bytes, string, dynamic array), 
-            // the value in the head section of the transaction data is the offset location of the value. The offset 
-            // location is stored in a single 32-byte slot. The offset location is relative to the start of the encoded 
-            // parameters (after the selector). The actual value(s) is/are stored in the tail section of the 
+            // If the parameter is a dynamic-sized type (e.g. bytes, string, dynamic array),
+            // the value in the head section of the transaction data is the offset location of the value. The offset
+            // location is stored in a single 32-byte slot. The offset location is relative to the start of the encoded
+            // parameters (after the selector). The actual value(s) is/are stored in the tail section of the
             // transaction data, starting at the offset location.
             //
-            // If the parameter is a static-sized array or struct, the value in the head section of the transaction 
-            // data is the value of the parameter itself, but may take up multiple slots. We only allow 
+            // If the parameter is a static-sized array or struct, the value in the head section of the transaction
+            // data is the value of the parameter itself, but may take up multiple slots. We only allow
             // ConstraintType.Any for static-sized arrays and structs, so we would have skipped over them already.
             bytes32 paramHeadValue;
             /* solhint-disable no-inline-assembly */

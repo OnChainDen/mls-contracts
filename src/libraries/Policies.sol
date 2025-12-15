@@ -77,17 +77,16 @@ library Policies {
     ///      - Range + Int: abi.encode(int256 min, int256 max)
     ///      - List + Address: abi.encode(address[] allowedAddresses)
     ///
-    /// @dev The slotsToSkip field specifies how many 32-byte slots this parameter occupies:
+    /// @dev The slotsToSkip field specifies how many 32-byte slots this parameter occupies (must be >= 1):
     ///      - Basic types (uint, int, address, bool, bytes1-32): 1 slot
     ///      - Dynamic types (string, bytes, T[]): 1 slot (contains offset)
     ///      - Static arrays T[k]: k slots (stored inline)
     ///      - Static structs with N fields: N slots (stored inline)
     ///      - Dynamic structs: 1 slot (contains offset)
-    ///      If slotsToSkip is 0, it defaults to 1 during validation.
     struct ParameterConstraint {
         ParamType paramType;
         ConstraintType constraintType;
-        uint8 slotsToSkip; // Number of 32-byte slots this parameter occupies (0 = default to 1)
+        uint8 slotsToSkip; // Number of 32-byte slots this parameter occupies (must be >= 1)
         bytes comparisonData;
     }
 
