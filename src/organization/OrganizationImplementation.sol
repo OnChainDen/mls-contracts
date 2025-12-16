@@ -730,6 +730,11 @@ contract OrganizationImplementation is
         override
         returns (bytes4 magicValue)
     {
+        // Verify the caller is the account
+        if (msg.sender != account) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
         // Verify the account is deployed by this organization
         if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
