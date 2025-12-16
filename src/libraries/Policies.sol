@@ -15,7 +15,8 @@ library Policies {
     enum TransactionType {
         Any,
         TokenTransfers,
-        ContractInteractions
+        ContractInteractions,
+        Signatures
     }
 
     enum DestinationType {
