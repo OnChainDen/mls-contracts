@@ -131,7 +131,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Validate that the initiator is authorized by the policy
-        if (!LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, initiator)) {
+        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, initiator)) {
             revert UnauthorizedInitiator(initiator);
         }
 
@@ -239,7 +239,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Validate that the initiator is authorized by the policy
-        if (!LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, initiator)) {
+        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, initiator)) {
             revert UnauthorizedInitiator(initiator);
         }
 
@@ -258,7 +258,7 @@ library LibOrganizationAccountTransaction {
 
             // Verify the rejection signature is from an authorized initiator (not necessarily the original initiator)
             address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
-            if (!LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, rejectionSigner)) {
+            if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, rejectionSigner)) {
                 revert TransactionRejectedByPolicy("Rejection signature must be from an authorized initiator");
             }
             return;
