@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title Lib Organization Account Transaction
@@ -50,7 +49,27 @@ library LibOrganizationAccountTransaction {
     error TransactionExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
     /**
+     * @notice Emitted when the initiator signature is invalid or missing
+     */
+    error InvalidInitiatorSignature();
+
+    /**
+     * @notice Emitted when the initiator is not authorized by the policy
+     * @param initiator The address that attempted to initiate
+     */
+    error UnauthorizedInitiator(address initiator);
+
+    /**
+     * @notice Emitted when signatures bytes are too short (must contain at least initiator signature)
+     */
+    error InsufficientSignaturesLength();
+
+    /**
      * @notice Validates a transaction against the specified policy
+     * @dev The signatures parameter is structured as: [initiatorSignature (65 bytes)][reviewSignatures (N * 65 bytes)]
+     *      The initiator signature is verified against the base transaction hash.
+     *      Review signatures are verified against a hash that includes the initiator signature,
+     *      ensuring reviewers explicitly approve this specific initiation.
      * @param account The account executing the transaction
      * @param to Transaction destination address
      * @param value Transaction value
@@ -58,7 +77,7 @@ library LibOrganizationAccountTransaction {
      * @param salt User-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The policy ID to validate against
-     * @param signatures Signatures for approval verification
+     * @param signatures Signatures for approval verification (initiator signature first, then review signatures)
      */
     function validateTransactionApproval(
         address account,
@@ -78,6 +97,11 @@ library LibOrganizationAccountTransaction {
             revert TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
+        // Signatures must contain at least the initiator signature (65 bytes)
+        if (signatures.length < 65) {
+            revert InsufficientSignaturesLength();
+        }
+
         LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();
 
         // Validate that policy exists
@@ -88,19 +112,57 @@ library LibOrganizationAccountTransaction {
         // Look up policy directly
         Policies.Policy memory policy = policyStorage.policies[policyId];
 
-        // Validate that policy applies to transaction
-        // Note: msg.sender is the guardian who called the Organization
-        if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, account, to, value, data, msg.sender)) {
+        // Extract initiator signature (first 65 bytes)
+        bytes memory initiatorSignature = SignatureUtils.extractSignature(signatures, 0);
+
+        // Get the base transaction hash that the initiator signs
+        bytes32 initiatorTxHash =
+            _getInitiatorTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
+
+        // Recover the initiator address from the signature
+        address initiator = ECDSA.recover(initiatorTxHash, initiatorSignature);
+        if (initiator == address(0)) {
+            revert InvalidInitiatorSignature();
+        }
+
+        // Validate that policy applies to transaction with the recovered initiator
+        if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, account, to, value, data, initiator)) {
             revert PolicyDoesNotApply(policyId);
         }
 
+        // Validate that the initiator is authorized by the policy
+        if (!LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, initiator)) {
+            revert UnauthorizedInitiator(initiator);
+        }
+
+        // Case: Policy is AutoApprove
+        // Only the initiator signature is required (already validated above)
+        if (policy.policyType == Policies.PolicyType.AutoApprove) {
+            // Initiator must be a member of the organization
+            LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+            uint8 memberId = membersLayout.addressToMemberId[initiator];
+            if (memberId == 0) {
+                revert TransactionRejectedByPolicy("AutoApprove policy requires initiator to be an organization member");
+            }
+            return;
+        }
+
         // Case: Policy is a manual approval policy
-        // Check if the transaction has enough valid approvals
+        // Check if the transaction has enough valid review approvals
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
-            // Get transaction hash for signature verification
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
-            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, signatures, txHash);
+
+            // Extract review signatures (everything after the first 65 bytes)
+            bytes memory reviewSignatures = _extractReviewSignatures(signatures);
+
+            // Get the review transaction hash that includes the initiator signature
+            // This binds reviewers to this specific initiation
+            bytes32 reviewTxHash = _getReviewTransactionHash(
+                account, to, value, data, salt, expirationTimestamp, policyId, true, initiatorSignature
+            );
+
+            // Count valid review approvals
+            uint256 validApprovals = _getValidReviewApprovals(policy, reviewSignatures, reviewTxHash);
 
             // Case: Transaction does not have enough valid approvals
             if (validApprovals < requiredApprovals) {
@@ -108,24 +170,13 @@ library LibOrganizationAccountTransaction {
             }
             return;
         }
-
-        // Case: Policy is AutoApprove
-        // Require a single signature from any organization member
-        if (policy.policyType == Policies.PolicyType.AutoApprove) {
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
-
-            // Check if we have a valid signature from any organization member
-            if (!_hasValidMemberSignature(signatures, txHash)) {
-                revert TransactionRejectedByPolicy(
-                    "AutoApprove policy requires a signature from an organization member"
-                );
-            }
-            return;
-        }
     }
 
     /**
      * @notice Validates that the caller is authorized to reject the given transaction
+     * @dev The signatures parameter is structured as: [initiatorSignature (65 bytes)][reviewSignatures (N * 65 bytes)]
+     *      For rejection, the initiator signature proves who initiated the transaction being rejected.
+     *      Review signatures are verified against a hash that includes the initiator signature.
      * @param account The account for which the transaction is being rejected
      * @param to Transaction destination address
      * @param value Transaction value
@@ -133,7 +184,7 @@ library LibOrganizationAccountTransaction {
      * @param salt User-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The policy ID to validate against
-     * @param signatures Signatures for rejection verification
+     * @param signatures Signatures for rejection verification (initiator signature first, then review signatures)
      */
     function validateTransactionRejection(
         address account,
@@ -153,6 +204,11 @@ library LibOrganizationAccountTransaction {
             revert TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
+        // Signatures must contain at least the initiator signature (65 bytes)
+        if (signatures.length < 65) {
+            revert InsufficientSignaturesLength();
+        }
+
         LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();
 
         // Validate that policy exists
@@ -163,32 +219,67 @@ library LibOrganizationAccountTransaction {
         // Look up policy directly
         Policies.Policy memory policy = policyStorage.policies[policyId];
 
-        // Validate that policy applies to transaction
-        if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, account, to, value, data, msg.sender)) {
+        // Extract initiator signature (first 65 bytes)
+        bytes memory initiatorSignature = SignatureUtils.extractSignature(signatures, 0);
+
+        // Get the base transaction hash that the initiator signed (isApproval = true, same as approval)
+        // Note: The initiator signed the approval hash, not the rejection hash
+        bytes32 initiatorTxHash =
+            _getInitiatorTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
+
+        // Recover the initiator address from the signature
+        address initiator = ECDSA.recover(initiatorTxHash, initiatorSignature);
+        if (initiator == address(0)) {
+            revert InvalidInitiatorSignature();
+        }
+
+        // Validate that policy applies to transaction with the recovered initiator
+        if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, account, to, value, data, initiator)) {
             revert PolicyDoesNotApply(policyId);
         }
 
-        // Case: Policy is an automatic approval policy
-        // Only valid transaction initiators (as defined by policy) can reject it
-        if (policy.policyType == Policies.PolicyType.AutoApprove) {
-            // Get transaction hash for signature verification (isApproval = false for rejection)
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
+        // Validate that the initiator is authorized by the policy
+        if (!LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, initiator)) {
+            revert UnauthorizedInitiator(initiator);
+        }
 
-            // Check if we have at least one valid signature from an authorized initiator
-            if (_hasValidInitiatorSignature(policy, signatures, txHash)) {
-                return;
-            } else {
-                revert TransactionRejectedByPolicy("No valid signature from authorized transaction initiator");
+        // Case: Policy is an automatic approval policy
+        // Any authorized initiator (as defined by the policy) can reject the transaction
+        if (policy.policyType == Policies.PolicyType.AutoApprove) {
+            // For AutoApprove rejection, we need a rejection signature from any authorized initiator
+            bytes32 rejectionTxHash =
+                _getInitiatorTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
+
+            // Extract the rejection signature (should be at position 1, i.e., bytes 65-129)
+            if (signatures.length < 130) {
+                revert TransactionRejectedByPolicy("AutoApprove rejection requires authorized initiator signature");
             }
+            bytes memory rejectionSignature = SignatureUtils.extractSignature(signatures, 1);
+
+            // Verify the rejection signature is from an authorized initiator (not necessarily the original initiator)
+            address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
+            if (!LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, rejectionSigner)) {
+                revert TransactionRejectedByPolicy("Rejection signature must be from an authorized initiator");
+            }
+            return;
         }
 
         // Case: Policy is a manual approval policy
-        // Check if the caller has sufficient rejection authority
+        // Check if there are sufficient rejection signatures from reviewers
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
-            // Get transaction hash for signature verification (isApproval = false for rejection)
-            bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
-            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, signatures, txHash);
+
+            // Extract review signatures (everything after the first 65 bytes)
+            bytes memory reviewSignatures = _extractReviewSignatures(signatures);
+
+            // Get the review transaction hash for rejection (isApproval = false)
+            // This binds reviewers to rejecting this specific initiation
+            bytes32 reviewTxHash = _getReviewTransactionHash(
+                account, to, value, data, salt, expirationTimestamp, policyId, false, initiatorSignature
+            );
+
+            // Count valid review rejections
+            uint256 validApprovals = _getValidReviewApprovals(policy, reviewSignatures, reviewTxHash);
 
             // Case: Transaction does not have enough valid rejections
             if (validApprovals < requiredApprovals) {
@@ -199,80 +290,83 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Checks if there is at least one valid signature from an authorized transaction initiator
-     * @param policy The policy to check against
-     * @param signatures The signatures to verify
-     * @param txHash The hash of the transaction
-     * @return True if there is at least one valid signature from an authorized initiator
+     * @notice Extracts the review signatures from the signatures bytes (everything after the first 65 bytes)
+     * @param signatures The full signatures bytes
+     * @return reviewSignatures The review signatures (may be empty if only initiator signature provided)
      */
-    function _hasValidInitiatorSignature(
+    function _extractReviewSignatures(bytes memory signatures) private pure returns (bytes memory reviewSignatures) {
+        // If signatures is exactly 65 bytes, there are no review signatures
+        if (signatures.length <= 65) {
+            return new bytes(0);
+        }
+
+        uint256 reviewLength = signatures.length - 65;
+        reviewSignatures = new bytes(reviewLength);
+
+        // Copy review signatures (everything after byte 65)
+        /* solhint-disable no-inline-assembly */
+        assembly {
+            // Source: signatures + 32 (length prefix) + 65 (skip initiator sig)
+            let src := add(add(signatures, 32), 65)
+            // Destination: reviewSignatures + 32 (length prefix)
+            let dst := add(reviewSignatures, 32)
+            // Copy reviewLength bytes
+            // Using a loop to handle arbitrary length
+            for { let i := 0 } lt(i, reviewLength) { i := add(i, 32) } { mstore(add(dst, i), mload(add(src, i))) }
+        }
+    }
+
+    /**
+     * @notice Counts valid review approvals from authorized reviewers
+     * @param policy The policy to check against
+     * @param reviewSignatures The review signatures to verify
+     * @param reviewTxHash The hash that reviewers should have signed
+     * @return validApprovals The number of valid approvals from authorized reviewers
+     */
+    function _getValidReviewApprovals(
         Policies.Policy memory policy,
-        bytes memory signatures,
-        bytes32 txHash
+        bytes memory reviewSignatures,
+        bytes32 reviewTxHash
     )
         private
         view
-        returns (bool)
+        returns (uint256 validApprovals)
     {
-        // Case: No signatures provided
-        if (signatures.length == 0) return false;
+        // Case: No review signatures provided
+        if (reviewSignatures.length == 0) return 0;
 
         // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
+        uint256 signatureCount = reviewSignatures.length / 65;
 
-        // Iterate over signatures to find at least one valid initiator signature
-        for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
+        // Track last signer to prevent duplicates (similar to Safe contracts)
+        address lastSigner = address(0);
 
-            // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSigner(signature);
+        // Iterate over signatures to count valid approvals
+        for (uint256 i = 0; i < signatureCount; ++i) {
+            bytes memory signature = SignatureUtils.extractSignature(reviewSignatures, i);
+
+            // Recover signer address from signature
+            address signer = ECDSA.recover(reviewTxHash, signature);
 
             // Skip if signer is invalid
             if (signer == address(0)) continue;
 
-            // Verify the signature using ERC-1271
-            if (!SignatureChecker.isValidSignatureNow(signer, txHash, signature)) {
-                continue;
-            }
+            // Check for duplicate signers - signers must be unique and in ascending order
+            if (signer <= lastSigner) continue;
 
-            // Check if signer is authorized as a transaction initiator based on policy
-            if (LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, signer)) {
-                return true;
+            // Update last signer for next iteration
+            lastSigner = signer;
+
+            // Check if signer is authorized based on policy
+            if (LibOrganizationPolicy.isSignerAuthorizedForPolicy(policy, signer)) {
+                ++validApprovals;
             }
         }
-
-        return false;
     }
 
     /**
-     * @notice Checks if there is a valid signature from any organization member
-     * @param signatures The signature to verify (expected to be exactly 65 bytes)
-     * @param txHash The hash of the transaction
-     * @return True if there is a valid signature from any organization member
-     */
-    function _hasValidMemberSignature(bytes memory signatures, bytes32 txHash) private view returns (bool) {
-        // Case: No signature provided or incorrect length (must be exactly 65 bytes)
-        if (signatures.length != 65) return false;
-
-        // Extract signer address from signature
-        address signer = LibOrganizationSignatures.extractSigner(signatures);
-
-        // Case: Signer is invalid
-        if (signer == address(0)) return false;
-
-        // Verify the signature using ERC-1271
-        if (!SignatureChecker.isValidSignatureNow(signer, txHash, signatures)) {
-            return false;
-        }
-
-        // Check if signer is a member of the organization
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-        uint8 memberId = membersLayout.addressToMemberId[signer];
-        return memberId != 0;
-    }
-
-    /**
-     * @notice Creates a hash of the transaction for signature verification using EIP-712 typed data
+     * @notice Creates a hash of the transaction for initiator signature verification using EIP-712 typed data
+     * @dev This is the base transaction hash that the initiator signs to start the transaction flow
      * @param account The account executing the transaction
      * @param to The destination address of the transaction
      * @param value The value of the transaction
@@ -281,9 +375,9 @@ library LibOrganizationAccountTransaction {
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The policy ID governing this transaction
      * @param isApproval Whether the signature is for an approval or a rejection
-     * @return The hash of the transaction formatted for ERC-1271 signature verification
+     * @return The hash of the transaction formatted for signature verification
      */
-    function _getTransactionHash(
+    function _getInitiatorTransactionHash(
         address account,
         address to,
         uint256 value,
@@ -301,7 +395,7 @@ library LibOrganizationAccountTransaction {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
-                    "ExecuteAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
+                    "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
                 ),
                 address(this),
                 account,
@@ -316,18 +410,77 @@ library LibOrganizationAccountTransaction {
             )
         );
 
-        // Return EIP-712 compatible hash for ERC-1271 signature verification
-        return MessageHashUtils.toTypedDataHash(
-            keccak256(
-                abi.encode(
-                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                    keccak256("OnchainCustodyOrganization"),
-                    keccak256("1"),
-                    block.chainid,
-                    address(this)
-                )
-            ),
-            structHash
+        // Return EIP-712 compatible hash for signature verification
+        return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
+    }
+
+    /**
+     * @notice Creates a hash for reviewer signature verification that includes the initiator's signature
+     * @dev This hash binds reviewers to a specific initiation by including the initiator's signature.
+     *      This ensures reviewers are explicitly approving this particular initiation.
+     * @param account The account executing the transaction
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param salt The user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param policyId The policy ID governing this transaction
+     * @param isApproval Whether the signature is for an approval or a rejection
+     * @param initiatorSignature The initiator's signature that reviewers are approving
+     * @return The hash for reviewer signature verification
+     */
+    function _getReviewTransactionHash(
+        address account,
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        uint256 policyId,
+        bool isApproval,
+        bytes memory initiatorSignature
+    )
+        private
+        view
+        returns (bytes32)
+    {
+        // Create EIP-712 structured data hash that includes the initiator signature hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256(
+                    "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
+                ),
+                address(this),
+                account,
+                to,
+                value,
+                keccak256(data),
+                salt,
+                expirationTimestamp,
+                policyId,
+                isApproval,
+                block.chainid,
+                keccak256(initiatorSignature)
+            )
+        );
+
+        // Return EIP-712 compatible hash for signature verification
+        return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
+    }
+
+    /**
+     * @notice Returns the EIP-712 domain separator for this organization
+     * @return The domain separator hash
+     */
+    function _getDomainSeparator() private view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("OnchainCustodyOrganization"),
+                keccak256("1"),
+                block.chainid,
+                address(this)
+            )
         );
     }
 }
