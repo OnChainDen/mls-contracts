@@ -15,8 +15,9 @@ import { LibOrganizationAccountFactoryStorage } from "./libraries/storage/LibOrg
 import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
 import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures.sol";
 import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
+import { LibOrganizationAccountSignature } from "./libraries/LibOrganizationAccountSignature.sol";
 import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
-import { AdminType, OperationType } from "../interfaces/IOrganization.sol";
+import { AdminType, OperationType, IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
@@ -30,7 +31,13 @@ import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthoriza
  *      It implements IBeacon to serve as the beacon for all Account BeaconProxies.
  * @author Den Technologies Inc
  */
-contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradeable, IBeacon {
+contract OrganizationImplementation is
+    UUPSUpgradeable,
+    Initializable,
+    IUpgradeable,
+    IBeacon,
+    IOrganizationSignatureValidator
+{
     /**
      * @notice Emitted when a transaction is executed on an account
      * @param account The account that executed the transaction
@@ -699,6 +706,41 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IUpgradea
         );
 
         emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
+    }
+
+    // ================================
+    // IOrganizationSignatureValidator interface (ERC-1271)
+    // ================================
+
+    /**
+     * @notice Validates an ERC-1271 signature for a given account
+     * @dev This function is called by Account contracts to validate signatures
+     * @param account The account address on behalf of which the signature is being validated
+     * @param hash The hash that was signed
+     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
+     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
+     */
+    function isValidSignatureForAccount(
+        address account,
+        bytes32 hash,
+        bytes memory signature
+    )
+        external
+        view
+        override
+        returns (bytes4 magicValue)
+    {
+        // Verify the caller is the account
+        if (msg.sender != account) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        // Verify the account is deployed by this organization
+        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
     }
 
     // ================================

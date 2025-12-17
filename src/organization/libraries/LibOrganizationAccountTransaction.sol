@@ -100,7 +100,7 @@ library LibOrganizationAccountTransaction {
             // Get transaction hash for signature verification
             bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, true);
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
-            uint256 validApprovals = _getValidApprovals(policy, signatures, txHash);
+            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, signatures, txHash);
 
             // Case: Transaction does not have enough valid approvals
             if (validApprovals < requiredApprovals) {
@@ -188,7 +188,7 @@ library LibOrganizationAccountTransaction {
             // Get transaction hash for signature verification (isApproval = false for rejection)
             bytes32 txHash = _getTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
-            uint256 validApprovals = _getValidApprovals(policy, signatures, txHash);
+            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, signatures, txHash);
 
             // Case: Transaction does not have enough valid rejections
             if (validApprovals < requiredApprovals) {
@@ -196,62 +196,6 @@ library LibOrganizationAccountTransaction {
             }
             return;
         }
-    }
-
-    /**
-     * @notice Verifies signatures and returns the number of valid approvals
-     * @param policy The policy requiring approval
-     * @param signatures The signatures to verify
-     * @param txHash The hash of the transaction
-     * @return The number of valid approvals
-     */
-    function _getValidApprovals(
-        Policies.Policy memory policy,
-        bytes memory signatures,
-        bytes32 txHash
-    )
-        private
-        view
-        returns (uint8)
-    {
-        // Case: No signatures provided
-        if (signatures.length == 0) return 0;
-
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
-        uint8 validApprovals = 0;
-
-        // Track last signer to prevent duplicates (similar to Safe contracts)
-        address lastSigner = address(0);
-
-        // Iterate over signatures to count valid approvals
-        for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
-
-            // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSigner(signature);
-
-            // Skip if signer is invalid
-            if (signer == address(0)) continue;
-
-            // Check for duplicate signers - signers must be unique and in ascending order
-            if (signer <= lastSigner) continue;
-
-            // Update last signer for next iteration
-            lastSigner = signer;
-
-            // Verify the signature using ERC-1271
-            if (!SignatureChecker.isValidSignatureNow(signer, txHash, signature)) {
-                continue;
-            }
-
-            // Check if signer is authorized based on policy
-            if (LibOrganizationPolicy.isSignerAuthorizedForPolicy(policy, signer)) {
-                ++validApprovals;
-            }
-        }
-
-        return validApprovals;
     }
 
     /**

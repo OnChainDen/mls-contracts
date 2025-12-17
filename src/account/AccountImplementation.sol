@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
+import { IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
+import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 /**
  * @title Account Implementation
@@ -11,7 +13,7 @@ import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenRecei
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-contract AccountImplementation is INativeTokenReceivedEventEmitter {
+contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
     /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
@@ -106,6 +108,30 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter {
         assembly {
             success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
         }
+    }
+
+    // ================================
+    // IERC1271 (Smart Contract Signatures)
+    // ================================
+
+    /**
+     * @notice Validates a signature according to ERC-1271
+     * @dev Delegates signature validation to the associated Organization contract
+     * @param hash The hash of the data that was signed
+     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
+     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
+     */
+    function isValidSignature(
+        bytes32 hash,
+        bytes memory signature
+    )
+        external
+        view
+        override
+        returns (bytes4 magicValue)
+    {
+        address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
+        return IOrganizationSignatureValidator(organization).isValidSignatureForAccount(address(this), hash, signature);
     }
 
     // ================================

@@ -5,7 +5,10 @@ import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicySto
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationWhitelistStorage } from "./storage/LibOrganizationWhitelistStorage.sol";
+import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { Policies } from "../../libraries/Policies.sol";
+import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
+import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Policy
@@ -422,6 +425,63 @@ library LibOrganizationPolicy {
         }
 
         return false;
+    }
+
+    /**
+     * @notice Verifies signatures and returns the number of valid approvals for a policy
+     * @dev This is a shared function used by both transaction validation and signature validation
+     * @param policy The policy requiring approval
+     * @param signatures The signatures to verify
+     * @param messageHash The hash of the message that was signed
+     * @return The number of valid approvals
+     */
+    function getValidApprovals(
+        Policies.Policy memory policy,
+        bytes memory signatures,
+        bytes32 messageHash
+    )
+        internal
+        view
+        returns (uint8)
+    {
+        // Case: No signatures provided
+        if (signatures.length == 0) return 0;
+
+        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
+        uint8 signatureCount = uint8(signatures.length / 65);
+        uint8 validApprovals = 0;
+
+        // Track last signer to prevent duplicates (similar to Safe contracts)
+        address lastSigner = address(0);
+
+        // Iterate over signatures to count valid approvals
+        for (uint8 i = 0; i < signatureCount; ++i) {
+            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
+
+            // Extract signer address from signature
+            address signer = LibOrganizationSignatures.extractSigner(signature);
+
+            // Skip if signer is invalid
+            if (signer == address(0)) continue;
+
+            // Check for duplicate signers - signers must be unique and in ascending order
+            if (signer <= lastSigner) continue;
+
+            // Update last signer for next iteration
+            lastSigner = signer;
+
+            // Verify the signature using ERC-1271
+            if (!SignatureChecker.isValidSignatureNow(signer, messageHash, signature)) {
+                continue;
+            }
+
+            // Check if signer is authorized based on policy
+            if (isSignerAuthorizedForPolicy(policy, signer)) {
+                ++validApprovals;
+            }
+        }
+
+        return validApprovals;
     }
 
     // ================================
