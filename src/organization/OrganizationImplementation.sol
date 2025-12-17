@@ -367,7 +367,7 @@ contract OrganizationImplementation is
         view
         returns (bool)
     {
-        return LibOrganizationPolicy.isSignerAuthorizedAsInitiator(policy, signer);
+        return LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, signer);
     }
 
     // ================================

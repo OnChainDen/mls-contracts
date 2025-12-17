@@ -221,12 +221,17 @@ library LibOrganizationPolicy {
 
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
+        // Get the member ID for the signer
+        uint8 memberId = membersLayout.addressToMemberId[initiatorAddress];
+
+        // Case: Signer is not a member of the organization
+        if (memberId == 0) {
+            return false;
+        }
+
         // Case: The policy matches transactions made by a specific individual, and that individual
         //        is the initiator of this transaction
-        if (
-            policy.initiatorType == Policies.ApproverType.Member
-                && membersLayout.addressToMemberId[initiatorAddress] == policy.initiatorId
-        ) return true;
+        if (policy.initiatorType == Policies.ApproverType.Member && memberId == policy.initiatorId) return true;
 
         // Case: The policy matches transactions made by any individual from a specific group, and the initiator
         //       is in that group
@@ -382,46 +387,6 @@ library LibOrganizationPolicy {
         // Case: Policy requires approval from any member of a specific group
         if (policy.approverType == Policies.ApproverType.Group) {
             return _isMemberInGroup(memberId, policy.approverId);
-        }
-
-        return false;
-    }
-
-    /**
-     * @notice Checks if a signer is authorized as a transaction initiator for the given policy
-     * @param policy The policy to check against
-     * @param signer The signer address to validate
-     * @return True if the signer is authorized as an initiator, false otherwise
-     */
-    function isSignerAuthorizedAsInitiator(
-        Policies.Policy memory policy,
-        address signer
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: Policy allows any initiator
-        if (policy.anyInitiator) return true;
-
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Get the member ID for the signer
-        uint8 memberId = membersLayout.addressToMemberId[signer];
-
-        // Case: Signer is not a member of the organization
-        if (memberId == 0) {
-            return false;
-        }
-
-        // Case: Policy requires initiation by a specific member
-        if (policy.initiatorType == Policies.ApproverType.Member) {
-            return memberId == policy.initiatorId;
-        }
-
-        // Case: Policy requires initiation by any member of a specific group
-        if (policy.initiatorType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(memberId, policy.initiatorId);
         }
 
         return false;
