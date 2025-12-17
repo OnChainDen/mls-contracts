@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
-import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
@@ -52,12 +51,6 @@ library LibOrganizationAccountTransaction {
      * @notice Emitted when the initiator signature is invalid or missing
      */
     error InvalidInitiatorSignature();
-
-    /**
-     * @notice Emitted when the initiator is not authorized by the policy
-     * @param initiator The address that attempted to initiate
-     */
-    error UnauthorizedInitiator(address initiator);
 
     /**
      * @notice Emitted when signatures bytes are too short (must contain at least initiator signature)
@@ -126,24 +119,14 @@ library LibOrganizationAccountTransaction {
         }
 
         // Validate that policy applies to transaction with the recovered initiator
+        // Note: This includes validating that the initiator is authorized by the policy
         if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, account, to, value, data, initiator)) {
             revert PolicyDoesNotApply(policyId);
-        }
-
-        // Validate that the initiator is authorized by the policy
-        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, initiator)) {
-            revert UnauthorizedInitiator(initiator);
         }
 
         // Case: Policy is AutoApprove
         // Only the initiator signature is required (already validated above)
         if (policy.policyType == Policies.PolicyType.AutoApprove) {
-            // Initiator must be a member of the organization
-            LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-            uint8 memberId = membersLayout.addressToMemberId[initiator];
-            if (memberId == 0) {
-                revert TransactionRejectedByPolicy("AutoApprove policy requires initiator to be an organization member");
-            }
             return;
         }
 
@@ -234,13 +217,9 @@ library LibOrganizationAccountTransaction {
         }
 
         // Validate that policy applies to transaction with the recovered initiator
+        // Note: This includes validating that the initiator is authorized by the policy
         if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, account, to, value, data, initiator)) {
             revert PolicyDoesNotApply(policyId);
-        }
-
-        // Validate that the initiator is authorized by the policy
-        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, initiator)) {
-            revert UnauthorizedInitiator(initiator);
         }
 
         // Case: Policy is an automatic approval policy
