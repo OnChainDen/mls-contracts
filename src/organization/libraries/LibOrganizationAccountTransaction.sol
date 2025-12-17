@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
+import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
@@ -136,7 +137,7 @@ library LibOrganizationAccountTransaction {
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
 
             // Extract review signatures (everything after the first 65 bytes)
-            bytes memory reviewSignatures = _extractReviewSignatures(signatures);
+            bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
 
             // Get the review transaction hash that includes the initiator signature
             // This binds reviewers to this specific initiation
@@ -145,7 +146,7 @@ library LibOrganizationAccountTransaction {
             );
 
             // Count valid review approvals
-            uint256 validApprovals = _getValidReviewApprovals(policy, reviewSignatures, reviewTxHash);
+            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, reviewSignatures, reviewTxHash);
 
             // Case: Transaction does not have enough valid approvals
             if (validApprovals < requiredApprovals) {
@@ -249,7 +250,7 @@ library LibOrganizationAccountTransaction {
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
 
             // Extract review signatures (everything after the first 65 bytes)
-            bytes memory reviewSignatures = _extractReviewSignatures(signatures);
+            bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
 
             // Get the review transaction hash for rejection (isApproval = false)
             // This binds reviewers to rejecting this specific initiation
@@ -258,88 +259,13 @@ library LibOrganizationAccountTransaction {
             );
 
             // Count valid review rejections
-            uint256 validApprovals = _getValidReviewApprovals(policy, reviewSignatures, reviewTxHash);
+            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, reviewSignatures, reviewTxHash);
 
             // Case: Transaction does not have enough valid rejections
             if (validApprovals < requiredApprovals) {
                 revert InsufficientApprovals(requiredApprovals, validApprovals);
             }
             return;
-        }
-    }
-
-    /**
-     * @notice Extracts the review signatures from the signatures bytes (everything after the first 65 bytes)
-     * @param signatures The full signatures bytes
-     * @return reviewSignatures The review signatures (may be empty if only initiator signature provided)
-     */
-    function _extractReviewSignatures(bytes memory signatures) private pure returns (bytes memory reviewSignatures) {
-        // If signatures is exactly 65 bytes, there are no review signatures
-        if (signatures.length <= 65) {
-            return new bytes(0);
-        }
-
-        uint256 reviewLength = signatures.length - 65;
-        reviewSignatures = new bytes(reviewLength);
-
-        // Copy review signatures (everything after byte 65)
-        /* solhint-disable no-inline-assembly */
-        assembly {
-            // Source: signatures + 32 (length prefix) + 65 (skip initiator sig)
-            let src := add(add(signatures, 32), 65)
-            // Destination: reviewSignatures + 32 (length prefix)
-            let dst := add(reviewSignatures, 32)
-            // Copy reviewLength bytes
-            // Using a loop to handle arbitrary length
-            for { let i := 0 } lt(i, reviewLength) { i := add(i, 32) } { mstore(add(dst, i), mload(add(src, i))) }
-        }
-    }
-
-    /**
-     * @notice Counts valid review approvals from authorized reviewers
-     * @param policy The policy to check against
-     * @param reviewSignatures The review signatures to verify
-     * @param reviewTxHash The hash that reviewers should have signed
-     * @return validApprovals The number of valid approvals from authorized reviewers
-     */
-    function _getValidReviewApprovals(
-        Policies.Policy memory policy,
-        bytes memory reviewSignatures,
-        bytes32 reviewTxHash
-    )
-        private
-        view
-        returns (uint256 validApprovals)
-    {
-        // Case: No review signatures provided
-        if (reviewSignatures.length == 0) return 0;
-
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint256 signatureCount = reviewSignatures.length / 65;
-
-        // Track last signer to prevent duplicates (similar to Safe contracts)
-        address lastSigner = address(0);
-
-        // Iterate over signatures to count valid approvals
-        for (uint256 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = SignatureUtils.extractSignature(reviewSignatures, i);
-
-            // Recover signer address from signature
-            address signer = ECDSA.recover(reviewTxHash, signature);
-
-            // Skip if signer is invalid
-            if (signer == address(0)) continue;
-
-            // Check for duplicate signers - signers must be unique and in ascending order
-            if (signer <= lastSigner) continue;
-
-            // Update last signer for next iteration
-            lastSigner = signer;
-
-            // Check if signer is authorized based on policy
-            if (LibOrganizationPolicy.isSignerAuthorizedForPolicy(policy, signer)) {
-                ++validApprovals;
-            }
         }
     }
 
