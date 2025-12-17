@@ -236,7 +236,7 @@ library LibOrganizationAccountTransaction {
             bytes32 rejectionTxHash =
                 _getInitiatorTransactionHash(account, to, value, data, salt, expirationTimestamp, policyId, false);
 
-            // Extract the rejection signature (should be at position 1, i.e., bytes 65-129)
+            // Check if the signatures are long enough (initiator signature + at least one rejection signature)
             if (signatures.length < 130) {
                 revert TransactionRejectionNotAllowed("AutoApprove rejection requires authorized initiator signature");
             }
