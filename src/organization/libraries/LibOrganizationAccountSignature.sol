@@ -77,13 +77,7 @@ library LibOrganizationAccountSignature {
         // 3. Construct replay-safe hash
         bytes32 safeHash = _getSignatureHash(account, hash, policyId, expirationTimestamp);
 
-        // 4. Handle based on policy type
-        if (policy.policyType == Policies.PolicyType.AutoApprove) {
-            // Auto-approve policies don't require approver signatures
-            return ERC1271_MAGIC_VALUE;
-        }
-
-        // 5. For manual approval policies, verify approver signatures
+        // 4. For manual approval policies, verify approver signatures
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
             uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, approverSignatures, safeHash);
