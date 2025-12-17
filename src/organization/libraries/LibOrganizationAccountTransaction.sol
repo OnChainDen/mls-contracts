@@ -23,6 +23,12 @@ library LibOrganizationAccountTransaction {
     error TransactionRejectedByPolicy(string reason);
 
     /**
+     * @notice Emitted when a transaction rejection is not allowed
+     * @param reason The reason why the rejection is not allowed
+     */
+    error TransactionRejectionNotAllowed(string reason);
+
+    /**
      * @notice Emitted when a transaction is rejected because it has insufficient approvals
      * @param required The number of required approvals
      * @param provided The number of provided approvals
@@ -232,14 +238,14 @@ library LibOrganizationAccountTransaction {
 
             // Extract the rejection signature (should be at position 1, i.e., bytes 65-129)
             if (signatures.length < 130) {
-                revert TransactionRejectedByPolicy("AutoApprove rejection requires authorized initiator signature");
+                revert TransactionRejectionNotAllowed("AutoApprove rejection requires authorized initiator signature");
             }
             bytes memory rejectionSignature = SignatureUtils.extractSignature(signatures, 1);
 
             // Verify the rejection signature is from an authorized initiator (not necessarily the original initiator)
             address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
             if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, rejectionSigner)) {
-                revert TransactionRejectedByPolicy("Rejection signature must be from an authorized initiator");
+                revert TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
             }
             return;
         }
