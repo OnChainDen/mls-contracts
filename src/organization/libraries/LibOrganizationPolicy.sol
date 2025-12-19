@@ -708,7 +708,7 @@ library LibOrganizationPolicy {
 
         /* solhint-disable no-inline-assembly */
         assembly {
-            amount := mload(add(data, 68)) // Skip selector (4) + address (32) + read amount (32)
+            amount := mload(add(data, 68)) // Skip bytes length (32) + selector (4) + address (32)
         }
         return uint256(amount);
     }
