@@ -65,11 +65,18 @@ library LibOrganizationAccountTransaction {
     error InsufficientSignaturesLength();
 
     /**
+     * @notice Emitted when a transaction exceeds the time-based policy limit
+     * @param policyId The policy ID that was exceeded
+     */
+    error TimeBasedLimitExceeded(uint256 policyId);
+
+    /**
      * @notice Validates a transaction against the specified policy
      * @dev The signatures parameter is structured as: [initiatorSignature (65 bytes)][reviewSignatures (N * 65 bytes)]
      *      The initiator signature is verified against the base transaction hash.
      *      Review signatures are verified against a hash that includes the initiator signature,
      *      ensuring reviewers explicitly approve this specific initiation.
+     *      If the policy has time-based limits, this function also updates the usage tracking.
      * @param account The account executing the transaction
      * @param to Transaction destination address
      * @param value Transaction value
@@ -90,7 +97,6 @@ library LibOrganizationAccountTransaction {
         bytes memory signatures
     )
         internal
-        view
     {
         // Check if the transaction has expired
         if (block.timestamp > expirationTimestamp) {
@@ -134,6 +140,8 @@ library LibOrganizationAccountTransaction {
         // Case: Policy is AutoApprove
         // Only the initiator signature is required (already validated above)
         if (policy.policyType == Policies.PolicyType.AutoApprove) {
+            // Check and update time-based limits before returning
+            _checkAndUpdateTimeBasedLimit(policyId, policy, account, to, value, data, initiator);
             return;
         }
 
@@ -158,7 +166,60 @@ library LibOrganizationAccountTransaction {
             if (validApprovals < requiredApprovals) {
                 revert InsufficientApprovals(requiredApprovals, validApprovals);
             }
+
+            // Check and update time-based limits before returning
+            _checkAndUpdateTimeBasedLimit(policyId, policy, account, to, value, data, initiator);
             return;
+        }
+    }
+
+    /**
+     * @notice Checks and updates time-based limits for a transaction
+     * @dev Determines the usage amount based on transaction type and calls the limit check
+     * @param policyId The policy ID
+     * @param policy The policy to check against
+     * @param account The source account address
+     * @param to The destination address of the transaction
+     * @param value The value of the transaction
+     * @param data The data of the transaction
+     * @param initiator The initiator address
+     */
+    function _checkAndUpdateTimeBasedLimit(
+        uint256 policyId,
+        Policies.Policy memory policy,
+        address account,
+        address to,
+        uint256 value,
+        bytes memory data,
+        address initiator
+    )
+        private
+    {
+        // Skip if no time-based limitation
+        if (policy.limitation != Policies.PolicyLimitation.TimeInterval) {
+            return;
+        }
+
+        // Determine the actual destination for tracking
+        address destination = LibOrganizationPolicy.getActualDestination(to, data, value);
+
+        // Determine usage amount based on transaction type
+        uint256 usageAmount;
+        if (policy.transactionType == Policies.TransactionType.TokenTransfers) {
+            // For token transfers, usage is the transfer amount
+            usageAmount = LibOrganizationPolicy.extractTransferAmount(data, value);
+        } else {
+            // For contract interactions (and any other type), usage is 1 (call count)
+            usageAmount = 1;
+        }
+
+        // Check and update the time-based limit
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
+
+        if (!withinLimit) {
+            revert TimeBasedLimitExceeded(policyId);
         }
     }
 

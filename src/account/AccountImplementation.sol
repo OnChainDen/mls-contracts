@@ -116,7 +116,9 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
 
     /**
      * @notice Validates a signature according to ERC-1271
-     * @dev Delegates signature validation to the associated Organization contract
+     * @dev Delegates signature validation to the associated Organization contract.
+     *      Note: Time-based policy limits are checked but NOT updated for ERC-1271 signatures
+     *      due to the view requirement of the standard.
      * @param hash The hash of the data that was signed
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise

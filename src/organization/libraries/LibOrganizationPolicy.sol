@@ -1203,4 +1203,148 @@ library LibOrganizationPolicy {
     function _isAddressWhitelisted(address addressToCheck) private view returns (bool) {
         return LibOrganizationWhitelistStorage.layout().whitelistedAddresses[addressToCheck];
     }
+
+    // ================================
+    // TIME-BASED POLICY LIMIT FUNCTIONS
+    // ================================
+
+    /**
+     * @notice Computes the usage key for time-based policy tracking
+     * @dev The key is computed based on policyId and scoped entities.
+     *      When scope is AcrossAll, address(0) is used for that entity.
+     *      When scope is PerEntity, the actual address is used.
+     * @param policyId The ID of the policy
+     * @param policy The policy to compute the key for
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @return The computed usage key
+     */
+    function computeUsageKey(
+        uint256 policyId,
+        Policies.Policy memory policy,
+        address account,
+        address destination,
+        address initiator
+    )
+        internal
+        pure
+        returns (bytes32)
+    {
+        // Determine scoped values based on policy configuration
+        address scopedAccount =
+            policy.timeIntervalSourceScope == Policies.TimeIntervalScope.PerEntity ? account : address(0);
+
+        address scopedDestination =
+            policy.timeIntervalDestinationScope == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
+
+        address scopedInitiator =
+            policy.timeIntervalInitiatorScope == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
+
+        return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
+    }
+
+    /**
+     * @notice Computes the current time window for a policy
+     * @dev Uses fixed time windows based on timeIntervalHours
+     * @param policy The policy to compute the time window for
+     * @return The current time window ID
+     */
+    function computeTimeWindow(Policies.Policy memory policy) internal view returns (uint256) {
+        // Avoid division by zero
+        if (policy.timeIntervalHours == 0) {
+            return 0;
+        }
+        return block.timestamp / (policy.timeIntervalHours * 3600);
+    }
+
+    /**
+     * @notice Checks if usage is within time-based limit and updates storage if so
+     * @dev This function should only be called when policy.limitation == TimeInterval
+     * @param policyId The ID of the policy
+     * @param policy The policy to check against
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @param usageAmount The amount to add to usage (transfer amount for token transfers, 1 for
+     * interactions/signatures)
+     * @return withinLimit True if the usage is within the limit, false otherwise
+     */
+    function checkAndUpdateTimeBasedLimit(
+        uint256 policyId,
+        Policies.Policy memory policy,
+        address account,
+        address destination,
+        address initiator,
+        uint256 usageAmount
+    )
+        internal
+        returns (bool withinLimit)
+    {
+        // Skip check if no time-based limitation
+        if (policy.limitation != Policies.PolicyLimitation.TimeInterval) {
+            return true;
+        }
+
+        // Skip if time interval is not configured (0 hours)
+        if (policy.timeIntervalHours == 0) {
+            return true;
+        }
+
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
+
+        bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
+        uint256 timeWindow = computeTimeWindow(policy);
+
+        uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
+
+        // Check if adding usageAmount would exceed the limit
+        if (currentUsage + usageAmount > policy.timeIntervalLimit) {
+            return false;
+        }
+
+        // Update usage
+        policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
+
+        return true;
+    }
+
+    /**
+     * @notice Gets the current usage for a policy within the current time window
+     * @dev This is a view function for external queries
+     * @param policyId The ID of the policy
+     * @param policy The policy to check
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @return The current usage amount within the current time window
+     */
+    function getCurrentUsage(
+        uint256 policyId,
+        Policies.Policy memory policy,
+        address account,
+        address destination,
+        address initiator
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        // Return 0 if no time-based limitation
+        if (policy.limitation != Policies.PolicyLimitation.TimeInterval) {
+            return 0;
+        }
+
+        // Return 0 if time interval is not configured
+        if (policy.timeIntervalHours == 0) {
+            return 0;
+        }
+
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
+
+        bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
+        uint256 timeWindow = computeTimeWindow(policy);
+
+        return policyLayout.policyUsage[usageKey][timeWindow];
+    }
 }

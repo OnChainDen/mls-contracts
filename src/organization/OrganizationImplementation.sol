@@ -370,6 +370,28 @@ contract OrganizationImplementation is
         return LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, signer);
     }
 
+    /**
+     * @notice Gets the current usage for a time-based policy within the current time window
+     * @param policyId The ID of the policy
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @return The current usage amount within the current time window
+     */
+    function getPolicyUsage(
+        uint256 policyId,
+        address account,
+        address destination,
+        address initiator
+    )
+        external
+        view
+        returns (uint256)
+    {
+        Policies.Policy memory policy = LibOrganizationPolicy.getPolicy(policyId);
+        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
+    }
+
     // ================================
     // LibOrganizationWhitelist wrappers
     // ================================
@@ -714,7 +736,8 @@ contract OrganizationImplementation is
 
     /**
      * @notice Validates an ERC-1271 signature for a given account
-     * @dev This function is called by Account contracts to validate signatures
+     * @dev This function is called by Account contracts to validate signatures.
+     *      Note: Time-based policy limits are checked but NOT updated due to ERC-1271 view requirement.
      * @param account The account address on behalf of which the signature is being validated
      * @param hash The hash that was signed
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)

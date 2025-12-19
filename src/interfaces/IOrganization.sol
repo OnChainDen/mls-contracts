@@ -40,6 +40,7 @@ enum OperationType {
 interface IOrganizationSignatureValidator {
     /**
      * @notice Validates an ERC-1271 signature for a given account
+     * @dev Note: Time-based policy limits are checked but NOT updated due to ERC-1271 view requirement
      * @param account The account address on behalf of which the signature is being validated
      * @param hash The hash that was signed
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)

@@ -13,6 +13,9 @@ library LibOrganizationPolicyStorage {
         mapping(uint256 => Policies.Policy) policies;
         mapping(uint256 => bool) policyExists;
         uint256 nextPolicyId;
+        // Time-based usage tracking: usageKey => timeWindow => usedAmount/count
+        // usageKey is computed from policyId and scoped entities (account, destination, initiator)
+        mapping(bytes32 => mapping(uint256 => uint256)) policyUsage;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.policy.storage");

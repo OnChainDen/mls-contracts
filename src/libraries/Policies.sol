@@ -130,5 +130,6 @@ library Policies {
         TimeIntervalScope timeIntervalInitiatorScope; // Whether time limits are per-initiator or global
         TimeIntervalScope timeIntervalSourceScope; // Whether time limits are per-source-account or global
         TimeIntervalScope timeIntervalDestinationScope; // Whether time limits are per-destination or global
+        uint256 timeIntervalLimit; // Max amount (transfers) or count (interactions/signatures) per interval
     }
 }
