@@ -36,6 +36,11 @@ library LibOrganizationPolicy {
     event PoliciesRemoved(uint256[] policyIds);
 
     /**
+     * @notice Thrown when a token transfer transaction is malformed
+     */
+    error MalformedTokenTransfer();
+
+    /**
      * @notice Gets a policy by its ID
      * @param policyId The ID of the policy to retrieve
      * @return The policy with the given ID
@@ -692,10 +697,10 @@ library LibOrganizationPolicy {
             return value; // Native token transfer
         }
 
-        // Case: The ERC-20 transaction is transfering a value of zero
+        // Case: The ERC-20 transaction is malformed
         // Note: 4 bytes selector + 32 bytes address + 32 bytes amount = 68 bytes
         if (data.length < 68) {
-            return 0;
+            revert MalformedTokenTransfer();
         }
 
         // Case: The ERC-20 transaction is transfering a non-zero value
