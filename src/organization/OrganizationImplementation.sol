@@ -737,7 +737,8 @@ contract OrganizationImplementation is
     /**
      * @notice Validates an ERC-1271 signature for a given account
      * @dev This function is called by Account contracts to validate signatures.
-     *      Note: Time-based policy limits are checked but NOT updated due to ERC-1271 view requirement.
+     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
      * @param account The account address on behalf of which the signature is being validated
      * @param hash The hash that was signed
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)

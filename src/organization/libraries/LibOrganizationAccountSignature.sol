@@ -31,7 +31,8 @@ library LibOrganizationAccountSignature {
      *      The approverSignatures is structured as: [initiatorSignature (65 bytes)][reviewSignatures (N * 65 bytes)]
      *      The initiator signature is verified against the initiator hash.
      *      Review signatures are verified against a hash that includes the initiator signature.
-     *      Note: Time-based limits are checked but NOT updated due to ERC-1271 view requirement.
+     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
      * @param account The account address on behalf of which the signature is being validated
      * @param hash The original hash that was signed
      * @param signature The encoded signature data containing policyId, expiration, approver signatures, and guardian
@@ -104,18 +105,12 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // 4. Check time-based limits (view only - does not update usage)
-        // Note: Due to ERC-1271 view requirement, we cannot update usage tracking for signatures
-        if (!_checkTimeBasedLimit(policyId, policy, account, initiator)) {
-            return ERC1271_INVALID_VALUE;
-        }
-
-        // 5. For AutoApprove policies, only the initiator signature is required (already validated)
+        // 4. For AutoApprove policies, only the initiator signature is required (already validated)
         if (policy.policyType == Policies.PolicyType.AutoApprove) {
             return ERC1271_MAGIC_VALUE;
         }
 
-        // 6. For manual approval policies, verify review signatures
+        // 5. For manual approval policies, verify review signatures
         if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
             uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
 
@@ -135,44 +130,6 @@ library LibOrganizationAccountSignature {
         }
 
         return ERC1271_INVALID_VALUE;
-    }
-
-    /**
-     * @notice Checks time-based limits for a signature (view only, does not update)
-     * @dev Due to ERC-1271 view requirement, we can only check but not update usage
-     * @param policyId The policy ID
-     * @param policy The policy to check against
-     * @param account The account address
-     * @param initiator The initiator address
-     * @return True if within limit, false otherwise
-     */
-    function _checkTimeBasedLimit(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        address account,
-        address initiator
-    )
-        private
-        view
-        returns (bool)
-    {
-        // Skip if no time-based limitation
-        if (policy.limitation != Policies.PolicyLimitation.TimeInterval) {
-            return true;
-        }
-
-        // Skip if time interval is not configured
-        if (policy.timeIntervalHours == 0) {
-            return true;
-        }
-
-        // Get current usage and check if adding 1 would exceed the limit
-        // For signatures, usage is always 1 (count) and destination is not applicable
-        uint256 currentUsage = LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, address(0), initiator);
-
-        // Check if adding 1 would exceed the limit
-        // Note: This is a read-only check - usage is NOT updated
-        return currentUsage + 1 <= policy.timeIntervalLimit;
     }
 
     /**
