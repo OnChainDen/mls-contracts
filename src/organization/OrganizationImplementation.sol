@@ -372,6 +372,7 @@ contract OrganizationImplementation is
 
     /**
      * @notice Gets the current usage for a time-based policy within the current time window
+     * @dev Reverts if the policy does not exist
      * @param policyId The ID of the policy
      * @param account The source account address
      * @param destination The destination address
@@ -388,8 +389,7 @@ contract OrganizationImplementation is
         view
         returns (uint256)
     {
-        Policies.Policy memory policy = LibOrganizationPolicy.getPolicy(policyId);
-        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
+        return LibOrganizationPolicy.getCurrentUsage(policyId, account, destination, initiator);
     }
 
     // ================================

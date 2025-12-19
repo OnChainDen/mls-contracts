@@ -1311,9 +1311,8 @@ library LibOrganizationPolicy {
 
     /**
      * @notice Gets the current usage for a policy within the current time window
-     * @dev This is a view function for external queries
+     * @dev This is a view function for external queries. Reverts if policy does not exist.
      * @param policyId The ID of the policy
-     * @param policy The policy to check
      * @param account The source account address
      * @param destination The destination address
      * @param initiator The initiator address
@@ -1321,7 +1320,6 @@ library LibOrganizationPolicy {
      */
     function getCurrentUsage(
         uint256 policyId,
-        Policies.Policy memory policy,
         address account,
         address destination,
         address initiator
@@ -1330,6 +1328,9 @@ library LibOrganizationPolicy {
         view
         returns (uint256)
     {
+        // Fetch policy from storage (reverts if policy doesn't exist)
+        Policies.Policy memory policy = getPolicy(policyId);
+
         // Return 0 if no time-based limitation
         if (policy.limitation != Policies.PolicyLimitation.TimeInterval) {
             return 0;

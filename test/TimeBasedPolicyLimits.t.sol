@@ -277,7 +277,10 @@ contract TimeBasedPolicyLimitsTest is Test {
         Policies.Policy memory policy = _createBasicTimeBasedPolicy();
         policy.limitation = Policies.PolicyLimitation.None;
 
-        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        // Store policy in storage
+        _storePolicy(POLICY_ID, policy);
+
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
 
         assertEq(usage, 0, "Should return 0 when no time-based limitation");
     }
@@ -286,7 +289,10 @@ contract TimeBasedPolicyLimitsTest is Test {
         Policies.Policy memory policy = _createBasicTimeBasedPolicy();
         policy.timeIntervalHours = 0;
 
-        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        // Store policy in storage
+        _storePolicy(POLICY_ID, policy);
+
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
 
         assertEq(usage, 0, "Should return 0 when timeIntervalHours is 0");
     }
@@ -295,9 +301,11 @@ contract TimeBasedPolicyLimitsTest is Test {
         Policies.Policy memory policy = _createBasicTimeBasedPolicy();
         policy.timeIntervalLimit = 1000;
 
+        // Store policy in storage
+        _storePolicy(POLICY_ID, policy);
+
         // Initial usage should be 0
-        uint256 initialUsage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 initialUsage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(initialUsage, 0, "Initial usage should be 0");
 
         // Use 500
@@ -307,7 +315,7 @@ contract TimeBasedPolicyLimitsTest is Test {
 
         // Check usage is now 500
         uint256 afterFirstUsage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(afterFirstUsage, 500, "Usage should be 500 after first transaction");
 
         // Use 300 more
@@ -317,7 +325,7 @@ contract TimeBasedPolicyLimitsTest is Test {
 
         // Check usage is now 800
         uint256 afterSecondUsage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(afterSecondUsage, 800, "Usage should be 800 after second transaction");
     }
 
@@ -343,5 +351,11 @@ contract TimeBasedPolicyLimitsTest is Test {
         policy.timeIntervalSourceScope = Policies.TimeIntervalScope.AcrossAll;
         policy.timeIntervalDestinationScope = Policies.TimeIntervalScope.AcrossAll;
         policy.timeIntervalLimit = 1000;
+    }
+
+    function _storePolicy(uint256 policyId, Policies.Policy memory policy) internal {
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
+        policyLayout.policies[policyId] = policy;
+        policyLayout.policyExists[policyId] = true;
     }
 }
