@@ -21,21 +21,11 @@ library UpgradeAuthorizationStorage {
 
     /**
      * @notice Get the storage layout for upgrade authorization
-     * @return layout The storage layout
-     * @dev Computes ERC-7201 location: keccak256(abi.encode(uint256(keccak256(namespace)) - 1)) &
-     * ~bytes32(uint256(0xff))
+     * @return layout_ The storage layout
+     * @dev Uses keccak256 hash of the namespace as the storage slot
      */
     function layout() internal pure returns (Layout storage layout_) {
-        bytes32 slot;
-        assembly {
-            // Compute ERC-7201 location: keccak256(abi.encode(uint256(STORAGE_NAMESPACE) - 1)) &
-            // ~bytes32(uint256(0xff))
-            let namespaceHash := STORAGE_NAMESPACE
-            let adjustedHash := sub(namespaceHash, 1)
-            mstore(0x00, adjustedHash)
-            let hash := keccak256(0x00, 0x20)
-            slot := and(hash, not(0xff))
-        }
+        bytes32 slot = STORAGE_NAMESPACE;
         assembly {
             layout_.slot := slot
         }

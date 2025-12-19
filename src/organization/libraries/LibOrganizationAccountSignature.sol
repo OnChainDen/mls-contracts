@@ -31,6 +31,8 @@ library LibOrganizationAccountSignature {
      *      The approverSignatures is structured as: [initiatorSignature (65 bytes)][reviewSignatures (N * 65 bytes)]
      *      The initiator signature is verified against the initiator hash.
      *      Review signatures are verified against a hash that includes the initiator signature.
+     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
      * @param account The account address on behalf of which the signature is being validated
      * @param hash The original hash that was signed
      * @param signature The encoded signature data containing policyId, expiration, approver signatures, and guardian

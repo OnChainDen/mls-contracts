@@ -87,6 +87,7 @@ library LibOrganizationInitialization {
         _setAdminConfiguration(adminType, adminAddresses, votingThreshold);
 
         // Initialize policy counter
+        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
         policyLayout.nextPolicyId = 1;
 
         // Set guardian
