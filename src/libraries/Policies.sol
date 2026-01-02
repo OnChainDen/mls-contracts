@@ -111,10 +111,26 @@ library Policies {
 
     }
 
-    /**
-     * @notice Types of constraints that can be applied to function parameters
-     * @dev Determines how parameter values are validated against the constraint
-     */
+    /// @notice A constraint on a single function parameter
+    /// @dev The comparisonData field is ABI-encoded based on paramType and constraintType:
+    ///      - Any: empty bytes (no comparison needed)
+    ///      - Exact + Uint: abi.encode(uint256 value)
+    ///      - Exact + Int: abi.encode(int256 value)
+    ///      - Exact + Address: abi.encode(address value)
+    ///      - Exact + Bool: abi.encode(bool value)
+    ///      - Exact + FixedBytes: abi.encode(bytes32 value) - value is left-padded for bytes1-bytes31
+    ///      - Exact + Bytes: abi.encode(bytes32 keccak256Hash) - hash of expected dynamic bytes
+    ///      - Exact + String: abi.encode(bytes32 keccak256Hash) - hash of expected string
+    ///      - Range + Uint: abi.encode(uint256 min, uint256 max)
+    ///      - Range + Int: abi.encode(int256 min, int256 max)
+    ///      - List + Address: abi.encode(address[] allowedAddresses)
+    ///
+    /// @dev The slotsToSkip field specifies how many 32-byte slots this parameter occupies (must be >= 1):
+    ///      - Basic types (uint, int, address, bool, bytes1-32): 1 slot
+    ///      - Dynamic types (string, bytes, T[]): 1 slot (contains offset)
+    ///      - Static arrays T[k]: k slots (stored inline)
+    ///      - Static structs with N fields: N slots (stored inline)
+    ///      - Dynamic structs: 1 slot (contains offset)
     enum ConstraintType {
         Any, // Any value is accepted (no constraint)
         Exact, // Value must exactly match the specified value
@@ -134,7 +150,7 @@ library Policies {
     struct ParameterConstraint {
         ParamType paramType;
         ConstraintType constraintType;
-        uint8 slotsToSkip;
+        uint8 slotsToSkip; // Number of 32-byte slots this parameter occupies (must be >= 1)
         bytes comparisonData;
     }
 
