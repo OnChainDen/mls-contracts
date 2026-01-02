@@ -76,7 +76,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the policy exists in the organization's policy tree
-        if (!LibOrganizationPolicy.policyExistsMemory(policyId, proofs.policy, proofs.policyProof)) {
+        if (!LibOrganizationPolicy.policyExists(policyId, proofs.policy, proofs.policyProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -135,7 +135,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the initiator is authorized by this policy
-        if (!LibOrganizationPolicy._doesMatchInitiatorMemory(proofs.policy, initiator)) {
+        if (!LibOrganizationPolicy._doesMatchInitiator(proofs.policy, initiator)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -215,7 +215,7 @@ library LibOrganizationAccountSignature {
         returns (bytes4)
     {
         // Get required number of approvals from policy
-        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovalsMemory(proofs.policy);
+        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
 
         // Extract reviewer signatures (everything after the initiator signature)
         bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(approverSignatures);
@@ -225,8 +225,7 @@ library LibOrganizationAccountSignature {
         bytes32 reviewHash = _getReviewSignatureHash(account, hash, policyId, expirationTimestamp, initiatorSignature);
 
         // Count valid approvals from authorized signers
-        uint256 validApprovals =
-            LibOrganizationPolicy.getValidApprovalsMemory(proofs.policy, reviewSignatures, reviewHash);
+        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash);
 
         if (validApprovals >= requiredApprovals) {
             return ERC1271_MAGIC_VALUE;

@@ -136,6 +136,7 @@ library Policies {
         Exact, // Value must exactly match the specified value
         Range, // Value must be within min/max bounds (for numeric types)
         List // Value must be one of the allowed values in a list
+
     }
 
     /**

@@ -79,35 +79,13 @@ library LibOrganizationPolicy {
     // ================================
 
     /**
-     * @notice Verifies that a policy exists in the global merkle tree (calldata version)
+     * @notice Verifies that a policy exists in the global merkle tree
      * @param policyId The unique identifier of the policy
-     * @param policy The policy data from calldata
+     * @param policy The policy data
      * @param proof The merkle proof for the policy
      * @return True if the policy exists in the tree, false otherwise
      */
     function policyExists(
-        uint256 policyId,
-        Policies.Policy calldata policy,
-        bytes32[] calldata proof
-    )
-        internal
-        view
-        returns (bool)
-    {
-        bytes32 root = LibOrganizationPolicyStorage.layout().policiesRoot;
-        bytes32 leaf = _computePolicyLeaf(policyId, policy);
-        return MerkleProof.verify(proof, root, leaf);
-    }
-
-    /**
-     * @notice Verifies that a policy exists in the global merkle tree (memory version)
-     * @dev Used when policy data has been decoded into memory (e.g., in ERC-1271 validation)
-     * @param policyId The unique identifier of the policy
-     * @param policy The policy data from memory
-     * @param proof The merkle proof for the policy
-     * @return True if the policy exists in the tree, false otherwise
-     */
-    function policyExistsMemory(
         uint256 policyId,
         Policies.Policy memory policy,
         bytes32[] memory proof
@@ -233,7 +211,7 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks if the initiator matches the policy's initiator filter (calldata version)
+     * @notice Checks if the initiator matches the policy's initiator filter
      * @dev If anyInitiator is true, always returns true.
      *      Otherwise, checks if the initiator is the specified member or in the specified group.
      * @param policy The policy to check against
@@ -241,51 +219,6 @@ library LibOrganizationPolicy {
      * @return True if the initiator matches, false otherwise
      */
     function _doesMatchInitiator(
-        Policies.Policy calldata policy,
-        address initiatorAddress
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: The policy matches transactions with any initiator
-        if (policy.config.initiator.anyInitiator) return true;
-
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Get the member ID for the initiator
-        uint8 memberId = membersLayout.addressToMemberId[initiatorAddress];
-
-        // Case: Initiator is not a member of the organization
-        if (memberId == 0) return false;
-
-        Policies.ApproverType initType = policy.config.initiator.initiatorType;
-        uint8 initId = policy.config.initiator.initiatorId;
-
-        // Case: The policy matches transactions made by a specific individual, and that individual
-        //        is the initiator of this transaction
-        if (initType == Policies.ApproverType.Member) {
-            return memberId == initId;
-        }
-
-        // Case: The policy matches transactions made by any individual from a specific group, and the initiator
-        //       is in that group
-        if (initType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(initiatorAddress, initId);
-        }
-
-        // Case: The policy does not match this transaction
-        return false;
-    }
-
-    /**
-     * @notice Checks if the initiator matches the policy's initiator filter (memory version)
-     * @dev Used when policy data is in memory (e.g., ERC-1271 validation)
-     * @param policy The policy to check against
-     * @param initiatorAddress The address of the transaction initiator
-     * @return True if the initiator matches, false otherwise
-     */
-    function _doesMatchInitiatorMemory(
         Policies.Policy memory policy,
         address initiatorAddress
     )
@@ -498,13 +431,13 @@ library LibOrganizationPolicy {
     // ================================
 
     /**
-     * @notice Gets the number of required approvals for a policy (calldata version)
+     * @notice Gets the number of required approvals for a policy
      * @dev For Member approver type, always returns 1.
      *      For Group approver type, returns the approval threshold.
      * @param policy The policy to check
      * @return The number of required approvals
      */
-    function getRequiredApprovals(Policies.Policy calldata policy) internal pure returns (uint256) {
+    function getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
         // Case: Policy requires a single approval from a member
         if (policy.config.approval.approverType == Policies.ApproverType.Member) {
             return 1;
@@ -515,22 +448,7 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Gets the number of required approvals for a policy (memory version)
-     * @param policy The policy to check
-     * @return The number of required approvals
-     */
-    function getRequiredApprovalsMemory(Policies.Policy memory policy) internal pure returns (uint256) {
-        // Case: Policy requires a single approval from a member
-        if (policy.config.approval.approverType == Policies.ApproverType.Member) {
-            return 1;
-        }
-
-        // Case: Policy requires a threshold number of approvals from any individual in a group
-        return policy.config.approval.approvalThreshold;
-    }
-
-    /**
-     * @notice Checks if a signer is authorized to approve for a policy (calldata version)
+     * @notice Checks if a signer is authorized to approve for a policy
      * @dev For Member approver type, the signer must be the specified member.
      *      For Group approver type, the signer must be in the specified group.
      * @param policy The policy to check against
@@ -538,44 +456,6 @@ library LibOrganizationPolicy {
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicy(
-        Policies.Policy calldata policy,
-        address signerAddress
-    )
-        internal
-        view
-        returns (bool)
-    {
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Get the member ID for the signer
-        uint8 memberId = membersLayout.addressToMemberId[signerAddress];
-
-        // Case: Signer is not a member of the organization
-        if (memberId == 0) return false;
-
-        Policies.ApproverType appType = policy.config.approval.approverType;
-        uint8 approverId = policy.config.approval.approverId;
-
-        // Case: Policy requires approval from a specific member
-        if (appType == Policies.ApproverType.Member) {
-            return memberId == approverId;
-        }
-
-        // Case: Policy requires approval from any member of a specific group
-        if (appType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(memberId, approverId);
-        }
-
-        return false;
-    }
-
-    /**
-     * @notice Checks if a signer is authorized to approve for a policy (memory version)
-     * @param policy The policy to check against
-     * @param signerAddress The address of the signer
-     * @return True if the signer is authorized, false otherwise
-     */
-    function isSignerAuthorizedForPolicyMemory(
         Policies.Policy memory policy,
         address signerAddress
     )
@@ -608,7 +488,7 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Counts valid approvals from a set of signatures (calldata version)
+     * @notice Counts valid approvals from a set of signatures
      * @dev Signatures must be ordered by signer address (ascending) to prevent duplicates.
      *      Each signature is verified against the message hash and checked for authorization.
      * @param policy The policy to check against
@@ -617,7 +497,7 @@ library LibOrganizationPolicy {
      * @return The number of valid approvals
      */
     function getValidApprovals(
-        Policies.Policy calldata policy,
+        Policies.Policy memory policy,
         bytes memory signatures,
         bytes32 messageHash
     )
@@ -658,62 +538,6 @@ library LibOrganizationPolicy {
 
             // Check if signer is authorized based on policy
             if (isSignerAuthorizedForPolicy(policy, signer)) {
-                ++validApprovals;
-            }
-        }
-
-        return validApprovals;
-    }
-
-    /**
-     * @notice Counts valid approvals from a set of signatures (memory version)
-     * @param policy The policy to check against
-     * @param signatures The concatenated signatures (65 bytes each)
-     * @param messageHash The message hash that was signed
-     * @return The number of valid approvals
-     */
-    function getValidApprovalsMemory(
-        Policies.Policy memory policy,
-        bytes memory signatures,
-        bytes32 messageHash
-    )
-        internal
-        view
-        returns (uint8)
-    {
-        // Case: No signatures provided
-        if (signatures.length == 0) return 0;
-
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
-        uint8 validApprovals = 0;
-
-        // Track last signer to prevent duplicates (similar to Safe contracts)
-        address lastSigner = address(0);
-
-        // Iterate over signatures to count valid approvals
-        for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
-
-            // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSigner(signature);
-
-            // Skip if signer is invalid
-            if (signer == address(0)) continue;
-
-            // Check for duplicate signers - signers must be unique and in ascending order
-            if (signer <= lastSigner) continue;
-
-            // Update last signer for next iteration
-            lastSigner = signer;
-
-            // Verify the signature using ERC-1271
-            if (!SignatureChecker.isValidSignatureNow(signer, messageHash, signature)) {
-                continue;
-            }
-
-            // Check if signer is authorized based on policy
-            if (isSignerAuthorizedForPolicyMemory(policy, signer)) {
                 ++validApprovals;
             }
         }
@@ -1143,7 +967,7 @@ library LibOrganizationPolicy {
     // ================================
 
     /**
-     * @notice Computes the usage key for time-based limit tracking (calldata version)
+     * @notice Computes the usage key for time-based limit tracking
      * @dev The usage key is a hash of the policy ID and scoped entities.
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
@@ -1156,7 +980,7 @@ library LibOrganizationPolicy {
      */
     function computeUsageKey(
         uint256 policyId,
-        Policies.Policy calldata policy,
+        Policies.Policy memory policy,
         address account,
         address destination,
         address initiator
@@ -1181,12 +1005,12 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Computes the current time window for a policy (calldata version)
+     * @notice Computes the current time window for a policy
      * @dev Time windows are calculated as: block.timestamp / (timeIntervalHours * 3600)
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
-    function computeTimeWindow(Policies.Policy calldata policy) internal view returns (uint256) {
+    function computeTimeWindow(Policies.Policy memory policy) internal view returns (uint256) {
         // Uses fixed time windows based on timeIntervalHours
         uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
 
@@ -1197,7 +1021,7 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks and updates time-based usage limits (calldata version)
+     * @notice Checks and updates time-based usage limits
      * @dev Checks if the usage amount would exceed the limit for the current time window.
      *      If within limit, updates the usage and returns true.
      *      If exceeding limit, returns false without updating.
@@ -1211,7 +1035,7 @@ library LibOrganizationPolicy {
      */
     function checkAndUpdateTimeBasedLimit(
         uint256 policyId,
-        Policies.Policy calldata policy,
+        Policies.Policy memory policy,
         address account,
         address destination,
         address initiator,
@@ -1243,7 +1067,7 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Gets the current usage for a time-based policy (calldata version)
+     * @notice Gets the current usage for a time-based policy
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -1253,7 +1077,7 @@ library LibOrganizationPolicy {
      */
     function getCurrentUsage(
         uint256 policyId,
-        Policies.Policy calldata policy,
+        Policies.Policy memory policy,
         address account,
         address destination,
         address initiator
@@ -1272,139 +1096,6 @@ library LibOrganizationPolicy {
 
         bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
         uint256 timeWindow = computeTimeWindow(policy);
-
-        return policyLayout.policyUsage[usageKey][timeWindow];
-    }
-
-    // ================================
-    // MEMORY VERSIONS FOR TESTS/INTERNAL USE
-    // ================================
-
-    /**
-     * @notice Computes the usage key for time-based limit tracking (memory version)
-     * @dev Used when policy data is in memory (e.g., in tests)
-     * @param policyId The policy ID
-     * @param policy The policy data
-     * @param account The source account address
-     * @param destination The destination address
-     * @param initiator The initiator address
-     * @return The computed usage key
-     */
-    function computeUsageKeyMemory(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        address account,
-        address destination,
-        address initiator
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        // Determine scoped values based on policy configuration
-        // When scope is AcrossAll, address(0) is used for that entity.
-        // When scope is PerEntity, the actual address is used.
-        address scopedAccount =
-            policy.config.timeLimit.sourceScope == Policies.TimeIntervalScope.PerEntity ? account : address(0);
-
-        address scopedDestination =
-            policy.config.timeLimit.destinationScope == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
-
-        address scopedInitiator =
-            policy.config.timeLimit.initiatorScope == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
-
-        return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
-    }
-
-    /**
-     * @notice Computes the current time window for a policy (memory version)
-     * @param policy The policy data
-     * @return The current time window, or 0 if timeIntervalHours is 0
-     */
-    function computeTimeWindowMemory(Policies.Policy memory policy) internal view returns (uint256) {
-        // Uses fixed time windows based on timeIntervalHours
-        uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
-
-        // Avoid division by zero
-        if (hours_ == 0) return 0;
-
-        return block.timestamp / (uint256(hours_) * 3600);
-    }
-
-    /**
-     * @notice Checks and updates time-based usage limits (memory version)
-     * @dev Used when policy data is in memory (e.g., in tests)
-     * @param policyId The policy ID
-     * @param policy The policy data
-     * @param account The source account address
-     * @param destination The destination address
-     * @param initiator The initiator address
-     * @param usageAmount The amount to add to usage
-     * @return withinLimit True if within limit (and usage was updated), false otherwise
-     */
-    function checkAndUpdateTimeBasedLimitMemory(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        address account,
-        address destination,
-        address initiator,
-        uint256 usageAmount
-    )
-        internal
-        returns (bool withinLimit)
-    {
-        // Skip check if no time-based limitation
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return true;
-
-        // Skip if time interval is not configured (0 hours)
-        if (policy.config.timeLimit.timeIntervalHours == 0) return true;
-
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
-
-        bytes32 usageKey = computeUsageKeyMemory(policyId, policy, account, destination, initiator);
-        uint256 timeWindow = computeTimeWindowMemory(policy);
-
-        uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
-
-        // Check if adding usageAmount would exceed the limit
-        if (currentUsage + usageAmount > policy.config.timeLimit.timeIntervalLimit) return false;
-
-        // Update usage
-        policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
-
-        return true;
-    }
-
-    /**
-     * @notice Gets the current usage for a time-based policy (memory version)
-     * @param policyId The policy ID
-     * @param policy The policy data
-     * @param account The source account address
-     * @param destination The destination address
-     * @param initiator The initiator address
-     * @return The current usage amount within the current time window
-     */
-    function getCurrentUsageMemory(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        address account,
-        address destination,
-        address initiator
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        // Return 0 if no time-based limitation
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return 0;
-
-        // Return 0 if time interval is not configured
-        if (policy.config.timeLimit.timeIntervalHours == 0) return 0;
-
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
-
-        bytes32 usageKey = computeUsageKeyMemory(policyId, policy, account, destination, initiator);
-        uint256 timeWindow = computeTimeWindowMemory(policy);
 
         return policyLayout.policyUsage[usageKey][timeWindow];
     }
