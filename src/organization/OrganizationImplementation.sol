@@ -346,6 +346,7 @@ contract OrganizationImplementation is
      * @param account The source account address
      * @param destination The destination address
      * @param initiator The initiator address
+     * @param policyProof The merkle proof verifying the policy exists
      * @return The current usage amount within the current time window
      */
     function getPolicyUsage(
@@ -353,12 +354,18 @@ contract OrganizationImplementation is
         Policies.Policy calldata policy,
         address account,
         address destination,
-        address initiator
+        address initiator,
+        bytes32[] calldata policyProof
     )
         external
         view
         returns (uint256)
     {
+        // Verify policy exists in merkle tree
+        if (!LibOrganizationPolicy.policyExists(policyId, policy, policyProof)) {
+            revert LibOrganizationPolicy.PolicyVerificationFailed();
+        }
+
         return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
     }
 
