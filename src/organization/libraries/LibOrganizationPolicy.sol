@@ -534,12 +534,12 @@ library LibOrganizationPolicy {
      * @dev For Member approver type, the signer must be the specified member.
      *      For Group approver type, the signer must be in the specified group.
      * @param policy The policy to check against
-     * @param signer The address of the signer
+     * @param signerAddress The address of the signer
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicy(
         Policies.Policy calldata policy,
-        address signer
+        address signerAddress
     )
         internal
         view
@@ -548,22 +548,22 @@ library LibOrganizationPolicy {
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
         // Get the member ID for the signer
-        uint8 memberId = membersLayout.addressToMemberId[signer];
+        uint8 memberId = membersLayout.addressToMemberId[signerAddress];
 
         // Case: Signer is not a member of the organization
         if (memberId == 0) return false;
 
         Policies.ApproverType appType = policy.config.approval.approverType;
-        uint8 appId = policy.config.approval.approverId;
+        uint8 approverId = policy.config.approval.approverId;
 
         // Case: Policy requires approval from a specific member
         if (appType == Policies.ApproverType.Member) {
-            return memberId == appId;
+            return memberId == approverId;
         }
 
         // Case: Policy requires approval from any member of a specific group
         if (appType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(memberId, appId);
+            return _isMemberInGroup(memberId, approverId);
         }
 
         return false;
@@ -572,12 +572,12 @@ library LibOrganizationPolicy {
     /**
      * @notice Checks if a signer is authorized to approve for a policy (memory version)
      * @param policy The policy to check against
-     * @param signer The address of the signer
+     * @param signerAddress The address of the signer
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicyMemory(
         Policies.Policy memory policy,
-        address signer
+        address signerAddress
     )
         internal
         view
@@ -586,22 +586,22 @@ library LibOrganizationPolicy {
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
         // Get the member ID for the signer
-        uint8 memberId = membersLayout.addressToMemberId[signer];
+        uint8 memberId = membersLayout.addressToMemberId[signerAddress];
 
         // Case: Signer is not a member of the organization
         if (memberId == 0) return false;
 
         Policies.ApproverType appType = policy.config.approval.approverType;
-        uint8 appId = policy.config.approval.approverId;
+        uint8 approverId = policy.config.approval.approverId;
 
         // Case: Policy requires approval from a specific member
         if (appType == Policies.ApproverType.Member) {
-            return memberId == appId;
+            return memberId == approverId;
         }
 
         // Case: Policy requires approval from any member of a specific group
         if (appType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(memberId, appId);
+            return _isMemberInGroup(memberId, approverId);
         }
 
         return false;
