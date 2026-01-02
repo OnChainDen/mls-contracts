@@ -118,21 +118,21 @@ contract OrganizationImplementation is
      * @param adminType Type of admin (Member or Group)
      * @param adminAddresses Array of addresses to be added as admin members
      * @param votingThreshold Voting threshold (only used for Group admin type)
-     * @param _guardian Guardian address for the organization
+     * @param guardianAddress Guardian address for the organization
      * @dev whitelistAddress and deployerAddress are set in the proxy constructor and should not be passed here
      */
     function initialize(
         AdminType adminType,
         address[] memory adminAddresses,
         uint256 votingThreshold,
-        address _guardian
+        address guardianAddress
     )
         external
         initializer
         onlyDeployer
     {
         // Initialize organization
-        LibOrganizationInitialization.initialize(adminType, adminAddresses, votingThreshold, _guardian);
+        LibOrganizationInitialization.initialize(adminType, adminAddresses, votingThreshold, guardianAddress);
     }
 
     // ================================
