@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
+import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
 
 /**
  * @title Lib Organization Guardian
@@ -23,12 +24,6 @@ library LibOrganizationGuardian {
      * @param guardian The current guardian address
      */
     error UnauthorizedCaller(address caller, address guardian);
-
-    /**
-     * @notice Emitted when an admin operation is rejected due to insufficient authorization
-     * @param reason The reason for the rejection
-     */
-    error AdminOperationRejected(string reason);
 
     /**
      * @notice Enforces that the caller is the guardian address
@@ -56,7 +51,7 @@ library LibOrganizationGuardian {
     function updateGuardian(address newGuardian) internal {
         // Validate input parameters
         if (newGuardian == address(0)) {
-            revert AdminOperationRejected("Guardian address cannot be zero address");
+            revert LibOrganizationAdmin.AdminOperationRejected("Guardian address cannot be zero address");
         }
 
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();

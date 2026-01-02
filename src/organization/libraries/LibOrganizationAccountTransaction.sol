@@ -60,9 +60,6 @@ library LibOrganizationAccountTransaction {
     /// @notice Thrown when not enough valid approval signatures are provided
     error InsufficientApprovals(uint256 required, uint256 provided);
 
-    /// @notice Thrown when policy merkle proof verification fails
-    error PolicyVerificationFailed(uint256 policyId);
-
     /// @notice Thrown when the policy doesn't apply to this transaction
     error PolicyDoesNotApply(uint256 policyId);
 

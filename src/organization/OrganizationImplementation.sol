@@ -363,7 +363,7 @@ contract OrganizationImplementation is
     {
         // Verify policy exists in merkle tree
         if (!LibOrganizationPolicy.policyExists(policyId, policy, policyProof)) {
-            revert LibOrganizationPolicy.PolicyVerificationFailed();
+            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
         }
 
         return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);

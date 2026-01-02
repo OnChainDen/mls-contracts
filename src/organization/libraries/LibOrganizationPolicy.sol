@@ -35,8 +35,9 @@ library LibOrganizationPolicy {
 
     /**
      * @notice Thrown when policy verification fails
+     * @param policyId The ID of the policy that failed verification
      */
-    error PolicyVerificationFailed();
+    error PolicyVerificationFailed(uint256 policyId);
 
     // ================================
     // MERKLE HELPERS

@@ -2,6 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "./OrganizationProxy.sol";
+import "./OrganizationImplementation.sol";
+import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
 import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 
 /**
@@ -26,11 +28,6 @@ contract OrganizationFactory {
     );
 
     /**
-     * @notice Error thrown when caller is not the authorized deployer
-     */
-    error UnauthorizedDeployer();
-
-    /**
      * @notice Error thrown when deployment fails
      */
     error DeploymentFailed();
@@ -39,11 +36,6 @@ contract OrganizationFactory {
      * @notice Error thrown when the deployed address does not match the computed address
      */
     error DeploymentAddressMismatch();
-
-    /**
-     * @notice Error thrown when implementation address is not whitelisted
-     */
-    error ImplementationNotWhitelisted(address implementation);
 
     /**
      * @notice Constructor to set the deployer address
@@ -72,7 +64,7 @@ contract OrganizationFactory {
     {
         // Only the authorized deployer can deploy organizations
         if (msg.sender != deployerAddress) {
-            revert UnauthorizedDeployer();
+            revert LibOrganizationInitialization.UnauthorizedDeployer();
         }
 
         // Validate that the implementation is whitelisted
@@ -81,7 +73,7 @@ contract OrganizationFactory {
                 IImplementationWhitelist.ContractType.Organization, implementationAddress
             )
         ) {
-            revert ImplementationNotWhitelisted(implementationAddress);
+            revert OrganizationImplementation.ImplementationNotWhitelisted(implementationAddress);
         }
 
         // Deploy the organization proxy using CREATE2
