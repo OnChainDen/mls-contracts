@@ -244,7 +244,7 @@ library LibOrganizationPolicy {
         Policies.Policy calldata policy,
         address initiatorAddress
     )
-        private
+        internal
         view
         returns (bool)
     {
@@ -289,7 +289,7 @@ library LibOrganizationPolicy {
         Policies.Policy memory policy,
         address initiatorAddress
     )
-        private
+        internal
         view
         returns (bool)
     {
@@ -605,40 +605,6 @@ library LibOrganizationPolicy {
         }
 
         return false;
-    }
-
-    /**
-     * @notice Checks if a transaction initiator matches the policy's initiator filter (calldata version)
-     * @param policy The policy to check against
-     * @param initiatorAddress The address of the transaction initiator
-     * @return True if the initiator matches, false otherwise
-     */
-    function doesTransactionMatchPolicyInitiator(
-        Policies.Policy calldata policy,
-        address initiatorAddress
-    )
-        internal
-        view
-        returns (bool)
-    {
-        return _doesMatchInitiator(policy, initiatorAddress);
-    }
-
-    /**
-     * @notice Checks if a transaction initiator matches the policy's initiator filter (memory version)
-     * @param policy The policy to check against
-     * @param initiatorAddress The address of the transaction initiator
-     * @return True if the initiator matches, false otherwise
-     */
-    function doesTransactionMatchPolicyInitiatorMemory(
-        Policies.Policy memory policy,
-        address initiatorAddress
-    )
-        internal
-        view
-        returns (bool)
-    {
-        return _doesMatchInitiatorMemory(policy, initiatorAddress);
     }
 
     /**

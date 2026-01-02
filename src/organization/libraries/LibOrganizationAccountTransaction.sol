@@ -428,7 +428,7 @@ library LibOrganizationAccountTransaction {
 
         // Verify the rejection signer is an authorized initiator for this policy
         address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
-        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(proofs.policy, rejectionSigner)) {
+        if (!LibOrganizationPolicy._doesMatchInitiator(proofs.policy, rejectionSigner)) {
             revert TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
         }
     }

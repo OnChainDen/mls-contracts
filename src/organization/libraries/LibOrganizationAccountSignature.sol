@@ -135,7 +135,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the initiator is authorized by this policy
-        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiatorMemory(proofs.policy, initiator)) {
+        if (!LibOrganizationPolicy._doesMatchInitiatorMemory(proofs.policy, initiator)) {
             return ERC1271_INVALID_VALUE;
         }
 
