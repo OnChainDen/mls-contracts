@@ -193,11 +193,11 @@ library LibOrganizationPolicy {
      * @return True if the source account matches, false otherwise
      */
     function _doesMatchSourceAccount(
-        Policies.Policy calldata policy,
+        Policies.Policy memory policy,
         address sourceAccount,
-        bytes32[] calldata sourceAccountProof
+        bytes32[] memory sourceAccountProof
     )
-        private
+        internal
         pure
         returns (bool)
     {

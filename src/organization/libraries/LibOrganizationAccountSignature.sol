@@ -9,7 +9,6 @@ import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
  * @title Lib Organization Account Signature
@@ -86,7 +85,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the policy applies to this specific account
-        if (!_doesPolicyApplyToAccount(proofs.policy, account, proofs.sourceAccountProof)) {
+        if (!LibOrganizationPolicy._doesMatchSourceAccount(proofs.policy, account, proofs.sourceAccountProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -232,32 +231,6 @@ library LibOrganizationAccountSignature {
         }
 
         return ERC1271_INVALID_VALUE;
-    }
-
-    /**
-     * @notice Checks if a policy applies to a specific account
-     * @dev If anySourceAccount is true, policy applies to all accounts.
-     *      Otherwise, verifies account is in the policy's source accounts merkle tree.
-     * @param policy The policy to check
-     * @param account The account address to check
-     * @param sourceAccountProof Merkle proof for the account (if not anySourceAccount)
-     * @return True if policy applies to this account
-     */
-    function _doesPolicyApplyToAccount(
-        Policies.Policy memory policy,
-        address account,
-        bytes32[] memory sourceAccountProof
-    )
-        private
-        pure
-        returns (bool)
-    {
-        // Policy applies to all accounts
-        if (policy.config.anySourceAccount) return true;
-
-        // Verify account is in the policy's allowed source accounts tree
-        bytes32 accountLeaf = keccak256(bytes.concat(keccak256(abi.encode(account))));
-        return MerkleProof.verify(sourceAccountProof, policy.roots.sourceAccountsRoot, accountLeaf);
     }
 
     /**
