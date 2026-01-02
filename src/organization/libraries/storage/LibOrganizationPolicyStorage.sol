@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Policies } from "../../../libraries/Policies.sol";
-
 /**
  * @title Organization Policy Storage
- * @notice Storage layout for organization policy functionality
+ * @notice Minimal storage layout for merkle-based policy functionality
+ * @dev Policies are stored in a global merkle tree. Only the root is stored on-chain.
+ *      Full policy data is stored off-chain (IPFS) and provided via calldata at validation time.
  * @author Den Technologies Inc
  */
 library LibOrganizationPolicyStorage {
     struct Layout {
-        mapping(uint256 => Policies.Policy) policies;
-        mapping(uint256 => bool) policyExists;
+        /// @notice Global merkle root containing ALL policies
+        /// @dev Each leaf is hash(policyId, Policy struct)
+        bytes32 policiesRoot;
+        /// @notice Counter for policy IDs
         uint256 nextPolicyId;
-        // Time-based usage tracking: usageKey => timeWindow => usedAmount/count
-        // usageKey is computed from policyId and scoped entities (account, destination, initiator)
+        /// @notice Time-based usage tracking: usageKey => timeWindow => usedAmount/count
+        /// @dev usageKey is computed from policyId and scoped entities (account, destination, initiator)
         mapping(bytes32 => mapping(uint256 => uint256)) policyUsage;
     }
 
