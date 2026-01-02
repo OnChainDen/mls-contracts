@@ -53,7 +53,7 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        if (Policies.transactionType(proofs.policy) != Policies.TransactionType.Signatures) {
+        if (proofs.policy.config.transactionType != Policies.TransactionType.Signatures) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -112,7 +112,7 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4)
     {
-        Policies.PolicyType pType = Policies.policyType(proofs.policy);
+        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
 
         if (pType == Policies.PolicyType.AutoApprove) {
             return ERC1271_MAGIC_VALUE;
@@ -165,7 +165,7 @@ library LibOrganizationAccountSignature {
         pure
         returns (bool)
     {
-        if (Policies.anySourceAccount(policy)) return true;
+        if (policy.config.anySourceAccount) return true;
 
         bytes32 accountLeaf = keccak256(bytes.concat(keccak256(abi.encode(account))));
         return MerkleProof.verify(sourceAccountProof, policy.roots.sourceAccountsRoot, accountLeaf);

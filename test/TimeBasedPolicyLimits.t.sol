@@ -281,7 +281,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     // ================================
-    // Helper Functions - Build packed directly without using packConfig
+    // Helper Functions - Create policies using new struct format
     // ================================
 
     function _createPolicy(
@@ -293,84 +293,55 @@ contract TimeBasedPolicyLimitsTest is Test {
         pure
         returns (Policies.Policy memory policy)
     {
-        policy.config.packed = _buildPacked(hours_, limitationType, 0, 0, 0); // all AcrossAll
-        policy.config.timeIntervalLimit = limit;
-        policy.config.tokenAddress = address(0);
-        policy.config.amountThreshold = 0;
+        // Set up PolicyConfig
+        policy.config.transactionType = Policies.TransactionType.TokenTransfers;
+        policy.config.anySourceAccount = true;
+        policy.config.anyFunction = true;
+        policy.config.destinationType = Policies.DestinationType.Any;
+
+        // Set up ApprovalConfig
+        policy.config.approval.policyType = Policies.PolicyType.AutoApprove;
+        policy.config.approval.approverType = Policies.ApproverType.Member;
+        policy.config.approval.approverId = 1;
+        policy.config.approval.approvalThreshold = 1;
+
+        // Set up InitiatorConfig
+        policy.config.initiator.anyInitiator = true;
+        policy.config.initiator.initiatorType = Policies.ApproverType.Member;
+        policy.config.initiator.initiatorId = 0;
+
+        // Set up TokenFilter
+        policy.config.token.anyToken = true;
+        policy.config.token.tokenAddress = address(0);
+        policy.config.token.hasAmountThreshold = false;
+        policy.config.token.amountThreshold = 0;
+
+        // Set up TimeLimitConfig
+        policy.config.timeLimit.limitation = limitationType;
+        policy.config.timeLimit.timeIntervalHours = hours_;
+        policy.config.timeLimit.timeIntervalLimit = limit;
+        policy.config.timeLimit.initiatorScope = Policies.TimeIntervalScope.AcrossAll;
+        policy.config.timeLimit.sourceScope = Policies.TimeIntervalScope.AcrossAll;
+        policy.config.timeLimit.destinationScope = Policies.TimeIntervalScope.AcrossAll;
+
+        // Set up PolicyRoots (empty for this test)
         policy.roots.sourceAccountsRoot = bytes32(0);
         policy.roots.customDestinationsRoot = bytes32(0);
         policy.roots.allowedFunctionsRoot = bytes32(0);
     }
 
     function _createPolicyWithSourceScope() internal pure returns (Policies.Policy memory policy) {
-        // Source scope = PerEntity (1), others AcrossAll (0)
-        policy.config.packed = _buildPacked(24, Policies.PolicyLimitation.TimeInterval, 0, 1, 0);
-        policy.config.timeIntervalLimit = 1000;
-        policy.config.tokenAddress = address(0);
-        policy.config.amountThreshold = 0;
-        policy.roots.sourceAccountsRoot = bytes32(0);
-        policy.roots.customDestinationsRoot = bytes32(0);
-        policy.roots.allowedFunctionsRoot = bytes32(0);
+        policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        policy.config.timeLimit.sourceScope = Policies.TimeIntervalScope.PerEntity;
     }
 
     function _createPolicyWithDestScope() internal pure returns (Policies.Policy memory policy) {
-        // Dest scope = PerEntity (1), others AcrossAll (0)
-        policy.config.packed = _buildPacked(24, Policies.PolicyLimitation.TimeInterval, 0, 0, 1);
-        policy.config.timeIntervalLimit = 1000;
-        policy.config.tokenAddress = address(0);
-        policy.config.amountThreshold = 0;
-        policy.roots.sourceAccountsRoot = bytes32(0);
-        policy.roots.customDestinationsRoot = bytes32(0);
-        policy.roots.allowedFunctionsRoot = bytes32(0);
+        policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        policy.config.timeLimit.destinationScope = Policies.TimeIntervalScope.PerEntity;
     }
 
     function _createPolicyWithInitiatorScope() internal pure returns (Policies.Policy memory policy) {
-        // Initiator scope = PerEntity (1), others AcrossAll (0)
-        policy.config.packed = _buildPacked(24, Policies.PolicyLimitation.TimeInterval, 1, 0, 0);
-        policy.config.timeIntervalLimit = 1000;
-        policy.config.tokenAddress = address(0);
-        policy.config.amountThreshold = 0;
-        policy.roots.sourceAccountsRoot = bytes32(0);
-        policy.roots.customDestinationsRoot = bytes32(0);
-        policy.roots.allowedFunctionsRoot = bytes32(0);
-    }
-
-    /// @notice Build the packed config directly without calling packConfig
-    /// @param hours_ Time interval hours
-    /// @param limitationType The policy limitation type
-    /// @param initiatorScope 0 = AcrossAll, 1 = PerEntity
-    /// @param sourceScope 0 = AcrossAll, 1 = PerEntity
-    /// @param destScope 0 = AcrossAll, 1 = PerEntity
-    function _buildPacked(
-        uint16 hours_,
-        Policies.PolicyLimitation limitationType,
-        uint256 initiatorScope,
-        uint256 sourceScope,
-        uint256 destScope
-    )
-        private
-        pure
-        returns (uint256 packed)
-    {
-        // Flags: all true (anySourceAccount, anyInitiator, anyToken, anyFunction)
-        packed = Policies.FLAG_ANY_SOURCE_ACCOUNT | Policies.FLAG_ANY_INITIATOR | Policies.FLAG_ANY_TOKEN
-            | Policies.FLAG_ANY_FUNCTION;
-
-        // PolicyType.AutoApprove = 0, so no shift needed
-        // ApproverType.Member = 1, but Member is defined as second (index 1), Group is 0
-        // Actually looking at enum: Group=0, Member=1
-        packed |= uint256(1) << Policies.SHIFT_APPROVER_TYPE; // Member
-        packed |= uint256(1) << Policies.SHIFT_INITIATOR_TYPE; // Member
-        // DestinationType.Any = 0, no shift needed
-        packed |= uint256(limitationType) << Policies.SHIFT_LIMITATION;
-        packed |= uint256(1) << Policies.SHIFT_TX_TYPE; // TokenTransfers = 1
-        packed |= uint256(1) << Policies.SHIFT_APPROVER_ID; // approverId = 1
-        packed |= uint256(1) << Policies.SHIFT_APPROVAL_THRESHOLD; // threshold = 1
-        // initiatorId = 0, no shift needed
-        packed |= uint256(hours_) << Policies.SHIFT_TIME_HOURS;
-
-        // Pack scopes: initiator (bits 0-1), source (bits 2-3), dest (bits 4-5)
-        uint256 scopes = initiatorScope | (sourceScope << 2) | (destScope << 4);
-        packed |= scopes << Policies.SHIFT_TIME_SCOPES;
+        policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        policy.config.timeLimit.initiatorScope = Policies.TimeIntervalScope.PerEntity;
     }
 }

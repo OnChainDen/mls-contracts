@@ -106,7 +106,7 @@ library LibOrganizationAccountTransaction {
     )
         private
     {
-        Policies.PolicyType pType = Policies.policyTypeCalldata(proofs.policy);
+        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
 
         if (pType == Policies.PolicyType.AutoApprove) {
             _updateTimeLimitForAutoApprove(params, data, initiator, proofs.policy);
@@ -126,14 +126,14 @@ library LibOrganizationAccountTransaction {
     )
         private
     {
-        if (Policies.limitationCalldata(policy) != Policies.PolicyLimitation.TimeInterval) {
+        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) {
             return;
         }
 
         address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
 
         uint256 usageAmount;
-        if (Policies.transactionTypeCalldata(policy) == Policies.TransactionType.TokenTransfers) {
+        if (policy.config.transactionType == Policies.TransactionType.TokenTransfers) {
             usageAmount = LibOrganizationPolicy.extractTransferAmount(data, params.value);
         } else {
             usageAmount = 1;
@@ -228,7 +228,7 @@ library LibOrganizationAccountTransaction {
         private
         view
     {
-        Policies.PolicyType pType = Policies.policyTypeCalldata(proofs.policy);
+        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
 
         if (pType == Policies.PolicyType.AutoApprove) {
             _validateAutoApproveRejection(params, data, signatures, proofs);

@@ -224,7 +224,7 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         // Case: The policy matches transactions sent from any account
-        if (Policies.anySourceAccountCalldata(policy)) return true;
+        if (policy.config.anySourceAccount) return true;
 
         // Case: The policy matches transactions sent from a list of specific source accounts
         // Verify this account is in the source accounts merkle tree
@@ -249,7 +249,7 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         // Case: The policy matches transactions with any initiator
-        if (Policies.anyInitiatorCalldata(policy)) return true;
+        if (policy.config.initiator.anyInitiator) return true;
 
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
@@ -259,8 +259,8 @@ library LibOrganizationPolicy {
         // Case: Initiator is not a member of the organization
         if (memberId == 0) return false;
 
-        Policies.ApproverType initType = Policies.initiatorTypeCalldata(policy);
-        uint8 initId = Policies.initiatorIdCalldata(policy);
+        Policies.ApproverType initType = policy.config.initiator.initiatorType;
+        uint8 initId = policy.config.initiator.initiatorId;
 
         // Case: The policy matches transactions made by a specific individual, and that individual
         //        is the initiator of this transaction
@@ -294,7 +294,7 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         // Case: The policy matches transactions with any initiator
-        if (Policies.anyInitiator(policy)) return true;
+        if (policy.config.initiator.anyInitiator) return true;
 
         LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
 
@@ -304,8 +304,8 @@ library LibOrganizationPolicy {
         // Case: Initiator is not a member of the organization
         if (memberId == 0) return false;
 
-        Policies.ApproverType initType = Policies.initiatorType(policy);
-        uint8 initId = Policies.initiatorId(policy);
+        Policies.ApproverType initType = policy.config.initiator.initiatorType;
+        uint8 initId = policy.config.initiator.initiatorId;
 
         // Case: The policy matches transactions made by a specific individual, and that individual
         //        is the initiator of this transaction
@@ -349,7 +349,7 @@ library LibOrganizationPolicy {
         pure
         returns (bool)
     {
-        Policies.TransactionType txType = Policies.transactionTypeCalldata(policy);
+        Policies.TransactionType txType = policy.config.transactionType;
 
         // Case: The policy matches any type of transaction
         if (txType == Policies.TransactionType.Any) return true;
@@ -361,17 +361,17 @@ library LibOrganizationPolicy {
 
             // Case: The Policy matches only transactions that are token transfers that are of a
             //       specific token, and the transaction is not transferring that token
-            if (!Policies.anyTokenCalldata(policy)) {
+            if (!policy.config.token.anyToken) {
                 address transferToken = extractTokenAddress(to, data);
-                if (transferToken != policy.config.tokenAddress) return false;
+                if (transferToken != policy.config.token.tokenAddress) return false;
             }
 
             // Case: The policy matches only transactions that are token transfers that are of a
             //       specific token, and the transaction is transferring that token, but the
             //       transaction amount is less than the amount threshold
-            if (Policies.hasAmountThresholdCalldata(policy)) {
+            if (policy.config.token.hasAmountThreshold) {
                 uint256 amount = extractTransferAmount(data, value);
-                if (amount >= policy.config.amountThreshold) return false;
+                if (amount >= policy.config.token.amountThreshold) return false;
             }
 
             return true;
@@ -421,7 +421,7 @@ library LibOrganizationPolicy {
         view
         returns (bool)
     {
-        Policies.DestinationType destType = Policies.destinationTypeCalldata(policy);
+        Policies.DestinationType destType = policy.config.destinationType;
 
         // Case: Policy matches transaction to any address
         if (destType == Policies.DestinationType.Any) return true;
@@ -471,7 +471,7 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         // Case: Policy matches any function
-        if (Policies.anyFunctionCalldata(policy)) return true;
+        if (policy.config.anyFunction) return true;
 
         // Case: Policy matches only transactions that call a specific function, but the transaction is not calling
         //       a function
@@ -506,12 +506,12 @@ library LibOrganizationPolicy {
      */
     function getRequiredApprovals(Policies.Policy calldata policy) internal pure returns (uint256) {
         // Case: Policy requires a single approval from a member
-        if (Policies.approverTypeCalldata(policy) == Policies.ApproverType.Member) {
+        if (policy.config.approval.approverType == Policies.ApproverType.Member) {
             return 1;
         }
 
         // Case: Policy requires a threshold number of approvals from any individual in a group
-        return Policies.approvalThresholdCalldata(policy);
+        return policy.config.approval.approvalThreshold;
     }
 
     /**
@@ -521,12 +521,12 @@ library LibOrganizationPolicy {
      */
     function getRequiredApprovalsMemory(Policies.Policy memory policy) internal pure returns (uint256) {
         // Case: Policy requires a single approval from a member
-        if (Policies.approverType(policy) == Policies.ApproverType.Member) {
+        if (policy.config.approval.approverType == Policies.ApproverType.Member) {
             return 1;
         }
 
         // Case: Policy requires a threshold number of approvals from any individual in a group
-        return Policies.approvalThreshold(policy);
+        return policy.config.approval.approvalThreshold;
     }
 
     /**
@@ -553,8 +553,8 @@ library LibOrganizationPolicy {
         // Case: Signer is not a member of the organization
         if (memberId == 0) return false;
 
-        Policies.ApproverType appType = Policies.approverTypeCalldata(policy);
-        uint8 appId = Policies.approverIdCalldata(policy);
+        Policies.ApproverType appType = policy.config.approval.approverType;
+        uint8 appId = policy.config.approval.approverId;
 
         // Case: Policy requires approval from a specific member
         if (appType == Policies.ApproverType.Member) {
@@ -591,8 +591,8 @@ library LibOrganizationPolicy {
         // Case: Signer is not a member of the organization
         if (memberId == 0) return false;
 
-        Policies.ApproverType appType = Policies.approverType(policy);
-        uint8 appId = Policies.approverId(policy);
+        Policies.ApproverType appType = policy.config.approval.approverType;
+        uint8 appId = policy.config.approval.approverId;
 
         // Case: Policy requires approval from a specific member
         if (appType == Policies.ApproverType.Member) {
@@ -1202,15 +1202,14 @@ library LibOrganizationPolicy {
         // Determine scoped values based on policy configuration
         // When scope is AcrossAll, address(0) is used for that entity.
         // When scope is PerEntity, the actual address is used.
-        address scopedAccount = Policies.timeIntervalSourceScopeCalldata(policy) == Policies.TimeIntervalScope.PerEntity
-            ? account
-            : address(0);
+        address scopedAccount =
+            policy.config.timeLimit.sourceScope == Policies.TimeIntervalScope.PerEntity ? account : address(0);
 
-        address scopedDestination = Policies.timeIntervalDestinationScopeCalldata(policy)
-            == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
+        address scopedDestination =
+            policy.config.timeLimit.destinationScope == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
 
-        address scopedInitiator = Policies.timeIntervalInitiatorScopeCalldata(policy)
-            == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
+        address scopedInitiator =
+            policy.config.timeLimit.initiatorScope == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
 
         return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
     }
@@ -1223,7 +1222,7 @@ library LibOrganizationPolicy {
      */
     function computeTimeWindow(Policies.Policy calldata policy) internal view returns (uint256) {
         // Uses fixed time windows based on timeIntervalHours
-        uint16 hours_ = Policies.timeIntervalHoursCalldata(policy);
+        uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
 
         // Avoid division by zero
         if (hours_ == 0) return 0;
@@ -1256,10 +1255,10 @@ library LibOrganizationPolicy {
         returns (bool withinLimit)
     {
         // Skip check if no time-based limitation
-        if (Policies.limitationCalldata(policy) != Policies.PolicyLimitation.TimeInterval) return true;
+        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return true;
 
         // Skip if time interval is not configured (0 hours)
-        if (Policies.timeIntervalHoursCalldata(policy) == 0) return true;
+        if (policy.config.timeLimit.timeIntervalHours == 0) return true;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
@@ -1269,7 +1268,7 @@ library LibOrganizationPolicy {
         uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
 
         // Check if adding usageAmount would exceed the limit
-        if (currentUsage + usageAmount > policy.config.timeIntervalLimit) return false;
+        if (currentUsage + usageAmount > policy.config.timeLimit.timeIntervalLimit) return false;
 
         // Update usage
         policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
@@ -1298,10 +1297,10 @@ library LibOrganizationPolicy {
         returns (uint256)
     {
         // Return 0 if no time-based limitation
-        if (Policies.limitationCalldata(policy) != Policies.PolicyLimitation.TimeInterval) return 0;
+        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return 0;
 
         // Return 0 if time interval is not configured
-        if (Policies.timeIntervalHoursCalldata(policy) == 0) return 0;
+        if (policy.config.timeLimit.timeIntervalHours == 0) return 0;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
@@ -1340,13 +1339,13 @@ library LibOrganizationPolicy {
         // When scope is AcrossAll, address(0) is used for that entity.
         // When scope is PerEntity, the actual address is used.
         address scopedAccount =
-            Policies.timeIntervalSourceScope(policy) == Policies.TimeIntervalScope.PerEntity ? account : address(0);
+            policy.config.timeLimit.sourceScope == Policies.TimeIntervalScope.PerEntity ? account : address(0);
 
-        address scopedDestination = Policies.timeIntervalDestinationScope(policy)
-            == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
+        address scopedDestination =
+            policy.config.timeLimit.destinationScope == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
 
         address scopedInitiator =
-            Policies.timeIntervalInitiatorScope(policy) == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
+            policy.config.timeLimit.initiatorScope == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
 
         return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
     }
@@ -1358,7 +1357,7 @@ library LibOrganizationPolicy {
      */
     function computeTimeWindowMemory(Policies.Policy memory policy) internal view returns (uint256) {
         // Uses fixed time windows based on timeIntervalHours
-        uint16 hours_ = Policies.timeIntervalHours(policy);
+        uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
 
         // Avoid division by zero
         if (hours_ == 0) return 0;
@@ -1389,10 +1388,10 @@ library LibOrganizationPolicy {
         returns (bool withinLimit)
     {
         // Skip check if no time-based limitation
-        if (Policies.limitation(policy) != Policies.PolicyLimitation.TimeInterval) return true;
+        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return true;
 
         // Skip if time interval is not configured (0 hours)
-        if (Policies.timeIntervalHours(policy) == 0) return true;
+        if (policy.config.timeLimit.timeIntervalHours == 0) return true;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
@@ -1402,7 +1401,7 @@ library LibOrganizationPolicy {
         uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
 
         // Check if adding usageAmount would exceed the limit
-        if (currentUsage + usageAmount > policy.config.timeIntervalLimit) return false;
+        if (currentUsage + usageAmount > policy.config.timeLimit.timeIntervalLimit) return false;
 
         // Update usage
         policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
@@ -1431,10 +1430,10 @@ library LibOrganizationPolicy {
         returns (uint256)
     {
         // Return 0 if no time-based limitation
-        if (Policies.limitation(policy) != Policies.PolicyLimitation.TimeInterval) return 0;
+        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return 0;
 
         // Return 0 if time interval is not configured
-        if (Policies.timeIntervalHours(policy) == 0) return 0;
+        if (policy.config.timeLimit.timeIntervalHours == 0) return 0;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
