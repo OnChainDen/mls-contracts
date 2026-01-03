@@ -126,7 +126,7 @@ library LibOrganizationPolicy {
      *      1. Policy existence (via merkle proof)
      *      2. Source account matching
      *      3. Initiator authorization
-     *      4. Transaction type matching
+     *      4. Transaction type matching (including token transfer and contract interaction checks)
      *      5. Destination matching
      * @param policyId The unique identifier of the policy
      * @param sourceAccount The account executing the transaction
