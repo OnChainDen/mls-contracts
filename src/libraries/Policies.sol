@@ -123,7 +123,7 @@ library Policies {
     ///      - Exact + String: abi.encode(bytes32 keccak256Hash) - hash of expected string
     ///      - Range + Uint: abi.encode(uint256 min, uint256 max)
     ///      - Range + Int: abi.encode(int256 min, int256 max)
-    ///      - List + Address: abi.encode(address[] allowedAddresses)
+    ///      - List + Address: abi.encode(bytes32 merkleRoot) - root of allowed addresses merkle tree
     ///
     /// @dev The slotsToSkip field specifies how many 32-byte slots this parameter occupies (must be >= 1):
     ///      - Basic types (uint, int, address, bool, bytes1-32): 1 slot
@@ -284,6 +284,7 @@ library Policies {
      * @param destinationProof Proof that destination is allowed by policy
      * @param functionProof Proof that function selector is allowed by policy
      * @param constraints ABI-encoded parameter constraints for function calls
+     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
      */
     struct ValidationProofs {
         Policy policy;
@@ -292,6 +293,12 @@ library Policies {
         bytes32[] destinationProof;
         bytes32[] functionProof;
         bytes constraints;
+        // Merkle proofs for address parameters with List constraints.
+        // This is bytes32[][] because:
+        // - Outer array: One element per parameter that has a List constraint (a function
+        //   can have multiple address parameters, each with their own allowed addresses tree)
+        // - Inner array: The merkle proof itself (array of sibling hashes from leaf to root)
+        bytes32[][] addressParameterProofs;
     }
 
     // ================================
