@@ -472,16 +472,16 @@ library LibOrganizationPolicy {
         // Case: Signer is not a member of the organization
         if (memberId == 0) return false;
 
-        Policies.ApproverType appType = policy.config.approval.approverType;
+        Policies.ApproverType approverType = policy.config.approval.approverType;
         uint8 approverId = policy.config.approval.approverId;
 
         // Case: Policy requires approval from a specific member
-        if (appType == Policies.ApproverType.Member) {
+        if (approverType == Policies.ApproverType.Member) {
             return memberId == approverId;
         }
 
         // Case: Policy requires approval from any member of a specific group
-        if (appType == Policies.ApproverType.Group) {
+        if (approverType == Policies.ApproverType.Group) {
             return _isMemberInGroup(memberId, approverId);
         }
 
@@ -784,13 +784,13 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         Policies.ParamType pType = constraint.paramType;
-        Policies.ConstraintType cType = constraint.constraintType;
+        Policies.ConstraintType constraintType = constraint.constraintType;
         bytes memory comparisonData = constraint.comparisonData;
 
         // Handle Bool type
         // Bool only supports Exact constraint
         if (pType == Policies.ParamType.Bool) {
-            if (cType != Policies.ConstraintType.Exact) return false;
+            if (constraintType != Policies.ConstraintType.Exact) return false;
             bool expectedValue = abi.decode(comparisonData, (bool));
             bool actualValue = uint256(paramHeadValue) != 0;
             return actualValue == expectedValue;
@@ -799,11 +799,11 @@ library LibOrganizationPolicy {
         // Handle Uint type (and enums which are treated as uint)
         if (pType == Policies.ParamType.Uint) {
             uint256 actualValue = uint256(paramHeadValue);
-            if (cType == Policies.ConstraintType.Exact) {
+            if (constraintType == Policies.ConstraintType.Exact) {
                 uint256 expectedValue = abi.decode(comparisonData, (uint256));
                 return actualValue == expectedValue;
             }
-            if (cType == Policies.ConstraintType.Range) {
+            if (constraintType == Policies.ConstraintType.Range) {
                 (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
                 return actualValue >= minValue && actualValue <= maxValue;
             }
@@ -814,11 +814,11 @@ library LibOrganizationPolicy {
         // Handle Int type
         if (pType == Policies.ParamType.Int) {
             int256 actualValue = int256(uint256(paramHeadValue));
-            if (cType == Policies.ConstraintType.Exact) {
+            if (constraintType == Policies.ConstraintType.Exact) {
                 int256 expectedValue = abi.decode(comparisonData, (int256));
                 return actualValue == expectedValue;
             }
-            if (cType == Policies.ConstraintType.Range) {
+            if (constraintType == Policies.ConstraintType.Range) {
                 (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
                 return actualValue >= minValue && actualValue <= maxValue;
             }
@@ -829,11 +829,11 @@ library LibOrganizationPolicy {
         // Handle Address type
         if (pType == Policies.ParamType.Address) {
             address actualValue = address(uint160(uint256(paramHeadValue)));
-            if (cType == Policies.ConstraintType.Exact) {
+            if (constraintType == Policies.ConstraintType.Exact) {
                 address expectedValue = abi.decode(comparisonData, (address));
                 return actualValue == expectedValue;
             }
-            if (cType == Policies.ConstraintType.List) {
+            if (constraintType == Policies.ConstraintType.List) {
                 address[] memory allowedAddresses = abi.decode(comparisonData, (address[]));
                 for (uint256 i = 0; i < allowedAddresses.length; ++i) {
                     if (actualValue == allowedAddresses[i]) return true;
@@ -848,7 +848,7 @@ library LibOrganizationPolicy {
         // FixedBytes only supports Exact constraint
         // For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned)
         if (pType == Policies.ParamType.FixedBytes) {
-            if (cType != Policies.ConstraintType.Exact) return false;
+            if (constraintType != Policies.ConstraintType.Exact) return false;
             bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
             return paramHeadValue == expectedValue;
         }
@@ -858,7 +858,7 @@ library LibOrganizationPolicy {
         // The paramHeadValue contains the offset to the data location in calldata.
         // The comparisonData should contain the keccak256 hash of the expected bytes.
         if (pType == Policies.ParamType.Bytes) {
-            if (cType != Policies.ConstraintType.Exact) return false;
+            if (constraintType != Policies.ConstraintType.Exact) return false;
 
             // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
             uint256 offset = uint256(paramHeadValue);
@@ -886,7 +886,7 @@ library LibOrganizationPolicy {
         // The paramHeadValue contains the offset to the string data in calldata.
         // The comparisonData should contain the keccak256 hash of the expected string.
         if (pType == Policies.ParamType.String) {
-            if (cType != Policies.ConstraintType.Exact) return false;
+            if (constraintType != Policies.ConstraintType.Exact) return false;
 
             // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
             uint256 offset = uint256(paramHeadValue);
