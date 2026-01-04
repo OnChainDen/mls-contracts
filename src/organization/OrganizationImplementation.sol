@@ -17,6 +17,7 @@ import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures
 import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
 import { LibOrganizationAccountSignature } from "./libraries/LibOrganizationAccountSignature.sol";
 import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
+import { LibOrganizationPolicyStorage } from "./libraries/storage/LibOrganizationPolicyStorage.sol";
 import { AdminType, OperationType, IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
@@ -27,8 +28,8 @@ import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthoriza
 /**
  * @title Organization Implementation
  * @notice UUPS upgradeable implementation contract for Organization that also acts as a Beacon for Account proxies
- * @dev This contract exposes all Organization library functions as external wrappers.
- *      It implements IBeacon to serve as the beacon for all Account BeaconProxies.
+ * @dev Policies are stored in a global merkle tree. Only the root is stored on-chain.
+ *      Full policy data is provided via calldata and verified against the root.
  * @author Den Technologies Inc
  */
 contract OrganizationImplementation is
@@ -117,21 +118,21 @@ contract OrganizationImplementation is
      * @param adminType Type of admin (Member or Group)
      * @param adminAddresses Array of addresses to be added as admin members
      * @param votingThreshold Voting threshold (only used for Group admin type)
-     * @param guardian Guardian address for the organization
+     * @param guardianAddress Guardian address for the organization
      * @dev whitelistAddress and deployerAddress are set in the proxy constructor and should not be passed here
      */
     function initialize(
         AdminType adminType,
         address[] memory adminAddresses,
         uint256 votingThreshold,
-        address guardian
+        address guardianAddress
     )
         external
         initializer
         onlyDeployer
     {
         // Initialize organization
-        LibOrganizationInitialization.initialize(adminType, adminAddresses, votingThreshold, guardian);
+        LibOrganizationInitialization.initialize(adminType, adminAddresses, votingThreshold, guardianAddress);
     }
 
     // ================================
@@ -300,19 +301,26 @@ contract OrganizationImplementation is
     // LibOrganizationPolicy wrappers
     // ================================
 
-    function getPolicy(uint256 policyId) external view returns (Policies.Policy memory) {
-        return LibOrganizationPolicy.getPolicy(policyId);
+    /**
+     * @notice Returns the current global policies merkle root
+     * @return The policies merkle root
+     */
+    function policiesRoot() external view returns (bytes32) {
+        return LibOrganizationPolicyStorage.layout().policiesRoot;
     }
 
-    function policyExists(uint256 policyId) external view returns (bool) {
-        return LibOrganizationPolicy.policyExists(policyId);
-    }
-
+    /**
+     * @notice Updates the global policies merkle root
+     * @dev This is the only way to modify policies. All policy data is stored off-chain (IPFS).
+     * @param newPoliciesRoot The new merkle root containing all policies
+     * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
+     * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param signatures The signatures from admin(s) authorizing this update
+     */
     function modifyPolicies(
-        uint256[] memory modifyPolicyIds,
-        Policies.Policy[] memory policiesToModify,
-        Policies.Policy[] memory addPolicies,
-        uint256[] memory removePolicyIds,
+        bytes32 newPoliciesRoot,
+        string calldata ipfsCid,
         uint256 salt,
         uint256 expirationTimestamp,
         bytes memory signatures
@@ -320,76 +328,45 @@ contract OrganizationImplementation is
         external
         onlyGuardian
     {
-        // Encode the operation data for validation (hash variable-length data)
-        bytes memory operationData = abi.encode(
-            keccak256(abi.encode(modifyPolicyIds)),
-            keccak256(abi.encode(policiesToModify)),
-            keccak256(abi.encode(addPolicies)),
-            keccak256(abi.encode(removePolicyIds))
-        );
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
             OperationType.ModifyPolicies, operationData, salt, expirationTimestamp, true, signatures
         );
 
-        LibOrganizationPolicy.modifyPolicies(modifyPolicyIds, policiesToModify, addPolicies, removePolicyIds);
-    }
-
-    function doesPolicyApplyToTransaction(
-        Policies.Policy memory policy,
-        address sourceAccount,
-        address to,
-        uint256 value,
-        bytes memory data,
-        address initiator
-    )
-        external
-        view
-        returns (bool)
-    {
-        return LibOrganizationPolicy.doesPolicyApplyToTransaction(policy, sourceAccount, to, value, data, initiator);
-    }
-
-    function getRequiredApprovals(Policies.Policy memory policy) external pure returns (uint256) {
-        return LibOrganizationPolicy.getRequiredApprovals(policy);
-    }
-
-    function isSignerAuthorizedForPolicy(Policies.Policy memory policy, address signer) external view returns (bool) {
-        return LibOrganizationPolicy.isSignerAuthorizedForPolicy(policy, signer);
-    }
-
-    function isSignerAuthorizedAsInitiator(
-        Policies.Policy memory policy,
-        address signer
-    )
-        external
-        view
-        returns (bool)
-    {
-        return LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, signer);
+        LibOrganizationPolicy.modifyPolicies(newPoliciesRoot, ipfsCid);
     }
 
     /**
      * @notice Gets the current usage for a time-based policy within the current time window
-     * @dev Reverts if the policy does not exist
      * @param policyId The ID of the policy
+     * @param policy The policy data (from calldata)
      * @param account The source account address
      * @param destination The destination address
      * @param initiator The initiator address
+     * @param policyProof The merkle proof verifying the policy exists
      * @return The current usage amount within the current time window
      */
     function getPolicyUsage(
         uint256 policyId,
+        Policies.Policy calldata policy,
         address account,
         address destination,
-        address initiator
+        address initiator,
+        bytes32[] calldata policyProof
     )
         external
         view
         returns (uint256)
     {
-        return LibOrganizationPolicy.getCurrentUsage(policyId, account, destination, initiator);
+        // Verify policy exists in merkle tree
+        if (!LibOrganizationPolicy.policyExists(policyId, policy, policyProof)) {
+            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
+        }
+
+        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
     }
 
     // ================================
@@ -637,6 +614,7 @@ contract OrganizationImplementation is
 
     /**
      * @notice Executes a transaction on an account through the organization
+     * @dev Policy is verified via merkle proof in the proofs parameter
      * @param account The account to execute the transaction from
      * @param to The destination address of the transaction
      * @param value The value of the transaction
@@ -645,6 +623,7 @@ contract OrganizationImplementation is
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
      * @param signatures The signatures authorizing the transaction
+     * @param proofs The validation proofs containing policy data and merkle proofs
      */
     function executeAccountTransaction(
         address account,
@@ -654,7 +633,8 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures
+        bytes memory signatures,
+        Policies.ValidationProofs calldata proofs
     )
         external
         onlyGuardian
@@ -673,9 +653,9 @@ contract OrganizationImplementation is
         // Validate and consume nonce (will revert if already used)
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
-        // Validate the transaction against the policy and signatures
+        // Validate the transaction against the policy and signatures (with merkle proofs)
         LibOrganizationAccountTransaction.validateTransactionApproval(
-            account, to, value, data, salt, expirationTimestamp, policyId, signatures
+            account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
         );
 
         // Execute the transaction on the account
@@ -686,6 +666,7 @@ contract OrganizationImplementation is
 
     /**
      * @notice Rejects a transaction that has been signed but not yet executed
+     * @dev Policy is verified via merkle proof in the proofs parameter
      * @param account The account for which to reject the transaction
      * @param to The destination address of the transaction
      * @param value The value of the transaction
@@ -694,6 +675,7 @@ contract OrganizationImplementation is
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
      * @param signatures The signatures authorizing the rejection
+     * @param proofs The validation proofs containing policy data and merkle proofs
      */
     function rejectAccountTransaction(
         address account,
@@ -703,7 +685,8 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures
+        bytes memory signatures,
+        Policies.ValidationProofs calldata proofs
     )
         external
         onlyGuardian
@@ -722,9 +705,9 @@ contract OrganizationImplementation is
         // Validate and consume nonce (will revert if already used)
         LibOrganizationSignatures.validateAndConsumeNonce(nonce);
 
-        // Validate the rejection authorization
+        // Validate the rejection authorization (with merkle proofs)
         LibOrganizationAccountTransaction.validateTransactionRejection(
-            account, to, value, data, salt, expirationTimestamp, policyId, signatures
+            account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
         );
 
         emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
@@ -737,11 +720,13 @@ contract OrganizationImplementation is
     /**
      * @notice Validates an ERC-1271 signature for a given account
      * @dev This function is called by Account contracts to validate signatures.
+     *      Policy is verified via merkle proof in the signature data.
      *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
      *      requires isValidSignature to be a view function (cannot modify storage to track usage).
      * @param account The account address on behalf of which the signature is being validated
      * @param hash The hash that was signed
-     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
+     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature,
+     * proofs)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
     function isValidSignatureForAccount(

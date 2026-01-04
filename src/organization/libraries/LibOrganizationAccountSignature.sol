@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
 import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -14,29 +13,37 @@ import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 /**
  * @title Lib Organization Account Signature
  * @notice Library for validating ERC-1271 signatures through the Organization contract
- * @dev This library handles validation of signatures for Account contracts following ERC-1271
+ * @dev This library enables smart accounts to sign messages in a policy-controlled manner.
+ *      When an external contract calls isValidSignature() on an Account, the Account
+ *      delegates to the Organization, which uses this library to validate that:
+ *      1. The signature request hasn't expired
+ *      2. The guardian has approved the signature request
+ *      3. A valid policy exists for signature operations
+ *      4. The policy applies to the requesting account
+ *      5. The initiator is authorized by the policy
+ *      6. Required approvals have been collected (for manual approval policies)
+ *
+ *      Policy existence is verified via merkle proof. Policy data is provided in calldata.
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountSignature {
     /// @notice ERC-1271 magic value returned when signature is valid
     bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
 
-    /// @notice Value returned when signature is invalid
+    /// @notice Value returned when signature validation fails
     bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
 
     /**
      * @notice Validates an ERC-1271 signature for a given account
-     * @dev The signature parameter is expected to be ABI-encoded as:
-     *      (uint256 policyId, uint256 expirationTimestamp, bytes approverSignatures, bytes guardianSignature)
-     *      The approverSignatures is structured as: [initiatorSignature (65 bytes)][reviewSignatures (N * 65 bytes)]
-     *      The initiator signature is verified against the initiator hash.
-     *      Review signatures are verified against a hash that includes the initiator signature.
-     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
-     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
-     * @param account The account address on behalf of which the signature is being validated
-     * @param hash The original hash that was signed
-     * @param signature The encoded signature data containing policyId, expiration, approver signatures, and guardian
-     * signature
+     * @dev The signature parameter is ABI-encoded and contains:
+     *      - policyId: ID of the policy authorizing this signature
+     *      - expirationTimestamp: When the signature request expires
+     *      - approverSignatures: Concatenated signatures (initiator + reviewers)
+     *      - guardianSignature: Guardian's approval of the signature request
+     *      - proofs: Merkle proofs and policy data for validation
+     * @param account The account address whose signature is being validated
+     * @param hash The message hash that was signed
+     * @param signature ABI-encoded signature data containing policy info and proofs
      * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
      */
     function isValidSignature(
@@ -48,98 +55,194 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4 magicValue)
     {
-        // Decode the signature data
-        (uint256 policyId, uint256 expirationTimestamp, bytes memory approverSignatures, bytes memory guardianSignature)
-        = abi.decode(signature, (uint256, uint256, bytes, bytes));
+        // Decode the packed signature data
+        (
+            uint256 policyId,
+            uint256 expirationTimestamp,
+            bytes memory approverSignatures,
+            bytes memory guardianSignature,
+            Policies.ValidationProofs memory proofs
+        ) = abi.decode(signature, (uint256, uint256, bytes, bytes, Policies.ValidationProofs));
 
-        // 0. Check if the signature has expired
+        // Check if the signature request has expired
         if (block.timestamp > expirationTimestamp) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // 1. Verify guardian signature
+        // Verify guardian has approved this signature request
         if (!_verifyGuardianSignature(account, hash, policyId, expirationTimestamp, guardianSignature)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // 2. Retrieve and verify policy
-        LibOrganizationPolicyStorage.Layout storage policyStorage = LibOrganizationPolicyStorage.layout();
-
-        // Check policy exists
-        if (!policyStorage.policyExists[policyId]) {
+        // Verify the policy exists in the organization's policy tree
+        if (!LibOrganizationPolicy.policyExists(policyId, proofs.policy, proofs.policyProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        Policies.Policy memory policy = policyStorage.policies[policyId];
-
-        // Check policy is for signatures
-        if (policy.transactionType != Policies.TransactionType.Signatures) {
+        // Policy must be configured for signature operations
+        if (proofs.policy.config.transactionType != Policies.TransactionType.Signatures) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Check policy applies to this account
-        if (!LibOrganizationPolicy.doesTransactionMatchPolicySourceAccounts(policy, account)) {
+        // Verify the policy applies to this specific account
+        if (!LibOrganizationPolicy._doesMatchSourceAccount(proofs.policy, account, proofs.sourceAccountProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // 3. Validate initiator signature
-        // approverSignatures must contain at least the initiator signature (65 bytes)
+        // Continue validation in separate function to reduce stack depth
+        return _validateSignatures(account, hash, policyId, expirationTimestamp, approverSignatures, proofs);
+    }
+
+    /**
+     * @notice Validates initiator signature and routes to appropriate approval flow
+     * @dev Extracted to separate function to manage stack depth
+     * @param account The account address whose signature is being validated
+     * @param hash The message hash that was signed
+     * @param policyId The policy ID being used for validation
+     * @param expirationTimestamp When the signature request expires
+     * @param approverSignatures Concatenated signatures from initiator and approvers
+     * @param proofs Merkle proofs and policy data
+     * @return ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     */
+    function _validateSignatures(
+        address account,
+        bytes32 hash,
+        uint256 policyId,
+        uint256 expirationTimestamp,
+        bytes memory approverSignatures,
+        Policies.ValidationProofs memory proofs
+    )
+        private
+        view
+        returns (bytes4)
+    {
+        // Need at least one signature (the initiator's)
         if (approverSignatures.length < 65) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Extract initiator signature (first 65 bytes)
+        // Extract and verify the initiator's signature (first 65 bytes)
         bytes memory initiatorSignature = SignatureUtils.extractSignature(approverSignatures, 0);
 
-        // Get the initiator hash that the initiator signs
+        // Compute the hash that the initiator should have signed
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
-        // Recover the initiator address from the signature
+        // Recover the initiator's address from their signature
         address initiator = ECDSA.recover(initiatorHash, initiatorSignature);
         if (initiator == address(0)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Validate that the initiator is authorized by the policy
-        if (!LibOrganizationPolicy.doesTransactionMatchPolicyInitiator(policy, initiator)) {
+        // Verify the initiator is authorized by this policy
+        if (!LibOrganizationPolicy._doesMatchInitiator(proofs.policy, initiator)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // 4. For AutoApprove policies, only the initiator signature is required (already validated)
-        if (policy.policyType == Policies.PolicyType.AutoApprove) {
+        // Route to appropriate validation based on policy type
+        return _checkPolicyType(
+            account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
+        );
+    }
+
+    /**
+     * @notice Routes validation based on policy type (AutoApprove vs ManualApproval)
+     * @dev For AutoApprove policies, initiator signature is sufficient.
+     *      For ManualApproval policies, additional reviewer signatures are required.
+     * @param account The account address whose signature is being validated
+     * @param hash The message hash that was signed
+     * @param policyId The policy ID being used for validation
+     * @param expirationTimestamp When the signature request expires
+     * @param approverSignatures Concatenated signatures from initiator and approvers
+     * @param initiatorSignature The initiator's signature (extracted from approverSignatures)
+     * @param proofs Merkle proofs and policy data
+     * @return ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     */
+    function _checkPolicyType(
+        address account,
+        bytes32 hash,
+        uint256 policyId,
+        uint256 expirationTimestamp,
+        bytes memory approverSignatures,
+        bytes memory initiatorSignature,
+        Policies.ValidationProofs memory proofs
+    )
+        private
+        view
+        returns (bytes4)
+    {
+        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
+
+        // AutoApprove: Initiator signature alone is sufficient
+        if (pType == Policies.PolicyType.AutoApprove) {
             return ERC1271_MAGIC_VALUE;
         }
 
-        // 5. For manual approval policies, verify review signatures
-        if (policy.policyType == Policies.PolicyType.RequireManualApproval) {
-            uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(policy);
-
-            // Extract review signatures (everything after the first 65 bytes)
-            bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(approverSignatures);
-
-            // Get the review hash that includes the initiator signature
-            bytes32 reviewHash =
-                _getReviewSignatureHash(account, hash, policyId, expirationTimestamp, initiatorSignature);
-
-            // Count valid review approvals
-            uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(policy, reviewSignatures, reviewHash);
-
-            if (validApprovals >= requiredApprovals) {
-                return ERC1271_MAGIC_VALUE;
-            }
+        // ManualApproval: Need additional reviewer signatures
+        if (pType == Policies.PolicyType.RequireManualApproval) {
+            return _validateManualApproval(
+                account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
+            );
         }
 
         return ERC1271_INVALID_VALUE;
     }
 
     /**
-     * @notice Verifies the guardian signature
-     * @param account The account address on behalf of which the signature is being validated
-     * @param hash The original hash that was signed
+     * @notice Validates manual approval signatures meet the required threshold
+     * @dev Extracts reviewer signatures (all after the first initiator signature),
+     *      computes the review hash, and counts valid approvals from authorized approvers.
+     * @param account The account address whose signature is being validated
+     * @param hash The message hash that was signed
+     * @param policyId The policy ID being used for validation
+     * @param expirationTimestamp When the signature request expires
+     * @param approverSignatures Concatenated signatures from initiator and approvers
+     * @param initiatorSignature The initiator's signature
+     * @param proofs Merkle proofs and policy data
+     * @return ERC1271_MAGIC_VALUE if enough valid approvals, ERC1271_INVALID_VALUE otherwise
+     */
+    function _validateManualApproval(
+        address account,
+        bytes32 hash,
+        uint256 policyId,
+        uint256 expirationTimestamp,
+        bytes memory approverSignatures,
+        bytes memory initiatorSignature,
+        Policies.ValidationProofs memory proofs
+    )
+        private
+        view
+        returns (bytes4)
+    {
+        // Get required number of approvals from policy
+        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
+
+        // Extract reviewer signatures (everything after the initiator signature)
+        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(approverSignatures);
+
+        // Compute the hash that reviewers should have signed
+        // Note: includes the initiator signature to bind approvals to the specific request
+        bytes32 reviewHash = _getReviewSignatureHash(account, hash, policyId, expirationTimestamp, initiatorSignature);
+
+        // Count valid approvals from authorized signers
+        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash);
+
+        if (validApprovals >= requiredApprovals) {
+            return ERC1271_MAGIC_VALUE;
+        }
+
+        return ERC1271_INVALID_VALUE;
+    }
+
+    /**
+     * @notice Verifies the guardian's signature on a signature request
+     * @dev The guardian provides an additional layer of security by approving
+     *      signature requests off-chain before they can be validated on-chain.
+     * @param account The account whose signature is being validated
+     * @param hash The message hash being signed
      * @param policyId The policy ID being used
-     * @param expirationTimestamp The timestamp after which the signature is no longer valid
-     * @param guardianSignature The signature from the guardian
-     * @return True if the guardian signature is valid, false otherwise
+     * @param expirationTimestamp When the request expires
+     * @param guardianSignature The guardian's signature
+     * @return True if guardian signature is valid
      */
     function _verifyGuardianSignature(
         address account,
@@ -154,21 +257,22 @@ library LibOrganizationAccountSignature {
     {
         address guardianAddress = LibOrganizationGuardian.guardian();
 
-        // Construct the message that the guardian should have signed
+        // Guardian signs the same hash structure as the initiator
         bytes32 guardianMessageHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
-        // Verify the guardian's signature
+        // Use SignatureChecker to support both EOA and smart contract guardians
         return SignatureChecker.isValidSignatureNow(guardianAddress, guardianMessageHash, guardianSignature);
     }
 
     /**
-     * @notice Creates the initiator hash for signature verification using EIP-712 typed data
-     * @dev This is the hash that the initiator signs to start the signature flow
-     * @param account The account address on behalf of which the signature is being validated
-     * @param hash The original hash that was signed
+     * @notice Computes the EIP-712 hash for initiator signatures
+     * @dev Creates a typed data hash following EIP-712 standard for the
+     *      InitiateSignatureValidation struct type.
+     * @param account The account whose signature is being validated
+     * @param hash The message hash being signed
      * @param policyId The policy ID being used
-     * @param expirationTimestamp The timestamp after which the signature is no longer valid
-     * @return The hash for initiator signature verification
+     * @param expirationTimestamp When the request expires
+     * @return The EIP-712 typed data hash for signing
      */
     function _getInitiatorSignatureHash(
         address account,
@@ -180,7 +284,6 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes32)
     {
-        // Create EIP-712 structured data hash
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
@@ -195,19 +298,19 @@ library LibOrganizationAccountSignature {
             )
         );
 
-        // Return EIP-712 compatible hash for signature verification
         return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
     }
 
     /**
-     * @notice Creates the review hash for reviewer signature verification that includes the initiator's signature
-     * @dev This hash binds reviewers to a specific initiation by including the initiator's signature
-     * @param account The account address on behalf of which the signature is being validated
-     * @param hash The original hash that was signed
+     * @notice Computes the EIP-712 hash for reviewer signatures
+     * @dev Creates a typed data hash for the ReviewSignatureValidation struct type.
+     *      Includes the initiator signature to bind approval to a specific request.
+     * @param account The account whose signature is being validated
+     * @param hash The message hash being signed
      * @param policyId The policy ID being used
-     * @param expirationTimestamp The timestamp after which the signature is no longer valid
-     * @param initiatorSignature The initiator's signature that reviewers are approving
-     * @return The hash for reviewer signature verification
+     * @param expirationTimestamp When the request expires
+     * @param initiatorSignature The initiator's signature (included in hash)
+     * @return The EIP-712 typed data hash for signing
      */
     function _getReviewSignatureHash(
         address account,
@@ -220,7 +323,6 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes32)
     {
-        // Create EIP-712 structured data hash that includes the initiator signature hash
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
@@ -236,12 +338,12 @@ library LibOrganizationAccountSignature {
             )
         );
 
-        // Return EIP-712 compatible hash for signature verification
         return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
     }
 
     /**
-     * @notice Returns the EIP-712 domain separator for this organization
+     * @notice Computes the EIP-712 domain separator for this organization
+     * @dev Used for all EIP-712 typed data hashes in signature validation
      * @return The domain separator hash
      */
     function _getDomainSeparator() private view returns (bytes32) {

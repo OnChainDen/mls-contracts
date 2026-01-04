@@ -3,16 +3,13 @@ pragma solidity ^0.8.24;
 
 import { Test } from "forge-std/Test.sol";
 import { LibOrganizationPolicy } from "../src/organization/libraries/LibOrganizationPolicy.sol";
-import { LibOrganizationPolicyStorage } from "../src/organization/libraries/storage/LibOrganizationPolicyStorage.sol";
 import { Policies } from "../src/libraries/Policies.sol";
 
 /**
  * @title Time-Based Policy Limits Test
  * @notice Tests for time-based policy limit functionality
- * @dev Tests the computeUsageKey, computeTimeWindow, checkAndUpdateTimeBasedLimit, and getCurrentUsage functions
  */
 contract TimeBasedPolicyLimitsTest is Test {
-    // Test addresses
     address constant ACCOUNT_1 = address(0x1);
     address constant ACCOUNT_2 = address(0x2);
     address constant DESTINATION_1 = address(0x3);
@@ -20,11 +17,9 @@ contract TimeBasedPolicyLimitsTest is Test {
     address constant INITIATOR_1 = address(0x5);
     address constant INITIATOR_2 = address(0x6);
 
-    // Test policy ID
     uint256 constant POLICY_ID = 1;
 
     function setUp() public {
-        // Set block timestamp to a known value
         vm.warp(1_000_000);
     }
 
@@ -32,31 +27,26 @@ contract TimeBasedPolicyLimitsTest is Test {
     // computeTimeWindow Tests
     // ================================
 
-    function test_computeTimeWindow_basicCalculation() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalHours = 24; // 24 hours = 86400 seconds
+    function test_computeTimeWindow_basicCalculation() public view {
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
-        // At timestamp 1000000, window should be 1000000 / 86400 = 11 (integer division)
         uint256 expectedWindow = uint256(1_000_000) / (uint256(24) * uint256(3600));
         uint256 actualWindow = LibOrganizationPolicy.computeTimeWindow(policy);
         assertEq(actualWindow, expectedWindow, "Time window calculation incorrect");
     }
 
-    function test_computeTimeWindow_zeroHoursReturnsZero() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalHours = 0;
+    function test_computeTimeWindow_zeroHoursReturnsZero() public view {
+        Policies.Policy memory policy = _createPolicy(0, 1000, Policies.PolicyLimitation.TimeInterval);
 
         uint256 actualWindow = LibOrganizationPolicy.computeTimeWindow(policy);
         assertEq(actualWindow, 0, "Zero hours should return 0 window");
     }
 
     function test_computeTimeWindow_changesWithTime() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalHours = 1; // 1 hour = 3600 seconds
+        Policies.Policy memory policy = _createPolicy(1, 1000, Policies.PolicyLimitation.TimeInterval);
 
         uint256 window1 = LibOrganizationPolicy.computeTimeWindow(policy);
 
-        // Advance time by 1 hour
         vm.warp(block.timestamp + 3600);
 
         uint256 window2 = LibOrganizationPolicy.computeTimeWindow(policy);
@@ -67,24 +57,18 @@ contract TimeBasedPolicyLimitsTest is Test {
     // computeUsageKey Tests
     // ================================
 
-    function test_computeUsageKey_allAcrossAllScopes() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalSourceScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalDestinationScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalInitiatorScope = Policies.TimeIntervalScope.AcrossAll;
+    function test_computeUsageKey_allAcrossAllScopes() public pure {
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        // Default is AcrossAll for all scopes
 
-        // When all scopes are AcrossAll, different accounts/destinations/initiators should have same key
         bytes32 key1 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         bytes32 key2 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_2, DESTINATION_2, INITIATOR_2);
 
         assertEq(key1, key2, "Keys should be equal when all scopes are AcrossAll");
     }
 
-    function test_computeUsageKey_perAccountScope() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalSourceScope = Policies.TimeIntervalScope.PerEntity;
-        policy.timeIntervalDestinationScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalInitiatorScope = Policies.TimeIntervalScope.AcrossAll;
+    function test_computeUsageKey_perAccountScope() public pure {
+        Policies.Policy memory policy = _createPolicyWithSourceScope();
 
         bytes32 key1 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         bytes32 key2 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_2, DESTINATION_1, INITIATOR_1);
@@ -92,11 +76,8 @@ contract TimeBasedPolicyLimitsTest is Test {
         assertTrue(key1 != key2, "Keys should be different for different accounts when PerEntity");
     }
 
-    function test_computeUsageKey_perDestinationScope() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalSourceScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalDestinationScope = Policies.TimeIntervalScope.PerEntity;
-        policy.timeIntervalInitiatorScope = Policies.TimeIntervalScope.AcrossAll;
+    function test_computeUsageKey_perDestinationScope() public pure {
+        Policies.Policy memory policy = _createPolicyWithDestScope();
 
         bytes32 key1 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         bytes32 key2 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_1, DESTINATION_2, INITIATOR_1);
@@ -104,11 +85,8 @@ contract TimeBasedPolicyLimitsTest is Test {
         assertTrue(key1 != key2, "Keys should be different for different destinations when PerEntity");
     }
 
-    function test_computeUsageKey_perInitiatorScope() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalSourceScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalDestinationScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalInitiatorScope = Policies.TimeIntervalScope.PerEntity;
+    function test_computeUsageKey_perInitiatorScope() public pure {
+        Policies.Policy memory policy = _createPolicyWithInitiatorScope();
 
         bytes32 key1 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         bytes32 key2 = LibOrganizationPolicy.computeUsageKey(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_2);
@@ -116,8 +94,8 @@ contract TimeBasedPolicyLimitsTest is Test {
         assertTrue(key1 != key2, "Keys should be different for different initiators when PerEntity");
     }
 
-    function test_computeUsageKey_differentPolicyIds() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
+    function test_computeUsageKey_differentPolicyIds() public pure {
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
         bytes32 key1 = LibOrganizationPolicy.computeUsageKey(1, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         bytes32 key2 = LibOrganizationPolicy.computeUsageKey(2, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
@@ -130,8 +108,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     // ================================
 
     function test_checkAndUpdateTimeBasedLimit_skipIfNoLimitation() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.limitation = Policies.PolicyLimitation.None;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.None);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
@@ -141,8 +118,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_skipIfSingleTransactionLimitation() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.limitation = Policies.PolicyLimitation.SingleTransaction;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.SingleTransaction);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
@@ -152,8 +128,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_skipIfZeroHours() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalHours = 0;
+        Policies.Policy memory policy = _createPolicy(0, 1000, Policies.PolicyLimitation.TimeInterval);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
@@ -163,8 +138,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_withinLimit() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 500
@@ -174,8 +148,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_exactlyAtLimit() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
@@ -185,8 +158,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_exceedsLimit() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1001
@@ -196,22 +168,18 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_cumulativeUsage() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
-        // First transaction: 500
         bool firstWithinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 500
         );
         assertTrue(firstWithinLimit, "First transaction should be within limit");
 
-        // Second transaction: 400 (cumulative: 900)
         bool secondWithinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 400
         );
         assertTrue(secondWithinLimit, "Second transaction should be within limit");
 
-        // Third transaction: 200 (would be 1100, exceeds 1000)
         bool thirdWithinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 200
         );
@@ -219,26 +187,20 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_resetsInNewWindow() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
-        policy.timeIntervalHours = 1; // 1 hour window
+        Policies.Policy memory policy = _createPolicy(1, 1000, Policies.PolicyLimitation.TimeInterval);
 
-        // Use up the limit
         bool firstWithinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
         );
         assertTrue(firstWithinLimit, "First transaction should be within limit");
 
-        // Try to use more in same window - should fail
         bool secondWithinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
         );
         assertFalse(secondWithinLimit, "Second transaction should exceed limit in same window");
 
-        // Advance time to new window
         vm.warp(block.timestamp + 3600);
 
-        // Should be able to use again in new window
         bool thirdWithinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 500
         );
@@ -246,23 +208,18 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     function test_checkAndUpdateTimeBasedLimit_perAccountIndependent() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
-        policy.timeIntervalSourceScope = Policies.TimeIntervalScope.PerEntity;
+        Policies.Policy memory policy = _createPolicyWithSourceScope();
 
-        // Account 1 uses up limit
         bool account1First = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
         );
         assertTrue(account1First, "Account 1 first transaction should be within limit");
 
-        // Account 1 can't use more
         bool account1Second = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1
         );
         assertFalse(account1Second, "Account 1 second transaction should exceed limit");
 
-        // Account 2 should still be able to use (independent tracking)
         bool account2First = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_2, DESTINATION_1, INITIATOR_1, 1000
         );
@@ -273,89 +230,108 @@ contract TimeBasedPolicyLimitsTest is Test {
     // getCurrentUsage Tests
     // ================================
 
-    function test_getCurrentUsage_returnsZeroForNoLimitation() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.limitation = Policies.PolicyLimitation.None;
+    function test_getCurrentUsage_returnsZeroForNoLimitation() public view {
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.None);
 
-        // Store policy in storage
-        _storePolicy(POLICY_ID, policy);
-
-        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
 
         assertEq(usage, 0, "Should return 0 when no time-based limitation");
     }
 
-    function test_getCurrentUsage_returnsZeroForZeroHours() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalHours = 0;
+    function test_getCurrentUsage_returnsZeroForZeroHours() public view {
+        Policies.Policy memory policy = _createPolicy(0, 1000, Policies.PolicyLimitation.TimeInterval);
 
-        // Store policy in storage
-        _storePolicy(POLICY_ID, policy);
-
-        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
 
         assertEq(usage, 0, "Should return 0 when timeIntervalHours is 0");
     }
 
     function test_getCurrentUsage_tracksUsageCorrectly() public {
-        Policies.Policy memory policy = _createBasicTimeBasedPolicy();
-        policy.timeIntervalLimit = 1000;
+        Policies.Policy memory policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
 
-        // Store policy in storage
-        _storePolicy(POLICY_ID, policy);
-
-        // Initial usage should be 0
-        uint256 initialUsage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        uint256 initialUsage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(initialUsage, 0, "Initial usage should be 0");
 
-        // Use 500
         LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 500
         );
 
-        // Check usage is now 500
         uint256 afterFirstUsage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(afterFirstUsage, 500, "Usage should be 500 after first transaction");
 
-        // Use 300 more
         LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 300
         );
 
-        // Check usage is now 800
         uint256 afterSecondUsage =
-            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
         assertEq(afterSecondUsage, 800, "Usage should be 800 after second transaction");
     }
 
     // ================================
-    // Helper Functions
+    // Helper Functions - Create policies using new struct format
     // ================================
 
-    function _createBasicTimeBasedPolicy() internal pure returns (Policies.Policy memory policy) {
-        policy.policyType = Policies.PolicyType.AutoApprove;
-        policy.approverType = Policies.ApproverType.Member;
-        policy.approverId = 1;
-        policy.approvalThreshold = 1;
-        policy.anySourceAccount = true;
-        policy.anyInitiator = true;
-        policy.transactionType = Policies.TransactionType.TokenTransfers;
-        policy.anyToken = true;
-        policy.hasAmountThreshold = false;
-        policy.destinationType = Policies.DestinationType.Any;
-        policy.anyFunction = true;
-        policy.limitation = Policies.PolicyLimitation.TimeInterval;
-        policy.timeIntervalHours = 24;
-        policy.timeIntervalInitiatorScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalSourceScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalDestinationScope = Policies.TimeIntervalScope.AcrossAll;
-        policy.timeIntervalLimit = 1000;
+    function _createPolicy(
+        uint16 hours_,
+        uint256 limit,
+        Policies.PolicyLimitation limitationType
+    )
+        internal
+        pure
+        returns (Policies.Policy memory policy)
+    {
+        // Set up PolicyConfig
+        policy.config.transactionType = Policies.TransactionType.TokenTransfers;
+        policy.config.anySourceAccount = true;
+        policy.config.anyFunction = true;
+        policy.config.destinationType = Policies.DestinationType.Any;
+
+        // Set up ApprovalConfig
+        policy.config.approval.policyType = Policies.PolicyType.AutoApprove;
+        policy.config.approval.approverType = Policies.ApproverType.Member;
+        policy.config.approval.approverId = 1;
+        policy.config.approval.approvalThreshold = 1;
+
+        // Set up InitiatorConfig
+        policy.config.initiator.anyInitiator = true;
+        policy.config.initiator.initiatorType = Policies.ApproverType.Member;
+        policy.config.initiator.initiatorId = 0;
+
+        // Set up TokenFilter
+        policy.config.token.anyToken = true;
+        policy.config.token.tokenAddress = address(0);
+        policy.config.token.hasAmountThreshold = false;
+        policy.config.token.amountThreshold = 0;
+
+        // Set up TimeLimitConfig
+        policy.config.timeLimit.limitation = limitationType;
+        policy.config.timeLimit.timeIntervalHours = hours_;
+        policy.config.timeLimit.timeIntervalLimit = limit;
+        policy.config.timeLimit.initiatorScope = Policies.TimeIntervalScope.AcrossAll;
+        policy.config.timeLimit.sourceScope = Policies.TimeIntervalScope.AcrossAll;
+        policy.config.timeLimit.destinationScope = Policies.TimeIntervalScope.AcrossAll;
+
+        // Set up PolicyRoots (empty for this test)
+        policy.roots.sourceAccountsRoot = bytes32(0);
+        policy.roots.customDestinationsRoot = bytes32(0);
+        policy.roots.allowedFunctionsRoot = bytes32(0);
     }
 
-    function _storePolicy(uint256 policyId, Policies.Policy memory policy) internal {
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
-        policyLayout.policies[policyId] = policy;
-        policyLayout.policyExists[policyId] = true;
+    function _createPolicyWithSourceScope() internal pure returns (Policies.Policy memory policy) {
+        policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        policy.config.timeLimit.sourceScope = Policies.TimeIntervalScope.PerEntity;
+    }
+
+    function _createPolicyWithDestScope() internal pure returns (Policies.Policy memory policy) {
+        policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        policy.config.timeLimit.destinationScope = Policies.TimeIntervalScope.PerEntity;
+    }
+
+    function _createPolicyWithInitiatorScope() internal pure returns (Policies.Policy memory policy) {
+        policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
+        policy.config.timeLimit.initiatorScope = Policies.TimeIntervalScope.PerEntity;
     }
 }
