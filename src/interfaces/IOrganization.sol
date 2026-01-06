@@ -34,6 +34,31 @@ enum OperationType {
 }
 
 /**
+ * @notice Parameters for organization initialization
+ * @dev Packed into a struct to avoid stack too deep errors
+ * @param adminType Type of admin (Member or Group)
+ * @param adminMember The admin member address (only used when adminType is Member)
+ * @param adminGroupId The admin group ID (only used when adminType is Group)
+ * @param votingThreshold Voting threshold (only used for Group admin type)
+ * @param guardian Guardian address for the organization
+ * @param membersRoot The initial Merkle root for all members
+ * @param groupsRoot The initial Merkle root for all groups
+ * @param membersIpfsCid The IPFS CID where full members data is stored
+ * @param groupsIpfsCid The IPFS CID where full groups data is stored
+ */
+struct InitializationParams {
+    AdminType adminType;
+    address adminMember;
+    bytes32 adminGroupId;
+    uint256 votingThreshold;
+    address guardian;
+    bytes32 membersRoot;
+    bytes32 groupsRoot;
+    string membersIpfsCid;
+    string groupsIpfsCid;
+}
+
+/**
  * @title IOrganizationSignatureValidator
  * @notice Interface for validating ERC-1271 signatures on behalf of accounts
  */

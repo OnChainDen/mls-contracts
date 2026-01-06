@@ -14,6 +14,8 @@ pragma solidity ^0.8.24;
  *
  *      Policies are stored as leaves in a merkle tree (only the root is stored on-chain).
  *      Full policy data is provided in calldata and verified via merkle proofs.
+ *
+ *      Members and Groups are also stored as merkle trees. Membership is verified via proofs.
  * @author Den Technologies Inc
  */
 library Policies {
@@ -160,30 +162,36 @@ library Policies {
 
     /**
      * @notice Approval configuration - defines who must approve transactions
-     * @dev Specifies the approval requirements for a policy
+     * @dev Specifies the approval requirements for a policy.
+     *      Uses address for Member approver and bytes32 groupId for Group approver.
      * @param policyType Whether transactions auto-approve or require manual approval
      * @param approverType Whether approver is a group or individual member
-     * @param approverId The ID of the member or group that must approve
+     * @param approverMember The address of the member that must approve (when approverType == Member)
+     * @param approverGroupId The ID of the group that must approve (when approverType == Group)
      * @param approvalThreshold Required number of approvals (for groups)
      */
     struct ApprovalConfig {
         PolicyType policyType;
         ApproverType approverType;
-        uint8 approverId;
+        address approverMember; // Used when approverType == Member
+        bytes32 approverGroupId; // Used when approverType == Group
         uint8 approvalThreshold;
     }
 
     /**
      * @notice Initiator configuration - defines who can initiate transactions
-     * @dev Specifies who is authorized to create and sign the initial transaction request
+     * @dev Specifies who is authorized to create and sign the initial transaction request.
+     *      Uses address for Member initiator and bytes32 groupId for Group initiator.
      * @param anyInitiator If true, any member can initiate (ignores other fields)
      * @param initiatorType Whether initiator must be from a group or specific member
-     * @param initiatorId The ID of the member or group authorized to initiate
+     * @param initiatorMember The address of the member authorized to initiate (when initiatorType == Member)
+     * @param initiatorGroupId The ID of the group authorized to initiate (when initiatorType == Group)
      */
     struct InitiatorConfig {
         bool anyInitiator;
         ApproverType initiatorType;
-        uint8 initiatorId;
+        address initiatorMember; // Used when initiatorType == Member
+        bytes32 initiatorGroupId; // Used when initiatorType == Group
     }
 
     /**
@@ -272,6 +280,52 @@ library Policies {
     }
 
     // ================================
+    // MEMBERSHIP PROOF STRUCTURES
+    // ================================
+
+    /**
+     * @notice Data needed to identify and verify a group
+     * @dev Groups are stored in a merkle tree where each leaf is hash(groupId, groupMembersRoot)
+     * @param groupId The unique identifier for the group
+     * @param groupMembersRoot The merkle root of all member addresses in this group
+     */
+    struct GroupData {
+        bytes32 groupId;
+        bytes32 groupMembersRoot;
+    }
+
+    /**
+     * @notice Proofs needed to verify an initiator's authorization
+     * @dev Contains proofs for both organization membership and optional group membership
+     * @param memberProof Merkle proof that the initiator address is in the organization's membersRoot
+     * @param group Group data if the initiator must be from a specific group (ignored if anyInitiator or Member type)
+     * @param groupExistenceProof Merkle proof that the group exists in the organization's groupsRoot
+     * @param memberInGroupProof Merkle proof that the initiator is in the group's members tree
+     */
+    struct InitiatorProofs {
+        bytes32[] memberProof;
+        GroupData group;
+        bytes32[] groupExistenceProof;
+        bytes32[] memberInGroupProof;
+    }
+
+    /**
+     * @notice Proofs needed to verify approvers' authorization
+     * @dev Contains per-signer proofs for organization membership and optional group membership.
+     *      Arrays are indexed by signer position (same order as signatures).
+     * @param memberProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
+     * @param group Approver group data if approvers must be from a specific group (ignored for Member type)
+     * @param groupExistenceProof Merkle proof that the approver group exists in groupsRoot
+     * @param memberInGroupProofs Per-signer merkle proofs that each signer is in the approver group's tree
+     */
+    struct ApproverProofs {
+        bytes32[][] memberProofs;
+        GroupData group;
+        bytes32[] groupExistenceProof;
+        bytes32[][] memberInGroupProofs;
+    }
+
+    // ================================
     // VALIDATION PROOFS
     // ================================
 
@@ -285,6 +339,8 @@ library Policies {
      * @param functionProof Proof that function selector is allowed by policy
      * @param constraints ABI-encoded parameter constraints for function calls
      * @param addressParameterProofs Merkle proofs for address parameters with List constraints
+     * @param initiatorProofs Proofs for initiator membership verification
+     * @param approverProofs Proofs for approver membership verification
      */
     struct ValidationProofs {
         Policy policy;
@@ -299,6 +355,9 @@ library Policies {
         //   can have multiple address parameters, each with their own allowed addresses tree)
         // - Inner array: The merkle proof itself (array of sibling hashes from leaf to root)
         bytes32[][] addressParameterProofs;
+        // Membership proofs for initiator and approvers
+        InitiatorProofs initiatorProofs;
+        ApproverProofs approverProofs;
     }
 
     // ================================

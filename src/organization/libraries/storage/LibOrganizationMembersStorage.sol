@@ -3,14 +3,16 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Members Storage
- * @notice Storage layout for organization members functionality
+ * @notice Minimal storage layout for merkle-based members functionality
+ * @dev Members are stored in a merkle tree. Only the root is stored on-chain.
+ *      Full member data is stored off-chain (IPFS) and provided via calldata at validation time.
  * @author Den Technologies Inc
  */
 library LibOrganizationMembersStorage {
     struct Layout {
-        mapping(uint8 => address) memberIdToAddress;
-        mapping(address => uint8) addressToMemberId;
-        uint8 nextMemberId;
+        /// @notice Global merkle root containing ALL members
+        /// @dev Each leaf is hash(hash(memberAddress))
+        bytes32 membersRoot;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.members.storage");

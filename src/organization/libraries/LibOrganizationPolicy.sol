@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
-import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationWhitelistStorage } from "./storage/LibOrganizationWhitelistStorage.sol";
+import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
+import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
@@ -16,6 +16,7 @@ import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerklePr
  * @notice Library for merkle-based policy operations
  * @dev Policies are stored in a global merkle tree. Only the root is stored on-chain.
  *      Full policy data is provided via calldata and verified against the root.
+ *      Members and Groups are also Merkle-based - membership is verified via proofs.
  *      This approach drastically reduces gas costs for policy creation/modification (1 SSTORE)
  *      while keeping validation costs reasonable (O(log n) hash operations).
  * @author Den Technologies Inc
@@ -125,7 +126,7 @@ library LibOrganizationPolicy {
      * @dev Performs comprehensive validation including:
      *      1. Policy existence (via merkle proof)
      *      2. Source account matching
-     *      3. Initiator authorization
+     *      3. Initiator authorization (via merkle proofs for membership)
      *      4. Transaction type matching (including token transfer and contract interaction checks)
      *      5. Destination matching
      * @param policyId The unique identifier of the policy
@@ -162,8 +163,8 @@ library LibOrganizationPolicy {
             return false;
         }
 
-        // 3. Check if the initiator is authorized
-        if (!_doesMatchInitiator(proofs.policy, initiator)) {
+        // 3. Check if the initiator is authorized (using merkle proofs)
+        if (!_doesMatchInitiator(proofs.policy, initiator, proofs.initiatorProofs)) {
             return false;
         }
 
@@ -218,14 +219,17 @@ library LibOrganizationPolicy {
     /**
      * @notice Checks if the initiator matches the policy's initiator filter
      * @dev If anyInitiator is true, always returns true.
-     *      Otherwise, checks if the initiator is the specified member or in the specified group.
+     *      Otherwise, verifies the initiator is a member and matches policy requirements.
+     *      Uses Merkle proofs for membership verification.
      * @param policy The policy to check against
      * @param initiatorAddress The address of the transaction initiator
+     * @param initiatorProofs The proofs for initiator membership verification
      * @return True if the initiator matches, false otherwise
      */
     function _doesMatchInitiator(
         Policies.Policy memory policy,
-        address initiatorAddress
+        address initiatorAddress,
+        Policies.InitiatorProofs memory initiatorProofs
     )
         internal
         view
@@ -234,27 +238,28 @@ library LibOrganizationPolicy {
         // Case: The policy matches transactions with any initiator
         if (policy.config.initiator.anyInitiator) return true;
 
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Get the member ID for the initiator
-        uint8 memberId = membersLayout.addressToMemberId[initiatorAddress];
-
-        // Case: Initiator is not a member of the organization
-        if (memberId == 0) return false;
-
-        Policies.ApproverType initType = policy.config.initiator.initiatorType;
-        uint8 initId = policy.config.initiator.initiatorId;
-
-        // Case: The policy matches transactions made by a specific individual, and that individual
-        //        is the initiator of this transaction
-        if (initType == Policies.ApproverType.Member) {
-            return memberId == initId;
+        // First, verify the initiator is a member of the organization
+        if (!LibOrganizationMembers.verifyMembership(initiatorAddress, initiatorProofs.memberProof)) {
+            return false;
         }
 
-        // Case: The policy matches transactions made by any individual from a specific group, and the initiator
-        //       is in that group
+        Policies.ApproverType initType = policy.config.initiator.initiatorType;
+
+        // Case: The policy matches transactions made by a specific individual
+        if (initType == Policies.ApproverType.Member) {
+            // Check if the initiator is the specified member address
+            return initiatorAddress == policy.config.initiator.initiatorMember;
+        }
+
+        // Case: The policy matches transactions made by any individual from a specific group
         if (initType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(initiatorAddress, initId);
+            // Verify the group exists and the initiator is in that group
+            return LibOrganizationGroups.verifyGroupMembership(
+                initiatorAddress,
+                initiatorProofs.group,
+                initiatorProofs.groupExistenceProof,
+                initiatorProofs.memberInGroupProof
+            ) && initiatorProofs.group.groupId == policy.config.initiator.initiatorGroupId;
         }
 
         // Case: The policy does not match this transaction
@@ -457,58 +462,78 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks if a signer is authorized to approve for a policy
-     * @dev For Member approver type, the signer must be the specified member.
-     *      For Group approver type, the signer must be in the specified group.
+     * @notice Checks if a signer is authorized to approve for a policy (using Merkle proofs)
+     * @dev For Member approver type, the signer must be the specified member address.
+     *      For Group approver type, the signer must be in the specified group (verified via proofs).
      * @param policy The policy to check against
      * @param signerAddress The address of the signer
+     * @param memberProof Proof that the signer is a member of the organization
+     * @param approverProofs The approver proofs for group membership (if applicable)
+     * @param signerIndex The index of this signer in the approver proofs arrays
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicy(
         Policies.Policy memory policy,
-        address signerAddress
+        address signerAddress,
+        bytes32[] memory memberProof,
+        Policies.ApproverProofs memory approverProofs,
+        uint256 signerIndex
     )
         internal
         view
         returns (bool)
     {
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Get the member ID for the signer
-        uint8 memberId = membersLayout.addressToMemberId[signerAddress];
-
-        // Case: Signer is not a member of the organization
-        if (memberId == 0) return false;
+        // First verify the signer is a member of the organization
+        if (!LibOrganizationMembers.verifyMembership(signerAddress, memberProof)) {
+            return false;
+        }
 
         Policies.ApproverType approverType = policy.config.approval.approverType;
-        uint8 approverId = policy.config.approval.approverId;
 
         // Case: Policy requires approval from a specific member
         if (approverType == Policies.ApproverType.Member) {
-            return memberId == approverId;
+            return signerAddress == policy.config.approval.approverMember;
         }
 
         // Case: Policy requires approval from any member of a specific group
         if (approverType == Policies.ApproverType.Group) {
-            return _isMemberInGroup(memberId, approverId);
+            // Check the group ID matches the policy's approver group
+            if (approverProofs.group.groupId != policy.config.approval.approverGroupId) {
+                return false;
+            }
+
+            // Get the member-in-group proof for this signer
+            if (signerIndex >= approverProofs.memberInGroupProofs.length) {
+                return false;
+            }
+
+            // Verify group membership
+            return LibOrganizationGroups.verifyGroupMembership(
+                signerAddress,
+                approverProofs.group,
+                approverProofs.groupExistenceProof,
+                approverProofs.memberInGroupProofs[signerIndex]
+            );
         }
 
         return false;
     }
 
     /**
-     * @notice Counts valid approvals from a set of signatures
+     * @notice Counts valid approvals from a set of signatures (using Merkle proofs)
      * @dev Signatures must be ordered by signer address (ascending) to prevent duplicates.
      *      Each signature is verified against the message hash and checked for authorization.
      * @param policy The policy to check against
      * @param signatures The concatenated signatures (65 bytes each)
      * @param messageHash The message hash that was signed
+     * @param approverProofs The proofs for approver membership verification
      * @return The number of valid approvals
      */
     function getValidApprovals(
         Policies.Policy memory policy,
         bytes memory signatures,
-        bytes32 messageHash
+        bytes32 messageHash,
+        Policies.ApproverProofs memory approverProofs
     )
         internal
         view
@@ -545,8 +570,14 @@ library LibOrganizationPolicy {
                 continue;
             }
 
-            // Check if signer is authorized based on policy
-            if (isSignerAuthorizedForPolicy(policy, signer)) {
+            // Get the member proof for this signer
+            if (i >= approverProofs.memberProofs.length) {
+                continue;
+            }
+            bytes32[] memory memberProof = approverProofs.memberProofs[i];
+
+            // Check if signer is authorized based on policy (with Merkle proofs)
+            if (isSignerAuthorizedForPolicy(policy, signer, memberProof, approverProofs, i)) {
                 ++validApprovals;
             }
         }
@@ -948,39 +979,6 @@ library LibOrganizationPolicy {
     // ================================
     // PRIVATE HELPERS
     // ================================
-
-    /**
-     * @notice Checks if a member is in a group (by member ID)
-     * @param memberId The member's ID
-     * @param groupId The group's ID
-     * @return True if the member is in the group, false otherwise
-     */
-    function _isMemberInGroup(uint8 memberId, uint8 groupId) private view returns (bool) {
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-
-        // Case: Member does not exist
-        if (membersLayout.memberIdToAddress[memberId] == address(0)) return false;
-
-        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
-    }
-
-    /**
-     * @notice Checks if a member is in a group (by member address)
-     * @param memberAddress The member's address
-     * @param groupId The group's ID
-     * @return True if the member is in the group, false otherwise
-     */
-    function _isMemberInGroup(address memberAddress, uint8 groupId) private view returns (bool) {
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        uint8 memberId = membersLayout.addressToMemberId[memberAddress];
-
-        // Case: Member does not exist
-        if (memberId == 0) return false;
-
-        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
-    }
 
     /**
      * @notice Checks if an address is in the organization's whitelist
