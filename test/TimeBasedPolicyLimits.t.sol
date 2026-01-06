@@ -16,6 +16,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     address constant DESTINATION_2 = address(0x4);
     address constant INITIATOR_1 = address(0x5);
     address constant INITIATOR_2 = address(0x6);
+    address constant APPROVER_MEMBER = address(0x7);
 
     uint256 constant POLICY_ID = 1;
 
@@ -271,7 +272,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     }
 
     // ================================
-    // Helper Functions - Create policies using new struct format
+    // Helper Functions - Create policies using new struct format with Merkle-based members
     // ================================
 
     function _createPolicy(
@@ -289,16 +290,18 @@ contract TimeBasedPolicyLimitsTest is Test {
         policy.config.anyFunction = true;
         policy.config.destinationType = Policies.DestinationType.Any;
 
-        // Set up ApprovalConfig
+        // Set up ApprovalConfig (using new Merkle-based format with address/groupId)
         policy.config.approval.policyType = Policies.PolicyType.AutoApprove;
         policy.config.approval.approverType = Policies.ApproverType.Member;
-        policy.config.approval.approverId = 1;
+        policy.config.approval.approverMember = APPROVER_MEMBER;
+        policy.config.approval.approverGroupId = bytes32(0);
         policy.config.approval.approvalThreshold = 1;
 
-        // Set up InitiatorConfig
+        // Set up InitiatorConfig (using new Merkle-based format with address/groupId)
         policy.config.initiator.anyInitiator = true;
         policy.config.initiator.initiatorType = Policies.ApproverType.Member;
-        policy.config.initiator.initiatorId = 0;
+        policy.config.initiator.initiatorMember = address(0);
+        policy.config.initiator.initiatorGroupId = bytes32(0);
 
         // Set up TokenFilter
         policy.config.token.anyToken = true;
