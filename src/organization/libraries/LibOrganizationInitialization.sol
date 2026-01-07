@@ -89,10 +89,6 @@ library LibOrganizationInitialization {
             params.adminsRoot, params.adminCount, params.votingThreshold
         );
 
-        // Set roots
-        LibOrganizationMembersStorage.layout().membersRoot = params.membersRoot;
-        LibOrganizationGroupsStorage.layout().groupsRoot = params.groupsRoot;
-
         // Create validation struct
         LibOrganizationAdmin.AdminMembershipValidation memory validation = LibOrganizationAdmin
             .AdminMembershipValidation({
@@ -105,6 +101,10 @@ library LibOrganizationInitialization {
         LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
             validation, params.adminsRoot, params.membersRoot, params.adminCount
         );
+
+        // Set roots
+        LibOrganizationMembersStorage.layout().membersRoot = params.membersRoot;
+        LibOrganizationGroupsStorage.layout().groupsRoot = params.groupsRoot;
 
         // Set admin configuration
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
