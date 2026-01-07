@@ -294,14 +294,14 @@ contract TimeBasedPolicyLimitsTest is Test {
         policy.config.approval.policyType = Policies.PolicyType.AutoApprove;
         policy.config.approval.approverType = Policies.ApproverType.Member;
         policy.config.approval.approverMember = APPROVER_MEMBER;
-        policy.config.approval.approverGroupId = bytes32(0);
+        policy.config.approval.approverGroupId = 0;
         policy.config.approval.approvalThreshold = 1;
 
         // Set up InitiatorConfig (using new Merkle-based format with address/groupId)
         policy.config.initiator.anyInitiator = true;
         policy.config.initiator.initiatorType = Policies.ApproverType.Member;
         policy.config.initiator.initiatorMember = address(0);
-        policy.config.initiator.initiatorGroupId = bytes32(0);
+        policy.config.initiator.initiatorGroupId = 0;
 
         // Set up TokenFilter
         policy.config.token.anyToken = true;
