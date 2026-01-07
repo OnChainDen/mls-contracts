@@ -196,7 +196,7 @@ contract OrganizationImplementation is
      * @param groupExistenceProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function verifyGroupExists(
+    function isGroupInOrg(
         Policies.GroupData calldata groupData,
         bytes32[] calldata groupExistenceProof
     )
@@ -204,7 +204,7 @@ contract OrganizationImplementation is
         view
         returns (bool)
     {
-        return LibOrganizationGroups.verifyGroupExists(groupData, groupExistenceProof);
+        return LibOrganizationGroups.isGroupInOrg(groupData, groupExistenceProof);
     }
 
     /**
@@ -215,7 +215,7 @@ contract OrganizationImplementation is
      * @param memberInGroupProof The merkle proof that the member is in the group
      * @return True if both verifications pass, false otherwise
      */
-    function verifyGroupMembership(
+    function isMemberInGroupAndGroupInOrg(
         address memberAddress,
         Policies.GroupData calldata groupData,
         bytes32[] calldata groupExistenceProof,
@@ -225,7 +225,7 @@ contract OrganizationImplementation is
         view
         returns (bool)
     {
-        return LibOrganizationGroups.verifyGroupMembership(
+        return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
             memberAddress, groupData, groupExistenceProof, memberInGroupProof
         );
     }

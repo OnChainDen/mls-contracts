@@ -245,7 +245,7 @@ library LibOrganizationPolicy {
         // Case: The policy matches transactions made by any individual from a specific group
         if (initType == Policies.ApproverType.Group) {
             // Verify the group exists and the initiator is in that group
-            return LibOrganizationGroups.verifyGroupMembership(
+            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
                 initiatorAddress,
                 initiatorProofs.group,
                 initiatorProofs.groupExistenceProof,
@@ -499,7 +499,7 @@ library LibOrganizationPolicy {
             }
 
             // Verify group membership
-            return LibOrganizationGroups.verifyGroupMembership(
+            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
                 signerAddress,
                 approverProofs.group,
                 approverProofs.groupExistenceProof,

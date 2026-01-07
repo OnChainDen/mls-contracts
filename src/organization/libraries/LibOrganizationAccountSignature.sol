@@ -382,7 +382,7 @@ library LibOrganizationAccountSignature {
 
         // For Group type, verify the initiator is in the specified group
         if (initType == Policies.ApproverType.Group) {
-            return LibOrganizationGroups.verifyGroupMembership(
+            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
                 initiatorAddress,
                 initiatorProofs.group,
                 initiatorProofs.groupExistenceProof,

@@ -50,7 +50,7 @@ library LibOrganizationGroups {
      * @param groupExistenceProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function verifyGroupExists(
+    function isGroupInOrg(
         Policies.GroupData memory groupData,
         bytes32[] memory groupExistenceProof
     )
@@ -75,7 +75,7 @@ library LibOrganizationGroups {
      * @param memberInGroupProof The merkle proof that the member is in the group
      * @return True if the member is in the group, false otherwise
      */
-    function verifyMemberInGroup(
+    function isMemberInGroup(
         address memberAddress,
         bytes32 groupMembersRoot,
         bytes32[] memory memberInGroupProof
@@ -99,7 +99,7 @@ library LibOrganizationGroups {
      * @param memberInGroupProof The merkle proof that the member is in the group
      * @return True if both verifications pass, false otherwise
      */
-    function verifyGroupMembership(
+    function isMemberInGroupAndGroupInOrg(
         address memberAddress,
         Policies.GroupData memory groupData,
         bytes32[] memory groupExistenceProof,
@@ -110,12 +110,12 @@ library LibOrganizationGroups {
         returns (bool)
     {
         // First verify the group exists
-        if (!verifyGroupExists(groupData, groupExistenceProof)) {
+        if (!isGroupInOrg(groupData, groupExistenceProof)) {
             return false;
         }
 
         // Then verify the member is in the group
-        return verifyMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof);
+        return isMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof);
     }
 
     // ================================
