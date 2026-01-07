@@ -12,5 +12,5 @@ interface IOrganizationGroupsFacet {
      * @param groupId The group ID to validate
      * @return True if the group exists and has members, false otherwise
      */
-    function isValidGroupWithMembers(uint8 groupId) external view returns (bool);
+    function isValidGroupWithMembers(uint256 groupId) external view returns (bool);
 }

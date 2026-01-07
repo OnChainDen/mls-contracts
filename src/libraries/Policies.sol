@@ -163,7 +163,7 @@ library Policies {
     /**
      * @notice Approval configuration - defines who must approve transactions
      * @dev Specifies the approval requirements for a policy.
-     *      Uses address for Member approver and bytes32 groupId for Group approver.
+     *      Uses address for Member approver and uint256 groupId for Group approver.
      * @param policyType Whether transactions auto-approve or require manual approval
      * @param approverType Whether approver is a group or individual member
      * @param approverMember The address of the member that must approve (when approverType == Member)
@@ -174,14 +174,14 @@ library Policies {
         PolicyType policyType;
         ApproverType approverType;
         address approverMember; // Used when approverType == Member
-        bytes32 approverGroupId; // Used when approverType == Group
+        uint256 approverGroupId; // Used when approverType == Group
         uint8 approvalThreshold;
     }
 
     /**
      * @notice Initiator configuration - defines who can initiate transactions
      * @dev Specifies who is authorized to create and sign the initial transaction request.
-     *      Uses address for Member initiator and bytes32 groupId for Group initiator.
+     *      Uses address for Member initiator and uint256 groupId for Group initiator.
      * @param anyInitiator If true, any member can initiate (ignores other fields)
      * @param initiatorType Whether initiator must be from a group or specific member
      * @param initiatorMember The address of the member authorized to initiate (when initiatorType == Member)
@@ -191,7 +191,7 @@ library Policies {
         bool anyInitiator;
         ApproverType initiatorType;
         address initiatorMember; // Used when initiatorType == Member
-        bytes32 initiatorGroupId; // Used when initiatorType == Group
+        uint256 initiatorGroupId; // Used when initiatorType == Group
     }
 
     /**
@@ -290,7 +290,7 @@ library Policies {
      * @param groupMembersRoot The merkle root of all member addresses in this group
      */
     struct GroupData {
-        bytes32 groupId;
+        uint256 groupId;
         bytes32 groupMembersRoot;
     }
 
