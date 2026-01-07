@@ -8,12 +8,8 @@ pragma solidity ^0.8.24;
 enum OperationType {
     // Admin/Organization operations
     UpdateAdmin,
-    CreateGroup,
-    ModifyGroup,
-    RemoveGroup,
-    AddMembers,
-    ModifyMember,
-    RemoveMembers,
+    ModifyGroups,
+    ModifyMembers,
     ModifyPolicies,
     UpdateGuardian,
     ModifyWhitelist,

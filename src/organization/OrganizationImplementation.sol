@@ -172,7 +172,7 @@ contract OrganizationImplementation is
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.AddMembers, operationData, salt, expirationTimestamp, true, signatures, adminProofs
+            OperationType.ModifyMembers, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
         LibOrganizationMembers.modifyMembers(newMembersRoot, ipfsCid, adminValidation);
@@ -256,7 +256,7 @@ contract OrganizationImplementation is
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.CreateGroup, operationData, salt, expirationTimestamp, true, signatures, adminProofs
+            OperationType.ModifyGroups, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
         LibOrganizationGroups.modifyGroups(newGroupsRoot, ipfsCid);
