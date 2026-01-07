@@ -25,19 +25,6 @@ library LibOrganizationGroups {
      */
     event GroupsUpdated(bytes32 indexed newRoot, string ipfsCid);
 
-    /**
-     * @notice Emitted when group verification fails
-     * @param groupId The group ID that failed verification
-     */
-    error GroupVerificationFailed(bytes32 groupId);
-
-    /**
-     * @notice Emitted when group membership verification fails
-     * @param memberAddress The address that failed group membership verification
-     * @param groupId The group ID
-     */
-    error GroupMembershipVerificationFailed(address memberAddress, bytes32 groupId);
-
     // ================================
     // MERKLE HELPERS
     // ================================
@@ -129,33 +116,6 @@ library LibOrganizationGroups {
 
         // Then verify the member is in the group
         return verifyMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof);
-    }
-
-    /**
-     * @notice Verifies group membership and reverts if verification fails
-     * @param memberAddress The address to verify
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupExistenceProof The merkle proof that the group exists
-     * @param memberInGroupProof The merkle proof that the member is in the group
-     */
-    function verifyGroupMembershipOrRevert(
-        address memberAddress,
-        Policies.GroupData memory groupData,
-        bytes32[] memory groupExistenceProof,
-        bytes32[] memory memberInGroupProof
-    )
-        internal
-        view
-    {
-        // First verify the group exists
-        if (!verifyGroupExists(groupData, groupExistenceProof)) {
-            revert GroupVerificationFailed(groupData.groupId);
-        }
-
-        // Then verify the member is in the group
-        if (!verifyMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof)) {
-            revert GroupMembershipVerificationFailed(memberAddress, groupData.groupId);
-        }
     }
 
     // ================================
