@@ -4,57 +4,74 @@ pragma solidity ^0.8.24;
 import { LibOrganizationAdminStorage } from "./storage/LibOrganizationAdminStorage.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
-import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { AdminType, OperationType } from "../../interfaces/IOrganization.sol";
-import { Policies } from "../../libraries/Policies.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { OperationType } from "../../interfaces/IOrganization.sol";
 
 /**
  * @title Lib Organization Admin
  * @notice Library for admin-related operations for Organization contracts
  * @dev This library should ONLY be used by Organization contracts.
  *      Admin membership is verified via Merkle proofs.
+ *      Admins are stored as a Merkle tree of member addresses.
  * @author Den Technologies Inc
  */
 library LibOrganizationAdmin {
+    // ================================
+    // STRUCTS
+    // ================================
+
     /**
-     * @notice Proofs needed to verify admin authorization
-     * @dev Contains per-signer proofs for organization membership and optional group membership
-     * @param memberProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
-     * @param group Admin group data if admin is a group (ignored for Member admin type)
-     * @param groupExistenceProof Merkle proof that the admin group exists in groupsRoot
-     * @param memberInGroupProofs Per-signer merkle proofs that each signer is in the admin group's tree
+     * @notice Data needed to validate that all admins are members of the organization
+     * @dev Used by modifyMembers, updateAdmin, and initialize to prevent bricking
+     * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
+     * @param adminTreeProofs Merkle proofs that each address is in adminsRoot
+     * @param memberTreeProofs Merkle proofs that each address is in membersRoot
      */
-    struct AdminProofs {
-        bytes32[][] memberProofs;
-        Policies.GroupData group;
-        bytes32[] groupExistenceProof;
-        bytes32[][] memberInGroupProofs;
+    struct AdminMembershipValidation {
+        address[] adminAddresses;
+        bytes32[][] adminTreeProofs;
+        bytes32[][] memberTreeProofs;
     }
 
     /**
+     * @notice Proofs needed to verify admin authorization for signing operations
+     * @dev Contains per-signer proofs for admin tree and organization membership
+     * @param adminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
+     * @param memberProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
+     */
+    struct AdminProofs {
+        bytes32[][] adminTreeProofs;
+        bytes32[][] memberProofs;
+    }
+
+    // ================================
+    // EVENTS
+    // ================================
+
+    /**
      * @notice Emitted when admin permissions are updated
-     * @param previousAdminType The previous admin type (Member or Group)
-     * @param previousAdminMember The previous admin member address (if Member type)
-     * @param previousAdminGroupId The previous admin group ID (if Group type)
+     * @param previousAdminsRoot The previous admins merkle root
+     * @param previousAdminCount The previous admin count
      * @param previousVotingThreshold The previous voting threshold
-     * @param newAdminType The new admin type (Member or Group)
-     * @param newAdminMember The new admin member address (if Member type)
-     * @param newAdminGroupId The new admin group ID (if Group type)
+     * @param newAdminsRoot The new admins merkle root
+     * @param newAdminCount The new admin count
      * @param newVotingThreshold The new voting threshold
      */
     event AdminPermissionUpdated(
-        AdminType previousAdminType,
-        address previousAdminMember,
-        bytes32 previousAdminGroupId,
+        bytes32 previousAdminsRoot,
+        uint256 previousAdminCount,
         uint256 previousVotingThreshold,
-        AdminType newAdminType,
-        address newAdminMember,
-        bytes32 newAdminGroupId,
+        bytes32 newAdminsRoot,
+        uint256 newAdminCount,
         uint256 newVotingThreshold
     );
+
+    // ================================
+    // ERRORS
+    // ================================
 
     /**
      * @notice Emitted when an admin operation is rejected due to insufficient authorization
@@ -89,6 +106,151 @@ library LibOrganizationAdmin {
     error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
     /**
+     * @notice Emitted when admin count doesn't match expected
+     * @param expected The expected admin count
+     * @param provided The provided admin count
+     */
+    error AdminCountMismatch(uint256 expected, uint256 provided);
+
+    /**
+     * @notice Emitted when admin addresses are not in ascending order or have duplicates
+     * @param address_ The duplicate or out-of-order address
+     */
+    error DuplicateOrUnorderedAdminAddress(address address_);
+
+    /**
+     * @notice Emitted when an admin is not in the admin tree
+     * @param admin The address that is not in the admin tree
+     */
+    error AdminNotInTree(address admin);
+
+    /**
+     * @notice Emitted when an admin is not a member of the organization
+     * @param admin The address that is not a member
+     */
+    error AdminNotMember(address admin);
+
+    /**
+     * @notice Emitted when voting threshold is invalid
+     * @param votingThreshold The invalid voting threshold
+     * @param adminCount The admin count
+     */
+    error InvalidVotingThreshold(uint256 votingThreshold, uint256 adminCount);
+
+    /**
+     * @notice Emitted when admin count is zero
+     */
+    error AdminCountCannotBeZero();
+
+    // ================================
+    // ADMIN LEAF COMPUTATION
+    // ================================
+
+    /**
+     * @notice Computes the merkle leaf for an admin address
+     * @dev Uses the same format as member leaves for consistency (double hashing)
+     * @param adminAddress The admin's address
+     * @return The computed merkle leaf
+     */
+    function computeAdminLeaf(address adminAddress) internal pure returns (bytes32) {
+        return keccak256(bytes.concat(keccak256(abi.encode(adminAddress))));
+    }
+
+    // ================================
+    // ADMIN TREE VERIFICATION
+    // ================================
+
+    /**
+     * @notice Checks if an address is in the admin tree
+     * @param admin The address to check
+     * @param adminsRoot The merkle root of the admin tree
+     * @param proof The merkle proof
+     * @return True if the address is in the admin tree, false otherwise
+     */
+    function isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) internal pure returns (bool) {
+        if (adminsRoot == bytes32(0)) return false;
+        bytes32 leaf = computeAdminLeaf(admin);
+        return MerkleProof.verify(proof, adminsRoot, leaf);
+    }
+
+    // ================================
+    // SHARED VALIDATION HELPER
+    // ================================
+
+    /**
+     * @notice Validates that all admins are members of the organization
+     * @dev Used by modifyMembers, updateAdmin, and initialize to prevent bricking.
+     *      Admin addresses must be in strictly ascending order to prevent duplicates.
+     * @param validation The validation data containing admin addresses and proofs
+     * @param adminsRoot The merkle root of the admin tree
+     * @param membersRoot The merkle root of the members tree
+     * @param expectedAdminCount The expected number of admins (for completeness check)
+     */
+    function validateAllAdminsAreMembersOrRevert(
+        AdminMembershipValidation memory validation,
+        bytes32 adminsRoot,
+        bytes32 membersRoot,
+        uint256 expectedAdminCount
+    )
+        internal
+        pure
+    {
+        // Check completeness: admin addresses array must match expected count
+        if (validation.adminAddresses.length != expectedAdminCount) {
+            revert AdminCountMismatch(expectedAdminCount, validation.adminAddresses.length);
+        }
+
+        // Track last admin address to ensure ascending order (prevents duplicates)
+        address lastAdmin = address(0);
+
+        for (uint256 i = 0; i < validation.adminAddresses.length; ++i) {
+            address admin = validation.adminAddresses[i];
+
+            // Check for duplicates and ascending order
+            if (admin <= lastAdmin) {
+                revert DuplicateOrUnorderedAdminAddress(admin);
+            }
+            lastAdmin = admin;
+
+            // Verify admin is in the admin tree
+            if (!isAdminInTree(admin, adminsRoot, validation.adminTreeProofs[i])) {
+                revert AdminNotInTree(admin);
+            }
+
+            // Verify admin is a member of the organization
+            if (!_verifyMembership(admin, membersRoot, validation.memberTreeProofs[i])) {
+                revert AdminNotMember(admin);
+            }
+        }
+    }
+
+    /**
+     * @notice Internal helper to verify membership against a specific root
+     * @dev Used to verify against potentially different roots (current vs new)
+     * @param memberAddress The address to verify
+     * @param membersRoot The merkle root to verify against
+     * @param proof The merkle proof
+     * @return True if the address is a member, false otherwise
+     */
+    function _verifyMembership(
+        address memberAddress,
+        bytes32 membersRoot,
+        bytes32[] memory proof
+    )
+        private
+        pure
+        returns (bool)
+    {
+        if (membersRoot == bytes32(0)) return false;
+        bytes32 leaf = LibOrganizationMembers.computeMemberLeaf(memberAddress);
+        return MerkleProof.verify(proof, membersRoot, leaf);
+    }
+
+    // ================================
+    // ADMIN PERMISSION MANAGEMENT
+    // ================================
+
+    /**
      * @notice Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
@@ -98,34 +260,40 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Updates the admin permissions for the organization
-     * @dev For Member admin, provide the member address. For Group admin, provide the group ID.
-     * @param newAdminType The new admin type (Member or Group)
-     * @param newAdminMember The new admin member address (only used when newAdminType is Member)
-     * @param newAdminGroupId The new admin group ID (only used when newAdminType is Group)
-     * @param newVotingThreshold The new voting threshold (only used when newAdminType is Group)
+     * @dev Validates that all new admins are members before updating.
+     *      Admin addresses must be in ascending order.
+     * @param newAdminsRoot The new merkle root of admin addresses
+     * @param newAdminCount The number of admins in the new tree
+     * @param newVotingThreshold The new voting threshold
+     * @param validation The validation data to verify all new admins are members
+     * @param currentMembersRoot The current members root to validate against
      */
     function updateAdmin(
-        AdminType newAdminType,
-        address newAdminMember,
-        bytes32 newAdminGroupId,
-        uint256 newVotingThreshold
+        bytes32 newAdminsRoot,
+        uint256 newAdminCount,
+        uint256 newVotingThreshold,
+        AdminMembershipValidation memory validation,
+        bytes32 currentMembersRoot
     )
         internal
     {
-        // Validate the new admin configuration
-        if (newAdminType == AdminType.Group && newVotingThreshold == 0) {
-            revert AdminOperationRejected("Group admin must have a voting threshold greater than 0");
+        // Validate admin count is not zero
+        if (newAdminCount == 0) {
+            revert AdminCountCannotBeZero();
         }
 
-        // Validate that the newAdminMember is a non-zero address for Member type
-        if (newAdminType == AdminType.Member && newAdminMember == address(0)) {
-            revert AdminOperationRejected("Invalid admin member: address cannot be zero");
+        // Validate voting threshold is valid
+        if (newVotingThreshold == 0 || newVotingThreshold > newAdminCount) {
+            revert InvalidVotingThreshold(newVotingThreshold, newAdminCount);
         }
 
-        // Validate that newAdminGroupId is non-zero for Group type
-        if (newAdminType == AdminType.Group && newAdminGroupId == bytes32(0)) {
-            revert AdminOperationRejected("Invalid admin group: group ID cannot be zero");
+        // Validate that the new adminsRoot is not zero
+        if (newAdminsRoot == bytes32(0)) {
+            revert AdminOperationRejected("Admin root cannot be zero");
         }
+
+        // Validate all new admins are current members of the organization
+        validateAllAdminsAreMembersOrRevert(validation, newAdminsRoot, currentMembersRoot, newAdminCount);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
@@ -134,28 +302,29 @@ library LibOrganizationAdmin {
 
         // Update admin permissions
         adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
-            adminType: newAdminType,
-            adminMember: newAdminType == AdminType.Member ? newAdminMember : address(0),
-            adminGroupId: newAdminType == AdminType.Group ? newAdminGroupId : bytes32(0),
-            votingThreshold: newAdminType == AdminType.Group ? newVotingThreshold : 0
+            adminsRoot: newAdminsRoot,
+            adminCount: newAdminCount,
+            votingThreshold: newVotingThreshold
         });
 
         // Emit event
         emit AdminPermissionUpdated(
-            previousAdmin.adminType,
-            previousAdmin.adminMember,
-            previousAdmin.adminGroupId,
+            previousAdmin.adminsRoot,
+            previousAdmin.adminCount,
             previousAdmin.votingThreshold,
-            newAdminType,
-            adminLayout.adminPermission.adminMember,
-            adminLayout.adminPermission.adminGroupId,
-            adminLayout.adminPermission.votingThreshold
+            newAdminsRoot,
+            newAdminCount,
+            newVotingThreshold
         );
     }
 
+    // ================================
+    // ADMIN AUTHORIZATION
+    // ================================
+
     /**
      * @notice Validates that the provided signatures meet the admin authorization requirements
-     * @dev This function computes the nonce, verifies that the signatures are from authorized admin members/group
+     * @dev This function computes the nonce, verifies that the signatures are from authorized admins
      *      using Merkle proofs, meets the required voting threshold, checks nonce and chainId for replay protection,
      *      and marks the nonce as used. This function will revert if authorization fails.
      * @param operationType The type of operation being performed
@@ -195,75 +364,23 @@ library LibOrganizationAdmin {
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
-        bool isAuthorized = false;
+        // Count valid signatures from admins
+        uint256 validSignatures = _getValidAdminSignatures(signatures, operationHash, adminProofs);
 
-        // Case: Admin is an individual member
-        if (adminLayout.adminPermission.adminType == AdminType.Member) {
-            isAuthorized = _hasValidAdminMemberSignature(signatures, operationHash, adminProofs);
-        }
-        // Case: Admin is a group
-        else if (adminLayout.adminPermission.adminType == AdminType.Group) {
-            uint256 validSignatures = _getValidAdminGroupSignatures(signatures, operationHash, adminProofs);
-            isAuthorized = validSignatures >= adminLayout.adminPermission.votingThreshold;
-        }
-
-        // Revert if not authorized
-        if (!isAuthorized) {
+        // Check if we have enough valid signatures
+        if (validSignatures < adminLayout.adminPermission.votingThreshold) {
             revert AdminOperationRejected("Insufficient authorization for admin operation");
         }
     }
 
     /**
-     * @notice Checks if there is a valid signature from the admin member
+     * @notice Counts valid signatures from admin members
      * @param signatures The signatures to verify
      * @param operationHash The hash of the admin operation
      * @param adminProofs The Merkle proofs for membership verification
-     * @return True if there is a valid signature from the admin member, false otherwise
+     * @return The number of valid signatures from admins
      */
-    function _hasValidAdminMemberSignature(
-        bytes memory signatures,
-        bytes32 operationHash,
-        AdminProofs memory adminProofs
-    )
-        private
-        view
-        returns (bool)
-    {
-        // Check that we have exactly one signature (65 bytes: r: 32, s: 32, v: 1)
-        if (signatures.length != 65) return false;
-
-        // Check that we have a member proof
-        if (adminProofs.memberProofs.length == 0) return false;
-
-        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-
-        // Get the admin member's address directly from storage
-        address adminMemberAddress = adminLayout.adminPermission.adminMember;
-        if (adminMemberAddress == address(0)) return false;
-
-        // Extract signer address from signature
-        address signer = LibOrganizationSignatures.extractSigner(signatures);
-
-        // Check if signer is the admin member
-        if (signer != adminMemberAddress) return false;
-
-        // Verify the signer is still a member of the organization using Merkle proof
-        if (!LibOrganizationMembers.verifyMembership(signer, adminProofs.memberProofs[0])) {
-            return false;
-        }
-
-        // Verify the signature using ERC-1271
-        return SignatureChecker.isValidSignatureNow(signer, operationHash, signatures);
-    }
-
-    /**
-     * @notice Counts valid signatures from members of the admin group
-     * @param signatures The signatures to verify
-     * @param operationHash The hash of the admin operation
-     * @param adminProofs The Merkle proofs for membership verification
-     * @return The number of valid signatures from admin group members
-     */
-    function _getValidAdminGroupSignatures(
+    function _getValidAdminSignatures(
         bytes memory signatures,
         bytes32 operationHash,
         AdminProofs memory adminProofs
@@ -283,18 +400,9 @@ library LibOrganizationAdmin {
         address lastSigner = address(0);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
+        bytes32 adminsRoot = adminLayout.adminPermission.adminsRoot;
 
-        // Verify the admin group matches what's stored
-        if (adminProofs.group.groupId != adminLayout.adminPermission.adminGroupId) {
-            return 0;
-        }
-
-        // Verify the admin group exists
-        if (!LibOrganizationGroups.verifyGroupExists(adminProofs.group, adminProofs.groupExistenceProof)) {
-            return 0;
-        }
-
-        // Iterate over signatures to count valid ones from admin group members
+        // Iterate over signatures to count valid ones from admin members
         for (uint8 i = 0; i < signatureCount; ++i) {
             bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
@@ -316,7 +424,12 @@ library LibOrganizationAdmin {
             }
 
             // Check proofs arrays have enough entries
-            if (i >= adminProofs.memberProofs.length || i >= adminProofs.memberInGroupProofs.length) {
+            if (i >= adminProofs.adminTreeProofs.length || i >= adminProofs.memberProofs.length) {
+                continue;
+            }
+
+            // Verify the signer is in the admin tree
+            if (!isAdminInTree(signer, adminsRoot, adminProofs.adminTreeProofs[i])) {
                 continue;
             }
 
@@ -325,14 +438,7 @@ library LibOrganizationAdmin {
                 continue;
             }
 
-            // Verify the signer is in the admin group
-            if (
-                LibOrganizationGroups.verifyMemberInGroup(
-                    signer, adminProofs.group.groupMembersRoot, adminProofs.memberInGroupProofs[i]
-                )
-            ) {
-                ++validSignatures;
-            }
+            ++validSignatures;
         }
 
         return validSignatures;

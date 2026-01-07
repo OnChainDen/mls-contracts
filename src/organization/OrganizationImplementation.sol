@@ -18,12 +18,7 @@ import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAc
 import { LibOrganizationAccountSignature } from "./libraries/LibOrganizationAccountSignature.sol";
 import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
 import { LibOrganizationPolicyStorage } from "./libraries/storage/LibOrganizationPolicyStorage.sol";
-import {
-    AdminType,
-    OperationType,
-    InitializationParams,
-    IOrganizationSignatureValidator
-} from "../interfaces/IOrganization.sol";
+import { OperationType, InitializationParams, IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
 import { Policies } from "../libraries/Policies.sol";
 import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
 import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
@@ -123,17 +118,7 @@ contract OrganizationImplementation is
      * @param params The initialization parameters struct containing all required configuration
      */
     function initialize(InitializationParams calldata params) external initializer onlyDeployer {
-        LibOrganizationInitialization.initialize(
-            params.adminType,
-            params.adminMember,
-            params.adminGroupId,
-            params.votingThreshold,
-            params.guardian,
-            params.membersRoot,
-            params.groupsRoot,
-            params.membersIpfsCid,
-            params.groupsIpfsCid
-        );
+        LibOrganizationInitialization.initialize(params);
     }
 
     // ================================
@@ -161,12 +146,14 @@ contract OrganizationImplementation is
     /**
      * @notice Updates the global members merkle root
      * @dev This is the only way to modify members. All member data is stored off-chain (IPFS).
+     *      Validates that all admins remain members in the new tree to prevent bricking.
      * @param newMembersRoot The new merkle root containing all members
      * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this update
      * @param adminProofs The Merkle proofs for admin membership verification
+     * @param adminValidation The validation data to verify all admins are in the new members tree
      */
     function modifyMembers(
         bytes32 newMembersRoot,
@@ -174,7 +161,8 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminProofs calldata adminProofs,
+        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
     )
         external
         onlyGuardian
@@ -187,7 +175,7 @@ contract OrganizationImplementation is
             OperationType.AddMembers, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
-        LibOrganizationMembers.modifyMembers(newMembersRoot, ipfsCid);
+        LibOrganizationMembers.modifyMembers(newMembersRoot, ipfsCid, adminValidation);
     }
 
     // ================================
@@ -405,37 +393,43 @@ contract OrganizationImplementation is
 
     /**
      * @notice Updates the admin permissions for the organization
-     * @param newAdminType The new admin type (Member or Group)
-     * @param newAdminMember The new admin member address (only used when newAdminType is Member)
-     * @param newAdminGroupId The new admin group ID (only used when newAdminType is Group)
-     * @param newVotingThreshold The new voting threshold (only used when newAdminType is Group)
+     * @dev Validates that all new admins are current members before updating.
+     * @param newAdminsRoot The new merkle root of admin addresses
+     * @param newAdminCount The number of admins in the new tree
+     * @param newVotingThreshold The new voting threshold
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this update
      * @param adminProofs The Merkle proofs for admin membership verification
+     * @param adminValidation The validation data to verify all new admins are members
      */
     function updateAdmin(
-        AdminType newAdminType,
-        address newAdminMember,
-        bytes32 newAdminGroupId,
+        bytes32 newAdminsRoot,
+        uint256 newAdminCount,
         uint256 newVotingThreshold,
         uint256 salt,
         uint256 expirationTimestamp,
         bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminProofs calldata adminProofs,
+        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
     )
         external
         onlyGuardian
     {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newAdminType, newAdminMember, newAdminGroupId, newVotingThreshold);
+        bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
             OperationType.UpdateAdmin, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
-        LibOrganizationAdmin.updateAdmin(newAdminType, newAdminMember, newAdminGroupId, newVotingThreshold);
+        // Get current members root for validation
+        bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
+
+        LibOrganizationAdmin.updateAdmin(
+            newAdminsRoot, newAdminCount, newVotingThreshold, adminValidation, currentMembersRoot
+        );
     }
 
     /**

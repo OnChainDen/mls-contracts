@@ -7,7 +7,8 @@ import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersS
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { AdminType } from "../../interfaces/IOrganization.sol";
+import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
+import { InitializationParams } from "../../interfaces/IOrganization.sol";
 
 /**
  * @title Lib Organization Initialization
@@ -20,10 +21,9 @@ import { AdminType } from "../../interfaces/IOrganization.sol";
 library LibOrganizationInitialization {
     /**
      * @notice Emitted when organization is successfully initialized
-     * @param adminType The admin type set during initialization
-     * @param adminMember The admin member address (if Member type)
-     * @param adminGroupId The admin group ID (if Group type)
-     * @param votingThreshold The voting threshold (if Group type)
+     * @param adminsRoot The merkle root of admin addresses
+     * @param adminCount The number of admins
+     * @param votingThreshold The voting threshold for admin operations
      * @param guardian The guardian address set during initialization
      * @param membersRoot The initial members Merkle root
      * @param groupsRoot The initial groups Merkle root
@@ -31,9 +31,8 @@ library LibOrganizationInitialization {
      * @param groupsIpfsCid The IPFS CID for groups data
      */
     event OrganizationInitialized(
-        AdminType adminType,
-        address adminMember,
-        bytes32 adminGroupId,
+        bytes32 adminsRoot,
+        uint256 adminCount,
         uint256 votingThreshold,
         address guardian,
         bytes32 membersRoot,
@@ -76,136 +75,89 @@ library LibOrganizationInitialization {
      * @notice Initializes the organization contract with Merkle-based members/groups and admin configuration
      * @dev Deployer authorization is enforced by the external wrapper function.
      *      Members and groups are represented as Merkle trees - only roots are stored on-chain.
-     * @param adminType Type of admin (Member or Group)
-     * @param adminMember The admin member address (only used when adminType is Member)
-     * @param adminGroupId The admin group ID (only used when adminType is Group)
-     * @param votingThreshold Voting threshold (only used for Group admin type)
-     * @param guardian Guardian address for the organization
-     * @param membersRoot The initial Merkle root for all members
-     * @param groupsRoot The initial Merkle root for all groups
-     * @param membersIpfsCid The IPFS CID where full members data is stored for disaster recovery
-     * @param groupsIpfsCid The IPFS CID where full groups data is stored for disaster recovery
+     *      Validates that all admin addresses are members to prevent bricking.
+     * @param params The initialization parameters struct
      */
-    function initialize(
-        AdminType adminType,
-        address adminMember,
-        bytes32 adminGroupId,
-        uint256 votingThreshold,
-        address guardian,
-        bytes32 membersRoot,
-        bytes32 groupsRoot,
-        string calldata membersIpfsCid,
-        string calldata groupsIpfsCid
-    )
-        internal
-    {
+    function initialize(InitializationParams calldata params) internal {
         // Check if already initialized
         if (isInitialized()) {
             revert AlreadyInitialized();
         }
 
-        // Validate and set roots
-        _validateAndSetRoots(adminType, membersRoot, groupsRoot);
+        // Validate members root is provided (organization must have at least one member)
+        if (params.membersRoot == bytes32(0)) {
+            revert InvalidMembersRoot();
+        }
+
+        // Validate admin configuration
+        _validateAdminConfiguration(params.adminsRoot, params.adminCount, params.votingThreshold);
+
+        // Set roots
+        LibOrganizationMembersStorage.layout().membersRoot = params.membersRoot;
+        LibOrganizationGroupsStorage.layout().groupsRoot = params.groupsRoot;
+
+        // Create validation struct
+        LibOrganizationAdmin.AdminMembershipValidation memory validation = LibOrganizationAdmin
+            .AdminMembershipValidation({
+            adminAddresses: params.adminAddresses,
+            adminTreeProofs: params.adminTreeProofs,
+            memberTreeProofs: params.adminMemberProofs
+        });
+
+        // Validate all admins are members (this prevents bricking at initialization)
+        LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
+            validation, params.adminsRoot, params.membersRoot, params.adminCount
+        );
 
         // Set admin configuration
-        _setAdminConfiguration(adminType, adminMember, adminGroupId, votingThreshold);
+        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
+        adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
+            adminsRoot: params.adminsRoot,
+            adminCount: params.adminCount,
+            votingThreshold: params.votingThreshold
+        });
 
         // Initialize policy counter
         LibOrganizationPolicyStorage.layout().nextPolicyId = 1;
 
         // Set guardian
-        LibOrganizationGuardianStorage.layout().guardian = guardian;
+        LibOrganizationGuardianStorage.layout().guardian = params.guardian;
 
-        _emitInitializedEvent(
-            adminType,
-            adminMember,
-            adminGroupId,
-            votingThreshold,
-            guardian,
-            membersRoot,
-            groupsRoot,
-            membersIpfsCid,
-            groupsIpfsCid
+        emit OrganizationInitialized(
+            params.adminsRoot,
+            params.adminCount,
+            params.votingThreshold,
+            params.guardian,
+            params.membersRoot,
+            params.groupsRoot,
+            params.membersIpfsCid,
+            params.groupsIpfsCid
         );
     }
 
     /**
-     * @notice Validates and sets the members and groups roots
+     * @notice Validates the admin configuration
+     * @param adminsRoot The merkle root of admin addresses
+     * @param adminCount The number of admins
+     * @param votingThreshold The voting threshold
      */
-    function _validateAndSetRoots(AdminType adminType, bytes32 membersRoot, bytes32 groupsRoot) private {
-        // Validate members root is provided (organization must have at least one member)
-        if (membersRoot == bytes32(0)) {
-            revert InvalidMembersRoot();
-        }
-
-        // Groups root must be provided for group admin
-        if (adminType == AdminType.Group && groupsRoot == bytes32(0)) {
-            revert InvalidAdminConfiguration();
-        }
-
-        // Set roots
-        LibOrganizationMembersStorage.layout().membersRoot = membersRoot;
-        LibOrganizationGroupsStorage.layout().groupsRoot = groupsRoot;
-    }
-
-    /**
-     * @notice Sets the admin configuration
-     */
-    function _setAdminConfiguration(
-        AdminType adminType,
-        address adminMember,
-        bytes32 adminGroupId,
+    function _validateAdminConfiguration(
+        bytes32 adminsRoot,
+        uint256 adminCount,
         uint256 votingThreshold
     )
         private
+        pure
     {
-        // Validate admin configuration
-        if (adminType == AdminType.Member) {
-            if (adminMember == address(0)) {
-                revert InvalidAdminConfiguration();
-            }
-        } else if (adminType == AdminType.Group) {
-            if (adminGroupId == bytes32(0) || votingThreshold == 0) {
-                revert InvalidAdminConfiguration();
-            }
+        if (adminsRoot == bytes32(0)) {
+            revert InvalidAdminConfiguration();
         }
-
-        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
-            adminType: adminType,
-            adminMember: adminType == AdminType.Member ? adminMember : address(0),
-            adminGroupId: adminType == AdminType.Group ? adminGroupId : bytes32(0),
-            votingThreshold: adminType == AdminType.Group ? votingThreshold : 0
-        });
-    }
-
-    /**
-     * @notice Emits the OrganizationInitialized event
-     */
-    function _emitInitializedEvent(
-        AdminType adminType,
-        address adminMember,
-        bytes32 adminGroupId,
-        uint256 votingThreshold,
-        address guardian,
-        bytes32 membersRoot,
-        bytes32 groupsRoot,
-        string calldata membersIpfsCid,
-        string calldata groupsIpfsCid
-    )
-        private
-    {
-        emit OrganizationInitialized(
-            adminType,
-            adminType == AdminType.Member ? adminMember : address(0),
-            adminType == AdminType.Group ? adminGroupId : bytes32(0),
-            adminType == AdminType.Group ? votingThreshold : 0,
-            guardian,
-            membersRoot,
-            groupsRoot,
-            membersIpfsCid,
-            groupsIpfsCid
-        );
+        if (adminCount == 0) {
+            revert InvalidAdminConfiguration();
+        }
+        if (votingThreshold == 0 || votingThreshold > adminCount) {
+            revert InvalidAdminConfiguration();
+        }
     }
 
     /**
