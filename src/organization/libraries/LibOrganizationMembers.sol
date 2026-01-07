@@ -5,6 +5,7 @@ import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersS
 import { LibOrganizationAdminStorage } from "./storage/LibOrganizationAdminStorage.sol";
 import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
 
 /**
  * @title Lib Organization Members
@@ -30,20 +31,6 @@ library LibOrganizationMembers {
     error MemberVerificationFailed(address memberAddress);
 
     // ================================
-    // MERKLE HELPERS
-    // ================================
-
-    /**
-     * @notice Computes the merkle leaf for a member address
-     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
-     * @param memberAddress The member's address
-     * @return The computed merkle leaf
-     */
-    function computeMemberLeaf(address memberAddress) internal pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(memberAddress))));
-    }
-
-    // ================================
     // MEMBERSHIP VERIFICATION
     // ================================
 
@@ -65,7 +52,7 @@ library LibOrganizationMembers {
         returns (bool)
     {
         if (membersRoot == bytes32(0)) return false;
-        bytes32 leaf = computeMemberLeaf(memberAddress);
+        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
         return MerkleProof.verify(proof, membersRoot, leaf);
     }
 

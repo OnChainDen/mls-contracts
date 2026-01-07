@@ -9,6 +9,7 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { OperationType } from "../../interfaces/IOrganization.sol";
+import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
 
 /**
  * @title Lib Organization Admin
@@ -148,20 +149,6 @@ library LibOrganizationAdmin {
     error AdminRootCannotBeZero();
 
     // ================================
-    // ADMIN LEAF COMPUTATION
-    // ================================
-
-    /**
-     * @notice Computes the merkle leaf for an admin address
-     * @dev Uses the same format as member leaves for consistency (double hashing)
-     * @param adminAddress The admin's address
-     * @return The computed merkle leaf
-     */
-    function computeAdminLeaf(address adminAddress) internal pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(adminAddress))));
-    }
-
-    // ================================
     // ADMIN TREE VERIFICATION
     // ================================
 
@@ -174,7 +161,7 @@ library LibOrganizationAdmin {
      */
     function isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) internal pure returns (bool) {
         if (adminsRoot == bytes32(0)) return false;
-        bytes32 leaf = computeAdminLeaf(admin);
+        bytes32 leaf = MerkleUtils.computeAddressLeaf(admin);
         return MerkleProof.verify(proof, adminsRoot, leaf);
     }
 

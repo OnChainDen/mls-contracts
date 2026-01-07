@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
-import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
 import { Policies } from "../../libraries/Policies.sol";
 
 /**
@@ -53,16 +53,6 @@ library LibOrganizationGroups {
         return keccak256(bytes.concat(keccak256(abi.encode(groupId, groupMembersRoot))));
     }
 
-    /**
-     * @notice Computes the merkle leaf for a member address within a group
-     * @dev Uses the same leaf computation as the members tree for consistency
-     * @param memberAddress The member's address
-     * @return The computed merkle leaf
-     */
-    function computeGroupMemberLeaf(address memberAddress) internal pure returns (bytes32) {
-        return LibOrganizationMembers.computeMemberLeaf(memberAddress);
-    }
-
     // ================================
     // GROUP VERIFICATION
     // ================================
@@ -110,7 +100,7 @@ library LibOrganizationGroups {
         // Empty root means no members in group
         if (groupMembersRoot == bytes32(0)) return false;
 
-        bytes32 leaf = computeGroupMemberLeaf(memberAddress);
+        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
         return MerkleProof.verify(memberInGroupProof, groupMembersRoot, leaf);
     }
 

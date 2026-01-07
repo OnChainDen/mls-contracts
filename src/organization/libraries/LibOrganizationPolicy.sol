@@ -10,6 +10,7 @@ import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
 
 /**
  * @title Lib Organization Policy
@@ -53,16 +54,6 @@ library LibOrganizationPolicy {
      */
     function _computePolicyLeaf(uint256 policyId, Policies.Policy calldata policy) private pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
-    }
-
-    /**
-     * @notice Computes the merkle leaf for an address (used for source accounts and destinations)
-     * @dev Uses double hashing for security
-     * @param addr The address to compute the leaf for
-     * @return The computed merkle leaf
-     */
-    function _computeAddressLeaf(address addr) private pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(addr))));
     }
 
     /**
@@ -212,7 +203,7 @@ library LibOrganizationPolicy {
 
         // Case: The policy matches transactions sent from a list of specific source accounts
         // Verify this account is in the source accounts merkle tree
-        bytes32 accountLeaf = _computeAddressLeaf(sourceAccount);
+        bytes32 accountLeaf = MerkleUtils.computeAddressLeaf(sourceAccount);
         return MerkleProof.verify(sourceAccountProof, policy.roots.sourceAccountsRoot, accountLeaf);
     }
 
@@ -387,7 +378,7 @@ library LibOrganizationPolicy {
         // Case: Policy matches only transactions that are sent to a specific list of addresses
         // Verify via merkle proof that destination is in the custom destinations tree
         if (destType == Policies.DestinationType.CustomList) {
-            bytes32 destLeaf = _computeAddressLeaf(actualDestination);
+            bytes32 destLeaf = MerkleUtils.computeAddressLeaf(actualDestination);
             return MerkleProof.verify(destinationProof, policy.roots.customDestinationsRoot, destLeaf);
         }
 
@@ -895,7 +886,7 @@ library LibOrganizationPolicy {
                 // comparisonData contains the merkle root of allowed addresses
                 bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
                 // Compute leaf for the actual address using double-hashing
-                bytes32 addressLeaf = _computeAddressLeaf(actualValue);
+                bytes32 addressLeaf = MerkleUtils.computeAddressLeaf(actualValue);
                 // Verify the address is in the allowed addresses merkle tree
                 return MerkleProof.verify(addressListProof, allowedAddressesRoot, addressLeaf);
             }
