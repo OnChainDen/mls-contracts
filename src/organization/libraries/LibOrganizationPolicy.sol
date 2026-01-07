@@ -455,9 +455,12 @@ library LibOrganizationPolicy {
     /**
      * @notice Checks if a signer is authorized to approve for a policy (using Merkle proofs)
      * @dev For Member approver type, the signer must be the specified member address.
-     *      For Group approver type, the signer must be in the specified group (verified via proofs).
+     *      For Group approver type, the signer must be in the specified group.
+     *      NOTE: Group existence must be verified by the caller before calling this function.
+     *      This function only verifies member-in-org and member-in-group to avoid redundant checks.
      * @param policy The policy to check against
      * @param signerAddress The address of the signer
+     * @param membersRoot The organization's members merkle root (cached by caller to avoid repeated storage reads)
      * @param memberProof Proof that the signer is a member of the organization
      * @param approverProofs The approver proofs for group membership (if applicable)
      * @param signerIndex The index of this signer in the approver proofs arrays
@@ -466,16 +469,17 @@ library LibOrganizationPolicy {
     function isSignerAuthorizedForPolicy(
         Policies.Policy memory policy,
         address signerAddress,
+        bytes32 membersRoot,
         bytes32[] memory memberProof,
         Policies.ApproverProofs memory approverProofs,
         uint256 signerIndex
     )
         internal
-        view
+        pure
         returns (bool)
     {
-        // First verify the signer is a member of the organization
-        if (!LibOrganizationMembers.isMemberInOrg(signerAddress, memberProof)) {
+        // First verify the signer is a member of the organization (using cached root)
+        if (!LibOrganizationMembers.isMemberInTree(signerAddress, membersRoot, memberProof)) {
             return false;
         }
 
@@ -498,12 +502,9 @@ library LibOrganizationPolicy {
                 return false;
             }
 
-            // Verify group membership
-            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
-                signerAddress,
-                approverProofs.group,
-                approverProofs.groupExistenceProof,
-                approverProofs.memberInGroupProofs[signerIndex]
+            // Verify member is in the group (group existence is verified by caller)
+            return LibOrganizationGroups.isMemberInGroup(
+                signerAddress, approverProofs.group.groupMembersRoot, approverProofs.memberInGroupProofs[signerIndex]
             );
         }
 
@@ -514,6 +515,7 @@ library LibOrganizationPolicy {
      * @notice Counts valid approvals from a set of signatures (using Merkle proofs)
      * @dev Signatures must be ordered by signer address (ascending) to prevent duplicates.
      *      Each signature is verified against the message hash and checked for authorization.
+     *      Optimized to cache storage reads and verify group existence once before the loop.
      * @param policy The policy to check against
      * @param signatures The concatenated signatures (65 bytes each)
      * @param messageHash The message hash that was signed
@@ -532,6 +534,21 @@ library LibOrganizationPolicy {
     {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
+
+        // Cache membersRoot to avoid repeated storage reads in the loop
+        bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
+
+        // For Group approver type, verify group existence once before the loop
+        if (policy.config.approval.approverType == Policies.ApproverType.Group) {
+            bytes32 groupsRoot = LibOrganizationGroups.getGroupsRoot();
+            if (
+                !LibOrganizationGroups.isGroupInTree(
+                    approverProofs.group, groupsRoot, approverProofs.groupExistenceProof
+                )
+            ) {
+                return 0;
+            }
+        }
 
         // Each signature is 65 bytes (r: 32, s: 32, v: 1)
         uint8 signatureCount = uint8(signatures.length / 65);
@@ -568,7 +585,8 @@ library LibOrganizationPolicy {
             bytes32[] memory memberProof = approverProofs.memberProofs[i];
 
             // Check if signer is authorized based on policy (with Merkle proofs)
-            if (isSignerAuthorizedForPolicy(policy, signer, memberProof, approverProofs, i)) {
+            // Note: Group existence already verified above, membersRoot passed to avoid storage reads
+            if (isSignerAuthorizedForPolicy(policy, signer, membersRoot, memberProof, approverProofs, i)) {
                 ++validApprovals;
             }
         }

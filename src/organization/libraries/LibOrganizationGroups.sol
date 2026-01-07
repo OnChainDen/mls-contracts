@@ -45,6 +45,30 @@ library LibOrganizationGroups {
     // ================================
 
     /**
+     * @notice Checks if a group exists in a groups tree given an explicit root
+     * @dev Used to verify against potentially different roots or to avoid storage reads in loops
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupsRoot The merkle root to verify against
+     * @param groupExistenceProof The merkle proof for the group
+     * @return True if the group exists in the tree, false otherwise
+     */
+    function isGroupInTree(
+        Policies.GroupData memory groupData,
+        bytes32 groupsRoot,
+        bytes32[] memory groupExistenceProof
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Empty root means no groups (organization not initialized or all groups removed)
+        if (groupsRoot == bytes32(0)) return false;
+
+        bytes32 leaf = computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
+        return MerkleProof.verify(groupExistenceProof, groupsRoot, leaf);
+    }
+
+    /**
      * @notice Verifies that a group exists in the organization
      * @param groupData The group data containing groupId and groupMembersRoot
      * @param groupExistenceProof The merkle proof for the group
@@ -59,12 +83,7 @@ library LibOrganizationGroups {
         returns (bool)
     {
         bytes32 root = LibOrganizationGroupsStorage.layout().groupsRoot;
-
-        // Empty root means no groups (organization not initialized or all groups removed)
-        if (root == bytes32(0)) return false;
-
-        bytes32 leaf = computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
-        return MerkleProof.verify(groupExistenceProof, root, leaf);
+        return isGroupInTree(groupData, root, groupExistenceProof);
     }
 
     /**
