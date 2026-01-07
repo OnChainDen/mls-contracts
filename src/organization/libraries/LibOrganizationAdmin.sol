@@ -142,6 +142,11 @@ library LibOrganizationAdmin {
      */
     error AdminCountCannotBeZero();
 
+    /**
+     * @notice Emitted when admin root is zero
+     */
+    error AdminRootCannotBeZero();
+
     // ================================
     // ADMIN LEAF COMPUTATION
     // ================================
@@ -224,6 +229,33 @@ library LibOrganizationAdmin {
         }
     }
 
+    /**
+     * @notice Validates the admin configuration parameters
+     * @dev Used by initialize and updateAdmin to ensure valid admin configuration.
+     *      Validates that adminsRoot is not zero, adminCount is not zero, and votingThreshold is valid.
+     * @param adminsRoot The merkle root of admin addresses
+     * @param adminCount The number of admins
+     * @param votingThreshold The voting threshold for admin operations
+     */
+    function validateAdminConfigurationOrRevert(
+        bytes32 adminsRoot,
+        uint256 adminCount,
+        uint256 votingThreshold
+    )
+        internal
+        pure
+    {
+        if (adminsRoot == bytes32(0)) {
+            revert AdminRootCannotBeZero();
+        }
+        if (adminCount == 0) {
+            revert AdminCountCannotBeZero();
+        }
+        if (votingThreshold == 0 || votingThreshold > adminCount) {
+            revert InvalidVotingThreshold(votingThreshold, adminCount);
+        }
+    }
+
     // ================================
     // ADMIN PERMISSION MANAGEMENT
     // ================================
@@ -255,20 +287,8 @@ library LibOrganizationAdmin {
     )
         internal
     {
-        // Validate admin count is not zero
-        if (newAdminCount == 0) {
-            revert AdminCountCannotBeZero();
-        }
-
-        // Validate voting threshold is valid
-        if (newVotingThreshold == 0 || newVotingThreshold > newAdminCount) {
-            revert InvalidVotingThreshold(newVotingThreshold, newAdminCount);
-        }
-
-        // Validate that the new adminsRoot is not zero
-        if (newAdminsRoot == bytes32(0)) {
-            revert AdminOperationRejected("Admin root cannot be zero");
-        }
+        // Validate admin configuration (root, count, threshold)
+        validateAdminConfigurationOrRevert(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate all new admins are current members of the organization
         validateAllAdminsAreMembersOrRevert(validation, newAdminsRoot, currentMembersRoot, newAdminCount);

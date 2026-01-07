@@ -52,11 +52,6 @@ library LibOrganizationInitialization {
     error AlreadyInitialized();
 
     /**
-     * @notice Error thrown when invalid admin configuration is provided
-     */
-    error InvalidAdminConfiguration();
-
-    /**
      * @notice Error thrown when invalid members root is provided
      */
     error InvalidMembersRoot();
@@ -90,7 +85,9 @@ library LibOrganizationInitialization {
         }
 
         // Validate admin configuration
-        _validateAdminConfiguration(params.adminsRoot, params.adminCount, params.votingThreshold);
+        LibOrganizationAdmin.validateAdminConfigurationOrRevert(
+            params.adminsRoot, params.adminCount, params.votingThreshold
+        );
 
         // Set roots
         LibOrganizationMembersStorage.layout().membersRoot = params.membersRoot;
@@ -133,31 +130,6 @@ library LibOrganizationInitialization {
             params.membersIpfsCid,
             params.groupsIpfsCid
         );
-    }
-
-    /**
-     * @notice Validates the admin configuration
-     * @param adminsRoot The merkle root of admin addresses
-     * @param adminCount The number of admins
-     * @param votingThreshold The voting threshold
-     */
-    function _validateAdminConfiguration(
-        bytes32 adminsRoot,
-        uint256 adminCount,
-        uint256 votingThreshold
-    )
-        private
-        pure
-    {
-        if (adminsRoot == bytes32(0)) {
-            revert InvalidAdminConfiguration();
-        }
-        if (adminCount == 0) {
-            revert InvalidAdminConfiguration();
-        }
-        if (votingThreshold == 0 || votingThreshold > adminCount) {
-            revert InvalidAdminConfiguration();
-        }
     }
 
     /**
