@@ -387,6 +387,9 @@ library LibOrganizationAdmin {
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
         bytes32 adminsRoot = adminLayout.adminPermission.adminsRoot;
 
+        // Cache membersRoot to avoid repeated storage reads in the loop
+        bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
+
         // Iterate over signatures to count valid ones from admin members
         for (uint8 i = 0; i < signatureCount; ++i) {
             bytes memory signature = SignatureUtils.extractSignature(signatures, i);
@@ -418,8 +421,8 @@ library LibOrganizationAdmin {
                 continue;
             }
 
-            // Verify the signer is a member of the organization
-            if (!LibOrganizationMembers.isMemberInOrg(signer, adminProofs.memberProofs[i])) {
+            // Verify the signer is a member of the organization (using cached root)
+            if (!LibOrganizationMembers.isMemberInTree(signer, membersRoot, adminProofs.memberProofs[i])) {
                 continue;
             }
 
