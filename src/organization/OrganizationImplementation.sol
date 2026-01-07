@@ -139,8 +139,8 @@ contract OrganizationImplementation is
      * @param proof The merkle proof for the address
      * @return True if the address is a verified member, false otherwise
      */
-    function verifyMembership(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
-        return LibOrganizationMembers.verifyMembership(memberAddress, proof);
+    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
+        return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
     }
 
     /**

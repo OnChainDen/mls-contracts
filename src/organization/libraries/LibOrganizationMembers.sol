@@ -48,19 +48,36 @@ library LibOrganizationMembers {
     // ================================
 
     /**
+     * @notice Checks if an address is in a member tree given an explicit root
+     * @dev Used to verify against potentially different roots (current vs new)
+     * @param memberAddress The address to verify
+     * @param membersRoot The merkle root to verify against
+     * @param proof The merkle proof
+     * @return True if the address is in the member tree, false otherwise
+     */
+    function isMemberInTree(
+        address memberAddress,
+        bytes32 membersRoot,
+        bytes32[] memory proof
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        if (membersRoot == bytes32(0)) return false;
+        bytes32 leaf = computeMemberLeaf(memberAddress);
+        return MerkleProof.verify(proof, membersRoot, leaf);
+    }
+
+    /**
      * @notice Verifies that an address is a member of the organization
      * @param memberAddress The address to verify
      * @param proof The merkle proof for the address
      * @return True if the address is a verified member, false otherwise
      */
-    function verifyMembership(address memberAddress, bytes32[] memory proof) internal view returns (bool) {
+    function isMemberInOrg(address memberAddress, bytes32[] memory proof) internal view returns (bool) {
         bytes32 root = LibOrganizationMembersStorage.layout().membersRoot;
-
-        // Empty root means no members (organization not initialized or all members removed)
-        if (root == bytes32(0)) return false;
-
-        bytes32 leaf = computeMemberLeaf(memberAddress);
-        return MerkleProof.verify(proof, root, leaf);
+        return isMemberInTree(memberAddress, root, proof);
     }
 
     /**
@@ -68,8 +85,8 @@ library LibOrganizationMembers {
      * @param memberAddress The address to verify
      * @param proof The merkle proof for the address
      */
-    function verifyMembershipOrRevert(address memberAddress, bytes32[] memory proof) internal view {
-        if (!verifyMembership(memberAddress, proof)) {
+    function verifyMemberInOrgOrRevert(address memberAddress, bytes32[] memory proof) internal view {
+        if (!isMemberInOrg(memberAddress, proof)) {
             revert MemberVerificationFailed(memberAddress);
         }
     }

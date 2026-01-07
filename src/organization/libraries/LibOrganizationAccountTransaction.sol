@@ -584,7 +584,7 @@ library LibOrganizationAccountTransaction {
         if (policy.config.initiator.anyInitiator) return true;
 
         // Verify the address is a member of the organization
-        if (!LibOrganizationMembers.verifyMembership(initiatorAddress, initiatorProofs.memberProof)) {
+        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.memberProof)) {
             return false;
         }
 

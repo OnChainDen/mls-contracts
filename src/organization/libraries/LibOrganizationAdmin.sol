@@ -218,32 +218,10 @@ library LibOrganizationAdmin {
             }
 
             // Verify admin is a member of the organization
-            if (!_verifyMembership(admin, membersRoot, validation.memberTreeProofs[i])) {
+            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.memberTreeProofs[i])) {
                 revert AdminNotMember(admin);
             }
         }
-    }
-
-    /**
-     * @notice Internal helper to verify membership against a specific root
-     * @dev Used to verify against potentially different roots (current vs new)
-     * @param memberAddress The address to verify
-     * @param membersRoot The merkle root to verify against
-     * @param proof The merkle proof
-     * @return True if the address is a member, false otherwise
-     */
-    function _verifyMembership(
-        address memberAddress,
-        bytes32 membersRoot,
-        bytes32[] memory proof
-    )
-        private
-        pure
-        returns (bool)
-    {
-        if (membersRoot == bytes32(0)) return false;
-        bytes32 leaf = LibOrganizationMembers.computeMemberLeaf(memberAddress);
-        return MerkleProof.verify(proof, membersRoot, leaf);
     }
 
     // ================================
@@ -434,7 +412,7 @@ library LibOrganizationAdmin {
             }
 
             // Verify the signer is a member of the organization
-            if (!LibOrganizationMembers.verifyMembership(signer, adminProofs.memberProofs[i])) {
+            if (!LibOrganizationMembers.isMemberInOrg(signer, adminProofs.memberProofs[i])) {
                 continue;
             }
 

@@ -239,7 +239,7 @@ library LibOrganizationPolicy {
         if (policy.config.initiator.anyInitiator) return true;
 
         // First, verify the initiator is a member of the organization
-        if (!LibOrganizationMembers.verifyMembership(initiatorAddress, initiatorProofs.memberProof)) {
+        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.memberProof)) {
             return false;
         }
 
@@ -484,7 +484,7 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         // First verify the signer is a member of the organization
-        if (!LibOrganizationMembers.verifyMembership(signerAddress, memberProof)) {
+        if (!LibOrganizationMembers.isMemberInOrg(signerAddress, memberProof)) {
             return false;
         }
 
