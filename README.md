@@ -425,12 +425,8 @@ Each Organization Diamond is expected to use the diamond cut facet `src/organiza
  */
 enum AdminOperationType {
     UpdateAdmin,
-    CreateGroup,
-    ModifyGroup,
-    RemoveGroup,
-    AddMembers,
-    ModifyMember,
-    RemoveMembers,
+    ModifyGroups,
+    ModifyMembers,
     ModifyPolicies,
     UpdateGuardian,
     ModifyWhitelist,
