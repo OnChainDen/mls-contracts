@@ -155,7 +155,7 @@ library LibOrganizationPolicy {
         }
 
         // 3. Check if the initiator is authorized (using merkle proofs)
-        if (!_doesMatchInitiator(proofs.policy, initiator, proofs.initiatorProofs)) {
+        if (!_isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return false;
         }
 
@@ -208,16 +208,16 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks if the initiator matches the policy's initiator filter
+     * @notice Checks if the initiator is authorized by the policy
      * @dev If anyInitiator is true, always returns true.
      *      Otherwise, verifies the initiator is a member and matches policy requirements.
      *      Uses Merkle proofs for membership verification.
      * @param policy The policy to check against
      * @param initiatorAddress The address of the transaction initiator
      * @param initiatorProofs The proofs for initiator membership verification
-     * @return True if the initiator matches, false otherwise
+     * @return True if the initiator is authorized, false otherwise
      */
-    function _doesMatchInitiator(
+    function _isInitiatorAuthorized(
         Policies.Policy memory policy,
         address initiatorAddress,
         Policies.InitiatorProofs memory initiatorProofs

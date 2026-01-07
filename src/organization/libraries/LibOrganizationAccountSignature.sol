@@ -4,8 +4,6 @@ pragma solidity ^0.8.24;
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
 import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
-import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -136,7 +134,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the initiator is authorized by this policy (with Merkle proofs)
-        if (!_isAuthorizedInitiator(proofs.policy, initiator, proofs.initiatorProofs)) {
+        if (!LibOrganizationPolicy._isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -342,55 +340,6 @@ library LibOrganizationAccountSignature {
         );
 
         return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
-    }
-
-    // ================================
-    // HELPER FUNCTIONS
-    // ================================
-
-    /**
-     * @notice Checks if an address is authorized as an initiator for a policy
-     * @dev This is a helper that validates initiator authorization using Merkle proofs
-     * @param policy The policy to check against
-     * @param initiatorAddress The address to check
-     * @param initiatorProofs The proofs for initiator membership verification
-     * @return True if the address is authorized as an initiator, false otherwise
-     */
-    function _isAuthorizedInitiator(
-        Policies.Policy memory policy,
-        address initiatorAddress,
-        Policies.InitiatorProofs memory initiatorProofs
-    )
-        private
-        view
-        returns (bool)
-    {
-        // If anyInitiator is true, any member can initiate
-        if (policy.config.initiator.anyInitiator) return true;
-
-        // Verify the address is a member of the organization
-        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.memberProof)) {
-            return false;
-        }
-
-        Policies.ApproverType initType = policy.config.initiator.initiatorType;
-
-        // For Member type, check if the address matches the policy's initiator member
-        if (initType == Policies.ApproverType.Member) {
-            return initiatorAddress == policy.config.initiator.initiatorMember;
-        }
-
-        // For Group type, verify the initiator is in the specified group
-        if (initType == Policies.ApproverType.Group) {
-            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
-                initiatorAddress,
-                initiatorProofs.group,
-                initiatorProofs.groupExistenceProof,
-                initiatorProofs.memberInGroupProof
-            ) && initiatorProofs.group.groupId == policy.config.initiator.initiatorGroupId;
-        }
-
-        return false;
     }
 
     /**
