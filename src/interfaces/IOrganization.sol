@@ -28,8 +28,8 @@ enum OperationType {
  * @param adminCount Number of admins in the admin tree (for completeness validation)
  * @param votingThreshold Number of admin signatures required
  * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
- * @param adminTreeProofs Merkle proofs that each admin address is in adminsRoot
- * @param adminMemberProofs Merkle proofs that each admin address is in membersRoot
+ * @param adminInAdminTreeProofs Merkle proofs that each admin address is in adminsRoot
+ * @param adminInMembersTreeProofs Merkle proofs that each admin address is in membersRoot
  * @param guardian Guardian address for the organization
  * @param membersRoot The initial Merkle root for all members
  * @param groupsRoot The initial Merkle root for all groups
@@ -41,8 +41,8 @@ struct InitializationParams {
     uint256 adminCount;
     uint256 votingThreshold;
     address[] adminAddresses;
-    bytes32[][] adminTreeProofs;
-    bytes32[][] adminMemberProofs;
+    bytes32[][] adminInAdminTreeProofs;
+    bytes32[][] adminInMembersTreeProofs;
     address guardian;
     bytes32 membersRoot;
     bytes32 groupsRoot;

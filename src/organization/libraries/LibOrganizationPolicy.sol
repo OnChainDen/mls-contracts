@@ -244,7 +244,7 @@ library LibOrganizationPolicy {
         if (policy.config.initiator.anyInitiator) return true;
 
         // First, verify the initiator is a member of the organization
-        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.memberProof)) {
+        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.initiatorInOrgMembersTreeProof)) {
             return false;
         }
 
@@ -267,7 +267,7 @@ library LibOrganizationPolicy {
             return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
                 initiatorAddress,
                 initiatorProofs.group,
-                initiatorProofs.groupExistenceProof,
+                initiatorProofs.groupInOrgGroupsTreeProof,
                 initiatorProofs.memberInGroupProof
             );
         }
@@ -551,8 +551,8 @@ library LibOrganizationPolicy {
         uint8 signatureCount = uint8(signatures.length / 65);
 
         // Require member proofs array matches signature count
-        if (approverProofs.memberProofs.length != signatureCount) {
-            revert MemberProofsLengthMismatch(signatureCount, approverProofs.memberProofs.length);
+        if (approverProofs.approverInOrgMembersTreeProofs.length != signatureCount) {
+            revert MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
         }
 
         // Cache membersRoot to avoid repeated storage reads in the loop
@@ -568,7 +568,7 @@ library LibOrganizationPolicy {
             bytes32 groupsRoot = LibOrganizationGroups.getGroupsRoot();
             if (
                 !LibOrganizationGroups.isGroupInTree(
-                    approverProofs.group, groupsRoot, approverProofs.groupExistenceProof
+                    approverProofs.group, groupsRoot, approverProofs.groupInOrgGroupsTreeProof
                 )
             ) {
                 return 0;
@@ -602,7 +602,7 @@ library LibOrganizationPolicy {
             }
 
             // Get the proofs for this signer
-            bytes32[] memory memberProof = approverProofs.memberProofs[i];
+            bytes32[] memory memberProof = approverProofs.approverInOrgMembersTreeProofs[i];
             bytes32[] memory memberInGroupProof = approverProofs.memberInGroupProofs[i];
 
             // Check if signer is authorized based on policy (with Merkle proofs)

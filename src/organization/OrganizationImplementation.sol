@@ -193,32 +193,32 @@ contract OrganizationImplementation is
     /**
      * @notice Verifies that a group exists in the organization
      * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupExistenceProof The merkle proof for the group
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
     function isGroupInOrg(
         Policies.GroupData calldata groupData,
-        bytes32[] calldata groupExistenceProof
+        bytes32[] calldata groupInOrgGroupsTreeProof
     )
         external
         view
         returns (bool)
     {
-        return LibOrganizationGroups.isGroupInOrg(groupData, groupExistenceProof);
+        return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
     }
 
     /**
      * @notice Verifies complete group membership (group exists AND member is in group)
      * @param memberAddress The address to verify
      * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupExistenceProof The merkle proof that the group exists
+     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
      * @param memberInGroupProof The merkle proof that the member is in the group
      * @return True if both verifications pass, false otherwise
      */
     function isMemberInGroupAndGroupInOrg(
         address memberAddress,
         Policies.GroupData calldata groupData,
-        bytes32[] calldata groupExistenceProof,
+        bytes32[] calldata groupInOrgGroupsTreeProof,
         bytes32[] calldata memberInGroupProof
     )
         external
@@ -226,7 +226,7 @@ contract OrganizationImplementation is
         returns (bool)
     {
         return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
-            memberAddress, groupData, groupExistenceProof, memberInGroupProof
+            memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
         );
     }
 

@@ -95,8 +95,8 @@ library LibOrganizationInitialization {
         LibOrganizationAdmin.AdminMembershipValidation memory validation = LibOrganizationAdmin
             .AdminMembershipValidation({
             adminAddresses: params.adminAddresses,
-            adminTreeProofs: params.adminTreeProofs,
-            memberTreeProofs: params.adminMemberProofs
+            adminInOrgAdminTreeProofs: params.adminInAdminTreeProofs,
+            adminInOrgMembersTreeProofs: params.adminInMembersTreeProofs
         });
 
         // Validate all admins are members (this prevents bricking at initialization)

@@ -297,15 +297,16 @@ library Policies {
     /**
      * @notice Proofs needed to verify an initiator's authorization
      * @dev Contains proofs for both organization membership and optional group membership
-     * @param memberProof Merkle proof that the initiator address is in the organization's membersRoot
+     * @param initiatorInOrgMembersTreeProof Merkle proof that the initiator address is in the organization's
+     * membersRoot
      * @param group Group data if the initiator must be from a specific group (ignored if anyInitiator or Member type)
-     * @param groupExistenceProof Merkle proof that the group exists in the organization's groupsRoot
+     * @param groupInOrgGroupsTreeProof Merkle proof that the group exists in the organization's groupsRoot
      * @param memberInGroupProof Merkle proof that the initiator is in the group's members tree
      */
     struct InitiatorProofs {
-        bytes32[] memberProof;
+        bytes32[] initiatorInOrgMembersTreeProof;
         GroupData group;
-        bytes32[] groupExistenceProof;
+        bytes32[] groupInOrgGroupsTreeProof;
         bytes32[] memberInGroupProof;
     }
 
@@ -313,15 +314,16 @@ library Policies {
      * @notice Proofs needed to verify approvers' authorization
      * @dev Contains per-signer proofs for organization membership and optional group membership.
      *      Arrays are indexed by signer position (same order as signatures).
-     * @param memberProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
+     * @param approverInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's
+     * membersRoot
      * @param group Approver group data if approvers must be from a specific group (ignored for Member type)
-     * @param groupExistenceProof Merkle proof that the approver group exists in groupsRoot
+     * @param groupInOrgGroupsTreeProof Merkle proof that the approver group exists in groupsRoot
      * @param memberInGroupProofs Per-signer merkle proofs that each signer is in the approver group's tree
      */
     struct ApproverProofs {
-        bytes32[][] memberProofs;
+        bytes32[][] approverInOrgMembersTreeProofs;
         GroupData group;
-        bytes32[] groupExistenceProof;
+        bytes32[] groupInOrgGroupsTreeProof;
         bytes32[][] memberInGroupProofs;
     }
 

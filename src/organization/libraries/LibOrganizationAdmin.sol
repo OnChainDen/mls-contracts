@@ -28,24 +28,24 @@ library LibOrganizationAdmin {
      * @notice Data needed to validate that all admins are members of the organization
      * @dev Used by modifyMembers, modifyAdmins, and initialize to prevent bricking
      * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
-     * @param adminTreeProofs Merkle proofs that each address is in adminsRoot
-     * @param memberTreeProofs Merkle proofs that each address is in membersRoot
+     * @param adminInOrgAdminTreeProofs Merkle proofs that each address is in adminsRoot
+     * @param adminInOrgMembersTreeProofs Merkle proofs that each address is in membersRoot
      */
     struct AdminMembershipValidation {
         address[] adminAddresses;
-        bytes32[][] adminTreeProofs;
-        bytes32[][] memberTreeProofs;
+        bytes32[][] adminInOrgAdminTreeProofs;
+        bytes32[][] adminInOrgMembersTreeProofs;
     }
 
     /**
      * @notice Proofs needed to verify admin authorization for signing operations
      * @dev Contains per-signer proofs for admin tree and organization membership
-     * @param adminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
-     * @param memberProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
+     * @param adminInOrgAdminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
+     * @param adminInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
      */
     struct AdminProofs {
-        bytes32[][] adminTreeProofs;
-        bytes32[][] memberProofs;
+        bytes32[][] adminInOrgAdminTreeProofs;
+        bytes32[][] adminInOrgMembersTreeProofs;
     }
 
     // ================================
@@ -207,12 +207,12 @@ library LibOrganizationAdmin {
             lastAdmin = admin;
 
             // Verify admin is in the admin tree
-            if (!isAdminInTree(admin, adminsRoot, validation.adminTreeProofs[i])) {
+            if (!isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
                 revert AdminNotInTree(admin);
             }
 
             // Verify admin is a member of the organization
-            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.memberTreeProofs[i])) {
+            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.adminInOrgMembersTreeProofs[i])) {
                 revert AdminNotMember(admin);
             }
         }
@@ -415,17 +415,20 @@ library LibOrganizationAdmin {
             }
 
             // Check proofs arrays have enough entries
-            if (i >= adminProofs.adminTreeProofs.length || i >= adminProofs.memberProofs.length) {
+            if (
+                i >= adminProofs.adminInOrgAdminTreeProofs.length || i >= adminProofs.adminInOrgMembersTreeProofs.length
+            ) {
                 continue;
             }
 
             // Verify the signer is in the admin tree
-            if (!isAdminInTree(signer, adminsRoot, adminProofs.adminTreeProofs[i])) {
+            if (!isAdminInTree(signer, adminsRoot, adminProofs.adminInOrgAdminTreeProofs[i])) {
                 continue;
             }
 
             // Verify the signer is a member of the organization (using cached root)
-            if (!LibOrganizationMembers.isMemberInTree(signer, membersRoot, adminProofs.memberProofs[i])) {
+            if (!LibOrganizationMembers.isMemberInTree(signer, membersRoot, adminProofs.adminInOrgMembersTreeProofs[i]))
+            {
                 continue;
             }
 

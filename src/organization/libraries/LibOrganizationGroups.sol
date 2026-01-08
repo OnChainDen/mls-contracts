@@ -49,13 +49,13 @@ library LibOrganizationGroups {
      * @dev Used to verify against potentially different roots or to avoid storage reads in loops
      * @param groupData The group data containing groupId and groupMembersRoot
      * @param groupsRoot The merkle root to verify against
-     * @param groupExistenceProof The merkle proof for the group
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists in the tree, false otherwise
      */
     function isGroupInTree(
         Policies.GroupData memory groupData,
         bytes32 groupsRoot,
-        bytes32[] memory groupExistenceProof
+        bytes32[] memory groupInOrgGroupsTreeProof
     )
         internal
         pure
@@ -65,25 +65,25 @@ library LibOrganizationGroups {
         if (groupsRoot == bytes32(0)) return false;
 
         bytes32 leaf = computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
-        return MerkleProof.verify(groupExistenceProof, groupsRoot, leaf);
+        return MerkleProof.verify(groupInOrgGroupsTreeProof, groupsRoot, leaf);
     }
 
     /**
      * @notice Verifies that a group exists in the organization
      * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupExistenceProof The merkle proof for the group
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
     function isGroupInOrg(
         Policies.GroupData memory groupData,
-        bytes32[] memory groupExistenceProof
+        bytes32[] memory groupInOrgGroupsTreeProof
     )
         internal
         view
         returns (bool)
     {
         bytes32 root = LibOrganizationGroupsStorage.layout().groupsRoot;
-        return isGroupInTree(groupData, root, groupExistenceProof);
+        return isGroupInTree(groupData, root, groupInOrgGroupsTreeProof);
     }
 
     /**
@@ -114,14 +114,14 @@ library LibOrganizationGroups {
      * @notice Verifies complete group membership (group exists AND member is in group)
      * @param memberAddress The address to verify
      * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupExistenceProof The merkle proof that the group exists
+     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
      * @param memberInGroupProof The merkle proof that the member is in the group
      * @return True if both verifications pass, false otherwise
      */
     function isMemberInGroupAndGroupInOrg(
         address memberAddress,
         Policies.GroupData memory groupData,
-        bytes32[] memory groupExistenceProof,
+        bytes32[] memory groupInOrgGroupsTreeProof,
         bytes32[] memory memberInGroupProof
     )
         internal
@@ -129,7 +129,7 @@ library LibOrganizationGroups {
         returns (bool)
     {
         // First verify the group exists
-        if (!isGroupInOrg(groupData, groupExistenceProof)) {
+        if (!isGroupInOrg(groupData, groupInOrgGroupsTreeProof)) {
             return false;
         }
 
