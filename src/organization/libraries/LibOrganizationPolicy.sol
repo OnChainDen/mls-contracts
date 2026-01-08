@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { LibOrganizationWhitelistStorage } from "./storage/LibOrganizationWhitelistStorage.sol";
 import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
@@ -355,8 +354,6 @@ library LibOrganizationPolicy {
      * @notice Checks if the destination matches the policy's destination filter
      * @dev Handles different destination types:
      *      - Any: Always matches
-     *      - WhitelistedOnly: Must be in the organization's whitelist
-     *      - NonWhitelistedOnly: Must NOT be in the organization's whitelist
      *      - CustomList: Must be in the policy's custom destinations merkle tree
      * @param policy The policy to check against
      * @param to The transaction destination address
@@ -383,16 +380,6 @@ library LibOrganizationPolicy {
 
         // Determine the actual destination address based on transaction type
         address actualDestination = getActualDestination(to, data, value);
-
-        // Case: Policy matches only transactions that are sent to whitelisted addresses
-        if (destType == Policies.DestinationType.WhitelistedOnly) {
-            return _isAddressWhitelisted(actualDestination);
-        }
-
-        // Case: Policy matches only transactions that are sent to non-whitelisted addresses
-        if (destType == Policies.DestinationType.NonWhitelistedOnly) {
-            return !_isAddressWhitelisted(actualDestination);
-        }
 
         // Case: Policy matches only transactions that are sent to a specific list of addresses
         // Verify via merkle proof that destination is in the custom destinations tree
@@ -1008,19 +995,6 @@ library LibOrganizationPolicy {
 
         // Unknown type - fail safe
         return false;
-    }
-
-    // ================================
-    // PRIVATE HELPERS
-    // ================================
-
-    /**
-     * @notice Checks if an address is in the organization's whitelist
-     * @param addressToCheck The address to check
-     * @return True if the address is whitelisted, false otherwise
-     */
-    function _isAddressWhitelisted(address addressToCheck) private view returns (bool) {
-        return LibOrganizationWhitelistStorage.layout().whitelistedAddresses[addressToCheck];
     }
 
     // ================================

@@ -7,7 +7,6 @@ import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import { LibOrganizationMembers } from "./libraries/LibOrganizationMembers.sol";
 import { LibOrganizationGroups } from "./libraries/LibOrganizationGroups.sol";
 import { LibOrganizationPolicy } from "./libraries/LibOrganizationPolicy.sol";
-import { LibOrganizationWhitelist } from "./libraries/LibOrganizationWhitelist.sol";
 import { LibOrganizationAdmin } from "./libraries/LibOrganizationAdmin.sol";
 import { LibOrganizationGuardian } from "./libraries/LibOrganizationGuardian.sol";
 import { LibOrganizationAccountFactory } from "./libraries/LibOrganizationAccountFactory.sol";
@@ -334,37 +333,6 @@ contract OrganizationImplementation is
         }
 
         return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
-    }
-
-    // ================================
-    // LibOrganizationWhitelist wrappers
-    // ================================
-
-    function isAddressWhitelisted(address addressToCheck) external view returns (bool) {
-        return LibOrganizationWhitelist.isAddressWhitelisted(addressToCheck);
-    }
-
-    function modifyWhitelist(
-        address[] memory addressesToAdd,
-        address[] memory addressesToRemove,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
-        // Encode the operation data for validation (hash variable-length data)
-        bytes memory operationData =
-            abi.encode(keccak256(abi.encode(addressesToAdd)), keccak256(abi.encode(addressesToRemove)));
-
-        // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyWhitelist, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
-
-        LibOrganizationWhitelist.modifyWhitelist(addressesToAdd, addressesToRemove);
     }
 
     // ================================
