@@ -36,7 +36,7 @@ library LibOrganizationGroups {
      * @param groupMembersRoot The merkle root of all member addresses in this group
      * @return The computed merkle leaf
      */
-    function computeGroupLeaf(uint256 groupId, bytes32 groupMembersRoot) private pure returns (bytes32) {
+    function _computeGroupLeaf(uint256 groupId, bytes32 groupMembersRoot) private pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(groupId, groupMembersRoot))));
     }
 
@@ -64,7 +64,7 @@ library LibOrganizationGroups {
         // Empty root means no groups (organization not initialized or all groups removed)
         if (groupsRoot == bytes32(0)) return false;
 
-        bytes32 leaf = computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
+        bytes32 leaf = _computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
         return MerkleProof.verify(groupInOrgGroupsTreeProof, groupsRoot, leaf);
     }
 

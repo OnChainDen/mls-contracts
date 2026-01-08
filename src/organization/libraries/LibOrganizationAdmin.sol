@@ -161,7 +161,7 @@ library LibOrganizationAdmin {
      * @param proof The merkle proof
      * @return True if the address is in the admin tree, false otherwise
      */
-    function isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) private pure returns (bool) {
+    function _isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) private pure returns (bool) {
         if (adminsRoot == bytes32(0)) return false;
         bytes32 leaf = MerkleUtils.computeAddressLeaf(admin);
         return MerkleProof.verify(proof, adminsRoot, leaf);
@@ -207,7 +207,7 @@ library LibOrganizationAdmin {
             lastAdmin = admin;
 
             // Verify admin is in the admin tree
-            if (!isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
+            if (!_isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
                 revert AdminNotInTree(admin);
             }
 
@@ -422,7 +422,7 @@ library LibOrganizationAdmin {
             }
 
             // Verify the signer is in the admin tree
-            if (!isAdminInTree(signer, adminsRoot, adminProofs.adminInOrgAdminTreeProofs[i])) {
+            if (!_isAdminInTree(signer, adminsRoot, adminProofs.adminInOrgAdminTreeProofs[i])) {
                 continue;
             }
 

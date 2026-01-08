@@ -85,7 +85,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the policy applies to this specific account
-        if (!LibOrganizationPolicy._isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) {
+        if (!LibOrganizationPolicy.isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -134,7 +134,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the initiator is authorized by this policy (with Merkle proofs)
-        if (!LibOrganizationPolicy._isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return ERC1271_INVALID_VALUE;
         }
 

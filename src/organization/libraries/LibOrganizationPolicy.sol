@@ -163,12 +163,12 @@ library LibOrganizationPolicy {
         }
 
         // 2. Check if the source account matches
-        if (!_isSourceAccountAllowedByPolicy(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
+        if (!isSourceAccountAllowedByPolicy(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
             return false;
         }
 
         // 3. Check if the initiator is authorized (using merkle proofs)
-        if (!_isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+        if (!isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return false;
         }
 
@@ -177,7 +177,7 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that are token transfers
         if (txType == Policies.TransactionType.TokenTransfers) {
-            if (!isTransactionTokenTransfer(data, value)) return false;
+            if (!_isTransactionTokenTransfer(data, value)) return false;
             if (!_isTokenAllowedByPolicy(proofs.policy, to, data)) return false;
             if (!_isTokenAmountAllowedByPolicy(proofs.policy, data, value)) return false;
         }
@@ -186,7 +186,7 @@ library LibOrganizationPolicy {
         if (txType == Policies.TransactionType.ContractInteractions) {
             // Case: The policy matches only transactions that are contract interactions that are not token transfers,
             //       but the transaction is a token transfer
-            if (isTransactionTokenTransfer(data, value)) return false;
+            if (_isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The policy matches only transactions that are contract interactions that call a specific function,
             //       but the transaction is not calling that function
@@ -220,7 +220,7 @@ library LibOrganizationPolicy {
      * @param sourceAccountProof The merkle proof for the source account
      * @return True if the source account matches, false otherwise
      */
-    function _isSourceAccountAllowedByPolicy(
+    function isSourceAccountAllowedByPolicy(
         Policies.Policy memory policy,
         address sourceAccount,
         bytes32[] memory sourceAccountProof
@@ -260,7 +260,7 @@ library LibOrganizationPolicy {
         if (policy.config.token.anyToken) return true;
 
         // Case: The policy matches only transfers of a specific token
-        address transferToken = extractTokenAddress(to, data);
+        address transferToken = _extractTokenAddress(to, data);
         return transferToken == policy.config.token.tokenAddress;
     }
 
@@ -300,7 +300,7 @@ library LibOrganizationPolicy {
      * @param initiatorProofs The proofs for initiator membership verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function _isInitiatorAuthorized(
+    function isInitiatorAuthorized(
         Policies.Policy memory policy,
         address initiatorAddress,
         Policies.InitiatorProofs memory initiatorProofs
@@ -619,11 +619,11 @@ library LibOrganizationPolicy {
         if (data.length == 0) return to;
 
         // Case: The transaction is a contract interaction
-        if (!isTransactionTokenTransfer(data, value)) return to;
+        if (!_isTransactionTokenTransfer(data, value)) return to;
 
         // Case: The transaction is an ERC-20 token transfer
         // Extract the recipient address from the transfer function call
-        return extractTokenRecipient(data);
+        return _extractTokenRecipient(data);
     }
 
     /**
@@ -632,7 +632,7 @@ library LibOrganizationPolicy {
      * @param data The transaction calldata
      * @return The recipient address, or address(0) if not a valid token transfer
      */
-    function extractTokenRecipient(bytes calldata data) private pure returns (address) {
+    function _extractTokenRecipient(bytes calldata data) private pure returns (address) {
         // Case: Transaction data is too short to contain a valid selector
         if (data.length < 36) return address(0);
 
@@ -667,7 +667,7 @@ library LibOrganizationPolicy {
      * @param value The transaction value in wei
      * @return True if the transaction is a token transfer, false otherwise
      */
-    function isTransactionTokenTransfer(bytes calldata data, uint256 value) private pure returns (bool) {
+    function _isTransactionTokenTransfer(bytes calldata data, uint256 value) private pure returns (bool) {
         // Case: The transaction is a native token transfer
         if (data.length == 0 && value > 0) return true;
 
@@ -700,7 +700,7 @@ library LibOrganizationPolicy {
      * @param data The transaction calldata
      * @return The token contract address
      */
-    function extractTokenAddress(address to, bytes calldata data) private pure returns (address) {
+    function _extractTokenAddress(address to, bytes calldata data) private pure returns (address) {
         if (data.length == 0) {
             return address(0); // Native token
         }
