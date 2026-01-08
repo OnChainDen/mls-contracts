@@ -244,13 +244,18 @@ library LibOrganizationPolicy {
 
         // Case: The policy matches transactions made by any individual from a specific group
         if (initType == Policies.ApproverType.Group) {
+            // Check the group ID matches the policy's initiator group ID
+            if (initiatorProofs.group.groupId != policy.config.initiator.initiatorGroupId) {
+                return false;
+            }
+
             // Verify the group exists and the initiator is in that group
             return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
                 initiatorAddress,
                 initiatorProofs.group,
                 initiatorProofs.groupExistenceProof,
                 initiatorProofs.memberInGroupProof
-            ) && initiatorProofs.group.groupId == policy.config.initiator.initiatorGroupId;
+            );
         }
 
         // Case: The policy does not match this transaction
