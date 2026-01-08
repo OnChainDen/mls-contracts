@@ -41,6 +41,20 @@ library LibOrganizationPolicy {
      */
     error PolicyVerificationFailed(uint256 policyId);
 
+    /**
+     * @notice Thrown when member proofs array length doesn't match signature count
+     * @param expected The expected number of member proofs (signature count)
+     * @param actual The actual number of member proofs provided
+     */
+    error MemberProofsLengthMismatch(uint256 expected, uint256 actual);
+
+    /**
+     * @notice Thrown when member-in-group proofs array length doesn't match signature count
+     * @param expected The expected number of member-in-group proofs (signature count)
+     * @param actual The actual number of member-in-group proofs provided
+     */
+    error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
+
     // ================================
     // MERKLE HELPERS
     // ================================
@@ -467,8 +481,8 @@ library LibOrganizationPolicy {
      * @param signerAddress The address of the signer
      * @param membersRoot The organization's members merkle root (cached by caller to avoid repeated storage reads)
      * @param memberProof Proof that the signer is a member of the organization
-     * @param approverProofs The approver proofs for group membership (if applicable)
-     * @param signerIndex The index of this signer in the approver proofs arrays
+     * @param group The approver group data (if applicable)
+     * @param memberInGroupProof Proof that the signer is in the approver group (if applicable)
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicy(
@@ -476,8 +490,8 @@ library LibOrganizationPolicy {
         address signerAddress,
         bytes32 membersRoot,
         bytes32[] memory memberProof,
-        Policies.ApproverProofs memory approverProofs,
-        uint256 signerIndex
+        Policies.GroupData memory group,
+        bytes32[] memory memberInGroupProof
     )
         internal
         pure
@@ -498,19 +512,12 @@ library LibOrganizationPolicy {
         // Case: Policy requires approval from any member of a specific group
         if (approverType == Policies.ApproverType.Group) {
             // Check the group ID matches the policy's approver group
-            if (approverProofs.group.groupId != policy.config.approval.approverGroupId) {
+            if (group.groupId != policy.config.approval.approverGroupId) {
                 return false;
             }
 
-            // Get the member-in-group proof for this signer
-            if (signerIndex >= approverProofs.memberInGroupProofs.length) {
-                return false;
-            }
-
-            // Verify member is in the group (group existence is verified by caller)
-            return LibOrganizationGroups.isMemberInGroup(
-                signerAddress, approverProofs.group.groupMembersRoot, approverProofs.memberInGroupProofs[signerIndex]
-            );
+            // Verify member is in the group (group existence and proofs length verified by caller)
+            return LibOrganizationGroups.isMemberInGroup(signerAddress, group.groupMembersRoot, memberInGroupProof);
         }
 
         return false;
@@ -540,11 +547,24 @@ library LibOrganizationPolicy {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
 
+        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
+        uint8 signatureCount = uint8(signatures.length / 65);
+
+        // Require member proofs array matches signature count
+        if (approverProofs.memberProofs.length != signatureCount) {
+            revert MemberProofsLengthMismatch(signatureCount, approverProofs.memberProofs.length);
+        }
+
         // Cache membersRoot to avoid repeated storage reads in the loop
         bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
 
-        // For Group approver type, verify group existence once before the loop
+        // For Group approver type, verify group existence and memberInGroupProofs length before the loop
         if (policy.config.approval.approverType == Policies.ApproverType.Group) {
+            // Require member-in-group proofs array matches signature count
+            if (approverProofs.memberInGroupProofs.length != signatureCount) {
+                revert MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
+            }
+
             bytes32 groupsRoot = LibOrganizationGroups.getGroupsRoot();
             if (
                 !LibOrganizationGroups.isGroupInTree(
@@ -555,8 +575,6 @@ library LibOrganizationPolicy {
             }
         }
 
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
         uint8 validApprovals = 0;
 
         // Track last signer to prevent duplicates (similar to Safe contracts)
@@ -583,15 +601,17 @@ library LibOrganizationPolicy {
                 continue;
             }
 
-            // Get the member proof for this signer
-            if (i >= approverProofs.memberProofs.length) {
-                continue;
-            }
+            // Get the proofs for this signer
             bytes32[] memory memberProof = approverProofs.memberProofs[i];
+            bytes32[] memory memberInGroupProof = approverProofs.memberInGroupProofs[i];
 
             // Check if signer is authorized based on policy (with Merkle proofs)
             // Note: Group existence already verified above, membersRoot passed to avoid storage reads
-            if (isSignerAuthorizedForPolicy(policy, signer, membersRoot, memberProof, approverProofs, i)) {
+            if (
+                isSignerAuthorizedForPolicy(
+                    policy, signer, membersRoot, memberProof, approverProofs.group, memberInGroupProof
+                )
+            ) {
                 ++validApprovals;
             }
         }
