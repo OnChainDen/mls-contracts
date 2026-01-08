@@ -403,7 +403,7 @@ contract OrganizationImplementation is
      * @param adminProofs The Merkle proofs for admin membership verification
      * @param adminValidation The validation data to verify all new admins are members
      */
-    function updateAdmin(
+    function modifyAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
@@ -421,13 +421,13 @@ contract OrganizationImplementation is
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.UpdateAdmin, operationData, salt, expirationTimestamp, true, signatures, adminProofs
+            OperationType.ModifyAdmins, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
         // Get current members root for validation
         bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
 
-        LibOrganizationAdmin.updateAdmin(
+        LibOrganizationAdmin.modifyAdmins(
             newAdminsRoot, newAdminCount, newVotingThreshold, adminValidation, currentMembersRoot
         );
     }

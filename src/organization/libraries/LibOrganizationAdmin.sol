@@ -26,7 +26,7 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Data needed to validate that all admins are members of the organization
-     * @dev Used by modifyMembers, updateAdmin, and initialize to prevent bricking
+     * @dev Used by modifyMembers, modifyAdmins, and initialize to prevent bricking
      * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
      * @param adminTreeProofs Merkle proofs that each address is in adminsRoot
      * @param memberTreeProofs Merkle proofs that each address is in membersRoot
@@ -171,7 +171,7 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Validates that all admins are members of the organization
-     * @dev Used by modifyMembers, updateAdmin, and initialize to prevent bricking.
+     * @dev Used by modifyMembers, modifyAdmins, and initialize to prevent bricking.
      *      Admin addresses must be in strictly ascending order to prevent duplicates.
      * @param validation The validation data containing admin addresses and proofs
      * @param adminsRoot The merkle root of the admin tree
@@ -218,7 +218,7 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Validates the admin configuration parameters
-     * @dev Used by initialize and updateAdmin to ensure valid admin configuration.
+     * @dev Used by initialize and modifyAdmins to ensure valid admin configuration.
      *      Validates that adminsRoot is not zero, adminCount is not zero, and votingThreshold is valid.
      * @param adminsRoot The merkle root of admin addresses
      * @param adminCount The number of admins
@@ -265,7 +265,7 @@ library LibOrganizationAdmin {
      * @param validation The validation data to verify all new admins are members
      * @param currentMembersRoot The current members root to validate against
      */
-    function updateAdmin(
+    function modifyAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
