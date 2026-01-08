@@ -67,17 +67,6 @@ library LibOrganizationMembers {
         return isMemberInTree(memberAddress, root, proof);
     }
 
-    /**
-     * @notice Verifies membership and reverts if verification fails
-     * @param memberAddress The address to verify
-     * @param proof The merkle proof for the address
-     */
-    function verifyMemberInOrgOrRevert(address memberAddress, bytes32[] memory proof) internal view {
-        if (!isMemberInOrg(memberAddress, proof)) {
-            revert MemberVerificationFailed(memberAddress);
-        }
-    }
-
     // ================================
     // MODIFY MEMBERS
     // ================================
