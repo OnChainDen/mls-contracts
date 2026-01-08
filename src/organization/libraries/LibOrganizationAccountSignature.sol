@@ -85,7 +85,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the policy applies to this specific account
-        if (!LibOrganizationPolicy._doesMatchSourceAccount(proofs.policy, account, proofs.sourceAccountProof)) {
+        if (!LibOrganizationPolicy._isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) {
             return ERC1271_INVALID_VALUE;
         }
 

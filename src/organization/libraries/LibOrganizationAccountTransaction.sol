@@ -135,7 +135,7 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify the policy exists and applies to this specific transaction
-        if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policyId, account, to, value, data, initiator, proofs))
+        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy(policyId, account, to, value, data, initiator, proofs))
         {
             revert PolicyDoesNotApply(policyId);
         }
@@ -356,7 +356,7 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify policy applies to this transaction
-        if (!LibOrganizationPolicy.doesPolicyApplyToTransaction(policyId, account, to, value, data, initiator, proofs))
+        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy(policyId, account, to, value, data, initiator, proofs))
         {
             revert PolicyDoesNotApply(policyId);
         }

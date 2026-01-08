@@ -142,7 +142,7 @@ library LibOrganizationPolicy {
      * @param proofs The validation proofs containing policy data and merkle proofs
      * @return True if the policy applies to this transaction, false otherwise
      */
-    function doesPolicyApplyToTransaction(
+    function isTransactionAllowedByPolicy(
         uint256 policyId,
         address sourceAccount,
         address to,
@@ -163,7 +163,7 @@ library LibOrganizationPolicy {
         }
 
         // 2. Check if the source account matches
-        if (!_doesMatchSourceAccount(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
+        if (!_isSourceAccountAllowedByPolicy(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
             return false;
         }
 
@@ -173,16 +173,34 @@ library LibOrganizationPolicy {
         }
 
         // 4. Check if the transaction type matches
-        if (
-            !_doesMatchTransactionType(
-                proofs.policy, to, value, data, proofs.functionProof, proofs.constraints, proofs.addressParameterProofs
-            )
-        ) {
-            return false;
+        Policies.TransactionType txType = proofs.policy.config.transactionType;
+
+        // Case: Policy matches only transactions that are token transfers
+        if (txType == Policies.TransactionType.TokenTransfers) {
+            if (!isTransactionTokenTransfer(data, value)) return false;
+            if (!_isTokenAllowedByPolicy(proofs.policy, to, data)) return false;
+            if (!_isTokenAmountAllowedByPolicy(proofs.policy, data, value)) return false;
+        }
+
+        // Case: The policy matches only transactions that are contract interactions that are not token transfers
+        if (txType == Policies.TransactionType.ContractInteractions) {
+            // Case: The policy matches only transactions that are contract interactions that are not token transfers,
+            //       but the transaction is a token transfer
+            if (isTransactionTokenTransfer(data, value)) return false;
+
+            // Case: The policy matches only transactions that are contract interactions that call a specific function,
+            //       but the transaction is not calling that function
+            if (
+                !_isFunctionAllowedByPolicy(
+                    proofs.policy, data, proofs.functionProof, proofs.constraints, proofs.addressParameterProofs
+                )
+            ) {
+                return false;
+            }
         }
 
         // 5. Check if the destination matches
-        if (!_doesMatchDestination(proofs.policy, to, value, data, proofs.destinationProof)) {
+        if (!_isDestinationAllowedByPolicy(proofs.policy, to, value, data, proofs.destinationProof)) {
             return false;
         }
 
@@ -202,7 +220,7 @@ library LibOrganizationPolicy {
      * @param sourceAccountProof The merkle proof for the source account
      * @return True if the source account matches, false otherwise
      */
-    function _doesMatchSourceAccount(
+    function _isSourceAccountAllowedByPolicy(
         Policies.Policy memory policy,
         address sourceAccount,
         bytes32[] memory sourceAccountProof
@@ -218,6 +236,58 @@ library LibOrganizationPolicy {
         // Verify this account is in the source accounts merkle tree
         bytes32 accountLeaf = MerkleUtils.computeAddressLeaf(sourceAccount);
         return MerkleProof.verify(sourceAccountProof, policy.roots.sourceAccountsRoot, accountLeaf);
+    }
+
+    /**
+     * @notice Checks if the token is allowed by the policy for a token transfer
+     * @dev If anyToken is true, always returns true.
+     *      Otherwise, verifies the token address matches the policy's specified token.
+     * @param policy The policy to check against
+     * @param to The transaction destination address (token contract for ERC20)
+     * @param data The transaction calldata
+     * @return True if the token is allowed, false otherwise
+     */
+    function _isTokenAllowedByPolicy(
+        Policies.Policy calldata policy,
+        address to,
+        bytes calldata data
+    )
+        private
+        pure
+        returns (bool)
+    {
+        // Case: The policy matches transfers of any token
+        if (policy.config.token.anyToken) return true;
+
+        // Case: The policy matches only transfers of a specific token
+        address transferToken = extractTokenAddress(to, data);
+        return transferToken == policy.config.token.tokenAddress;
+    }
+
+    /**
+     * @notice Checks if the token amount is allowed by the policy for a token transfer
+     * @dev If hasAmountThreshold is false, always returns true.
+     *      Otherwise, verifies the amount is below the threshold.
+     * @param policy The policy to check against
+     * @param data The transaction calldata
+     * @param value The transaction value in wei
+     * @return True if the amount is allowed, false otherwise
+     */
+    function _isTokenAmountAllowedByPolicy(
+        Policies.Policy calldata policy,
+        bytes calldata data,
+        uint256 value
+    )
+        private
+        pure
+        returns (bool)
+    {
+        // Case: The policy has no amount threshold
+        if (!policy.config.token.hasAmountThreshold) return true;
+
+        // Case: The policy has an amount threshold - verify amount is below it
+        uint256 amount = extractTransferAmount(data, value);
+        return amount < policy.config.token.amountThreshold;
     }
 
     /**
@@ -276,81 +346,6 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks if the transaction type matches the policy's transaction type filter
-     * @dev Handles different transaction types:
-     *      - Any: Always matches
-     *      - TokenTransfers: Must be a token transfer, optionally with token/amount constraints
-     *      - ContractInteractions: Must not be a token transfer, optionally with function constraints
-     * @param policy The policy to check against
-     * @param to The transaction destination address
-     * @param value The transaction value in wei
-     * @param data The transaction calldata
-     * @param functionProof The merkle proof for the function (for ContractInteractions)
-     * @param constraints The parameter constraints (for ContractInteractions)
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
-     * @return True if the transaction type matches, false otherwise
-     */
-    function _doesMatchTransactionType(
-        Policies.Policy calldata policy,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        bytes32[] calldata functionProof,
-        bytes calldata constraints,
-        bytes32[][] calldata addressParameterProofs
-    )
-        private
-        pure
-        returns (bool)
-    {
-        Policies.TransactionType txType = policy.config.transactionType;
-
-        // Case: The policy matches any type of transaction
-        if (txType == Policies.TransactionType.Any) return true;
-
-        // Case: Policy matches only transactions that are token transfers
-        if (txType == Policies.TransactionType.TokenTransfers) {
-            // Case: The transaction is not a token transfer
-            if (!isTransactionTokenTransfer(data, value)) return false;
-
-            // Case: The Policy matches only transactions that are token transfers that are of a
-            //       specific token, and the transaction is not transferring that token
-            if (!policy.config.token.anyToken) {
-                address transferToken = extractTokenAddress(to, data);
-                if (transferToken != policy.config.token.tokenAddress) return false;
-            }
-
-            // Case: The policy matches only transactions that are token transfers that are of a
-            //       specific token, and the transaction is transferring that token, but the
-            //       transaction amount is less than the amount threshold
-            if (policy.config.token.hasAmountThreshold) {
-                uint256 amount = extractTransferAmount(data, value);
-                if (amount >= policy.config.token.amountThreshold) return false;
-            }
-
-            return true;
-        }
-
-        // Case: The policy matches only transactions that are contract interactions that are not token transfers
-        if (txType == Policies.TransactionType.ContractInteractions) {
-            // Case: The policy matches only transactions that are contract interactions that are not token transfers,
-            //       but the transaction is a token transfer
-            if (isTransactionTokenTransfer(data, value)) return false;
-
-            // Case: The policy matches only transactions that are contract interactions that call a specific function,
-            //       but the transaction is not calling that function
-            if (!_doesMatchFunction(policy, data, functionProof, constraints, addressParameterProofs)) {
-                return false;
-            }
-
-            return true;
-        }
-
-        // Case: The policy does not fail to match the transaction based on the transaction type filters
-        return true;
-    }
-
-    /**
      * @notice Checks if the destination matches the policy's destination filter
      * @dev Handles different destination types:
      *      - Any: Always matches
@@ -362,7 +357,7 @@ library LibOrganizationPolicy {
      * @param destinationProof The merkle proof for the destination (for CustomList)
      * @return True if the destination matches, false otherwise
      */
-    function _doesMatchDestination(
+    function _isDestinationAllowedByPolicy(
         Policies.Policy calldata policy,
         address to,
         uint256 value,
@@ -370,7 +365,7 @@ library LibOrganizationPolicy {
         bytes32[] calldata destinationProof
     )
         private
-        view
+        pure
         returns (bool)
     {
         Policies.DestinationType destType = policy.config.destinationType;
@@ -403,7 +398,7 @@ library LibOrganizationPolicy {
      * @param addressParameterProofs Merkle proofs for address parameters with List constraints
      * @return True if the function matches, false otherwise
      */
-    function _doesMatchFunction(
+    function _isFunctionAllowedByPolicy(
         Policies.Policy calldata policy,
         bytes calldata data,
         bytes32[] calldata functionProof,
