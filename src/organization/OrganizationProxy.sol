@@ -15,19 +15,13 @@ contract OrganizationProxy is ERC1967Proxy {
     /**
      * @notice Constructor for the proxy
      * @param implementation The implementation contract address
-     * @param deployerAddress The deployer address (stored for initialization authorization)
      * @param whitelistAddress The address of the implementation whitelist contract
-     * @dev The proxy is deployed without initialization. Initialize must be called separately.
+     * @dev The deployer (msg.sender) is stored for initialization authorization.
+     *      The factory deploys and initializes atomically in a single transaction.
      */
-    constructor(
-        address implementation,
-        address deployerAddress,
-        address whitelistAddress
-    )
-        ERC1967Proxy(implementation, "")
-    {
-        // Store deployer address in storage
-        LibOrganizationDeployerAddressStorage.layout().deployerAddress = deployerAddress;
+    constructor(address implementation, address whitelistAddress) ERC1967Proxy(implementation, "") {
+        // Store deployer address (the factory) in storage for initialization authorization
+        LibOrganizationDeployerAddressStorage.layout().deployerAddress = msg.sender;
 
         // Store whitelist address and contract type in storage
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
