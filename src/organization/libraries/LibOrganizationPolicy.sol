@@ -632,7 +632,7 @@ library LibOrganizationPolicy {
      * @param data The transaction calldata
      * @return The recipient address, or address(0) if not a valid token transfer
      */
-    function extractTokenRecipient(bytes calldata data) internal pure returns (address) {
+    function extractTokenRecipient(bytes calldata data) private pure returns (address) {
         // Case: Transaction data is too short to contain a valid selector
         if (data.length < 36) return address(0);
 
@@ -667,7 +667,7 @@ library LibOrganizationPolicy {
      * @param value The transaction value in wei
      * @return True if the transaction is a token transfer, false otherwise
      */
-    function isTransactionTokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
+    function isTransactionTokenTransfer(bytes calldata data, uint256 value) private pure returns (bool) {
         // Case: The transaction is a native token transfer
         if (data.length == 0 && value > 0) return true;
 
@@ -700,7 +700,7 @@ library LibOrganizationPolicy {
      * @param data The transaction calldata
      * @return The token contract address
      */
-    function extractTokenAddress(address to, bytes calldata data) internal pure returns (address) {
+    function extractTokenAddress(address to, bytes calldata data) private pure returns (address) {
         if (data.length == 0) {
             return address(0); // Native token
         }

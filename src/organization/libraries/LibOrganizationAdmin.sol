@@ -161,7 +161,7 @@ library LibOrganizationAdmin {
      * @param proof The merkle proof
      * @return True if the address is in the admin tree, false otherwise
      */
-    function isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) internal pure returns (bool) {
+    function isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) private pure returns (bool) {
         if (adminsRoot == bytes32(0)) return false;
         bytes32 leaf = MerkleUtils.computeAddressLeaf(admin);
         return MerkleProof.verify(proof, adminsRoot, leaf);
