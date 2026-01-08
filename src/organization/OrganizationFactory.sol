@@ -5,6 +5,7 @@ import "./OrganizationProxy.sol";
 import "./OrganizationImplementation.sol";
 import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
 import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
+import { InitializationParams } from "../interfaces/IOrganization.sol";
 
 /**
  * @title Organization Factory
@@ -46,18 +47,20 @@ contract OrganizationFactory {
     }
 
     /**
-     * @notice Deploys a new OrganizationProxy at a deterministic address
-     * @dev Uses CREATE2 to ensure the same address across different chains
-     * @dev The proxy is deployed without initialization. Initialize must be called separately.
+     * @notice Deploys and initializes a new OrganizationProxy at a deterministic address
+     * @dev Uses CREATE2 to ensure the same address across different chains.
+     *      Deployment and initialization are atomic - if initialization fails, the entire transaction reverts.
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the OrganizationImplementation contract
      * @param whitelistAddress The address of the implementation whitelist contract
+     * @param params The initialization parameters for the organization
      * @return organizationAddress The address of the deployed organization proxy
      */
     function deployOrganization(
         bytes32 salt,
         address implementationAddress,
-        address whitelistAddress
+        address whitelistAddress,
+        InitializationParams calldata params
     )
         external
         returns (address organizationAddress)
@@ -77,9 +80,8 @@ contract OrganizationFactory {
         }
 
         // Deploy the organization proxy using CREATE2
-        bytes memory bytecode = abi.encodePacked(
-            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress, whitelistAddress)
-        );
+        bytes memory bytecode =
+            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
 
         assembly {
             organizationAddress := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
@@ -94,6 +96,9 @@ contract OrganizationFactory {
         if (organizationAddress != computeOrganizationAddress(salt, implementationAddress, whitelistAddress)) {
             revert DeploymentAddressMismatch();
         }
+
+        // Initialize the organization atomically - reverts the entire transaction if initialization fails
+        OrganizationImplementation(organizationAddress).initialize(params);
 
         emit OrganizationDeployed(organizationAddress, salt, deployerAddress);
     }
@@ -114,9 +119,8 @@ contract OrganizationFactory {
         view
         returns (address)
     {
-        bytes memory bytecode = abi.encodePacked(
-            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, deployerAddress, whitelistAddress)
-        );
+        bytes memory bytecode =
+            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
 
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
 
