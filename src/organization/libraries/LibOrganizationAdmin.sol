@@ -60,6 +60,7 @@ library LibOrganizationAdmin {
      * @param newAdminsRoot The new admins merkle root
      * @param newAdminCount The new admin count
      * @param newVotingThreshold The new voting threshold
+     * @param newAdminAddresses The new admin addresses (in ascending order)
      */
     event AdminPermissionUpdated(
         bytes32 previousAdminsRoot,
@@ -67,7 +68,8 @@ library LibOrganizationAdmin {
         uint256 previousVotingThreshold,
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
-        uint256 newVotingThreshold
+        uint256 newVotingThreshold,
+        address[] newAdminAddresses
     );
 
     // ================================
@@ -299,7 +301,8 @@ library LibOrganizationAdmin {
             previousAdmin.votingThreshold,
             newAdminsRoot,
             newAdminCount,
-            newVotingThreshold
+            newVotingThreshold,
+            validation.adminAddresses
         );
     }
 

@@ -24,6 +24,7 @@ library LibOrganizationInitialization {
      * @param adminsRoot The merkle root of admin addresses
      * @param adminCount The number of admins
      * @param votingThreshold The voting threshold for admin operations
+     * @param adminAddresses The admin addresses (in ascending order)
      * @param guardian The guardian address set during initialization
      * @param membersRoot The initial members Merkle root
      * @param groupsRoot The initial groups Merkle root
@@ -34,6 +35,7 @@ library LibOrganizationInitialization {
         bytes32 adminsRoot,
         uint256 adminCount,
         uint256 votingThreshold,
+        address[] adminAddresses,
         address guardian,
         bytes32 membersRoot,
         bytes32 groupsRoot,
@@ -124,6 +126,7 @@ library LibOrganizationInitialization {
             params.adminsRoot,
             params.adminCount,
             params.votingThreshold,
+            params.adminAddresses,
             params.guardian,
             params.membersRoot,
             params.groupsRoot,
