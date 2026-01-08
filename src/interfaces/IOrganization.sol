@@ -12,7 +12,6 @@ enum OperationType {
     ModifyMembers,
     ModifyPolicies,
     UpdateGuardian,
-    ModifyWhitelist,
     Upgrade,
     DeployAccount,
     UpgradeAccount,

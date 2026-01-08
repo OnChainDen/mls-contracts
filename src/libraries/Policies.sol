@@ -62,8 +62,6 @@ library Policies {
      */
     enum DestinationType {
         Any, // Any destination address is allowed
-        WhitelistedOnly, // Only addresses in the organization's whitelist
-        NonWhitelistedOnly, // Only addresses NOT in the organization's whitelist
         CustomList // Only addresses in the policy's custom destination merkle tree
 
     }
