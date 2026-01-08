@@ -282,8 +282,10 @@ library LibOrganizationAccountTransaction {
         // Includes initiator signature to bind approvals to specific request
         bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, true, initiatorSignature);
 
-        // Count valid approvals from authorized signers
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewTxHash);
+        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
+        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
+            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
+        );
 
         if (validApprovals < requiredApprovals) {
             revert InsufficientApprovals(requiredApprovals, validApprovals);
@@ -425,7 +427,7 @@ library LibOrganizationAccountTransaction {
 
         // Verify the rejection signer is an authorized initiator for this policy
         address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
-        if (!LibOrganizationPolicy._doesMatchInitiator(proofs.policy, rejectionSigner)) {
+        if (!LibOrganizationPolicy._isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
             revert TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
         }
     }
@@ -459,8 +461,10 @@ library LibOrganizationAccountTransaction {
         // Compute rejection review hash (isApproval = false)
         bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, false, initiatorSignature);
 
-        // Count valid rejection approvals
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewTxHash);
+        // Count valid rejection approvals (with Merkle proofs for membership verification)
+        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
+            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
+        );
 
         if (validApprovals < requiredApprovals) {
             revert InsufficientApprovals(requiredApprovals, validApprovals);

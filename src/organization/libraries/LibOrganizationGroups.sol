@@ -2,195 +2,166 @@
 pragma solidity ^0.8.24;
 
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
-import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
+import { Policies } from "../../libraries/Policies.sol";
 
 /**
  * @title Lib Organization Groups
- * @notice Library for group-related operations for Organization contracts
- * @dev This library should ONLY be used by Organization contracts
+ * @notice Library for merkle-based group operations for Organization contracts
+ * @dev Groups are stored in a nested merkle tree. Only the root is stored on-chain.
+ *      Full group data is stored off-chain (IPFS) and provided via calldata at validation time.
+ *      Each group leaf is hash(hash(groupId, groupMembersRoot)) where groupMembersRoot is
+ *      a separate merkle tree containing the member addresses in that group.
+ *      This approach drastically reduces gas costs for group management (1 SSTORE)
+ *      while keeping verification costs reasonable (O(log n) hash operations per verification).
  * @author Den Technologies Inc
  */
 library LibOrganizationGroups {
     /**
-     * @notice Emitted when a group is created
-     * @param groupId The ID of the created group
-     * @param memberIds The initial member IDs in the group
+     * @notice Emitted when the groups merkle root is updated
+     * @param newRoot The new merkle root
+     * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
      */
-    event GroupCreated(uint8 indexed groupId, uint8[] memberIds);
+    event GroupsUpdated(bytes32 indexed newRoot, string ipfsCid);
+
+    // ================================
+    // MERKLE HELPERS
+    // ================================
 
     /**
-     * @notice Emitted when a group is modified (members added or removed)
-     * @param groupId The ID of the modified group
-     * @param addedMemberIds The member IDs that were added to the group
-     * @param removedMemberIds The member IDs that were removed from the group
+     * @notice Computes the merkle leaf for a group
+     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
+     * @param groupId The group's unique identifier
+     * @param groupMembersRoot The merkle root of all member addresses in this group
+     * @return The computed merkle leaf
      */
-    event GroupModified(uint8 indexed groupId, uint8[] addedMemberIds, uint8[] removedMemberIds);
+    function computeGroupLeaf(uint256 groupId, bytes32 groupMembersRoot) internal pure returns (bytes32) {
+        return keccak256(bytes.concat(keccak256(abi.encode(groupId, groupMembersRoot))));
+    }
+
+    // ================================
+    // GROUP VERIFICATION
+    // ================================
 
     /**
-     * @notice Emitted when a group is removed
-     * @param groupId The ID of the removed group
+     * @notice Checks if a group exists in a groups tree given an explicit root
+     * @dev Used to verify against potentially different roots or to avoid storage reads in loops
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupsRoot The merkle root to verify against
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
+     * @return True if the group exists in the tree, false otherwise
      */
-    event GroupRemoved(uint8 indexed groupId);
+    function isGroupInTree(
+        Policies.GroupData memory groupData,
+        bytes32 groupsRoot,
+        bytes32[] memory groupInOrgGroupsTreeProof
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Empty root means no groups (organization not initialized or all groups removed)
+        if (groupsRoot == bytes32(0)) return false;
 
-    /**
-     * @notice Emitted when a group operation is rejected due to invalid parameters
-     * @param reason The reason for the rejection
-     */
-    error GroupOperationRejected(string reason);
-
-    /**
-     * @notice Checks if a member is in a group
-     * @param memberId The ID of the member
-     * @param groupId The ID of the group
-     * @return True if the member is in the group, false otherwise
-     */
-    function isMemberInGroup(uint8 memberId, uint8 groupId) internal view returns (bool) {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Case: Member does not exist
-        if (membersLayout.memberIdToAddress[memberId] == address(0)) return false;
-
-        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
+        bytes32 leaf = computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
+        return MerkleProof.verify(groupInOrgGroupsTreeProof, groupsRoot, leaf);
     }
 
     /**
-     * @notice Checks if a member is in a group
-     * @param memberAddress The address of the member
-     * @param groupId The ID of the group
-     * @return True if the member is in the group, false otherwise
-     */
-    function isMemberInGroup(address memberAddress, uint8 groupId) internal view returns (bool) {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-        uint8 memberId = membersLayout.addressToMemberId[memberAddress];
-
-        // Case: Member does not exist
-        if (memberId == 0) return false;
-
-        return groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId];
-    }
-
-    /**
-     * @notice Checks if a group exists
-     * @param groupId The ID of the group to check
+     * @notice Verifies that a group exists in the organization
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function groupExists(uint8 groupId) internal view returns (bool) {
-        return LibOrganizationGroupsStorage.layout().groupIdToExists[groupId];
+    function isGroupInOrg(
+        Policies.GroupData memory groupData,
+        bytes32[] memory groupInOrgGroupsTreeProof
+    )
+        internal
+        view
+        returns (bool)
+    {
+        bytes32 root = LibOrganizationGroupsStorage.layout().groupsRoot;
+        return isGroupInTree(groupData, root, groupInOrgGroupsTreeProof);
     }
 
     /**
-     * @notice Checks if a group ID is valid and has at least one member
-     * @param groupId The group ID to validate
-     * @return True if the group exists and has members, false otherwise
+     * @notice Verifies that a member is in a specific group
+     * @dev Verifies against the group's internal members merkle tree (groupMembersRoot)
+     * @param memberAddress The address to verify
+     * @param groupMembersRoot The merkle root of the group's members tree
+     * @param memberInGroupProof The merkle proof that the member is in the group
+     * @return True if the member is in the group, false otherwise
      */
-    function isValidGroupWithMembers(uint8 groupId) internal view returns (bool) {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        return groupsLayout.groupIdToExists[groupId] && groupsLayout.groupIdToMemberCount[groupId] > 0;
+    function isMemberInGroup(
+        address memberAddress,
+        bytes32 groupMembersRoot,
+        bytes32[] memory memberInGroupProof
+    )
+        internal
+        pure
+        returns (bool)
+    {
+        // Empty root means no members in group
+        if (groupMembersRoot == bytes32(0)) return false;
+
+        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
+        return MerkleProof.verify(memberInGroupProof, groupMembersRoot, leaf);
     }
 
     /**
-     * @notice Creates a new group with the specified member IDs
-     * @param memberIds The array of member IDs to include in the group
-     * @return groupId The auto-generated ID of the created group
+     * @notice Verifies complete group membership (group exists AND member is in group)
+     * @param memberAddress The address to verify
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
+     * @param memberInGroupProof The merkle proof that the member is in the group
+     * @return True if both verifications pass, false otherwise
      */
-    function createGroup(uint8[] memory memberIds) internal returns (uint8 groupId) {
-        // Validate input parameters
-        if (memberIds.length == 0) {
-            revert GroupOperationRejected("Group must have at least one member");
+    function isMemberInGroupAndGroupInOrg(
+        address memberAddress,
+        Policies.GroupData memory groupData,
+        bytes32[] memory groupInOrgGroupsTreeProof,
+        bytes32[] memory memberInGroupProof
+    )
+        internal
+        view
+        returns (bool)
+    {
+        // First verify the group exists
+        if (!isGroupInOrg(groupData, groupInOrgGroupsTreeProof)) {
+            return false;
         }
 
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Auto-increment group ID
-        groupId = groupsLayout.nextGroupId;
-        ++groupsLayout.nextGroupId;
-
-        // Update member-to-group mappings and group membership flags
-        for (uint256 i = 0; i < memberIds.length; ++i) {
-            uint8 memberId = memberIds[i];
-            if (membersLayout.memberIdToAddress[memberId] == address(0)) {
-                revert GroupOperationRejected("Invalid member ID provided");
-            }
-
-            // Mark member as being in the group
-            groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId] = true;
-        }
-
-        // Mark group as existing and set initial member count
-        groupsLayout.groupIdToExists[groupId] = true;
-        groupsLayout.groupIdToMemberCount[groupId] = memberIds.length;
-
-        // Emit event
-        emit GroupCreated(groupId, memberIds);
+        // Then verify the member is in the group
+        return isMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof);
     }
 
+    // ================================
+    // MODIFY GROUPS
+    // ================================
+
     /**
-     * @notice Modifies an existing group by adding or removing members
-     * @param groupId The ID of the group to modify
-     * @param membersToAdd Array of member IDs to add to the group
-     * @param membersToRemove Array of member IDs to remove from the group
+     * @notice Updates the global groups merkle root
+     * @dev This is the only way to modify groups. All group data is stored off-chain (IPFS).
+     *      Emits GroupsUpdated event with the IPFS CID for disaster recovery.
+     * @param newGroupsRoot The new merkle root containing all groups
+     * @param ipfsCid The IPFS CID where full group data is stored
      */
-    function modifyGroup(uint8 groupId, uint8[] memory membersToAdd, uint8[] memory membersToRemove) internal {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        // Check if group exists
-        if (!groupsLayout.groupIdToExists[groupId]) {
-            revert GroupOperationRejected("Group does not exist");
-        }
-
-        // Validate that we're actually making changes
-        if (membersToAdd.length == 0 && membersToRemove.length == 0) {
-            revert GroupOperationRejected("Must specify members to add or remove");
-        }
-
-        // Add new members
-        for (uint256 i = 0; i < membersToAdd.length; ++i) {
-            uint8 memberId = membersToAdd[i];
-            if (membersLayout.memberIdToAddress[memberId] == address(0)) {
-                revert GroupOperationRejected("Invalid member ID provided");
-            }
-
-            // Only add if not already in group to avoid double counting
-            if (!groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId]) {
-                groupsLayout.groupIdToMemberIdToInGroup[groupId][memberId] = true;
-                groupsLayout.groupIdToMemberCount[groupId]++;
-            }
-        }
-
-        // Remove members
-        for (uint256 i = 0; i < membersToRemove.length; ++i) {
-            // Only remove if currently in group to avoid negative counting
-            if (groupsLayout.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]]) {
-                groupsLayout.groupIdToMemberIdToInGroup[groupId][membersToRemove[i]] = false;
-                groupsLayout.groupIdToMemberCount[groupId]--;
-            }
-        }
-
-        // Emit event
-        emit GroupModified(groupId, membersToAdd, membersToRemove);
+    function modifyGroups(bytes32 newGroupsRoot, string calldata ipfsCid) internal {
+        LibOrganizationGroupsStorage.layout().groupsRoot = newGroupsRoot;
+        emit GroupsUpdated(newGroupsRoot, ipfsCid);
     }
 
+    // ================================
+    // GETTERS
+    // ================================
+
     /**
-     * @notice Removes an existing group by marking it as not existing
-     * @param groupId The ID of the group to remove
+     * @notice Returns the current groups merkle root
+     * @return The groups merkle root
      */
-    function removeGroup(uint8 groupId) internal {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-
-        // Check if group exists
-        if (!groupsLayout.groupIdToExists[groupId]) {
-            revert GroupOperationRejected("Group does not exist");
-        }
-
-        // Mark group as not existing and reset member count
-        groupsLayout.groupIdToExists[groupId] = false;
-        groupsLayout.groupIdToMemberCount[groupId] = 0;
-
-        // Emit event
-        emit GroupRemoved(groupId);
+    function getGroupsRoot() internal view returns (bytes32) {
+        return LibOrganizationGroupsStorage.layout().groupsRoot;
     }
 }

@@ -7,22 +7,41 @@ import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersS
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
 import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { AdminType } from "../../interfaces/IOrganization.sol";
+import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
+import { InitializationParams } from "../../interfaces/IOrganization.sol";
 
 /**
  * @title Lib Organization Initialization
  * @notice Library for post-deployment initialization of Organization contracts
- * @dev This library should ONLY be used by Organization contracts
+ * @dev This library should ONLY be used by Organization contracts.
+ *      Members and Groups are stored as Merkle trees - only the roots are stored on-chain.
+ *      Full member/group data is stored off-chain (IPFS) and provided via calldata at validation time.
  * @author Den Technologies Inc
  */
 library LibOrganizationInitialization {
     /**
      * @notice Emitted when organization is successfully initialized
-     * @param adminType The admin type set during initialization
-     * @param adminAddresses The admin addresses set during initialization
+     * @param adminsRoot The merkle root of admin addresses
+     * @param adminCount The number of admins
+     * @param votingThreshold The voting threshold for admin operations
+     * @param adminAddresses The admin addresses (in ascending order)
      * @param guardian The guardian address set during initialization
+     * @param membersRoot The initial members Merkle root
+     * @param groupsRoot The initial groups Merkle root
+     * @param membersIpfsCid The IPFS CID for members data
+     * @param groupsIpfsCid The IPFS CID for groups data
      */
-    event OrganizationInitialized(AdminType adminType, address[] adminAddresses, address guardian);
+    event OrganizationInitialized(
+        bytes32 adminsRoot,
+        uint256 adminCount,
+        uint256 votingThreshold,
+        address[] adminAddresses,
+        address guardian,
+        bytes32 membersRoot,
+        bytes32 groupsRoot,
+        string membersIpfsCid,
+        string groupsIpfsCid
+    );
 
     /**
      * @notice Error thrown when caller is not the authorized deployer
@@ -35,9 +54,9 @@ library LibOrganizationInitialization {
     error AlreadyInitialized();
 
     /**
-     * @notice Error thrown when invalid admin configuration is provided
+     * @notice Error thrown when invalid members root is provided
      */
-    error InvalidAdminConfiguration();
+    error InvalidMembersRoot();
 
     /**
      * @notice Enforces that the caller is the deployer address
@@ -50,123 +69,70 @@ library LibOrganizationInitialization {
     }
 
     /**
-     * @notice Initializes the organization contract with admin configuration
-     * @dev Deployer authorization is enforced by the external wrapper function
-     * @param adminType Type of admin (Member or Group)
-     * @param adminAddresses Array of addresses to be added as admin members
-     * @param votingThreshold Voting threshold (only used for Group admin type)
-     * @param guardian Guardian address for the organization
+     * @notice Initializes the organization contract with Merkle-based members/groups and admin configuration
+     * @dev Deployer authorization is enforced by the external wrapper function.
+     *      Members and groups are represented as Merkle trees - only roots are stored on-chain.
+     *      Validates that all admin addresses are members to prevent bricking.
+     * @param params The initialization parameters struct
      */
-    function initialize(
-        AdminType adminType,
-        address[] memory adminAddresses,
-        uint256 votingThreshold,
-        address guardian
-    )
-        internal
-    {
+    function initialize(InitializationParams calldata params) internal {
         // Check if already initialized
         if (isInitialized()) {
             revert AlreadyInitialized();
         }
 
+        // Validate members root is provided (organization must have at least one member)
+        if (params.membersRoot == bytes32(0)) {
+            revert InvalidMembersRoot();
+        }
+
         // Validate admin configuration
-        if (adminAddresses.length == 0) {
-            revert InvalidAdminConfiguration();
-        }
+        LibOrganizationAdmin.validateAdminConfigurationOrRevert(
+            params.adminsRoot, params.adminCount, params.votingThreshold
+        );
 
-        if (adminType == AdminType.Group && votingThreshold == 0) {
-            revert InvalidAdminConfiguration();
-        }
+        // Create validation struct
+        LibOrganizationAdmin.AdminMembershipValidation memory validation = LibOrganizationAdmin
+            .AdminMembershipValidation({
+            adminAddresses: params.adminAddresses,
+            adminInOrgAdminTreeProofs: params.adminInAdminTreeProofs,
+            adminInOrgMembersTreeProofs: params.adminInMembersTreeProofs
+        });
 
-        if (adminType == AdminType.Member && adminAddresses.length > 1) {
-            revert InvalidAdminConfiguration();
-        }
+        // Validate all admins are members (this prevents bricking at initialization)
+        LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
+            validation, params.adminsRoot, params.membersRoot, params.adminCount
+        );
 
-        // Set admin configuration - create members and optionally create group
-        _setAdminConfiguration(adminType, adminAddresses, votingThreshold);
+        // Set roots
+        LibOrganizationMembersStorage.layout().membersRoot = params.membersRoot;
+        LibOrganizationGroupsStorage.layout().groupsRoot = params.groupsRoot;
+
+        // Set admin configuration
+        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
+        adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
+            adminsRoot: params.adminsRoot,
+            adminCount: params.adminCount,
+            votingThreshold: params.votingThreshold
+        });
 
         // Initialize policy counter
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
-        policyLayout.nextPolicyId = 1;
+        LibOrganizationPolicyStorage.layout().nextPolicyId = 1;
 
         // Set guardian
-        LibOrganizationGuardianStorage.layout().guardian = guardian;
+        LibOrganizationGuardianStorage.layout().guardian = params.guardian;
 
-        emit OrganizationInitialized(adminType, adminAddresses, guardian);
-    }
-
-    /**
-     * @notice Sets the admin configuration by creating members and optionally a group
-     * @param adminType Type of admin (Member or Group)
-     * @param adminAddresses Array of addresses to be added as admin members
-     * @param votingThreshold Voting threshold for group admins
-     * @return adminId The ID of the admin (member ID or group ID)
-     */
-    function _setAdminConfiguration(
-        AdminType adminType,
-        address[] memory adminAddresses,
-        uint256 votingThreshold
-    )
-        private
-        returns (uint8 adminId)
-    {
-        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
-
-        // Case: Individual admin
-        if (adminType == AdminType.Member) {
-            // Validate admin address
-            if (adminAddresses[0] == address(0)) {
-                revert InvalidAdminConfiguration();
-            }
-
-            // Add member to mappings
-            membersLayout.memberIdToAddress[1] = adminAddresses[0];
-            membersLayout.addressToMemberId[adminAddresses[0]] = 1;
-
-            // Initialize the member, group, and policy counters
-            membersLayout.nextMemberId = 2;
-            groupsLayout.nextGroupId = 1;
-
-            // Set admin permission
-            adminLayout.adminPermission =
-                LibOrganizationAdminStorage.AdminPermission({ adminType: adminType, adminId: 1, votingThreshold: 0 });
-        }
-        // Case: Group admin
-        else {
-            // Create a group with all members
-            groupsLayout.groupIdToExists[1] = true;
-            groupsLayout.groupIdToMemberCount[1] = uint256(adminAddresses.length);
-
-            // Initialize the member, group, and policy counters
-            membersLayout.nextMemberId = uint8(adminAddresses.length + 1);
-            groupsLayout.nextGroupId = 2;
-
-            // Create members for all admin addresses
-            for (uint256 i = 0; i < adminAddresses.length; ++i) {
-                // Validate admin address
-                if (adminAddresses[i] == address(0)) {
-                    revert InvalidAdminConfiguration();
-                }
-
-                uint8 memberId = uint8(i + 1);
-
-                // Add member to mappings
-                membersLayout.memberIdToAddress[memberId] = adminAddresses[i];
-                membersLayout.addressToMemberId[adminAddresses[i]] = memberId;
-                groupsLayout.groupIdToMemberIdToInGroup[1][memberId] = true;
-            }
-
-            // Set admin permission
-            adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
-                adminType: adminType,
-                adminId: 1,
-                votingThreshold: votingThreshold
-            });
-        }
+        emit OrganizationInitialized(
+            params.adminsRoot,
+            params.adminCount,
+            params.votingThreshold,
+            params.adminAddresses,
+            params.guardian,
+            params.membersRoot,
+            params.groupsRoot,
+            params.membersIpfsCid,
+            params.groupsIpfsCid
+        );
     }
 
     /**
@@ -179,9 +145,10 @@ library LibOrganizationInitialization {
 
     /**
      * @notice Checks if the organization has been initialized
+     * @dev Checks if membersRoot is set (since every organization must have at least one member)
      * @return True if initialized, false otherwise
      */
     function isInitialized() internal view returns (bool) {
-        return LibOrganizationAdminStorage.layout().adminPermission.adminId != 0;
+        return LibOrganizationMembersStorage.layout().membersRoot != bytes32(0);
     }
 }

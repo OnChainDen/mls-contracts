@@ -133,8 +133,8 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Verify the initiator is authorized by this policy
-        if (!LibOrganizationPolicy._doesMatchInitiator(proofs.policy, initiator)) {
+        // Verify the initiator is authorized by this policy (with Merkle proofs)
+        if (!LibOrganizationPolicy._isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -223,8 +223,9 @@ library LibOrganizationAccountSignature {
         // Note: includes the initiator signature to bind approvals to the specific request
         bytes32 reviewHash = _getReviewSignatureHash(account, hash, policyId, expirationTimestamp, initiatorSignature);
 
-        // Count valid approvals from authorized signers
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash);
+        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
+        uint256 validApprovals =
+            LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash, proofs.approverProofs);
 
         if (validApprovals >= requiredApprovals) {
             return ERC1271_MAGIC_VALUE;
