@@ -85,7 +85,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Signature is not allowed by the policy
-        if (!_isSignatureAllowedByPolicy(account, initiator, policyId, proofs)) {
+        if (!_isERC1271SignatureAllowedByPolicy(account, initiator, policyId, proofs)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -112,7 +112,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Checks if a signature operation is allowed by the policy
+     * @notice Checks if an ERC-1271 signature operation is allowed by the policy
      * @dev Validates that:
      *      1. The policy exists in the organization's policy tree
      *      2. The policy is configured for signature operations
@@ -124,7 +124,7 @@ library LibOrganizationAccountSignature {
      * @param proofs Merkle proofs and policy data for validation
      * @return True if the signature is allowed by the policy, false otherwise
      */
-    function _isSignatureAllowedByPolicy(
+    function _isERC1271SignatureAllowedByPolicy(
         address account,
         address initiator,
         uint256 policyId,
