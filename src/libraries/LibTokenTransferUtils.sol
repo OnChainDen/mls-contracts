@@ -23,24 +23,44 @@ library LibTokenTransferUtils {
      */
     function isTransactionTokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
         // Case: The transaction is a native token transfer
-        if (data.length == 0 && value > 0) return true;
+        if (isTransactionNativeTokenTransfer(data, value)) return true;
 
-        // Case: The transaction data is too short to call a function
-        if (data.length < 4) return false;
-
-        // Case: The transaction is not a native token transfer, but the value is greater than zero
-        if (value > 0) return false;
-
-        // Case: The transaction is a token transfer
-        bytes4 selector = bytes4(data[:4]);
-
-        // Case: The transaction is a token transfer
-        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
-            return true;
-        }
+        // Case: The transaction is an ERC20 token transfer
+        if (isTransactionERC20TokenTransfer(data, value)) return true;
 
         // Case: The transaction is not a token transfer
         return false;
+    }
+
+    /**
+     * @notice Checks if a transaction is a native token transfer
+     * @dev A transaction is considered a native token transfer if it has value > 0 and no data
+     * @param data The transaction calldata
+     * @param value The transaction value in wei
+     * @return True if the transaction is a native token transfer, false otherwise
+     */
+    function isTransactionNativeTokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
+        return data.length == 0 && value > 0;
+    }
+
+    /**
+     * @notice Checks if a transaction is an ERC20 token transfer
+     * @dev A transaction is considered an ERC20 token transfer if it calls transfer(address,uint256)
+     *      and has no native value attached
+     * @param data The transaction calldata
+     * @param value The transaction value in wei
+     * @return True if the transaction is an ERC20 token transfer, false otherwise
+     */
+    function isTransactionERC20TokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
+        // Case: The transaction data is too short to call a function
+        if (data.length < 4) return false;
+
+        // Case: The transaction has native value attached (not a pure ERC20 transfer)
+        if (value > 0) return false;
+
+        // Case: Check if the transaction is calling the `transfer` function
+        bytes4 selector = bytes4(data[:4]);
+        return selector == bytes4(keccak256("transfer(address,uint256)"));
     }
 
     /**
