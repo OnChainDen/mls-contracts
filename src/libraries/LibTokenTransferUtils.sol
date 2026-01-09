@@ -35,10 +35,7 @@ library LibTokenTransferUtils {
         bytes4 selector = bytes4(data[:4]);
 
         // Case: The transaction is a token transfer
-        if (
-            selector == bytes4(keccak256("transfer(address,uint256)"))
-                || selector == bytes4(keccak256("transferFrom(address,address,uint256)"))
-        ) {
+        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
             return true;
         }
 
@@ -63,15 +60,6 @@ library LibTokenTransferUtils {
         // The recipient is the first parameter after the selector
         if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
             return address(bytes20(data[16:36]));
-        }
-
-        // Case: The transaction is calling the `transferFrom` function
-        // transferFrom(address from, address to, uint256 amount)
-        // Note: The recipient is the second address parameter after the selector
-        if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
-            // Case: Transaction data is too short to contain a valid recipient
-            if (data.length < 68) return address(0);
-            return address(bytes20(data[48:68]));
         }
 
         // Case: The transaction is not a valid ERC-20 transfer
