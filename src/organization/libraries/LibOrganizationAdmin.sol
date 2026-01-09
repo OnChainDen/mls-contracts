@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { LibOrganizationAdminStorage } from "./storage/LibOrganizationAdminStorage.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
+import { LibOrganizationEIP712 } from "./LibOrganizationEIP712.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
@@ -476,17 +477,6 @@ library LibOrganizationAdmin {
         );
 
         // Return EIP-712 compatible hash for ERC-1271 signature verification
-        return MessageHashUtils.toTypedDataHash(
-            keccak256(
-                abi.encode(
-                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                    keccak256("OnchainCustodyOrganization"),
-                    keccak256("1"),
-                    block.chainid,
-                    address(this)
-                )
-            ),
-            structHash
-        );
+        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
     }
 }

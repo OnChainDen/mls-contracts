@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
 import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
 import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
+import { LibOrganizationEIP712 } from "./LibOrganizationEIP712.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
@@ -299,7 +300,7 @@ library LibOrganizationAccountSignature {
             )
         );
 
-        return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
+        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
     }
 
     /**
@@ -339,23 +340,6 @@ library LibOrganizationAccountSignature {
             )
         );
 
-        return MessageHashUtils.toTypedDataHash(_getDomainSeparator(), structHash);
-    }
-
-    /**
-     * @notice Computes the EIP-712 domain separator for this organization
-     * @dev Used for all EIP-712 typed data hashes in signature validation
-     * @return The domain separator hash
-     */
-    function _getDomainSeparator() private view returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("OnchainCustodyOrganization"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )
-        );
+        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
     }
 }
