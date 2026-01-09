@@ -143,8 +143,14 @@ library LibOrganizationAccountTransaction {
             revert PolicyDoesNotApply(policyId);
         }
 
-        // Route to appropriate approval flow based on policy type
-        _processApproval(params, data, signatures, initiatorSignature, initiator, proofs);
+        // Case: Policy requires manual approval
+        // Validate that we have enough valid approvals
+        if (proofs.policy.config.approval.policyType == Policies.PolicyType.RequireManualApproval) {
+            _validateManualApprovalOrRevert(params, data, signatures, initiatorSignature, proofs);
+        }
+
+        // Update time-based limits if applicable (for all policy types)
+        _updateTimeBasedLimit(params, data, initiator, proofs.policy);
     }
 
     /**
@@ -176,42 +182,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Routes approval validation based on policy type
-     * @dev For AutoApprove policies, just updates time limits.
-     *      For ManualApproval policies, validates reviewer signatures first.
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param signatures All signatures (initiator + reviewers)
-     * @param initiatorSignature The initiator's signature (extracted)
-     * @param initiator The initiator's address
-     * @param proofs Merkle proofs and policy data
-     */
-    function _processApproval(
-        TxParams memory params,
-        bytes calldata data,
-        bytes memory signatures,
-        bytes memory initiatorSignature,
-        address initiator,
-        Policies.ValidationProofs calldata proofs
-    )
-        private
-    {
-        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
-
-        // AutoApprove: Initiator signature alone is sufficient
-        if (pType == Policies.PolicyType.AutoApprove) {
-            _updateTimeLimitForAutoApprove(params, data, initiator, proofs.policy);
-            return;
-        }
-
-        // ManualApproval: Validate reviewer signatures meet threshold
-        if (pType == Policies.PolicyType.RequireManualApproval) {
-            _validateAndUpdateManualApproval(params, data, signatures, initiatorSignature, initiator, proofs);
-        }
-    }
-
-    /**
-     * @notice Updates time-based limits for auto-approve transactions
+     * @notice Updates time-based limits for approved transactions
      * @dev Only applies if the policy has TimeInterval limitation.
      *      For token transfers, tracks the transfer amount.
      *      For other transactions, tracks count (usage = 1).
@@ -220,7 +191,7 @@ library LibOrganizationAccountTransaction {
      * @param initiator The initiator's address
      * @param policy The policy being used
      */
-    function _updateTimeLimitForAutoApprove(
+    function _updateTimeBasedLimit(
         TxParams memory params,
         bytes calldata data,
         address initiator,
@@ -255,25 +226,23 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Validates manual approval signatures and updates time limits
-     * @dev Extracts reviewer signatures, validates against required threshold,
-     *      then updates time-based limits if all approvals are valid.
+     * @notice Validates manual approval signatures meet the required threshold
+     * @dev Extracts reviewer signatures and validates against required threshold.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures All signatures (initiator + reviewers)
      * @param initiatorSignature The initiator's signature
-     * @param initiator The initiator's address
      * @param proofs Merkle proofs and policy data
      */
-    function _validateAndUpdateManualApproval(
+    function _validateManualApprovalOrRevert(
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
         bytes memory initiatorSignature,
-        address initiator,
         Policies.ValidationProofs calldata proofs
     )
         private
+        view
     {
         // Get required approval count from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
@@ -293,9 +262,6 @@ library LibOrganizationAccountTransaction {
         if (validApprovals < requiredApprovals) {
             revert InsufficientApprovals(requiredApprovals, validApprovals);
         }
-
-        // Update time limits after successful approval validation
-        _updateTimeLimitForAutoApprove(params, data, initiator, proofs.policy);
     }
 
     // ================================
