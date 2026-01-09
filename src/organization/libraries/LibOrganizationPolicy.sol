@@ -680,21 +680,21 @@ library LibOrganizationPolicy {
         for (uint256 i = 0; i < constraints.length; ++i) {
             // Use block scoping to reduce stack depth
             {
-                uint256 slotsToSkip = uint256(constraints[i].slotsToSkip);
+                uint256 paramCalldataHeadSlotCount = uint256(constraints[i].paramCalldataHeadSlotCount);
 
-                // Case: Constraint is not configured correctly (constraintSlotToSkip == 0)
-                if (slotsToSkip == 0) {
+                // Case: Constraint is not configured correctly (paramCalldataHeadSlotCount == 0)
+                if (paramCalldataHeadSlotCount == 0) {
                     return false;
                 }
 
                 // Case: Constraint is a wildcard constraint (any value is accepted)
                 if (constraints[i].constraintType == Policies.ConstraintType.Any) {
-                    paramOffset += slotsToSkip * 32;
+                    paramOffset += paramCalldataHeadSlotCount * 32;
                     continue;
                 }
 
                 // Static-sized arrays/structs can only have Any constraint
-                if (slotsToSkip > 1) {
+                if (paramCalldataHeadSlotCount > 1) {
                     return false;
                 }
             }
@@ -727,7 +727,7 @@ library LibOrganizationPolicy {
                 }
             }
 
-            paramOffset += 32; // Move past this parameter (we already checked slotsToSkip == 1)
+            paramOffset += 32; // Move past this parameter (we already checked paramCalldataHeadSlotCount == 1)
         }
 
         return true;

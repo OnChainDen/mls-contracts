@@ -125,12 +125,14 @@ library Policies {
     ///      - Range + Int: abi.encode(int256 min, int256 max)
     ///      - List + Address: abi.encode(bytes32 merkleRoot) - root of allowed addresses merkle tree
     ///
-    /// @dev The slotsToSkip field specifies how many 32-byte slots this parameter occupies (must be >= 1):
-    ///      - Basic types (uint, int, address, bool, bytes1-32): 1 slot
-    ///      - Dynamic types (string, bytes, T[]): 1 slot (contains offset)
-    ///      - Static arrays T[k]: k slots (stored inline)
-    ///      - Static structs with N fields: N slots (stored inline)
-    ///      - Dynamic structs: 1 slot (contains offset)
+    /// @dev The paramCalldataHeadSlotCount field specifies how many 32-byte head slots this parameter occupies
+    ///      (must be >= 1). In ABI encoding, the "head" contains values for static types or offset pointers for
+    ///      dynamic types:
+    ///      - Basic types (uint, int, address, bool, bytes1-32): 1 head slot
+    ///      - Dynamic types (string, bytes, T[]): 1 head slot (contains offset to tail data)
+    ///      - Static arrays T[k]: k head slots (stored inline)
+    ///      - Static structs with N fields: N head slots (stored inline)
+    ///      - Dynamic structs: 1 head slot (contains offset to tail data)
     enum ConstraintType {
         Any, // Any value is accepted (no constraint)
         Exact, // Value must exactly match the specified value
@@ -144,13 +146,13 @@ library Policies {
      * @dev Used to restrict what values can be passed to specific function parameters
      * @param paramType The type of the parameter being constrained
      * @param constraintType How the constraint should be evaluated
-     * @param slotsToSkip Number of 32-byte slots to skip in calldata to reach this param
+     * @param paramCalldataHeadSlotCount Number of 32-byte head slots this parameter occupies in calldata (must be >= 1)
      * @param comparisonData ABI-encoded data used for comparison based on constraintType
      */
     struct ParameterConstraint {
         ParamType paramType;
         ConstraintType constraintType;
-        uint8 slotsToSkip; // Number of 32-byte slots this parameter occupies (must be >= 1)
+        uint8 paramCalldataHeadSlotCount; // Number of 32-byte head slots this parameter occupies (must be >= 1)
         bytes comparisonData;
     }
 
