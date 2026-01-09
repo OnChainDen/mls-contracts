@@ -678,56 +678,49 @@ library LibOrganizationPolicy {
         uint256 addressListProofIndex = 0;
 
         for (uint256 i = 0; i < constraints.length; ++i) {
-            // Use block scoping to reduce stack depth
-            {
-                uint256 paramCalldataHeadSlotCount = uint256(constraints[i].paramCalldataHeadSlotCount);
+            uint256 paramCalldataHeadSlotCount = uint256(constraints[i].paramCalldataHeadSlotCount);
 
-                // Case: Constraint is not configured correctly (paramCalldataHeadSlotCount == 0)
-                if (paramCalldataHeadSlotCount == 0) {
-                    return false;
-                }
-
-                // Case: Constraint is a wildcard constraint (any value is accepted)
-                if (constraints[i].constraintType == Policies.ConstraintType.Any) {
-                    paramCalldataOffset += paramCalldataHeadSlotCount * 32;
-                    continue;
-                }
-
-                // Static-sized arrays/structs can only have Any constraint
-                if (paramCalldataHeadSlotCount > 1) {
-                    return false;
-                }
+            // Case: Constraint is not configured correctly (paramCalldataHeadSlotCount == 0)
+            if (paramCalldataHeadSlotCount == 0) {
+                return false;
             }
 
-            // Case: Transaction data is too short for this parameter
+            // Case: Transaction data is too short for this parameter (not enough data to extract the parameter value)
             if (data.length < paramCalldataOffset + 32) {
                 return false;
             }
 
-            // Extract parameter value and get proof if needed (in separate scope)
+            // Extract parameter value and get proof if needed (in separate scope to reduce stack depth)
             {
                 bytes32 paramHeadValue = bytes32(data[paramCalldataOffset:paramCalldataOffset + 32]);
                 bytes32[] memory addressListProof;
 
-                // Get merkle proof for List constraints on Address parameters
+                // Case: The parameter is an Address and has a List constraint
+                // Get the merkle proof for the List constraint on the Address parameter
                 if (
                     constraints[i].constraintType == Policies.ConstraintType.List
                         && constraints[i].paramType == Policies.ParamType.Address
                 ) {
+                    // Case: This address List constraint is not configured correctly (missing merkle proof)
                     if (addressListProofIndex >= addressParameterProofs.length) {
-                        return false; // Missing proof for address List constraint
+                        return false;
                     }
+                    // Get the merkle proof for the List constraint on the Address parameter
                     addressListProof = addressParameterProofs[addressListProofIndex];
+
+                    // Move on to the next address List proof index in case the function
+                    // has multiple address parameters with List constraints
                     ++addressListProofIndex;
                 }
 
-                // Validate the parameter
+                // Case: The parameter does not satisfy its constraint
                 if (!_isParameterAllowedByConstraint(constraints[i], paramHeadValue, data, addressListProof)) {
                     return false;
                 }
             }
 
-            paramCalldataOffset += 32; // Move past this parameter (we already checked paramCalldataHeadSlotCount == 1)
+            // Move on to the next parameter in calldata
+            paramCalldataOffset += paramCalldataHeadSlotCount * 32;
         }
 
         return true;
@@ -984,6 +977,12 @@ library LibOrganizationPolicy {
     {
         Policies.ParamType pType = constraint.paramType;
         Policies.ConstraintType constraintType = constraint.constraintType;
+
+        // Case: Constraint is a wildcard constraint (any value is accepted)
+        if (constraintType == Policies.ConstraintType.Any) {
+            return true;
+        }
+
         bytes memory comparisonData = constraint.comparisonData;
 
         if (pType == Policies.ParamType.Bool) {
@@ -1015,11 +1014,13 @@ library LibOrganizationPolicy {
             return _isStringParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
         }
 
-        // Handle Array and Struct types - only Any constraint is valid
-        // These types can only have Any constraint, which is handled earlier in _processConstraints
-        // If we reach here with a non-Any constraint, it's invalid configuration
+        // Case: The parameter is an Array or Struct type, which only support the "Any" constraint
+        // If we reach here, the constraint type is not "Any", which is invalid for these types.
+        if (pType == Policies.ParamType.Array || pType == Policies.ParamType.Struct) {
+            return false;
+        }
 
-        // Unknown type - fail safe
+        // Case: The parameter is an unknown type
         return false;
     }
 
