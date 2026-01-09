@@ -11,6 +11,7 @@ import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/Sig
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
 import { LibTokenTransferUtils } from "../../libraries/LibTokenTransferUtils.sol";
+import { LibContractInteractionUtils } from "../../libraries/LibContractInteractionUtils.sol";
 
 /**
  * @title Lib Organization Policy
@@ -418,7 +419,7 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that call a specific function, and the transaction is calling
         //       a function - verify via merkle proof
-        bytes4 selector = bytes4(data[:4]);
+        bytes4 selector = LibContractInteractionUtils.extractFunctionSelector(data);
         bytes32 constraintsHash = keccak256(constraints);
 
         // Verify function (selector + constraints hash) is in the allowed functions merkle tree

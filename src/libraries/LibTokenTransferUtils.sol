@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import { LibContractInteractionUtils } from "./LibContractInteractionUtils.sol";
+
 /**
  * @title LibTokenTransferUtils
  * @notice A library for ERC-20 and native token transfer detection and extraction utilities
@@ -59,7 +61,7 @@ library LibTokenTransferUtils {
         if (value > 0) return false;
 
         // Case: Check if the transaction is calling the `transfer` function
-        bytes4 selector = bytes4(data[:4]);
+        bytes4 selector = LibContractInteractionUtils.extractFunctionSelector(data);
         return selector == bytes4(keccak256("transfer(address,uint256)"));
     }
 
@@ -73,7 +75,7 @@ library LibTokenTransferUtils {
         // Case: Transaction data is too short to contain a valid selector
         if (data.length < 36) revert MalformedTokenTransfer();
 
-        bytes4 selector = bytes4(data[:4]);
+        bytes4 selector = LibContractInteractionUtils.extractFunctionSelector(data);
 
         // Case: The transaction is calling the `transfer` function
         // transfer(address to, uint256 amount)
