@@ -151,24 +151,19 @@ library LibOrganizationPolicy {
         view
         returns (bool)
     {
-        // 1. Verify policy exists in the global merkle tree
-        bytes32 policyLeaf = _computePolicyLeaf(policyId, proofs.policy);
-        bytes32 root = LibOrganizationPolicyStorage.layout().policiesRoot;
-        if (!MerkleProof.verify(proofs.policyProof, root, policyLeaf)) {
-            return false;
-        }
+        // Case: The policy does not exist in the organization
+        if (!isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) return false;
 
-        // 2. Check if the source account matches
+        // Case: The source account is not allowed by the policy
         if (!isSourceAccountAllowedByPolicy(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
             return false;
         }
 
-        // 3. Check if the initiator is authorized (using merkle proofs)
+        // Case: The initiator is not authorized by the policy
         if (!isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return false;
         }
 
-        // 4. Check if the transaction type matches
         Policies.TransactionType txType = proofs.policy.config.transactionType;
 
         // Case: Policy matches only transactions that are token transfers
