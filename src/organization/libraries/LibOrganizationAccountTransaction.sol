@@ -146,7 +146,7 @@ library LibOrganizationAccountTransaction {
         // Case: Policy requires manual approval
         // Validate that we have enough valid approvals
         if (proofs.policy.config.approval.policyType == Policies.PolicyType.RequireManualApproval) {
-            _validateManualApprovalOrRevert(params, data, signatures, initiatorSignature, proofs);
+            _validateManualConfirmationOrRevert(params, data, signatures, initiatorSignature, proofs, true);
         }
 
         // Update time-based limits if applicable (for all policy types)
@@ -227,20 +227,24 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Validates manual approval signatures meet the required threshold
+     * @notice Validates manual approval/rejection signatures meet the required threshold
      * @dev Extracts reviewer signatures and validates against required threshold.
+     *      Used for both approval and rejection flows - the isApproval flag determines
+     *      which hash is computed for signature verification.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures All signatures (initiator + reviewers)
      * @param initiatorSignature The initiator's signature
      * @param proofs Merkle proofs and policy data
+     * @param isApproval True for approval validation, false for rejection validation
      */
-    function _validateManualApprovalOrRevert(
+    function _validateManualConfirmationOrRevert(
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
         bytes memory initiatorSignature,
-        Policies.ValidationProofs calldata proofs
+        Policies.ValidationProofs calldata proofs,
+        bool isApproval
     )
         private
         view
@@ -253,7 +257,7 @@ library LibOrganizationAccountTransaction {
 
         // Compute hash that reviewers should have signed
         // Includes initiator signature to bind approvals to specific request
-        bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, true, initiatorSignature);
+        bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
 
         // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
         uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
@@ -341,7 +345,7 @@ library LibOrganizationAccountTransaction {
         }
         // ManualApproval: Need threshold approvals for the rejection
         else if (pType == Policies.PolicyType.RequireManualApproval) {
-            _validateManualRejectionOrRevert(params, data, signatures, initiatorSignature, proofs);
+            _validateManualConfirmationOrRevert(params, data, signatures, initiatorSignature, proofs, false);
         }
     }
 
@@ -376,45 +380,6 @@ library LibOrganizationAccountTransaction {
         address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
             revert TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
-        }
-    }
-
-    /**
-     * @notice Validates rejection for manual approval policies
-     * @dev For manual approval policies, rejection requires the same threshold
-     *      of approvals as a regular transaction, but signing the rejection hash
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param signatures All rejection signatures
-     * @param initiatorSignature The original initiator's signature
-     * @param proofs Merkle proofs and policy data
-     */
-    function _validateManualRejectionOrRevert(
-        TxParams memory params,
-        bytes calldata data,
-        bytes memory signatures,
-        bytes memory initiatorSignature,
-        Policies.ValidationProofs calldata proofs
-    )
-        private
-        view
-    {
-        // Get required approval count
-        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
-
-        // Extract reviewer signatures
-        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
-
-        // Compute rejection review hash (isApproval = false)
-        bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, false, initiatorSignature);
-
-        // Count valid rejection approvals (with Merkle proofs for membership verification)
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
-            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
-        );
-
-        if (validApprovals < requiredApprovals) {
-            revert InsufficientApprovals(requiredApprovals, validApprovals);
         }
     }
 
