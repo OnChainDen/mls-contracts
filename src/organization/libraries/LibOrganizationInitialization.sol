@@ -6,7 +6,6 @@ import { LibOrganizationDeployerAddressStorage } from "./storage/LibOrganization
 import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
 import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
 import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
-import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
 import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
 import { InitializationParams } from "../../interfaces/IOrganization.sol";
 
@@ -115,9 +114,6 @@ library LibOrganizationInitialization {
             adminCount: params.adminCount,
             votingThreshold: params.votingThreshold
         });
-
-        // Initialize policy counter
-        LibOrganizationPolicyStorage.layout().nextPolicyId = 1;
 
         // Set guardian
         LibOrganizationGuardianStorage.layout().guardian = params.guardian;

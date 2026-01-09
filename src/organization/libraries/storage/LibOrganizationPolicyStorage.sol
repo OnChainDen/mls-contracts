@@ -13,8 +13,6 @@ library LibOrganizationPolicyStorage {
         /// @notice Global merkle root containing ALL policies
         /// @dev Each leaf is hash(policyId, Policy struct)
         bytes32 policiesRoot;
-        /// @notice Counter for policy IDs
-        uint256 nextPolicyId;
         /// @notice Time-based usage tracking: usageKey => timeWindow => usedAmount/count
         /// @dev usageKey is computed from policyId and scoped entities (account, destination, initiator)
         mapping(bytes32 => mapping(uint256 => uint256)) policyUsage;
