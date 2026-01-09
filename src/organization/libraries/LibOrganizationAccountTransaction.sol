@@ -337,11 +337,11 @@ library LibOrganizationAccountTransaction {
 
         // AutoApprove: Need an authorized initiator to sign the rejection
         if (pType == Policies.PolicyType.AutoApprove) {
-            _validateAutoApproveRejection(params, data, signatures, proofs);
+            _validateAutoApproveRejectionOrRevert(params, data, signatures, proofs);
         }
         // ManualApproval: Need threshold approvals for the rejection
         else if (pType == Policies.PolicyType.RequireManualApproval) {
-            _validateManualRejection(params, data, signatures, initiatorSignature, proofs);
+            _validateManualRejectionOrRevert(params, data, signatures, initiatorSignature, proofs);
         }
     }
 
@@ -354,7 +354,7 @@ library LibOrganizationAccountTransaction {
      * @param signatures The signatures (original initiator + rejection signer)
      * @param proofs Merkle proofs and policy data
      */
-    function _validateAutoApproveRejection(
+    function _validateAutoApproveRejectionOrRevert(
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
@@ -389,7 +389,7 @@ library LibOrganizationAccountTransaction {
      * @param initiatorSignature The original initiator's signature
      * @param proofs Merkle proofs and policy data
      */
-    function _validateManualRejection(
+    function _validateManualRejectionOrRevert(
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
