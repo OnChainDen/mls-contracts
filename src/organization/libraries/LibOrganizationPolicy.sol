@@ -673,7 +673,7 @@ library LibOrganizationPolicy {
     {
         // Validate each parameter against its constraint
         // Parameters start at byte 4 (after the selector)
-        uint256 paramOffset = 4;
+        uint256 paramCalldataOffset = 4;
         // Track which address List proof to use (incremented for each List constraint encountered)
         uint256 addressListProofIndex = 0;
 
@@ -689,7 +689,7 @@ library LibOrganizationPolicy {
 
                 // Case: Constraint is a wildcard constraint (any value is accepted)
                 if (constraints[i].constraintType == Policies.ConstraintType.Any) {
-                    paramOffset += paramCalldataHeadSlotCount * 32;
+                    paramCalldataOffset += paramCalldataHeadSlotCount * 32;
                     continue;
                 }
 
@@ -700,13 +700,13 @@ library LibOrganizationPolicy {
             }
 
             // Case: Transaction data is too short for this parameter
-            if (data.length < paramOffset + 32) {
+            if (data.length < paramCalldataOffset + 32) {
                 return false;
             }
 
             // Extract parameter value and get proof if needed (in separate scope)
             {
-                bytes32 paramHeadValue = bytes32(data[paramOffset:paramOffset + 32]);
+                bytes32 paramHeadValue = bytes32(data[paramCalldataOffset:paramCalldataOffset + 32]);
                 bytes32[] memory addressListProof;
 
                 // Get merkle proof for List constraints on Address parameters
@@ -727,7 +727,7 @@ library LibOrganizationPolicy {
                 }
             }
 
-            paramOffset += 32; // Move past this parameter (we already checked paramCalldataHeadSlotCount == 1)
+            paramCalldataOffset += 32; // Move past this parameter (we already checked paramCalldataHeadSlotCount == 1)
         }
 
         return true;
