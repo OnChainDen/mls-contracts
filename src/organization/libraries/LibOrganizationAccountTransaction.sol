@@ -88,6 +88,7 @@ library LibOrganizationAccountTransaction {
      *      3. Checks that the policy applies to this transaction
      *      4. Routes to appropriate approval flow based on policy type
      *      5. Updates time-based limits if applicable
+     *      Reverts on validation failure.
      * @param account The source account executing the transaction
      * @param to The destination address
      * @param value The ETH value being sent
@@ -98,7 +99,7 @@ library LibOrganizationAccountTransaction {
      * @param signatures Concatenated signatures (initiator + optional approvers)
      * @param proofs Merkle proofs and policy data for validation
      */
-    function validateTransactionApproval(
+    function validateTransactionApprovalOrRevert(
         address account,
         address to,
         uint256 value,
@@ -305,6 +306,7 @@ library LibOrganizationAccountTransaction {
      * @dev Rejection validation ensures that only authorized parties can reject transactions.
      *      This prevents griefing attacks where unauthorized actors could reject
      *      legitimate pending transactions.
+     *      Reverts on validation failure.
      *
      *      For AutoApprove policies: requires a second initiator signature authorizing rejection
      *      For ManualApproval policies: requires threshold approvals for the rejection
@@ -318,7 +320,7 @@ library LibOrganizationAccountTransaction {
      * @param signatures Rejection signatures
      * @param proofs Merkle proofs and policy data
      */
-    function validateTransactionRejection(
+    function validateTransactionRejectionOrRevert(
         address account,
         address to,
         uint256 value,

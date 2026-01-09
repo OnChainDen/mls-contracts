@@ -76,7 +76,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the policy exists in the organization's policy tree
-        if (!LibOrganizationPolicy.policyExists(policyId, proofs.policy, proofs.policyProof)) {
+        if (!LibOrganizationPolicy.isPolicyInTree(policyId, proofs.policy, proofs.policyProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -257,7 +257,7 @@ library LibOrganizationAccountSignature {
         view
         returns (bool)
     {
-        address guardianAddress = LibOrganizationGuardian.guardian();
+        address guardianAddress = LibOrganizationGuardian.getGuardian();
 
         // Guardian signs the same hash structure as the initiator
         bytes32 guardianMessageHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);

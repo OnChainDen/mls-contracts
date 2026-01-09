@@ -68,19 +68,19 @@ library LibOrganizationMembers {
     }
 
     // ================================
-    // MODIFY MEMBERS
+    // SET MEMBERS
     // ================================
 
     /**
      * @notice Updates the global members merkle root
-     * @dev This is the only way to modify members. All member data is stored off-chain (IPFS).
+     * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
      *      Validates that ALL admins remain members in the new tree to prevent bricking.
      *      Emits MembersUpdated event with the IPFS CID for disaster recovery.
      * @param newMembersRoot The new merkle root containing all members
      * @param ipfsCid The IPFS CID where full member data is stored
      * @param adminValidation The validation data to verify all admins are in the new members tree
      */
-    function modifyMembers(
+    function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
         LibOrganizationAdmin.AdminMembershipValidation memory adminValidation

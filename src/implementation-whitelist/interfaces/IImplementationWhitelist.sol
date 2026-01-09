@@ -16,11 +16,17 @@ interface IImplementationWhitelist {
     }
 
     /**
-     * @notice Validates that an implementation address is whitelisted
+     * @notice Checks if an implementation address is whitelisted
      * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address to validate
+     * @param implementation The implementation address to check
      * @return True if the implementation is whitelisted, false otherwise
      * @dev The contract maintains separate whitelists for Account and Organization implementations
      */
-    function validateImplementation(ContractType contractType, address implementation) external view returns (bool);
+    function isImplementationWhitelisted(
+        ContractType contractType,
+        address implementation
+    )
+        external
+        view
+        returns (bool);
 }

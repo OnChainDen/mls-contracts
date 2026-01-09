@@ -47,10 +47,10 @@ library LibOrganizationSignatures {
 
     /**
      * @notice Validates that a nonce has not been used and marks it as used
-     * @dev This function will revert if the nonce has already been used
+     * @dev Reverts if the nonce has already been used
      * @param nonce The nonce to validate and consume
      */
-    function validateAndConsumeNonce(uint256 nonce) internal {
+    function validateAndConsumeNonceOrRevert(uint256 nonce) internal {
         LibOrganizationSignaturesStorage.Layout storage sigLayout = LibOrganizationSignaturesStorage.layout();
 
         if (sigLayout.usedNonces[nonce]) {

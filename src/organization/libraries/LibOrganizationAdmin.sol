@@ -27,7 +27,7 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Data needed to validate that all admins are members of the organization
-     * @dev Used by modifyMembers, modifyAdmins, and initialize to prevent bricking
+     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking
      * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
      * @param adminInOrgAdminTreeProofs Merkle proofs that each address is in adminsRoot
      * @param adminInOrgMembersTreeProofs Merkle proofs that each address is in membersRoot
@@ -174,7 +174,7 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Validates that all admins are members of the organization
-     * @dev Used by modifyMembers, modifyAdmins, and initialize to prevent bricking.
+     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
      *      Admin addresses must be in strictly ascending order to prevent duplicates.
      * @param validation The validation data containing admin addresses and proofs
      * @param adminsRoot The merkle root of the admin tree
@@ -221,7 +221,7 @@ library LibOrganizationAdmin {
 
     /**
      * @notice Validates the admin configuration parameters
-     * @dev Used by initialize and modifyAdmins to ensure valid admin configuration.
+     * @dev Used by initialize and setAdmins to ensure valid admin configuration.
      *      Validates that adminsRoot is not zero, adminCount is not zero, and votingThreshold is valid.
      * @param adminsRoot The merkle root of admin addresses
      * @param adminCount The number of admins
@@ -254,12 +254,12 @@ library LibOrganizationAdmin {
      * @notice Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
-    function adminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
+    function getAdminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
         return LibOrganizationAdminStorage.layout().adminPermission;
     }
 
     /**
-     * @notice Updates the admin permissions for the organization
+     * @notice Sets the admin permissions for the organization
      * @dev Validates that all new admins are members before updating.
      *      Admin addresses must be in ascending order.
      * @param newAdminsRoot The new merkle root of admin addresses
@@ -268,7 +268,7 @@ library LibOrganizationAdmin {
      * @param validation The validation data to verify all new admins are members
      * @param currentMembersRoot The current members root to validate against
      */
-    function modifyAdmins(
+    function setAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
@@ -315,7 +315,7 @@ library LibOrganizationAdmin {
      * @notice Validates that the provided signatures meet the admin authorization requirements
      * @dev This function computes the nonce, verifies that the signatures are from authorized admins
      *      using Merkle proofs, meets the required voting threshold, checks nonce and chainId for replay protection,
-     *      and marks the nonce as used. This function will revert if authorization fails.
+     *      and marks the nonce as used. Reverts if authorization fails.
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt A user-provided salt for nonce computation
@@ -324,7 +324,7 @@ library LibOrganizationAdmin {
      * @param signatures The signatures to validate
      * @param adminProofs The Merkle proofs for admin membership verification
      */
-    function validateAdminAuthorization(
+    function validateAdminAuthorizationOrRevert(
         OperationType operationType,
         bytes memory operationData,
         uint256 salt,
@@ -344,7 +344,7 @@ library LibOrganizationAdmin {
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
 
         // Validate and consume nonce for replay protection (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Get operation hash for signature verification
         // Note: isApproval is included to ensure rejection signatures cannot be used for execution and vice versa

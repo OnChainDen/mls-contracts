@@ -72,7 +72,7 @@ contract OrganizationFactory {
 
         // Validate that the implementation is whitelisted
         if (
-            !IImplementationWhitelist(whitelistAddress).validateImplementation(
+            !IImplementationWhitelist(whitelistAddress).isImplementationWhitelisted(
                 IImplementationWhitelist.ContractType.Organization, implementationAddress
             )
         ) {

@@ -138,17 +138,17 @@ library LibOrganizationGroups {
     }
 
     // ================================
-    // MODIFY GROUPS
+    // SET GROUPS
     // ================================
 
     /**
      * @notice Updates the global groups merkle root
-     * @dev This is the only way to modify groups. All group data is stored off-chain (IPFS).
+     * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
      *      Emits GroupsUpdated event with the IPFS CID for disaster recovery.
      * @param newGroupsRoot The new merkle root containing all groups
      * @param ipfsCid The IPFS CID where full group data is stored
      */
-    function modifyGroups(bytes32 newGroupsRoot, string calldata ipfsCid) internal {
+    function setGroups(bytes32 newGroupsRoot, string calldata ipfsCid) internal {
         LibOrganizationGroupsStorage.layout().groupsRoot = newGroupsRoot;
         emit GroupsUpdated(newGroupsRoot, ipfsCid);
     }

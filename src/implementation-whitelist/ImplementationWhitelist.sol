@@ -41,12 +41,12 @@ contract ImplementationWhitelist is Initializable, UUPSUpgradeable, Ownable, IIm
     }
 
     /**
-     * @notice Validates that an implementation address is whitelisted
+     * @notice Checks if an implementation address is whitelisted
      * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address to validate
+     * @param implementation The implementation address to check
      * @return True if the implementation is whitelisted, false otherwise
      */
-    function validateImplementation(
+    function isImplementationWhitelisted(
         ContractType contractType,
         address implementation
     )

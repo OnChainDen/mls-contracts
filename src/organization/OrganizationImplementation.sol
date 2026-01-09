@@ -144,7 +144,7 @@ contract OrganizationImplementation is
 
     /**
      * @notice Updates the global members merkle root
-     * @dev This is the only way to modify members. All member data is stored off-chain (IPFS).
+     * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
      *      Validates that all admins remain members in the new tree to prevent bricking.
      * @param newMembersRoot The new merkle root containing all members
      * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
@@ -154,7 +154,7 @@ contract OrganizationImplementation is
      * @param adminProofs The Merkle proofs for admin membership verification
      * @param adminValidation The validation data to verify all admins are in the new members tree
      */
-    function modifyMembers(
+    function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
         uint256 salt,
@@ -170,11 +170,11 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.ModifyMembers, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
-        LibOrganizationMembers.modifyMembers(newMembersRoot, ipfsCid, adminValidation);
+        LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, adminValidation);
     }
 
     // ================================
@@ -231,7 +231,7 @@ contract OrganizationImplementation is
 
     /**
      * @notice Updates the global groups merkle root
-     * @dev This is the only way to modify groups. All group data is stored off-chain (IPFS).
+     * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
      * @param newGroupsRoot The new merkle root containing all groups
      * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
      * @param salt A user-provided salt for nonce computation
@@ -239,7 +239,7 @@ contract OrganizationImplementation is
      * @param signatures The signatures from admin(s) authorizing this update
      * @param adminProofs The Merkle proofs for admin membership verification
      */
-    function modifyGroups(
+    function setGroups(
         bytes32 newGroupsRoot,
         string calldata ipfsCid,
         uint256 salt,
@@ -254,11 +254,11 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.ModifyGroups, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
-        LibOrganizationGroups.modifyGroups(newGroupsRoot, ipfsCid);
+        LibOrganizationGroups.setGroups(newGroupsRoot, ipfsCid);
     }
 
     // ================================
@@ -275,7 +275,7 @@ contract OrganizationImplementation is
 
     /**
      * @notice Updates the global policies merkle root
-     * @dev This is the only way to modify policies. All policy data is stored off-chain (IPFS).
+     * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
      * @param salt A user-provided salt for nonce computation
@@ -283,7 +283,7 @@ contract OrganizationImplementation is
      * @param signatures The signatures from admin(s) authorizing this update
      * @param adminProofs The Merkle proofs for admin membership verification
      */
-    function modifyPolicies(
+    function setPolicies(
         bytes32 newPoliciesRoot,
         string calldata ipfsCid,
         uint256 salt,
@@ -298,11 +298,11 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.ModifyPolicies, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
-        LibOrganizationPolicy.modifyPolicies(newPoliciesRoot, ipfsCid);
+        LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
     }
 
     /**
@@ -328,7 +328,7 @@ contract OrganizationImplementation is
         returns (uint256)
     {
         // Verify policy exists in merkle tree
-        if (!LibOrganizationPolicy.policyExists(policyId, policy, policyProof)) {
+        if (!LibOrganizationPolicy.isPolicyInTree(policyId, policy, policyProof)) {
             revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
         }
 
@@ -340,7 +340,7 @@ contract OrganizationImplementation is
     // ================================
 
     function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdmin.adminPermission();
+        return LibOrganizationAdmin.getAdminPermission();
     }
 
     function isNonceUsed(uint256 nonce) external view returns (bool) {
@@ -360,7 +360,7 @@ contract OrganizationImplementation is
     }
 
     /**
-     * @notice Updates the admin permissions for the organization
+     * @notice Sets the admin permissions for the organization
      * @dev Validates that all new admins are current members before updating.
      * @param newAdminsRoot The new merkle root of admin addresses
      * @param newAdminCount The number of admins in the new tree
@@ -371,7 +371,7 @@ contract OrganizationImplementation is
      * @param adminProofs The Merkle proofs for admin membership verification
      * @param adminValidation The validation data to verify all new admins are members
      */
-    function modifyAdmins(
+    function setAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
@@ -388,14 +388,14 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.ModifyAdmins, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
         // Get current members root for validation
         bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
 
-        LibOrganizationAdmin.modifyAdmins(
+        LibOrganizationAdmin.setAdmins(
             newAdminsRoot, newAdminCount, newVotingThreshold, adminValidation, currentMembersRoot
         );
     }
@@ -426,7 +426,7 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             operationType, operationData, salt, expirationTimestamp, false, signatures, adminProofs
         );
 
@@ -442,10 +442,10 @@ contract OrganizationImplementation is
     }
 
     function guardian() external view returns (address) {
-        return LibOrganizationGuardian.guardian();
+        return LibOrganizationGuardian.getGuardian();
     }
 
-    function updateGuardian(
+    function setGuardian(
         address newGuardian,
         uint256 salt,
         uint256 expirationTimestamp,
@@ -459,11 +459,11 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.UpdateGuardian, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
-        LibOrganizationGuardian.updateGuardian(newGuardian);
+        LibOrganizationGuardian.setGuardian(newGuardian);
     }
 
     // ================================
@@ -504,14 +504,14 @@ contract OrganizationImplementation is
     {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.UpgradeAccount, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
         // 2. Validate implementation against whitelist
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
         if (
-            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
+            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).isImplementationWhitelisted(
                 IImplementationWhitelist.ContractType.Account, newImplementation
             )
         ) {
@@ -553,7 +553,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(create2Salt);
 
         // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.DeployAccount,
             operationData,
             adminSignatureSalt,
@@ -618,10 +618,10 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
 
         // Validate and consume nonce (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the transaction against the policy and signatures (with merkle proofs)
-        LibOrganizationAccountTransaction.validateTransactionApproval(
+        LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert(
             account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
         );
 
@@ -670,10 +670,10 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
 
         // Validate and consume nonce (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the rejection authorization (with merkle proofs)
-        LibOrganizationAccountTransaction.validateTransactionRejection(
+        LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert(
             account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
         );
 
@@ -801,14 +801,14 @@ contract OrganizationImplementation is
     {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorization(
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
             OperationType.Upgrade, operationData, salt, expirationTimestamp, true, signatures, adminProofs
         );
 
         // 2. Validate implementation against whitelist
         UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
         if (
-            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
+            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).isImplementationWhitelisted(
                 IImplementationWhitelist.ContractType.Organization, newImplementation
             )
         ) {

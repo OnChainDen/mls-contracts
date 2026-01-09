@@ -85,13 +85,13 @@ library LibOrganizationPolicy {
     // ================================
 
     /**
-     * @notice Verifies that a policy exists in the global merkle tree
+     * @notice Checks if a policy exists in the global merkle tree
      * @param policyId The unique identifier of the policy
      * @param policy The policy data
      * @param proof The merkle proof for the policy
-     * @return True if the policy exists in the tree, false otherwise
+     * @return True if the policy is in the tree, false otherwise
      */
-    function policyExists(
+    function isPolicyInTree(
         uint256 policyId,
         Policies.Policy memory policy,
         bytes32[] memory proof
@@ -106,17 +106,17 @@ library LibOrganizationPolicy {
     }
 
     // ================================
-    // MODIFY POLICIES
+    // SET POLICIES
     // ================================
 
     /**
      * @notice Updates the global policies merkle root
-     * @dev This is the only way to modify policies. All policy data is stored off-chain (IPFS).
+     * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
      *      Emits PoliciesUpdated event with the IPFS CID for disaster recovery.
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored
      */
-    function modifyPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) internal {
+    function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) internal {
         LibOrganizationPolicyStorage.layout().policiesRoot = newPoliciesRoot;
         emit PoliciesUpdated(newPoliciesRoot, ipfsCid);
     }
@@ -429,7 +429,7 @@ library LibOrganizationPolicy {
 
         // Case: Parameter constraints defined - validate them
         // Verify parameters match constraints
-        return doParametersMatchConstraints(constraints, data, addressParameterProofs);
+        return areParametersAllowedByConstraints(constraints, data, addressParameterProofs);
     }
 
     // ================================
@@ -742,7 +742,7 @@ library LibOrganizationPolicy {
      * @param addressParameterProofs Merkle proofs for address parameters with List constraints
      * @return True if all constraints are satisfied, false otherwise
      */
-    function doParametersMatchConstraints(
+    function areParametersAllowedByConstraints(
         bytes calldata parameterConstraints,
         bytes calldata data,
         bytes32[][] calldata addressParameterProofs

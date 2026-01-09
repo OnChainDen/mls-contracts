@@ -40,15 +40,15 @@ library LibOrganizationGuardian {
      * @notice Gets the current guardian address
      * @return The current guardian address
      */
-    function guardian() internal view returns (address) {
+    function getGuardian() internal view returns (address) {
         return LibOrganizationGuardianStorage.layout().guardian;
     }
 
     /**
-     * @notice Updates the guardian address for the organization
+     * @notice Sets the guardian address for the organization
      * @param newGuardian The new guardian address
      */
-    function updateGuardian(address newGuardian) internal {
+    function setGuardian(address newGuardian) internal {
         // Validate input parameters
         if (newGuardian == address(0)) {
             revert LibOrganizationAdmin.AdminOperationRejected("Guardian address cannot be zero address");
