@@ -140,37 +140,6 @@ library LibOrganizationAccountSignature {
         }
 
         // Route to appropriate validation based on policy type
-        return _checkPolicyType(
-            account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
-        );
-    }
-
-    /**
-     * @notice Routes validation based on policy type (AutoApprove vs ManualApproval)
-     * @dev For AutoApprove policies, initiator signature is sufficient.
-     *      For ManualApproval policies, additional reviewer signatures are required.
-     * @param account The account address whose signature is being validated
-     * @param hash The message hash that was signed
-     * @param policyId The policy ID being used for validation
-     * @param expirationTimestamp When the signature request expires
-     * @param approverSignatures Concatenated signatures from initiator and approvers
-     * @param initiatorSignature The initiator's signature (extracted from approverSignatures)
-     * @param proofs Merkle proofs and policy data
-     * @return ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
-     */
-    function _checkPolicyType(
-        address account,
-        bytes32 hash,
-        uint256 policyId,
-        uint256 expirationTimestamp,
-        bytes memory approverSignatures,
-        bytes memory initiatorSignature,
-        Policies.ValidationProofs memory proofs
-    )
-        private
-        view
-        returns (bytes4)
-    {
         Policies.PolicyType pType = proofs.policy.config.approval.policyType;
 
         // AutoApprove: Initiator signature alone is sufficient
