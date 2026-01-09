@@ -16,6 +16,12 @@ interface IImplementationWhitelist {
     }
 
     /**
+     * @notice Emitted when an implementation is not whitelisted
+     * @param implementation The implementation address that was not whitelisted
+     */
+    error ImplementationNotWhitelisted(address implementation);
+
+    /**
      * @notice Checks if an implementation address is whitelisted
      * @param contractType The type of contract (Account or Organization)
      * @param implementation The implementation address to check
@@ -29,4 +35,17 @@ interface IImplementationWhitelist {
         external
         view
         returns (bool);
+
+    /**
+     * @notice Validates that an implementation address is whitelisted, reverts if not
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementation The implementation address to check
+     * @dev Reverts with ImplementationNotWhitelisted if the implementation is not whitelisted
+     */
+    function validateIsImplementationWhitelistedOrRevert(
+        ContractType contractType,
+        address implementation
+    )
+        external
+        view;
 }

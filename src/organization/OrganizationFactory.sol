@@ -71,13 +71,9 @@ contract OrganizationFactory {
         }
 
         // Validate that the implementation is whitelisted
-        if (
-            !IImplementationWhitelist(whitelistAddress).isImplementationWhitelisted(
-                IImplementationWhitelist.ContractType.Organization, implementationAddress
-            )
-        ) {
-            revert OrganizationImplementation.ImplementationNotWhitelisted(implementationAddress);
-        }
+        IImplementationWhitelist(whitelistAddress).validateIsImplementationWhitelistedOrRevert(
+            IImplementationWhitelist.ContractType.Organization, implementationAddress
+        );
 
         // Deploy the organization proxy using CREATE2
         bytes memory bytecode =

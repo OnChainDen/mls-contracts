@@ -86,12 +86,6 @@ contract OrganizationImplementation is
     event AdminOperationRejected(OperationType indexed operationType, bytes operationData, uint256 indexed nonce);
 
     /**
-     * @notice Emitted when an implementation is not whitelisted
-     * @param implementation The implementation address that was not whitelisted
-     */
-    error ImplementationNotWhitelisted(address implementation);
-
-    /**
      * @notice Emitted when the account implementation has not been set
      */
     error AccountImplementationNotSet();
@@ -509,14 +503,8 @@ contract OrganizationImplementation is
         );
 
         // 2. Validate implementation against whitelist
-        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        if (
-            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).isImplementationWhitelisted(
-                IImplementationWhitelist.ContractType.Account, newImplementation
-            )
-        ) {
-            revert ImplementationNotWhitelisted(newImplementation);
-        }
+        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(IImplementationWhitelist.ContractType.Account, newImplementation);
 
         // 3. Update the account implementation in storage
         LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
@@ -806,14 +794,10 @@ contract OrganizationImplementation is
         );
 
         // 2. Validate implementation against whitelist
-        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        if (
-            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).isImplementationWhitelisted(
-                IImplementationWhitelist.ContractType.Organization, newImplementation
-            )
-        ) {
-            revert ImplementationNotWhitelisted(newImplementation);
-        }
+        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(
+            IImplementationWhitelist.ContractType.Organization, newImplementation
+        );
     }
 
     /**

@@ -59,6 +59,24 @@ contract ImplementationWhitelist is Initializable, UUPSUpgradeable, Ownable, IIm
     }
 
     /**
+     * @notice Validates that an implementation address is whitelisted, reverts if not
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementation The implementation address to check
+     */
+    function validateIsImplementationWhitelistedOrRevert(
+        ContractType contractType,
+        address implementation
+    )
+        external
+        view
+        override
+    {
+        if (!LibImplementationWhitelistStorage.layout().whitelisted[contractType][implementation]) {
+            revert ImplementationNotWhitelisted(implementation);
+        }
+    }
+
+    /**
      * @notice Whitelists and/or unwhitelists implementation addresses
      * @param contractType The type of contract (Account or Organization)
      * @param toWhitelist The implementation addresses to whitelist
