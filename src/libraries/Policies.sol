@@ -123,7 +123,7 @@ library Policies {
     ///      - Exact + String: abi.encode(bytes32 keccak256Hash) - hash of expected string
     ///      - Range + Uint: abi.encode(uint256 min, uint256 max)
     ///      - Range + Int: abi.encode(int256 min, int256 max)
-    ///      - List + Address: abi.encode(bytes32 merkleRoot) - root of allowed addresses merkle tree
+    ///      - OneOf + Address: abi.encode(bytes32 merkleRoot) - root of allowed addresses merkle tree
     ///
     /// @dev The paramCalldataHeadSlotCount field specifies how many 32-byte head slots this parameter occupies
     ///      (must be >= 1). In ABI encoding, the "head" contains values for static types or offset pointers for
@@ -137,7 +137,7 @@ library Policies {
         Any, // Any value is accepted (no constraint)
         Exact, // Value must exactly match the specified value
         Range, // Value must be within min/max bounds (for numeric types)
-        List // Value must be one of the allowed values in a list
+        OneOf // Value must be one of the allowed values in a list
 
     }
 
@@ -148,12 +148,14 @@ library Policies {
      * @param constraintType How the constraint should be evaluated
      * @param paramCalldataHeadSlotCount Number of 32-byte head slots this parameter occupies in calldata (must be >= 1)
      * @param comparisonData ABI-encoded data used for comparison based on constraintType
+     * @param paramValueInListProof Merkle proof for OneOf constraints (empty for other constraint types)
      */
     struct ParameterConstraint {
         ParamType paramType;
         ConstraintType constraintType;
         uint8 paramCalldataHeadSlotCount; // Number of 32-byte head slots this parameter occupies (must be >= 1)
         bytes comparisonData;
+        bytes32[] paramValueInListProof; // Merkle proof for OneOf constraints (empty otherwise)
     }
 
     // ================================
@@ -339,8 +341,7 @@ library Policies {
      * @param sourceAccountProof Proof that source account is allowed by policy
      * @param destinationProof Proof that destination is allowed by policy
      * @param functionProof Proof that function selector is allowed by policy
-     * @param constraints ABI-encoded parameter constraints for function calls
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
+     * @param constraints ABI-encoded parameter constraints for function calls (includes proofs for OneOf constraints)
      * @param initiatorProofs Proofs for initiator membership verification
      * @param approverProofs Proofs for approver membership verification
      */
@@ -351,13 +352,6 @@ library Policies {
         bytes32[] destinationProof;
         bytes32[] functionProof;
         bytes constraints;
-        // Merkle proofs for address parameters with List constraints.
-        // This is bytes32[][] because:
-        // - Outer array: One element per parameter that has a List constraint (a function
-        //   can have multiple address parameters, each with their own allowed addresses tree)
-        // - Inner array: The merkle proof itself (array of sibling hashes from leaf to root)
-        bytes32[][] addressParameterProofs;
-        // Membership proofs for initiator and approvers
         InitiatorProofs initiatorProofs;
         ApproverProofs approverProofs;
     }

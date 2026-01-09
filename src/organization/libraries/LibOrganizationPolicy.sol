@@ -196,7 +196,7 @@ library LibOrganizationPolicy {
             }
 
             // Case: The transaction parameters do not match the policy's constraints
-            if (!_areParametersAllowedByConstraints(proofs.constraints, data, proofs.addressParameterProofs)) {
+            if (!_areParametersAllowedByConstraints(proofs.constraints, data)) {
                 return false;
             }
 
@@ -629,16 +629,15 @@ library LibOrganizationPolicy {
      * @notice Checks if transaction parameters match the specified constraints
      * @dev Iterates through each constraint and validates the corresponding parameter.
      *      Supports various parameter types (uint, int, address, bool, bytes, etc.) and
-     *      constraint types (exact, range, list).
+     *      constraint types (exact, range, list). Each constraint contains its own proof
+     *      for OneOf constraints, eliminating the need for separate proof arrays.
      * @param parameterConstraints ABI-encoded array of ParameterConstraint structs
      * @param data The transaction calldata
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
      * @return True if all constraints are satisfied, false otherwise
      */
     function _areParametersAllowedByConstraints(
         bytes calldata parameterConstraints,
-        bytes calldata data,
-        bytes32[][] calldata addressParameterProofs
+        bytes calldata data
     )
         private
         pure
@@ -655,17 +654,17 @@ library LibOrganizationPolicy {
         if (constraints.length == 0) return true;
 
         // Use a helper function to process constraints (reduces stack depth)
-        return _processConstraints(constraints, data, addressParameterProofs);
+        return _processConstraints(constraints, data);
     }
 
     /**
      * @notice Internal helper to process parameter constraints
-     * @dev Separated to manage stack depth in the main function
+     * @dev Separated to manage stack depth in the main function.
+     *      Each constraint is self-contained with its own merkle proof for OneOf constraints.
      */
     function _processConstraints(
         Policies.ParameterConstraint[] memory constraints,
-        bytes calldata data,
-        bytes32[][] calldata addressParameterProofs
+        bytes calldata data
     )
         private
         pure
@@ -674,53 +673,34 @@ library LibOrganizationPolicy {
         // Validate each parameter against its constraint
         // Parameters start at byte 4 (after the selector)
         uint256 paramCalldataOffset = 4;
-        // Track which address List proof to use (incremented for each List constraint encountered)
-        uint256 addressListProofIndex = 0;
 
         for (uint256 i = 0; i < constraints.length; ++i) {
-            uint256 paramCalldataHeadSlotCount = uint256(constraints[i].paramCalldataHeadSlotCount);
+            // Number of bytes this parameter's head occupies in calldata
+            uint256 paramCalldataHeadSize = uint256(constraints[i].paramCalldataHeadSlotCount) * 32;
 
             // Case: Constraint is not configured correctly (paramCalldataHeadSlotCount == 0)
-            if (paramCalldataHeadSlotCount == 0) {
+            if (paramCalldataHeadSize == 0) {
                 return false;
             }
 
-            // Case: Transaction data is too short for this parameter (not enough data to extract the parameter value)
-            if (data.length < paramCalldataOffset + 32) {
+            // Case: Transaction data is too short for this parameter (not enough data for the full parameter head)
+            if (data.length < paramCalldataOffset + paramCalldataHeadSize) {
                 return false;
             }
 
-            // Extract parameter value and get proof if needed (in separate scope to reduce stack depth)
-            {
-                bytes32 paramHeadValue = bytes32(data[paramCalldataOffset:paramCalldataOffset + 32]);
-                bytes32[] memory addressListProof;
+            // Extract the first 32 bytes of the parameter head for validation
+            // Note: For multi-slot params like static arrays/structs, only "Any" constraint is supported,
+            // so we don't need to extract the full parameter value
+            bytes32 paramHeadValue = bytes32(data[paramCalldataOffset:paramCalldataOffset + 32]);
 
-                // Case: The parameter is an Address and has a List constraint
-                // Get the merkle proof for the List constraint on the Address parameter
-                if (
-                    constraints[i].constraintType == Policies.ConstraintType.List
-                        && constraints[i].paramType == Policies.ParamType.Address
-                ) {
-                    // Case: This address List constraint is not configured correctly (missing merkle proof)
-                    if (addressListProofIndex >= addressParameterProofs.length) {
-                        return false;
-                    }
-                    // Get the merkle proof for the List constraint on the Address parameter
-                    addressListProof = addressParameterProofs[addressListProofIndex];
-
-                    // Move on to the next address List proof index in case the function
-                    // has multiple address parameters with List constraints
-                    ++addressListProofIndex;
-                }
-
-                // Case: The parameter does not satisfy its constraint
-                if (!_isParameterAllowedByConstraint(constraints[i], paramHeadValue, data, addressListProof)) {
-                    return false;
-                }
+            // Case: The parameter does not satisfy its constraint
+            // Each constraint carries its own proof for OneOf constraints
+            if (!_isParameterAllowedByConstraint(constraints[i], paramHeadValue, data)) {
+                return false;
             }
 
             // Move on to the next parameter in calldata
-            paramCalldataOffset += paramCalldataHeadSlotCount * 32;
+            paramCalldataOffset += paramCalldataHeadSize;
         }
 
         return true;
@@ -775,7 +755,7 @@ library LibOrganizationPolicy {
             (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
             return actualValue >= minValue && actualValue <= maxValue;
         }
-        // Uint doesn't support List constraint
+        // Uint doesn't support OneOf constraint
         return false;
     }
 
@@ -805,17 +785,17 @@ library LibOrganizationPolicy {
             (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
             return actualValue >= minValue && actualValue <= maxValue;
         }
-        // Int doesn't support List constraint
+        // Int doesn't support OneOf constraint
         return false;
     }
 
     /**
      * @notice Validates an Address parameter against its constraint
-     * @dev Address supports Exact and List constraints
+     * @dev Address supports Exact and OneOf constraints
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value or merkle root encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
-     * @param addressListProof Merkle proof for List constraint (empty for Exact constraint)
+     * @param addressListProof Merkle proof for OneOf constraint (empty for Exact constraint)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isAddressParameterAllowedByConstraint(
@@ -833,7 +813,7 @@ library LibOrganizationPolicy {
             address expectedValue = abi.decode(comparisonData, (address));
             return actualValue == expectedValue;
         }
-        if (constraintType == Policies.ConstraintType.List) {
+        if (constraintType == Policies.ConstraintType.OneOf) {
             // comparisonData contains the merkle root of allowed addresses
             bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
             // Compute leaf for the actual address using double-hashing
@@ -958,18 +938,17 @@ library LibOrganizationPolicy {
 
     /**
      * @notice Validates a single parameter against its constraint
-     * @dev Dispatches to type-specific validation functions based on parameter type
-     * @param constraint The constraint to validate against
+     * @dev Dispatches to type-specific validation functions based on parameter type.
+     *      For Address+OneOf constraints, the merkle proof is read from constraint.paramValueInListProof.
+     * @param constraint The constraint to validate against (includes proof for OneOf constraints)
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @param data The full transaction calldata (for dynamic types)
-     * @param addressListProof Merkle proof for List constraint on Address type (empty for other constraints)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isParameterAllowedByConstraint(
         Policies.ParameterConstraint memory constraint,
         bytes32 paramHeadValue,
-        bytes calldata data,
-        bytes32[] memory addressListProof
+        bytes calldata data
     )
         private
         pure
@@ -998,8 +977,9 @@ library LibOrganizationPolicy {
         }
 
         if (pType == Policies.ParamType.Address) {
-            return
-                _isAddressParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, addressListProof);
+            return _isAddressParameterAllowedByConstraint(
+                constraintType, comparisonData, paramHeadValue, constraint.paramValueInListProof
+            );
         }
 
         if (pType == Policies.ParamType.FixedBytes) {
