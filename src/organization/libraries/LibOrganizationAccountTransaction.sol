@@ -332,39 +332,15 @@ library LibOrganizationAccountTransaction {
             revert PolicyDoesNotApply(policyId);
         }
 
-        // Route to appropriate rejection validation
-        _processRejection(params, data, signatures, initiatorSignature, proofs);
-    }
-
-    /**
-     * @notice Routes rejection validation based on policy type
-     * @dev Different policy types have different rejection requirements
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param signatures The rejection signatures
-     * @param initiatorSignature The original initiator's signature
-     * @param proofs Merkle proofs and policy data
-     */
-    function _processRejection(
-        TxParams memory params,
-        bytes calldata data,
-        bytes memory signatures,
-        bytes memory initiatorSignature,
-        Policies.ValidationProofs calldata proofs
-    )
-        private
-        view
-    {
+        // Route to appropriate rejection validation based on policy type
         Policies.PolicyType pType = proofs.policy.config.approval.policyType;
 
         // AutoApprove: Need an authorized initiator to sign the rejection
         if (pType == Policies.PolicyType.AutoApprove) {
             _validateAutoApproveRejection(params, data, signatures, proofs);
-            return;
         }
-
         // ManualApproval: Need threshold approvals for the rejection
-        if (pType == Policies.PolicyType.RequireManualApproval) {
+        else if (pType == Policies.PolicyType.RequireManualApproval) {
             _validateManualRejection(params, data, signatures, initiatorSignature, proofs);
         }
     }
