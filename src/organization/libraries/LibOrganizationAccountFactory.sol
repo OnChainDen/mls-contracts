@@ -86,7 +86,7 @@ library LibOrganizationAccountFactory {
      * @param accountAddress The address of the account to check
      * @return True if the account was deployed by this organization, false otherwise
      */
-    function isAccountDeployed(address accountAddress) internal view returns (bool) {
+    function isAccountDeployedByOrganization(address accountAddress) internal view returns (bool) {
         return LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress];
     }
 }

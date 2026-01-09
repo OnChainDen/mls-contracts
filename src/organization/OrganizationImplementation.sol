@@ -595,7 +595,7 @@ contract OrganizationImplementation is
         onlyGuardian
     {
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
         }
 
@@ -647,7 +647,7 @@ contract OrganizationImplementation is
         onlyGuardian
     {
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
         }
 
@@ -700,7 +700,7 @@ contract OrganizationImplementation is
         }
 
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
+        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
         }
 
