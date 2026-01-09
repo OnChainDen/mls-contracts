@@ -70,21 +70,6 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Case: Policy is not in the organization's policy tree
-        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
-            return ERC1271_INVALID_VALUE;
-        }
-
-        // Case: Policy can't be used for signature operations
-        if (proofs.policy.config.transactionType != Policies.TransactionType.Signatures) {
-            return ERC1271_INVALID_VALUE;
-        }
-
-        // Case: Policy doesn't apply to this specific source account
-        if (!LibOrganizationPolicy.isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) {
-            return ERC1271_INVALID_VALUE;
-        }
-
         // Case: Guardian signature is invalid
         if (!_isGuardianSignatureValid(account, hash, policyId, expirationTimestamp, guardianSignature)) {
             return ERC1271_INVALID_VALUE;
@@ -99,8 +84,8 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Case: Initiator is not authorized by this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+        // Case: Signature is not allowed by the policy
+        if (!_isSignatureAllowedByPolicy(account, initiator, policyId, proofs)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -124,6 +109,52 @@ library LibOrganizationAccountSignature {
         }
 
         return ERC1271_INVALID_VALUE;
+    }
+
+    /**
+     * @notice Checks if a signature operation is allowed by the policy
+     * @dev Validates that:
+     *      1. The policy exists in the organization's policy tree
+     *      2. The policy is configured for signature operations
+     *      3. The policy applies to the source account
+     *      4. The initiator is authorized by the policy
+     * @param account The account address whose signature is being validated
+     * @param initiator The address that initiated the signature request
+     * @param policyId The ID of the policy being used for validation
+     * @param proofs Merkle proofs and policy data for validation
+     * @return True if the signature is allowed by the policy, false otherwise
+     */
+    function _isSignatureAllowedByPolicy(
+        address account,
+        address initiator,
+        uint256 policyId,
+        Policies.ValidationProofs memory proofs
+    )
+        private
+        view
+        returns (bool)
+    {
+        // Case: Policy is not in the organization's policy tree
+        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
+            return false;
+        }
+
+        // Case: Policy can't be used for signature operations
+        if (proofs.policy.config.transactionType != Policies.TransactionType.Signatures) {
+            return false;
+        }
+
+        // Case: Policy doesn't apply to this specific source account
+        if (!LibOrganizationPolicy.isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) {
+            return false;
+        }
+
+        // Case: Initiator is not authorized by this policy
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
