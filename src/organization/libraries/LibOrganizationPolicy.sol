@@ -190,11 +190,12 @@ library LibOrganizationPolicy {
             if (LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The function being called by the transaction is not allowed by the policy
-            if (
-                !_isFunctionAllowedByPolicy(
-                    proofs.policy, data, proofs.functionProof, proofs.constraints, proofs.addressParameterProofs
-                )
-            ) {
+            if (!_isFunctionAllowedByPolicy(proofs.policy, data, proofs.functionProof, proofs.constraints)) {
+                return false;
+            }
+
+            // Case: The transaction parameters do not match the policy's constraints
+            if (!_areParametersAllowedByConstraints(proofs.constraints, data, proofs.addressParameterProofs)) {
                 return false;
             }
 
@@ -395,16 +396,14 @@ library LibOrganizationPolicy {
      * @param policy The policy to check against
      * @param data The transaction calldata
      * @param functionProof The merkle proof for the function
-     * @param constraints The parameter constraints to verify
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
+     * @param constraints The parameter constraints to verify (used to compute the constraints hash)
      * @return True if the function matches, false otherwise
      */
     function _isFunctionAllowedByPolicy(
         Policies.Policy calldata policy,
         bytes calldata data,
         bytes32[] calldata functionProof,
-        bytes calldata constraints,
-        bytes32[][] calldata addressParameterProofs
+        bytes calldata constraints
     )
         private
         pure
@@ -424,13 +423,7 @@ library LibOrganizationPolicy {
 
         // Verify function (selector + constraints hash) is in the allowed functions merkle tree
         bytes32 funcLeaf = _computeFunctionLeaf(selector, constraintsHash);
-        if (!MerkleProof.verify(functionProof, policy.roots.allowedFunctionsRoot, funcLeaf)) {
-            return false;
-        }
-
-        // Case: Parameter constraints defined - validate them
-        // Verify parameters match constraints
-        return areParametersAllowedByConstraints(constraints, data, addressParameterProofs);
+        return MerkleProof.verify(functionProof, policy.roots.allowedFunctionsRoot, funcLeaf);
     }
 
     // ================================
@@ -641,12 +634,12 @@ library LibOrganizationPolicy {
      * @param addressParameterProofs Merkle proofs for address parameters with List constraints
      * @return True if all constraints are satisfied, false otherwise
      */
-    function areParametersAllowedByConstraints(
+    function _areParametersAllowedByConstraints(
         bytes calldata parameterConstraints,
         bytes calldata data,
         bytes32[][] calldata addressParameterProofs
     )
-        internal
+        private
         pure
         returns (bool)
     {
