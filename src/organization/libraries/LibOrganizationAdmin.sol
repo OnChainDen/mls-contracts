@@ -388,7 +388,7 @@ library LibOrganizationAdmin {
             bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
             // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSigner(signature);
+            address signer = LibOrganizationSignatures.extractSignerAddress(signature);
 
             // Case: Signer address is invalid
             if (signer == address(0)) continue;

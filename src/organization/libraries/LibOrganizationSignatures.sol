@@ -66,7 +66,7 @@ library LibOrganizationSignatures {
      * @param signature The signature to extract the signer from
      * @return The signer address, or address(0) if invalid
      */
-    function extractSigner(bytes memory signature) internal pure returns (address) {
+    function extractSignerAddress(bytes memory signature) internal pure returns (address) {
         if (signature.length < 20) {
             return address(0);
         }
