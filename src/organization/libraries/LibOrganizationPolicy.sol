@@ -732,8 +732,238 @@ library LibOrganizationPolicy {
     }
 
     /**
+     * @notice Validates a Bool parameter against its constraint
+     * @dev Bool only supports Exact constraint
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected value encoded as bytes
+     * @param paramHeadValue The parameter value (first 32 bytes)
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isBoolParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue
+    )
+        private
+        pure
+        returns (bool)
+    {
+        if (constraintType != Policies.ConstraintType.Exact) return false;
+        bool expectedValue = abi.decode(comparisonData, (bool));
+        bool actualValue = uint256(paramHeadValue) != 0;
+        return actualValue == expectedValue;
+    }
+
+    /**
+     * @notice Validates a Uint parameter against its constraint
+     * @dev Uint supports Exact and Range constraints (also used for enums)
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected value(s) encoded as bytes
+     * @param paramHeadValue The parameter value (first 32 bytes)
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isUintParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue
+    )
+        private
+        pure
+        returns (bool)
+    {
+        uint256 actualValue = uint256(paramHeadValue);
+        if (constraintType == Policies.ConstraintType.Exact) {
+            uint256 expectedValue = abi.decode(comparisonData, (uint256));
+            return actualValue == expectedValue;
+        }
+        if (constraintType == Policies.ConstraintType.Range) {
+            (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
+            return actualValue >= minValue && actualValue <= maxValue;
+        }
+        // Uint doesn't support List constraint
+        return false;
+    }
+
+    /**
+     * @notice Validates an Int parameter against its constraint
+     * @dev Int supports Exact and Range constraints
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected value(s) encoded as bytes
+     * @param paramHeadValue The parameter value (first 32 bytes)
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isIntParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue
+    )
+        private
+        pure
+        returns (bool)
+    {
+        int256 actualValue = int256(uint256(paramHeadValue));
+        if (constraintType == Policies.ConstraintType.Exact) {
+            int256 expectedValue = abi.decode(comparisonData, (int256));
+            return actualValue == expectedValue;
+        }
+        if (constraintType == Policies.ConstraintType.Range) {
+            (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
+            return actualValue >= minValue && actualValue <= maxValue;
+        }
+        // Int doesn't support List constraint
+        return false;
+    }
+
+    /**
+     * @notice Validates an Address parameter against its constraint
+     * @dev Address supports Exact and List constraints
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected value or merkle root encoded as bytes
+     * @param paramHeadValue The parameter value (first 32 bytes)
+     * @param addressListProof Merkle proof for List constraint (empty for Exact constraint)
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isAddressParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue,
+        bytes32[] memory addressListProof
+    )
+        private
+        pure
+        returns (bool)
+    {
+        address actualValue = address(uint160(uint256(paramHeadValue)));
+        if (constraintType == Policies.ConstraintType.Exact) {
+            address expectedValue = abi.decode(comparisonData, (address));
+            return actualValue == expectedValue;
+        }
+        if (constraintType == Policies.ConstraintType.List) {
+            // comparisonData contains the merkle root of allowed addresses
+            bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
+            // Compute leaf for the actual address using double-hashing
+            bytes32 addressLeaf = MerkleUtils.computeAddressLeaf(actualValue);
+            // Verify the address is in the allowed addresses merkle tree
+            return MerkleProof.verify(addressListProof, allowedAddressesRoot, addressLeaf);
+        }
+        // Address doesn't support Range constraint
+        return false;
+    }
+
+    /**
+     * @notice Validates a FixedBytes parameter against its constraint
+     * @dev FixedBytes (bytes1-bytes32) only supports Exact constraint.
+     *      For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned).
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected value encoded as bytes
+     * @param paramHeadValue The parameter value (first 32 bytes)
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isFixedBytesParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue
+    )
+        private
+        pure
+        returns (bool)
+    {
+        if (constraintType != Policies.ConstraintType.Exact) return false;
+        bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
+        return paramHeadValue == expectedValue;
+    }
+
+    /**
+     * @notice Validates a dynamic Bytes parameter against its constraint
+     * @dev Dynamic bytes only supports Exact constraint (hash comparison).
+     *      The paramHeadValue contains the offset to the data location in calldata.
+     *      The comparisonData should contain the keccak256 hash of the expected bytes.
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected hash encoded as bytes
+     * @param paramHeadValue The parameter value (offset to bytes data)
+     * @param data The full transaction calldata
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isBytesParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue,
+        bytes calldata data
+    )
+        private
+        pure
+        returns (bool)
+    {
+        if (constraintType != Policies.ConstraintType.Exact) return false;
+
+        // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
+        uint256 offset = uint256(paramHeadValue);
+
+        // The offset is relative to the start of the encoded parameters (after selector)
+        // So actual position in data = 4 (selector) + offset
+        uint256 dataPosition = 4 + offset;
+
+        // First 32 bytes at that position is the length
+        if (data.length < dataPosition + 32) return false;
+
+        uint256 bytesLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
+
+        // Check we have enough data for the bytes content
+        if (data.length < dataPosition + 32 + bytesLength) return false;
+
+        // Hash the actual bytes content
+        bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + bytesLength]);
+        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
+        return actualHash == expectedHash;
+    }
+
+    /**
+     * @notice Validates a String parameter against its constraint
+     * @dev String only supports Exact constraint (hash comparison).
+     *      The paramHeadValue contains the offset to the string data in calldata.
+     *      The comparisonData should contain the keccak256 hash of the expected string.
+     * @param constraintType The type of constraint to apply
+     * @param comparisonData The expected hash encoded as bytes
+     * @param paramHeadValue The parameter value (offset to string data)
+     * @param data The full transaction calldata
+     * @return True if the parameter satisfies the constraint, false otherwise
+     */
+    function _isStringParameterAllowedByConstraint(
+        Policies.ConstraintType constraintType,
+        bytes memory comparisonData,
+        bytes32 paramHeadValue,
+        bytes calldata data
+    )
+        private
+        pure
+        returns (bool)
+    {
+        if (constraintType != Policies.ConstraintType.Exact) return false;
+
+        // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
+        uint256 offset = uint256(paramHeadValue);
+
+        // The offset is relative to the start of the encoded parameters (after selector)
+        // So actual position in data = 4 (selector) + offset
+        uint256 dataPosition = 4 + offset;
+
+        // First 32 bytes at that position is the string length
+        if (data.length < dataPosition + 32) return false;
+
+        uint256 strLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
+
+        // Check we have enough data for the string content
+        if (data.length < dataPosition + 32 + strLength) return false;
+
+        // Hash the actual string content
+        bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + strLength]);
+        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
+        return actualHash == expectedHash;
+    }
+
+    /**
      * @notice Validates a single parameter against its constraint
-     * @dev Handles different parameter types and constraint types
+     * @dev Dispatches to type-specific validation functions based on parameter type
      * @param constraint The constraint to validate against
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @param data The full transaction calldata (for dynamic types)
@@ -754,131 +984,37 @@ library LibOrganizationPolicy {
         Policies.ConstraintType constraintType = constraint.constraintType;
         bytes memory comparisonData = constraint.comparisonData;
 
-        // Handle Bool type
-        // Bool only supports Exact constraint
         if (pType == Policies.ParamType.Bool) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-            bool expectedValue = abi.decode(comparisonData, (bool));
-            bool actualValue = uint256(paramHeadValue) != 0;
-            return actualValue == expectedValue;
+            return _isBoolParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
         }
 
-        // Handle Uint type (and enums which are treated as uint)
         if (pType == Policies.ParamType.Uint) {
-            uint256 actualValue = uint256(paramHeadValue);
-            if (constraintType == Policies.ConstraintType.Exact) {
-                uint256 expectedValue = abi.decode(comparisonData, (uint256));
-                return actualValue == expectedValue;
-            }
-            if (constraintType == Policies.ConstraintType.Range) {
-                (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
-                return actualValue >= minValue && actualValue <= maxValue;
-            }
-            // Uint doesn't support List constraint
-            return false;
+            return _isUintParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
         }
 
-        // Handle Int type
         if (pType == Policies.ParamType.Int) {
-            int256 actualValue = int256(uint256(paramHeadValue));
-            if (constraintType == Policies.ConstraintType.Exact) {
-                int256 expectedValue = abi.decode(comparisonData, (int256));
-                return actualValue == expectedValue;
-            }
-            if (constraintType == Policies.ConstraintType.Range) {
-                (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
-                return actualValue >= minValue && actualValue <= maxValue;
-            }
-            // Int doesn't support List constraint
-            return false;
+            return _isIntParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
         }
 
-        // Handle Address type
         if (pType == Policies.ParamType.Address) {
-            address actualValue = address(uint160(uint256(paramHeadValue)));
-            if (constraintType == Policies.ConstraintType.Exact) {
-                address expectedValue = abi.decode(comparisonData, (address));
-                return actualValue == expectedValue;
-            }
-            if (constraintType == Policies.ConstraintType.List) {
-                // comparisonData contains the merkle root of allowed addresses
-                bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
-                // Compute leaf for the actual address using double-hashing
-                bytes32 addressLeaf = MerkleUtils.computeAddressLeaf(actualValue);
-                // Verify the address is in the allowed addresses merkle tree
-                return MerkleProof.verify(addressListProof, allowedAddressesRoot, addressLeaf);
-            }
-            // Address doesn't support Range constraint
-            return false;
+            return
+                _isAddressParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, addressListProof);
         }
 
-        // Handle FixedBytes type (bytes1-bytes32, stored inline)
-        // FixedBytes only supports Exact constraint
-        // For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned)
         if (pType == Policies.ParamType.FixedBytes) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-            bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
-            return paramHeadValue == expectedValue;
+            return _isFixedBytesParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
         }
 
-        // Handle Bytes type (dynamic bytes, stored as offset)
-        // Dynamic bytes only supports Exact constraint (hash comparison)
-        // The paramHeadValue contains the offset to the data location in calldata.
-        // The comparisonData should contain the keccak256 hash of the expected bytes.
         if (pType == Policies.ParamType.Bytes) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-
-            // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
-            uint256 offset = uint256(paramHeadValue);
-
-            // The offset is relative to the start of the encoded parameters (after selector)
-            // So actual position in data = 4 (selector) + offset
-            uint256 dataPosition = 4 + offset;
-
-            // First 32 bytes at that position is the length
-            if (data.length < dataPosition + 32) return false;
-
-            uint256 bytesLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
-
-            // Check we have enough data for the bytes content
-            if (data.length < dataPosition + 32 + bytesLength) return false;
-
-            // Hash the actual bytes content
-            bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + bytesLength]);
-            bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
-            return actualHash == expectedHash;
+            return _isBytesParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
         }
 
-        // Handle String type (dynamic string, stored as offset)
-        // String only supports Exact constraint (hash comparison)
-        // The paramHeadValue contains the offset to the string data in calldata.
-        // The comparisonData should contain the keccak256 hash of the expected string.
         if (pType == Policies.ParamType.String) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-
-            // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
-            uint256 offset = uint256(paramHeadValue);
-
-            // The offset is relative to the start of the encoded parameters (after selector)
-            // So actual position in data = 4 (selector) + offset
-            uint256 dataPosition = 4 + offset;
-
-            // First 32 bytes at that position is the string length
-            if (data.length < dataPosition + 32) return false;
-
-            uint256 strLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
-
-            // Check we have enough data for the string content
-            if (data.length < dataPosition + 32 + strLength) return false;
-
-            // Hash the actual string content
-            bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + strLength]);
-            bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
-            return actualHash == expectedHash;
+            return _isStringParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
         }
 
         // Handle Array and Struct types - only Any constraint is valid
-        // These types can only have Any constraint, which is handled earlier
+        // These types can only have Any constraint, which is handled earlier in _processConstraints
         // If we reach here with a non-Any constraint, it's invalid configuration
 
         // Unknown type - fail safe
