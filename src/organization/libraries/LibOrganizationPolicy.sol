@@ -720,7 +720,7 @@ library LibOrganizationPolicy {
                 }
 
                 // Validate the parameter
-                if (!_validateParameter(constraints[i], paramHeadValue, data, addressListProof)) {
+                if (!_isParameterAllowedByConstraint(constraints[i], paramHeadValue, data, addressListProof)) {
                     return false;
                 }
             }
@@ -740,7 +740,7 @@ library LibOrganizationPolicy {
      * @param addressListProof Merkle proof for List constraint on Address type (empty for other constraints)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
-    function _validateParameter(
+    function _isParameterAllowedByConstraint(
         Policies.ParameterConstraint memory constraint,
         bytes32 paramHeadValue,
         bytes calldata data,
