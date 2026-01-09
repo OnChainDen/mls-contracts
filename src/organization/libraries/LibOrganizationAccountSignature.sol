@@ -71,7 +71,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify guardian has approved this signature request
-        if (!_verifyGuardianSignature(account, hash, policyId, expirationTimestamp, guardianSignature)) {
+        if (!_isGuardianSignatureValid(account, hash, policyId, expirationTimestamp, guardianSignature)) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -236,7 +236,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Verifies the guardian's signature on a signature request
+     * @notice Checks if the guardian's signature is valid for an ERC-1271 signature request
      * @dev The guardian provides an additional layer of security by approving
      *      signature requests off-chain before they can be validated on-chain.
      * @param account The account whose signature is being validated
@@ -246,7 +246,7 @@ library LibOrganizationAccountSignature {
      * @param guardianSignature The guardian's signature
      * @return True if guardian signature is valid
      */
-    function _verifyGuardianSignature(
+    function _isGuardianSignatureValid(
         address account,
         bytes32 hash,
         uint256 policyId,
