@@ -150,7 +150,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Update time-based limits if applicable (for all policy types)
-        _updateTimeBasedLimit(params, data, initiator, proofs.policy);
+        _validateAndUpdateTimeBasedLimitOrRevert(params, data, initiator, proofs.policy);
     }
 
     /**
@@ -182,16 +182,17 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Updates time-based limits for approved transactions
+     * @notice Validates and updates time-based limits for approved transactions
      * @dev Only applies if the policy has TimeInterval limitation.
      *      For token transfers, tracks the transfer amount.
      *      For other transactions, tracks count (usage = 1).
+     *      Reverts if the limit would be exceeded.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param initiator The initiator's address
      * @param policy The policy being used
      */
-    function _updateTimeBasedLimit(
+    function _validateAndUpdateTimeBasedLimitOrRevert(
         TxParams memory params,
         bytes calldata data,
         address initiator,
