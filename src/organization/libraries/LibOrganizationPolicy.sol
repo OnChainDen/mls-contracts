@@ -10,6 +10,7 @@ import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
+import { LibTokenTransferUtils } from "../../libraries/LibTokenTransferUtils.sol";
 
 /**
  * @title Lib Organization Policy
@@ -28,11 +29,6 @@ library LibOrganizationPolicy {
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
      */
     event PoliciesUpdated(bytes32 indexed newRoot, string ipfsCid);
-
-    /**
-     * @notice Thrown when a token transfer transaction is malformed
-     */
-    error MalformedTokenTransfer();
 
     /**
      * @notice Thrown when policy verification fails
@@ -177,7 +173,7 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that are token transfers
         if (txType == Policies.TransactionType.TokenTransfers) {
-            if (!_isTransactionTokenTransfer(data, value)) return false;
+            if (!LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
             if (!_isTokenAllowedByPolicy(proofs.policy, to, data)) return false;
             if (!_isTokenAmountAllowedByPolicy(proofs.policy, data, value)) return false;
         }
@@ -186,7 +182,7 @@ library LibOrganizationPolicy {
         if (txType == Policies.TransactionType.ContractInteractions) {
             // Case: The policy matches only transactions that are contract interactions that are not token transfers,
             //       but the transaction is a token transfer
-            if (_isTransactionTokenTransfer(data, value)) return false;
+            if (LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The policy matches only transactions that are contract interactions that call a specific function,
             //       but the transaction is not calling that function
@@ -260,7 +256,7 @@ library LibOrganizationPolicy {
         if (policy.config.token.anyToken) return true;
 
         // Case: The policy matches only transfers of a specific token
-        address transferToken = _extractTokenAddress(to, data);
+        address transferToken = LibTokenTransferUtils.extractTokenAddress(to, data);
         return transferToken == policy.config.token.tokenAddress;
     }
 
@@ -286,7 +282,7 @@ library LibOrganizationPolicy {
         if (!policy.config.token.hasAmountThreshold) return true;
 
         // Case: The policy has an amount threshold - verify amount is below it
-        uint256 amount = extractTransferAmount(data, value);
+        uint256 amount = LibTokenTransferUtils.extractTransferAmount(data, value);
         return amount < policy.config.token.amountThreshold;
     }
 
@@ -619,113 +615,11 @@ library LibOrganizationPolicy {
         if (data.length == 0) return to;
 
         // Case: The transaction is a contract interaction
-        if (!_isTransactionTokenTransfer(data, value)) return to;
+        if (!LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return to;
 
         // Case: The transaction is an ERC-20 token transfer
         // Extract the recipient address from the transfer function call
-        return _extractTokenRecipient(data);
-    }
-
-    /**
-     * @notice Extracts the token recipient from token transfer calldata
-     * @dev Supports ERC20 transfer(address,uint256) and transferFrom(address,address,uint256)
-     * @param data The transaction calldata
-     * @return The recipient address, or address(0) if not a valid token transfer
-     */
-    function _extractTokenRecipient(bytes calldata data) private pure returns (address) {
-        // Case: Transaction data is too short to contain a valid selector
-        if (data.length < 36) return address(0);
-
-        bytes4 selector = bytes4(data[:4]);
-
-        // Case: The transaction is calling the `transfer` function
-        // transfer(address to, uint256 amount)
-        // The recipient is the first parameter after the selector
-        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
-            return address(bytes20(data[16:36]));
-        }
-
-        // Case: The transaction is calling the `transferFrom` function
-        // transferFrom(address from, address to, uint256 amount)
-        // Note: The recipient is the second address parameter after the selector
-        if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
-            // Case: Transaction data is too short to contain a valid recipient
-            if (data.length < 68) return address(0);
-            return address(bytes20(data[48:68]));
-        }
-
-        // Case: The transaction is not a valid ERC-20 transfer
-        return address(0);
-    }
-
-    /**
-     * @notice Checks if a transaction is a token transfer
-     * @dev A transaction is considered a token transfer if:
-     *      1. It has value > 0 and no data (native token transfer), OR
-     *      2. It calls transfer(address,uint256) or transferFrom(address,address,uint256)
-     * @param data The transaction calldata
-     * @param value The transaction value in wei
-     * @return True if the transaction is a token transfer, false otherwise
-     */
-    function _isTransactionTokenTransfer(bytes calldata data, uint256 value) private pure returns (bool) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0 && value > 0) return true;
-
-        // Case: The transaction data is too short to call a function
-        if (data.length < 4) return false;
-
-        // Case: The transaction is not a native token transfer, but the value is greater than zero
-        if (value > 0) return false;
-
-        // Case: The transaction is a token transfer
-        bytes4 selector = bytes4(data[:4]);
-
-        // Case: The transaction is a token transfer
-        if (
-            selector == bytes4(keccak256("transfer(address,uint256)"))
-                || selector == bytes4(keccak256("transferFrom(address,address,uint256)"))
-        ) {
-            return true;
-        }
-
-        // Case: The transaction is not a token transfer
-        return false;
-    }
-
-    /**
-     * @notice Extracts the token contract address from a token transfer
-     * @dev For ERC20 transfers, the token contract is the `to` address.
-     *      For native transfers, returns address(0).
-     * @param to The transaction `to` address
-     * @param data The transaction calldata
-     * @return The token contract address
-     */
-    function _extractTokenAddress(address to, bytes calldata data) private pure returns (address) {
-        if (data.length == 0) {
-            return address(0); // Native token
-        }
-        return to; // ERC20 token address
-    }
-
-    /**
-     * @notice Extracts the transfer amount from a token transfer
-     * @dev For native transfers, returns the transaction value.
-     *      For ERC20 transfers, extracts the amount from calldata.
-     * @param data The transaction calldata
-     * @param value The transaction value in wei
-     * @return The transfer amount
-     */
-    function extractTransferAmount(bytes calldata data, uint256 value) internal pure returns (uint256) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0) return value;
-
-        // Case: The ERC-20 transaction is malformed
-        // Note: 4 bytes selector + 32 bytes address + 32 bytes amount = 68 bytes
-        if (data.length < 68) revert MalformedTokenTransfer();
-
-        // Case: The ERC-20 transaction is transferring a non-zero value
-        // ERC20 transfer - amount is second parameter (offset 36-68)
-        return uint256(bytes32(data[36:68]));
+        return LibTokenTransferUtils.extractTransferRecipient(data);
     }
 
     // ================================
