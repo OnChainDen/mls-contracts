@@ -90,33 +90,6 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Continue validation in separate function to reduce stack depth
-        return _validateSignatures(account, hash, policyId, expirationTimestamp, approverSignatures, proofs);
-    }
-
-    /**
-     * @notice Validates initiator signature and routes to appropriate approval flow
-     * @dev Extracted to separate function to manage stack depth
-     * @param account The account address whose signature is being validated
-     * @param hash The message hash that was signed
-     * @param policyId The policy ID being used for validation
-     * @param expirationTimestamp When the signature request expires
-     * @param approverSignatures Concatenated signatures from initiator and approvers
-     * @param proofs Merkle proofs and policy data
-     * @return ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
-     */
-    function _validateSignatures(
-        address account,
-        bytes32 hash,
-        uint256 policyId,
-        uint256 expirationTimestamp,
-        bytes memory approverSignatures,
-        Policies.ValidationProofs memory proofs
-    )
-        private
-        view
-        returns (bytes4)
-    {
         // Need at least one signature (the initiator's)
         if (approverSignatures.length < 65) {
             return ERC1271_INVALID_VALUE;
