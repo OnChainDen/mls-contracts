@@ -43,20 +43,21 @@ library LibOrganizationAccountFactory {
      * @return accountAddress The address of the deployed account proxy
      */
     function deployAccount(bytes32 create2Salt) internal returns (address accountAddress) {
-        // Deploy the AccountProxy (BeaconProxy) using CREATE2 with the Organization as the beacon
-        // The beacon is address(this), and we pass empty data (no initialization call)
+        // Generate the bytecode to deploy the AccountProxy (which is a BeaconProxy) with the Organization
+        // as the beacon (address(this)) and no initialization data (empty bytes)
         bytes memory bytecode = abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(this), ""));
 
+        // Deploy the AccountProxy using CREATE2
         assembly {
             accountAddress := create2(0, add(bytecode, 0x20), mload(bytecode), create2Salt)
         }
 
-        // Check if deployment was successful
+        // Case: Deployment failed
         if (accountAddress == address(0)) {
             revert AccountDeploymentFailed();
         }
 
-        // Check if the deployed address matches the computed address
+        // Case: The deployed address does not match the address we expected
         if (accountAddress != computeAccountAddress(create2Salt)) {
             revert AccountDeploymentAddressMismatch();
         }
