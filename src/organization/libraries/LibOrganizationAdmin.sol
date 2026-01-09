@@ -135,21 +135,10 @@ library LibOrganizationAdmin {
     error AdminNotMember(address admin);
 
     /**
-     * @notice Emitted when voting threshold is invalid
-     * @param votingThreshold The invalid voting threshold
-     * @param adminCount The admin count
+     * @notice Emitted when admin configuration is invalid
+     * @param reason The reason for the invalid configuration
      */
-    error InvalidVotingThreshold(uint256 votingThreshold, uint256 adminCount);
-
-    /**
-     * @notice Emitted when admin count is zero
-     */
-    error AdminCountCannotBeZero();
-
-    /**
-     * @notice Emitted when admin root is zero
-     */
-    error AdminRootCannotBeZero();
+    error InvalidAdminConfiguration(string reason);
 
     // ================================
     // ADMIN TREE VERIFICATION
@@ -236,13 +225,13 @@ library LibOrganizationAdmin {
         pure
     {
         if (adminsRoot == bytes32(0)) {
-            revert AdminRootCannotBeZero();
+            revert InvalidAdminConfiguration("Admin root cannot be zero");
         }
         if (adminCount == 0) {
-            revert AdminCountCannotBeZero();
+            revert InvalidAdminConfiguration("Admin count cannot be zero");
         }
         if (votingThreshold == 0 || votingThreshold > adminCount) {
-            revert InvalidVotingThreshold(votingThreshold, adminCount);
+            revert InvalidAdminConfiguration("Invalid voting threshold");
         }
     }
 
