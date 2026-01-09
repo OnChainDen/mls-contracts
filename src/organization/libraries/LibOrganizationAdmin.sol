@@ -179,7 +179,7 @@ library LibOrganizationAdmin {
         internal
         pure
     {
-        // Check completeness: admin addresses array must match expected count
+        // Case: Admin addresses array does not match expected count
         if (validation.adminAddresses.length != expectedAdminCount) {
             revert AdminCountMismatch(expectedAdminCount, validation.adminAddresses.length);
         }
@@ -190,18 +190,18 @@ library LibOrganizationAdmin {
         for (uint256 i = 0; i < validation.adminAddresses.length; ++i) {
             address admin = validation.adminAddresses[i];
 
-            // Check for duplicates and ascending order
+            // Case: Admin address is not in ascending order or has duplicates
             if (admin <= lastAdmin) {
                 revert DuplicateOrUnorderedAdminAddress(admin);
             }
             lastAdmin = admin;
 
-            // Verify admin is in the admin tree
+            // Case: Admin is not in the admin tree
             if (!_isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
                 revert AdminNotInTree(admin);
             }
 
-            // Verify admin is a member of the organization
+            // Case: Admin is not a member in the members tree
             if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.adminInOrgMembersTreeProofs[i])) {
                 revert AdminNotMember(admin);
             }
@@ -390,33 +390,33 @@ library LibOrganizationAdmin {
             // Extract signer address from signature
             address signer = LibOrganizationSignatures.extractSigner(signature);
 
-            // Skip if signer is invalid
+            // Case: Signer address is invalid
             if (signer == address(0)) continue;
 
-            // Check for duplicate signers - signers must be unique and in ascending order
+            // Case: Signer address is not in ascending order or has duplicates
             if (signer <= lastSigner) continue;
 
             // Update last signer for next iteration
             lastSigner = signer;
 
-            // Verify the signature using ERC-1271
+            // Case: Signature is not valid
             if (!SignatureChecker.isValidSignatureNow(signer, operationHash, signature)) {
                 continue;
             }
 
-            // Check proofs arrays have enough entries
+            // Case: Proofs arrays do not have enough entries
             if (
                 i >= adminProofs.adminInOrgAdminTreeProofs.length || i >= adminProofs.adminInOrgMembersTreeProofs.length
             ) {
                 continue;
             }
 
-            // Verify the signer is in the admin tree
+            // Case: Signer is not in the admin tree
             if (!_isAdminInTree(signer, adminsRoot, adminProofs.adminInOrgAdminTreeProofs[i])) {
                 continue;
             }
 
-            // Verify the signer is a member of the organization (using cached root)
+            // Case: Signer is not a member in the members tree
             if (!LibOrganizationMembers.isMemberInTree(signer, membersRoot, adminProofs.adminInOrgMembersTreeProofs[i]))
             {
                 continue;
