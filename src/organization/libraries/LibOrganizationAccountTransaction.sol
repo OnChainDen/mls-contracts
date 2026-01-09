@@ -6,7 +6,7 @@ import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
 import { LibOrganizationEIP712 } from "./LibOrganizationEIP712.sol";
 import { Policies } from "../../libraries/Policies.sol";
 import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { LibTokenTransferUtils } from "../../libraries/LibTokenTransferUtils.sol";
+import { TokenTransferUtils } from "../../libraries/TokenTransferUtils.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -239,7 +239,7 @@ library LibOrganizationAccountTransaction {
         // Calculate usage amount: token amount for transfers, 1 for other transactions
         uint256 usageAmount;
         if (policy.config.transactionType == Policies.TransactionType.TokenTransfers) {
-            usageAmount = LibTokenTransferUtils.extractTransferAmount(data, params.value);
+            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
         } else {
             usageAmount = 1; // Count-based limit for non-transfer transactions
         }

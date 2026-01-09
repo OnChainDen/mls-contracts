@@ -2,11 +2,11 @@
 pragma solidity ^0.8.24;
 
 /**
- * @title LibContractInteractionUtils
+ * @title ContractInteractionUtils
  * @notice A library for contract interaction utility functions
  * @author Den Technologies Inc
  */
-library LibContractInteractionUtils {
+library ContractInteractionUtils {
     /**
      * @notice Extracts the function selector from transaction calldata
      * @dev The function selector is the first 4 bytes of the calldata

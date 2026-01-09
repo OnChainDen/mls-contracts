@@ -10,8 +10,8 @@ import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
 import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
-import { LibTokenTransferUtils } from "../../libraries/LibTokenTransferUtils.sol";
-import { LibContractInteractionUtils } from "../../libraries/LibContractInteractionUtils.sol";
+import { TokenTransferUtils } from "../../libraries/TokenTransferUtils.sol";
+import { ContractInteractionUtils } from "../../libraries/ContractInteractionUtils.sol";
 
 /**
  * @title Lib Organization Policy
@@ -170,7 +170,7 @@ library LibOrganizationPolicy {
         // Case: Policy matches only transactions that are token transfers
         if (txType == Policies.TransactionType.TokenTransfers) {
             // Case: The transaction is not a token transfer
-            if (!LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
+            if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The token being transferred is not allowed by the policy
             if (!_isTokenAllowedByPolicy(proofs.policy, to, data)) return false;
@@ -188,7 +188,7 @@ library LibOrganizationPolicy {
         // Case: The policy matches only transactions that are contract interactions that are not token transfers
         if (txType == Policies.TransactionType.ContractInteractions) {
             // Case: The transaction is a token transfer (not a contract interaction)
-            if (LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
+            if (TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
             // Case: The function being called by the transaction is not allowed by the policy
             if (!_isFunctionAllowedByPolicy(proofs.policy, data, proofs.functionProof, proofs.constraints)) {
@@ -263,7 +263,7 @@ library LibOrganizationPolicy {
         if (policy.config.token.anyToken) return true;
 
         // Case: The policy matches only transfers of a specific token
-        address transferToken = LibTokenTransferUtils.extractTokenAddress(to, data);
+        address transferToken = TokenTransferUtils.extractTokenAddress(to, data);
         return transferToken == policy.config.token.tokenAddress;
     }
 
@@ -289,7 +289,7 @@ library LibOrganizationPolicy {
         if (!policy.config.token.hasAmountThreshold) return true;
 
         // Case: The policy has an amount threshold - verify amount is below it
-        uint256 amount = LibTokenTransferUtils.extractTransferAmount(data, value);
+        uint256 amount = TokenTransferUtils.extractTransferAmount(data, value);
         return amount < policy.config.token.amountThreshold;
     }
 
@@ -419,7 +419,7 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that call a specific function, and the transaction is calling
         //       a function - verify via merkle proof
-        bytes4 selector = LibContractInteractionUtils.extractFunctionSelector(data);
+        bytes4 selector = ContractInteractionUtils.extractFunctionSelector(data);
         bytes32 constraintsHash = keccak256(constraints);
 
         // Verify function (selector + constraints hash) is in the allowed functions merkle tree
@@ -614,11 +614,11 @@ library LibOrganizationPolicy {
         if (data.length == 0) return to;
 
         // Case: The transaction is a contract interaction
-        if (!LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return to;
+        if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return to;
 
         // Case: The transaction is an ERC-20 token transfer
         // Extract the recipient address from the transfer function call
-        return LibTokenTransferUtils.extractERC20TransferRecipient(data);
+        return TokenTransferUtils.extractERC20TransferRecipient(data);
     }
 
     // ================================
