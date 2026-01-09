@@ -681,11 +681,13 @@ library LibOrganizationPolicy {
             // Use block scoping to reduce stack depth
             {
                 uint256 slotsToSkip = uint256(constraints[i].slotsToSkip);
+
+                // Case: Constraint is not configured correctly (constraintSlotToSkip == 0)
                 if (slotsToSkip == 0) {
-                    return false; // Invalid constraint configuration
+                    return false;
                 }
 
-                // Case: Wildcard constraint - any value is accepted
+                // Case: Constraint is a wildcard constraint (any value is accepted)
                 if (constraints[i].constraintType == Policies.ConstraintType.Any) {
                     paramOffset += slotsToSkip * 32;
                     continue;
