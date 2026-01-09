@@ -149,16 +149,21 @@ library LibOrganizationAccountSignature {
 
         // ManualApproval: Need additional reviewer signatures
         if (pType == Policies.PolicyType.RequireManualApproval) {
-            return _validateManualApproval(
-                account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
-            );
+            if (
+                _hasSufficentValidApprovalSignatures(
+                    account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
+                )
+            ) {
+                return ERC1271_MAGIC_VALUE;
+            }
+            return ERC1271_INVALID_VALUE;
         }
 
         return ERC1271_INVALID_VALUE;
     }
 
     /**
-     * @notice Validates manual approval signatures meet the required threshold
+     * @notice Checks if manual approval signatures meet the required threshold
      * @dev Extracts reviewer signatures (all after the first initiator signature),
      *      computes the review hash, and counts valid approvals from authorized approvers.
      * @param account The account address whose signature is being validated
@@ -168,9 +173,9 @@ library LibOrganizationAccountSignature {
      * @param approverSignatures Concatenated signatures from initiator and approvers
      * @param initiatorSignature The initiator's signature
      * @param proofs Merkle proofs and policy data
-     * @return ERC1271_MAGIC_VALUE if enough valid approvals, ERC1271_INVALID_VALUE otherwise
+     * @return True if enough valid approvals, false otherwise
      */
-    function _validateManualApproval(
+    function _hasSufficentValidApprovalSignatures(
         address account,
         bytes32 hash,
         uint256 policyId,
@@ -181,7 +186,7 @@ library LibOrganizationAccountSignature {
     )
         private
         view
-        returns (bytes4)
+        returns (bool)
     {
         // Get required number of approvals from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
@@ -197,11 +202,7 @@ library LibOrganizationAccountSignature {
         uint256 validApprovals =
             LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash, proofs.approverProofs);
 
-        if (validApprovals >= requiredApprovals) {
-            return ERC1271_MAGIC_VALUE;
-        }
-
-        return ERC1271_INVALID_VALUE;
+        return validApprovals >= requiredApprovals;
     }
 
     /**
