@@ -619,7 +619,7 @@ library LibOrganizationPolicy {
 
         // Case: The transaction is an ERC-20 token transfer
         // Extract the recipient address from the transfer function call
-        return LibTokenTransferUtils.extractTransferRecipient(data);
+        return LibTokenTransferUtils.extractERC20TransferRecipient(data);
     }
 
     // ================================

@@ -64,14 +64,14 @@ library LibTokenTransferUtils {
     }
 
     /**
-     * @notice Extracts the token recipient from token transfer calldata
-     * @dev Supports ERC20 transfer(address,uint256) and transferFrom(address,address,uint256)
-     * @param data The transaction calldata
-     * @return The recipient address, or address(0) if not a valid token transfer
+     * @notice Extracts the token recipient from ERC-20 transfer calldata
+     * @dev Only supports ERC20 transfer(address,uint256)
+     * @param data The transaction calldata (must be a valid ERC-20 transfer call)
+     * @return The recipient address
      */
-    function extractTransferRecipient(bytes calldata data) internal pure returns (address) {
+    function extractERC20TransferRecipient(bytes calldata data) internal pure returns (address) {
         // Case: Transaction data is too short to contain a valid selector
-        if (data.length < 36) return address(0);
+        if (data.length < 36) revert MalformedTokenTransfer();
 
         bytes4 selector = bytes4(data[:4]);
 
@@ -83,7 +83,7 @@ library LibTokenTransferUtils {
         }
 
         // Case: The transaction is not a valid ERC-20 transfer
-        return address(0);
+        revert MalformedTokenTransfer();
     }
 
     /**
