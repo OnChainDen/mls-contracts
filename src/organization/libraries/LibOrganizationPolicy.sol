@@ -65,7 +65,7 @@ library LibOrganizationPolicy {
      * @param policy The policy data
      * @return The computed merkle leaf
      */
-    function _computePolicyLeaf(uint256 policyId, Policies.Policy calldata policy) private pure returns (bytes32) {
+    function _computePolicyLeaf(uint256 policyId, Policies.Policy memory policy) private pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
     }
 
@@ -85,13 +85,13 @@ library LibOrganizationPolicy {
     // ================================
 
     /**
-     * @notice Checks if a policy exists in the global merkle tree
+     * @notice Checks if a policy exists in the organization's policy merkle tree
      * @param policyId The unique identifier of the policy
      * @param policy The policy data
      * @param proof The merkle proof for the policy
      * @return True if the policy is in the tree, false otherwise
      */
-    function isPolicyInTree(
+    function isPolicyInOrg(
         uint256 policyId,
         Policies.Policy memory policy,
         bytes32[] memory proof
@@ -101,7 +101,7 @@ library LibOrganizationPolicy {
         returns (bool)
     {
         bytes32 root = LibOrganizationPolicyStorage.layout().policiesRoot;
-        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
+        bytes32 leaf = _computePolicyLeaf(policyId, policy);
         return MerkleProof.verify(proof, root, leaf);
     }
 

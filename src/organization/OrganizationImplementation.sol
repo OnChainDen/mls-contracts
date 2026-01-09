@@ -322,7 +322,7 @@ contract OrganizationImplementation is
         returns (uint256)
     {
         // Verify policy exists in merkle tree
-        if (!LibOrganizationPolicy.isPolicyInTree(policyId, policy, policyProof)) {
+        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
             revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
         }
 

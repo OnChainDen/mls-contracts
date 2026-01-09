@@ -76,7 +76,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Verify the policy exists in the organization's policy tree
-        if (!LibOrganizationPolicy.isPolicyInTree(policyId, proofs.policy, proofs.policyProof)) {
+        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
