@@ -53,14 +53,14 @@ contract OrganizationFactory {
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the OrganizationImplementation contract
      * @param whitelistAddress The address of the implementation whitelist contract
-     * @param params The initialization parameters for the organization
+     * @param initParams The initialization parameters for the organization
      * @return organizationAddress The address of the deployed organization proxy
      */
     function deployOrganization(
         bytes32 salt,
         address implementationAddress,
         address whitelistAddress,
-        InitializationParams calldata params
+        InitializationParams calldata initParams
     )
         external
         returns (address organizationAddress)
@@ -75,26 +75,28 @@ contract OrganizationFactory {
             IImplementationWhitelist.ContractType.Organization, implementationAddress
         );
 
-        // Deploy the organization proxy using CREATE2
+        // Generate the bytecode to deploy the OrganizationProxy (which is a ERC1967Proxy)
+        // with the OrganizationImplementation as the implementation and the whitelist address
         bytes memory bytecode =
             abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
 
+        // Deploy the organization proxy using CREATE2
         assembly {
             organizationAddress := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
         }
 
-        // Check if deployment was successful
+        // Case: Deployment failed
         if (organizationAddress == address(0)) {
             revert DeploymentFailed();
         }
 
-        // Check if the deployed address matches the computed address
+        // Case: The deployed address does not match the address we expected
         if (organizationAddress != computeOrganizationAddress(salt, implementationAddress, whitelistAddress)) {
             revert DeploymentAddressMismatch();
         }
 
         // Initialize the organization atomically - reverts the entire transaction if initialization fails
-        OrganizationImplementation(organizationAddress).initialize(params);
+        OrganizationImplementation(organizationAddress).initialize(initParams);
 
         emit OrganizationDeployed(organizationAddress, salt, deployerAddress);
     }
