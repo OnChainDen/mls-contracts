@@ -173,19 +173,28 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that are token transfers
         if (txType == Policies.TransactionType.TokenTransfers) {
+            // Case: The transaction is not a token transfer
             if (!LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
+
+            // Case: The token being transferred is not allowed by the policy
             if (!_isTokenAllowedByPolicy(proofs.policy, to, data)) return false;
+
+            // Case: The amount of the token being transferred is not allowed by the policy
             if (!_isTokenAmountAllowedByPolicy(proofs.policy, data, value)) return false;
+
+            // Case: The destination (token recipient) is not allowed by the policy
+            if (!_isDestinationAllowedByPolicy(proofs.policy, to, value, data, proofs.destinationProof)) return false;
+
+            // Case: The token transfer is allowed by the policy
+            return true;
         }
 
         // Case: The policy matches only transactions that are contract interactions that are not token transfers
         if (txType == Policies.TransactionType.ContractInteractions) {
-            // Case: The policy matches only transactions that are contract interactions that are not token transfers,
-            //       but the transaction is a token transfer
+            // Case: The transaction is a token transfer (not a contract interaction)
             if (LibTokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
-            // Case: The policy matches only transactions that are contract interactions that call a specific function,
-            //       but the transaction is not calling that function
+            // Case: The function being called by the transaction is not allowed by the policy
             if (
                 !_isFunctionAllowedByPolicy(
                     proofs.policy, data, proofs.functionProof, proofs.constraints, proofs.addressParameterProofs
@@ -193,14 +202,15 @@ library LibOrganizationPolicy {
             ) {
                 return false;
             }
+
+            // Case: The destination (contract being called) is not allowed by the policy
+            if (!_isDestinationAllowedByPolicy(proofs.policy, to, value, data, proofs.destinationProof)) return false;
+
+            // Case: The contract interaction is allowed by the policy
+            return true;
         }
 
-        // 5. Check if the destination matches
-        if (!_isDestinationAllowedByPolicy(proofs.policy, to, value, data, proofs.destinationProof)) {
-            return false;
-        }
-
-        return true;
+        return false;
     }
 
     // ================================
