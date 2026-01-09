@@ -65,63 +65,55 @@ library LibOrganizationAccountSignature {
             Policies.ValidationProofs memory proofs
         ) = abi.decode(signature, (uint256, uint256, bytes, bytes, Policies.ValidationProofs));
 
-        // Check if the signature request has expired
+        // Case: Signature request has expired
         if (block.timestamp > expirationTimestamp) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Verify guardian has approved this signature request
-        if (!_isGuardianSignatureValid(account, hash, policyId, expirationTimestamp, guardianSignature)) {
-            return ERC1271_INVALID_VALUE;
-        }
-
-        // Verify the policy exists in the organization's policy tree
+        // Case: Policy is not in the organization's policy tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Policy must be configured for signature operations
+        // Case: Policy can't be used for signature operations
         if (proofs.policy.config.transactionType != Policies.TransactionType.Signatures) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Verify the policy applies to this specific account
+        // Case: Policy doesn't apply to this specific source account
         if (!LibOrganizationPolicy.isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Need at least one signature (the initiator's)
-        if (approverSignatures.length < 65) {
+        // Case: Guardian signature is invalid
+        if (!_isGuardianSignatureValid(account, hash, policyId, expirationTimestamp, guardianSignature)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Extract and verify the initiator's signature (first 65 bytes)
         bytes memory initiatorSignature = SignatureUtils.extractSignature(approverSignatures, 0);
-
-        // Compute the hash that the initiator should have signed
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
-
-        // Recover the initiator's address from their signature
         address initiator = ECDSA.recover(initiatorHash, initiatorSignature);
+
+        // Case: Initiator signature is invalid
         if (initiator == address(0)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Verify the initiator is authorized by this policy (with Merkle proofs)
+        // Case: Initiator is not authorized by this policy
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Route to appropriate validation based on policy type
         Policies.PolicyType pType = proofs.policy.config.approval.policyType;
 
-        // AutoApprove: Initiator signature alone is sufficient
+        // Case: Policy is an AutoApprove approval policy (Guardian and initiator signatures are sufficient)
         if (pType == Policies.PolicyType.AutoApprove) {
             return ERC1271_MAGIC_VALUE;
         }
 
-        // ManualApproval: Need additional reviewer signatures
+        // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
         if (pType == Policies.PolicyType.RequireManualApproval) {
+            // Case: Sufficient valid approval signatures are provided
             if (
                 _hasSufficentValidApprovalSignatures(
                     account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
@@ -129,7 +121,6 @@ library LibOrganizationAccountSignature {
             ) {
                 return ERC1271_MAGIC_VALUE;
             }
-            return ERC1271_INVALID_VALUE;
         }
 
         return ERC1271_INVALID_VALUE;
@@ -161,6 +152,11 @@ library LibOrganizationAccountSignature {
         view
         returns (bool)
     {
+        // Case: Not enough data provided to check for valid approval signatures
+        if (approverSignatures.length < 65) {
+            return false;
+        }
+
         // Get required number of approvals from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
 
