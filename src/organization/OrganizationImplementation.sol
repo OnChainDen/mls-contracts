@@ -606,6 +606,7 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
 
         // Validate and consume nonce (will revert if already used)
+        // REPLAY PROTECTION: Nonce is consumed BEFORE the external call to prevent reentrancy.
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the transaction against the policy and signatures (with merkle proofs)

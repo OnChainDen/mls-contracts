@@ -12,7 +12,7 @@ import { LibImplementationWhitelistStorage } from "./libraries/LibImplementation
  * @notice Contract for managing whitelisted implementation addresses
  * @author Den Technologies Inc
  */
-contract ImplementationWhitelist is Initializable, UUPSUpgradeable, Ownable, IImplementationWhitelist {
+contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable, Ownable, IImplementationWhitelist {
     /**
      * @notice Emitted when an implementation is whitelisted
      * @param contractType The type of contract (Account or Organization)
