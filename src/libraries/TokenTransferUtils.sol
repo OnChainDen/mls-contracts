@@ -53,6 +53,7 @@ library TokenTransferUtils {
      * @param value The transaction value in wei
      * @return True if the transaction is an ERC20 token transfer, false otherwise
      */
+    // forge-lint: disable-next-line(mixed-case-function)
     function isTransactionERC20TokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
         // Case: The transaction data is too short to call a function
         if (data.length < 4) return false;
@@ -71,6 +72,7 @@ library TokenTransferUtils {
      * @param data The transaction calldata (must be a valid ERC-20 transfer call)
      * @return The recipient address
      */
+    // forge-lint: disable-next-line(mixed-case-function)
     function extractERC20TransferRecipient(bytes calldata data) internal pure returns (address) {
         // Case: Transaction data is too short to contain a valid selector
         if (data.length < 36) revert MalformedTokenTransfer();

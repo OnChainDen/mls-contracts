@@ -124,6 +124,7 @@ library LibOrganizationAccountSignature {
      * @param proofs Merkle proofs and policy data for validation
      * @return True if the signature is allowed by the policy, false otherwise
      */
+    // forge-lint: disable-next-line(mixed-case-function)
     function _isERC1271SignatureAllowedByPolicy(
         address account,
         address initiator,
