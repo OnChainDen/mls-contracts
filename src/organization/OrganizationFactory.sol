@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./OrganizationProxy.sol";
-import "./OrganizationImplementation.sol";
+import { OrganizationProxy } from "./OrganizationProxy.sol";
+import { OrganizationImplementation } from "./OrganizationImplementation.sol";
 import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
 import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 import { InitializationParams } from "../interfaces/IOrganization.sol";
@@ -16,7 +16,7 @@ contract OrganizationFactory {
     /**
      * @notice The address authorized to deploy organization proxies
      */
-    address public immutable deployerAddress;
+    address public immutable DEPLOYER_ADDRESS;
 
     /**
      * @notice Emitted when a new organization proxy is deployed
@@ -43,7 +43,7 @@ contract OrganizationFactory {
      * @param _deployerAddress The address authorized to deploy organization proxies
      */
     constructor(address _deployerAddress) {
-        deployerAddress = _deployerAddress;
+        DEPLOYER_ADDRESS = _deployerAddress;
     }
 
     /**
@@ -66,7 +66,7 @@ contract OrganizationFactory {
         returns (address organizationAddress)
     {
         // Only the authorized deployer can deploy organizations
-        if (msg.sender != deployerAddress) {
+        if (msg.sender != DEPLOYER_ADDRESS) {
             revert LibOrganizationInitialization.UnauthorizedDeployer();
         }
 
@@ -98,7 +98,7 @@ contract OrganizationFactory {
         // Initialize the organization atomically - reverts the entire transaction if initialization fails
         OrganizationImplementation(organizationAddress).initialize(initParams);
 
-        emit OrganizationDeployed(organizationAddress, salt, deployerAddress);
+        emit OrganizationDeployed(organizationAddress, salt, DEPLOYER_ADDRESS);
     }
 
     /**

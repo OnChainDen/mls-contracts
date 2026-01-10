@@ -40,10 +40,18 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
      * @notice Modifier that enforces only the associated organization can call the function
      */
     modifier onlyOrganization() {
+        _onlyOrganization();
+        _;
+    }
+
+    /**
+     * @notice Internal function to check if the caller is the organization
+     * @dev Extracted from modifier to reduce code size
+     */
+    function _onlyOrganization() private view {
         if (msg.sender != LibAccountOrganizationAddressStorage.getOrganizationAddress()) {
             revert OnlyOrganization();
         }
-        _;
     }
 
     // ================================
