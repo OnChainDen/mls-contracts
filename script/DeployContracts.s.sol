@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { Script, console } from "forge-std/Script.sol";
-import { ImplementationWhitelist } from "../src/implementation-whitelist/ImplementationWhitelist.sol";
+import { ImplementationWhitelistImplementation } from "../src/implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import { IImplementationWhitelist } from "../src/implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 import { OrganizationImplementation } from "../src/organization/OrganizationImplementation.sol";
 import { AccountImplementation } from "../src/account/AccountImplementation.sol";
@@ -22,10 +22,10 @@ contract DeployContracts is Script {
 
         console.log("Deploying contracts with deployer:", deployer);
 
-        // Deploy ImplementationWhitelist
-        ImplementationWhitelist whitelist = new ImplementationWhitelist();
+        // Deploy ImplementationWhitelistImplementation
+        ImplementationWhitelistImplementation whitelist = new ImplementationWhitelistImplementation();
         whitelist.initialize(deployer);
-        console.log("ImplementationWhitelist deployed at:", address(whitelist));
+        console.log("ImplementationWhitelistImplementation deployed at:", address(whitelist));
 
         // Deploy OrganizationImplementation
         OrganizationImplementation organizationImplementation = new OrganizationImplementation();

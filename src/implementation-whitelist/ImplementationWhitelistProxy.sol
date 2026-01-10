@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ImplementationWhitelist } from "./ImplementationWhitelist.sol";
+import { ImplementationWhitelistImplementation } from "./ImplementationWhitelistImplementation.sol";
 
 /**
  * @title Implementation Whitelist Proxy
@@ -19,6 +19,6 @@ contract ImplementationWhitelistProxy is ERC1967Proxy {
         address implementation,
         address owner
     )
-        ERC1967Proxy(implementation, abi.encodeCall(ImplementationWhitelist.initialize, (owner)))
+        ERC1967Proxy(implementation, abi.encodeCall(ImplementationWhitelistImplementation.initialize, (owner)))
     { }
 }
