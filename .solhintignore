@@ -1,0 +1,12 @@
+# Dependencies
+lib/
+node_modules/
+
+# Build artifacts
+out/
+cache/
+artifacts/
+
+# Test and script files (different conventions apply)
+test/
+script/
