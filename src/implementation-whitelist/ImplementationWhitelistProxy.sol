@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ImplementationWhitelistImplementation } from "./ImplementationWhitelistImplementation.sol";
+import {ImplementationWhitelistImplementation} from "./ImplementationWhitelistImplementation.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @title Implementation Whitelist Proxy
@@ -15,10 +15,7 @@ contract ImplementationWhitelistProxy is ERC1967Proxy {
      * @param implementation The implementation contract address
      * @param owner The initial owner address for the whitelist contract
      */
-    constructor(
-        address implementation,
-        address owner
-    )
+    constructor(address implementation, address owner)
         ERC1967Proxy(implementation, abi.encodeCall(ImplementationWhitelistImplementation.initialize, (owner)))
-    { }
+    {}
 }

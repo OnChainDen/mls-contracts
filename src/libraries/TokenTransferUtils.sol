@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { ContractInteractionUtils } from "./ContractInteractionUtils.sol";
+import {ContractInteractionUtils} from "./ContractInteractionUtils.sol";
 
 /**
  * @title TokenTransferUtils

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { OrganizationProxy } from "./OrganizationProxy.sol";
-import { OrganizationImplementation } from "./OrganizationImplementation.sol";
-import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
-import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import { InitializationParams } from "../interfaces/IOrganization.sol";
+import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
+import {InitializationParams} from "../interfaces/IOrganization.sol";
+import {OrganizationImplementation} from "./OrganizationImplementation.sol";
+import {OrganizationProxy} from "./OrganizationProxy.sol";
+import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
 
 /**
  * @title Organization Factory
@@ -61,10 +61,7 @@ contract OrganizationFactory {
         address implementationAddress,
         address whitelistAddress,
         InitializationParams calldata initParams
-    )
-        external
-        returns (address organizationAddress)
-    {
+    ) external returns (address organizationAddress) {
         // Only the authorized deployer can deploy organizations
         if (msg.sender != DEPLOYER_ADDRESS) {
             revert LibOrganizationInitialization.UnauthorizedDeployer();
@@ -108,11 +105,7 @@ contract OrganizationFactory {
      * @param whitelistAddress The address of the implementation whitelist contract
      * @return The computed address
      */
-    function computeOrganizationAddress(
-        bytes32 salt,
-        address implementationAddress,
-        address whitelistAddress
-    )
+    function computeOrganizationAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
         public
         view
         returns (address)

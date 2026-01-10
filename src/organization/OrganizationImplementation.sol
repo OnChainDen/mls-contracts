@@ -1,28 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
-import { LibOrganizationMembers } from "./libraries/LibOrganizationMembers.sol";
-import { LibOrganizationGroups } from "./libraries/LibOrganizationGroups.sol";
-import { LibOrganizationPolicy } from "./libraries/LibOrganizationPolicy.sol";
-import { LibOrganizationAdmin } from "./libraries/LibOrganizationAdmin.sol";
-import { LibOrganizationGuardian } from "./libraries/LibOrganizationGuardian.sol";
-import { LibOrganizationAccountFactory } from "./libraries/LibOrganizationAccountFactory.sol";
-import { LibOrganizationAccountFactoryStorage } from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
-import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
-import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures.sol";
-import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
-import { LibOrganizationAccountSignature } from "./libraries/LibOrganizationAccountSignature.sol";
-import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
-import { LibOrganizationPolicyStorage } from "./libraries/storage/LibOrganizationPolicyStorage.sol";
-import { OperationType, InitializationParams, IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
-import { Policies } from "../libraries/Policies.sol";
-import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
-import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import { IAccountExecute } from "../account/interfaces/IAccountExecute.sol";
-import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
+import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
+import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
+import {IOrganizationSignatureValidator, InitializationParams, OperationType} from "../interfaces/IOrganization.sol";
+import {IUpgradeable} from "../interfaces/IUpgradeable.sol";
+import {Policies} from "../libraries/Policies.sol";
+
+import {UpgradeAuthorizationStorage} from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
+import {LibOrganizationAccountFactory} from "./libraries/LibOrganizationAccountFactory.sol";
+import {LibOrganizationAccountSignature} from "./libraries/LibOrganizationAccountSignature.sol";
+import {LibOrganizationAccountTransaction} from "./libraries/LibOrganizationAccountTransaction.sol";
+import {LibOrganizationAdmin} from "./libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationGroups} from "./libraries/LibOrganizationGroups.sol";
+import {LibOrganizationGuardian} from "./libraries/LibOrganizationGuardian.sol";
+import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
+import {LibOrganizationMembers} from "./libraries/LibOrganizationMembers.sol";
+import {LibOrganizationPolicy} from "./libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "./libraries/LibOrganizationSignatures.sol";
+import {LibOrganizationAccountFactoryStorage} from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+
+import {LibOrganizationAdminStorage} from "./libraries/storage/LibOrganizationAdminStorage.sol";
+import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationPolicyStorage.sol";
+import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @title Organization Implementation
@@ -156,10 +158,7 @@ contract OrganizationImplementation is
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs,
         LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
@@ -189,10 +188,7 @@ contract OrganizationImplementation is
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function isGroupInOrg(
-        Policies.GroupData calldata groupData,
-        bytes32[] calldata groupInOrgGroupsTreeProof
-    )
+    function isGroupInOrg(Policies.GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
         external
         view
         returns (bool)
@@ -213,11 +209,7 @@ contract OrganizationImplementation is
         Policies.GroupData calldata groupData,
         bytes32[] calldata groupInOrgGroupsTreeProof,
         bytes32[] calldata memberInGroupProof
-    )
-        external
-        view
-        returns (bool)
-    {
+    ) external view returns (bool) {
         return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
             memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
         );
@@ -240,10 +232,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
 
@@ -284,10 +273,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
@@ -316,11 +302,7 @@ contract OrganizationImplementation is
         address destination,
         address initiator,
         bytes32[] calldata policyProof
-    )
-        external
-        view
-        returns (uint256)
-    {
+    ) external view returns (uint256) {
         // Verify policy exists in merkle tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
             revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
@@ -341,11 +323,7 @@ contract OrganizationImplementation is
         return LibOrganizationSignatures.isNonceUsed(nonce);
     }
 
-    function computeNonce(
-        OperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
+    function computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
         external
         view
         returns (uint256)
@@ -374,10 +352,7 @@ contract OrganizationImplementation is
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs,
         LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
@@ -412,10 +387,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Compute nonce for this operation
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
 
@@ -445,10 +417,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
@@ -492,10 +461,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
@@ -532,11 +498,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes memory signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-        returns (address)
-    {
+    ) external onlyGuardian returns (address) {
         // Validate admin authorization for account deployment
         bytes memory operationData = abi.encode(create2Salt);
 
@@ -590,10 +552,7 @@ contract OrganizationImplementation is
         uint256 policyId,
         bytes memory signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Verify the account is deployed by this organization
         if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
@@ -643,10 +602,7 @@ contract OrganizationImplementation is
         uint256 policyId,
         bytes memory signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Verify the account is deployed by this organization
         if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
             revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
@@ -685,11 +641,7 @@ contract OrganizationImplementation is
      * proofs)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
-    function isValidSignatureForAccount(
-        address account,
-        bytes32 hash,
-        bytes memory signature
-    )
+    function isValidSignatureForAccount(address account, bytes32 hash, bytes memory signature)
         external
         view
         override
@@ -738,10 +690,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
         upgradeToAndCall(newImplementation, "");
     }
@@ -762,10 +711,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
         upgradeToAndCall(newImplementation, data);
     }
@@ -785,9 +731,7 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        internal
-    {
+    ) internal {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert(

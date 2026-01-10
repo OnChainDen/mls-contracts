@@ -28,10 +28,7 @@ interface IImplementationWhitelist {
      * @return True if the implementation is whitelisted, false otherwise
      * @dev The contract maintains separate whitelists for Account and Organization implementations
      */
-    function isImplementationWhitelisted(
-        ContractType contractType,
-        address implementation
-    )
+    function isImplementationWhitelisted(ContractType contractType, address implementation)
         external
         view
         returns (bool);
@@ -42,10 +39,7 @@ interface IImplementationWhitelist {
      * @param implementation The implementation address to check
      * @dev Reverts with ImplementationNotWhitelisted if the implementation is not whitelisted
      */
-    function validateIsImplementationWhitelistedOrRevert(
-        ContractType contractType,
-        address implementation
-    )
+    function validateIsImplementationWhitelistedOrRevert(ContractType contractType, address implementation)
         external
         view;
 }

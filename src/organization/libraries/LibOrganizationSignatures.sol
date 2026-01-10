@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationSignaturesStorage } from "./storage/LibOrganizationSignaturesStorage.sol";
-import { OperationType } from "../../interfaces/IOrganization.sol";
+import {OperationType} from "../../interfaces/IOrganization.sol";
+import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignaturesStorage.sol";
 
 /**
  * @title Lib Organization Signatures
@@ -33,11 +33,7 @@ library LibOrganizationSignatures {
      * @param salt A user-provided salt for nonce computation
      * @return The computed nonce
      */
-    function computeNonce(
-        OperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
+    function computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
         internal
         view
         returns (uint256)

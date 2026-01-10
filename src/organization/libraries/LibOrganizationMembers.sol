@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationMembersStorage } from "./storage/LibOrganizationMembersStorage.sol";
-import { LibOrganizationAdminStorage } from "./storage/LibOrganizationAdminStorage.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
+import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
+import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
+import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersStorage.sol";
+
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
  * @title Lib Organization Members
@@ -42,11 +43,7 @@ library LibOrganizationMembers {
      * @param proof The merkle proof
      * @return True if the address is in the member tree, false otherwise
      */
-    function isMemberInTree(
-        address memberAddress,
-        bytes32 membersRoot,
-        bytes32[] memory proof
-    )
+    function isMemberInTree(address memberAddress, bytes32 membersRoot, bytes32[] memory proof)
         internal
         pure
         returns (bool)
@@ -84,9 +81,7 @@ library LibOrganizationMembers {
         bytes32 newMembersRoot,
         string calldata ipfsCid,
         LibOrganizationAdmin.AdminMembershipValidation memory adminValidation
-    )
-        internal
-    {
+    ) internal {
         // Get current admin configuration
         LibOrganizationAdminStorage.AdminPermission memory admin = LibOrganizationAdminStorage.layout().adminPermission;
 

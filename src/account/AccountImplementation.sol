@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
-import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
-import { IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
-import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
+import {INativeTokenReceivedEventEmitter} from "./interfaces/INativeTokenReceivedEventEmitter.sol";
+import {LibAccountOrganizationAddressStorage} from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
+
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 /**
  * @title Account Implementation
@@ -79,13 +80,7 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
      * @param nonce The nonce for this transaction (computed by Organization)
      * @param policyId The ID of the policy that governs this transaction
      */
-    function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 nonce,
-        uint256 policyId
-    )
+    function executeTransaction(address to, uint256 value, bytes calldata data, uint256 nonce, uint256 policyId)
         external
         onlyOrganization
     {
@@ -131,10 +126,7 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
-    function isValidSignature(
-        bytes32 hash,
-        bytes memory signature
-    )
+    function isValidSignature(bytes32 hash, bytes memory signature)
         external
         view
         override

@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationAdminStorage } from "./storage/LibOrganizationAdminStorage.sol";
-import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
-import { LibOrganizationEIP712 } from "./LibOrganizationEIP712.sol";
-import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { OperationType } from "../../interfaces/IOrganization.sol";
-import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
+import {OperationType} from "../../interfaces/IOrganization.sol";
+import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
+import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
+import {LibOrganizationMembers} from "./LibOrganizationMembers.sol";
+import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
+import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
+
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Admin
@@ -175,10 +176,7 @@ library LibOrganizationAdmin {
         bytes32 adminsRoot,
         bytes32 membersRoot,
         uint256 expectedAdminCount
-    )
-        internal
-        pure
-    {
+    ) internal pure {
         // Case: Admin addresses array does not match expected count
         if (validation.adminAddresses.length != expectedAdminCount) {
             revert AdminCountMismatch(expectedAdminCount, validation.adminAddresses.length);
@@ -216,11 +214,7 @@ library LibOrganizationAdmin {
      * @param adminCount The number of admins
      * @param votingThreshold The voting threshold for admin operations
      */
-    function validateAdminConfigurationOrRevert(
-        bytes32 adminsRoot,
-        uint256 adminCount,
-        uint256 votingThreshold
-    )
+    function validateAdminConfigurationOrRevert(bytes32 adminsRoot, uint256 adminCount, uint256 votingThreshold)
         internal
         pure
     {
@@ -263,9 +257,7 @@ library LibOrganizationAdmin {
         uint256 newVotingThreshold,
         AdminMembershipValidation memory validation,
         bytes32 currentMembersRoot
-    )
-        internal
-    {
+    ) internal {
         // Validate admin configuration (root, count, threshold)
         validateAdminConfigurationOrRevert(newAdminsRoot, newAdminCount, newVotingThreshold);
 
@@ -321,9 +313,7 @@ library LibOrganizationAdmin {
         bool isApproval,
         bytes memory signatures,
         AdminProofs memory adminProofs
-    )
-        internal
-    {
+    ) internal {
         // Check if the operation has expired
         if (block.timestamp > expirationTimestamp) {
             revert AdminOperationExpired(expirationTimestamp, block.timestamp);
@@ -358,11 +348,7 @@ library LibOrganizationAdmin {
      * @param adminProofs The Merkle proofs for membership verification
      * @return The number of valid signatures from admins
      */
-    function _getValidAdminSignatures(
-        bytes memory signatures,
-        bytes32 operationHash,
-        AdminProofs memory adminProofs
-    )
+    function _getValidAdminSignatures(bytes memory signatures, bytes32 operationHash, AdminProofs memory adminProofs)
         private
         view
         returns (uint256)
@@ -443,11 +429,7 @@ library LibOrganizationAdmin {
         uint256 salt,
         uint256 expirationTimestamp,
         bool isApproval
-    )
-        private
-        view
-        returns (bytes32)
-    {
+    ) private view returns (bytes32) {
         // Create EIP-712 structured data hash
         // Note: isApproval is included to differentiate execution signatures from rejection signatures
         bytes32 structHash = keccak256(

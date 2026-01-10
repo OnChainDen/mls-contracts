@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationGroupsStorage } from "./storage/LibOrganizationGroupsStorage.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
-import { Policies } from "../../libraries/Policies.sol";
+import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {Policies} from "../../libraries/Policies.sol";
+import {LibOrganizationGroupsStorage} from "./storage/LibOrganizationGroupsStorage.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
  * @title Lib Organization Groups
@@ -56,11 +56,7 @@ library LibOrganizationGroups {
         Policies.GroupData memory groupData,
         bytes32 groupsRoot,
         bytes32[] memory groupInOrgGroupsTreeProof
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         // Empty root means no groups (organization not initialized or all groups removed)
         if (groupsRoot == bytes32(0)) return false;
 
@@ -74,10 +70,7 @@ library LibOrganizationGroups {
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function isGroupInOrg(
-        Policies.GroupData memory groupData,
-        bytes32[] memory groupInOrgGroupsTreeProof
-    )
+    function isGroupInOrg(Policies.GroupData memory groupData, bytes32[] memory groupInOrgGroupsTreeProof)
         internal
         view
         returns (bool)
@@ -94,11 +87,7 @@ library LibOrganizationGroups {
      * @param memberInGroupProof The merkle proof that the member is in the group
      * @return True if the member is in the group, false otherwise
      */
-    function isMemberInGroup(
-        address memberAddress,
-        bytes32 groupMembersRoot,
-        bytes32[] memory memberInGroupProof
-    )
+    function isMemberInGroup(address memberAddress, bytes32 groupMembersRoot, bytes32[] memory memberInGroupProof)
         internal
         pure
         returns (bool)
@@ -123,11 +112,7 @@ library LibOrganizationGroups {
         Policies.GroupData memory groupData,
         bytes32[] memory groupInOrgGroupsTreeProof,
         bytes32[] memory memberInGroupProof
-    )
-        internal
-        view
-        returns (bool)
-    {
+    ) internal view returns (bool) {
         // First verify the group exists
         if (!isGroupInOrg(groupData, groupInOrgGroupsTreeProof)) {
             return false;

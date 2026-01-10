@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationAdmin } from "../organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationAdmin} from "../organization/libraries/LibOrganizationAdmin.sol";
 
 /**
  * @title IUpgradeable
@@ -23,8 +23,7 @@ interface IUpgradeable {
         uint256 expirationTimestamp,
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external;
+    ) external;
 
     /**
      * @notice Upgrade the implementation to a new address and call a function with authorization
@@ -42,6 +41,5 @@ interface IUpgradeable {
         uint256 expirationTimestamp,
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external;
+    ) external;
 }

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
-import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { LibOrganizationEIP712 } from "./LibOrganizationEIP712.sol";
-import { Policies } from "../../libraries/Policies.sol";
-import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { TokenTransferUtils } from "../../libraries/TokenTransferUtils.sol";
-import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Policies} from "../../libraries/Policies.sol";
+import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
+import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
+import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
+import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
+
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title Lib Organization Account Transaction
@@ -110,9 +111,7 @@ library LibOrganizationAccountTransaction {
         uint256 policyId,
         bytes memory signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        internal
-    {
+    ) internal {
         // Check transaction hasn't expired
         if (block.timestamp > expirationTimestamp) {
             revert TransactionExpired(expirationTimestamp, block.timestamp);
@@ -161,11 +160,7 @@ library LibOrganizationAccountTransaction {
      * @param initiatorSignature The initiator's ECDSA signature
      * @return The recovered initiator address
      */
-    function _recoverInitiatorFromParams(
-        TxParams memory params,
-        bytes calldata data,
-        bytes memory initiatorSignature
-    )
+    function _recoverInitiatorFromParams(TxParams memory params, bytes calldata data, bytes memory initiatorSignature)
         private
         view
         returns (address)
@@ -197,9 +192,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         address initiator,
         Policies.Policy calldata policy
-    )
-        private
-    {
+    ) private {
         // Only process if policy has time-based limits
         if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) {
             return;
@@ -245,10 +238,7 @@ library LibOrganizationAccountTransaction {
         bytes memory initiatorSignature,
         Policies.ValidationProofs calldata proofs,
         bool isApproval
-    )
-        private
-        view
-    {
+    ) private view {
         // Get required approval count from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
 
@@ -302,10 +292,7 @@ library LibOrganizationAccountTransaction {
         uint256 policyId,
         bytes memory signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        internal
-        view
-    {
+    ) internal view {
         // Check transaction hasn't expired (can only reject pending transactions)
         if (block.timestamp > expirationTimestamp) {
             revert TransactionExpired(expirationTimestamp, block.timestamp);
@@ -363,10 +350,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bytes memory signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        private
-        view
-    {
+    ) private view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
@@ -397,11 +381,7 @@ library LibOrganizationAccountTransaction {
      * @param isApproval True for approval, false for rejection
      * @return The EIP-712 typed data hash for signing
      */
-    function _computeInitiatorHashFromParams(
-        TxParams memory params,
-        bytes calldata data,
-        bool isApproval
-    )
+    function _computeInitiatorHashFromParams(TxParams memory params, bytes calldata data, bool isApproval)
         private
         view
         returns (bytes32)
@@ -442,11 +422,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bool isApproval,
         bytes memory initiatorSignature
-    )
-        private
-        view
-        returns (bytes32)
-    {
+    ) private view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(

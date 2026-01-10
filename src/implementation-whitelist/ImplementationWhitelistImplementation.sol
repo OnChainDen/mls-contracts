@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IImplementationWhitelist } from "./interfaces/IImplementationWhitelist.sol";
-import { LibImplementationWhitelistStorage } from "./libraries/LibImplementationWhitelistStorage.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
+import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWhitelistStorage.sol";
 
 /**
  * @title Implementation Whitelist
@@ -46,10 +47,7 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      * @param implementation The implementation address to check
      * @return True if the implementation is whitelisted, false otherwise
      */
-    function isImplementationWhitelisted(
-        ContractType contractType,
-        address implementation
-    )
+    function isImplementationWhitelisted(ContractType contractType, address implementation)
         external
         view
         override
@@ -63,10 +61,7 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      * @param contractType The type of contract (Account or Organization)
      * @param implementation The implementation address to check
      */
-    function validateIsImplementationWhitelistedOrRevert(
-        ContractType contractType,
-        address implementation
-    )
+    function validateIsImplementationWhitelistedOrRevert(ContractType contractType, address implementation)
         external
         view
         override
@@ -86,10 +81,7 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
         ContractType contractType,
         address[] calldata toWhitelist,
         address[] calldata toUnwhitelist
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
         for (uint256 i = 0; i < toWhitelist.length; i++) {
@@ -107,5 +99,5 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      * @notice Authorize an upgrade
      * @param newImplementation The new implementation address
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

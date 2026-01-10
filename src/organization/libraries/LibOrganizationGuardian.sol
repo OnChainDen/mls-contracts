@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationGuardianStorage } from "./storage/LibOrganizationGuardianStorage.sol";
-import { LibOrganizationAdmin } from "./LibOrganizationAdmin.sol";
+import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
+import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianStorage.sol";
 
 /**
  * @title Lib Organization Guardian

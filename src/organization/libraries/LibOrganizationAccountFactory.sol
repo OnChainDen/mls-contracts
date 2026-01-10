@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { AccountProxy } from "../../account/AccountProxy.sol";
-import { LibOrganizationAccountFactoryStorage } from "./storage/LibOrganizationAccountFactoryStorage.sol";
+import {AccountProxy} from "../../account/AccountProxy.sol";
+import {LibOrganizationAccountFactoryStorage} from "./storage/LibOrganizationAccountFactoryStorage.sol";
 
 /**
  * @title Lib Organization Account Factory

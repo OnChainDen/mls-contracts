@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
-import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
-import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { Policies } from "../../libraries/Policies.sol";
-import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
-import { TokenTransferUtils } from "../../libraries/TokenTransferUtils.sol";
-import { ContractInteractionUtils } from "../../libraries/ContractInteractionUtils.sol";
+import {ContractInteractionUtils} from "../../libraries/ContractInteractionUtils.sol";
+import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {Policies} from "../../libraries/Policies.sol";
+import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
+import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
+import {LibOrganizationGroups} from "./LibOrganizationGroups.sol";
+import {LibOrganizationMembers} from "./LibOrganizationMembers.sol";
+import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
+import {LibOrganizationPolicyStorage} from "./storage/LibOrganizationPolicyStorage.sol";
+
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Policy
@@ -88,11 +89,7 @@ library LibOrganizationPolicy {
      * @param proof The merkle proof for the policy
      * @return True if the policy is in the tree, false otherwise
      */
-    function isPolicyInOrg(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        bytes32[] memory proof
-    )
+    function isPolicyInOrg(uint256 policyId, Policies.Policy memory policy, bytes32[] memory proof)
         internal
         view
         returns (bool)
@@ -147,11 +144,7 @@ library LibOrganizationPolicy {
         bytes calldata data,
         address initiator,
         Policies.ValidationProofs calldata proofs
-    )
-        internal
-        view
-        returns (bool)
-    {
+    ) internal view returns (bool) {
         // Case: The policy does not exist in the organization
         if (!isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) return false;
 
@@ -227,11 +220,7 @@ library LibOrganizationPolicy {
         Policies.Policy memory policy,
         address sourceAccount,
         bytes32[] memory sourceAccountProof
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         // Case: The policy matches transactions sent from any account
         if (policy.config.anySourceAccount) return true;
 
@@ -250,11 +239,7 @@ library LibOrganizationPolicy {
      * @param data The transaction calldata
      * @return True if the token is allowed, false otherwise
      */
-    function _isTokenAllowedByPolicy(
-        Policies.Policy calldata policy,
-        address to,
-        bytes calldata data
-    )
+    function _isTokenAllowedByPolicy(Policies.Policy calldata policy, address to, bytes calldata data)
         private
         pure
         returns (bool)
@@ -276,11 +261,7 @@ library LibOrganizationPolicy {
      * @param value The transaction value in wei
      * @return True if the amount is allowed, false otherwise
      */
-    function _isTokenAmountAllowedByPolicy(
-        Policies.Policy calldata policy,
-        bytes calldata data,
-        uint256 value
-    )
+    function _isTokenAmountAllowedByPolicy(Policies.Policy calldata policy, bytes calldata data, uint256 value)
         private
         pure
         returns (bool)
@@ -307,11 +288,7 @@ library LibOrganizationPolicy {
         Policies.Policy memory policy,
         address initiatorAddress,
         Policies.InitiatorProofs memory initiatorProofs
-    )
-        internal
-        view
-        returns (bool)
-    {
+    ) internal view returns (bool) {
         // Case: The policy matches transactions with any initiator
         if (policy.config.initiator.anyInitiator) return true;
 
@@ -366,11 +343,7 @@ library LibOrganizationPolicy {
         uint256 value,
         bytes calldata data,
         bytes32[] calldata destinationProof
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         Policies.DestinationType destType = policy.config.destinationType;
 
         // Case: Policy matches transaction to any address
@@ -405,11 +378,7 @@ library LibOrganizationPolicy {
         bytes calldata data,
         bytes32[] calldata functionProof,
         bytes calldata constraints
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         // Case: Policy matches any function
         if (policy.config.anyFunction) return true;
 
@@ -469,11 +438,7 @@ library LibOrganizationPolicy {
         bytes32[] memory memberProof,
         Policies.GroupData memory group,
         bytes32[] memory memberInGroupProof
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         // First verify the signer is a member of the organization (using cached root)
         if (!LibOrganizationMembers.isMemberInTree(signerAddress, membersRoot, memberProof)) {
             return false;
@@ -516,11 +481,7 @@ library LibOrganizationPolicy {
         bytes memory signatures,
         bytes32 messageHash,
         Policies.ApproverProofs memory approverProofs
-    )
-        internal
-        view
-        returns (uint8)
-    {
+    ) internal view returns (uint8) {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
 
@@ -635,10 +596,7 @@ library LibOrganizationPolicy {
      * @param data The transaction calldata
      * @return True if all constraints are satisfied, false otherwise
      */
-    function _areParametersAllowedByConstraints(
-        bytes calldata parameterConstraints,
-        bytes calldata data
-    )
+    function _areParametersAllowedByConstraints(bytes calldata parameterConstraints, bytes calldata data)
         private
         pure
         returns (bool)
@@ -662,10 +620,7 @@ library LibOrganizationPolicy {
      * @dev Separated to manage stack depth in the main function.
      *      Each constraint is self-contained with its own merkle proof for OneOf constraints.
      */
-    function _processConstraints(
-        Policies.ParameterConstraint[] memory constraints,
-        bytes calldata data
-    )
+    function _processConstraints(Policies.ParameterConstraint[] memory constraints, bytes calldata data)
         private
         pure
         returns (bool)
@@ -718,11 +673,7 @@ library LibOrganizationPolicy {
         Policies.ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         if (constraintType != Policies.ConstraintType.Exact) return false;
         bool expectedValue = abi.decode(comparisonData, (bool));
         bool actualValue = uint256(paramHeadValue) != 0;
@@ -741,11 +692,7 @@ library LibOrganizationPolicy {
         Policies.ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         uint256 actualValue = uint256(paramHeadValue);
         if (constraintType == Policies.ConstraintType.Exact) {
             uint256 expectedValue = abi.decode(comparisonData, (uint256));
@@ -771,11 +718,7 @@ library LibOrganizationPolicy {
         Policies.ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         int256 actualValue = int256(uint256(paramHeadValue));
         if (constraintType == Policies.ConstraintType.Exact) {
             int256 expectedValue = abi.decode(comparisonData, (int256));
@@ -803,11 +746,7 @@ library LibOrganizationPolicy {
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes32[] memory addressListProof
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         address actualValue = address(uint160(uint256(paramHeadValue)));
         if (constraintType == Policies.ConstraintType.Exact) {
             address expectedValue = abi.decode(comparisonData, (address));
@@ -838,11 +777,7 @@ library LibOrganizationPolicy {
         Policies.ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         if (constraintType != Policies.ConstraintType.Exact) return false;
         bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
         return paramHeadValue == expectedValue;
@@ -864,11 +799,7 @@ library LibOrganizationPolicy {
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes calldata data
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         if (constraintType != Policies.ConstraintType.Exact) return false;
 
         // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
@@ -908,11 +839,7 @@ library LibOrganizationPolicy {
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes calldata data
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         if (constraintType != Policies.ConstraintType.Exact) return false;
 
         // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
@@ -949,11 +876,7 @@ library LibOrganizationPolicy {
         Policies.ParameterConstraint memory constraint,
         bytes32 paramHeadValue,
         bytes calldata data
-    )
-        private
-        pure
-        returns (bool)
-    {
+    ) private pure returns (bool) {
         Policies.ParamType pType = constraint.paramType;
         Policies.ConstraintType constraintType = constraint.constraintType;
 
@@ -1026,11 +949,7 @@ library LibOrganizationPolicy {
         address account,
         address destination,
         address initiator
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
+    ) internal pure returns (bytes32) {
         // Determine scoped values based on policy configuration
         // When scope is AcrossAll, address(0) is used for that entity.
         // When scope is PerEntity, the actual address is used.
@@ -1082,10 +1001,7 @@ library LibOrganizationPolicy {
         address destination,
         address initiator,
         uint256 usageAmount
-    )
-        internal
-        returns (bool withinLimit)
-    {
+    ) internal returns (bool withinLimit) {
         // Skip check if no time-based limitation
         if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return true;
 
@@ -1123,11 +1039,7 @@ library LibOrganizationPolicy {
         address account,
         address destination,
         address initiator
-    )
-        internal
-        view
-        returns (uint256)
-    {
+    ) internal view returns (uint256) {
         // Return 0 if no time-based limitation
         if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return 0;
 

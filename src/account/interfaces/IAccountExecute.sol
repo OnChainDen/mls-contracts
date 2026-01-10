@@ -7,12 +7,6 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 interface IAccountExecute {
-    function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 nonce,
-        uint256 policyId
-    )
+    function executeTransaction(address to, uint256 value, bytes calldata data, uint256 nonce, uint256 policyId)
         external;
 }

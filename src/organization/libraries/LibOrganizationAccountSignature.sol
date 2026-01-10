@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationPolicy } from "./LibOrganizationPolicy.sol";
-import { LibOrganizationGuardian } from "./LibOrganizationGuardian.sol";
-import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { LibOrganizationEIP712 } from "./LibOrganizationEIP712.sol";
-import { Policies } from "../../libraries/Policies.sol";
-import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {Policies} from "../../libraries/Policies.sol";
+import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
+import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
+import {LibOrganizationGuardian} from "./LibOrganizationGuardian.sol";
+import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
+
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Account Signature
@@ -47,11 +48,7 @@ library LibOrganizationAccountSignature {
      * @param signature ABI-encoded signature data containing policy info and proofs
      * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
      */
-    function isValidSignature(
-        address account,
-        bytes32 hash,
-        bytes memory signature
-    )
+    function isValidSignature(address account, bytes32 hash, bytes memory signature)
         internal
         view
         returns (bytes4 magicValue)
@@ -130,11 +127,7 @@ library LibOrganizationAccountSignature {
         address initiator,
         uint256 policyId,
         Policies.ValidationProofs memory proofs
-    )
-        private
-        view
-        returns (bool)
-    {
+    ) private view returns (bool) {
         // Case: Policy is not in the organization's policy tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
             return false;
@@ -179,11 +172,7 @@ library LibOrganizationAccountSignature {
         bytes memory approverSignatures,
         bytes memory initiatorSignature,
         Policies.ValidationProofs memory proofs
-    )
-        private
-        view
-        returns (bool)
-    {
+    ) private view returns (bool) {
         // Case: Not enough data provided to check for valid approval signatures
         if (approverSignatures.length < 65) {
             return false;
@@ -223,11 +212,7 @@ library LibOrganizationAccountSignature {
         uint256 policyId,
         uint256 expirationTimestamp,
         bytes memory guardianSignature
-    )
-        private
-        view
-        returns (bool)
-    {
+    ) private view returns (bool) {
         address guardianAddress = LibOrganizationGuardian.getGuardian();
 
         // Guardian signs the same hash structure as the initiator
@@ -247,12 +232,7 @@ library LibOrganizationAccountSignature {
      * @param expirationTimestamp When the request expires
      * @return The EIP-712 typed data hash for signing
      */
-    function _getInitiatorSignatureHash(
-        address account,
-        bytes32 hash,
-        uint256 policyId,
-        uint256 expirationTimestamp
-    )
+    function _getInitiatorSignatureHash(address account, bytes32 hash, uint256 policyId, uint256 expirationTimestamp)
         private
         view
         returns (bytes32)
@@ -291,11 +271,7 @@ library LibOrganizationAccountSignature {
         uint256 policyId,
         uint256 expirationTimestamp,
         bytes memory initiatorSignature
-    )
-        private
-        view
-        returns (bytes32)
-    {
+    ) private view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
                 keccak256(
