@@ -17,6 +17,10 @@ remappings = [
 fuzz = { runs = 10000 }
 invariant = { runs = 1000 }
 
+[lint]
+# Disable the asm-keccak256 lint - we prefer readable keccak256() calls over assembly
+exclude_lints = ["asm-keccak256"]
+
 [fmt]
 bracket_spacing = true
 int_types = "long"
