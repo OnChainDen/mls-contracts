@@ -32,39 +32,6 @@ library LibOrganizationMembers {
     error MemberVerificationFailed(address memberAddress);
 
     // ================================
-    // MEMBERSHIP VERIFICATION
-    // ================================
-
-    /**
-     * @notice Checks if an address is in a member tree given an explicit root
-     * @dev Used to verify against potentially different roots (current vs new)
-     * @param memberAddress The address to verify
-     * @param membersRoot The merkle root to verify against
-     * @param proof The merkle proof
-     * @return True if the address is in the member tree, false otherwise
-     */
-    function isMemberInTree(address memberAddress, bytes32 membersRoot, bytes32[] memory proof)
-        internal
-        pure
-        returns (bool)
-    {
-        if (membersRoot == bytes32(0)) return false;
-        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
-        return MerkleProof.verify(proof, membersRoot, leaf);
-    }
-
-    /**
-     * @notice Verifies that an address is a member of the organization
-     * @param memberAddress The address to verify
-     * @param proof The merkle proof for the address
-     * @return True if the address is a verified member, false otherwise
-     */
-    function isMemberInOrg(address memberAddress, bytes32[] memory proof) internal view returns (bool) {
-        bytes32 root = LibOrganizationMembersStorage.layout().membersRoot;
-        return isMemberInTree(memberAddress, root, proof);
-    }
-
-    // ================================
     // SET MEMBERS
     // ================================
 
@@ -97,6 +64,21 @@ library LibOrganizationMembers {
     }
 
     // ================================
+    // MEMBERSHIP VERIFICATION
+    // ================================
+
+    /**
+     * @notice Verifies that an address is a member of the organization
+     * @param memberAddress The address to verify
+     * @param proof The merkle proof for the address
+     * @return True if the address is a verified member, false otherwise
+     */
+    function isMemberInOrg(address memberAddress, bytes32[] memory proof) internal view returns (bool) {
+        bytes32 root = LibOrganizationMembersStorage.layout().membersRoot;
+        return isMemberInTree(memberAddress, root, proof);
+    }
+
+    // ================================
     // GETTERS
     // ================================
 
@@ -106,5 +88,23 @@ library LibOrganizationMembers {
      */
     function getMembersRoot() internal view returns (bytes32) {
         return LibOrganizationMembersStorage.layout().membersRoot;
+    }
+
+    /**
+     * @notice Checks if an address is in a member tree given an explicit root
+     * @dev Used to verify against potentially different roots (current vs new)
+     * @param memberAddress The address to verify
+     * @param membersRoot The merkle root to verify against
+     * @param proof The merkle proof
+     * @return True if the address is in the member tree, false otherwise
+     */
+    function isMemberInTree(address memberAddress, bytes32 membersRoot, bytes32[] memory proof)
+        internal
+        pure
+        returns (bool)
+    {
+        if (membersRoot == bytes32(0)) return false;
+        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
+        return MerkleProof.verify(proof, membersRoot, leaf);
     }
 }

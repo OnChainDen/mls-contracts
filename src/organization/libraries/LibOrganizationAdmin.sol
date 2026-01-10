@@ -142,104 +142,8 @@ library LibOrganizationAdmin {
     error InvalidAdminConfiguration(string reason);
 
     // ================================
-    // ADMIN TREE VERIFICATION
-    // ================================
-
-    /**
-     * @notice Checks if an address is in the admin tree
-     * @param admin The address to check
-     * @param adminsRoot The merkle root of the admin tree
-     * @param proof The merkle proof
-     * @return True if the address is in the admin tree, false otherwise
-     */
-    function _isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) private pure returns (bool) {
-        if (adminsRoot == bytes32(0)) return false;
-        bytes32 leaf = MerkleUtils.computeAddressLeaf(admin);
-        return MerkleProof.verify(proof, adminsRoot, leaf);
-    }
-
-    // ================================
-    // SHARED VALIDATION HELPER
-    // ================================
-
-    /**
-     * @notice Validates that all admins are members of the organization
-     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
-     *      Admin addresses must be in strictly ascending order to prevent duplicates.
-     * @param validation The validation data containing admin addresses and proofs
-     * @param adminsRoot The merkle root of the admin tree
-     * @param membersRoot The merkle root of the members tree
-     * @param expectedAdminCount The expected number of admins (for completeness check)
-     */
-    function validateAllAdminsAreMembersOrRevert(
-        AdminMembershipValidation memory validation,
-        bytes32 adminsRoot,
-        bytes32 membersRoot,
-        uint256 expectedAdminCount
-    ) internal pure {
-        // Case: Admin addresses array does not match expected count
-        if (validation.adminAddresses.length != expectedAdminCount) {
-            revert AdminCountMismatch(expectedAdminCount, validation.adminAddresses.length);
-        }
-
-        // Track last admin address to ensure ascending order (prevents duplicates)
-        address lastAdmin = address(0);
-
-        for (uint256 i = 0; i < validation.adminAddresses.length; ++i) {
-            address admin = validation.adminAddresses[i];
-
-            // Case: Admin address is not in ascending order or has duplicates
-            if (admin <= lastAdmin) {
-                revert DuplicateOrUnorderedAdminAddress(admin);
-            }
-            lastAdmin = admin;
-
-            // Case: Admin is not in the admin tree
-            if (!_isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
-                revert AdminNotInTree(admin);
-            }
-
-            // Case: Admin is not a member in the members tree
-            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.adminInOrgMembersTreeProofs[i])) {
-                revert AdminNotMember(admin);
-            }
-        }
-    }
-
-    /**
-     * @notice Validates the admin configuration parameters
-     * @dev Used by initialize and setAdmins to ensure valid admin configuration.
-     *      Validates that adminsRoot is not zero, adminCount is not zero, and votingThreshold is valid.
-     * @param adminsRoot The merkle root of admin addresses
-     * @param adminCount The number of admins
-     * @param votingThreshold The voting threshold for admin operations
-     */
-    function validateAdminConfigurationOrRevert(bytes32 adminsRoot, uint256 adminCount, uint256 votingThreshold)
-        internal
-        pure
-    {
-        if (adminsRoot == bytes32(0)) {
-            revert InvalidAdminConfiguration("Admin root cannot be zero");
-        }
-        if (adminCount == 0) {
-            revert InvalidAdminConfiguration("Admin count cannot be zero");
-        }
-        if (votingThreshold == 0 || votingThreshold > adminCount) {
-            revert InvalidAdminConfiguration("Invalid voting threshold");
-        }
-    }
-
-    // ================================
     // ADMIN PERMISSION MANAGEMENT
     // ================================
-
-    /**
-     * @notice Gets the current admin permission configuration
-     * @return The current admin permission configuration
-     */
-    function getAdminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdminStorage.layout().adminPermission;
-    }
 
     /**
      * @notice Sets the admin permissions for the organization
@@ -338,6 +242,85 @@ library LibOrganizationAdmin {
         // Check if we have enough valid signatures
         if (validSignatures < adminLayout.adminPermission.votingThreshold) {
             revert AdminOperationRejected("Insufficient authorization for admin operation");
+        }
+    }
+
+    /**
+     * @notice Gets the current admin permission configuration
+     * @return The current admin permission configuration
+     */
+    function getAdminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
+        return LibOrganizationAdminStorage.layout().adminPermission;
+    }
+
+    // ================================
+    // SHARED VALIDATION HELPER
+    // ================================
+
+    /**
+     * @notice Validates that all admins are members of the organization
+     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
+     *      Admin addresses must be in strictly ascending order to prevent duplicates.
+     * @param validation The validation data containing admin addresses and proofs
+     * @param adminsRoot The merkle root of the admin tree
+     * @param membersRoot The merkle root of the members tree
+     * @param expectedAdminCount The expected number of admins (for completeness check)
+     */
+    function validateAllAdminsAreMembersOrRevert(
+        AdminMembershipValidation memory validation,
+        bytes32 adminsRoot,
+        bytes32 membersRoot,
+        uint256 expectedAdminCount
+    ) internal pure {
+        // Case: Admin addresses array does not match expected count
+        if (validation.adminAddresses.length != expectedAdminCount) {
+            revert AdminCountMismatch(expectedAdminCount, validation.adminAddresses.length);
+        }
+
+        // Track last admin address to ensure ascending order (prevents duplicates)
+        address lastAdmin = address(0);
+
+        for (uint256 i = 0; i < validation.adminAddresses.length; ++i) {
+            address admin = validation.adminAddresses[i];
+
+            // Case: Admin address is not in ascending order or has duplicates
+            if (admin <= lastAdmin) {
+                revert DuplicateOrUnorderedAdminAddress(admin);
+            }
+            lastAdmin = admin;
+
+            // Case: Admin is not in the admin tree
+            if (!_isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
+                revert AdminNotInTree(admin);
+            }
+
+            // Case: Admin is not a member in the members tree
+            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.adminInOrgMembersTreeProofs[i])) {
+                revert AdminNotMember(admin);
+            }
+        }
+    }
+
+    /**
+     * @notice Validates the admin configuration parameters
+     * @dev Used by initialize and setAdmins to ensure valid admin configuration.
+     *      Validates that adminsRoot is not zero, adminCount is not zero, and votingThreshold is valid.
+     * @param adminsRoot The merkle root of admin addresses
+     * @param adminCount The number of admins
+     * @param votingThreshold The voting threshold for admin operations
+     */
+    function validateAdminConfigurationOrRevert(bytes32 adminsRoot, uint256 adminCount, uint256 votingThreshold)
+        internal
+        pure
+    {
+        if (adminsRoot == bytes32(0)) {
+            revert InvalidAdminConfiguration("Admin root cannot be zero");
+        }
+        if (adminCount == 0) {
+            revert InvalidAdminConfiguration("Admin count cannot be zero");
+        }
+        if (votingThreshold == 0 || votingThreshold > adminCount) {
+            revert InvalidAdminConfiguration("Invalid voting threshold");
         }
     }
 
@@ -449,5 +432,22 @@ library LibOrganizationAdmin {
 
         // Return EIP-712 compatible hash for ERC-1271 signature verification
         return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
+    }
+
+    // ================================
+    // ADMIN TREE VERIFICATION
+    // ================================
+
+    /**
+     * @notice Checks if an address is in the admin tree
+     * @param admin The address to check
+     * @param adminsRoot The merkle root of the admin tree
+     * @param proof The merkle proof
+     * @return True if the address is in the admin tree, false otherwise
+     */
+    function _isAdminInTree(address admin, bytes32 adminsRoot, bytes32[] memory proof) private pure returns (bool) {
+        if (adminsRoot == bytes32(0)) return false;
+        bytes32 leaf = MerkleUtils.computeAddressLeaf(admin);
+        return MerkleProof.verify(proof, adminsRoot, leaf);
     }
 }

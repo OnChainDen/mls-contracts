@@ -45,26 +45,12 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
         _;
     }
 
-    /**
-     * @notice Internal function to check if the caller is the organization
-     * @dev Extracted from modifier to reduce code size
-     */
-    function _onlyOrganization() private view {
-        if (msg.sender != LibAccountOrganizationAddressStorage.getOrganizationAddress()) {
-            revert OnlyOrganization();
-        }
-    }
-
     // ================================
-    // Organization reference
+    // INativeTokenReceivedEventEmitter
     // ================================
 
-    /**
-     * @notice Gets the organization address that this account is associated with (the beacon)
-     * @return The organization address
-     */
-    function getOrganizationAddress() external view returns (address) {
-        return LibAccountOrganizationAddressStorage.getOrganizationAddress();
+    receive() external payable override {
+        emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
     }
 
     // ================================
@@ -94,23 +80,16 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
         emit TransactionExecuted(to, value, data, nonce, policyId);
     }
 
+    // ================================
+    // Organization reference
+    // ================================
+
     /**
-     * @notice Executes a `CALL` with provided parameters.
-     * @dev This method doesn't perform any sanity check of the transaction, such as:
-     *      - if the contract at `to` address has code or not
-     *      It is the responsibility of the caller to perform such checks.
-     * @param to Destination address.
-     * @param value Ether value.
-     * @param data Data payload.
-     * @param txGas Gas to use for the call.
-     * @return success boolean flag indicating if the call succeeded.
+     * @notice Gets the organization address that this account is associated with (the beacon)
+     * @return The organization address
      */
-    function _execute(address to, uint256 value, bytes memory data, uint256 txGas) private returns (bool success) {
-        /* solhint-disable no-inline-assembly */
-        /// @solidity memory-safe-assembly
-        assembly {
-            success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
-        }
+    function getOrganizationAddress() external view returns (address) {
+        return LibAccountOrganizationAddressStorage.getOrganizationAddress();
     }
 
     // ================================
@@ -136,11 +115,32 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
         return IOrganizationSignatureValidator(organization).isValidSignatureForAccount(address(this), hash, signature);
     }
 
-    // ================================
-    // INativeTokenReceivedEventEmitter
-    // ================================
+    /**
+     * @notice Executes a `CALL` with provided parameters.
+     * @dev This method doesn't perform any sanity check of the transaction, such as:
+     *      - if the contract at `to` address has code or not
+     *      It is the responsibility of the caller to perform such checks.
+     * @param to Destination address.
+     * @param value Ether value.
+     * @param data Data payload.
+     * @param txGas Gas to use for the call.
+     * @return success boolean flag indicating if the call succeeded.
+     */
+    function _execute(address to, uint256 value, bytes memory data, uint256 txGas) private returns (bool success) {
+        /* solhint-disable no-inline-assembly */
+        /// @solidity memory-safe-assembly
+        assembly {
+            success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
+        }
+    }
 
-    receive() external payable override {
-        emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
+    /**
+     * @notice Internal function to check if the caller is the organization
+     * @dev Extracted from modifier to reduce code size
+     */
+    function _onlyOrganization() private view {
+        if (msg.sender != LibAccountOrganizationAddressStorage.getOrganizationAddress()) {
+            revert OnlyOrganization();
+        }
     }
 }

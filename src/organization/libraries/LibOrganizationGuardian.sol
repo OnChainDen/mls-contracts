@@ -26,25 +26,6 @@ library LibOrganizationGuardian {
     error UnauthorizedCaller(address caller, address guardian);
 
     /**
-     * @notice Enforces that the caller is the guardian address
-     * @dev This function will revert if msg.sender is not the guardian
-     */
-    function enforceOnlyGuardian() internal view {
-        LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
-        if (msg.sender != guardianLayout.guardian) {
-            revert UnauthorizedCaller(msg.sender, guardianLayout.guardian);
-        }
-    }
-
-    /**
-     * @notice Gets the current guardian address
-     * @return The current guardian address
-     */
-    function getGuardian() internal view returns (address) {
-        return LibOrganizationGuardianStorage.layout().guardian;
-    }
-
-    /**
      * @notice Sets the guardian address for the organization
      * @param newGuardian The new guardian address
      */
@@ -64,5 +45,24 @@ library LibOrganizationGuardian {
 
         // Emit event
         emit GuardianUpdated(previousGuardian, newGuardian);
+    }
+
+    /**
+     * @notice Enforces that the caller is the guardian address
+     * @dev This function will revert if msg.sender is not the guardian
+     */
+    function enforceOnlyGuardian() internal view {
+        LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
+        if (msg.sender != guardianLayout.guardian) {
+            revert UnauthorizedCaller(msg.sender, guardianLayout.guardian);
+        }
+    }
+
+    /**
+     * @notice Gets the current guardian address
+     * @return The current guardian address
+     */
+    function getGuardian() internal view returns (address) {
+        return LibOrganizationGuardianStorage.layout().guardian;
     }
 }

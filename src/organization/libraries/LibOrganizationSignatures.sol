@@ -18,6 +18,21 @@ library LibOrganizationSignatures {
     error NonceAlreadyUsed(uint256 nonce);
 
     /**
+     * @notice Validates that a nonce has not been used and marks it as used
+     * @dev Reverts if the nonce has already been used
+     * @param nonce The nonce to validate and consume
+     */
+    function validateAndConsumeNonceOrRevert(uint256 nonce) internal {
+        LibOrganizationSignaturesStorage.Layout storage sigLayout = LibOrganizationSignaturesStorage.layout();
+
+        if (sigLayout.usedNonces[nonce]) {
+            revert NonceAlreadyUsed(nonce);
+        }
+
+        sigLayout.usedNonces[nonce] = true;
+    }
+
+    /**
      * @notice Checks if a nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
@@ -39,21 +54,6 @@ library LibOrganizationSignatures {
         returns (uint256)
     {
         return uint256(keccak256(abi.encode(address(this), operationType, keccak256(operationData), salt)));
-    }
-
-    /**
-     * @notice Validates that a nonce has not been used and marks it as used
-     * @dev Reverts if the nonce has already been used
-     * @param nonce The nonce to validate and consume
-     */
-    function validateAndConsumeNonceOrRevert(uint256 nonce) internal {
-        LibOrganizationSignaturesStorage.Layout storage sigLayout = LibOrganizationSignaturesStorage.layout();
-
-        if (sigLayout.usedNonces[nonce]) {
-            revert NonceAlreadyUsed(nonce);
-        }
-
-        sigLayout.usedNonces[nonce] = true;
     }
 
     /**

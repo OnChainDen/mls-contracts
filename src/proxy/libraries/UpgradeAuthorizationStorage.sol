@@ -9,15 +9,15 @@ import {IImplementationWhitelist} from "../../implementation-whitelist/interface
  * @author Den Technologies Inc
  */
 library UpgradeAuthorizationStorage {
-    // Storage namespace for upgrade authorization
-    bytes32 private constant STORAGE_NAMESPACE = keccak256("onchain.custody.upgrade.authorization");
-
     struct Layout {
         // Address of the implementation whitelist contract
         address whitelistAddress;
         // Contract type (Account or Organization)
         IImplementationWhitelist.ContractType contractType;
     }
+
+    // Storage namespace for upgrade authorization
+    bytes32 private constant STORAGE_NAMESPACE = keccak256("onchain.custody.upgrade.authorization");
 
     /**
      * @notice Get the storage layout for upgrade authorization

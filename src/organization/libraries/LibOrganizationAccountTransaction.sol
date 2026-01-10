@@ -152,113 +152,6 @@ library LibOrganizationAccountTransaction {
         _validateAndUpdateTimeBasedLimitOrRevert(params, data, initiator, proofs.policy);
     }
 
-    /**
-     * @notice Recovers the initiator address from the transaction parameters and signature
-     * @dev Computes the EIP-712 hash of the transaction and recovers the signer
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param initiatorSignature The initiator's ECDSA signature
-     * @return The recovered initiator address
-     */
-    function _recoverInitiatorFromParams(TxParams memory params, bytes calldata data, bytes memory initiatorSignature)
-        private
-        view
-        returns (address)
-    {
-        // Compute the hash the initiator should have signed (isApproval = true)
-        bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
-
-        // Recover signer from signature
-        address initiator = ECDSA.recover(initiatorTxHash, initiatorSignature);
-        if (initiator == address(0)) {
-            revert InvalidInitiatorSignature();
-        }
-        return initiator;
-    }
-
-    /**
-     * @notice Validates and updates time-based limits for approved transactions
-     * @dev Only applies if the policy has TimeInterval limitation.
-     *      For token transfers, tracks the transfer amount.
-     *      For other transactions, tracks count (usage = 1).
-     *      Reverts if the limit would be exceeded.
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param initiator The initiator's address
-     * @param policy The policy being used
-     */
-    function _validateAndUpdateTimeBasedLimitOrRevert(
-        TxParams memory params,
-        bytes calldata data,
-        address initiator,
-        Policies.Policy calldata policy
-    ) private {
-        // Only process if policy has time-based limits
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) {
-            return;
-        }
-
-        // Determine the actual destination (may differ for token transfers)
-        address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
-
-        // Calculate usage amount: token amount for transfers, 1 for other transactions
-        uint256 usageAmount;
-        if (policy.config.transactionType == Policies.TransactionType.TokenTransfers) {
-            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
-        } else {
-            usageAmount = 1; // Count-based limit for non-transfer transactions
-        }
-
-        // Check limit and update usage tracking
-        bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
-            params.policyId, policy, params.account, destination, initiator, usageAmount
-        );
-
-        if (!withinLimit) {
-            revert TimeBasedLimitExceeded(params.policyId);
-        }
-    }
-
-    /**
-     * @notice Validates manual approval/rejection signatures meet the required threshold
-     * @dev Extracts reviewer signatures and validates against required threshold.
-     *      Used for both approval and rejection flows - the isApproval flag determines
-     *      which hash is computed for signature verification.
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param signatures All signatures (initiator + reviewers)
-     * @param initiatorSignature The initiator's signature
-     * @param proofs Merkle proofs and policy data
-     * @param isApproval True for approval validation, false for rejection validation
-     */
-    function _validateManualConfirmationOrRevert(
-        TxParams memory params,
-        bytes calldata data,
-        bytes memory signatures,
-        bytes memory initiatorSignature,
-        Policies.ValidationProofs calldata proofs,
-        bool isApproval
-    ) private view {
-        // Get required approval count from policy
-        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
-
-        // Extract reviewer signatures (everything after initiator signature)
-        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
-
-        // Compute hash that reviewers should have signed
-        // Includes initiator signature to bind approvals to specific request
-        bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
-
-        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
-            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
-        );
-
-        if (validApprovals < requiredApprovals) {
-            revert InsufficientApprovals(requiredApprovals, validApprovals);
-        }
-    }
-
     // ================================
     // TRANSACTION REJECTION
     // ================================
@@ -337,6 +230,49 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
+     * @notice Validates and updates time-based limits for approved transactions
+     * @dev Only applies if the policy has TimeInterval limitation.
+     *      For token transfers, tracks the transfer amount.
+     *      For other transactions, tracks count (usage = 1).
+     *      Reverts if the limit would be exceeded.
+     * @param params The packed transaction parameters
+     * @param data The transaction calldata
+     * @param initiator The initiator's address
+     * @param policy The policy being used
+     */
+    function _validateAndUpdateTimeBasedLimitOrRevert(
+        TxParams memory params,
+        bytes calldata data,
+        address initiator,
+        Policies.Policy calldata policy
+    ) private {
+        // Only process if policy has time-based limits
+        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) {
+            return;
+        }
+
+        // Determine the actual destination (may differ for token transfers)
+        address destination = LibOrganizationPolicy.getActualDestination(params.to, data, params.value);
+
+        // Calculate usage amount: token amount for transfers, 1 for other transactions
+        uint256 usageAmount;
+        if (policy.config.transactionType == Policies.TransactionType.TokenTransfers) {
+            usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
+        } else {
+            usageAmount = 1; // Count-based limit for non-transfer transactions
+        }
+
+        // Check limit and update usage tracking
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
+            params.policyId, policy, params.account, destination, initiator, usageAmount
+        );
+
+        if (!withinLimit) {
+            revert TimeBasedLimitExceeded(params.policyId);
+        }
+    }
+
+    /**
      * @notice Validates rejection for auto-approve policies
      * @dev For auto-approve policies, rejection requires a second signature from
      *      an authorized initiator signing the rejection hash (isApproval = false)
@@ -364,6 +300,70 @@ library LibOrganizationAccountTransaction {
         address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
             revert TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
+        }
+    }
+
+    /**
+     * @notice Recovers the initiator address from the transaction parameters and signature
+     * @dev Computes the EIP-712 hash of the transaction and recovers the signer
+     * @param params The packed transaction parameters
+     * @param data The transaction calldata
+     * @param initiatorSignature The initiator's ECDSA signature
+     * @return The recovered initiator address
+     */
+    function _recoverInitiatorFromParams(TxParams memory params, bytes calldata data, bytes memory initiatorSignature)
+        private
+        view
+        returns (address)
+    {
+        // Compute the hash the initiator should have signed (isApproval = true)
+        bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
+
+        // Recover signer from signature
+        address initiator = ECDSA.recover(initiatorTxHash, initiatorSignature);
+        if (initiator == address(0)) {
+            revert InvalidInitiatorSignature();
+        }
+        return initiator;
+    }
+
+    /**
+     * @notice Validates manual approval/rejection signatures meet the required threshold
+     * @dev Extracts reviewer signatures and validates against required threshold.
+     *      Used for both approval and rejection flows - the isApproval flag determines
+     *      which hash is computed for signature verification.
+     * @param params The packed transaction parameters
+     * @param data The transaction calldata
+     * @param signatures All signatures (initiator + reviewers)
+     * @param initiatorSignature The initiator's signature
+     * @param proofs Merkle proofs and policy data
+     * @param isApproval True for approval validation, false for rejection validation
+     */
+    function _validateManualConfirmationOrRevert(
+        TxParams memory params,
+        bytes calldata data,
+        bytes memory signatures,
+        bytes memory initiatorSignature,
+        Policies.ValidationProofs calldata proofs,
+        bool isApproval
+    ) private view {
+        // Get required approval count from policy
+        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
+
+        // Extract reviewer signatures (everything after initiator signature)
+        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
+
+        // Compute hash that reviewers should have signed
+        // Includes initiator signature to bind approvals to specific request
+        bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
+
+        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
+        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
+            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
+        );
+
+        if (validApprovals < requiredApprovals) {
+            revert InsufficientApprovals(requiredApprovals, validApprovals);
         }
     }
 

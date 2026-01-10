@@ -58,16 +58,6 @@ library LibOrganizationInitialization {
     error InvalidMembersRoot();
 
     /**
-     * @notice Enforces that the caller is the deployer address
-     * @dev This function will revert if msg.sender is not the deployer
-     */
-    function enforceOnlyDeployer() internal view {
-        if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
-            revert UnauthorizedDeployer();
-        }
-    }
-
-    /**
      * @notice Initializes the organization contract with Merkle-based members/groups and admin configuration
      * @dev Deployer authorization is enforced by the external wrapper function.
      *      Members and groups are represented as Merkle trees - only roots are stored on-chain.
@@ -129,6 +119,16 @@ library LibOrganizationInitialization {
             params.membersIpfsCid,
             params.groupsIpfsCid
         );
+    }
+
+    /**
+     * @notice Enforces that the caller is the deployer address
+     * @dev This function will revert if msg.sender is not the deployer
+     */
+    function enforceOnlyDeployer() internal view {
+        if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
+            revert UnauthorizedDeployer();
+        }
     }
 
     /**

@@ -34,11 +34,27 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
     }
 
     /**
-     * @notice Initialize the implementation whitelist
-     * @param initialOwner The initial owner address
+     * @notice Whitelists and/or unwhitelists implementation addresses
+     * @param contractType The type of contract (Account or Organization)
+     * @param toWhitelist The implementation addresses to whitelist
+     * @param toUnwhitelist The implementation addresses to remove from whitelist
      */
-    function initialize(address initialOwner) public initializer {
-        _transferOwnership(initialOwner);
+    function whitelistImplementations(
+        ContractType contractType,
+        address[] calldata toWhitelist,
+        address[] calldata toUnwhitelist
+    ) external onlyOwner {
+        LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
+
+        for (uint256 i = 0; i < toWhitelist.length; i++) {
+            storageLayout.whitelisted[contractType][toWhitelist[i]] = true;
+            emit ImplementationWhitelisted(contractType, toWhitelist[i]);
+        }
+
+        for (uint256 i = 0; i < toUnwhitelist.length; i++) {
+            storageLayout.whitelisted[contractType][toUnwhitelist[i]] = false;
+            emit ImplementationUnwhitelisted(contractType, toUnwhitelist[i]);
+        }
     }
 
     /**
@@ -72,27 +88,11 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
     }
 
     /**
-     * @notice Whitelists and/or unwhitelists implementation addresses
-     * @param contractType The type of contract (Account or Organization)
-     * @param toWhitelist The implementation addresses to whitelist
-     * @param toUnwhitelist The implementation addresses to remove from whitelist
+     * @notice Initialize the implementation whitelist
+     * @param initialOwner The initial owner address
      */
-    function whitelistImplementations(
-        ContractType contractType,
-        address[] calldata toWhitelist,
-        address[] calldata toUnwhitelist
-    ) external onlyOwner {
-        LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
-
-        for (uint256 i = 0; i < toWhitelist.length; i++) {
-            storageLayout.whitelisted[contractType][toWhitelist[i]] = true;
-            emit ImplementationWhitelisted(contractType, toWhitelist[i]);
-        }
-
-        for (uint256 i = 0; i < toUnwhitelist.length; i++) {
-            storageLayout.whitelisted[contractType][toUnwhitelist[i]] = false;
-            emit ImplementationUnwhitelisted(contractType, toUnwhitelist[i]);
-        }
+    function initialize(address initialOwner) public initializer {
+        _transferOwnership(initialOwner);
     }
 
     /**
