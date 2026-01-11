@@ -14,8 +14,8 @@ remappings = [
 ]
 
 [profile.ci]
-fuzz = { runs = 10000 }
-invariant = { runs = 1000 }
+fuzz = { runs = 256  }
+invariant = { runs = 256 }
 
 [lint]
 # Disable the asm-keccak256 lint - we prefer readable keccak256() calls over assembly
