@@ -130,6 +130,20 @@ library LibOrganizationAdmin {
     error InvalidAdminConfiguration(string reason);
 
     /**
+     * @notice Emitted when admin tree proofs length doesn't match signature count
+     * @param expected The expected length (signature count)
+     * @param actual The actual length of proofs array
+     */
+    error AdminTreeProofsLengthMismatch(uint256 expected, uint256 actual);
+
+    /**
+     * @notice Emitted when members tree proofs length doesn't match signature count
+     * @param expected The expected length (signature count)
+     * @param actual The actual length of proofs array
+     */
+    error MembersTreeProofsLengthMismatch(uint256 expected, uint256 actual);
+
+    /**
      * @notice Sets the admin permissions for the organization
      * @dev Validates that all new admins are members before updating.
      *      Admin addresses must be in ascending order.
@@ -322,6 +336,10 @@ library LibOrganizationAdmin {
 
         // Each signature is 65 bytes (r: 32, s: 32, v: 1)
         uint8 signatureCount = uint8(signatures.length / 65);
+
+        // Validate admin proofs lengths
+        _validateAdminProofsOrRevert(adminProofs, signatureCount);
+
         uint256 validSignatures = 0;
 
         // Track last signer to prevent duplicates (similar to Safe contracts)
@@ -351,13 +369,6 @@ library LibOrganizationAdmin {
 
             // Case: Signature is not valid
             if (!SignatureChecker.isValidSignatureNow(signer, operationHash, signature)) {
-                continue;
-            }
-
-            // Case: Proofs arrays do not have enough entries
-            if (
-                i >= adminProofs.adminInOrgAdminTreeProofs.length || i >= adminProofs.adminInOrgMembersTreeProofs.length
-            ) {
                 continue;
             }
 
@@ -414,6 +425,22 @@ library LibOrganizationAdmin {
 
         // Return EIP-712 compatible hash for ERC-1271 signature verification
         return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
+    }
+
+    /**
+     * @notice Validates that admin proofs have correct lengths
+     * @dev Reverts if proof arrays don't match signature count
+     * @param adminProofs The proofs for admin membership verification
+     * @param signatureCount The number of signatures provided
+     */
+    function _validateAdminProofsOrRevert(AdminProofs memory adminProofs, uint8 signatureCount) private pure {
+        if (adminProofs.adminInOrgAdminTreeProofs.length != signatureCount) {
+            revert AdminTreeProofsLengthMismatch(signatureCount, adminProofs.adminInOrgAdminTreeProofs.length);
+        }
+
+        if (adminProofs.adminInOrgMembersTreeProofs.length != signatureCount) {
+            revert MembersTreeProofsLengthMismatch(signatureCount, adminProofs.adminInOrgMembersTreeProofs.length);
+        }
     }
 
     /**
