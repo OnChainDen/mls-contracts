@@ -34,6 +34,14 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
     }
 
     /**
+     * @notice Initialize the implementation whitelist
+     * @param initialOwner The initial owner address
+     */
+    function initialize(address initialOwner) external initializer {
+        _transferOwnership(initialOwner);
+    }
+
+    /**
      * @notice Whitelists and/or unwhitelists implementation addresses
      * @param contractType The type of contract (Account or Organization)
      * @param toWhitelist The implementation addresses to whitelist
@@ -85,14 +93,6 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
         if (!LibImplementationWhitelistStorage.layout().whitelisted[contractType][implementation]) {
             revert ImplementationNotWhitelisted(implementation);
         }
-    }
-
-    /**
-     * @notice Initialize the implementation whitelist
-     * @param initialOwner The initial owner address
-     */
-    function initialize(address initialOwner) public initializer {
-        _transferOwnership(initialOwner);
     }
 
     /**
