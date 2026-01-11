@@ -460,6 +460,16 @@ contract OrganizationImplementation is
             proofs: proofs
         });
 
+        // Emit event before external call (CEI pattern) - if execution fails, transaction reverts
+        emit AccountTransactionExecuted({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            nonce: nonce,
+            policyId: policyId
+        });
+
         // Execute the transaction on the account
         // forgefmt: disable-next-item
         IAccountExecute(account).executeTransaction({
@@ -467,15 +477,6 @@ contract OrganizationImplementation is
             value: value, 
             data: data, 
             nonce: nonce, 
-            policyId: policyId
-        });
-
-        emit AccountTransactionExecuted({
-            account: account,
-            to: to,
-            value: value,
-            data: data,
-            nonce: nonce,
             policyId: policyId
         });
     }

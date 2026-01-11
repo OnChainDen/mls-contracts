@@ -86,6 +86,7 @@ contract OrganizationFactory {
             abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
 
         // Deploy the organization proxy using CREATE2
+        // slither-disable-next-line assembly
         assembly {
             organizationAddress := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
         }
@@ -100,10 +101,11 @@ contract OrganizationFactory {
             revert DeploymentAddressMismatch();
         }
 
+        // Emit event before external call (CEI pattern) - if initialize fails, transaction reverts
+        emit OrganizationDeployed(organizationAddress, salt, DEPLOYER_ADDRESS);
+
         // Initialize the organization atomically - reverts the entire transaction if initialization fails
         OrganizationImplementation(organizationAddress).initialize(initParams);
-
-        emit OrganizationDeployed(organizationAddress, salt, DEPLOYER_ADDRESS);
     }
 
     /**

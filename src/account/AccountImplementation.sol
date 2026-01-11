@@ -114,6 +114,7 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
     function _execute(address to, uint256 value, bytes memory data, uint256 txGas) private returns (bool success) {
         /* solhint-disable no-inline-assembly */
         /// @solidity memory-safe-assembly
+        // slither-disable-next-line assembly
         assembly {
             success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
         }
