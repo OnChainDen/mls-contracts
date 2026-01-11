@@ -93,7 +93,13 @@ library LibOrganizationPolicy {
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
-        bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
+        bytes32 usageKey = computeUsageKey({
+            policyId: policyId,
+            policy: policy,
+            account: account,
+            destination: destination,
+            initiator: initiator
+        });
         uint256 timeWindow = computeTimeWindow(policy);
 
         uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
@@ -177,7 +183,15 @@ library LibOrganizationPolicy {
             if (!_isTokenAmountAllowedByPolicy(proofs.policy, data, value)) return false;
 
             // Case: The destination (token recipient) is not allowed by the policy
-            if (!_isDestinationAllowedByPolicy(proofs.policy, to, value, data, proofs.destinationProof)) return false;
+            if (
+                !_isDestinationAllowedByPolicy({
+                    policy: proofs.policy,
+                    to: to,
+                    value: value,
+                    data: data,
+                    destinationProof: proofs.destinationProof
+                })
+            ) return false;
 
             // Case: The token transfer is allowed by the policy
             return true;
@@ -199,7 +213,15 @@ library LibOrganizationPolicy {
             }
 
             // Case: The destination (contract being called) is not allowed by the policy
-            if (!_isDestinationAllowedByPolicy(proofs.policy, to, value, data, proofs.destinationProof)) return false;
+            if (
+                !_isDestinationAllowedByPolicy({
+                    policy: proofs.policy,
+                    to: to,
+                    value: value,
+                    data: data,
+                    destinationProof: proofs.destinationProof
+                })
+            ) return false;
 
             // Case: The contract interaction is allowed by the policy
             return true;
@@ -340,9 +362,14 @@ library LibOrganizationPolicy {
             // Check if signer is authorized based on policy (with Merkle proofs)
             // Note: Group existence already verified above, membersRoot passed to avoid storage reads
             if (
-                isSignerAuthorizedForPolicy(
-                    policy, signer, membersRoot, memberProof, approverProofs.group, memberInGroupProof
-                )
+                isSignerAuthorizedForPolicy({
+                    policy: policy,
+                    signerAddress: signer,
+                    membersRoot: membersRoot,
+                    memberProof: memberProof,
+                    group: approverProofs.group,
+                    memberInGroupProof: memberInGroupProof
+                })
             ) {
                 ++validApprovals;
             }
@@ -391,7 +418,13 @@ library LibOrganizationPolicy {
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
-        bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
+        bytes32 usageKey = computeUsageKey({
+            policyId: policyId,
+            policy: policy,
+            account: account,
+            destination: destination,
+            initiator: initiator
+        });
         uint256 timeWindow = computeTimeWindow(policy);
 
         return policyLayout.policyUsage[usageKey][timeWindow];

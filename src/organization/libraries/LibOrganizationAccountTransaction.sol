@@ -129,19 +129,40 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify the policy exists and applies to this specific transaction
-        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy(policyId, account, to, value, data, initiator, proofs))
-        {
+        if (
+            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
+                policyId: policyId,
+                sourceAccount: account,
+                to: to,
+                value: value,
+                data: data,
+                initiator: initiator,
+                proofs: proofs
+            })
+        ) {
             revert PolicyDoesNotApply(policyId);
         }
 
         // Case: Policy requires manual approval
         // Validate that we have enough valid approvals
         if (proofs.policy.config.approval.policyType == Policies.PolicyType.RequireManualApproval) {
-            _validateManualConfirmationOrRevert(params, data, signatures, initiatorSignature, proofs, true);
+            _validateManualConfirmationOrRevert({
+                params: params,
+                data: data,
+                signatures: signatures,
+                initiatorSignature: initiatorSignature,
+                proofs: proofs,
+                isApproval: true
+            });
         }
 
         // Update time-based limits if applicable (for all policy types)
-        _validateAndUpdateTimeBasedLimitOrRevert(params, data, initiator, proofs.policy);
+        _validateAndUpdateTimeBasedLimitOrRevert({
+            params: params,
+            data: data,
+            initiator: initiator,
+            policy: proofs.policy
+        });
     }
 
     /**
@@ -199,8 +220,17 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify policy applies to this transaction
-        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy(policyId, account, to, value, data, initiator, proofs))
-        {
+        if (
+            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
+                policyId: policyId,
+                sourceAccount: account,
+                to: to,
+                value: value,
+                data: data,
+                initiator: initiator,
+                proofs: proofs
+            })
+        ) {
             revert PolicyDoesNotApply(policyId);
         }
 
@@ -209,11 +239,18 @@ library LibOrganizationAccountTransaction {
 
         // AutoApprove: Need an authorized initiator to sign the rejection
         if (pType == Policies.PolicyType.AutoApprove) {
-            _validateAutoApproveRejectionOrRevert(params, data, signatures, proofs);
+            _validateAutoApproveRejectionOrRevert({params: params, data: data, signatures: signatures, proofs: proofs});
         }
         // ManualApproval: Need threshold approvals for the rejection
         else if (pType == Policies.PolicyType.RequireManualApproval) {
-            _validateManualConfirmationOrRevert(params, data, signatures, initiatorSignature, proofs, false);
+            _validateManualConfirmationOrRevert({
+                params: params,
+                data: data,
+                signatures: signatures,
+                initiatorSignature: initiatorSignature,
+                proofs: proofs,
+                isApproval: false
+            });
         }
     }
 
@@ -251,9 +288,14 @@ library LibOrganizationAccountTransaction {
         }
 
         // Check limit and update usage tracking
-        bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit(
-            params.policyId, policy, params.account, destination, initiator, usageAmount
-        );
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit({
+            policyId: params.policyId,
+            policy: policy,
+            account: params.account,
+            destination: destination,
+            initiator: initiator,
+            usageAmount: usageAmount
+        });
 
         if (!withinLimit) {
             revert TimeBasedLimitExceeded(params.policyId);

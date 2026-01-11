@@ -68,7 +68,15 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Guardian signature is invalid
-        if (!_isGuardianSignatureValid(account, hash, policyId, expirationTimestamp, guardianSignature)) {
+        if (
+            !_isGuardianSignatureValid({
+                account: account,
+                hash: hash,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                guardianSignature: guardianSignature
+            })
+        ) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -97,9 +105,15 @@ library LibOrganizationAccountSignature {
         if (pType == Policies.PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
             if (
-                _hasSufficentValidApprovalSignatures(
-                    account, hash, policyId, expirationTimestamp, approverSignatures, initiatorSignature, proofs
-                )
+                _hasSufficentValidApprovalSignatures({
+                    account: account,
+                    hash: hash,
+                    policyId: policyId,
+                    expirationTimestamp: expirationTimestamp,
+                    approverSignatures: approverSignatures,
+                    initiatorSignature: initiatorSignature,
+                    proofs: proofs
+                })
             ) {
                 return ERC1271_MAGIC_VALUE;
             }
@@ -186,7 +200,13 @@ library LibOrganizationAccountSignature {
 
         // Compute the hash that reviewers should have signed
         // Note: includes the initiator signature to bind approvals to the specific request
-        bytes32 reviewHash = _getReviewSignatureHash(account, hash, policyId, expirationTimestamp, initiatorSignature);
+        bytes32 reviewHash = _getReviewSignatureHash({
+            account: account,
+            hash: hash,
+            policyId: policyId,
+            expirationTimestamp: expirationTimestamp,
+            initiatorSignature: initiatorSignature
+        });
 
         // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
         uint256 validApprovals =

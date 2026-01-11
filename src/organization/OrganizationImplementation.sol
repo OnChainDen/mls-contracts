@@ -141,9 +141,15 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.ModifyMembers, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.ModifyMembers,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, adminValidation);
     }
@@ -170,9 +176,15 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.ModifyGroups, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.ModifyGroups,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         LibOrganizationGroups.setGroups(newGroupsRoot, ipfsCid);
     }
@@ -199,9 +211,15 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.ModifyPolicies, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.ModifyPolicies,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
     }
@@ -232,16 +250,26 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.ModifyAdmins, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         // Get current members root for validation
         bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
 
-        LibOrganizationAdmin.setAdmins(
-            newAdminsRoot, newAdminCount, newVotingThreshold, adminValidation, currentMembersRoot
-        );
+        LibOrganizationAdmin.setAdmins({
+            newAdminsRoot: newAdminsRoot,
+            newAdminCount: newAdminCount,
+            newVotingThreshold: newVotingThreshold,
+            validation: adminValidation,
+            currentMembersRoot: currentMembersRoot
+        });
     }
 
     /**
@@ -267,9 +295,15 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            operationType, operationData, salt, expirationTimestamp, false, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: operationType,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: false,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         emit AdminOperationRejected(operationType, operationData, nonce);
     }
@@ -285,9 +319,15 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.UpdateGuardian, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.UpdateGuardian,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         LibOrganizationGuardian.setGuardian(newGuardian);
     }
@@ -310,9 +350,15 @@ contract OrganizationImplementation is
     ) external onlyGuardian {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.UpgradeAccount, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.UpgradeAccount,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         // 2. Validate implementation against whitelist
         IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
@@ -345,15 +391,15 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(create2Salt);
 
         // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.DeployAccount,
-            operationData,
-            adminSignatureSalt,
-            expirationTimestamp,
-            true,
-            signatures,
-            adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.DeployAccount,
+            operationData: operationData,
+            salt: adminSignatureSalt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
@@ -398,14 +444,29 @@ contract OrganizationImplementation is
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the transaction against the policy and signatures (with merkle proofs)
-        LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert(
-            account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
-        );
+        LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            signatures: signatures,
+            proofs: proofs
+        });
 
         // Execute the transaction on the account
-        IAccountExecute(account).executeTransaction(to, value, data, nonce, policyId);
+        IAccountExecute(account).executeTransaction({to: to, value: value, data: data, nonce: nonce, policyId: policyId});
 
-        emit AccountTransactionExecuted(account, to, value, data, nonce, policyId);
+        emit AccountTransactionExecuted({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            nonce: nonce,
+            policyId: policyId
+        });
     }
 
     /**
@@ -447,11 +508,26 @@ contract OrganizationImplementation is
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the rejection authorization (with merkle proofs)
-        LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert(
-            account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
-        );
+        LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            signatures: signatures,
+            proofs: proofs
+        });
 
-        emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
+        emit AccountTransactionRejected({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            nonce: nonce,
+            policyId: policyId
+        });
     }
 
     /**
@@ -469,7 +545,13 @@ contract OrganizationImplementation is
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
-        _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
+        _validateOrganizationUpgrade({
+            newImplementation: newImplementation,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
         upgradeToAndCall(newImplementation, "");
     }
 
@@ -490,7 +572,13 @@ contract OrganizationImplementation is
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
-        _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
+        _validateOrganizationUpgrade({
+            newImplementation: newImplementation,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
         upgradeToAndCall(newImplementation, data);
     }
 
@@ -584,7 +672,13 @@ contract OrganizationImplementation is
             revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
         }
 
-        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
+        return LibOrganizationPolicy.getCurrentUsage({
+            policyId: policyId,
+            policy: policy,
+            account: account,
+            destination: destination,
+            initiator: initiator
+        });
     }
 
     function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
@@ -690,9 +784,15 @@ contract OrganizationImplementation is
     ) internal {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert(
-            OperationType.Upgrade, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.Upgrade,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
 
         // 2. Validate implementation against whitelist
         IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)

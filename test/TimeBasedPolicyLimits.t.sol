@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Test } from "forge-std/Test.sol";
-import { LibOrganizationPolicy } from "../src/organization/libraries/LibOrganizationPolicy.sol";
-import { Policies } from "../src/libraries/Policies.sol";
+import {Policies} from "../src/libraries/Policies.sol";
+import {LibOrganizationPolicy} from "../src/organization/libraries/LibOrganizationPolicy.sol";
+import {Test} from "forge-std/Test.sol";
 
 /**
  * @title Time-Based Policy Limits Test
@@ -275,11 +275,7 @@ contract TimeBasedPolicyLimitsTest is Test {
     // Helper Functions - Create policies using new struct format with Merkle-based members
     // ================================
 
-    function _createPolicy(
-        uint16 hours_,
-        uint256 limit,
-        Policies.PolicyLimitation limitationType
-    )
+    function _createPolicy(uint16 hours_, uint256 limit, Policies.PolicyLimitation limitationType)
         internal
         pure
         returns (Policies.Policy memory policy)

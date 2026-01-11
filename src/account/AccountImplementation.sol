@@ -69,7 +69,7 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
             revert TransactionExecutionFailed();
         }
 
-        emit TransactionExecuted(to, value, data, nonce, policyId);
+        emit TransactionExecuted({to: to, value: value, data: data, nonce: nonce, policyId: policyId});
     }
 
     /**

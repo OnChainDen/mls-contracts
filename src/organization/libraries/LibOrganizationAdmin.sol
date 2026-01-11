@@ -165,15 +165,15 @@ library LibOrganizationAdmin {
         });
 
         // Emit event
-        emit AdminPermissionUpdated(
-            previousAdmin.adminsRoot,
-            previousAdmin.adminCount,
-            previousAdmin.votingThreshold,
-            newAdminsRoot,
-            newAdminCount,
-            newVotingThreshold,
-            validation.adminAddresses
-        );
+        emit AdminPermissionUpdated({
+            previousAdminsRoot: previousAdmin.adminsRoot,
+            previousAdminCount: previousAdmin.adminCount,
+            previousVotingThreshold: previousAdmin.votingThreshold,
+            newAdminsRoot: newAdminsRoot,
+            newAdminCount: newAdminCount,
+            newVotingThreshold: newVotingThreshold,
+            newAdminAddresses: validation.adminAddresses
+        });
     }
 
     /**
@@ -211,8 +211,13 @@ library LibOrganizationAdmin {
 
         // Get operation hash for signature verification
         // Note: isApproval is included to ensure rejection signatures cannot be used for execution and vice versa
-        bytes32 operationHash =
-            _getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
+        bytes32 operationHash = _getAdminOperationHash({
+            operationType: operationType,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: isApproval
+        });
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 

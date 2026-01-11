@@ -108,17 +108,17 @@ library LibOrganizationInitialization {
         // Set guardian
         LibOrganizationGuardianStorage.layout().guardian = params.guardian;
 
-        emit OrganizationInitialized(
-            params.adminsRoot,
-            params.adminCount,
-            params.votingThreshold,
-            params.adminAddresses,
-            params.guardian,
-            params.membersRoot,
-            params.groupsRoot,
-            params.membersIpfsCid,
-            params.groupsIpfsCid
-        );
+        emit OrganizationInitialized({
+            adminsRoot: params.adminsRoot,
+            adminCount: params.adminCount,
+            votingThreshold: params.votingThreshold,
+            adminAddresses: params.adminAddresses,
+            guardian: params.guardian,
+            membersRoot: params.membersRoot,
+            groupsRoot: params.groupsRoot,
+            membersIpfsCid: params.membersIpfsCid,
+            groupsIpfsCid: params.groupsIpfsCid
+        });
     }
 
     /**
