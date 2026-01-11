@@ -176,25 +176,13 @@ library LibOrganizationPolicy {
             // Case: The transaction is not a token transfer
             if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
-            // Case: The token being transferred is not allowed by the policy
-            if (!_isTokenAllowedByPolicy(proofs.policy, to, data)) return false;
-
-            // Case: The amount of the token being transferred is not allowed by the policy
-            if (!_isTokenAmountAllowedByPolicy(proofs.policy, data, value)) return false;
-
-            // Case: The destination (token recipient) is not allowed by the policy
-            if (
-                !_isDestinationAllowedByPolicy({
-                    policy: proofs.policy,
-                    to: to,
-                    value: value,
-                    data: data,
-                    destinationProof: proofs.destinationProof
-                })
-            ) return false;
-
-            // Case: The token transfer is allowed by the policy
-            return true;
+            return _isTokenTransferAllowedByPolicy({
+                policy: proofs.policy,
+                to: to,
+                value: value,
+                data: data,
+                destinationProof: proofs.destinationProof
+            });
         }
 
         // Case: The policy matches only transactions that are contract interactions that are not token transfers
@@ -202,28 +190,29 @@ library LibOrganizationPolicy {
             // Case: The transaction is a token transfer (not a contract interaction)
             if (TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
-            // Case: The function being called by the transaction is not allowed by the policy
-            if (!_isFunctionAllowedByPolicy(proofs.policy, data, proofs.functionProof, proofs.constraints)) {
-                return false;
-            }
+            return _isContractInteractionAllowedByPolicy({
+                policy: proofs.policy,
+                to: to,
+                value: value,
+                data: data,
+                functionProof: proofs.functionProof,
+                constraints: proofs.constraints,
+                destinationProof: proofs.destinationProof
+            });
+        }
 
-            // Case: The transaction parameters do not match the policy's constraints
-            if (!_areParametersAllowedByConstraints(proofs.constraints, data)) {
-                return false;
-            }
-
-            // Case: The destination (contract being called) is not allowed by the policy
-            if (
-                !_isDestinationAllowedByPolicy({
+        // Case: The policy can be applied to any type of transaction (Token transfers or Contract interactions)
+        // and the destination is allowed by the policy
+        if (
+            txType == Policies.TransactionType.Any
+                && _isDestinationAllowedByPolicy({
                     policy: proofs.policy,
                     to: to,
                     value: value,
                     data: data,
                     destinationProof: proofs.destinationProof
                 })
-            ) return false;
-
-            // Case: The contract interaction is allowed by the policy
+        ) {
             return true;
         }
 
@@ -653,6 +642,96 @@ library LibOrganizationPolicy {
 
         // Case: The policy does not match the transaction destination
         return false;
+    }
+
+    /**
+     * @notice Checks if a token transfer transaction is allowed by the policy
+     * @dev Validates that:
+     *      1. The token being transferred is allowed by the policy
+     *      2. The amount being transferred is within policy limits
+     *      3. The destination (token recipient) is allowed by the policy
+     * @param policy The policy to check against
+     * @param to The transaction destination address (token contract for ERC20)
+     * @param value The transaction value in wei
+     * @param data The transaction calldata
+     * @param destinationProof The merkle proof for the destination
+     * @return True if the token transfer is allowed, false otherwise
+     */
+    function _isTokenTransferAllowedByPolicy(
+        Policies.Policy calldata policy,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        bytes32[] calldata destinationProof
+    ) private pure returns (bool) {
+        // Case: The token being transferred is not allowed by the policy
+        if (!_isTokenAllowedByPolicy(policy, to, data)) return false;
+
+        // Case: The amount of the token being transferred is not allowed by the policy
+        if (!_isTokenAmountAllowedByPolicy(policy, data, value)) return false;
+
+        // Case: The destination (token recipient) is not allowed by the policy
+        if (
+            !_isDestinationAllowedByPolicy({
+                policy: policy,
+                to: to,
+                value: value,
+                data: data,
+                destinationProof: destinationProof
+            })
+        ) return false;
+
+        // Case: The token transfer is allowed by the policy
+        return true;
+    }
+
+    /**
+     * @notice Checks if a contract interaction transaction is allowed by the policy
+     * @dev Validates that:
+     *      1. The function being called is allowed by the policy
+     *      2. The transaction parameters match the policy's constraints
+     *      3. The destination (contract being called) is allowed by the policy
+     * @param policy The policy to check against
+     * @param to The transaction destination address (contract being called)
+     * @param value The transaction value in wei
+     * @param data The transaction calldata
+     * @param functionProof The merkle proof for the function
+     * @param constraints The parameter constraints to verify
+     * @param destinationProof The merkle proof for the destination
+     * @return True if the contract interaction is allowed, false otherwise
+     */
+    function _isContractInteractionAllowedByPolicy(
+        Policies.Policy calldata policy,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        bytes32[] calldata functionProof,
+        bytes calldata constraints,
+        bytes32[] calldata destinationProof
+    ) private pure returns (bool) {
+        // Case: The contract being called (i.e. the "destination" of the transaction) is not allowed by the policy
+        if (
+            !_isDestinationAllowedByPolicy({
+                policy: policy,
+                to: to,
+                value: value,
+                data: data,
+                destinationProof: destinationProof
+            })
+        ) return false;
+
+        // Case: The function being called by the transaction is not allowed by the policy
+        if (!_isFunctionAllowedByPolicy(policy, data, functionProof, constraints)) {
+            return false;
+        }
+
+        // Case: The transaction parameters do not match the policy's constraints
+        if (!_areParametersAllowedByConstraints(constraints, data)) {
+            return false;
+        }
+
+        // Case: The contract interaction is allowed by the policy
+        return true;
     }
 
     /**
