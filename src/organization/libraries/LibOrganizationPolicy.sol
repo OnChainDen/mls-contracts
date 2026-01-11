@@ -25,6 +25,9 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  * @author Den Technologies Inc
  */
 library LibOrganizationPolicy {
+    /// @dev Number of seconds in one hour (for time window calculations)
+    uint256 private constant SECONDS_PER_HOUR = 3600;
+
     /**
      * @notice Emitted when the policies merkle root is updated
      * @param newRoot The new merkle root
@@ -291,7 +294,7 @@ library LibOrganizationPolicy {
         if (signatures.length == 0) return 0;
 
         // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
+        uint8 signatureCount = uint8(signatures.length / SignatureUtils.SIGNATURE_LENGTH);
 
         // Validate approver proofs lengths
         _validateApproverProofsOrRevert(policy, approverProofs, signatureCount);
@@ -368,7 +371,7 @@ library LibOrganizationPolicy {
         // Avoid division by zero
         if (hours_ == 0) return 0;
 
-        return block.timestamp / (uint256(hours_) * 3600);
+        return block.timestamp / (uint256(hours_) * SECONDS_PER_HOUR);
     }
 
     /**
@@ -721,7 +724,7 @@ library LibOrganizationPolicy {
 
         // Case: Policy matches only transactions that call a specific function, but the transaction is not calling
         //       a function
-        if (data.length < 4) return false;
+        if (data.length < ContractInteractionUtils.SELECTOR_LENGTH) return false;
 
         // Case: Policy matches only transactions that call a specific function, and the transaction is calling
         //       a function - verify via merkle proof
@@ -777,11 +780,12 @@ library LibOrganizationPolicy {
     {
         // Validate each parameter against its constraint
         // Parameters start at byte 4 (after the selector)
-        uint256 paramCalldataOffset = 4;
+        uint256 paramCalldataOffset = ContractInteractionUtils.SELECTOR_LENGTH;
 
         for (uint256 i = 0; i < constraints.length; ++i) {
             // Number of bytes this parameter's head occupies in calldata
-            uint256 paramCalldataHeadSize = uint256(constraints[i].paramCalldataHeadSlotCount) * 32;
+            uint256 paramCalldataHeadSize =
+                uint256(constraints[i].paramCalldataHeadSlotCount) * ContractInteractionUtils.SLOT_SIZE;
 
             // Case: Constraint is not configured correctly (paramCalldataHeadSlotCount == 0)
             if (paramCalldataHeadSize == 0) {
@@ -796,7 +800,8 @@ library LibOrganizationPolicy {
             // Extract the first 32 bytes of the parameter head for validation
             // Note: For multi-slot params like static arrays/structs, only "Any" constraint is supported,
             // so we don't need to extract the full parameter value
-            bytes32 paramHeadValue = bytes32(data[paramCalldataOffset:paramCalldataOffset + 32]);
+            bytes32 paramHeadValue =
+                bytes32(data[paramCalldataOffset:paramCalldataOffset + ContractInteractionUtils.SLOT_SIZE]);
 
             // Case: The parameter does not satisfy its constraint
             // Each constraint carries its own proof for OneOf constraints
@@ -959,18 +964,23 @@ library LibOrganizationPolicy {
 
         // The offset is relative to the start of the encoded parameters (after selector)
         // So actual position in data = 4 (selector) + offset
-        uint256 dataPosition = 4 + offset;
+        uint256 dataPosition = ContractInteractionUtils.SELECTOR_LENGTH + offset;
 
         // First 32 bytes at that position is the length
-        if (data.length < dataPosition + 32) return false;
+        if (data.length < dataPosition + ContractInteractionUtils.SLOT_SIZE) return false;
 
-        uint256 length = uint256(bytes32(data[dataPosition:dataPosition + 32]));
+        uint256 length = uint256(bytes32(data[dataPosition:dataPosition + ContractInteractionUtils.SLOT_SIZE]));
 
         // Check we have enough data for the content
-        if (data.length < dataPosition + 32 + length) return false;
+        if (data.length < dataPosition + ContractInteractionUtils.SLOT_SIZE + length) return false;
 
         // Hash the actual content
-        bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + length]);
+        bytes32 actualHash = keccak256(
+            data[
+                dataPosition + ContractInteractionUtils.SLOT_SIZE:
+                    dataPosition + ContractInteractionUtils.SLOT_SIZE + length
+            ]
+        );
         bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
         return actualHash == expectedHash;
     }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {OperationType} from "../../interfaces/IOrganization.sol";
+import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
 import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignaturesStorage.sol";
 
 /**
@@ -76,26 +77,28 @@ library LibOrganizationSignatures {
     }
 
     /**
-     * @notice Extracts the review signatures from a signatures bytes array (everything after the first 65 bytes)
-     * @dev The first 65 bytes are assumed to be the initiator signature.
-     *      Review signatures start at byte 65 and continue to the end.
+     * @notice Extracts the review signatures from a signatures bytes array (everything after the first signature)
+     * @dev The first SIGNATURE_LENGTH bytes are assumed to be the initiator signature.
+     *      Review signatures start after the initiator signature and continue to the end.
      * @param signatures The full signatures bytes array
      * @return reviewSignatures The review signatures (may be empty if only initiator signature provided)
      */
     function extractReviewSignatures(bytes memory signatures) internal pure returns (bytes memory reviewSignatures) {
-        // If signatures is 65 bytes or less, there are no review signatures
-        if (signatures.length <= 65) {
+        uint256 sigLength = SignatureUtils.SIGNATURE_LENGTH;
+
+        // If signatures is SIGNATURE_LENGTH bytes or less, there are no review signatures
+        if (signatures.length <= sigLength) {
             return new bytes(0);
         }
 
-        uint256 reviewLength = signatures.length - 65;
+        uint256 reviewLength = signatures.length - sigLength;
         reviewSignatures = new bytes(reviewLength);
 
         // Copy review signatures (everything after byte 65)
         /* solhint-disable no-inline-assembly */
         assembly {
             // Source: signatures + 32 (length prefix) + 65 (skip initiator sig)
-            let src := add(add(signatures, 32), 65)
+            let src := add(add(signatures, 32), sigLength)
             // Destination: reviewSignatures + 32 (length prefix)
             let dst := add(reviewSignatures, 32)
             // Copy reviewLength bytes

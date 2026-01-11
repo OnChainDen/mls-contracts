@@ -335,7 +335,7 @@ library LibOrganizationAdmin {
         if (signatures.length == 0) return 0;
 
         // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
+        uint8 signatureCount = uint8(signatures.length / SignatureUtils.SIGNATURE_LENGTH);
 
         // Validate admin proofs lengths
         _validateAdminProofsOrRevert(adminProofs, signatureCount);

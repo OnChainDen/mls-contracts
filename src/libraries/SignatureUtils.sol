@@ -7,6 +7,9 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library SignatureUtils {
+    /// @dev Signature length: r (32) + s (32) + v (1) = 65 bytes
+    uint256 internal constant SIGNATURE_LENGTH = 65;
+
     /**
      * @notice Extracts a single signature from the signatures array
      * @param signatures The signatures to extract from
@@ -15,9 +18,9 @@ library SignatureUtils {
      */
     function extractSignature(bytes memory signatures, uint256 index) internal pure returns (bytes memory) {
         // Initialize a new bytes array to store the signature
-        // Note: The signature is 65 bytes (r: 32, s: 32, v: 1)
-        bytes memory extractedSignature = new bytes(65);
-        uint256 signatureStartPosition = index * 65;
+        // Note: Each signature is 65 bytes (r: 32, s: 32, v: 1)
+        bytes memory extractedSignature = new bytes(SIGNATURE_LENGTH);
+        uint256 signatureStartPosition = index * SIGNATURE_LENGTH;
 
         /* solhint-disable no-inline-assembly */
         assembly {
