@@ -566,8 +566,8 @@ contract OrganizationImplementation is
      *
      *      SECURITY MODEL:
      *      1. Guardian must submit the transaction (onlyGuardian modifier)
-     *      2. Admin(s) must have signed the upgrade (validated in _validateOrganizationUpgrade)
-     *      3. New implementation must be on the whitelist (validated in _validateOrganizationUpgrade)
+     *      2. Admin(s) must have signed the upgrade (validated via LibOrganizationAdmin)
+     *      3. New implementation must be on the whitelist (validated via IImplementationWhitelist)
      *      4. A storage flag is set to authorize the subsequent _authorizeUpgrade call
      *      5. The flag is reset after the upgrade completes (or if it reverts, the tx reverts entirely)
      *
@@ -602,17 +602,25 @@ contract OrganizationImplementation is
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
-        // Validate admin signatures and whitelist
-        // This consumes the nonce and validates:
-        // - Sufficient admin signatures for the operation
-        // - New implementation is on the allowed whitelist
-        _validateOrganizationUpgrade({
-            newImplementation: newImplementation,
+        // Validate admin authorization (isApproval = true for execution)
+        bytes memory operationData = abi.encode(newImplementation);
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.Upgrade,
+            operationData: operationData,
             salt: salt,
             expirationTimestamp: expirationTimestamp,
+            isApproval: true,
             signatures: signatures,
             adminProofs: adminProofs
         });
+
+        // Validate implementation against whitelist
+        // forgefmt: disable-next-item
+        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(
+                IImplementationWhitelist.ContractType.Organization,
+                newImplementation
+            );
 
         // Set authorization flag in namespaced storage
         // This flag tells _authorizeUpgrade that we've done proper validation.
@@ -846,41 +854,6 @@ contract OrganizationImplementation is
      */
     function isInitialized() external view returns (bool) {
         return LibOrganizationInitialization.isInitialized();
-    }
-
-    /**
-     * @notice Validates organization upgrade authorization
-     * @dev Checks admin signatures and implementation whitelist
-     * @param newImplementation The new implementation address
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function _validateOrganizationUpgrade(
-        address newImplementation,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) internal {
-        // Validate admin authorization (isApproval = true for execution)
-        bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: OperationType.Upgrade,
-            operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
-            isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
-        });
-
-        // Validate implementation against whitelist
-        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
-            .validateIsImplementationWhitelistedOrRevert(
-            IImplementationWhitelist.ContractType.Organization, newImplementation
-        );
     }
 
     /**
