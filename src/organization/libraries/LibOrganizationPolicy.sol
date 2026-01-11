@@ -293,21 +293,14 @@ library LibOrganizationPolicy {
         // Each signature is 65 bytes (r: 32, s: 32, v: 1)
         uint8 signatureCount = uint8(signatures.length / 65);
 
-        // Require member proofs array matches signature count
-        if (approverProofs.approverInOrgMembersTreeProofs.length != signatureCount) {
-            revert MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
-        }
+        // Validate approver proofs lengths
+        _validateApproverProofsOrRevert(policy, approverProofs, signatureCount);
 
         // Cache membersRoot to avoid repeated storage reads in the loop
         bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
 
-        // For Group approver type, verify group existence and memberInGroupProofs length before the loop
+        // For Group approver type, verify group existence before the loop
         if (policy.config.approval.approverType == Policies.ApproverType.Group) {
-            // Require member-in-group proofs array matches signature count
-            if (approverProofs.memberInGroupProofs.length != signatureCount) {
-                revert MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
-            }
-
             if (!LibOrganizationGroups.isGroupInOrg(approverProofs.group, approverProofs.groupInOrgGroupsTreeProof)) {
                 return 0;
             }
@@ -1104,6 +1097,29 @@ library LibOrganizationPolicy {
 
         // Case: The parameter is an unknown type
         return false;
+    }
+
+    /**
+     * @notice Validates that approver proofs have correct lengths
+     * @dev Reverts if proof arrays don't match signature count
+     * @param policy The policy to check against
+     * @param approverProofs The proofs for approver membership verification
+     * @param signatureCount The number of signatures provided
+     */
+    function _validateApproverProofsOrRevert(
+        Policies.Policy memory policy,
+        Policies.ApproverProofs memory approverProofs,
+        uint8 signatureCount
+    ) private pure {
+        if (approverProofs.approverInOrgMembersTreeProofs.length != signatureCount) {
+            revert MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
+        }
+
+        if (policy.config.approval.approverType == Policies.ApproverType.Group) {
+            if (approverProofs.memberInGroupProofs.length != signatureCount) {
+                revert MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
+            }
+        }
     }
 
     /**
