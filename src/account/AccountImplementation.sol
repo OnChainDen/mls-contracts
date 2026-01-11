@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
+import {IAccountExecute} from "./interfaces/IAccountExecute.sol";
 import {INativeTokenReceivedEventEmitter} from "./interfaces/INativeTokenReceivedEventEmitter.sol";
 import {LibAccountOrganizationAddressStorage} from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 
@@ -14,7 +15,7 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
+contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmitter, IERC1271 {
     /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction

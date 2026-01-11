@@ -39,10 +39,18 @@ contract OrganizationFactory {
     error DeploymentAddressMismatch();
 
     /**
+     * @notice Error thrown when a zero address is provided where a valid address is required
+     */
+    error ZeroAddress();
+
+    /**
      * @notice Constructor to set the deployer address
      * @param _deployerAddress The address authorized to deploy organization proxies
      */
     constructor(address _deployerAddress) {
+        if (_deployerAddress == address(0)) {
+            revert ZeroAddress();
+        }
         DEPLOYER_ADDRESS = _deployerAddress;
     }
 
