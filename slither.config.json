@@ -1,0 +1,9 @@
+{
+  "detectors_to_exclude": [
+    "naming-convention",
+    "solc-version",
+    "unused-return"
+  ],
+  "filter_paths": "(test|script|lib)",
+  "exclude_dependencies": true
+}
