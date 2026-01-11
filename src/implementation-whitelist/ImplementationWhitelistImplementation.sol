@@ -54,12 +54,12 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
     ) external onlyOwner {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
-        for (uint256 i = 0; i < toWhitelist.length; i++) {
+        for (uint256 i = 0; i < toWhitelist.length; ++i) {
             storageLayout.whitelisted[contractType][toWhitelist[i]] = true;
             emit ImplementationWhitelisted(contractType, toWhitelist[i]);
         }
 
-        for (uint256 i = 0; i < toUnwhitelist.length; i++) {
+        for (uint256 i = 0; i < toUnwhitelist.length; ++i) {
             storageLayout.whitelisted[contractType][toUnwhitelist[i]] = false;
             emit ImplementationUnwhitelisted(contractType, toUnwhitelist[i]);
         }
