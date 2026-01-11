@@ -414,8 +414,8 @@ library LibOrganizationAccountTransaction {
     {
         bytes32 structHash = keccak256(
             abi.encode(
-                // solhint-disable-next-line max-line-length
                 keccak256(
+                    // solhint-disable-next-line max-line-length
                     "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
                 ),
                 address(this),
@@ -452,8 +452,8 @@ library LibOrganizationAccountTransaction {
     ) private view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
-                // solhint-disable-next-line max-line-length
                 keccak256(
+                    // solhint-disable-next-line max-line-length
                     "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
                 ),
                 address(this),

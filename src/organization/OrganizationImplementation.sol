@@ -461,7 +461,14 @@ contract OrganizationImplementation is
         });
 
         // Execute the transaction on the account
-        IAccountExecute(account).executeTransaction({to: to, value: value, data: data, nonce: nonce, policyId: policyId});
+        // forgefmt: disable-next-item
+        IAccountExecute(account).executeTransaction({
+            to: to,
+            value: value, 
+            data: data, 
+            nonce: nonce, 
+            policyId: policyId
+        });
 
         emit AccountTransactionExecuted({
             account: account,
