@@ -126,6 +126,122 @@ contract OrganizationImplementation is
     }
 
     /**
+     * @notice Sets the admin permissions for the organization
+     * @dev Validates that all new admins are current members before updating.
+     * @param newAdminsRoot The new merkle root of admin addresses
+     * @param newAdminCount The number of admins in the new tree
+     * @param newVotingThreshold The new voting threshold
+     * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param signatures The signatures from admin(s) authorizing this update
+     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param adminValidation The validation data to verify all new admins are members
+     */
+    function setAdmins(
+        bytes32 newAdminsRoot,
+        uint256 newAdminCount,
+        uint256 newVotingThreshold,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        bytes calldata signatures,
+        LibOrganizationAdmin.AdminProofs calldata adminProofs,
+        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
+    ) external onlyGuardian {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
+
+        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
+
+        // Get current members root for validation
+        bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
+
+        LibOrganizationAdmin.setAdmins({
+            newAdminsRoot: newAdminsRoot,
+            newAdminCount: newAdminCount,
+            newVotingThreshold: newVotingThreshold,
+            validation: adminValidation,
+            currentMembersRoot: currentMembersRoot
+        });
+    }
+
+    /**
+     * @notice Sets a new guardian address for the organization
+     * @param newGuardian The address of the new guardian
+     * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param signatures The signatures from admin(s) authorizing this update
+     * @param adminProofs The Merkle proofs for admin membership verification
+     */
+    function setGuardian(
+        address newGuardian,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        bytes calldata signatures,
+        LibOrganizationAdmin.AdminProofs calldata adminProofs
+    ) external onlyGuardian {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newGuardian);
+
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: OperationType.UpdateGuardian,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: true,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
+
+        LibOrganizationGuardian.setGuardian(newGuardian);
+    }
+
+    /**
+     * @notice Rejects an admin operation by burning its nonce
+     * @dev This allows admins to explicitly cancel a previously signed operation
+     *      by consuming its nonce without executing the operation logic
+     * @param operationType The type of admin operation to reject
+     * @param operationData The ABI-encoded data of the operation
+     * @param salt The user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param signatures The signatures from admin(s) authorizing this rejection
+     * @param adminProofs The Merkle proofs for admin membership verification
+     */
+    function rejectAdminOperation(
+        OperationType operationType,
+        bytes calldata operationData,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        bytes calldata signatures,
+        LibOrganizationAdmin.AdminProofs calldata adminProofs
+    ) external onlyGuardian {
+        // Compute nonce for this operation
+        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+
+        // Validate admin authorization and consume the nonce (isApproval = false for rejection)
+        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+            operationType: operationType,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            isApproval: false,
+            signatures: signatures,
+            adminProofs: adminProofs
+        });
+
+        emit AdminOperationRejected(operationType, operationData, nonce);
+    }
+
+    /**
      * @notice Updates the global members merkle root
      * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
      *      Validates that all admins remain members in the new tree to prevent bricking.
@@ -234,119 +350,37 @@ contract OrganizationImplementation is
     }
 
     /**
-     * @notice Sets the admin permissions for the organization
-     * @dev Validates that all new admins are current members before updating.
-     * @param newAdminsRoot The new merkle root of admin addresses
-     * @param newAdminCount The number of admins in the new tree
-     * @param newVotingThreshold The new voting threshold
-     * @param salt A user-provided salt for nonce computation
+     * @notice Deploys a new Account BeaconProxy at a deterministic address
+     * @dev The account uses this Organization as its beacon
+     * @param create2Salt The salt for CREATE2 deployment
+     * @param adminSignatureSalt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
+     * @param signatures The signatures from admin(s) authorizing this deployment
      * @param adminProofs The Merkle proofs for admin membership verification
-     * @param adminValidation The validation data to verify all new admins are members
+     * @return The address of the deployed account proxy
      */
-    function setAdmins(
-        bytes32 newAdminsRoot,
-        uint256 newAdminCount,
-        uint256 newVotingThreshold,
-        uint256 salt,
+    function deployAccount(
+        bytes32 create2Salt,
+        uint256 adminSignatureSalt,
         uint256 expirationTimestamp,
         bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs,
-        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
-    ) external onlyGuardian {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
+        LibOrganizationAdmin.AdminProofs calldata adminProofs
+    ) external onlyGuardian returns (address) {
+        // Validate admin authorization for account deployment
+        bytes memory operationData = abi.encode(create2Salt);
 
-        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        // isApproval = true for execution
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: OperationType.ModifyAdmins,
+            operationType: OperationType.DeployAccount,
             operationData: operationData,
-            salt: salt,
+            salt: adminSignatureSalt,
             expirationTimestamp: expirationTimestamp,
             isApproval: true,
             signatures: signatures,
             adminProofs: adminProofs
         });
 
-        // Get current members root for validation
-        bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
-
-        LibOrganizationAdmin.setAdmins({
-            newAdminsRoot: newAdminsRoot,
-            newAdminCount: newAdminCount,
-            newVotingThreshold: newVotingThreshold,
-            validation: adminValidation,
-            currentMembersRoot: currentMembersRoot
-        });
-    }
-
-    /**
-     * @notice Rejects an admin operation by burning its nonce
-     * @dev This allows admins to explicitly cancel a previously signed operation
-     *      by consuming its nonce without executing the operation logic
-     * @param operationType The type of admin operation to reject
-     * @param operationData The ABI-encoded data of the operation
-     * @param salt The user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this rejection
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function rejectAdminOperation(
-        OperationType operationType,
-        bytes calldata operationData,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) external onlyGuardian {
-        // Compute nonce for this operation
-        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
-
-        // Validate admin authorization and consume the nonce (isApproval = false for rejection)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: operationType,
-            operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
-            isApproval: false,
-            signatures: signatures,
-            adminProofs: adminProofs
-        });
-
-        emit AdminOperationRejected(operationType, operationData, nonce);
-    }
-
-    /**
-     * @notice Sets a new guardian address for the organization
-     * @param newGuardian The address of the new guardian
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function setGuardian(
-        address newGuardian,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) external onlyGuardian {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newGuardian);
-
-        // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: OperationType.UpdateGuardian,
-            operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
-            isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
-        });
-
-        LibOrganizationGuardian.setGuardian(newGuardian);
+        return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
 
     /**
@@ -389,40 +423,6 @@ contract OrganizationImplementation is
         LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
 
         emit AccountImplementationUpdated(newImplementation);
-    }
-
-    /**
-     * @notice Deploys a new Account BeaconProxy at a deterministic address
-     * @dev The account uses this Organization as its beacon
-     * @param create2Salt The salt for CREATE2 deployment
-     * @param adminSignatureSalt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this deployment
-     * @param adminProofs The Merkle proofs for admin membership verification
-     * @return The address of the deployed account proxy
-     */
-    function deployAccount(
-        bytes32 create2Salt,
-        uint256 adminSignatureSalt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) external onlyGuardian returns (address) {
-        // Validate admin authorization for account deployment
-        bytes memory operationData = abi.encode(create2Salt);
-
-        // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: OperationType.DeployAccount,
-            operationData: operationData,
-            salt: adminSignatureSalt,
-            expirationTimestamp: expirationTimestamp,
-            isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
-        });
-
-        return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
 
     /**
@@ -642,6 +642,45 @@ contract OrganizationImplementation is
     }
 
     /**
+     * @notice Returns the address that deployed this organization
+     * @return The deployer address
+     */
+    function getDeployerAddress() external view returns (address) {
+        return LibOrganizationInitialization.getDeployerAddress();
+    }
+
+    /**
+     * @notice Checks if the organization has been initialized
+     * @return True if initialized, false otherwise
+     */
+    function isInitialized() external view returns (bool) {
+        return LibOrganizationInitialization.isInitialized();
+    }
+
+    /**
+     * @notice Returns the current admin permission settings for the organization
+     * @return The admin permission configuration including admins root, count, and voting threshold
+     */
+    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
+        return LibOrganizationAdmin.getAdminPermission();
+    }
+
+    /**
+     * @notice Returns the current guardian address
+     * @return The address of the guardian
+     */
+    function guardian() external view returns (address) {
+        return LibOrganizationGuardian.getGuardian();
+    }
+
+    /**
+     * @notice Reverts if the caller is not the guardian
+     */
+    function enforceOnlyGuardian() external view {
+        LibOrganizationGuardian.enforceOnlyGuardian();
+    }
+
+    /**
      * @notice Returns the current members merkle root
      * @return The members merkle root
      */
@@ -741,14 +780,6 @@ contract OrganizationImplementation is
     }
 
     /**
-     * @notice Returns the current admin permission settings for the organization
-     * @return The admin permission configuration including admins root, count, and voting threshold
-     */
-    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdmin.getAdminPermission();
-    }
-
-    /**
      * @notice Checks if a nonce has already been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
@@ -770,21 +801,6 @@ contract OrganizationImplementation is
         returns (uint256)
     {
         return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
-    }
-
-    /**
-     * @notice Reverts if the caller is not the guardian
-     */
-    function enforceOnlyGuardian() external view {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-    }
-
-    /**
-     * @notice Returns the current guardian address
-     * @return The address of the guardian
-     */
-    function guardian() external view returns (address) {
-        return LibOrganizationGuardian.getGuardian();
     }
 
     /**
@@ -838,22 +854,6 @@ contract OrganizationImplementation is
         }
 
         return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
-    }
-
-    /**
-     * @notice Returns the address that deployed this organization
-     * @return The deployer address
-     */
-    function getDeployerAddress() external view returns (address) {
-        return LibOrganizationInitialization.getDeployerAddress();
-    }
-
-    /**
-     * @notice Checks if the organization has been initialized
-     * @return True if initialized, false otherwise
-     */
-    function isInitialized() external view returns (bool) {
-        return LibOrganizationInitialization.isInitialized();
     }
 
     /**
