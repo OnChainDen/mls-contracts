@@ -5,6 +5,7 @@ pragma solidity ^0.8.24;
  * @title Lib Organization EIP712
  * @notice Library for EIP-712 typed data hashing for Organization contracts
  * @dev Provides shared EIP-712 domain separator computation used across organization libraries
+ * @author Den Technologies Inc
  */
 library LibOrganizationEIP712 {
     /**

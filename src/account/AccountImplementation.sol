@@ -46,6 +46,10 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
         _;
     }
 
+    /**
+     * @notice Receives native tokens (ETH) sent to this account
+     * @dev Emits OnchainCustodyAccountNativeTokenReceived event when native tokens are received
+     */
     receive() external payable override {
         emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
     }

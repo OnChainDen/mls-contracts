@@ -721,6 +721,9 @@ library LibOrganizationPolicy {
      * @notice Internal helper to process parameter constraints
      * @dev Separated to manage stack depth in the main function.
      *      Each constraint is self-contained with its own merkle proof for OneOf constraints.
+     * @param constraints The array of parameter constraints to validate
+     * @param data The full transaction calldata
+     * @return True if all constraints are satisfied, false otherwise
      */
     function _processConstraints(Policies.ParameterConstraint[] memory constraints, bytes calldata data)
         private

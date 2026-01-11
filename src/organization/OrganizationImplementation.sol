@@ -308,6 +308,14 @@ contract OrganizationImplementation is
         emit AdminOperationRejected(operationType, operationData, nonce);
     }
 
+    /**
+     * @notice Sets a new guardian address for the organization
+     * @param newGuardian The address of the new guardian
+     * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param signatures The signatures from admin(s) authorizing this update
+     * @param adminProofs The Merkle proofs for admin membership verification
+     */
     function setGuardian(
         address newGuardian,
         uint256 salt,
@@ -693,14 +701,30 @@ contract OrganizationImplementation is
         });
     }
 
+    /**
+     * @notice Returns the current admin permission settings for the organization
+     * @return The admin permission configuration including admins root, count, and voting threshold
+     */
     function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
         return LibOrganizationAdmin.getAdminPermission();
     }
 
+    /**
+     * @notice Checks if a nonce has already been used
+     * @param nonce The nonce to check
+     * @return True if the nonce has been used, false otherwise
+     */
     function isNonceUsed(uint256 nonce) external view returns (bool) {
         return LibOrganizationSignatures.isNonceUsed(nonce);
     }
 
+    /**
+     * @notice Computes the nonce for a given operation
+     * @param operationType The type of operation being performed
+     * @param operationData The ABI-encoded data of the operation
+     * @param salt A user-provided salt for nonce computation
+     * @return The computed nonce
+     */
     function computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
         external
         view
@@ -709,10 +733,17 @@ contract OrganizationImplementation is
         return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
     }
 
+    /**
+     * @notice Reverts if the caller is not the guardian
+     */
     function enforceOnlyGuardian() external view {
         LibOrganizationGuardian.enforceOnlyGuardian();
     }
 
+    /**
+     * @notice Returns the current guardian address
+     * @return The address of the guardian
+     */
     function guardian() external view returns (address) {
         return LibOrganizationGuardian.getGuardian();
     }
@@ -770,10 +801,18 @@ contract OrganizationImplementation is
         return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
     }
 
+    /**
+     * @notice Returns the address that deployed this organization
+     * @return The deployer address
+     */
     function getDeployerAddress() external view returns (address) {
         return LibOrganizationInitialization.getDeployerAddress();
     }
 
+    /**
+     * @notice Checks if the organization has been initialized
+     * @return True if initialized, false otherwise
+     */
     function isInitialized() external view returns (bool) {
         return LibOrganizationInitialization.isInitialized();
     }

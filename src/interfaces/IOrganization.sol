@@ -52,6 +52,7 @@ struct InitializationParams {
 /**
  * @title IOrganizationSignatureValidator
  * @notice Interface for validating ERC-1271 signatures on behalf of accounts
+ * @author Den Technologies Inc
  */
 interface IOrganizationSignatureValidator {
     /**
