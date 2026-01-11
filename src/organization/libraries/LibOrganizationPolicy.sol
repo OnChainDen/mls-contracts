@@ -308,12 +308,7 @@ library LibOrganizationPolicy {
                 revert MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
             }
 
-            bytes32 groupsRoot = LibOrganizationGroups.getGroupsRoot();
-            if (
-                !LibOrganizationGroups.isGroupInTree(
-                    approverProofs.group, groupsRoot, approverProofs.groupInOrgGroupsTreeProof
-                )
-            ) {
+            if (!LibOrganizationGroups.isGroupInOrg(approverProofs.group, approverProofs.groupInOrgGroupsTreeProof)) {
                 return 0;
             }
         }
