@@ -27,7 +27,7 @@
     "visibility-modifier-order": "error",
     "quotes": ["error", "double"],
     "named-parameters-mapping": "warn",
-    "func-named-parameters": ["warn", 4],
+    "func-named-parameters": ["warn", 3],
     "foundry-test-function-naming": "off",
     "gas-calldata-parameters": "warn",
     "gas-custom-errors": "error",
