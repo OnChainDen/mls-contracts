@@ -11,7 +11,10 @@ interface INativeTokenReceivedEventEmitter {
      * @notice Native tokens were received
      * @param sender The address that sent the tokens
      * @param value The native token value that was received
+     * @dev `value` is intentionally not indexed: indexing only supports exact-match filtering,
+     *      not range queries, so filtering by amount is done in application code.
      */
+    // solhint-disable-next-line gas-indexed-events, use-natspec
     event OnchainCustodyAccountNativeTokenReceived(address indexed sender, uint256 value);
 
     /**
