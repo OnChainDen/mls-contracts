@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
+
 import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
 import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 import {IOrganizationSignatureValidator, InitializationParams, OperationType} from "../interfaces/IOrganization.sol";
@@ -22,10 +28,6 @@ import {LibOrganizationAccountFactoryStorage} from "./libraries/storage/LibOrgan
 
 import {LibOrganizationAdminStorage} from "./libraries/storage/LibOrganizationAdminStorage.sol";
 import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationPolicyStorage.sol";
-import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
-import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 /**
  * @title Organization Implementation
