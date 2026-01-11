@@ -97,7 +97,9 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
 
     /**
      * @notice Authorize an upgrade
+     * @dev This function is empty because the onlyOwner modifier ensures that only the owner can upgrade
      * @param newImplementation The new implementation address
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
 }
