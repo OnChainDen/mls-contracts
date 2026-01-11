@@ -22,6 +22,7 @@ import {LibOrganizationAccountFactoryStorage} from "./libraries/storage/LibOrgan
 
 import {LibOrganizationAdminStorage} from "./libraries/storage/LibOrganizationAdminStorage.sol";
 import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationPolicyStorage.sol";
+import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -91,6 +92,14 @@ contract OrganizationImplementation is
      * @notice Emitted when the account implementation has not been set
      */
     error AccountImplementationNotSet();
+
+    /**
+     * @notice Emitted when someone tries to call upgradeToAndCall directly without going through
+     *         the authorized upgrade flow (upgradeToAndCallWithAuthorization)
+     * @dev This protects against attackers bypassing admin signature validation by calling
+     *      the inherited public upgradeToAndCall function directly on the proxy
+     */
+    error UnauthorizedUpgrade();
 
     /**
      * @notice Modifier that enforces only the guardian can call the function
@@ -551,13 +560,39 @@ contract OrganizationImplementation is
     }
 
     /**
-     * @notice Upgrade the implementation to a new address and call a function with authorization
-     * @param newImplementation The new implementation address
-     * @param data The calldata to call on the new implementation
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @notice Upgrade the organization implementation to a new address and optionally call a function
+     * @dev This is the ONLY authorized way to upgrade this contract. Direct calls to the inherited
+     *      `upgradeToAndCall` function will revert with `UnauthorizedUpgrade`.
+     *
+     *      SECURITY MODEL:
+     *      1. Guardian must submit the transaction (onlyGuardian modifier)
+     *      2. Admin(s) must have signed the upgrade (validated in _validateOrganizationUpgrade)
+     *      3. New implementation must be on the whitelist (validated in _validateOrganizationUpgrade)
+     *      4. A storage flag is set to authorize the subsequent _authorizeUpgrade call
+     *      5. The flag is reset after the upgrade completes (or if it reverts, the tx reverts entirely)
+     *
+     *      WHY THE AUTHORIZATION FLAG?
+     *      OpenZeppelin's UUPSUpgradeable exposes a public `upgradeToAndCall` function that anyone
+     *      can call. The authorization is supposed to happen in `_authorizeUpgrade`, but that hook
+     *      only receives `newImplementation` - not our signatures/proofs. So we:
+     *      1. Validate everything here (guardian, signatures, whitelist)
+     *      2. Set a flag to signal "upgrade is authorized"
+     *      3. Call the inherited upgradeToAndCall
+     *      4. _authorizeUpgrade checks the flag and reverts if not set
+     *      5. Reset the flag after completion
+     *
+     *      The flag is safe because:
+     *      - It's set AFTER validation passes
+     *      - If upgradeToAndCall reverts, the entire transaction reverts (flag never persists)
+     *      - We explicitly reset it after success as defense-in-depth
+     *
+     * @param newImplementation The new implementation address (must be whitelisted)
+     * @param data Optional calldata to execute on the new implementation after upgrade.
+     *             Pass empty bytes ("") if no post-upgrade call is needed.
+     * @param salt A user-provided salt for nonce computation (prevents replay attacks)
+     * @param expirationTimestamp The timestamp after which the admin signatures are no longer valid
+     * @param signatures The concatenated signatures from admin(s) authorizing this upgrade
+     * @param adminProofs The Merkle proofs verifying the signers are admins
      */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
@@ -567,6 +602,10 @@ contract OrganizationImplementation is
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
+        // Validate admin signatures and whitelist
+        // This consumes the nonce and validates:
+        // - Sufficient admin signatures for the operation
+        // - New implementation is on the allowed whitelist
         _validateOrganizationUpgrade({
             newImplementation: newImplementation,
             salt: salt,
@@ -574,7 +613,24 @@ contract OrganizationImplementation is
             signatures: signatures,
             adminProofs: adminProofs
         });
+
+        // Set authorization flag in namespaced storage
+        // This flag tells _authorizeUpgrade that we've done proper validation.
+        // Using EIP-7201 namespaced storage to prevent slot collisions during upgrades.
+        LibOrganizationUpgradeStorage.layout().authorized = true;
+
+        // Perform the upgrade
+        // This calls the inherited UUPSUpgradeable.upgradeToAndCall which will:
+        // 1. Call _authorizeUpgrade (which checks our flag)
+        // 2. Upgrade the implementation
+        // 3. Optionally call `data` on the new implementation
         upgradeToAndCall(newImplementation, data);
+
+        // Reset the flag (defense-in-depth)
+        // Even though the flag can't persist if the tx reverts, we reset it explicitly
+        // as a security best practice. This also protects against any theoretical
+        // scenario where the flag might persist.
+        LibOrganizationUpgradeStorage.layout().authorized = false;
     }
 
     /**
@@ -808,7 +864,7 @@ contract OrganizationImplementation is
         bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) internal {
-        // 1. Validate admin authorization (isApproval = true for execution)
+        // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.Upgrade,
@@ -820,7 +876,7 @@ contract OrganizationImplementation is
             adminProofs: adminProofs
         });
 
-        // 2. Validate implementation against whitelist
+        // Validate implementation against whitelist
         IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
             IImplementationWhitelist.ContractType.Organization, newImplementation
@@ -829,12 +885,42 @@ contract OrganizationImplementation is
 
     /**
      * @notice Authorize an upgrade (required by UUPSUpgradeable)
-     * @dev Authorization is handled by upgradeToWithAuthorization and upgradeToAndCallWithAuthorization
-     *      which validate signatures before calling upgradeToAndCall
-     * @param newImplementation The new implementation address (unused)
+     * @dev This function is called by the inherited `upgradeToAndCall` function from UUPSUpgradeable.
+     *      It acts as a gatekeeper to ensure upgrades only happen through our authorized flow.
+     *
+     *      SECURITY EXPLANATION:
+     *      OpenZeppelin's UUPSUpgradeable exposes a public `upgradeToAndCall(address, bytes)` function.
+     *      Without protection, an attacker could call this directly on the proxy, bypassing:
+     *      - Guardian check (onlyGuardian modifier)
+     *      - Admin signature validation
+     *      - Implementation whitelist check
+     *
+     *      Our solution uses a storage flag at a namespaced slot (EIP-7201):
+     *      - `upgradeToAndCallWithAuthorization` sets the flag AFTER validating everything
+     *      - This function checks that the flag is set
+     *      - Direct calls to `upgradeToAndCall` will not have the flag set → revert
+     *
+     *      WHY NAMESPACED STORAGE (EIP-7201)?
+     *      - Prevents storage slot collisions when upgrading contracts
+     *      - Safe even if new state variables are added in future implementations
+     *
+     *      WHY REGULAR STORAGE (not transient)?
+     *      We use regular storage instead of EIP-1153 transient storage for maximum EVM chain
+     *      compatibility. This allows deployment to chains that haven't adopted the Cancun upgrade.
+     *      The flag is explicitly reset after the upgrade completes as defense-in-depth.
+     *
+     * @param newImplementation The new implementation address (unused - validation already done)
      */
-    function _authorizeUpgrade(address newImplementation) internal override {
-        // Authorization is already validated by upgradeToWithAuthorization or upgradeToAndCallWithAuthorization
-        // before this function is called via upgradeToAndCall
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        // Silence unused variable warning - validation was already performed in
+        // upgradeToAndCallWithAuthorization before setting the authorization flag
+        (newImplementation);
+
+        // Check the authorization flag from namespaced storage
+        // If this is false, it means someone called upgradeToAndCall directly without
+        // going through upgradeToAndCallWithAuthorization
+        if (!LibOrganizationUpgradeStorage.layout().authorized) {
+            revert UnauthorizedUpgrade();
+        }
     }
 }
