@@ -652,25 +652,16 @@ library LibOrganizationPolicy {
         bytes calldata data,
         bytes32[] calldata destinationProof
     ) private pure returns (bool) {
-        // Case: The token being transferred is not allowed by the policy
-        if (!_isTokenAllowedByPolicy(policy, to, data)) return false;
-
-        // Case: The amount of the token being transferred is not allowed by the policy
-        if (!_isTokenAmountAllowedByPolicy(policy, data, value)) return false;
-
-        // Case: The destination (token recipient) is not allowed by the policy
-        if (
-            !_isDestinationAllowedByPolicy({
+        // forgefmt: disable-next-item
+        return _isTokenAllowedByPolicy(policy, to, data) 
+            && _isTokenAmountAllowedByPolicy(policy, data, value)
+            && _isDestinationAllowedByPolicy({
                 policy: policy,
                 to: to,
                 value: value,
                 data: data,
                 destinationProof: destinationProof
-            })
-        ) return false;
-
-        // Case: The token transfer is allowed by the policy
-        return true;
+            });
     }
 
     /**
@@ -697,29 +688,16 @@ library LibOrganizationPolicy {
         bytes calldata constraints,
         bytes32[] calldata destinationProof
     ) private pure returns (bool) {
-        // Case: The contract being called (i.e. the "destination" of the transaction) is not allowed by the policy
-        if (
-            !_isDestinationAllowedByPolicy({
+        // forgefmt: disable-next-item
+        return _isDestinationAllowedByPolicy({
                 policy: policy,
                 to: to,
                 value: value,
                 data: data,
                 destinationProof: destinationProof
             })
-        ) return false;
-
-        // Case: The function being called by the transaction is not allowed by the policy
-        if (!_isFunctionAllowedByPolicy(policy, data, functionProof, constraints)) {
-            return false;
-        }
-
-        // Case: The transaction parameters do not match the policy's constraints
-        if (!_areParametersAllowedByConstraints(constraints, data)) {
-            return false;
-        }
-
-        // Case: The contract interaction is allowed by the policy
-        return true;
+            && _isFunctionAllowedByPolicy(policy, data, functionProof, constraints)
+            && _areParametersAllowedByConstraints(constraints, data);
     }
 
     /**
