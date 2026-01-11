@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {Policies} from "../../../libraries/Policies.sol";
+import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
+import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
+
+/**
+ * @title Lib Policy Initiator
+ * @notice Library for validating transaction initiator authorization
+ * @dev Handles checking if an initiator is authorized by a policy.
+ *      Uses Merkle proofs for membership verification.
+ * @author Den Technologies Inc
+ */
+library LibPolicyInitiator {
+    /**
+     * @notice Checks if the initiator is authorized by the policy
+     * @dev If anyInitiator is true, always returns true.
+     *      Otherwise, verifies the initiator is a member and matches policy requirements.
+     *      Uses Merkle proofs for membership verification.
+     * @param policy The policy to check against
+     * @param initiatorAddress The address of the transaction initiator
+     * @param initiatorProofs The proofs for initiator membership verification
+     * @return True if the initiator is authorized, false otherwise
+     */
+    function isInitiatorAuthorized(
+        Policies.Policy memory policy,
+        address initiatorAddress,
+        Policies.InitiatorProofs memory initiatorProofs
+    ) internal view returns (bool) {
+        // Case: The policy matches transactions with any initiator
+        if (policy.config.initiator.anyInitiator) return true;
+
+        // First, verify the initiator is a member of the organization
+        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.initiatorInOrgMembersTreeProof)) {
+            return false;
+        }
+
+        Policies.ApproverType initType = policy.config.initiator.initiatorType;
+
+        // Case: The policy matches transactions made by a specific individual
+        if (initType == Policies.ApproverType.Member) {
+            // Check if the initiator is the specified member address
+            return initiatorAddress == policy.config.initiator.initiatorMember;
+        }
+
+        // Case: The policy matches transactions made by any individual from a specific group
+        if (initType == Policies.ApproverType.Group) {
+            // Check the group ID matches the policy's initiator group ID
+            if (initiatorProofs.group.groupId != policy.config.initiator.initiatorGroupId) {
+                return false;
+            }
+
+            // Verify the group exists and the initiator is in that group
+            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
+                initiatorAddress,
+                initiatorProofs.group,
+                initiatorProofs.groupInOrgGroupsTreeProof,
+                initiatorProofs.memberInGroupProof
+            );
+        }
+
+        // Case: The policy does not match this transaction
+        return false;
+    }
+}
