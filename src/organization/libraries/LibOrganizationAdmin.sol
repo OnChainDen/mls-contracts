@@ -22,10 +22,6 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  * @author Den Technologies Inc
  */
 library LibOrganizationAdmin {
-    // ================================
-    // STRUCTS
-    // ================================
-
     /**
      * @notice Data needed to validate that all admins are members of the organization
      * @dev Used by setMembers, setAdmins, and initialize to prevent bricking
@@ -50,10 +46,6 @@ library LibOrganizationAdmin {
         bytes32[][] adminInOrgMembersTreeProofs;
     }
 
-    // ================================
-    // EVENTS
-    // ================================
-
     /**
      * @notice Emitted when admin permissions are updated
      * @param previousAdminsRoot The previous admins merkle root
@@ -73,10 +65,6 @@ library LibOrganizationAdmin {
         uint256 newVotingThreshold,
         address[] newAdminAddresses
     );
-
-    // ================================
-    // ERRORS
-    // ================================
 
     /**
      * @notice Emitted when an admin operation is rejected due to insufficient authorization
@@ -141,10 +129,6 @@ library LibOrganizationAdmin {
      */
     error InvalidAdminConfiguration(string reason);
 
-    // ================================
-    // ADMIN PERMISSION MANAGEMENT
-    // ================================
-
     /**
      * @notice Sets the admin permissions for the organization
      * @dev Validates that all new admins are members before updating.
@@ -191,10 +175,6 @@ library LibOrganizationAdmin {
             validation.adminAddresses
         );
     }
-
-    // ================================
-    // ADMIN AUTHORIZATION
-    // ================================
 
     /**
      * @notice Validates that the provided signatures meet the admin authorization requirements
@@ -252,10 +232,6 @@ library LibOrganizationAdmin {
     function getAdminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
         return LibOrganizationAdminStorage.layout().adminPermission;
     }
-
-    // ================================
-    // SHARED VALIDATION HELPER
-    // ================================
 
     /**
      * @notice Validates that all admins are members of the organization
@@ -433,10 +409,6 @@ library LibOrganizationAdmin {
         // Return EIP-712 compatible hash for ERC-1271 signature verification
         return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
     }
-
-    // ================================
-    // ADMIN TREE VERIFICATION
-    // ================================
 
     /**
      * @notice Checks if an address is in the admin tree

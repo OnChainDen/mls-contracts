@@ -31,10 +31,6 @@ library LibOrganizationMembers {
      */
     error MemberVerificationFailed(address memberAddress);
 
-    // ================================
-    // SET MEMBERS
-    // ================================
-
     /**
      * @notice Updates the global members merkle root
      * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
@@ -63,10 +59,6 @@ library LibOrganizationMembers {
         emit MembersUpdated(newMembersRoot, ipfsCid);
     }
 
-    // ================================
-    // MEMBERSHIP VERIFICATION
-    // ================================
-
     /**
      * @notice Verifies that an address is a member of the organization
      * @param memberAddress The address to verify
@@ -77,10 +69,6 @@ library LibOrganizationMembers {
         bytes32 root = LibOrganizationMembersStorage.layout().membersRoot;
         return isMemberInTree(memberAddress, root, proof);
     }
-
-    // ================================
-    // GETTERS
-    // ================================
 
     /**
      * @notice Returns the current members merkle root

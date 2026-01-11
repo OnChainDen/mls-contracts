@@ -25,14 +25,6 @@ library LibOrganizationGroups {
      */
     event GroupsUpdated(bytes32 indexed newRoot, string ipfsCid);
 
-    // ================================
-    // GROUP VERIFICATION
-    // ================================
-
-    // ================================
-    // SET GROUPS
-    // ================================
-
     /**
      * @notice Updates the global groups merkle root
      * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
@@ -83,10 +75,6 @@ library LibOrganizationGroups {
         return isMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof);
     }
 
-    // ================================
-    // GETTERS
-    // ================================
-
     /**
      * @notice Returns the current groups merkle root
      * @return The groups merkle root
@@ -134,10 +122,6 @@ library LibOrganizationGroups {
         bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
         return MerkleProof.verify(memberInGroupProof, groupMembersRoot, leaf);
     }
-
-    // ================================
-    // MERKLE HELPERS
-    // ================================
 
     /**
      * @notice Computes the merkle leaf for a group

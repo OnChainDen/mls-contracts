@@ -45,17 +45,9 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
         _;
     }
 
-    // ================================
-    // INativeTokenReceivedEventEmitter
-    // ================================
-
     receive() external payable override {
         emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
     }
-
-    // ================================
-    // Transaction execution
-    // ================================
 
     /**
      * @notice Executes a transaction from this account
@@ -80,10 +72,6 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
         emit TransactionExecuted(to, value, data, nonce, policyId);
     }
 
-    // ================================
-    // Organization reference
-    // ================================
-
     /**
      * @notice Gets the organization address that this account is associated with (the beacon)
      * @return The organization address
@@ -91,10 +79,6 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
     function getOrganizationAddress() external view returns (address) {
         return LibAccountOrganizationAddressStorage.getOrganizationAddress();
     }
-
-    // ================================
-    // IERC1271 (Smart Contract Signatures)
-    // ================================
 
     /**
      * @notice Validates a signature according to ERC-1271

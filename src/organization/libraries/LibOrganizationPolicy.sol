@@ -52,10 +52,6 @@ library LibOrganizationPolicy {
      */
     error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
 
-    // ================================
-    // SET POLICIES
-    // ================================
-
     /**
      * @notice Updates the global policies merkle root
      * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
@@ -111,10 +107,6 @@ library LibOrganizationPolicy {
         return true;
     }
 
-    // ================================
-    // POLICY VERIFICATION
-    // ================================
-
     /**
      * @notice Checks if a policy exists in the organization's policy merkle tree
      * @param policyId The unique identifier of the policy
@@ -131,10 +123,6 @@ library LibOrganizationPolicy {
         bytes32 leaf = _computePolicyLeaf(policyId, policy);
         return MerkleProof.verify(proof, root, leaf);
     }
-
-    // ================================
-    // POLICY VALIDATION
-    // ================================
 
     /**
      * @notice Checks if a policy applies to a given transaction
@@ -220,10 +208,6 @@ library LibOrganizationPolicy {
         return false;
     }
 
-    // ================================
-    // FILTER MATCHING
-    // ================================
-
     /**
      * @notice Checks if the initiator is authorized by the policy
      * @dev If anyInitiator is true, always returns true.
@@ -274,10 +258,6 @@ library LibOrganizationPolicy {
         // Case: The policy does not match this transaction
         return false;
     }
-
-    // ================================
-    // APPROVER HELPERS
-    // ================================
 
     /**
      * @notice Counts valid approvals from a set of signatures (using Merkle proofs)
@@ -505,10 +485,6 @@ library LibOrganizationPolicy {
         return false;
     }
 
-    // ================================
-    // TRANSACTION HELPERS
-    // ================================
-
     /**
      * @notice Gets the actual destination address for a transaction
      * @dev For token transfers, the actual destination is the token recipient (extracted from calldata).
@@ -529,10 +505,6 @@ library LibOrganizationPolicy {
         // Extract the recipient address from the transfer function call
         return TokenTransferUtils.extractERC20TransferRecipient(data);
     }
-
-    // ================================
-    // TIME-BASED LIMITS
-    // ================================
 
     /**
      * @notice Computes the usage key for time-based limit tracking
@@ -682,10 +654,6 @@ library LibOrganizationPolicy {
         bytes32 funcLeaf = _computeFunctionLeaf(selector, constraintsHash);
         return MerkleProof.verify(functionProof, policy.roots.allowedFunctionsRoot, funcLeaf);
     }
-
-    // ================================
-    // PARAMETER CONSTRAINTS
-    // ================================
 
     /**
      * @notice Checks if transaction parameters match the specified constraints
@@ -1027,10 +995,6 @@ library LibOrganizationPolicy {
         // Case: The parameter is an unknown type
         return false;
     }
-
-    // ================================
-    // MERKLE HELPERS
-    // ================================
 
     /**
      * @notice Computes the merkle leaf for a policy

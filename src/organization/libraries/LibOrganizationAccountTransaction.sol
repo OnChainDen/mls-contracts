@@ -50,10 +50,6 @@ library LibOrganizationAccountTransaction {
         uint256 policyId;
     }
 
-    // ================================
-    // ERRORS
-    // ================================
-
     /// @notice Thrown when a transaction is rejected due to policy rules
     error TransactionRejectedByPolicy(string reason);
 
@@ -77,10 +73,6 @@ library LibOrganizationAccountTransaction {
 
     /// @notice Thrown when the transaction exceeds the policy's time-based limit
     error TimeBasedLimitExceeded(uint256 policyId);
-
-    // ================================
-    // TRANSACTION APPROVAL
-    // ================================
 
     /**
      * @notice Validates a transaction against the specified policy using merkle proofs
@@ -151,10 +143,6 @@ library LibOrganizationAccountTransaction {
         // Update time-based limits if applicable (for all policy types)
         _validateAndUpdateTimeBasedLimitOrRevert(params, data, initiator, proofs.policy);
     }
-
-    // ================================
-    // TRANSACTION REJECTION
-    // ================================
 
     /**
      * @notice Validates that the caller is authorized to reject the given transaction
@@ -366,10 +354,6 @@ library LibOrganizationAccountTransaction {
             revert InsufficientApprovals(requiredApprovals, validApprovals);
         }
     }
-
-    // ================================
-    // EIP-712 HASH COMPUTATION
-    // ================================
 
     /**
      * @notice Computes the EIP-712 hash for initiator signatures

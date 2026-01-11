@@ -40,10 +40,6 @@ contract OrganizationImplementation is
     IBeacon,
     IOrganizationSignatureValidator
 {
-    // ================================
-    // Events
-    // ================================
-
     /**
      * @notice Emitted when a transaction is executed on an account
      * @param account The account that executed the transaction
@@ -84,10 +80,6 @@ contract OrganizationImplementation is
      */
     event AdminOperationRejected(OperationType indexed operationType, bytes operationData, uint256 indexed nonce);
 
-    // ================================
-    // Errors
-    // ================================
-
     /**
      * @notice Emitted when a transaction is rejected because of wrong chain ID
      * @param expected The expected chain ID
@@ -99,10 +91,6 @@ contract OrganizationImplementation is
      * @notice Emitted when the account implementation has not been set
      */
     error AccountImplementationNotSet();
-
-    // ================================
-    // Modifiers
-    // ================================
 
     /**
      * @notice Modifier that enforces only the guardian can call the function
@@ -119,10 +107,6 @@ contract OrganizationImplementation is
         LibOrganizationInitialization.enforceOnlyDeployer();
         _;
     }
-
-    // ================================
-    // External Functions (non-view)
-    // ================================
 
     /**
      * @notice Initialize the organization implementation with Merkle-based members and groups
@@ -510,10 +494,6 @@ contract OrganizationImplementation is
         upgradeToAndCall(newImplementation, data);
     }
 
-    // ================================
-    // External View Functions
-    // ================================
-
     /**
      * @notice Returns the current members merkle root
      * @return The members merkle root
@@ -691,10 +671,6 @@ contract OrganizationImplementation is
     function isInitialized() external view returns (bool) {
         return LibOrganizationInitialization.isInitialized();
     }
-
-    // ================================
-    // Internal Functions
-    // ================================
 
     /**
      * @notice Validates organization upgrade authorization

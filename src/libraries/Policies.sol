@@ -19,10 +19,6 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library Policies {
-    // ================================
-    // ENUMS
-    // ================================
-
     /**
      * @notice Defines whether a policy auto-approves transactions or requires manual approval
      * @dev AutoApprove: Transaction proceeds if initiator is authorized
@@ -89,10 +85,6 @@ library Policies {
 
     }
 
-    // ================================
-    // PARAMETER CONSTRAINT TYPES
-    // ================================
-
     /**
      * @notice Supported parameter types for function call constraints
      * @dev Used to specify how to interpret calldata parameters when validating
@@ -157,10 +149,6 @@ library Policies {
         bytes comparisonData;
         bytes32[] paramValueInListProof; // Merkle proof for OneOf constraints (empty otherwise)
     }
-
-    // ================================
-    // POLICY STRUCTS
-    // ================================
 
     /**
      * @notice Approval configuration - defines who must approve transactions
@@ -281,10 +269,6 @@ library Policies {
         PolicyRoots roots;
     }
 
-    // ================================
-    // MEMBERSHIP PROOF STRUCTURES
-    // ================================
-
     /**
      * @notice Data needed to identify and verify a group
      * @dev Groups are stored in a merkle tree where each leaf is hash(groupId, groupMembersRoot)
@@ -329,10 +313,6 @@ library Policies {
         bytes32[][] memberInGroupProofs;
     }
 
-    // ================================
-    // VALIDATION PROOFS
-    // ================================
-
     /**
      * @notice All proofs needed to validate a transaction against a policy
      * @dev Bundled together to simplify function signatures and reduce stack depth
@@ -355,10 +335,6 @@ library Policies {
         InitiatorProofs initiatorProofs;
         ApproverProofs approverProofs;
     }
-
-    // ================================
-    // FUNCTION LEAF STRUCTURE
-    // ================================
 
     /**
      * @notice Structure for function selector leaves in the allowed functions merkle tree
