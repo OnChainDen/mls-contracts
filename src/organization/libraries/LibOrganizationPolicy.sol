@@ -934,17 +934,19 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Validates a dynamic Bytes parameter against its constraint
-     * @dev Dynamic bytes only supports Exact constraint (hash comparison).
+     * @notice Validates a dynamic Bytes or String parameter against its constraint
+     * @dev Dynamic bytes and strings only support Exact constraint (hash comparison).
+     *      Both types have identical ABI encoding (offset -> length -> data), so this
+     *      function handles both ParamType.Bytes and ParamType.String.
      *      The paramHeadValue contains the offset to the data location in calldata.
-     *      The comparisonData should contain the keccak256 hash of the expected bytes.
+     *      The comparisonData should contain the keccak256 hash of the expected bytes/string.
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected hash encoded as bytes
-     * @param paramHeadValue The parameter value (offset to bytes data)
+     * @param paramHeadValue The parameter value (offset to bytes/string data)
      * @param data The full transaction calldata
      * @return True if the parameter satisfies the constraint, false otherwise
      */
-    function _isBytesParameterAllowedByConstraint(
+    function _isBytesOrStringParameterAllowedByConstraint(
         Policies.ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue,
@@ -962,53 +964,13 @@ library LibOrganizationPolicy {
         // First 32 bytes at that position is the length
         if (data.length < dataPosition + 32) return false;
 
-        uint256 bytesLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
+        uint256 length = uint256(bytes32(data[dataPosition:dataPosition + 32]));
 
-        // Check we have enough data for the bytes content
-        if (data.length < dataPosition + 32 + bytesLength) return false;
+        // Check we have enough data for the content
+        if (data.length < dataPosition + 32 + length) return false;
 
-        // Hash the actual bytes content
-        bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + bytesLength]);
-        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
-        return actualHash == expectedHash;
-    }
-
-    /**
-     * @notice Validates a String parameter against its constraint
-     * @dev String only supports Exact constraint (hash comparison).
-     *      The paramHeadValue contains the offset to the string data in calldata.
-     *      The comparisonData should contain the keccak256 hash of the expected string.
-     * @param constraintType The type of constraint to apply
-     * @param comparisonData The expected hash encoded as bytes
-     * @param paramHeadValue The parameter value (offset to string data)
-     * @param data The full transaction calldata
-     * @return True if the parameter satisfies the constraint, false otherwise
-     */
-    function _isStringParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
-        bytes memory comparisonData,
-        bytes32 paramHeadValue,
-        bytes calldata data
-    ) private pure returns (bool) {
-        if (constraintType != Policies.ConstraintType.Exact) return false;
-
-        // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
-        uint256 offset = uint256(paramHeadValue);
-
-        // The offset is relative to the start of the encoded parameters (after selector)
-        // So actual position in data = 4 (selector) + offset
-        uint256 dataPosition = 4 + offset;
-
-        // First 32 bytes at that position is the string length
-        if (data.length < dataPosition + 32) return false;
-
-        uint256 strLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
-
-        // Check we have enough data for the string content
-        if (data.length < dataPosition + 32 + strLength) return false;
-
-        // Hash the actual string content
-        bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + strLength]);
+        // Hash the actual content
+        bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + length]);
         bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
         return actualHash == expectedHash;
     }
@@ -1059,12 +1021,9 @@ library LibOrganizationPolicy {
             return _isFixedBytesParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
         }
 
-        if (pType == Policies.ParamType.Bytes) {
-            return _isBytesParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
-        }
-
-        if (pType == Policies.ParamType.String) {
-            return _isStringParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
+        // Bytes and String have identical ABI encoding, so we use the same validation function
+        if (pType == Policies.ParamType.Bytes || pType == Policies.ParamType.String) {
+            return _isBytesOrStringParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
         }
 
         // Case: The parameter is an Array or Struct type, which only support the "Any" constraint
