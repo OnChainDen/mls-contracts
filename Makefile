@@ -39,6 +39,7 @@ format:
 # Lint: Checks code style (no fixes)
 lint:
 	forge fmt --check
+	forge lint
 	npx solhint 'src/**/*.sol'
 
 # Analyze: Static Analysis (Slither)
