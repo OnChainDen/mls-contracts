@@ -40,6 +40,10 @@ contract OrganizationImplementation is
     IBeacon,
     IOrganizationSignatureValidator
 {
+    // ================================
+    // Events
+    // ================================
+
     /**
      * @notice Emitted when a transaction is executed on an account
      * @param account The account that executed the transaction
@@ -67,13 +71,6 @@ contract OrganizationImplementation is
     );
 
     /**
-     * @notice Emitted when a transaction is rejected because of wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidChainId(uint256 expected, uint256 provided);
-
-    /**
      * @notice Emitted when the account implementation is updated (affects all accounts via beacon)
      * @param newImplementation The new implementation address for all accounts
      */
@@ -87,10 +84,25 @@ contract OrganizationImplementation is
      */
     event AdminOperationRejected(OperationType indexed operationType, bytes operationData, uint256 indexed nonce);
 
+    // ================================
+    // Errors
+    // ================================
+
+    /**
+     * @notice Emitted when a transaction is rejected because of wrong chain ID
+     * @param expected The expected chain ID
+     * @param provided The provided chain ID
+     */
+    error InvalidChainId(uint256 expected, uint256 provided);
+
     /**
      * @notice Emitted when the account implementation has not been set
      */
     error AccountImplementationNotSet();
+
+    // ================================
+    // Modifiers
+    // ================================
 
     /**
      * @notice Modifier that enforces only the guardian can call the function
@@ -108,34 +120,16 @@ contract OrganizationImplementation is
         _;
     }
 
+    // ================================
+    // External Functions (non-view)
+    // ================================
+
     /**
      * @notice Initialize the organization implementation with Merkle-based members and groups
      * @param params The initialization parameters struct containing all required configuration
      */
     function initialize(InitializationParams calldata params) external initializer onlyDeployer {
         LibOrganizationInitialization.initialize(params);
-    }
-
-    // ================================
-    // LibOrganizationMembers wrappers
-    // ================================
-
-    /**
-     * @notice Returns the current members merkle root
-     * @return The members merkle root
-     */
-    function membersRoot() external view returns (bytes32) {
-        return LibOrganizationMembers.getMembersRoot();
-    }
-
-    /**
-     * @notice Verifies that an address is a member of the organization
-     * @param memberAddress The address to verify
-     * @param proof The merkle proof for the address
-     * @return True if the address is a verified member, false otherwise
-     */
-    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
-        return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
     }
 
     /**
@@ -170,51 +164,6 @@ contract OrganizationImplementation is
         LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, adminValidation);
     }
 
-    // ================================
-    // LibOrganizationGroups wrappers
-    // ================================
-
-    /**
-     * @notice Returns the current groups merkle root
-     * @return The groups merkle root
-     */
-    function groupsRoot() external view returns (bytes32) {
-        return LibOrganizationGroups.getGroupsRoot();
-    }
-
-    /**
-     * @notice Verifies that a group exists in the organization
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof for the group
-     * @return True if the group exists, false otherwise
-     */
-    function isGroupInOrg(Policies.GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
-        external
-        view
-        returns (bool)
-    {
-        return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
-    }
-
-    /**
-     * @notice Verifies complete group membership (group exists AND member is in group)
-     * @param memberAddress The address to verify
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
-     * @param memberInGroupProof The merkle proof that the member is in the group
-     * @return True if both verifications pass, false otherwise
-     */
-    function isMemberInGroupAndGroupInOrg(
-        address memberAddress,
-        Policies.GroupData calldata groupData,
-        bytes32[] calldata groupInOrgGroupsTreeProof,
-        bytes32[] calldata memberInGroupProof
-    ) external view returns (bool) {
-        return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
-            memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
-        );
-    }
-
     /**
      * @notice Updates the global groups merkle root
      * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
@@ -244,18 +193,6 @@ contract OrganizationImplementation is
         LibOrganizationGroups.setGroups(newGroupsRoot, ipfsCid);
     }
 
-    // ================================
-    // LibOrganizationPolicy wrappers
-    // ================================
-
-    /**
-     * @notice Returns the current global policies merkle root
-     * @return The policies merkle root
-     */
-    function policiesRoot() external view returns (bytes32) {
-        return LibOrganizationPolicyStorage.layout().policiesRoot;
-    }
-
     /**
      * @notice Updates the global policies merkle root
      * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
@@ -283,52 +220,6 @@ contract OrganizationImplementation is
         );
 
         LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
-    }
-
-    /**
-     * @notice Gets the current usage for a time-based policy within the current time window
-     * @param policyId The ID of the policy
-     * @param policy The policy data (from calldata)
-     * @param account The source account address
-     * @param destination The destination address
-     * @param initiator The initiator address
-     * @param policyProof The merkle proof verifying the policy exists
-     * @return The current usage amount within the current time window
-     */
-    function getPolicyUsage(
-        uint256 policyId,
-        Policies.Policy calldata policy,
-        address account,
-        address destination,
-        address initiator,
-        bytes32[] calldata policyProof
-    ) external view returns (uint256) {
-        // Verify policy exists in merkle tree
-        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
-            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
-        }
-
-        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
-    }
-
-    // ================================
-    // LibOrganizationAdmin wrappers
-    // ================================
-
-    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdmin.getAdminPermission();
-    }
-
-    function isNonceUsed(uint256 nonce) external view returns (bool) {
-        return LibOrganizationSignatures.isNonceUsed(nonce);
-    }
-
-    function computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
-        external
-        view
-        returns (uint256)
-    {
-        return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
     }
 
     /**
@@ -399,18 +290,6 @@ contract OrganizationImplementation is
         emit AdminOperationRejected(operationType, operationData, nonce);
     }
 
-    // ================================
-    // LibOrganizationGuardian wrappers
-    // ================================
-
-    function enforceOnlyGuardian() external view {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-    }
-
-    function guardian() external view returns (address) {
-        return LibOrganizationGuardian.getGuardian();
-    }
-
     function setGuardian(
         address newGuardian,
         uint256 salt,
@@ -427,23 +306,6 @@ contract OrganizationImplementation is
         );
 
         LibOrganizationGuardian.setGuardian(newGuardian);
-    }
-
-    // ================================
-    // IBeacon interface (for Account BeaconProxies)
-    // ================================
-
-    /**
-     * @notice Returns the current implementation address for all Account BeaconProxies
-     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
-     * @return The current account implementation address
-     */
-    function implementation() external view override returns (address) {
-        address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
-        if (impl == address(0)) {
-            revert AccountImplementationNotSet();
-        }
-        return impl;
     }
 
     /**
@@ -478,10 +340,6 @@ contract OrganizationImplementation is
         emit AccountImplementationUpdated(newImplementation);
     }
 
-    // ================================
-    // LibOrganizationAccountFactory wrappers
-    // ================================
-
     /**
      * @notice Deploys a new Account BeaconProxy at a deterministic address
      * @dev The account uses this Organization as its beacon
@@ -515,19 +373,6 @@ contract OrganizationImplementation is
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
-
-    /**
-     * @notice Computes the address where an account proxy would be deployed
-     * @param salt The salt for CREATE2 deployment
-     * @return The computed address
-     */
-    function computeAccountAddress(bytes32 salt) external view returns (address) {
-        return LibOrganizationAccountFactory.computeAccountAddress(salt);
-    }
-
-    // ================================
-    // LibOrganizationAccountTransaction wrappers
-    // ================================
 
     /**
      * @notice Executes a transaction on an account through the organization
@@ -625,57 +470,6 @@ contract OrganizationImplementation is
         emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
     }
 
-    // ================================
-    // IOrganizationSignatureValidator interface (ERC-1271)
-    // ================================
-
-    /**
-     * @notice Validates an ERC-1271 signature for a given account
-     * @dev This function is called by Account contracts to validate signatures.
-     *      Policy is verified via merkle proof in the signature data.
-     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
-     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
-     * @param account The account address on behalf of which the signature is being validated
-     * @param hash The hash that was signed
-     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature,
-     * proofs)
-     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
-     */
-    function isValidSignatureForAccount(address account, bytes32 hash, bytes memory signature)
-        external
-        view
-        override
-        returns (bytes4 magicValue)
-    {
-        // Verify the caller is the account
-        if (msg.sender != account) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
-
-        // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
-
-        return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
-    }
-
-    // ================================
-    // LibOrganizationInitialization wrappers
-    // ================================
-
-    function getDeployerAddress() external view returns (address) {
-        return LibOrganizationInitialization.getDeployerAddress();
-    }
-
-    function isInitialized() external view returns (bool) {
-        return LibOrganizationInitialization.isInitialized();
-    }
-
-    // ================================
-    // IUpgradeable interface
-    // ================================
-
     /**
      * @notice Upgrade the implementation to a new address with authorization
      * @param newImplementation The new implementation address
@@ -715,6 +509,192 @@ contract OrganizationImplementation is
         _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
         upgradeToAndCall(newImplementation, data);
     }
+
+    // ================================
+    // External View Functions
+    // ================================
+
+    /**
+     * @notice Returns the current members merkle root
+     * @return The members merkle root
+     */
+    function membersRoot() external view returns (bytes32) {
+        return LibOrganizationMembers.getMembersRoot();
+    }
+
+    /**
+     * @notice Verifies that an address is a member of the organization
+     * @param memberAddress The address to verify
+     * @param proof The merkle proof for the address
+     * @return True if the address is a verified member, false otherwise
+     */
+    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
+        return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
+    }
+
+    /**
+     * @notice Returns the current groups merkle root
+     * @return The groups merkle root
+     */
+    function groupsRoot() external view returns (bytes32) {
+        return LibOrganizationGroups.getGroupsRoot();
+    }
+
+    /**
+     * @notice Verifies that a group exists in the organization
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
+     * @return True if the group exists, false otherwise
+     */
+    function isGroupInOrg(Policies.GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
+        external
+        view
+        returns (bool)
+    {
+        return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
+    }
+
+    /**
+     * @notice Verifies complete group membership (group exists AND member is in group)
+     * @param memberAddress The address to verify
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
+     * @param memberInGroupProof The merkle proof that the member is in the group
+     * @return True if both verifications pass, false otherwise
+     */
+    function isMemberInGroupAndGroupInOrg(
+        address memberAddress,
+        Policies.GroupData calldata groupData,
+        bytes32[] calldata groupInOrgGroupsTreeProof,
+        bytes32[] calldata memberInGroupProof
+    ) external view returns (bool) {
+        return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
+            memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
+        );
+    }
+
+    /**
+     * @notice Returns the current global policies merkle root
+     * @return The policies merkle root
+     */
+    function policiesRoot() external view returns (bytes32) {
+        return LibOrganizationPolicyStorage.layout().policiesRoot;
+    }
+
+    /**
+     * @notice Gets the current usage for a time-based policy within the current time window
+     * @param policyId The ID of the policy
+     * @param policy The policy data (from calldata)
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @param policyProof The merkle proof verifying the policy exists
+     * @return The current usage amount within the current time window
+     */
+    function getPolicyUsage(
+        uint256 policyId,
+        Policies.Policy calldata policy,
+        address account,
+        address destination,
+        address initiator,
+        bytes32[] calldata policyProof
+    ) external view returns (uint256) {
+        // Verify policy exists in merkle tree
+        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
+            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
+        }
+
+        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
+    }
+
+    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
+        return LibOrganizationAdmin.getAdminPermission();
+    }
+
+    function isNonceUsed(uint256 nonce) external view returns (bool) {
+        return LibOrganizationSignatures.isNonceUsed(nonce);
+    }
+
+    function computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
+        external
+        view
+        returns (uint256)
+    {
+        return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+    }
+
+    function enforceOnlyGuardian() external view {
+        LibOrganizationGuardian.enforceOnlyGuardian();
+    }
+
+    function guardian() external view returns (address) {
+        return LibOrganizationGuardian.getGuardian();
+    }
+
+    /**
+     * @notice Returns the current implementation address for all Account BeaconProxies
+     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
+     * @return The current account implementation address
+     */
+    function implementation() external view override returns (address) {
+        address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
+        if (impl == address(0)) {
+            revert AccountImplementationNotSet();
+        }
+        return impl;
+    }
+
+    /**
+     * @notice Computes the address where an account proxy would be deployed
+     * @param salt The salt for CREATE2 deployment
+     * @return The computed address
+     */
+    function computeAccountAddress(bytes32 salt) external view returns (address) {
+        return LibOrganizationAccountFactory.computeAccountAddress(salt);
+    }
+
+    /**
+     * @notice Validates an ERC-1271 signature for a given account
+     * @dev This function is called by Account contracts to validate signatures.
+     *      Policy is verified via merkle proof in the signature data.
+     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
+     * @param account The account address on behalf of which the signature is being validated
+     * @param hash The hash that was signed
+     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature,
+     * proofs)
+     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
+     */
+    function isValidSignatureForAccount(address account, bytes32 hash, bytes memory signature)
+        external
+        view
+        override
+        returns (bytes4 magicValue)
+    {
+        // Verify the caller is the account
+        if (msg.sender != account) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        // Verify the account is deployed by this organization
+        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
+            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+        }
+
+        return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
+    }
+
+    function getDeployerAddress() external view returns (address) {
+        return LibOrganizationInitialization.getDeployerAddress();
+    }
+
+    function isInitialized() external view returns (bool) {
+        return LibOrganizationInitialization.isInitialized();
+    }
+
+    // ================================
+    // Internal Functions
+    // ================================
 
     /**
      * @notice Validates organization upgrade authorization
