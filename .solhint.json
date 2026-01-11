@@ -17,7 +17,7 @@
     "import-path-check": "off",
     "func-param-name-mixedcase": "error",
     "immutable-vars-naming": ["error", {
-      "immutablesAsConstants": false
+      "immutablesAsConstants": true
     }],
     "private-vars-leading-underscore": ["error", {
       "strict": false
@@ -41,7 +41,7 @@
     "avoid-sha3": "error",
     "avoid-suicide": "error",
     "check-send-result": "error",
-    "not-rely-on-time": "warn",
+    "not-rely-on-time": "off",
     "multiple-sends": "warn",
     "no-inline-assembly": "off",
     "payable-fallback": "off",
