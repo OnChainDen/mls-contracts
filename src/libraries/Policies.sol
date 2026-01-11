@@ -160,6 +160,10 @@ library Policies {
      * @param approverGroupId The ID of the group that must approve (when approverType == Group)
      * @param approvalThreshold Required number of approvals (for groups)
      */
+    // Struct packing is not beneficial here: this struct is only passed via calldata/memory
+    // and never stored on-chain directly (only its hash as part of a merkle root).
+    // ABI encoding uses full 32-byte slots regardless, so we prioritize readability.
+    // solhint-disable-next-line gas-struct-packing
     struct ApprovalConfig {
         PolicyType policyType;
         ApproverType approverType;
@@ -177,6 +181,10 @@ library Policies {
      * @param initiatorMember The address of the member authorized to initiate (when initiatorType == Member)
      * @param initiatorGroupId The ID of the group authorized to initiate (when initiatorType == Group)
      */
+    // Struct packing is not beneficial here: this struct is only passed via calldata/memory
+    // and never stored on-chain directly (only its hash as part of a merkle root).
+    // ABI encoding uses full 32-byte slots regardless, so we prioritize readability.
+    // solhint-disable-next-line gas-struct-packing
     struct InitiatorConfig {
         bool anyInitiator;
         ApproverType initiatorType;
