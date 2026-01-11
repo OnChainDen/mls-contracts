@@ -36,7 +36,7 @@ interface IUpgradeable {
      */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
-        bytes memory data,
+        bytes calldata data,
         uint256 salt,
         uint256 expirationTimestamp,
         bytes calldata signatures,

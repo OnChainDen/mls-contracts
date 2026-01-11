@@ -94,7 +94,7 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
-    function isValidSignature(bytes32 hash, bytes memory signature)
+    function isValidSignature(bytes32 hash, bytes calldata signature)
         external
         view
         override

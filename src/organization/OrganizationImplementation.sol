@@ -133,7 +133,7 @@ contract OrganizationImplementation is
         string calldata ipfsCid,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs,
         LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
     ) external onlyGuardian {
@@ -169,7 +169,7 @@ contract OrganizationImplementation is
         string calldata ipfsCid,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
         // Encode the operation data for validation
@@ -204,7 +204,7 @@ contract OrganizationImplementation is
         string calldata ipfsCid,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
         // Encode the operation data for validation
@@ -242,7 +242,7 @@ contract OrganizationImplementation is
         uint256 newVotingThreshold,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs,
         LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
     ) external onlyGuardian {
@@ -288,7 +288,7 @@ contract OrganizationImplementation is
         bytes calldata operationData,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
         // Compute nonce for this operation
@@ -320,7 +320,7 @@ contract OrganizationImplementation is
         address newGuardian,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
         // Encode the operation data for validation
@@ -353,7 +353,7 @@ contract OrganizationImplementation is
         address newImplementation,
         uint256 salt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian {
         // 1. Validate admin authorization (isApproval = true for execution)
@@ -396,7 +396,7 @@ contract OrganizationImplementation is
         bytes32 create2Salt,
         uint256 adminSignatureSalt,
         uint256 expirationTimestamp,
-        bytes memory signatures,
+        bytes calldata signatures,
         LibOrganizationAdmin.AdminProofs calldata adminProofs
     ) external onlyGuardian returns (address) {
         // Validate admin authorization for account deployment
@@ -437,7 +437,7 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures,
+        bytes calldata signatures,
         Policies.ValidationProofs calldata proofs
     ) external onlyGuardian {
         // Verify the account is deployed by this organization
@@ -510,7 +510,7 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures,
+        bytes calldata signatures,
         Policies.ValidationProofs calldata proofs
     ) external onlyGuardian {
         // Verify the account is deployed by this organization
@@ -586,7 +586,7 @@ contract OrganizationImplementation is
      */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
-        bytes memory data,
+        bytes calldata data,
         uint256 salt,
         uint256 expirationTimestamp,
         bytes calldata signatures,
@@ -725,7 +725,7 @@ contract OrganizationImplementation is
      * @param salt A user-provided salt for nonce computation
      * @return The computed nonce
      */
-    function computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
+    function computeNonce(OperationType operationType, bytes calldata operationData, uint256 salt)
         external
         view
         returns (uint256)
@@ -782,7 +782,7 @@ contract OrganizationImplementation is
      * proofs)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
-    function isValidSignatureForAccount(address account, bytes32 hash, bytes memory signature)
+    function isValidSignatureForAccount(address account, bytes32 hash, bytes calldata signature)
         external
         view
         override

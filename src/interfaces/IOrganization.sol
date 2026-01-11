@@ -64,7 +64,7 @@ interface IOrganizationSignatureValidator {
      * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
-    function isValidSignatureForAccount(address account, bytes32 hash, bytes memory signature)
+    function isValidSignatureForAccount(address account, bytes32 hash, bytes calldata signature)
         external
         view
         returns (bytes4 magicValue);
