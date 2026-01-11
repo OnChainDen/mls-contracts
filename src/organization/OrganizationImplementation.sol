@@ -551,31 +551,6 @@ contract OrganizationImplementation is
     }
 
     /**
-     * @notice Upgrade the implementation to a new address with authorization
-     * @param newImplementation The new implementation address
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function upgradeToWithAuthorization(
-        address newImplementation,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) external onlyGuardian {
-        _validateOrganizationUpgrade({
-            newImplementation: newImplementation,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
-            signatures: signatures,
-            adminProofs: adminProofs
-        });
-        upgradeToAndCall(newImplementation, "");
-    }
-
-    /**
      * @notice Upgrade the implementation to a new address and call a function with authorization
      * @param newImplementation The new implementation address
      * @param data The calldata to call on the new implementation
