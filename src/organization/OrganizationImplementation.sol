@@ -361,8 +361,12 @@ contract OrganizationImplementation is
         });
 
         // 2. Validate implementation against whitelist
+        // forgefmt: disable-next-item
         IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
-            .validateIsImplementationWhitelistedOrRevert(IImplementationWhitelist.ContractType.Account, newImplementation);
+            .validateIsImplementationWhitelistedOrRevert(
+                IImplementationWhitelist.ContractType.Account, 
+                newImplementation
+            );
 
         // 3. Update the account implementation in storage
         LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;

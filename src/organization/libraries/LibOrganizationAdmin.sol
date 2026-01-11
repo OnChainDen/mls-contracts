@@ -398,6 +398,7 @@ library LibOrganizationAdmin {
         // Note: isApproval is included to differentiate execution signatures from rejection signatures
         bytes32 structHash = keccak256(
             abi.encode(
+                // solhint-disable-next-line max-line-length
                 keccak256(
                     "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
                 ),

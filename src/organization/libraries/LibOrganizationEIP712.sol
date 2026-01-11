@@ -15,6 +15,7 @@ library LibOrganizationEIP712 {
     function getDomainSeparator() internal view returns (bytes32) {
         return keccak256(
             abi.encode(
+                // solhint-disable-next-line max-line-length
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256("OnchainCustodyOrganization"),
                 keccak256("1"),

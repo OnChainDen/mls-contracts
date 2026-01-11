@@ -259,6 +259,7 @@ library LibOrganizationAccountSignature {
     {
         bytes32 structHash = keccak256(
             abi.encode(
+                // solhint-disable-next-line max-line-length
                 keccak256(
                     "InitiateSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId)"
                 ),
@@ -294,6 +295,7 @@ library LibOrganizationAccountSignature {
     ) private view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
+                // solhint-disable-next-line max-line-length
                 keccak256(
                     "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
                 ),
