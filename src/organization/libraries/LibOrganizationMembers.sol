@@ -38,12 +38,12 @@ library LibOrganizationMembers {
      *      Emits MembersUpdated event with the IPFS CID for disaster recovery.
      * @param newMembersRoot The new merkle root containing all members
      * @param ipfsCid The IPFS CID where full member data is stored
-     * @param adminValidation The validation data to verify all admins are in the new members tree
+     * @param allAdminsInOrgProofs Proofs that all admins are in the new members tree
      */
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
-        LibOrganizationAdmin.AdminMembershipValidation memory adminValidation
+        LibOrganizationAdmin.AllAdminsInOrgProofs memory allAdminsInOrgProofs
     ) internal {
         // Get current admin configuration
         LibOrganizationAdminStorage.AdminPermission memory admin = LibOrganizationAdminStorage.layout().adminPermission;
@@ -51,7 +51,7 @@ library LibOrganizationMembers {
         // Validate that ALL admins are still members in the NEW members tree
         // This prevents accidentally bricking the organization by removing admins from membership
         LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
-            adminValidation, admin.adminsRoot, newMembersRoot, admin.adminCount
+            allAdminsInOrgProofs, admin.adminsRoot, newMembersRoot, admin.adminCount
         );
 
         // Update the members root

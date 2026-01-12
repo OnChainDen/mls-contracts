@@ -22,25 +22,27 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationAdmin {
     /**
-     * @notice Data needed to validate that all admins are members of the organization
-     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking
+     * @notice Proofs that ALL admins are members of the organization (in both admin tree and members tree)
+     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
+     *      Contains proofs for every admin in the organization, not just signers.
      * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
      * @param adminInOrgAdminTreeProofs Merkle proofs that each address is in adminsRoot
      * @param adminInOrgMembersTreeProofs Merkle proofs that each address is in membersRoot
      */
-    struct AdminMembershipValidation {
+    struct AllAdminsInOrgProofs {
         address[] adminAddresses;
         bytes32[][] adminInOrgAdminTreeProofs;
         bytes32[][] adminInOrgMembersTreeProofs;
     }
 
     /**
-     * @notice Proofs needed to verify admin authorization for signing operations
-     * @dev Contains per-signer proofs for admin tree and organization membership
+     * @notice Proofs that the SIGNING admins are members of the organization (in both admin tree and members tree)
+     * @dev Contains per-signer proofs for admin tree and organization membership.
+     *      Only contains proofs for admins who signed the operation, not all admins.
      * @param adminInOrgAdminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
      * @param adminInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
      */
-    struct AdminProofs {
+    struct SigningAdminsInOrgProofs {
         bytes32[][] adminInOrgAdminTreeProofs;
         bytes32[][] adminInOrgMembersTreeProofs;
     }
@@ -51,13 +53,13 @@ library LibOrganizationAdmin {
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param signatures The signatures from admin(s) authorizing this operation
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
      */
     struct AdminAuthParams {
         uint256 salt;
         uint256 expirationTimestamp;
         bytes signatures;
-        AdminProofs adminProofs;
+        SigningAdminsInOrgProofs signingAdminsInOrgProofs;
     }
 
     /**
@@ -164,21 +166,21 @@ library LibOrganizationAdmin {
      * @param newAdminsRoot The new merkle root of admin addresses
      * @param newAdminCount The number of admins in the new tree
      * @param newVotingThreshold The new voting threshold
-     * @param validation The validation data to verify all new admins are members
+     * @param newAdminsInOrgProofs Proofs that all new admins are in the organization (admin tree and members tree)
      * @param currentMembersRoot The current members root to validate against
      */
     function setAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
-        AdminMembershipValidation memory validation,
+        AllAdminsInOrgProofs memory newAdminsInOrgProofs,
         bytes32 currentMembersRoot
     ) internal {
         // Validate admin configuration (root, count, threshold)
         validateAdminConfigurationOrRevert(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate all new admins are current members of the organization
-        validateAllAdminsAreMembersOrRevert(validation, newAdminsRoot, currentMembersRoot, newAdminCount);
+        validateAllAdminsAreMembersOrRevert(newAdminsInOrgProofs, newAdminsRoot, currentMembersRoot, newAdminCount);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
@@ -200,7 +202,7 @@ library LibOrganizationAdmin {
             newAdminsRoot: newAdminsRoot,
             newAdminCount: newAdminCount,
             newVotingThreshold: newVotingThreshold,
-            newAdminAddresses: validation.adminAddresses
+            newAdminAddresses: newAdminsInOrgProofs.adminAddresses
         });
     }
 
@@ -248,7 +250,7 @@ library LibOrganizationAdmin {
         uint256 validSignatures = _getValidAdminSignatures(
             authParams.signatures, 
             operationHash, 
-            authParams.adminProofs
+            authParams.signingAdminsInOrgProofs
         );
 
         // Check if we have enough valid signatures
@@ -269,27 +271,27 @@ library LibOrganizationAdmin {
      * @notice Validates that all admins are members of the organization
      * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
      *      Admin addresses must be in strictly ascending order to prevent duplicates.
-     * @param validation The validation data containing admin addresses and proofs
+     * @param allAdminsInOrgProofs Proofs that all admins are in the organization (admin tree and members tree)
      * @param adminsRoot The merkle root of the admin tree
      * @param membersRoot The merkle root of the members tree
      * @param expectedAdminCount The expected number of admins (for completeness check)
      */
     function validateAllAdminsAreMembersOrRevert(
-        AdminMembershipValidation memory validation,
+        AllAdminsInOrgProofs memory allAdminsInOrgProofs,
         bytes32 adminsRoot,
         bytes32 membersRoot,
         uint256 expectedAdminCount
     ) internal pure {
         // Case: Admin addresses array does not match expected count
-        if (validation.adminAddresses.length != expectedAdminCount) {
-            revert AdminCountMismatch(expectedAdminCount, validation.adminAddresses.length);
+        if (allAdminsInOrgProofs.adminAddresses.length != expectedAdminCount) {
+            revert AdminCountMismatch(expectedAdminCount, allAdminsInOrgProofs.adminAddresses.length);
         }
 
         // Track last admin address to ensure ascending order (prevents duplicates)
         address lastAdmin = address(0);
 
-        for (uint256 i = 0; i < validation.adminAddresses.length; ++i) {
-            address admin = validation.adminAddresses[i];
+        for (uint256 i = 0; i < allAdminsInOrgProofs.adminAddresses.length; ++i) {
+            address admin = allAdminsInOrgProofs.adminAddresses[i];
 
             // Case: Admin address is not in ascending order or has duplicates
             if (admin <= lastAdmin) {
@@ -298,12 +300,13 @@ library LibOrganizationAdmin {
             lastAdmin = admin;
 
             // Case: Admin is not in the admin tree
-            if (!_isAdminInTree(admin, adminsRoot, validation.adminInOrgAdminTreeProofs[i])) {
+            if (!_isAdminInTree(admin, adminsRoot, allAdminsInOrgProofs.adminInOrgAdminTreeProofs[i])) {
                 revert AdminNotInTree(admin);
             }
 
             // Case: Admin is not a member in the members tree
-            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, validation.adminInOrgMembersTreeProofs[i])) {
+            bytes32[] memory memberProof = allAdminsInOrgProofs.adminInOrgMembersTreeProofs[i];
+            if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, memberProof)) {
                 revert AdminNotMember(admin);
             }
         }
@@ -336,21 +339,21 @@ library LibOrganizationAdmin {
      * @notice Counts valid signatures from admin members
      * @param signatures The signatures to verify
      * @param operationHash The hash of the admin operation
-     * @param adminProofs The Merkle proofs for membership verification
+     * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
      * @return The number of valid signatures from admins
      */
-    function _getValidAdminSignatures(bytes memory signatures, bytes32 operationHash, AdminProofs memory adminProofs)
-        private
-        view
-        returns (uint256)
-    {
+    function _getValidAdminSignatures(
+        bytes memory signatures,
+        bytes32 operationHash,
+        SigningAdminsInOrgProofs memory signingAdminsInOrgProofs
+    ) private view returns (uint256) {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
 
         uint8 signatureCount = SignatureUtils.getSignatureCount(signatures);
 
         // Validate admin proofs lengths
-        _validateAdminProofsOrRevert(adminProofs, signatureCount);
+        _validateSigningAdminsProofsOrRevert(signingAdminsInOrgProofs, signatureCount);
 
         uint256 validSignatures = 0;
 
@@ -377,13 +380,16 @@ library LibOrganizationAdmin {
             lastSigner = signer;
 
             // Case: Signer is not in the admin tree
-            if (!_isAdminInTree(signer, adminsRoot, adminProofs.adminInOrgAdminTreeProofs[i])) {
+            if (!_isAdminInTree(signer, adminsRoot, signingAdminsInOrgProofs.adminInOrgAdminTreeProofs[i])) {
                 continue;
             }
 
             // Case: Signer is not a member in the members tree
-            if (!LibOrganizationMembers.isMemberInTree(signer, membersRoot, adminProofs.adminInOrgMembersTreeProofs[i]))
-            {
+            if (
+                !LibOrganizationMembers.isMemberInTree(
+                    signer, membersRoot, signingAdminsInOrgProofs.adminInOrgMembersTreeProofs[i]
+                )
+            ) {
                 continue;
             }
 
@@ -429,18 +435,23 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Validates that admin proofs have correct lengths
+     * @notice Validates that signing admin proofs have correct lengths
      * @dev Reverts if proof arrays don't match signature count
-     * @param adminProofs The proofs for admin membership verification
+     * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
      * @param signatureCount The number of signatures provided
      */
-    function _validateAdminProofsOrRevert(AdminProofs memory adminProofs, uint8 signatureCount) private pure {
-        if (adminProofs.adminInOrgAdminTreeProofs.length != signatureCount) {
-            revert AdminTreeProofsLengthMismatch(signatureCount, adminProofs.adminInOrgAdminTreeProofs.length);
+    function _validateSigningAdminsProofsOrRevert(
+        SigningAdminsInOrgProofs memory signingAdminsInOrgProofs,
+        uint8 signatureCount
+    ) private pure {
+        uint256 adminTreeProofsLength = signingAdminsInOrgProofs.adminInOrgAdminTreeProofs.length;
+        if (adminTreeProofsLength != signatureCount) {
+            revert AdminTreeProofsLengthMismatch(signatureCount, adminTreeProofsLength);
         }
 
-        if (adminProofs.adminInOrgMembersTreeProofs.length != signatureCount) {
-            revert MembersTreeProofsLengthMismatch(signatureCount, adminProofs.adminInOrgMembersTreeProofs.length);
+        uint256 membersTreeProofsLength = signingAdminsInOrgProofs.adminInOrgMembersTreeProofs.length;
+        if (membersTreeProofsLength != signatureCount) {
+            revert MembersTreeProofsLengthMismatch(signatureCount, membersTreeProofsLength);
         }
     }
 

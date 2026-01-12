@@ -134,14 +134,14 @@ contract OrganizationImplementation is
      * @param newAdminCount The number of admins in the new tree
      * @param newVotingThreshold The new voting threshold
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
-     * @param adminValidation The validation data to verify all new admins are members
+     * @param newAdminsInOrgProofs Proofs that all new admins are in the organization (admin tree and members tree)
      */
     function setAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
         LibOrganizationAdmin.AdminAuthParams calldata authParams,
-        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
+        LibOrganizationAdmin.AllAdminsInOrgProofs calldata newAdminsInOrgProofs
     ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
@@ -161,7 +161,7 @@ contract OrganizationImplementation is
             newAdminsRoot: newAdminsRoot,
             newAdminCount: newAdminCount,
             newVotingThreshold: newVotingThreshold,
-            validation: adminValidation,
+            newAdminsInOrgProofs: newAdminsInOrgProofs,
             currentMembersRoot: currentMembersRoot
         });
     }
@@ -223,13 +223,13 @@ contract OrganizationImplementation is
      * @param newMembersRoot The new merkle root containing all members
      * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
-     * @param adminValidation The validation data to verify all admins are in the new members tree
+     * @param allAdminsInOrgProofs Proofs that all admins are in the new members tree
      */
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
         LibOrganizationAdmin.AdminAuthParams calldata authParams,
-        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
+        LibOrganizationAdmin.AllAdminsInOrgProofs calldata allAdminsInOrgProofs
     ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
@@ -242,7 +242,7 @@ contract OrganizationImplementation is
             authParams: authParams
         });
 
-        LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, adminValidation);
+        LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, allAdminsInOrgProofs);
     }
 
     /**

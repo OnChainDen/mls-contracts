@@ -80,9 +80,9 @@ library LibOrganizationInitialization {
             params.adminsRoot, params.adminCount, params.votingThreshold
         );
 
-        // Create validation struct
-        LibOrganizationAdmin.AdminMembershipValidation memory validation = LibOrganizationAdmin
-            .AdminMembershipValidation({
+        // Create proofs struct to verify all admins are in the organization
+        LibOrganizationAdmin.AllAdminsInOrgProofs memory allAdminsInOrgProofs = LibOrganizationAdmin
+            .AllAdminsInOrgProofs({
             adminAddresses: params.adminAddresses,
             adminInOrgAdminTreeProofs: params.adminInAdminTreeProofs,
             adminInOrgMembersTreeProofs: params.adminInMembersTreeProofs
@@ -90,7 +90,7 @@ library LibOrganizationInitialization {
 
         // Validate all admins are members (this prevents bricking at initialization)
         LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
-            validation, params.adminsRoot, params.membersRoot, params.adminCount
+            allAdminsInOrgProofs, params.adminsRoot, params.membersRoot, params.adminCount
         );
 
         // Set roots
