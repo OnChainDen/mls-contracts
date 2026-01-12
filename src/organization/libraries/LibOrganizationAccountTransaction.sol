@@ -105,8 +105,8 @@ library LibOrganizationAccountTransaction {
             revert TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
-        // Need at least one signature (initiator's 65-byte signature)
-        if (signatures.length < 65) {
+        // Need at least one signature (initiator's SIGNATURE_LENGTH-byte signature)
+        if (signatures.length < SignatureUtils.SIGNATURE_LENGTH) {
             revert InsufficientSignaturesLength();
         }
 
@@ -197,7 +197,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Need at least one signature
-        if (signatures.length < 65) {
+        if (signatures.length < SignatureUtils.SIGNATURE_LENGTH) {
             revert InsufficientSignaturesLength();
         }
 

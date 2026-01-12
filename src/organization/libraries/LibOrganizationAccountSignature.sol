@@ -192,7 +192,7 @@ library LibOrganizationAccountSignature {
         Policies.ValidationProofs memory proofs
     ) private view returns (bool) {
         // Case: Not enough data provided to check for valid approval signatures
-        if (approverSignatures.length < 65) {
+        if (approverSignatures.length < SignatureUtils.SIGNATURE_LENGTH) {
             return false;
         }
 

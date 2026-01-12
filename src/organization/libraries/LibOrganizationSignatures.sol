@@ -75,10 +75,10 @@ library LibOrganizationSignatures {
         uint256 reviewLength = signatures.length - sigLength;
         reviewSignatures = new bytes(reviewLength);
 
-        // Copy review signatures (everything after byte 65)
+        // Copy review signatures (everything after SIGNATURE_LENGTH bytes)
         /* solhint-disable no-inline-assembly */
         assembly {
-            // Source: signatures + 32 (length prefix) + 65 (skip initiator sig)
+            // Source: signatures + 32 (length prefix) + SIGNATURE_LENGTH (skip initiator sig)
             let src := add(add(signatures, 32), sigLength)
             // Destination: reviewSignatures + 32 (length prefix)
             let dst := add(reviewSignatures, 32)
