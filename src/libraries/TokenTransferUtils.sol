@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import {ContractInteractionUtils} from "./ContractInteractionUtils.sol";
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 /**
  * @title TokenTransferUtils
  * @dev A library for ERC-20 and native token transfer detection and extraction utilities
@@ -63,7 +65,7 @@ library TokenTransferUtils {
 
         // Case: Check if the transaction is calling the `transfer` function
         bytes4 selector = ContractInteractionUtils.extractFunctionSelector(data);
-        return selector == bytes4(keccak256("transfer(address,uint256)"));
+        return selector == IERC20.transfer.selector;
     }
 
     /**
@@ -82,7 +84,7 @@ library TokenTransferUtils {
         // Case: The transaction is calling the `transfer` function
         // transfer(address to, uint256 amount)
         // The recipient is the first parameter after the selector
-        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
+        if (selector == IERC20.transfer.selector) {
             return address(bytes20(data[16:36]));
         }
 
