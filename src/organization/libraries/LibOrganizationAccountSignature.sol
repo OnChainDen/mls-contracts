@@ -107,7 +107,7 @@ library LibOrganizationAccountSignature {
         if (pType == Policies.PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
             if (
-                _hasSufficentValidApprovalSignatures({
+                _hasSufficientValidApprovalSignatures({
                     account: account,
                     hash: hash,
                     policyId: policyId,
@@ -180,7 +180,7 @@ library LibOrganizationAccountSignature {
      * @param proofs Merkle proofs and policy data
      * @return True if enough valid approvals, false otherwise
      */
-    function _hasSufficentValidApprovalSignatures(
+    function _hasSufficientValidApprovalSignatures(
         address account,
         bytes32 hash,
         uint256 policyId,
