@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+
 import {AccountProxy} from "../../account/AccountProxy.sol";
 import {LibOrganizationAccountFactoryStorage} from "./storage/LibOrganizationAccountFactoryStorage.sol";
 
@@ -18,11 +20,6 @@ library LibOrganizationAccountFactory {
      * @param salt The salt used for CREATE2 deployment
      */
     event AccountDeployed(address indexed accountAddress, address indexed organizationAddress, bytes32 indexed salt);
-
-    /**
-     * @notice Error thrown when deployment fails
-     */
-    error AccountDeploymentFailed();
 
     /**
      * @notice Error thrown when the deployed address does not match the computed address
@@ -43,19 +40,10 @@ library LibOrganizationAccountFactory {
      * @return accountAddress The address of the deployed account proxy
      */
     function deployAccount(bytes32 create2Salt) internal returns (address accountAddress) {
-        // Generate the bytecode to deploy the AccountProxy (which is a BeaconProxy) with the Organization
-        // as the beacon (address(this)) and no initialization data (empty bytes)
-        bytes memory bytecode = abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(this), ""));
+        bytes memory bytecode = _getAccountProxyBytecode();
 
         // Deploy the AccountProxy using CREATE2
-        assembly {
-            accountAddress := create2(0, add(bytecode, 0x20), mload(bytecode), create2Salt)
-        }
-
-        // Case: Deployment failed
-        if (accountAddress == address(0)) {
-            revert AccountDeploymentFailed();
-        }
+        accountAddress = Create2.deploy(0, create2Salt, bytecode);
 
         // Case: The deployed address does not match the address we expected
         if (accountAddress != computeAccountAddress(create2Salt)) {
@@ -74,11 +62,7 @@ library LibOrganizationAccountFactory {
      * @return The computed address
      */
     function computeAccountAddress(bytes32 salt) internal view returns (address) {
-        bytes memory bytecode = abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(this), ""));
-
-        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
-
-        return address(uint160(uint256(hash)));
+        return Create2.computeAddress(salt, keccak256(_getAccountProxyBytecode()));
     }
 
     /**
@@ -99,5 +83,13 @@ library LibOrganizationAccountFactory {
         if (!isAccountDeployedByOrganization(accountAddress)) {
             revert AccountNotDeployedByOrganization(accountAddress);
         }
+    }
+
+    /// @notice Returns the creation bytecode for deploying an AccountProxy
+    /// @return bytecode The creation bytecode to deploy via CREATE2
+    function _getAccountProxyBytecode() internal view returns (bytes memory bytecode) {
+        // Generate the bytecode to deploy the AccountProxy (which is a BeaconProxy) with the Organization
+        // as the beacon (address(this)) and no initialization data (empty bytes)
+        return abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(this), ""));
     }
 }
