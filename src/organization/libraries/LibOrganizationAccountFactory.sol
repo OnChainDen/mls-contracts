@@ -89,4 +89,15 @@ library LibOrganizationAccountFactory {
     function isAccountDeployedByOrganization(address accountAddress) internal view returns (bool) {
         return LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress];
     }
+
+    /**
+     * @notice Validates that an account was deployed by this organization
+     * @dev Reverts with AccountNotDeployedByOrganization if the account was not deployed by this organization
+     * @param accountAddress The address of the account to validate
+     */
+    function validateIsAccountDeployedByOrgOrRevert(address accountAddress) internal view {
+        if (!isAccountDeployedByOrganization(accountAddress)) {
+            revert AccountNotDeployedByOrganization(accountAddress);
+        }
+    }
 }

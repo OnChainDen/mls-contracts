@@ -452,9 +452,7 @@ contract OrganizationImplementation is
         Policies.ValidationProofs calldata proofs
     ) external onlyGuardian {
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
         // Encode operation data for nonce computation
         bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
@@ -525,9 +523,7 @@ contract OrganizationImplementation is
         Policies.ValidationProofs calldata proofs
     ) external onlyGuardian {
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
         // Encode operation data for nonce computation (same as executeAccountTransaction)
         bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
@@ -851,9 +847,7 @@ contract OrganizationImplementation is
         }
 
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployedByOrganization(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
         return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
     }
