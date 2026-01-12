@@ -83,77 +83,77 @@ library LibOrganizationAdmin {
     );
 
     /**
-     * @dev Emitted when an admin operation is rejected due to insufficient authorization
+     * @dev Thrown when an admin operation is rejected due to insufficient authorization
      * @param reason The reason for the rejection
      */
     error AdminOperationRejected(string reason);
 
     /**
-     * @dev Emitted when an admin operation has insufficient signatures
+     * @dev Thrown when an admin operation has insufficient signatures
      * @param required The number of required signatures
      * @param provided The number of provided signatures
      */
     error InsufficientAdminSignatures(uint256 required, uint256 provided);
 
     /**
-     * @dev Emitted when an admin operation has an invalid signature
+     * @dev Thrown when an admin operation has an invalid signature
      */
     error InvalidAdminSignature();
 
     /**
-     * @dev Emitted when an admin operation has wrong chain ID
+     * @dev Thrown when an admin operation has wrong chain ID
      * @param expected The expected chain ID
      * @param provided The provided chain ID
      */
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
     /**
-     * @dev Emitted when an admin operation has expired
+     * @dev Thrown when an admin operation has expired
      * @param expirationTimestamp The expiration timestamp that was exceeded
      * @param currentTimestamp The current block timestamp
      */
     error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
     /**
-     * @dev Emitted when admin count doesn't match expected
+     * @dev Thrown when admin count doesn't match expected
      * @param expected The expected admin count
      * @param provided The provided admin count
      */
     error AdminCountMismatch(uint256 expected, uint256 provided);
 
     /**
-     * @dev Emitted when admin addresses are not in ascending order or have duplicates
+     * @dev Thrown when admin addresses are not in ascending order or have duplicates
      * @param address_ The duplicate or out-of-order address
      */
     error DuplicateOrUnorderedAdminAddress(address address_);
 
     /**
-     * @notice Emitted when an admin is not in the admin tree
+     * @notice Thrown when an admin is not in the admin tree
      * @param admin The address that is not in the admin tree
      */
     error AdminNotInTree(address admin);
 
     /**
-     * @dev Emitted when an admin is not a member of the organization
+     * @dev Thrown when an admin is not a member of the organization
      * @param admin The address that is not a member
      */
     error AdminNotMember(address admin);
 
     /**
-     * @dev Emitted when admin configuration is invalid
+     * @dev Thrown when admin configuration is invalid
      * @param reason The reason for the invalid configuration
      */
     error InvalidAdminConfiguration(string reason);
 
     /**
-     * @dev Emitted when admin tree proofs length doesn't match signature count
+     * @dev Thrown when admin tree proofs length doesn't match signature count
      * @param expected The expected length (signature count)
      * @param actual The actual length of proofs array
      */
     error AdminTreeProofsLengthMismatch(uint256 expected, uint256 actual);
 
     /**
-     * @dev Emitted when members tree proofs length doesn't match signature count
+     * @dev Thrown when members tree proofs length doesn't match signature count
      * @param expected The expected length (signature count)
      * @param actual The actual length of proofs array
      */

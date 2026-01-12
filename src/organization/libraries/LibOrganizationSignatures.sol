@@ -13,7 +13,7 @@ import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignatu
  */
 library LibOrganizationSignatures {
     /**
-     * @dev Emitted when an operation uses a nonce that has already been used
+     * @dev Thrown when an operation uses a nonce that has already been used
      * @param nonce The nonce that was attempted to be used
      */
     error NonceAlreadyUsed(uint256 nonce);

@@ -19,7 +19,7 @@ library LibOrganizationGuardian {
     event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
 
     /**
-     * @dev Emitted when a function is called by an unauthorized address (not the guardian)
+     * @dev Thrown when a function is called by an unauthorized address (not the guardian)
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
      */

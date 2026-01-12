@@ -91,7 +91,7 @@ contract OrganizationImplementation is
     error InvalidChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when the account implementation has not been set
+     * @notice Thrown when the account implementation has not been set
      */
     error AccountImplementationNotSet();
 

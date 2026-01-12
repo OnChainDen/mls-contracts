@@ -26,7 +26,7 @@ library LibOrganizationMembers {
     event MembersUpdated(bytes32 indexed newRoot, string ipfsCid);
 
     /**
-     * @dev Emitted when membership verification fails
+     * @dev Thrown when membership verification fails
      * @param memberAddress The address that failed verification
      */
     error MemberVerificationFailed(address memberAddress);

@@ -29,12 +29,12 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
     );
 
     /**
-     * @notice Emitted when a transaction execution fails
+     * @notice Thrown when a transaction execution fails
      */
     error TransactionExecutionFailed();
 
     /**
-     * @notice Emitted when the caller is not the associated organization
+     * @notice Thrown when the caller is not the associated organization
      */
     error OnlyOrganization();
 

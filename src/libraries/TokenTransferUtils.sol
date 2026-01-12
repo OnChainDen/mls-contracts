@@ -18,7 +18,7 @@ library TokenTransferUtils {
      * @dev Checks if a transaction is a token transfer
      * @dev A transaction is considered a token transfer if:
      *      1. It has value > 0 and no data (native token transfer), OR
-     *      2. It calls transfer(address,uint256) or transferFrom(address,address,uint256)
+     *      2. It calls transfer(address,uint256) for ERC-20 transfers
      * @param data The transaction calldata
      * @param value The transaction value in wei
      * @return True if the transaction is a token transfer, false otherwise
