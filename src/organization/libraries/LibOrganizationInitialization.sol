@@ -81,12 +81,13 @@ library LibOrganizationInitialization {
         );
 
         // Create proofs struct to verify all admins are in the organization
-        LibOrganizationAdmin.AllAdminsInOrgProofs memory allAdminsInOrgProofs = LibOrganizationAdmin
-            .AllAdminsInOrgProofs({
-            adminAddresses: params.adminAddresses,
-            adminInOrgAdminTreeProofs: params.adminInAdminTreeProofs,
-            adminInOrgMembersTreeProofs: params.adminInMembersTreeProofs
-        });
+        // forgefmt: disable-next-item
+        LibOrganizationAdmin.AllAdminsInOrgProofs memory allAdminsInOrgProofs =
+            LibOrganizationAdmin.AllAdminsInOrgProofs({
+                adminAddresses: params.adminAddresses,
+                adminInOrgAdminTreeProofs: params.adminInAdminTreeProofs,
+                adminInOrgMembersTreeProofs: params.adminInMembersTreeProofs
+            });
 
         // Validate all admins are members (this prevents bricking at initialization)
         LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
@@ -100,9 +101,7 @@ library LibOrganizationInitialization {
         // Set admin configuration
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
         adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
-            adminsRoot: params.adminsRoot,
-            adminCount: params.adminCount,
-            votingThreshold: params.votingThreshold
+            adminsRoot: params.adminsRoot, adminCount: params.adminCount, votingThreshold: params.votingThreshold
         });
 
         // Set guardian

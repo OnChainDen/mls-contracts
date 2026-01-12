@@ -2,8 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {AccountImplementation} from "../src/account/AccountImplementation.sol";
-import {ImplementationWhitelistImplementation} from
-    "../src/implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "../src/implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import {IImplementationWhitelist} from "../src/implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 import {OrganizationFactory} from "../src/organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "../src/organization/OrganizationImplementation.sol";

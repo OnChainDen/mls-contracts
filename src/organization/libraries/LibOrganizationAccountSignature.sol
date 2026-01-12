@@ -70,15 +70,13 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Guardian signature is invalid
-        if (
-            !_isGuardianSignatureValid({
+        if (!_isGuardianSignatureValid({
                 account: account,
                 hash: hash,
                 policyId: policyId,
                 expirationTimestamp: expirationTimestamp,
                 guardianSignature: guardianSignature
-            })
-        ) {
+            })) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -108,8 +106,7 @@ library LibOrganizationAccountSignature {
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
         if (pType == Policies.PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
-            if (
-                _hasSufficientValidApprovalSignatures({
+            if (_hasSufficientValidApprovalSignatures({
                     account: account,
                     hash: hash,
                     policyId: policyId,
@@ -117,8 +114,7 @@ library LibOrganizationAccountSignature {
                     approverSignatures: approverSignatures,
                     initiatorSignature: initiatorSignature,
                     proofs: proofs
-                })
-            ) {
+                })) {
                 return ERC1271_MAGIC_VALUE;
             }
         }

@@ -45,11 +45,7 @@ library LibPolicyTimeBasedLimits {
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
         bytes32 usageKey = computeUsageKey({
-            policyId: policyId,
-            policy: policy,
-            account: account,
-            destination: destination,
-            initiator: initiator
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
         uint256 timeWindow = computeTimeWindow(policy);
 
@@ -105,11 +101,7 @@ library LibPolicyTimeBasedLimits {
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
         bytes32 usageKey = computeUsageKey({
-            policyId: policyId,
-            policy: policy,
-            account: account,
-            destination: destination,
-            initiator: initiator
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
         uint256 timeWindow = computeTimeWindow(policy);
 

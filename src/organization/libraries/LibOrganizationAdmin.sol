@@ -189,9 +189,7 @@ library LibOrganizationAdmin {
 
         // Update admin permissions
         adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
-            adminsRoot: newAdminsRoot,
-            adminCount: newAdminCount,
-            votingThreshold: newVotingThreshold
+            adminsRoot: newAdminsRoot, adminCount: newAdminCount, votingThreshold: newVotingThreshold
         });
 
         // Emit event
@@ -385,11 +383,9 @@ library LibOrganizationAdmin {
             }
 
             // Case: Signer is not a member in the members tree
-            if (
-                !LibOrganizationMembers.isMemberInTree(
+            if (!LibOrganizationMembers.isMemberInTree(
                     signer, membersRoot, signingAdminsInOrgProofs.adminInOrgMembersTreeProofs[i]
-                )
-            ) {
+                )) {
                 continue;
             }
 

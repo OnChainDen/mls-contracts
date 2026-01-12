@@ -89,16 +89,14 @@ library LibPolicyApproval {
 
             // Check if signer is authorized based on policy (with Merkle proofs)
             // Note: Group existence already verified above, membersRoot passed to avoid storage reads
-            if (
-                isSignerAuthorizedForPolicy({
+            if (isSignerAuthorizedForPolicy({
                     policy: policy,
                     signerAddress: signer,
                     membersRoot: membersRoot,
                     memberProof: memberProof,
                     group: approverProofs.group,
                     memberInGroupProof: memberInGroupProof
-                })
-            ) {
+                })) {
                 ++validApprovals;
             }
         }

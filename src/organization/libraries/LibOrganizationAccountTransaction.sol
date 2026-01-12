@@ -125,8 +125,7 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify the policy exists and applies to this specific transaction
-        if (
-            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
+        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
                 policyId: policyId,
                 sourceAccount: account,
                 to: to,
@@ -134,8 +133,7 @@ library LibOrganizationAccountTransaction {
                 data: data,
                 initiator: initiator,
                 proofs: proofs
-            })
-        ) {
+            })) {
             revert PolicyDoesNotApply(policyId);
         }
 
@@ -154,10 +152,7 @@ library LibOrganizationAccountTransaction {
 
         // Update time-based limits if applicable (for all policy types)
         _validateAndUpdateTimeBasedLimitOrRevert({
-            params: params,
-            data: data,
-            initiator: initiator,
-            policy: proofs.policy
+            params: params, data: data, initiator: initiator, policy: proofs.policy
         });
     }
 
@@ -216,8 +211,7 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify policy applies to this transaction
-        if (
-            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
+        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
                 policyId: policyId,
                 sourceAccount: account,
                 to: to,
@@ -225,8 +219,7 @@ library LibOrganizationAccountTransaction {
                 data: data,
                 initiator: initiator,
                 proofs: proofs
-            })
-        ) {
+            })) {
             revert PolicyDoesNotApply(policyId);
         }
 

@@ -143,11 +143,7 @@ library LibOrganizationPolicy {
             if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
             return LibPolicyTokenTransfer.isTokenTransferAllowedByPolicy({
-                policy: proofs.policy,
-                to: to,
-                value: value,
-                data: data,
-                destinationProof: proofs.destinationProof
+                policy: proofs.policy, to: to, value: value, data: data, destinationProof: proofs.destinationProof
             });
         }
 
@@ -172,11 +168,7 @@ library LibOrganizationPolicy {
         if (
             txType == Policies.TransactionType.Any
                 && LibPolicyDestination.isDestinationAllowedByPolicy({
-                    policy: proofs.policy,
-                    to: to,
-                    value: value,
-                    data: data,
-                    destinationProof: proofs.destinationProof
+                    policy: proofs.policy, to: to, value: value, data: data, destinationProof: proofs.destinationProof
                 })
         ) {
             return true;
@@ -201,10 +193,7 @@ library LibOrganizationPolicy {
         Policies.ApproverProofs memory approverProofs
     ) internal view returns (uint8) {
         return LibPolicyApproval.getValidApprovals({
-            policy: policy,
-            signatures: signatures,
-            messageHash: messageHash,
-            approverProofs: approverProofs
+            policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
         });
     }
 
@@ -236,11 +225,7 @@ library LibOrganizationPolicy {
         address initiator
     ) internal view returns (uint256) {
         return LibPolicyTimeBasedLimits.getCurrentUsage({
-            policyId: policyId,
-            policy: policy,
-            account: account,
-            destination: destination,
-            initiator: initiator
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
     }
 
@@ -323,11 +308,7 @@ library LibOrganizationPolicy {
         address initiator
     ) internal pure returns (bytes32) {
         return LibPolicyTimeBasedLimits.computeUsageKey({
-            policyId: policyId,
-            policy: policy,
-            account: account,
-            destination: destination,
-            initiator: initiator
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
     }
 

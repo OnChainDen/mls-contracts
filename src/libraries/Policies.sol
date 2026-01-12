@@ -27,7 +27,6 @@ library Policies {
     enum PolicyType {
         AutoApprove, // No additional approval needed beyond the initiator
         RequireManualApproval // Requires threshold approvals from designated group/member
-
     }
 
     /**
@@ -37,7 +36,6 @@ library Policies {
     enum ApproverType {
         Group, // Refers to a group of members (threshold applies)
         Member // Refers to a single member
-
     }
 
     /**
@@ -49,7 +47,6 @@ library Policies {
         TokenTransfers, // Policy only applies to ERC20/native token transfers
         ContractInteractions, // Policy only applies to arbitrary contract calls
         Signatures // Policy only applies to ERC-1271 signature validations
-
     }
 
     /**
@@ -59,7 +56,6 @@ library Policies {
     enum DestinationType {
         Any, // Any destination address is allowed
         CustomList // Only addresses in the policy's custom destination merkle tree
-
     }
 
     /**
@@ -70,7 +66,6 @@ library Policies {
         None, // No limit on transactions
         SingleTransaction, // Only one transaction allowed (useful for one-time approvals)
         TimeInterval // Limit resets after a time period (e.g., daily/weekly limits)
-
     }
 
     /**
@@ -82,7 +77,6 @@ library Policies {
     enum TimeIntervalScope {
         AcrossAll, // Single shared limit across all accounts/destinations/initiators
         PerEntity // Separate limit tracked per account/destination/initiator
-
     }
 
     /**
@@ -100,7 +94,6 @@ library Policies {
         String, // Dynamic string
         Array, // Dynamic array
         Struct // Tuple/struct type
-
     }
 
     /// @dev A constraint on a single function parameter
@@ -130,7 +123,6 @@ library Policies {
         Exact, // Value must exactly match the specified value
         Range, // Value must be within min/max bounds (for numeric types)
         OneOf // Value must be one of the allowed values in a list
-
     }
 
     /**

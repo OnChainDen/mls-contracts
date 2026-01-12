@@ -316,9 +316,8 @@ library LibPolicyParameterConstraints {
 
         // Hash the actual content
         bytes32 actualHash = keccak256(
-            data[
-                dataPosition + ContractInteractionUtils.SLOT_SIZE:
-                    dataPosition + ContractInteractionUtils.SLOT_SIZE + length
+            data[dataPosition
+                    + ContractInteractionUtils.SLOT_SIZE:dataPosition + ContractInteractionUtils.SLOT_SIZE + length
             ]
         );
         bytes32 expectedHash = abi.decode(comparisonData, (bytes32));

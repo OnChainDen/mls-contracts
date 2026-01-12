@@ -207,10 +207,7 @@ contract OrganizationImplementation is
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: operationType,
-            operationData: operationData,
-            isApproval: false,
-            authParams: authParams
+            operationType: operationType, operationData: operationData, isApproval: false, authParams: authParams
         });
 
         emit AdminOperationRejected(operationType, operationData, nonce);
@@ -408,12 +405,7 @@ contract OrganizationImplementation is
 
         // Emit event before external call (CEI pattern) - if execution fails, transaction reverts
         emit AccountTransactionExecuted({
-            account: account,
-            to: to,
-            value: value,
-            data: data,
-            nonce: nonce,
-            policyId: policyId
+            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
         });
 
         // Execute the transaction on the account
@@ -477,12 +469,7 @@ contract OrganizationImplementation is
         });
 
         emit AccountTransactionRejected({
-            account: account,
-            to: to,
-            value: value,
-            data: data,
-            nonce: nonce,
-            policyId: policyId
+            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
         });
     }
 
@@ -526,10 +513,7 @@ contract OrganizationImplementation is
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
-            operationType: OperationType.Upgrade,
-            operationData: operationData,
-            isApproval: true,
-            authParams: authParams
+            operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
         });
 
         // Validate implementation against whitelist
@@ -689,11 +673,7 @@ contract OrganizationImplementation is
         }
 
         return LibOrganizationPolicy.getCurrentUsage({
-            policyId: policyId,
-            policy: policy,
-            account: account,
-            destination: destination,
-            initiator: initiator
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
     }
 

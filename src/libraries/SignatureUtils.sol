@@ -63,7 +63,8 @@ library SignatureUtils {
             mstore(extractedSignaturePosition, mload(add(signaturesPosition, signatureStartPosition)))
             // Copy second 32 bytes (s)
             mstore(
-                add(extractedSignaturePosition, 0x20), mload(add(signaturesPosition, add(signatureStartPosition, 0x20)))
+                add(extractedSignaturePosition, 0x20),
+                mload(add(signaturesPosition, add(signatureStartPosition, 0x20)))
             )
             // Copy last byte (v)
             mstore8(

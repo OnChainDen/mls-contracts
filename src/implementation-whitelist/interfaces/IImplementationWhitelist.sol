@@ -28,6 +28,7 @@ interface IImplementationWhitelist {
      * @return True if the implementation is whitelisted, false otherwise
      * @dev The contract maintains separate whitelists for Account and Organization implementations
      */
+    // forgefmt: disable-next-item
     function isImplementationWhitelisted(ContractType contractType, address implementation)
         external
         view
