@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+
 /**
  * @title Account Organization Address Storage
  * @dev Reads the organization address from the EIP-1967 Beacon slot
@@ -9,17 +11,11 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library LibAccountOrganizationAddressStorage {
-    /// @dev EIP-1967 Beacon storage slot where the organization (beacon) address is stored.
-    /// Computed as bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)
-    bytes32 internal constant BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
-
     /**
      * @dev Gets the organization address (beacon address) from the EIP-1967 Beacon slot
-     * @return organizationAddress The address of the organization contract (beacon)
+     * @return The address of the organization contract (beacon)
      */
-    function getOrganizationAddress() internal view returns (address organizationAddress) {
-        assembly {
-            organizationAddress := sload(BEACON_SLOT)
-        }
+    function getOrganizationAddress() internal view returns (address) {
+        return ERC1967Utils.getBeacon();
     }
 }
