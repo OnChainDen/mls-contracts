@@ -25,17 +25,11 @@ interface IUpgradeable {
      * @param newImplementation The new implementation address (must be whitelisted)
      * @param data Optional calldata to execute on the new implementation after upgrade.
      *             Pass empty bytes ("") if no post-upgrade call is needed.
-     * @param salt A user-provided salt for nonce computation (prevents replay attacks)
-     * @param expirationTimestamp The timestamp after which the admin signatures are no longer valid
-     * @param signatures The concatenated signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs verifying the signers are admins
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes calldata data,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
     ) external;
 }

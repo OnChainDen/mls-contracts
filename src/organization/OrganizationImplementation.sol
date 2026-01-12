@@ -133,20 +133,14 @@ contract OrganizationImplementation is
      * @param newAdminsRoot The new merkle root of admin addresses
      * @param newAdminCount The number of admins in the new tree
      * @param newVotingThreshold The new voting threshold
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      * @param adminValidation The validation data to verify all new admins are members
      */
     function setAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams,
         LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
     ) external onlyGuardian {
         // Encode the operation data for validation
@@ -156,11 +150,8 @@ contract OrganizationImplementation is
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         // Get current members root for validation
@@ -178,18 +169,12 @@ contract OrganizationImplementation is
     /**
      * @notice Sets a new guardian address for the organization
      * @param newGuardian The address of the new guardian
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setGuardian(
-        address newGuardian,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) external onlyGuardian {
+    function setGuardian(address newGuardian, LibOrganizationAdmin.AdminAuthParams calldata authParams)
+        external
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
@@ -197,11 +182,8 @@ contract OrganizationImplementation is
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.UpdateGuardian,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         LibOrganizationGuardian.setGuardian(newGuardian);
@@ -213,31 +195,22 @@ contract OrganizationImplementation is
      *      by consuming its nonce without executing the operation logic
      * @param operationType The type of admin operation to reject
      * @param operationData The ABI-encoded data of the operation
-     * @param salt The user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this rejection
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function rejectAdminOperation(
         OperationType operationType,
         bytes calldata operationData,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
     ) external onlyGuardian {
         // Compute nonce for this operation
-        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: operationType,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: false,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         emit AdminOperationRejected(operationType, operationData, nonce);
@@ -249,19 +222,13 @@ contract OrganizationImplementation is
      *      Validates that all admins remain members in the new tree to prevent bricking.
      * @param newMembersRoot The new merkle root containing all members
      * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      * @param adminValidation The validation data to verify all admins are in the new members tree
      */
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams,
         LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
     ) external onlyGuardian {
         // Encode the operation data for validation
@@ -271,11 +238,8 @@ contract OrganizationImplementation is
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, adminValidation);
@@ -286,18 +250,12 @@ contract OrganizationImplementation is
      * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
      * @param newGroupsRoot The new merkle root containing all groups
      * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function setGroups(
         bytes32 newGroupsRoot,
         string calldata ipfsCid,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
     ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
@@ -306,11 +264,8 @@ contract OrganizationImplementation is
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.ModifyGroups,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         LibOrganizationGroups.setGroups(newGroupsRoot, ipfsCid);
@@ -321,18 +276,12 @@ contract OrganizationImplementation is
      * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function setPolicies(
         bytes32 newPoliciesRoot,
         string calldata ipfsCid,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
     ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
@@ -341,11 +290,8 @@ contract OrganizationImplementation is
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.ModifyPolicies,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
@@ -355,19 +301,14 @@ contract OrganizationImplementation is
      * @notice Deploys a new Account BeaconProxy at a deterministic address
      * @dev The account uses this Organization as its beacon
      * @param create2Salt The salt for CREATE2 deployment
-     * @param adminSignatureSalt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this deployment
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      * @return The address of the deployed account proxy
      */
-    function deployAccount(
-        bytes32 create2Salt,
-        uint256 adminSignatureSalt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    ) external onlyGuardian returns (address) {
+    function deployAccount(bytes32 create2Salt, LibOrganizationAdmin.AdminAuthParams calldata authParams)
+        external
+        onlyGuardian
+        returns (address)
+    {
         // Validate admin authorization for account deployment
         bytes memory operationData = abi.encode(create2Salt);
 
@@ -375,11 +316,8 @@ contract OrganizationImplementation is
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.DeployAccount,
             operationData: operationData,
-            salt: adminSignatureSalt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
@@ -389,28 +327,19 @@ contract OrganizationImplementation is
      * @notice Sets the account implementation address (upgrades all accounts at once)
      * @dev This function updates the implementation for all Account BeaconProxies
      * @param newImplementation The new implementation address
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function setAccountImplementation(
         address newImplementation,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
     ) external onlyGuardian {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         // 2. Validate implementation against whitelist
@@ -587,29 +516,20 @@ contract OrganizationImplementation is
      * @param newImplementation The new implementation address (must be whitelisted)
      * @param data Optional calldata to execute on the new implementation after upgrade.
      *             Pass empty bytes ("") if no post-upgrade call is needed.
-     * @param salt A user-provided salt for nonce computation (prevents replay attacks)
-     * @param expirationTimestamp The timestamp after which the admin signatures are no longer valid
-     * @param signatures The concatenated signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs verifying the signers are admins
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes calldata data,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
     ) external onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
             operationType: OperationType.Upgrade,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
             isApproval: true,
-            signatures: signatures,
-            adminProofs: adminProofs
+            authParams: authParams
         });
 
         // Validate implementation against whitelist

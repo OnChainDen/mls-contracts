@@ -46,6 +46,21 @@ library LibOrganizationAdmin {
     }
 
     /**
+     * @notice Parameters for authorizing admin operations
+     * @dev Groups common authorization parameters to reduce function parameter count
+     * @param salt A user-provided salt for nonce computation
+     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
+     * @param signatures The signatures from admin(s) authorizing this operation
+     * @param adminProofs The Merkle proofs for admin membership verification
+     */
+    struct AdminAuthParams {
+        uint256 salt;
+        uint256 expirationTimestamp;
+        bytes signatures;
+        AdminProofs adminProofs;
+    }
+
+    /**
      * @notice Emitted when admin permissions are updated
      * @param previousAdminsRoot The previous admins merkle root
      * @param previousAdminCount The previous admin count
@@ -196,28 +211,22 @@ library LibOrganizationAdmin {
      *      and marks the nonce as used. Reverts if authorization fails.
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param isApproval Whether this is an approval (true) or rejection (false)
-     * @param signatures The signatures to validate
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function validateAdminAuthorizationOrRevert(
         OperationType operationType,
         bytes memory operationData,
-        uint256 salt,
-        uint256 expirationTimestamp,
         bool isApproval,
-        bytes memory signatures,
-        AdminProofs memory adminProofs
+        AdminAuthParams memory authParams
     ) internal {
         // Check if the operation has expired
-        if (block.timestamp > expirationTimestamp) {
-            revert AdminOperationExpired(expirationTimestamp, block.timestamp);
+        if (block.timestamp > authParams.expirationTimestamp) {
+            revert AdminOperationExpired(authParams.expirationTimestamp, block.timestamp);
         }
 
         // Compute deterministic nonce from operation data and salt
-        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
         // Validate and consume nonce for replay protection (will revert if already used)
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
@@ -227,15 +236,20 @@ library LibOrganizationAdmin {
         bytes32 operationHash = _getAdminOperationHash({
             operationType: operationType,
             operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
+            salt: authParams.salt,
+            expirationTimestamp: authParams.expirationTimestamp,
             isApproval: isApproval
         });
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
         // Count valid signatures from admins
-        uint256 validSignatures = _getValidAdminSignatures(signatures, operationHash, adminProofs);
+        // forgefmt: disable-next-item
+        uint256 validSignatures = _getValidAdminSignatures(
+            authParams.signatures, 
+            operationHash, 
+            authParams.adminProofs
+        );
 
         // Check if we have enough valid signatures
         if (validSignatures < adminLayout.adminPermission.votingThreshold) {
