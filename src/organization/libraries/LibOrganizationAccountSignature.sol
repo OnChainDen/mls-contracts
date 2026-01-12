@@ -8,8 +8,8 @@ import {LibOrganizationGuardian} from "./LibOrganizationGuardian.sol";
 import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
 import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
 
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
@@ -263,10 +263,7 @@ library LibOrganizationAccountSignature {
     {
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    // solhint-disable-next-line max-line-length
-                    "InitiateSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId)"
-                ),
+                LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH,
                 address(this),
                 account,
                 hash,
@@ -299,10 +296,7 @@ library LibOrganizationAccountSignature {
     ) private view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    // solhint-disable-next-line max-line-length
-                    "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
-                ),
+                LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
                 address(this),
                 account,
                 hash,
