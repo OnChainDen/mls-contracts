@@ -9,7 +9,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Policy Parameter Constraints
- * @notice Library for validating function call parameter constraints
+ * @dev Library for validating function call parameter constraints
  * @dev Handles validation of function parameters against policy-defined constraints.
  *      Supports various parameter types (uint, int, address, bool, bytes, etc.) and
  *      constraint types (exact, range, list).
@@ -17,7 +17,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibPolicyParameterConstraints {
     /**
-     * @notice Checks if transaction parameters match the specified constraints
+     * @dev Checks if transaction parameters match the specified constraints
      * @dev Iterates through each constraint and validates the corresponding parameter.
      *      Each constraint contains its own proof for OneOf constraints, eliminating
      *      the need for separate proof arrays.
@@ -45,7 +45,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Internal helper to process parameter constraints
+     * @dev Internal helper to process parameter constraints
      * @dev Separated to manage stack depth in the main function.
      *      Each constraint is self-contained with its own merkle proof for OneOf constraints.
      * @param constraints The array of parameter constraints to validate
@@ -96,7 +96,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates a single parameter against its constraint
+     * @dev Validates a single parameter against its constraint
      * @dev Dispatches to type-specific validation functions based on parameter type.
      *      For Address+OneOf constraints, the merkle proof is read from constraint.paramValueInListProof.
      * @param constraint The constraint to validate against (includes proof for OneOf constraints)
@@ -157,7 +157,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates a Bool parameter against its constraint
+     * @dev Validates a Bool parameter against its constraint
      * @dev Bool only supports Exact constraint
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value encoded as bytes
@@ -176,7 +176,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates a Uint parameter against its constraint
+     * @dev Validates a Uint parameter against its constraint
      * @dev Uint supports Exact and Range constraints (also used for enums)
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value(s) encoded as bytes
@@ -202,7 +202,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates an Int parameter against its constraint
+     * @dev Validates an Int parameter against its constraint
      * @dev Int supports Exact and Range constraints
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value(s) encoded as bytes
@@ -228,7 +228,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates an Address parameter against its constraint
+     * @dev Validates an Address parameter against its constraint
      * @dev Address supports Exact and OneOf constraints
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value or merkle root encoded as bytes
@@ -260,7 +260,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates a FixedBytes parameter against its constraint
+     * @dev Validates a FixedBytes parameter against its constraint
      * @dev FixedBytes (bytes1-bytes32) only supports Exact constraint.
      *      For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned).
      * @param constraintType The type of constraint to apply
@@ -279,7 +279,7 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @notice Validates a dynamic Bytes or String parameter against its constraint
+     * @dev Validates a dynamic Bytes or String parameter against its constraint
      * @dev Dynamic bytes and strings only support Exact constraint (hash comparison).
      *      Both types have identical ABI encoding (offset -> length -> data), so this
      *      function handles both ParamType.Bytes and ParamType.String.

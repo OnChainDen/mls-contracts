@@ -6,27 +6,27 @@ import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianS
 
 /**
  * @title Lib Organization Guardian
- * @notice Library for guardian-related operations for Organization contracts
+ * @dev Library for guardian-related operations for Organization contracts
  * @dev This library should ONLY be used by Organization contracts
  * @author Den Technologies Inc
  */
 library LibOrganizationGuardian {
     /**
-     * @notice Emitted when the guardian address is updated
+     * @dev Emitted when the guardian address is updated
      * @param previousGuardian The previous guardian address
      * @param newGuardian The new guardian address
      */
     event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
 
     /**
-     * @notice Emitted when a function is called by an unauthorized address (not the guardian)
+     * @dev Emitted when a function is called by an unauthorized address (not the guardian)
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
      */
     error UnauthorizedCaller(address caller, address guardian);
 
     /**
-     * @notice Sets the guardian address for the organization
+     * @dev Sets the guardian address for the organization
      * @param newGuardian The new guardian address
      */
     function setGuardian(address newGuardian) internal {
@@ -48,7 +48,7 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @notice Enforces that the caller is the guardian address
+     * @dev Enforces that the caller is the guardian address
      * @dev This function will revert if msg.sender is not the guardian
      */
     function enforceOnlyGuardian() internal view {
@@ -59,7 +59,7 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @notice Gets the current guardian address
+     * @dev Gets the current guardian address
      * @return The current guardian address
      */
     function getGuardian() internal view returns (address) {

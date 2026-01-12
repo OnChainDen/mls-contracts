@@ -10,7 +10,7 @@
     "reason-string": ["warn", {
       "maxLength": 64
     }],
-    "use-natspec": "warn",
+    "use-natspec": "off",
     "constructor-syntax": "error",
     "no-global-import": "error",
     "imports-on-top": "error",

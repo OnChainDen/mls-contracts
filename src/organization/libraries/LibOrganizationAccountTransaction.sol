@@ -12,7 +12,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title Lib Organization Account Transaction
- * @notice Library for validating account transactions through the Organization contract
+ * @dev Library for validating account transactions through the Organization contract
  * @dev This library handles the core transaction validation logic for the organization.
  *      It validates that:
  *      1. The transaction hasn't expired
@@ -31,7 +31,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  */
 library LibOrganizationAccountTransaction {
     /**
-     * @notice Struct to reduce stack depth when passing transaction parameters
+     * @dev Struct to reduce stack depth when passing transaction parameters
      * @dev Groups common transaction parameters that are used across multiple functions
      * @param account The source account executing the transaction
      * @param to The destination address
@@ -52,26 +52,26 @@ library LibOrganizationAccountTransaction {
     /// @notice Thrown when a transaction is rejected due to policy rules
     error TransactionRejectedByPolicy(string reason);
 
-    /// @notice Thrown when a rejection attempt is not authorized
+    /// @dev Thrown when a rejection attempt is not authorized
     error TransactionRejectionNotAllowed(string reason);
 
-    /// @notice Thrown when not enough valid approval signatures are provided
+    /// @dev Thrown when not enough valid approval signatures are provided
     error InsufficientApprovals(uint256 required, uint256 provided);
 
-    /// @notice Thrown when the policy doesn't apply to this transaction
+    /// @dev Thrown when the policy doesn't apply to this transaction
     error PolicyDoesNotApply(uint256 policyId);
 
-    /// @notice Thrown when the transaction authorization has expired
+    /// @dev Thrown when the transaction authorization has expired
     error TransactionExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
-    /// @notice Thrown when the signatures bytes is too short
+    /// @dev Thrown when the signatures bytes is too short
     error InsufficientSignaturesLength();
 
-    /// @notice Thrown when the transaction exceeds the policy's time-based limit
+    /// @dev Thrown when the transaction exceeds the policy's time-based limit
     error TimeBasedLimitExceeded(uint256 policyId);
 
     /**
-     * @notice Validates a transaction against the specified policy using merkle proofs
+     * @dev Validates a transaction against the specified policy using merkle proofs
      * @dev Main entry point for transaction approval validation. This function:
      *      1. Verifies the transaction hasn't expired
      *      2. Extracts and validates the initiator signature
@@ -162,7 +162,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Validates that the caller is authorized to reject the given transaction
+     * @dev Validates that the caller is authorized to reject the given transaction
      * @dev Rejection validation ensures that only authorized parties can reject transactions.
      *      This prevents griefing attacks where unauthorized actors could reject
      *      legitimate pending transactions.
@@ -251,7 +251,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Validates and updates time-based limits for approved transactions
+     * @dev Validates and updates time-based limits for approved transactions
      * @dev Only applies if the policy has TimeInterval limitation.
      *      For token transfers, tracks the transfer amount.
      *      For other transactions, tracks count (usage = 1).
@@ -299,7 +299,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Validates rejection for auto-approve policies
+     * @dev Validates rejection for auto-approve policies
      * @dev For auto-approve policies, rejection requires a second signature from
      *      an authorized initiator signing the rejection hash (isApproval = false)
      * @param params The packed transaction parameters
@@ -330,7 +330,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Recovers the initiator address from the transaction parameters and signature
+     * @dev Recovers the initiator address from the transaction parameters and signature
      * @dev Computes the EIP-712 hash of the transaction and recovers the signer
      * @param params The packed transaction parameters
      * @param data The transaction calldata
@@ -350,7 +350,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Validates manual approval/rejection signatures meet the required threshold
+     * @dev Validates manual approval/rejection signatures meet the required threshold
      * @dev Extracts reviewer signatures and validates against required threshold.
      *      Used for both approval and rejection flows - the isApproval flag determines
      *      which hash is computed for signature verification.
@@ -390,7 +390,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Computes the EIP-712 hash for initiator signatures
+     * @dev Computes the EIP-712 hash for initiator signatures
      * @dev Creates a typed data hash following EIP-712 standard for the
      *      InitiateAccountTransaction struct type. The isApproval flag
      *      distinguishes between approval and rejection signatures.
@@ -424,7 +424,7 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @notice Computes the EIP-712 hash for reviewer signatures
+     * @dev Computes the EIP-712 hash for reviewer signatures
      * @dev Creates a typed data hash for the ReviewAccountTransaction struct type.
      *      Includes the initiator signature to bind approvals to a specific request.
      * @param params The packed transaction parameters

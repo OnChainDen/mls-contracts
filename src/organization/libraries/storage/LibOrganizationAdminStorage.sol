@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Admin Storage
- * @notice Storage layout for organization admin functionality
+ * @dev Storage layout for organization admin functionality
  * @dev Admin is a list of members represented as a Merkle tree
  * @author Den Technologies Inc
  */
 library LibOrganizationAdminStorage {
     /**
-     * @notice Structure to define admin permissions
+     * @dev Structure to define admin permissions
      * @dev Admins are stored as a Merkle tree of member addresses
      * @param adminsRoot Merkle root of admin member addresses
      * @param adminCount Number of admins in the tree (for completeness validation)
@@ -22,7 +22,7 @@ library LibOrganizationAdminStorage {
     }
 
     /**
-     * @notice Storage layout for admin permissions
+     * @dev Storage layout for admin permissions
      * @param adminPermission The admin permission configuration
      */
     struct Layout {
@@ -34,7 +34,7 @@ library LibOrganizationAdminStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.admin.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */

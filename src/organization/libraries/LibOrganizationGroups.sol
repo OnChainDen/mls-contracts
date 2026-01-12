@@ -8,7 +8,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Organization Groups
- * @notice Library for merkle-based group operations for Organization contracts
+ * @dev Library for merkle-based group operations for Organization contracts
  * @dev Groups are stored in a nested merkle tree. Only the root is stored on-chain.
  *      Full group data is stored off-chain (IPFS) and provided via calldata at validation time.
  *      Each group leaf is hash(hash(groupId, groupMembersRoot)) where groupMembersRoot is
@@ -19,14 +19,14 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationGroups {
     /**
-     * @notice Emitted when the groups merkle root is updated
+     * @dev Emitted when the groups merkle root is updated
      * @param newRoot The new merkle root
      * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
      */
     event GroupsUpdated(bytes32 indexed newRoot, string ipfsCid);
 
     /**
-     * @notice Updates the global groups merkle root
+     * @dev Updates the global groups merkle root
      * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
      *      Emits GroupsUpdated event with the IPFS CID for disaster recovery.
      * @param newGroupsRoot The new merkle root containing all groups
@@ -38,7 +38,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @notice Verifies that a group exists in the organization
+     * @dev Verifies that a group exists in the organization
      * @param groupData The group data containing groupId and groupMembersRoot
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
@@ -53,7 +53,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @notice Verifies complete group membership (group exists AND member is in group)
+     * @dev Verifies complete group membership (group exists AND member is in group)
      * @param memberAddress The address to verify
      * @param groupData The group data containing groupId and groupMembersRoot
      * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
@@ -76,7 +76,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @notice Returns the current groups merkle root
+     * @dev Returns the current groups merkle root
      * @return The groups merkle root
      */
     function getGroupsRoot() internal view returns (bytes32) {
@@ -84,7 +84,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @notice Checks if a group exists in a groups tree given an explicit root
+     * @dev Checks if a group exists in a groups tree given an explicit root
      * @dev Used to verify against potentially different roots or to avoid storage reads in loops
      * @param groupData The group data containing groupId and groupMembersRoot
      * @param groupsRoot The merkle root to verify against
@@ -104,7 +104,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @notice Verifies that a member is in a specific group
+     * @dev Verifies that a member is in a specific group
      * @dev Verifies against the group's internal members merkle tree (groupMembersRoot)
      * @param memberAddress The address to verify
      * @param groupMembersRoot The merkle root of the group's members tree
@@ -124,7 +124,7 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @notice Computes the merkle leaf for a group
+     * @dev Computes the merkle leaf for a group
      * @dev Uses double hashing (hash of hash) for security against second preimage attacks
      * @param groupId The group's unique identifier
      * @param groupMembersRoot The merkle root of all member addresses in this group

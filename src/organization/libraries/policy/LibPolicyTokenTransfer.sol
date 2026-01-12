@@ -7,13 +7,13 @@ import {LibPolicyDestination} from "./LibPolicyDestination.sol";
 
 /**
  * @title Lib Policy Token Transfer
- * @notice Library for validating token transfer transactions against policies
+ * @dev Library for validating token transfer transactions against policies
  * @dev Handles validation of token transfers including token type, amount, and destination checks.
  * @author Den Technologies Inc
  */
 library LibPolicyTokenTransfer {
     /**
-     * @notice Checks if a token transfer transaction is allowed by the policy
+     * @dev Checks if a token transfer transaction is allowed by the policy
      * @dev Validates that:
      *      1. The token being transferred is allowed by the policy
      *      2. The amount being transferred is within policy limits
@@ -45,7 +45,7 @@ library LibPolicyTokenTransfer {
     }
 
     /**
-     * @notice Checks if the token is allowed by the policy for a token transfer
+     * @dev Checks if the token is allowed by the policy for a token transfer
      * @dev If anyToken is true, always returns true.
      *      Otherwise, verifies the token address matches the policy's specified token.
      * @param policy The policy to check against
@@ -67,7 +67,7 @@ library LibPolicyTokenTransfer {
     }
 
     /**
-     * @notice Checks if the token amount is allowed by the policy for a token transfer
+     * @dev Checks if the token amount is allowed by the policy for a token transfer
      * @dev If hasAmountThreshold is false, always returns true.
      *      Otherwise, verifies the amount is below the threshold.
      * @param policy The policy to check against

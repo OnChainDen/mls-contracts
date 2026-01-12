@@ -5,7 +5,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 
 /**
  * @title Lib Organization EIP712
- * @notice Library for EIP-712 typed data hashing for Organization contracts
+ * @dev Library for EIP-712 typed data hashing for Organization contracts
  * @dev Provides shared EIP-712 domain separator computation used across organization libraries
  * @author Den Technologies Inc
  */
@@ -47,7 +47,7 @@ library LibOrganizationEIP712 {
     );
 
     /**
-     * @notice Computes the EIP-712 domain separator for this organization
+     * @dev Computes the EIP-712 domain separator for this organization
      * @dev Used for all EIP-712 typed data hashes in transaction and signature validation
      * @return The domain separator hash
      */
@@ -64,7 +64,7 @@ library LibOrganizationEIP712 {
     }
 
     /**
-     * @notice Computes the EIP-712 typed data hash for this organization
+     * @dev Computes the EIP-712 typed data hash for this organization
      * @dev Wraps the provided struct hash with the Organization's EIP-712 domain separator.
      * @param structHash The EIP-712 struct hash
      * @return The final EIP-712 typed data hash to be signed / verified

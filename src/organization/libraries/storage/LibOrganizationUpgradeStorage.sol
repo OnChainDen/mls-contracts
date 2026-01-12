@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Upgrade Storage
- * @notice Storage layout for UUPS upgrade authorization functionality
+ * @dev Storage layout for UUPS upgrade authorization functionality
  * @dev This library provides namespaced storage for the upgrade authorization flag used to
  *      secure the UUPS upgrade flow. The flag ensures that upgrades can only occur through
  *      the authorized `upgradeToAndCallWithAuthorization` function.
@@ -24,7 +24,7 @@ pragma solidity ^0.8.24;
  */
 library LibOrganizationUpgradeStorage {
     /**
-     * @notice Storage layout for upgrade authorization
+     * @dev Storage layout for upgrade authorization
      * @param authorized Flag indicating if an upgrade has been authorized through
      *        the proper flow (upgradeToAndCallWithAuthorization)
      */
@@ -33,7 +33,7 @@ library LibOrganizationUpgradeStorage {
     }
 
     /**
-     * @notice Storage slot for the upgrade authorization data
+     * @dev Storage slot for the upgrade authorization data
      * @dev Uses a deterministic slot computed from a unique namespace string.
      *      This prevents storage collisions when upgrading contracts and ensures
      *      the slot won't shift if new state variables are added to the contract.
@@ -41,7 +41,7 @@ library LibOrganizationUpgradeStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.upgrade.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage struct at the namespaced slot
      */

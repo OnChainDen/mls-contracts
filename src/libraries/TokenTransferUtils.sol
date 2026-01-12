@@ -5,17 +5,17 @@ import {ContractInteractionUtils} from "./ContractInteractionUtils.sol";
 
 /**
  * @title TokenTransferUtils
- * @notice A library for ERC-20 and native token transfer detection and extraction utilities
+ * @dev A library for ERC-20 and native token transfer detection and extraction utilities
  * @author Den Technologies Inc
  */
 library TokenTransferUtils {
     /**
-     * @notice Thrown when a token transfer transaction is malformed
+     * @dev Thrown when a token transfer transaction is malformed
      */
     error MalformedTokenTransfer();
 
     /**
-     * @notice Checks if a transaction is a token transfer
+     * @dev Checks if a transaction is a token transfer
      * @dev A transaction is considered a token transfer if:
      *      1. It has value > 0 and no data (native token transfer), OR
      *      2. It calls transfer(address,uint256) or transferFrom(address,address,uint256)
@@ -35,7 +35,7 @@ library TokenTransferUtils {
     }
 
     /**
-     * @notice Checks if a transaction is a native token transfer
+     * @dev Checks if a transaction is a native token transfer
      * @dev A transaction is considered a native token transfer if it has value > 0 and no data
      * @param data The transaction calldata
      * @param value The transaction value in wei
@@ -67,7 +67,7 @@ library TokenTransferUtils {
     }
 
     /**
-     * @notice Extracts the token recipient from ERC-20 transfer calldata
+     * @dev Extracts the token recipient from ERC-20 transfer calldata
      * @dev Only supports ERC20 transfer(address,uint256)
      * @param data The transaction calldata (must be a valid ERC-20 transfer call)
      * @return The recipient address
@@ -106,7 +106,7 @@ library TokenTransferUtils {
     }
 
     /**
-     * @notice Extracts the transfer amount from a token transfer
+     * @dev Extracts the transfer amount from a token transfer
      * @dev For native transfers, returns the transaction value.
      *      For ERC20 transfers, extracts the amount from calldata.
      * @param data The transaction calldata

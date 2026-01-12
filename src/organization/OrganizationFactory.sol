@@ -112,7 +112,7 @@ contract OrganizationFactory {
         );
     }
 
-    /// @notice Returns the creation bytecode for deploying an OrganizationProxy
+    /// @dev Returns the creation bytecode for deploying an OrganizationProxy
     /// @param implementationAddress The address of the OrganizationImplementation contract
     /// @param whitelistAddress The address of the implementation whitelist contract
     /// @return bytecode The creation bytecode to deploy via CREATE2

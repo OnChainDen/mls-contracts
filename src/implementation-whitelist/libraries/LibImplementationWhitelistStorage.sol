@@ -5,12 +5,12 @@ import {IImplementationWhitelist} from "../interfaces/IImplementationWhitelist.s
 
 /**
  * @title Implementation Whitelist Storage
- * @notice Storage layout for implementation whitelist functionality
+ * @dev Storage layout for implementation whitelist functionality
  * @author Den Technologies Inc
  */
 library LibImplementationWhitelistStorage {
     /**
-     * @notice Storage layout for implementation whitelist
+     * @dev Storage layout for implementation whitelist
      * @param whitelisted Nested mapping of contract type to implementation address to whitelist status
      */
     struct Layout {
@@ -22,7 +22,7 @@ library LibImplementationWhitelistStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.implementation.whitelist.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */

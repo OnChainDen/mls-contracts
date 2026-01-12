@@ -14,7 +14,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Organization Admin
- * @notice Library for admin-related operations for Organization contracts
+ * @dev Library for admin-related operations for Organization contracts
  * @dev This library should ONLY be used by Organization contracts.
  *      Admin membership is verified via Merkle proofs.
  *      Admins are stored as a Merkle tree of member addresses.
@@ -22,7 +22,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationAdmin {
     /**
-     * @notice Proofs that ALL admins are members of the organization (in both admin tree and members tree)
+     * @dev Proofs that ALL admins are members of the organization (in both admin tree and members tree)
      * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
      *      Contains proofs for every admin in the organization, not just signers.
      * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
@@ -36,7 +36,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Proofs that the SIGNING admins are members of the organization (in both admin tree and members tree)
+     * @dev Proofs that the SIGNING admins are members of the organization (in both admin tree and members tree)
      * @dev Contains per-signer proofs for admin tree and organization membership.
      *      Only contains proofs for admins who signed the operation, not all admins.
      * @param adminInOrgAdminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
@@ -48,7 +48,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Parameters for authorizing admin operations
+     * @dev Parameters for authorizing admin operations
      * @dev Groups common authorization parameters to reduce function parameter count
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
@@ -63,7 +63,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Emitted when admin permissions are updated
+     * @dev Emitted when admin permissions are updated
      * @param previousAdminsRoot The previous admins merkle root
      * @param previousAdminCount The previous admin count
      * @param previousVotingThreshold The previous voting threshold
@@ -83,46 +83,46 @@ library LibOrganizationAdmin {
     );
 
     /**
-     * @notice Emitted when an admin operation is rejected due to insufficient authorization
+     * @dev Emitted when an admin operation is rejected due to insufficient authorization
      * @param reason The reason for the rejection
      */
     error AdminOperationRejected(string reason);
 
     /**
-     * @notice Emitted when an admin operation has insufficient signatures
+     * @dev Emitted when an admin operation has insufficient signatures
      * @param required The number of required signatures
      * @param provided The number of provided signatures
      */
     error InsufficientAdminSignatures(uint256 required, uint256 provided);
 
     /**
-     * @notice Emitted when an admin operation has an invalid signature
+     * @dev Emitted when an admin operation has an invalid signature
      */
     error InvalidAdminSignature();
 
     /**
-     * @notice Emitted when an admin operation has wrong chain ID
+     * @dev Emitted when an admin operation has wrong chain ID
      * @param expected The expected chain ID
      * @param provided The provided chain ID
      */
     error InvalidAdminChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when an admin operation has expired
+     * @dev Emitted when an admin operation has expired
      * @param expirationTimestamp The expiration timestamp that was exceeded
      * @param currentTimestamp The current block timestamp
      */
     error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
     /**
-     * @notice Emitted when admin count doesn't match expected
+     * @dev Emitted when admin count doesn't match expected
      * @param expected The expected admin count
      * @param provided The provided admin count
      */
     error AdminCountMismatch(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when admin addresses are not in ascending order or have duplicates
+     * @dev Emitted when admin addresses are not in ascending order or have duplicates
      * @param address_ The duplicate or out-of-order address
      */
     error DuplicateOrUnorderedAdminAddress(address address_);
@@ -134,33 +134,33 @@ library LibOrganizationAdmin {
     error AdminNotInTree(address admin);
 
     /**
-     * @notice Emitted when an admin is not a member of the organization
+     * @dev Emitted when an admin is not a member of the organization
      * @param admin The address that is not a member
      */
     error AdminNotMember(address admin);
 
     /**
-     * @notice Emitted when admin configuration is invalid
+     * @dev Emitted when admin configuration is invalid
      * @param reason The reason for the invalid configuration
      */
     error InvalidAdminConfiguration(string reason);
 
     /**
-     * @notice Emitted when admin tree proofs length doesn't match signature count
+     * @dev Emitted when admin tree proofs length doesn't match signature count
      * @param expected The expected length (signature count)
      * @param actual The actual length of proofs array
      */
     error AdminTreeProofsLengthMismatch(uint256 expected, uint256 actual);
 
     /**
-     * @notice Emitted when members tree proofs length doesn't match signature count
+     * @dev Emitted when members tree proofs length doesn't match signature count
      * @param expected The expected length (signature count)
      * @param actual The actual length of proofs array
      */
     error MembersTreeProofsLengthMismatch(uint256 expected, uint256 actual);
 
     /**
-     * @notice Sets the admin permissions for the organization
+     * @dev Sets the admin permissions for the organization
      * @dev Validates that all new admins are members before updating.
      *      Admin addresses must be in ascending order.
      * @param newAdminsRoot The new merkle root of admin addresses
@@ -207,7 +207,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Validates that the provided signatures meet the admin authorization requirements
+     * @dev Validates that the provided signatures meet the admin authorization requirements
      * @dev This function computes the nonce, verifies that the signatures are from authorized admins
      *      using Merkle proofs, meets the required voting threshold, checks nonce and chainId for replay protection,
      *      and marks the nonce as used. Reverts if authorization fails.
@@ -260,7 +260,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Gets the current admin permission configuration
+     * @dev Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
     function getAdminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
@@ -268,7 +268,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Validates that all admins are members of the organization
+     * @dev Validates that all admins are members of the organization
      * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
      *      Admin addresses must be in strictly ascending order to prevent duplicates.
      * @param allAdminsInOrgProofs Proofs that all admins are in the organization (admin tree and members tree)
@@ -336,7 +336,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Counts valid signatures from admin members
+     * @dev Counts valid signatures from admin members
      * @param signatures The signatures to verify
      * @param operationHash The hash of the admin operation
      * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
@@ -400,7 +400,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Creates a hash of the admin operation for signature verification using EIP-712 typed data
+     * @dev Creates a hash of the admin operation for signature verification using EIP-712 typed data
      * @param operationType The type of operation being performed
      * @param operationData The ABI-encoded data of the operation
      * @param salt The user-provided salt for nonce computation
@@ -435,7 +435,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Validates that signing admin proofs have correct lengths
+     * @dev Validates that signing admin proofs have correct lengths
      * @dev Reverts if proof arrays don't match signature count
      * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
      * @param signatureCount The number of signatures provided
@@ -456,7 +456,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @notice Checks if an address is in the admin tree
+     * @dev Checks if an address is in the admin tree
      * @param admin The address to check
      * @param adminsRoot The merkle root of the admin tree
      * @param proof The merkle proof

@@ -3,12 +3,12 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Deployer Address Storage
- * @notice Storage layout for the deployer address used in organization initialization
+ * @dev Storage layout for the deployer address used in organization initialization
  * @author Den Technologies Inc
  */
 library LibOrganizationDeployerAddressStorage {
     /**
-     * @notice Storage layout for deployer address
+     * @dev Storage layout for deployer address
      * @param deployerAddress Address authorized for post-deployment initialization
      */
     struct Layout {
@@ -20,7 +20,7 @@ library LibOrganizationDeployerAddressStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.deployer.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */

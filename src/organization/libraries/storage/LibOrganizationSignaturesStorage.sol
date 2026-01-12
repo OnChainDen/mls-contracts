@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Signatures Storage
- * @notice Storage layout for organization signature and nonce functionality
+ * @dev Storage layout for organization signature and nonce functionality
  * @dev Used for all operation types (admin operations and account transactions)
  * @author Den Technologies Inc
  */
 library LibOrganizationSignaturesStorage {
     /**
-     * @notice Storage layout for signature nonce tracking
+     * @dev Storage layout for signature nonce tracking
      * @param usedNonces Mapping of nonces that have been consumed (nonce => used)
      */
     struct Layout {
@@ -21,7 +21,7 @@ library LibOrganizationSignaturesStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.signatures.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */

@@ -11,7 +11,7 @@ import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersSto
 
 /**
  * @title Lib Organization Initialization
- * @notice Library for post-deployment initialization of Organization contracts
+ * @dev Library for post-deployment initialization of Organization contracts
  * @dev This library should ONLY be used by Organization contracts.
  *      Members and Groups are stored as Merkle trees - only the roots are stored on-chain.
  *      Full member/group data is stored off-chain (IPFS) and provided via calldata at validation time.
@@ -19,7 +19,7 @@ import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersSto
  */
 library LibOrganizationInitialization {
     /**
-     * @notice Emitted when organization is successfully initialized
+     * @dev Emitted when organization is successfully initialized
      * @param adminsRoot The merkle root of admin addresses
      * @param adminCount The number of admins
      * @param votingThreshold The voting threshold for admin operations
@@ -43,22 +43,22 @@ library LibOrganizationInitialization {
     );
 
     /**
-     * @notice Error thrown when caller is not the authorized deployer
+     * @dev Error thrown when caller is not the authorized deployer
      */
     error UnauthorizedDeployer();
 
     /**
-     * @notice Error thrown when organization is already initialized
+     * @dev Error thrown when organization is already initialized
      */
     error AlreadyInitialized();
 
     /**
-     * @notice Error thrown when invalid members root is provided
+     * @dev Error thrown when invalid members root is provided
      */
     error InvalidMembersRoot();
 
     /**
-     * @notice Initializes the organization contract with Merkle-based members/groups and admin configuration
+     * @dev Initializes the organization contract with Merkle-based members/groups and admin configuration
      * @dev Deployer authorization is enforced by the external wrapper function.
      *      Members and groups are represented as Merkle trees - only roots are stored on-chain.
      *      Validates that all admin addresses are members to prevent bricking.
@@ -122,7 +122,7 @@ library LibOrganizationInitialization {
     }
 
     /**
-     * @notice Enforces that the caller is the deployer address
+     * @dev Enforces that the caller is the deployer address
      * @dev This function will revert if msg.sender is not the deployer
      */
     function enforceOnlyDeployer() internal view {
@@ -132,7 +132,7 @@ library LibOrganizationInitialization {
     }
 
     /**
-     * @notice Gets the deployer address from storage
+     * @dev Gets the deployer address from storage
      * @return The deployer address
      */
     function getDeployerAddress() internal view returns (address) {
@@ -140,7 +140,7 @@ library LibOrganizationInitialization {
     }
 
     /**
-     * @notice Checks if the organization has been initialized
+     * @dev Checks if the organization has been initialized
      * @dev Checks if membersRoot is set (since every organization must have at least one member)
      * @return True if initialized, false otherwise
      */

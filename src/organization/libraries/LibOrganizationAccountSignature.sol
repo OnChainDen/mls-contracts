@@ -14,7 +14,7 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
 
 /**
  * @title Lib Organization Account Signature
- * @notice Library for validating ERC-1271 signatures through the Organization contract
+ * @dev Library for validating ERC-1271 signatures through the Organization contract
  * @dev This library enables smart accounts to sign messages in a policy-controlled manner.
  *      When an external contract calls isValidSignature() on an Account, the Account
  *      delegates to the Organization, which uses this library to validate that:
@@ -37,7 +37,7 @@ library LibOrganizationAccountSignature {
     bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
 
     /**
-     * @notice Validates an ERC-1271 signature for a given account
+     * @dev Validates an ERC-1271 signature for a given account
      * @dev The signature parameter is ABI-encoded and contains:
      *      - policyId: ID of the policy authorizing this signature
      *      - expirationTimestamp: When the signature request expires
@@ -126,7 +126,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Checks if an ERC-1271 signature operation is allowed by the policy
+     * @dev Checks if an ERC-1271 signature operation is allowed by the policy
      * @dev Validates that:
      *      1. The policy exists in the organization's policy tree
      *      2. The policy is configured for signature operations
@@ -169,7 +169,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Checks if manual approval signatures meet the required threshold
+     * @dev Checks if manual approval signatures meet the required threshold
      * @dev Extracts reviewer signatures (all after the first initiator signature),
      *      computes the review hash, and counts valid approvals from authorized approvers.
      * @param account The account address whose signature is being validated
@@ -219,7 +219,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Checks if the guardian's signature is valid for an ERC-1271 signature request
+     * @dev Checks if the guardian's signature is valid for an ERC-1271 signature request
      * @dev The guardian provides an additional layer of security by approving
      *      signature requests off-chain before they can be validated on-chain.
      * @param account The account whose signature is being validated
@@ -246,7 +246,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Computes the EIP-712 hash for initiator signatures
+     * @dev Computes the EIP-712 hash for initiator signatures
      * @dev Creates a typed data hash following EIP-712 standard for the
      *      InitiateSignatureValidation struct type.
      * @param account The account whose signature is being validated
@@ -279,7 +279,7 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @notice Computes the EIP-712 hash for reviewer signatures
+     * @dev Computes the EIP-712 hash for reviewer signatures
      * @dev Creates a typed data hash for the ReviewSignatureValidation struct type.
      *      Includes the initiator signature to bind approval to a specific request.
      * @param account The account whose signature is being validated

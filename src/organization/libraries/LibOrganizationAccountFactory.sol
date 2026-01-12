@@ -8,13 +8,13 @@ import {LibOrganizationAccountFactoryStorage} from "./storage/LibOrganizationAcc
 
 /**
  * @title Lib Organization Account Factory
- * @notice Library for deploying Account contracts as BeaconProxies with the Organization as the beacon
+ * @dev Library for deploying Account contracts as BeaconProxies with the Organization as the beacon
  * @dev This library should ONLY be used by Organization contracts
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountFactory {
     /**
-     * @notice Emitted when a new account proxy is deployed
+     * @dev Emitted when a new account proxy is deployed
      * @param accountAddress The address of the deployed account proxy
      * @param organizationAddress The address of the organization that deployed it (beacon)
      * @param salt The salt used for CREATE2 deployment
@@ -22,18 +22,18 @@ library LibOrganizationAccountFactory {
     event AccountDeployed(address indexed accountAddress, address indexed organizationAddress, bytes32 indexed salt);
 
     /**
-     * @notice Error thrown when the deployed address does not match the computed address
+     * @dev Error thrown when the deployed address does not match the computed address
      */
     error AccountDeploymentAddressMismatch();
 
     /**
-     * @notice Error thrown when an account was not deployed by this organization
+     * @dev Error thrown when an account was not deployed by this organization
      * @param accountAddress The address of the account that was not deployed by this organization
      */
     error AccountNotDeployedByOrganization(address accountAddress);
 
     /**
-     * @notice Deploys a new Account BeaconProxy at a deterministic address
+     * @dev Deploys a new Account BeaconProxy at a deterministic address
      * @dev Uses CREATE2 to ensure the same address across different chains.
      *      The Organization (this contract) acts as the beacon.
      * @param create2Salt The salt for CREATE2 deployment
@@ -57,7 +57,7 @@ library LibOrganizationAccountFactory {
     }
 
     /**
-     * @notice Computes the address where an account proxy would be deployed
+     * @dev Computes the address where an account proxy would be deployed
      * @param salt The salt for CREATE2 deployment
      * @return The computed address
      */
@@ -66,7 +66,7 @@ library LibOrganizationAccountFactory {
     }
 
     /**
-     * @notice Checks if an account was deployed by this organization
+     * @dev Checks if an account was deployed by this organization
      * @param accountAddress The address of the account to check
      * @return True if the account was deployed by this organization, false otherwise
      */
@@ -75,7 +75,7 @@ library LibOrganizationAccountFactory {
     }
 
     /**
-     * @notice Validates that an account was deployed by this organization
+     * @dev Validates that an account was deployed by this organization
      * @dev Reverts with AccountNotDeployedByOrganization if the account was not deployed by this organization
      * @param accountAddress The address of the account to validate
      */
@@ -85,7 +85,7 @@ library LibOrganizationAccountFactory {
         }
     }
 
-    /// @notice Returns the creation bytecode for deploying an AccountProxy
+    /// @dev Returns the creation bytecode for deploying an AccountProxy
     /// @return bytecode The creation bytecode to deploy via CREATE2
     function _getAccountProxyBytecode() internal view returns (bytes memory bytecode) {
         // Generate the bytecode to deploy the AccountProxy (which is a BeaconProxy) with the Organization

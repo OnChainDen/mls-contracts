@@ -3,12 +3,12 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Guardian Storage
- * @notice Storage layout for organization guardian functionality
+ * @dev Storage layout for organization guardian functionality
  * @author Den Technologies Inc
  */
 library LibOrganizationGuardianStorage {
     /**
-     * @notice Storage layout for guardian address
+     * @dev Storage layout for guardian address
      * @param guardian The address of the guardian authorized to submit transactions
      */
     struct Layout {
@@ -20,7 +20,7 @@ library LibOrganizationGuardianStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.guardian.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */

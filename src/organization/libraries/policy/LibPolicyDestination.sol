@@ -9,13 +9,13 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Policy Destination
- * @notice Library for validating transaction destinations against policies
+ * @dev Library for validating transaction destinations against policies
  * @dev Handles checking if a destination address is allowed by a policy.
  * @author Den Technologies Inc
  */
 library LibPolicyDestination {
     /**
-     * @notice Gets the actual destination address for a transaction
+     * @dev Gets the actual destination address for a transaction
      * @dev For token transfers, the actual destination is the token recipient (extracted from calldata).
      *      For other transactions, the actual destination is the `to` address.
      * @param to The transaction `to` address
@@ -36,7 +36,7 @@ library LibPolicyDestination {
     }
 
     /**
-     * @notice Checks if the destination matches the policy's destination filter
+     * @dev Checks if the destination matches the policy's destination filter
      * @dev Handles different destination types:
      *      - Any: Always matches
      *      - CustomList: Must be in the policy's custom destinations merkle tree

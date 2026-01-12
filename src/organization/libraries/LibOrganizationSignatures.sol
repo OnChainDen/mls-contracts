@@ -7,19 +7,19 @@ import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignatu
 
 /**
  * @title Lib Organization Signatures
- * @notice Library for signature and nonce-related operations for Organization contracts
+ * @dev Library for signature and nonce-related operations for Organization contracts
  * @dev This library handles nonce management for all operation types (admin operations and account transactions)
  * @author Den Technologies Inc
  */
 library LibOrganizationSignatures {
     /**
-     * @notice Emitted when an operation uses a nonce that has already been used
+     * @dev Emitted when an operation uses a nonce that has already been used
      * @param nonce The nonce that was attempted to be used
      */
     error NonceAlreadyUsed(uint256 nonce);
 
     /**
-     * @notice Validates that a nonce has not been used and marks it as used
+     * @dev Validates that a nonce has not been used and marks it as used
      * @dev Reverts if the nonce has already been used
      * @param nonce The nonce to validate and consume
      */
@@ -34,7 +34,7 @@ library LibOrganizationSignatures {
     }
 
     /**
-     * @notice Checks if a nonce has been used
+     * @dev Checks if a nonce has been used
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
      */
@@ -58,7 +58,7 @@ library LibOrganizationSignatures {
     }
 
     /**
-     * @notice Extracts the review signatures from a signatures bytes array (everything after the first signature)
+     * @dev Extracts the review signatures from a signatures bytes array (everything after the first signature)
      * @dev The first SIGNATURE_LENGTH bytes are assumed to be the initiator signature.
      *      Review signatures start after the initiator signature and continue to the end.
      * @param signatures The full signatures bytes array

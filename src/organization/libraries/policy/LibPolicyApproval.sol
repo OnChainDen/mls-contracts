@@ -10,28 +10,28 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title Lib Policy Approval
- * @notice Library for policy approval and signature validation
+ * @dev Library for policy approval and signature validation
  * @dev Handles counting valid approvals from signatures and verifying signer authorization.
  *      Uses Merkle proofs for membership verification.
  * @author Den Technologies Inc
  */
 library LibPolicyApproval {
     /**
-     * @notice Thrown when member proofs array length doesn't match signature count
+     * @dev Thrown when member proofs array length doesn't match signature count
      * @param expected The expected number of member proofs (signature count)
      * @param actual The actual number of member proofs provided
      */
     error MemberProofsLengthMismatch(uint256 expected, uint256 actual);
 
     /**
-     * @notice Thrown when member-in-group proofs array length doesn't match signature count
+     * @dev Thrown when member-in-group proofs array length doesn't match signature count
      * @param expected The expected number of member-in-group proofs (signature count)
      * @param actual The actual number of member-in-group proofs provided
      */
     error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
 
     /**
-     * @notice Counts valid approvals from a set of signatures (using Merkle proofs)
+     * @dev Counts valid approvals from a set of signatures (using Merkle proofs)
      * @dev Signatures must be ordered by signer address (ascending) to prevent duplicates.
      *      Each signature is verified against the message hash and checked for authorization.
      *      Optimized to cache storage reads and verify group existence once before the loop.
@@ -107,7 +107,7 @@ library LibPolicyApproval {
     }
 
     /**
-     * @notice Gets the number of required approvals for a policy
+     * @dev Gets the number of required approvals for a policy
      * @dev For Member approver type, always returns 1.
      *      For Group approver type, returns the approval threshold.
      * @param policy The policy to check
@@ -124,7 +124,7 @@ library LibPolicyApproval {
     }
 
     /**
-     * @notice Checks if a signer is authorized to approve for a policy (using Merkle proofs)
+     * @dev Checks if a signer is authorized to approve for a policy (using Merkle proofs)
      * @dev For Member approver type, the signer must be the specified member address.
      *      For Group approver type, the signer must be in the specified group.
      *      NOTE: Group existence must be verified by the caller before calling this function.
@@ -172,7 +172,7 @@ library LibPolicyApproval {
     }
 
     /**
-     * @notice Validates that approver proofs have correct lengths
+     * @dev Validates that approver proofs have correct lengths
      * @dev Reverts if proof arrays don't match signature count
      * @param policy The policy to check against
      * @param approverProofs The proofs for approver membership verification

@@ -10,7 +10,7 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Organization Members
- * @notice Library for merkle-based member operations for Organization contracts
+ * @dev Library for merkle-based member operations for Organization contracts
  * @dev Members are stored in a merkle tree. Only the root is stored on-chain.
  *      Full member data is stored off-chain (IPFS) and provided via calldata at validation time.
  *      This approach drastically reduces gas costs for member management (1 SSTORE)
@@ -19,20 +19,20 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationMembers {
     /**
-     * @notice Emitted when the members merkle root is updated
+     * @dev Emitted when the members merkle root is updated
      * @param newRoot The new merkle root
      * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
      */
     event MembersUpdated(bytes32 indexed newRoot, string ipfsCid);
 
     /**
-     * @notice Emitted when membership verification fails
+     * @dev Emitted when membership verification fails
      * @param memberAddress The address that failed verification
      */
     error MemberVerificationFailed(address memberAddress);
 
     /**
-     * @notice Updates the global members merkle root
+     * @dev Updates the global members merkle root
      * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
      *      Validates that ALL admins remain members in the new tree to prevent bricking.
      *      Emits MembersUpdated event with the IPFS CID for disaster recovery.
@@ -60,7 +60,7 @@ library LibOrganizationMembers {
     }
 
     /**
-     * @notice Verifies that an address is a member of the organization
+     * @dev Verifies that an address is a member of the organization
      * @param memberAddress The address to verify
      * @param proof The merkle proof for the address
      * @return True if the address is a verified member, false otherwise
@@ -71,7 +71,7 @@ library LibOrganizationMembers {
     }
 
     /**
-     * @notice Returns the current members merkle root
+     * @dev Returns the current members merkle root
      * @return The members merkle root
      */
     function getMembersRoot() internal view returns (bytes32) {
@@ -79,7 +79,7 @@ library LibOrganizationMembers {
     }
 
     /**
-     * @notice Checks if an address is in a member tree given an explicit root
+     * @dev Checks if an address is in a member tree given an explicit root
      * @dev Used to verify against potentially different roots (current vs new)
      * @param memberAddress The address to verify
      * @param membersRoot The merkle root to verify against

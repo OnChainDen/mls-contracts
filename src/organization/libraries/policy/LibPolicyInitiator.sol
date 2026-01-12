@@ -7,14 +7,14 @@ import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
 
 /**
  * @title Lib Policy Initiator
- * @notice Library for validating transaction initiator authorization
+ * @dev Library for validating transaction initiator authorization
  * @dev Handles checking if an initiator is authorized by a policy.
  *      Uses Merkle proofs for membership verification.
  * @author Den Technologies Inc
  */
 library LibPolicyInitiator {
     /**
-     * @notice Checks if the initiator is authorized by the policy
+     * @dev Checks if the initiator is authorized by the policy
      * @dev If anyInitiator is true, always returns true.
      *      Otherwise, verifies the initiator is a member and matches policy requirements.
      *      Uses Merkle proofs for membership verification.

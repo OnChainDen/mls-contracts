@@ -3,12 +3,12 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Account Factory Storage
- * @notice Storage layout for organization account factory functionality
+ * @dev Storage layout for organization account factory functionality
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountFactoryStorage {
     /**
-     * @notice Storage layout for account factory functionality
+     * @dev Storage layout for account factory functionality
      * @param deployedAccounts Mapping of account addresses deployed by this organization
      * @param accountImplementation The current implementation address for all Account beacon proxies
      */
@@ -22,7 +22,7 @@ library LibOrganizationAccountFactoryStorage {
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.account.factory.storage");
 
     /**
-     * @notice Returns the storage layout at the namespaced slot
+     * @dev Returns the storage layout at the namespaced slot
      * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */

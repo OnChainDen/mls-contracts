@@ -10,13 +10,13 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Policy Contract Interaction
- * @notice Library for validating contract interaction transactions against policies
+ * @dev Library for validating contract interaction transactions against policies
  * @dev Handles validation of contract calls including function selector, parameters, and destination checks.
  * @author Den Technologies Inc
  */
 library LibPolicyContractInteraction {
     /**
-     * @notice Checks if a contract interaction transaction is allowed by the policy
+     * @dev Checks if a contract interaction transaction is allowed by the policy
      * @dev Validates that:
      *      1. The function being called is allowed by the policy
      *      2. The transaction parameters match the policy's constraints
@@ -52,7 +52,7 @@ library LibPolicyContractInteraction {
     }
 
     /**
-     * @notice Checks if the function matches the policy's allowed functions filter
+     * @dev Checks if the function matches the policy's allowed functions filter
      * @dev If anyFunction is true, always returns true.
      *      Otherwise, verifies the function selector and constraints are in the allowed functions merkle tree.
      * @param policy The policy to check against
@@ -85,7 +85,7 @@ library LibPolicyContractInteraction {
     }
 
     /**
-     * @notice Computes the merkle leaf for an allowed function
+     * @dev Computes the merkle leaf for an allowed function
      * @dev Combines function selector with constraints hash
      * @param selector The function selector (first 4 bytes of calldata)
      * @param constraintsHash The keccak256 hash of the parameter constraints

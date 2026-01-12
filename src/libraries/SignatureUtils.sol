@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * @title SignatureUtils
- * @notice Utilities for handling pure 65-byte ECDSA signatures
+ * @dev Utilities for handling pure 65-byte ECDSA signatures
  * @dev Canonical signature format: r (32 bytes) || s (32 bytes) || v (1 byte)
  *
  *      This library provides utilities for working with concatenated ECDSA signatures.
@@ -27,7 +27,7 @@ library SignatureUtils {
     uint256 internal constant SIGNATURE_LENGTH = 65;
 
     /**
-     * @notice Returns the number of signatures in a concatenated signatures array
+     * @dev Returns the number of signatures in a concatenated signatures array
      * @param signatures The concatenated signatures bytes
      * @return The number of 65-byte signatures contained in the array
      */
@@ -36,7 +36,7 @@ library SignatureUtils {
     }
 
     /**
-     * @notice Extracts a single signature from the signatures array
+     * @dev Extracts a single signature from the signatures array
      * @param signatures The signatures to extract from
      * @param index The index of the signature to extract
      * @return The extracted signature
