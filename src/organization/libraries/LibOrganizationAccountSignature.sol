@@ -82,10 +82,12 @@ library LibOrganizationAccountSignature {
 
         bytes memory initiatorSignature = SignatureUtils.extractSignature(approverSignatures, 0);
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
-        address initiator = ECDSA.recover(initiatorHash, initiatorSignature);
+
+        // Use tryRecover to avoid reverting on invalid signatures (ERC-1271 should return failure, not revert)
+        (address initiator, ECDSA.RecoverError err,) = ECDSA.tryRecover(initiatorHash, initiatorSignature);
 
         // Case: Initiator signature is invalid
-        if (initiator == address(0)) {
+        if (err != ECDSA.RecoverError.NoError || initiator == address(0)) {
             return ERC1271_INVALID_VALUE;
         }
 

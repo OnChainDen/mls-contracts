@@ -5,9 +5,8 @@ import {Policies} from "../../../libraries/Policies.sol";
 import {SignatureUtils} from "../../../libraries/SignatureUtils.sol";
 import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
-import {LibOrganizationSignatures} from "../LibOrganizationSignatures.sol";
 
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title Lib Policy Approval
@@ -51,8 +50,7 @@ library LibPolicyApproval {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
 
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / SignatureUtils.SIGNATURE_LENGTH);
+        uint8 signatureCount = SignatureUtils.getSignatureCount(signatures);
 
         // Validate approver proofs lengths
         _validateApproverProofsOrRevert(policy, approverProofs, signatureCount);
@@ -76,22 +74,14 @@ library LibPolicyApproval {
         for (uint8 i = 0; i < signatureCount; ++i) {
             bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
-            // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSignerAddress(signature);
-
-            // Skip if signer is invalid
-            if (signer == address(0)) continue;
+            // Recover signer address from signature (reverts on invalid signature)
+            address signer = ECDSA.recover(messageHash, signature);
 
             // Check for duplicate signers - signers must be unique and in ascending order
             if (signer <= lastSigner) continue;
 
             // Update last signer for next iteration
             lastSigner = signer;
-
-            // Verify the signature using ERC-1271
-            if (!SignatureChecker.isValidSignatureNow(signer, messageHash, signature)) {
-                continue;
-            }
 
             // Get the proofs for this signer
             bytes32[] memory memberProof = approverProofs.approverInOrgMembersTreeProofs[i];

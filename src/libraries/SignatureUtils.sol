@@ -3,12 +3,37 @@ pragma solidity ^0.8.24;
 
 /**
  * @title SignatureUtils
- * @notice A library for signature utility functions
+ * @notice Utilities for handling pure 65-byte ECDSA signatures
+ * @dev Canonical signature format: r (32 bytes) || s (32 bytes) || v (1 byte)
+ *
+ *      This library provides utilities for working with concatenated ECDSA signatures.
+ *      Multiple signatures are stored as a single bytes array where each signature
+ *      occupies exactly 65 bytes.
+ *
+ *      Signers are derived using ECDSA.recover(), not embedded in the signature.
+ *      This library only supports EOA signatures (not ERC-1271 contract signatures).
+ *
+ *      Signature format:
+ *      | Offset | Size | Field | Description           |
+ *      |--------|------|-------|-----------------------|
+ *      | 0      | 32   | r     | ECDSA r component     |
+ *      | 32     | 32   | s     | ECDSA s component     |
+ *      | 64     | 1    | v     | ECDSA v component     |
+ *
  * @author Den Technologies Inc
  */
 library SignatureUtils {
     /// @dev Signature length: r (32) + s (32) + v (1) = 65 bytes
     uint256 internal constant SIGNATURE_LENGTH = 65;
+
+    /**
+     * @notice Returns the number of signatures in a concatenated signatures array
+     * @param signatures The concatenated signatures bytes
+     * @return The number of 65-byte signatures contained in the array
+     */
+    function getSignatureCount(bytes memory signatures) internal pure returns (uint8) {
+        return uint8(signatures.length / SIGNATURE_LENGTH);
+    }
 
     /**
      * @notice Extracts a single signature from the signatures array

@@ -65,9 +65,6 @@ library LibOrganizationAccountTransaction {
     /// @notice Thrown when the transaction authorization has expired
     error TransactionExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
-    /// @notice Thrown when the initiator signature is invalid or missing
-    error InvalidInitiatorSignature();
-
     /// @notice Thrown when the signatures bytes is too short
     error InsufficientSignaturesLength();
 
@@ -349,12 +346,8 @@ library LibOrganizationAccountTransaction {
         // Compute the hash the initiator should have signed (isApproval = true)
         bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
 
-        // Recover signer from signature
-        address initiator = ECDSA.recover(initiatorTxHash, initiatorSignature);
-        if (initiator == address(0)) {
-            revert InvalidInitiatorSignature();
-        }
-        return initiator;
+        // Recover signer from signature (reverts on invalid signature)
+        return ECDSA.recover(initiatorTxHash, initiatorSignature);
     }
 
     /**

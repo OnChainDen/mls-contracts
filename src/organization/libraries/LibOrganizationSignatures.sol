@@ -58,25 +58,6 @@ library LibOrganizationSignatures {
     }
 
     /**
-     * @notice Extracts the signer address from a signature
-     * @dev Assumes the first 20 bytes of the signature contain the signer address (ERC-1271 pattern)
-     * @param signature The signature to extract the signer from
-     * @return The signer address, or address(0) if invalid
-     */
-    function extractSignerAddress(bytes memory signature) internal pure returns (address) {
-        if (signature.length < 20) {
-            return address(0);
-        }
-
-        address signer;
-        /* solhint-disable no-inline-assembly */
-        assembly {
-            signer := mload(add(signature, 20))
-        }
-        return signer;
-    }
-
-    /**
      * @notice Extracts the review signatures from a signatures bytes array (everything after the first signature)
      * @dev The first SIGNATURE_LENGTH bytes are assumed to be the initiator signature.
      *      Review signatures start after the initiator signature and continue to the end.

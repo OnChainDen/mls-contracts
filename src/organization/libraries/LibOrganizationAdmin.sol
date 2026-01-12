@@ -9,9 +9,9 @@ import {LibOrganizationMembers} from "./LibOrganizationMembers.sol";
 import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
 import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
 
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Admin
@@ -334,8 +334,7 @@ library LibOrganizationAdmin {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
 
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / SignatureUtils.SIGNATURE_LENGTH);
+        uint8 signatureCount = SignatureUtils.getSignatureCount(signatures);
 
         // Validate admin proofs lengths
         _validateAdminProofsOrRevert(adminProofs, signatureCount);
@@ -355,22 +354,14 @@ library LibOrganizationAdmin {
         for (uint8 i = 0; i < signatureCount; ++i) {
             bytes memory signature = SignatureUtils.extractSignature(signatures, i);
 
-            // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSignerAddress(signature);
-
-            // Case: Signer address is invalid
-            if (signer == address(0)) continue;
+            // Recover signer address from signature (reverts on invalid signature)
+            address signer = ECDSA.recover(operationHash, signature);
 
             // Case: Signer address is not in ascending order or has duplicates
             if (signer <= lastSigner) continue;
 
             // Update last signer for next iteration
             lastSigner = signer;
-
-            // Case: Signature is not valid
-            if (!SignatureChecker.isValidSignatureNow(signer, operationHash, signature)) {
-                continue;
-            }
 
             // Case: Signer is not in the admin tree
             if (!_isAdminInTree(signer, adminsRoot, adminProofs.adminInOrgAdminTreeProofs[i])) {
