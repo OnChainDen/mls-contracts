@@ -7,10 +7,10 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library ContractInteractionUtils {
-    /// @dev Function selector length in calldata (first 4 bytes)
+    /// @dev Function selector length in calldata (first 4 bytes of keccak256 hash)
     uint256 internal constant SELECTOR_LENGTH = 4;
 
-    /// @dev ABI encoding slot size (32 bytes)
+    /// @dev ABI encoding slot size (32 bytes per slot)
     uint256 internal constant SLOT_SIZE = 32;
 
     /**

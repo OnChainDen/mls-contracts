@@ -12,7 +12,7 @@ import {LibOrganizationPolicyStorage} from "../storage/LibOrganizationPolicyStor
  * @author Den Technologies Inc
  */
 library LibPolicyTimeBasedLimits {
-    /// @dev Number of seconds in one hour (for time window calculations)
+    /// @dev Number of seconds in one hour, used for time window calculations
     uint256 private constant SECONDS_PER_HOUR = 3600;
 
     /**

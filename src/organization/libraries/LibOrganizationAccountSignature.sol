@@ -29,10 +29,11 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountSignature {
-    /// @notice ERC-1271 magic value returned when signature is valid
+    /// @dev ERC-1271 magic value returned when signature is valid.
+    /// Computed as bytes4(keccak256("isValidSignature(bytes32,bytes)"))
     bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
 
-    /// @notice Value returned when signature validation fails
+    /// @dev Value returned when signature validation fails per ERC-1271 standard
     bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
 
     /**

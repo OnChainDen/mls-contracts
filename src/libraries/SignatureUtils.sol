@@ -23,7 +23,7 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library SignatureUtils {
-    /// @dev Signature length: r (32) + s (32) + v (1) = 65 bytes
+    /// @dev Standard ECDSA signature length in bytes: r (32) + s (32) + v (1) = 65 bytes
     uint256 internal constant SIGNATURE_LENGTH = 65;
 
     /**

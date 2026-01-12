@@ -15,6 +15,12 @@ import {Script, console} from "forge-std/Script.sol";
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
+    /**
+     * @notice Deploys all core contracts for the onchain custody system
+     * @dev Deploys in order: ImplementationWhitelistImplementation, OrganizationImplementation,
+     *      AccountImplementation, whitelists the implementations, and deploys OrganizationFactory.
+     *      Requires PRIVATE_KEY environment variable to be set.
+     */
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
