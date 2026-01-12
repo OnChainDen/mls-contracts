@@ -11,7 +11,6 @@ import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title Lib Organization Admin
@@ -400,10 +399,7 @@ library LibOrganizationAdmin {
         // Note: isApproval is included to differentiate execution signatures from rejection signatures
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    // solhint-disable-next-line max-line-length
-                    "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
-                ),
+                LibOrganizationEIP712.ADMIN_OPERATION_TYPEHASH,
                 uint8(operationType),
                 keccak256(operationData),
                 salt,
@@ -415,7 +411,7 @@ library LibOrganizationAdmin {
         );
 
         // Return EIP-712 compatible hash for ERC-1271 signature verification
-        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
+        return LibOrganizationEIP712.computeTypedDataHash(structHash);
     }
 
     /**

@@ -9,7 +9,6 @@ import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
 import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title Lib Organization Account Transaction
@@ -407,10 +406,7 @@ library LibOrganizationAccountTransaction {
     {
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    // solhint-disable-next-line max-line-length
-                    "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
-                ),
+                LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH,
                 address(this),
                 params.account,
                 params.to,
@@ -424,7 +420,7 @@ library LibOrganizationAccountTransaction {
             )
         );
 
-        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
+        return LibOrganizationEIP712.computeTypedDataHash(structHash);
     }
 
     /**
@@ -445,10 +441,7 @@ library LibOrganizationAccountTransaction {
     ) private view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256(
-                    // solhint-disable-next-line max-line-length
-                    "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
-                ),
+                LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
                 address(this),
                 params.account,
                 params.to,
@@ -463,6 +456,6 @@ library LibOrganizationAccountTransaction {
             )
         );
 
-        return MessageHashUtils.toTypedDataHash(LibOrganizationEIP712.getDomainSeparator(), structHash);
+        return LibOrganizationEIP712.computeTypedDataHash(structHash);
     }
 }
