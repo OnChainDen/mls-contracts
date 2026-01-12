@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 /**
  * @title SignatureUtils
  * @dev Utilities for handling pure 65-byte ECDSA signatures
@@ -32,7 +34,7 @@ library SignatureUtils {
      * @return The number of 65-byte signatures contained in the array
      */
     function getSignatureCount(bytes memory signatures) internal pure returns (uint8) {
-        return uint8(signatures.length / SIGNATURE_LENGTH);
+        return SafeCast.toUint8(signatures.length / SIGNATURE_LENGTH);
     }
 
     /**
