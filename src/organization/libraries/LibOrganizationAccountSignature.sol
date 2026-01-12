@@ -9,6 +9,7 @@ import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
 import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
@@ -30,8 +31,8 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  */
 library LibOrganizationAccountSignature {
     /// @dev ERC-1271 magic value returned when signature is valid.
-    /// Computed as bytes4(keccak256("isValidSignature(bytes32,bytes)"))
-    bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+    /// Equals bytes4(keccak256("isValidSignature(bytes32,bytes)")) = 0x1626ba7e
+    bytes4 internal constant ERC1271_MAGIC_VALUE = IERC1271.isValidSignature.selector;
 
     /// @dev Value returned when signature validation fails per ERC-1271 standard
     bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
