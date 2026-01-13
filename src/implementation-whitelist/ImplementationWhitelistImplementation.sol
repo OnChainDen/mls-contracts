@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
+import {
+    LibImplementationWhitelistDeployerAddressStorage
+} from "./libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
 import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWhitelistStorage.sol";
 
 /**
@@ -13,7 +16,12 @@ import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWh
  * @notice Contract for managing whitelisted implementation addresses
  * @author Den Technologies Inc
  */
-contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable, Ownable, IImplementationWhitelist {
+contract ImplementationWhitelistImplementation is
+    Initializable,
+    UUPSUpgradeable,
+    Ownable2StepUpgradeable,
+    IImplementationWhitelist
+{
     /**
      * @notice Emitted when an implementation is whitelisted
      * @param contractType The type of contract (Account or Organization)
@@ -28,8 +36,27 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      */
     event ImplementationUnwhitelisted(ContractType indexed contractType, address indexed implementation);
 
+    /**
+     * @notice Emitted when the implementation whitelist is initialized
+     * @param owner The initial owner address
+     */
+    event ImplementationWhitelistInitialized(address indexed owner);
+
+    /**
+     * @notice Error thrown when caller is not the authorized deployer
+     */
+    error UnauthorizedDeployer();
+
+    /**
+     * @notice Modifier that enforces only the deployer can call the function
+     */
+    modifier onlyDeployer() {
+        _enforceOnlyDeployer();
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() Ownable(msg.sender) {
+    constructor() {
         _disableInitializers();
     }
 
@@ -37,8 +64,11 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      * @notice Initialize the implementation whitelist
      * @param initialOwner The initial owner address
      */
-    function initialize(address initialOwner) external initializer {
-        _transferOwnership(initialOwner);
+    function initialize(address initialOwner) external initializer onlyDeployer {
+        __Ownable_init(initialOwner);
+        __Ownable2Step_init();
+
+        emit ImplementationWhitelistInitialized(initialOwner);
     }
 
     /**
@@ -63,6 +93,23 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
             storageLayout.whitelisted[contractType][toUnwhitelist[i]] = false;
             emit ImplementationUnwhitelisted(contractType, toUnwhitelist[i]);
         }
+    }
+
+    /**
+     * @notice Returns the address that deployed this implementation whitelist proxy
+     * @return The deployer address
+     */
+    function getDeployerAddress() external view returns (address) {
+        return LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress;
+    }
+
+    /**
+     * @notice Checks if the implementation whitelist has been initialized
+     * @dev Checks if owner is set (since every initialized whitelist must have an owner)
+     * @return True if initialized, false otherwise
+     */
+    function isInitialized() external view returns (bool) {
+        return owner() != address(0);
     }
 
     /**
@@ -102,4 +149,14 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      */
     // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
+
+    /**
+     * @dev Enforces that the caller is the deployer address
+     * @dev This function will revert if msg.sender is not the deployer
+     */
+    function _enforceOnlyDeployer() private view {
+        if (msg.sender != LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress) {
+            revert UnauthorizedDeployer();
+        }
+    }
 }

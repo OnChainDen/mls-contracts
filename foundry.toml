@@ -10,7 +10,8 @@ optimizer_runs = 200
 via_ir = false
 fs_permissions = [{ access = "read-write", path = "./"}]
 remappings = [
-    "@openzeppelin/=lib/openzeppelin-contracts/"
+    "@openzeppelin/=lib/openzeppelin-contracts/",
+    "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
 ]
 
 [profile.ci]

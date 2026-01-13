@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {ImplementationWhitelistImplementation} from "./ImplementationWhitelistImplementation.sol";
+import {
+    LibImplementationWhitelistDeployerAddressStorage
+} from "./libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
@@ -13,9 +15,11 @@ contract ImplementationWhitelistProxy is ERC1967Proxy {
     /**
      * @notice Constructor for the proxy
      * @param implementation The implementation contract address
-     * @param owner The initial owner address for the whitelist contract
+     * @dev The deployer (msg.sender) is stored for initialization authorization.
+     *      The factory deploys and initializes atomically in a single transaction.
      */
-    constructor(address implementation, address owner)
-        ERC1967Proxy(implementation, abi.encodeCall(ImplementationWhitelistImplementation.initialize, (owner)))
-    {}
+    constructor(address implementation) ERC1967Proxy(implementation, "") {
+        // Store deployer address (the factory) in storage for initialization authorization
+        LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress = msg.sender;
+    }
 }
