@@ -67,7 +67,7 @@ library LibPolicyApproval {
 
         uint8 validApprovals = 0;
 
-        // Track last signer to prevent duplicates (similar to Safe contracts)
+        // Track last signer to prevent duplicates
         address lastSigner = address(0);
 
         // Iterate over signatures to count valid approvals

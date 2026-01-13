@@ -355,7 +355,7 @@ library LibOrganizationAdmin {
 
         uint256 validSignatures = 0;
 
-        // Track last signer to prevent duplicates (similar to Safe contracts)
+        // Track last signer to prevent duplicates
         address lastSigner = address(0);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
