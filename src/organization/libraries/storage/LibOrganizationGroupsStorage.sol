@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Groups Storage
- * @notice Minimal storage layout for merkle-based groups functionality
+ * @dev Minimal storage layout for merkle-based groups functionality
  * @dev Groups are stored in a nested merkle tree. Only the root is stored on-chain.
  *      Full group data is stored off-chain (IPFS) and provided via calldata at validation time.
  *      Each group leaf is hash(hash(groupId, groupMembersRoot)) where groupMembersRoot is
@@ -12,17 +12,24 @@ pragma solidity ^0.8.24;
  */
 library LibOrganizationGroupsStorage {
     struct Layout {
-        /// @notice Global merkle root containing ALL groups
+        /// @dev Global merkle root containing ALL groups
         /// @dev Each leaf is hash(hash(groupId, groupMembersRoot))
         bytes32 groupsRoot;
     }
 
+    /// @dev Storage slot for the groups storage layout, computed as
+    /// keccak256("onchain.custody.organization.groups.storage")
     bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.groups.storage");
 
-    function layout() internal pure returns (Layout storage l) {
+    /**
+     * @dev Returns the storage layout at the namespaced slot
+     * @dev Uses assembly to access storage at the precomputed slot
+     * @return _layout The storage layout struct
+     */
+    function layout() internal pure returns (Layout storage _layout) {
         bytes32 slot = STORAGE_SLOT;
         assembly {
-            l.slot := slot
+            _layout.slot := slot
         }
     }
 }

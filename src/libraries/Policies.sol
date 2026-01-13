@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Policies
- * @notice Core data structures for policy-based transaction authorization
+ * @dev Core data structures for policy-based transaction authorization
  * @dev Policies define "if-then" rules that govern what transactions can be executed
  *      through smart accounts in an organization. Each policy specifies:
  *      - Who can initiate transactions (initiator)
@@ -19,33 +19,27 @@ pragma solidity ^0.8.24;
  * @author Den Technologies Inc
  */
 library Policies {
-    // ================================
-    // ENUMS
-    // ================================
-
     /**
-     * @notice Defines whether a policy auto-approves transactions or requires manual approval
+     * @dev Defines whether a policy auto-approves transactions or requires manual approval
      * @dev AutoApprove: Transaction proceeds if initiator is authorized
      *      RequireManualApproval: Additional signatures from approvers are required
      */
     enum PolicyType {
         AutoApprove, // No additional approval needed beyond the initiator
         RequireManualApproval // Requires threshold approvals from designated group/member
-
     }
 
     /**
-     * @notice Defines whether an approver/initiator is a group or individual member
+     * @dev Defines whether an approver/initiator is a group or individual member
      * @dev Used for both initiator and approver configurations
      */
     enum ApproverType {
         Group, // Refers to a group of members (threshold applies)
         Member // Refers to a single member
-
     }
 
     /**
-     * @notice Categorizes the type of transaction a policy applies to
+     * @dev Categorizes the type of transaction a policy applies to
      * @dev Helps filter policies based on what kind of operation is being performed
      */
     enum TransactionType {
@@ -53,32 +47,29 @@ library Policies {
         TokenTransfers, // Policy only applies to ERC20/native token transfers
         ContractInteractions, // Policy only applies to arbitrary contract calls
         Signatures // Policy only applies to ERC-1271 signature validations
-
     }
 
     /**
-     * @notice Defines how destination addresses are filtered for a policy
+     * @dev Defines how destination addresses are filtered for a policy
      * @dev Controls which addresses can receive funds or be called
      */
     enum DestinationType {
         Any, // Any destination address is allowed
         CustomList // Only addresses in the policy's custom destination merkle tree
-
     }
 
     /**
-     * @notice Defines rate limiting behavior for a policy
+     * @dev Defines rate limiting behavior for a policy
      * @dev Controls how transaction frequency/amounts are limited
      */
     enum PolicyLimitation {
         None, // No limit on transactions
         SingleTransaction, // Only one transaction allowed (useful for one-time approvals)
         TimeInterval // Limit resets after a time period (e.g., daily/weekly limits)
-
     }
 
     /**
-     * @notice Defines how time-based limits are scoped across entities
+     * @dev Defines how time-based limits are scoped across entities
      * @dev When tracking usage for time-based limits, determines if limits are:
      *      - Shared across all entities (AcrossAll)
      *      - Tracked separately per entity (PerEntity)
@@ -86,15 +77,10 @@ library Policies {
     enum TimeIntervalScope {
         AcrossAll, // Single shared limit across all accounts/destinations/initiators
         PerEntity // Separate limit tracked per account/destination/initiator
-
     }
 
-    // ================================
-    // PARAMETER CONSTRAINT TYPES
-    // ================================
-
     /**
-     * @notice Supported parameter types for function call constraints
+     * @dev Supported parameter types for function call constraints
      * @dev Used to specify how to interpret calldata parameters when validating
      *      function calls against policy constraints
      */
@@ -108,10 +94,9 @@ library Policies {
         String, // Dynamic string
         Array, // Dynamic array
         Struct // Tuple/struct type
-
     }
 
-    /// @notice A constraint on a single function parameter
+    /// @dev A constraint on a single function parameter
     /// @dev The comparisonData field is ABI-encoded based on paramType and constraintType:
     ///      - Any: empty bytes (no comparison needed)
     ///      - Exact + Uint: abi.encode(uint256 value)
@@ -123,43 +108,42 @@ library Policies {
     ///      - Exact + String: abi.encode(bytes32 keccak256Hash) - hash of expected string
     ///      - Range + Uint: abi.encode(uint256 min, uint256 max)
     ///      - Range + Int: abi.encode(int256 min, int256 max)
-    ///      - List + Address: abi.encode(bytes32 merkleRoot) - root of allowed addresses merkle tree
+    ///      - OneOf + Address: abi.encode(bytes32 merkleRoot) - root of allowed addresses merkle tree
     ///
-    /// @dev The slotsToSkip field specifies how many 32-byte slots this parameter occupies (must be >= 1):
-    ///      - Basic types (uint, int, address, bool, bytes1-32): 1 slot
-    ///      - Dynamic types (string, bytes, T[]): 1 slot (contains offset)
-    ///      - Static arrays T[k]: k slots (stored inline)
-    ///      - Static structs with N fields: N slots (stored inline)
-    ///      - Dynamic structs: 1 slot (contains offset)
+    /// @dev The paramCalldataHeadSlotCount field specifies how many 32-byte head slots this parameter occupies
+    ///      (must be >= 1). In ABI encoding, the "head" contains values for static types or offset pointers for
+    ///      dynamic types:
+    ///      - Basic types (uint, int, address, bool, bytes1-32): 1 head slot
+    ///      - Dynamic types (string, bytes, T[]): 1 head slot (contains offset to tail data)
+    ///      - Static arrays T[k]: k head slots (stored inline)
+    ///      - Static structs with N fields: N head slots (stored inline)
+    ///      - Dynamic structs: 1 head slot (contains offset to tail data)
     enum ConstraintType {
         Any, // Any value is accepted (no constraint)
         Exact, // Value must exactly match the specified value
         Range, // Value must be within min/max bounds (for numeric types)
-        List // Value must be one of the allowed values in a list
-
+        OneOf // Value must be one of the allowed values in a list
     }
 
     /**
-     * @notice Defines a constraint on a single function parameter
+     * @dev Defines a constraint on a single function parameter
      * @dev Used to restrict what values can be passed to specific function parameters
      * @param paramType The type of the parameter being constrained
      * @param constraintType How the constraint should be evaluated
-     * @param slotsToSkip Number of 32-byte slots to skip in calldata to reach this param
+     * @param paramCalldataHeadSlotCount Number of 32-byte head slots this parameter occupies in calldata (must be >= 1)
      * @param comparisonData ABI-encoded data used for comparison based on constraintType
+     * @param paramValueInListProof Merkle proof for OneOf constraints (empty for other constraint types)
      */
     struct ParameterConstraint {
         ParamType paramType;
         ConstraintType constraintType;
-        uint8 slotsToSkip; // Number of 32-byte slots this parameter occupies (must be >= 1)
+        uint8 paramCalldataHeadSlotCount; // Number of 32-byte head slots this parameter occupies (must be >= 1)
         bytes comparisonData;
+        bytes32[] paramValueInListProof; // Merkle proof for OneOf constraints (empty otherwise)
     }
 
-    // ================================
-    // POLICY STRUCTS
-    // ================================
-
     /**
-     * @notice Approval configuration - defines who must approve transactions
+     * @dev Approval configuration - defines who must approve transactions
      * @dev Specifies the approval requirements for a policy.
      *      Uses address for Member approver and uint256 groupId for Group approver.
      * @param policyType Whether transactions auto-approve or require manual approval
@@ -168,6 +152,10 @@ library Policies {
      * @param approverGroupId The ID of the group that must approve (when approverType == Group)
      * @param approvalThreshold Required number of approvals (for groups)
      */
+    // Struct packing is not beneficial here: this struct is only passed via calldata/memory
+    // and never stored on-chain directly (only its hash as part of a merkle root).
+    // ABI encoding uses full 32-byte slots regardless, so we prioritize readability.
+    // solhint-disable-next-line gas-struct-packing
     struct ApprovalConfig {
         PolicyType policyType;
         ApproverType approverType;
@@ -177,7 +165,7 @@ library Policies {
     }
 
     /**
-     * @notice Initiator configuration - defines who can initiate transactions
+     * @dev Initiator configuration - defines who can initiate transactions
      * @dev Specifies who is authorized to create and sign the initial transaction request.
      *      Uses address for Member initiator and uint256 groupId for Group initiator.
      * @param anyInitiator If true, any member can initiate (ignores other fields)
@@ -185,6 +173,10 @@ library Policies {
      * @param initiatorMember The address of the member authorized to initiate (when initiatorType == Member)
      * @param initiatorGroupId The ID of the group authorized to initiate (when initiatorType == Group)
      */
+    // Struct packing is not beneficial here: this struct is only passed via calldata/memory
+    // and never stored on-chain directly (only its hash as part of a merkle root).
+    // ABI encoding uses full 32-byte slots regardless, so we prioritize readability.
+    // solhint-disable-next-line gas-struct-packing
     struct InitiatorConfig {
         bool anyInitiator;
         ApproverType initiatorType;
@@ -208,7 +200,7 @@ library Policies {
     }
 
     /**
-     * @notice Time-based limit configuration - defines rate limiting rules
+     * @dev Time-based limit configuration - defines rate limiting rules
      * @dev Controls how frequently transactions can occur and cumulative limits
      * @param limitation The type of limitation (None, SingleTransaction, TimeInterval)
      * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
@@ -227,7 +219,7 @@ library Policies {
     }
 
     /**
-     * @notice Main policy configuration - the complete set of policy rules
+     * @dev Main policy configuration - the complete set of policy rules
      * @dev This struct contains all the configuration that defines a policy's behavior.
      *      Replaces the previous packed uint256 approach for improved readability.
      * @param transactionType What types of transactions this policy applies to
@@ -251,7 +243,7 @@ library Policies {
     }
 
     /**
-     * @notice Merkle roots for policy-specific address and function lists
+     * @dev Merkle roots for policy-specific address and function lists
      * @dev These roots allow policies to reference large lists of addresses/functions
      *      without storing them on-chain. The actual lists are provided in calldata
      *      and verified via merkle proofs.
@@ -277,12 +269,8 @@ library Policies {
         PolicyRoots roots;
     }
 
-    // ================================
-    // MEMBERSHIP PROOF STRUCTURES
-    // ================================
-
     /**
-     * @notice Data needed to identify and verify a group
+     * @dev Data needed to identify and verify a group
      * @dev Groups are stored in a merkle tree where each leaf is hash(groupId, groupMembersRoot)
      * @param groupId The unique identifier for the group
      * @param groupMembersRoot The merkle root of all member addresses in this group
@@ -293,7 +281,7 @@ library Policies {
     }
 
     /**
-     * @notice Proofs needed to verify an initiator's authorization
+     * @dev Proofs needed to verify an initiator's authorization
      * @dev Contains proofs for both organization membership and optional group membership
      * @param initiatorInOrgMembersTreeProof Merkle proof that the initiator address is in the organization's
      * membersRoot
@@ -309,7 +297,7 @@ library Policies {
     }
 
     /**
-     * @notice Proofs needed to verify approvers' authorization
+     * @dev Proofs needed to verify approvers' authorization
      * @dev Contains per-signer proofs for organization membership and optional group membership.
      *      Arrays are indexed by signer position (same order as signatures).
      * @param approverInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's
@@ -325,10 +313,6 @@ library Policies {
         bytes32[][] memberInGroupProofs;
     }
 
-    // ================================
-    // VALIDATION PROOFS
-    // ================================
-
     /**
      * @notice All proofs needed to validate a transaction against a policy
      * @dev Bundled together to simplify function signatures and reduce stack depth
@@ -337,8 +321,7 @@ library Policies {
      * @param sourceAccountProof Proof that source account is allowed by policy
      * @param destinationProof Proof that destination is allowed by policy
      * @param functionProof Proof that function selector is allowed by policy
-     * @param constraints ABI-encoded parameter constraints for function calls
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
+     * @param constraints ABI-encoded parameter constraints for function calls (includes proofs for OneOf constraints)
      * @param initiatorProofs Proofs for initiator membership verification
      * @param approverProofs Proofs for approver membership verification
      */
@@ -349,23 +332,12 @@ library Policies {
         bytes32[] destinationProof;
         bytes32[] functionProof;
         bytes constraints;
-        // Merkle proofs for address parameters with List constraints.
-        // This is bytes32[][] because:
-        // - Outer array: One element per parameter that has a List constraint (a function
-        //   can have multiple address parameters, each with their own allowed addresses tree)
-        // - Inner array: The merkle proof itself (array of sibling hashes from leaf to root)
-        bytes32[][] addressParameterProofs;
-        // Membership proofs for initiator and approvers
         InitiatorProofs initiatorProofs;
         ApproverProofs approverProofs;
     }
 
-    // ================================
-    // FUNCTION LEAF STRUCTURE
-    // ================================
-
     /**
-     * @notice Structure for function selector leaves in the allowed functions merkle tree
+     * @dev Structure for function selector leaves in the allowed functions merkle tree
      * @dev Each allowed function has a selector and optional parameter constraints
      * @param selector The 4-byte function selector
      * @param constraintsHash Hash of the parameter constraints for this function

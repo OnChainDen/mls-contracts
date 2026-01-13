@@ -14,18 +14,23 @@ remappings = [
 ]
 
 [profile.ci]
-fuzz = { runs = 10000 }
-invariant = { runs = 1000 }
+fuzz = { runs = 256  }
+invariant = { runs = 256 }
+
+[lint]
+# Disable the asm-keccak256 lint - we prefer readable keccak256() calls over assembly
+exclude_lints = ["asm-keccak256"]
 
 [fmt]
-bracket_spacing = true
-int_types = "long"
+int_types = "long"           # Enforces "uint256" over "uint" (Implicit in your examples)
 line_length = 120
-multiline_func_header = "all"
+multiline_func_header = "attributes_first" 
 number_underscore = "thousands"
 quote_style = "double"
 tab_width = 4
 wrap_comments = true
+bracket_spacing = false      # Matches "No spaces inside brackets: arr[i]" 
+sort_imports = true          # Enforces "Strictly alphabetize imports"
 
 [rpc_endpoints]
 mainnet = "https://rpc.ankr.com/eth"

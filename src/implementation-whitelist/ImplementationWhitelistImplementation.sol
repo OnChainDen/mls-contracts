@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IImplementationWhitelist } from "./interfaces/IImplementationWhitelist.sol";
-import { LibImplementationWhitelistStorage } from "./libraries/LibImplementationWhitelistStorage.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
+import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWhitelistStorage.sol";
 
 /**
  * @title Implementation Whitelist
  * @notice Contract for managing whitelisted implementation addresses
  * @author Den Technologies Inc
  */
-contract ImplementationWhitelist is Initializable, UUPSUpgradeable, Ownable, IImplementationWhitelist {
+contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable, Ownable, IImplementationWhitelist {
     /**
      * @notice Emitted when an implementation is whitelisted
      * @param contractType The type of contract (Account or Organization)
@@ -36,26 +37,8 @@ contract ImplementationWhitelist is Initializable, UUPSUpgradeable, Ownable, IIm
      * @notice Initialize the implementation whitelist
      * @param initialOwner The initial owner address
      */
-    function initialize(address initialOwner) public initializer {
+    function initialize(address initialOwner) external initializer {
         _transferOwnership(initialOwner);
-    }
-
-    /**
-     * @notice Validates that an implementation address is whitelisted
-     * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address to validate
-     * @return True if the implementation is whitelisted, false otherwise
-     */
-    function validateImplementation(
-        ContractType contractType,
-        address implementation
-    )
-        external
-        view
-        override
-        returns (bool)
-    {
-        return LibImplementationWhitelistStorage.layout().whitelisted[contractType][implementation];
     }
 
     /**
@@ -68,26 +51,55 @@ contract ImplementationWhitelist is Initializable, UUPSUpgradeable, Ownable, IIm
         ContractType contractType,
         address[] calldata toWhitelist,
         address[] calldata toUnwhitelist
-    )
-        external
-        onlyOwner
-    {
+    ) external onlyOwner {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
-        for (uint256 i = 0; i < toWhitelist.length; i++) {
+        for (uint256 i = 0; i < toWhitelist.length; ++i) {
             storageLayout.whitelisted[contractType][toWhitelist[i]] = true;
             emit ImplementationWhitelisted(contractType, toWhitelist[i]);
         }
 
-        for (uint256 i = 0; i < toUnwhitelist.length; i++) {
+        for (uint256 i = 0; i < toUnwhitelist.length; ++i) {
             storageLayout.whitelisted[contractType][toUnwhitelist[i]] = false;
             emit ImplementationUnwhitelisted(contractType, toUnwhitelist[i]);
         }
     }
 
     /**
+     * @notice Checks if an implementation address is whitelisted
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementation The implementation address to check
+     * @return True if the implementation is whitelisted, false otherwise
+     */
+    function isImplementationWhitelisted(ContractType contractType, address implementation)
+        external
+        view
+        override
+        returns (bool)
+    {
+        return LibImplementationWhitelistStorage.layout().whitelisted[contractType][implementation];
+    }
+
+    /**
+     * @notice Validates that an implementation address is whitelisted, reverts if not
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementation The implementation address to check
+     */
+    function validateIsImplementationWhitelistedOrRevert(ContractType contractType, address implementation)
+        external
+        view
+        override
+    {
+        if (!LibImplementationWhitelistStorage.layout().whitelisted[contractType][implementation]) {
+            revert ImplementationNotWhitelisted(implementation);
+        }
+    }
+
+    /**
      * @notice Authorize an upgrade
+     * @dev This function is empty because the onlyOwner modifier ensures that only the owner can upgrade
      * @param newImplementation The new implementation address
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
 }

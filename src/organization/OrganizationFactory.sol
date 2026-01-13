@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "./OrganizationProxy.sol";
-import "./OrganizationImplementation.sol";
-import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
-import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import { InitializationParams } from "../interfaces/IOrganization.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+
+import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
+import {InitializationParams} from "../interfaces/IOrganization.sol";
+
+import {OrganizationImplementation} from "./OrganizationImplementation.sol";
+import {OrganizationProxy} from "./OrganizationProxy.sol";
+import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
 
 /**
  * @title Organization Factory
@@ -16,7 +19,7 @@ contract OrganizationFactory {
     /**
      * @notice The address authorized to deploy organization proxies
      */
-    address public immutable deployerAddress;
+    address public immutable DEPLOYER_ADDRESS;
 
     /**
      * @notice Emitted when a new organization proxy is deployed
@@ -29,21 +32,24 @@ contract OrganizationFactory {
     );
 
     /**
-     * @notice Error thrown when deployment fails
-     */
-    error DeploymentFailed();
-
-    /**
      * @notice Error thrown when the deployed address does not match the computed address
      */
     error DeploymentAddressMismatch();
+
+    /**
+     * @notice Error thrown when a zero address is provided where a valid address is required
+     */
+    error ZeroAddress();
 
     /**
      * @notice Constructor to set the deployer address
      * @param _deployerAddress The address authorized to deploy organization proxies
      */
     constructor(address _deployerAddress) {
-        deployerAddress = _deployerAddress;
+        if (_deployerAddress == address(0)) {
+            revert ZeroAddress();
+        }
+        DEPLOYER_ADDRESS = _deployerAddress;
     }
 
     /**
@@ -53,54 +59,41 @@ contract OrganizationFactory {
      * @param salt The salt for CREATE2 deployment
      * @param implementationAddress The address of the OrganizationImplementation contract
      * @param whitelistAddress The address of the implementation whitelist contract
-     * @param params The initialization parameters for the organization
+     * @param initParams The initialization parameters for the organization
      * @return organizationAddress The address of the deployed organization proxy
      */
     function deployOrganization(
         bytes32 salt,
         address implementationAddress,
         address whitelistAddress,
-        InitializationParams calldata params
-    )
-        external
-        returns (address organizationAddress)
-    {
+        InitializationParams calldata initParams
+    ) external returns (address organizationAddress) {
         // Only the authorized deployer can deploy organizations
-        if (msg.sender != deployerAddress) {
+        if (msg.sender != DEPLOYER_ADDRESS) {
             revert LibOrganizationInitialization.UnauthorizedDeployer();
         }
 
         // Validate that the implementation is whitelisted
-        if (
-            !IImplementationWhitelist(whitelistAddress).validateImplementation(
+        IImplementationWhitelist(whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(
                 IImplementationWhitelist.ContractType.Organization, implementationAddress
-            )
-        ) {
-            revert OrganizationImplementation.ImplementationNotWhitelisted(implementationAddress);
-        }
+            );
+
+        bytes memory bytecode = _getOrganizationProxyBytecode(implementationAddress, whitelistAddress);
 
         // Deploy the organization proxy using CREATE2
-        bytes memory bytecode =
-            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
+        organizationAddress = Create2.deploy(0, salt, bytecode);
 
-        assembly {
-            organizationAddress := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
-        }
-
-        // Check if deployment was successful
-        if (organizationAddress == address(0)) {
-            revert DeploymentFailed();
-        }
-
-        // Check if the deployed address matches the computed address
+        // Case: The deployed address does not match the address we expected
         if (organizationAddress != computeOrganizationAddress(salt, implementationAddress, whitelistAddress)) {
             revert DeploymentAddressMismatch();
         }
 
-        // Initialize the organization atomically - reverts the entire transaction if initialization fails
-        OrganizationImplementation(organizationAddress).initialize(params);
+        // Emit event before external call (CEI pattern) - if initialize fails, transaction reverts
+        emit OrganizationDeployed(organizationAddress, salt, DEPLOYER_ADDRESS);
 
-        emit OrganizationDeployed(organizationAddress, salt, deployerAddress);
+        // Initialize the organization atomically - reverts the entire transaction if initialization fails
+        OrganizationImplementation(organizationAddress).initialize(initParams);
     }
 
     /**
@@ -110,20 +103,28 @@ contract OrganizationFactory {
      * @param whitelistAddress The address of the implementation whitelist contract
      * @return The computed address
      */
-    function computeOrganizationAddress(
-        bytes32 salt,
-        address implementationAddress,
-        address whitelistAddress
-    )
+    function computeOrganizationAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
         public
         view
         returns (address)
     {
-        bytes memory bytecode =
+        return Create2.computeAddress(
+            salt, keccak256(_getOrganizationProxyBytecode(implementationAddress, whitelistAddress))
+        );
+    }
+
+    /// @dev Returns the creation bytecode for deploying an OrganizationProxy
+    /// @param implementationAddress The address of the OrganizationImplementation contract
+    /// @param whitelistAddress The address of the implementation whitelist contract
+    /// @return bytecode The creation bytecode to deploy via CREATE2
+    function _getOrganizationProxyBytecode(address implementationAddress, address whitelistAddress)
+        private
+        pure
+        returns (bytes memory bytecode)
+    {
+        // Generate the bytecode to deploy the OrganizationProxy (which is a ERC1967Proxy)
+        // with the OrganizationImplementation as the implementation and the whitelist address
+        return
             abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
-
-        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
-
-        return address(uint160(uint256(hash)));
     }
 }

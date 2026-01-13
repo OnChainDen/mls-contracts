@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Merkle Utils
- * @notice Shared utility library for merkle tree leaf computation
+ * @dev Shared utility library for merkle tree leaf computation
  * @dev Provides standardized leaf computation using double hashing for security against second preimage attacks
  * @author Den Technologies Inc
  */
 library MerkleUtils {
     /**
-     * @notice Computes the merkle leaf for an address
+     * @dev Computes the merkle leaf for an address
      * @dev Uses double hashing (hash of hash) for security against second preimage attacks
      * @param addr The address to compute the leaf for
      * @return The computed merkle leaf

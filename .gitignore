@@ -21,9 +21,6 @@ instructions.md
 # VSCode
 .vscode/
 
-# Git
-.github
-
 # Custom local scripts
 generate_code_screenshots.sh
 code_images/
@@ -31,3 +28,6 @@ code_images/
 # MacOS metadata
 .DS_Store
 .hypothesis/
+
+# Node
+node_modules/

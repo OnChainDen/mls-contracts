@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Script, console } from "forge-std/Script.sol";
-import { ImplementationWhitelist } from "../src/implementation-whitelist/ImplementationWhitelist.sol";
-import { IImplementationWhitelist } from "../src/implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import { OrganizationImplementation } from "../src/organization/OrganizationImplementation.sol";
-import { AccountImplementation } from "../src/account/AccountImplementation.sol";
-import { OrganizationFactory } from "../src/organization/OrganizationFactory.sol";
+import {AccountImplementation} from "../src/account/AccountImplementation.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "../src/implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {IImplementationWhitelist} from "../src/implementation-whitelist/interfaces/IImplementationWhitelist.sol";
+import {OrganizationFactory} from "../src/organization/OrganizationFactory.sol";
+import {OrganizationImplementation} from "../src/organization/OrganizationImplementation.sol";
+import {Script, console} from "forge-std/Script.sol";
 
 /**
  * @title Deploy Contracts
@@ -14,6 +16,12 @@ import { OrganizationFactory } from "../src/organization/OrganizationFactory.sol
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
+    /**
+     * @notice Deploys all core contracts for the onchain custody system
+     * @dev Deploys in order: ImplementationWhitelistImplementation, OrganizationImplementation,
+     *      AccountImplementation, whitelists the implementations, and deploys OrganizationFactory.
+     *      Requires PRIVATE_KEY environment variable to be set.
+     */
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
@@ -22,10 +30,10 @@ contract DeployContracts is Script {
 
         console.log("Deploying contracts with deployer:", deployer);
 
-        // Deploy ImplementationWhitelist
-        ImplementationWhitelist whitelist = new ImplementationWhitelist();
+        // Deploy ImplementationWhitelistImplementation
+        ImplementationWhitelistImplementation whitelist = new ImplementationWhitelistImplementation();
         whitelist.initialize(deployer);
-        console.log("ImplementationWhitelist deployed at:", address(whitelist));
+        console.log("ImplementationWhitelistImplementation deployed at:", address(whitelist));
 
         // Deploy OrganizationImplementation
         OrganizationImplementation organizationImplementation = new OrganizationImplementation();

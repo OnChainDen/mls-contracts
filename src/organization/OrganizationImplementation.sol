@@ -1,28 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { UUPSUpgradeable } from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import { IBeacon } from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
-import { LibOrganizationMembers } from "./libraries/LibOrganizationMembers.sol";
-import { LibOrganizationGroups } from "./libraries/LibOrganizationGroups.sol";
-import { LibOrganizationPolicy } from "./libraries/LibOrganizationPolicy.sol";
-import { LibOrganizationAdmin } from "./libraries/LibOrganizationAdmin.sol";
-import { LibOrganizationGuardian } from "./libraries/LibOrganizationGuardian.sol";
-import { LibOrganizationAccountFactory } from "./libraries/LibOrganizationAccountFactory.sol";
-import { LibOrganizationAccountFactoryStorage } from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
-import { LibOrganizationInitialization } from "./libraries/LibOrganizationInitialization.sol";
-import { LibOrganizationSignatures } from "./libraries/LibOrganizationSignatures.sol";
-import { LibOrganizationAccountTransaction } from "./libraries/LibOrganizationAccountTransaction.sol";
-import { LibOrganizationAccountSignature } from "./libraries/LibOrganizationAccountSignature.sol";
-import { LibOrganizationAdminStorage } from "./libraries/storage/LibOrganizationAdminStorage.sol";
-import { LibOrganizationPolicyStorage } from "./libraries/storage/LibOrganizationPolicyStorage.sol";
-import { OperationType, InitializationParams, IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
-import { Policies } from "../libraries/Policies.sol";
-import { IUpgradeable } from "../interfaces/IUpgradeable.sol";
-import { IImplementationWhitelist } from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import { IAccountExecute } from "../account/interfaces/IAccountExecute.sol";
-import { UpgradeAuthorizationStorage } from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
+import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
+
+import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
+import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
+import {IOrganizationSignatureValidator, InitializationParams, OperationType} from "../interfaces/IOrganization.sol";
+import {IUpgradeable} from "../interfaces/IUpgradeable.sol";
+import {Policies} from "../libraries/Policies.sol";
+
+import {UpgradeAuthorizationStorage} from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
+import {LibOrganizationAccountFactory} from "./libraries/LibOrganizationAccountFactory.sol";
+import {LibOrganizationAccountSignature} from "./libraries/LibOrganizationAccountSignature.sol";
+import {LibOrganizationAccountTransaction} from "./libraries/LibOrganizationAccountTransaction.sol";
+import {LibOrganizationAdmin} from "./libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationGroups} from "./libraries/LibOrganizationGroups.sol";
+import {LibOrganizationGuardian} from "./libraries/LibOrganizationGuardian.sol";
+import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
+import {LibOrganizationMembers} from "./libraries/LibOrganizationMembers.sol";
+import {LibOrganizationPolicy} from "./libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "./libraries/LibOrganizationSignatures.sol";
+import {LibOrganizationAccountFactoryStorage} from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+
+import {LibOrganizationAdminStorage} from "./libraries/storage/LibOrganizationAdminStorage.sol";
+import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationPolicyStorage.sol";
 
 /**
  * @title Organization Implementation
@@ -65,13 +70,6 @@ contract OrganizationImplementation is
     );
 
     /**
-     * @notice Emitted when a transaction is rejected because of wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidChainId(uint256 expected, uint256 provided);
-
-    /**
      * @notice Emitted when the account implementation is updated (affects all accounts via beacon)
      * @param newImplementation The new implementation address for all accounts
      */
@@ -86,15 +84,24 @@ contract OrganizationImplementation is
     event AdminOperationRejected(OperationType indexed operationType, bytes operationData, uint256 indexed nonce);
 
     /**
-     * @notice Emitted when an implementation is not whitelisted
-     * @param implementation The implementation address that was not whitelisted
+     * @notice Emitted when a transaction is rejected because of wrong chain ID
+     * @param expected The expected chain ID
+     * @param provided The provided chain ID
      */
-    error ImplementationNotWhitelisted(address implementation);
+    error InvalidChainId(uint256 expected, uint256 provided);
 
     /**
-     * @notice Emitted when the account implementation has not been set
+     * @notice Thrown when the account implementation has not been set
      */
     error AccountImplementationNotSet();
+
+    /**
+     * @notice Emitted when someone tries to call upgradeToAndCall directly without going through
+     *         the authorized upgrade flow (upgradeToAndCallWithAuthorization)
+     * @dev This protects against attackers bypassing admin signature validation by calling
+     *      the inherited public upgradeToAndCall function directly on the proxy
+     */
+    error UnauthorizedUpgrade();
 
     /**
      * @notice Modifier that enforces only the guardian can call the function
@@ -120,284 +127,66 @@ contract OrganizationImplementation is
         LibOrganizationInitialization.initialize(params);
     }
 
-    // ================================
-    // LibOrganizationMembers wrappers
-    // ================================
-
     /**
-     * @notice Returns the current members merkle root
-     * @return The members merkle root
-     */
-    function membersRoot() external view returns (bytes32) {
-        return LibOrganizationMembers.getMembersRoot();
-    }
-
-    /**
-     * @notice Verifies that an address is a member of the organization
-     * @param memberAddress The address to verify
-     * @param proof The merkle proof for the address
-     * @return True if the address is a verified member, false otherwise
-     */
-    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
-        return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
-    }
-
-    /**
-     * @notice Updates the global members merkle root
-     * @dev This is the only way to modify members. All member data is stored off-chain (IPFS).
-     *      Validates that all admins remain members in the new tree to prevent bricking.
-     * @param newMembersRoot The new merkle root containing all members
-     * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
-     * @param adminValidation The validation data to verify all admins are in the new members tree
-     */
-    function modifyMembers(
-        bytes32 newMembersRoot,
-        string calldata ipfsCid,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs,
-        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
-    )
-        external
-        onlyGuardian
-    {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
-
-        // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyMembers, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
-
-        LibOrganizationMembers.modifyMembers(newMembersRoot, ipfsCid, adminValidation);
-    }
-
-    // ================================
-    // LibOrganizationGroups wrappers
-    // ================================
-
-    /**
-     * @notice Returns the current groups merkle root
-     * @return The groups merkle root
-     */
-    function groupsRoot() external view returns (bytes32) {
-        return LibOrganizationGroups.getGroupsRoot();
-    }
-
-    /**
-     * @notice Verifies that a group exists in the organization
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof for the group
-     * @return True if the group exists, false otherwise
-     */
-    function isGroupInOrg(
-        Policies.GroupData calldata groupData,
-        bytes32[] calldata groupInOrgGroupsTreeProof
-    )
-        external
-        view
-        returns (bool)
-    {
-        return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
-    }
-
-    /**
-     * @notice Verifies complete group membership (group exists AND member is in group)
-     * @param memberAddress The address to verify
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
-     * @param memberInGroupProof The merkle proof that the member is in the group
-     * @return True if both verifications pass, false otherwise
-     */
-    function isMemberInGroupAndGroupInOrg(
-        address memberAddress,
-        Policies.GroupData calldata groupData,
-        bytes32[] calldata groupInOrgGroupsTreeProof,
-        bytes32[] calldata memberInGroupProof
-    )
-        external
-        view
-        returns (bool)
-    {
-        return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
-            memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
-        );
-    }
-
-    /**
-     * @notice Updates the global groups merkle root
-     * @dev This is the only way to modify groups. All group data is stored off-chain (IPFS).
-     * @param newGroupsRoot The new merkle root containing all groups
-     * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function modifyGroups(
-        bytes32 newGroupsRoot,
-        string calldata ipfsCid,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
-
-        // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyGroups, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
-
-        LibOrganizationGroups.modifyGroups(newGroupsRoot, ipfsCid);
-    }
-
-    // ================================
-    // LibOrganizationPolicy wrappers
-    // ================================
-
-    /**
-     * @notice Returns the current global policies merkle root
-     * @return The policies merkle root
-     */
-    function policiesRoot() external view returns (bytes32) {
-        return LibOrganizationPolicyStorage.layout().policiesRoot;
-    }
-
-    /**
-     * @notice Updates the global policies merkle root
-     * @dev This is the only way to modify policies. All policy data is stored off-chain (IPFS).
-     * @param newPoliciesRoot The new merkle root containing all policies
-     * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function modifyPolicies(
-        bytes32 newPoliciesRoot,
-        string calldata ipfsCid,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
-        // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
-
-        // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyPolicies, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
-
-        LibOrganizationPolicy.modifyPolicies(newPoliciesRoot, ipfsCid);
-    }
-
-    /**
-     * @notice Gets the current usage for a time-based policy within the current time window
-     * @param policyId The ID of the policy
-     * @param policy The policy data (from calldata)
-     * @param account The source account address
-     * @param destination The destination address
-     * @param initiator The initiator address
-     * @param policyProof The merkle proof verifying the policy exists
-     * @return The current usage amount within the current time window
-     */
-    function getPolicyUsage(
-        uint256 policyId,
-        Policies.Policy calldata policy,
-        address account,
-        address destination,
-        address initiator,
-        bytes32[] calldata policyProof
-    )
-        external
-        view
-        returns (uint256)
-    {
-        // Verify policy exists in merkle tree
-        if (!LibOrganizationPolicy.policyExists(policyId, policy, policyProof)) {
-            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
-        }
-
-        return LibOrganizationPolicy.getCurrentUsage(policyId, policy, account, destination, initiator);
-    }
-
-    // ================================
-    // LibOrganizationAdmin wrappers
-    // ================================
-
-    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdmin.adminPermission();
-    }
-
-    function isNonceUsed(uint256 nonce) external view returns (bool) {
-        return LibOrganizationSignatures.isNonceUsed(nonce);
-    }
-
-    function computeNonce(
-        OperationType operationType,
-        bytes memory operationData,
-        uint256 salt
-    )
-        external
-        view
-        returns (uint256)
-    {
-        return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
-    }
-
-    /**
-     * @notice Updates the admin permissions for the organization
+     * @notice Sets the admin permissions for the organization
      * @dev Validates that all new admins are current members before updating.
      * @param newAdminsRoot The new merkle root of admin addresses
      * @param newAdminCount The number of admins in the new tree
      * @param newVotingThreshold The new voting threshold
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this update
-     * @param adminProofs The Merkle proofs for admin membership verification
-     * @param adminValidation The validation data to verify all new admins are members
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     * @param newAdminsInOrgProofs Proofs that all new admins are in the organization (admin tree and members tree)
      */
-    function modifyAdmins(
+    function setAdmins(
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs,
-        LibOrganizationAdmin.AdminMembershipValidation calldata adminValidation
-    )
-        external
-        onlyGuardian
-    {
+        LibOrganizationAdmin.AdminAuthParams calldata authParams,
+        LibOrganizationAdmin.AllAdminsInOrgProofs calldata newAdminsInOrgProofs
+    ) external onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.ModifyAdmins, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
 
         // Get current members root for validation
         bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
 
-        LibOrganizationAdmin.modifyAdmins(
-            newAdminsRoot, newAdminCount, newVotingThreshold, adminValidation, currentMembersRoot
-        );
+        LibOrganizationAdmin.setAdmins({
+            newAdminsRoot: newAdminsRoot,
+            newAdminCount: newAdminCount,
+            newVotingThreshold: newVotingThreshold,
+            newAdminsInOrgProofs: newAdminsInOrgProofs,
+            currentMembersRoot: currentMembersRoot
+        });
+    }
+
+    /**
+     * @notice Sets a new guardian address for the organization
+     * @param newGuardian The address of the new guardian
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     */
+    function setGuardian(address newGuardian, LibOrganizationAdmin.AdminAuthParams calldata authParams)
+        external
+        onlyGuardian
+    {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newGuardian);
+
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.UpdateGuardian,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        LibOrganizationGuardian.setGuardian(newGuardian);
     }
 
     /**
@@ -406,145 +195,113 @@ contract OrganizationImplementation is
      *      by consuming its nonce without executing the operation logic
      * @param operationType The type of admin operation to reject
      * @param operationData The ABI-encoded data of the operation
-     * @param salt The user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this rejection
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
     function rejectAdminOperation(
         OperationType operationType,
         bytes calldata operationData,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
+    ) external onlyGuardian {
         // Compute nonce for this operation
-        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+        uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            operationType, operationData, salt, expirationTimestamp, false, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: operationType, operationData: operationData, isApproval: false, authParams: authParams
+        });
 
         emit AdminOperationRejected(operationType, operationData, nonce);
     }
 
-    // ================================
-    // LibOrganizationGuardian wrappers
-    // ================================
-
-    function enforceOnlyGuardian() external view {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-    }
-
-    function guardian() external view returns (address) {
-        return LibOrganizationGuardian.guardian();
-    }
-
-    function updateGuardian(
-        address newGuardian,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
+    /**
+     * @notice Updates the global members merkle root
+     * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
+     *      Validates that all admins remain members in the new tree to prevent bricking.
+     * @param newMembersRoot The new merkle root containing all members
+     * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     * @param allAdminsInOrgProofs Proofs that all admins are in the new members tree
+     */
+    function setMembers(
+        bytes32 newMembersRoot,
+        string calldata ipfsCid,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams,
+        LibOrganizationAdmin.AllAdminsInOrgProofs calldata allAdminsInOrgProofs
+    ) external onlyGuardian {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newGuardian);
+        bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.UpdateGuardian, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyMembers,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
 
-        LibOrganizationGuardian.updateGuardian(newGuardian);
-    }
-
-    // ================================
-    // IBeacon interface (for Account BeaconProxies)
-    // ================================
-
-    /**
-     * @notice Returns the current implementation address for all Account BeaconProxies
-     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
-     * @return The current account implementation address
-     */
-    function implementation() external view override returns (address) {
-        address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
-        if (impl == address(0)) {
-            revert AccountImplementationNotSet();
-        }
-        return impl;
+        LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, allAdminsInOrgProofs);
     }
 
     /**
-     * @notice Sets the account implementation address (upgrades all accounts at once)
-     * @dev This function updates the implementation for all Account BeaconProxies
-     * @param newImplementation The new implementation address
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @notice Updates the global groups merkle root
+     * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
+     * @param newGroupsRoot The new merkle root containing all groups
+     * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setAccountImplementation(
-        address newImplementation,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
-        // 1. Validate admin authorization (isApproval = true for execution)
-        bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.UpgradeAccount, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
+    function setGroups(
+        bytes32 newGroupsRoot,
+        string calldata ipfsCid,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
+    ) external onlyGuardian {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
 
-        // 2. Validate implementation against whitelist
-        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        if (
-            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
-                IImplementationWhitelist.ContractType.Account, newImplementation
-            )
-        ) {
-            revert ImplementationNotWhitelisted(newImplementation);
-        }
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyGroups,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
 
-        // 3. Update the account implementation in storage
-        LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
-
-        emit AccountImplementationUpdated(newImplementation);
+        LibOrganizationGroups.setGroups(newGroupsRoot, ipfsCid);
     }
 
-    // ================================
-    // LibOrganizationAccountFactory wrappers
-    // ================================
+    /**
+     * @notice Updates the global policies merkle root
+     * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
+     * @param newPoliciesRoot The new merkle root containing all policies
+     * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     */
+    function setPolicies(
+        bytes32 newPoliciesRoot,
+        string calldata ipfsCid,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
+    ) external onlyGuardian {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
+
+        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyPolicies,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        LibOrganizationPolicy.setPolicies(newPoliciesRoot, ipfsCid);
+    }
 
     /**
      * @notice Deploys a new Account BeaconProxy at a deterministic address
      * @dev The account uses this Organization as its beacon
      * @param create2Salt The salt for CREATE2 deployment
-     * @param adminSignatureSalt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this deployment
-     * @param adminProofs The Merkle proofs for admin membership verification
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      * @return The address of the deployed account proxy
      */
-    function deployAccount(
-        bytes32 create2Salt,
-        uint256 adminSignatureSalt,
-        uint256 expirationTimestamp,
-        bytes memory signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
+    function deployAccount(bytes32 create2Salt, LibOrganizationAdmin.AdminAuthParams calldata authParams)
         external
         onlyGuardian
         returns (address)
@@ -553,31 +310,48 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(create2Salt);
 
         // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.DeployAccount,
-            operationData,
-            adminSignatureSalt,
-            expirationTimestamp,
-            true,
-            signatures,
-            adminProofs
-        );
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.DeployAccount,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
 
         return LibOrganizationAccountFactory.deployAccount(create2Salt);
     }
 
     /**
-     * @notice Computes the address where an account proxy would be deployed
-     * @param salt The salt for CREATE2 deployment
-     * @return The computed address
+     * @notice Sets the account implementation address (upgrades all accounts at once)
+     * @dev This function updates the implementation for all Account BeaconProxies
+     * @param newImplementation The new implementation address
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function computeAccountAddress(bytes32 salt) external view returns (address) {
-        return LibOrganizationAccountFactory.computeAccountAddress(salt);
-    }
+    function setAccountImplementation(
+        address newImplementation,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
+    ) external onlyGuardian {
+        // 1. Validate admin authorization (isApproval = true for execution)
+        bytes memory operationData = abi.encode(newImplementation);
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.UpgradeAccount,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
 
-    // ================================
-    // LibOrganizationAccountTransaction wrappers
-    // ================================
+        // 2. Validate implementation against whitelist
+        // forgefmt: disable-next-item
+        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(
+                IImplementationWhitelist.ContractType.Account, 
+                newImplementation
+            );
+
+        // 3. Update the account implementation in storage
+        LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
+
+        emit AccountImplementationUpdated(newImplementation);
+    }
 
     /**
      * @notice Executes a transaction on an account through the organization
@@ -600,16 +374,11 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures,
+        bytes calldata signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
         // Encode operation data for nonce computation
         bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
@@ -618,17 +387,36 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
 
         // Validate and consume nonce (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+        // REPLAY PROTECTION: Nonce is consumed BEFORE the external call to prevent reentrancy.
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the transaction against the policy and signatures (with merkle proofs)
-        LibOrganizationAccountTransaction.validateTransactionApproval(
-            account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
-        );
+        LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            signatures: signatures,
+            proofs: proofs
+        });
+
+        // Emit event before external call (CEI pattern) - if execution fails, transaction reverts
+        emit AccountTransactionExecuted({
+            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
+        });
 
         // Execute the transaction on the account
-        IAccountExecute(account).executeTransaction(to, value, data, nonce, policyId);
-
-        emit AccountTransactionExecuted(account, to, value, data, nonce, policyId);
+        // forgefmt: disable-next-item
+        IAccountExecute(account).executeTransaction({
+            to: to,
+            value: value, 
+            data: data, 
+            nonce: nonce, 
+            policyId: policyId
+        });
     }
 
     /**
@@ -652,16 +440,11 @@ contract OrganizationImplementation is
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures,
+        bytes calldata signatures,
         Policies.ValidationProofs calldata proofs
-    )
-        external
-        onlyGuardian
-    {
+    ) external onlyGuardian {
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
         // Encode operation data for nonce computation (same as executeAccountTransaction)
         bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
@@ -670,19 +453,275 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
 
         // Validate and consume nonce (will revert if already used)
-        LibOrganizationSignatures.validateAndConsumeNonce(nonce);
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
         // Validate the rejection authorization (with merkle proofs)
-        LibOrganizationAccountTransaction.validateTransactionRejection(
-            account, to, value, data, salt, expirationTimestamp, policyId, signatures, proofs
-        );
+        LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            signatures: signatures,
+            proofs: proofs
+        });
 
-        emit AccountTransactionRejected(account, to, value, data, nonce, policyId);
+        emit AccountTransactionRejected({
+            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
+        });
     }
 
-    // ================================
-    // IOrganizationSignatureValidator interface (ERC-1271)
-    // ================================
+    /**
+     * @notice Upgrade the organization implementation to a new address and optionally call a function
+     * @dev This is the ONLY authorized way to upgrade this contract. Direct calls to the inherited
+     *      `upgradeToAndCall` function will revert with `UnauthorizedUpgrade`.
+     *
+     *      SECURITY MODEL:
+     *      1. Guardian must submit the transaction (onlyGuardian modifier)
+     *      2. Admin(s) must have signed the upgrade (validated via LibOrganizationAdmin)
+     *      3. New implementation must be on the whitelist (validated via IImplementationWhitelist)
+     *      4. A storage flag is set to authorize the subsequent _authorizeUpgrade call
+     *      5. The flag is reset after the upgrade completes (or if it reverts, the tx reverts entirely)
+     *
+     *      WHY THE AUTHORIZATION FLAG?
+     *      OpenZeppelin's UUPSUpgradeable exposes a public `upgradeToAndCall` function that anyone
+     *      can call. The authorization is supposed to happen in `_authorizeUpgrade`, but that hook
+     *      only receives `newImplementation` - not our signatures/proofs. So we:
+     *      1. Validate everything here (guardian, signatures, whitelist)
+     *      2. Set a flag to signal "upgrade is authorized"
+     *      3. Call the inherited upgradeToAndCall
+     *      4. _authorizeUpgrade checks the flag and reverts if not set
+     *      5. Reset the flag after completion
+     *
+     *      The flag is safe because:
+     *      - It's set AFTER validation passes
+     *      - If upgradeToAndCall reverts, the entire transaction reverts (flag never persists)
+     *      - We explicitly reset it after success as defense-in-depth
+     *
+     * @param newImplementation The new implementation address (must be whitelisted)
+     * @param data Optional calldata to execute on the new implementation after upgrade.
+     *             Pass empty bytes ("") if no post-upgrade call is needed.
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     */
+    function upgradeToAndCallWithAuthorization(
+        address newImplementation,
+        bytes calldata data,
+        LibOrganizationAdmin.AdminAuthParams calldata authParams
+    ) external onlyGuardian {
+        // Validate admin authorization (isApproval = true for execution)
+        bytes memory operationData = abi.encode(newImplementation);
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
+        });
+
+        // Validate implementation against whitelist
+        // forgefmt: disable-next-item
+        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(
+                IImplementationWhitelist.ContractType.Organization,
+                newImplementation
+            );
+
+        // Set authorization flag in namespaced storage
+        // This flag tells _authorizeUpgrade that we've done proper validation.
+        // Using EIP-7201 namespaced storage to prevent slot collisions during upgrades.
+        LibOrganizationUpgradeStorage.layout().authorized = true;
+
+        // Perform the upgrade
+        // This calls the inherited UUPSUpgradeable.upgradeToAndCall which will:
+        // 1. Call _authorizeUpgrade (which checks our flag)
+        // 2. Upgrade the implementation
+        // 3. Optionally call `data` on the new implementation
+        upgradeToAndCall(newImplementation, data);
+
+        // Reset the flag (defense-in-depth)
+        // Even though the flag can't persist if the tx reverts, we reset it explicitly
+        // as a security best practice. This also protects against any theoretical
+        // scenario where the flag might persist.
+        LibOrganizationUpgradeStorage.layout().authorized = false;
+    }
+
+    /**
+     * @notice Returns the address that deployed this organization
+     * @return The deployer address
+     */
+    function getDeployerAddress() external view returns (address) {
+        return LibOrganizationInitialization.getDeployerAddress();
+    }
+
+    /**
+     * @notice Checks if the organization has been initialized
+     * @return True if initialized, false otherwise
+     */
+    function isInitialized() external view returns (bool) {
+        return LibOrganizationInitialization.isInitialized();
+    }
+
+    /**
+     * @notice Returns the current admin permission settings for the organization
+     * @return The admin permission configuration including admins root, count, and voting threshold
+     */
+    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
+        return LibOrganizationAdmin.getAdminPermission();
+    }
+
+    /**
+     * @notice Returns the current guardian address
+     * @return The address of the guardian
+     */
+    function guardian() external view returns (address) {
+        return LibOrganizationGuardian.getGuardian();
+    }
+
+    /**
+     * @notice Reverts if the caller is not the guardian
+     */
+    function enforceOnlyGuardian() external view {
+        LibOrganizationGuardian.enforceOnlyGuardian();
+    }
+
+    /**
+     * @notice Returns the current members merkle root
+     * @return The members merkle root
+     */
+    function membersRoot() external view returns (bytes32) {
+        return LibOrganizationMembers.getMembersRoot();
+    }
+
+    /**
+     * @notice Verifies that an address is a member of the organization
+     * @param memberAddress The address to verify
+     * @param proof The merkle proof for the address
+     * @return True if the address is a verified member, false otherwise
+     */
+    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
+        return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
+    }
+
+    /**
+     * @notice Returns the current groups merkle root
+     * @return The groups merkle root
+     */
+    function groupsRoot() external view returns (bytes32) {
+        return LibOrganizationGroups.getGroupsRoot();
+    }
+
+    /**
+     * @notice Verifies that a group exists in the organization
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupInOrgGroupsTreeProof The merkle proof for the group
+     * @return True if the group exists, false otherwise
+     */
+    function isGroupInOrg(Policies.GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
+        external
+        view
+        returns (bool)
+    {
+        return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
+    }
+
+    /**
+     * @notice Verifies complete group membership (group exists AND member is in group)
+     * @param memberAddress The address to verify
+     * @param groupData The group data containing groupId and groupMembersRoot
+     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
+     * @param memberInGroupProof The merkle proof that the member is in the group
+     * @return True if both verifications pass, false otherwise
+     */
+    function isMemberInGroupAndGroupInOrg(
+        address memberAddress,
+        Policies.GroupData calldata groupData,
+        bytes32[] calldata groupInOrgGroupsTreeProof,
+        bytes32[] calldata memberInGroupProof
+    ) external view returns (bool) {
+        return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
+            memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
+        );
+    }
+
+    /**
+     * @notice Returns the current global policies merkle root
+     * @return The policies merkle root
+     */
+    function policiesRoot() external view returns (bytes32) {
+        return LibOrganizationPolicyStorage.layout().policiesRoot;
+    }
+
+    /**
+     * @notice Gets the current usage for a time-based policy within the current time window
+     * @param policyId The ID of the policy
+     * @param policy The policy data (from calldata)
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @param policyProof The merkle proof verifying the policy exists
+     * @return The current usage amount within the current time window
+     */
+    function getPolicyUsage(
+        uint256 policyId,
+        Policies.Policy calldata policy,
+        address account,
+        address destination,
+        address initiator,
+        bytes32[] calldata policyProof
+    ) external view returns (uint256) {
+        // Verify policy exists in merkle tree
+        if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
+            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
+        }
+
+        return LibOrganizationPolicy.getCurrentUsage({
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
+        });
+    }
+
+    /**
+     * @notice Checks if a nonce has already been used
+     * @param nonce The nonce to check
+     * @return True if the nonce has been used, false otherwise
+     */
+    function isNonceUsed(uint256 nonce) external view returns (bool) {
+        return LibOrganizationSignatures.isNonceUsed(nonce);
+    }
+
+    /**
+     * @notice Computes the nonce for a given operation
+     * @param operationType The type of operation being performed
+     * @param operationData The ABI-encoded data of the operation
+     * @param salt A user-provided salt for nonce computation
+     * @return The computed nonce
+     */
+    function computeNonce(OperationType operationType, bytes calldata operationData, uint256 salt)
+        external
+        view
+        returns (uint256)
+    {
+        return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
+    }
+
+    /**
+     * @notice Returns the current implementation address for all Account BeaconProxies
+     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
+     * @return The current account implementation address
+     */
+    function implementation() external view override returns (address) {
+        address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
+        if (impl == address(0)) {
+            revert AccountImplementationNotSet();
+        }
+        return impl;
+    }
+
+    /**
+     * @notice Computes the address where an account proxy would be deployed
+     * @param salt The salt for CREATE2 deployment
+     * @return The computed address
+     */
+    function computeAccountAddress(bytes32 salt) external view returns (address) {
+        return LibOrganizationAccountFactory.computeAccountAddress(salt);
+    }
 
     /**
      * @notice Validates an ERC-1271 signature for a given account
@@ -696,11 +735,7 @@ contract OrganizationImplementation is
      * proofs)
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
-    function isValidSignatureForAccount(
-        address account,
-        bytes32 hash,
-        bytes memory signature
-    )
+    function isValidSignatureForAccount(address account, bytes32 hash, bytes calldata signature)
         external
         view
         override
@@ -712,118 +747,49 @@ contract OrganizationImplementation is
         }
 
         // Verify the account is deployed by this organization
-        if (!LibOrganizationAccountFactory.isAccountDeployed(account)) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
-        }
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
         return LibOrganizationAccountSignature.isValidSignature(account, hash, signature);
     }
 
-    // ================================
-    // LibOrganizationInitialization wrappers
-    // ================================
-
-    function getDeployerAddress() external view returns (address) {
-        return LibOrganizationInitialization.getDeployerAddress();
-    }
-
-    function isInitialized() external view returns (bool) {
-        return LibOrganizationInitialization.isInitialized();
-    }
-
-    // ================================
-    // IUpgradeable interface
-    // ================================
-
-    /**
-     * @notice Upgrade the implementation to a new address with authorization
-     * @param newImplementation The new implementation address
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function upgradeToWithAuthorization(
-        address newImplementation,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
-        _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
-        upgradeToAndCall(newImplementation, "");
-    }
-
-    /**
-     * @notice Upgrade the implementation to a new address and call a function with authorization
-     * @param newImplementation The new implementation address
-     * @param data The calldata to call on the new implementation
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function upgradeToAndCallWithAuthorization(
-        address newImplementation,
-        bytes memory data,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        external
-        onlyGuardian
-    {
-        _validateOrganizationUpgrade(newImplementation, salt, expirationTimestamp, signatures, adminProofs);
-        upgradeToAndCall(newImplementation, data);
-    }
-
-    /**
-     * @notice Validates organization upgrade authorization
-     * @dev Checks admin signatures and implementation whitelist
-     * @param newImplementation The new implementation address
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this upgrade
-     * @param adminProofs The Merkle proofs for admin membership verification
-     */
-    function _validateOrganizationUpgrade(
-        address newImplementation,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bytes calldata signatures,
-        LibOrganizationAdmin.AdminProofs calldata adminProofs
-    )
-        internal
-    {
-        // 1. Validate admin authorization (isApproval = true for execution)
-        bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorization(
-            OperationType.Upgrade, operationData, salt, expirationTimestamp, true, signatures, adminProofs
-        );
-
-        // 2. Validate implementation against whitelist
-        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        if (
-            !IImplementationWhitelist(upgradeAuthLayout.whitelistAddress).validateImplementation(
-                IImplementationWhitelist.ContractType.Organization, newImplementation
-            )
-        ) {
-            revert ImplementationNotWhitelisted(newImplementation);
-        }
-    }
-
     /**
      * @notice Authorize an upgrade (required by UUPSUpgradeable)
-     * @dev Authorization is handled by upgradeToWithAuthorization and upgradeToAndCallWithAuthorization
-     *      which validate signatures before calling upgradeToAndCall
-     * @param newImplementation The new implementation address (unused)
+     * @dev This function is called by the inherited `upgradeToAndCall` function from UUPSUpgradeable.
+     *      It acts as a gatekeeper to ensure upgrades only happen through our authorized flow.
+     *
+     *      SECURITY EXPLANATION:
+     *      OpenZeppelin's UUPSUpgradeable exposes a public `upgradeToAndCall(address, bytes)` function.
+     *      Without protection, an attacker could call this directly on the proxy, bypassing:
+     *      - Guardian check (onlyGuardian modifier)
+     *      - Admin signature validation
+     *      - Implementation whitelist check
+     *
+     *      Our solution uses a storage flag at a namespaced slot (EIP-7201):
+     *      - `upgradeToAndCallWithAuthorization` sets the flag AFTER validating everything
+     *      - This function checks that the flag is set
+     *      - Direct calls to `upgradeToAndCall` will not have the flag set → revert
+     *
+     *      WHY NAMESPACED STORAGE (EIP-7201)?
+     *      - Prevents storage slot collisions when upgrading contracts
+     *      - Safe even if new state variables are added in future implementations
+     *
+     *      WHY REGULAR STORAGE (not transient)?
+     *      We use regular storage instead of EIP-1153 transient storage for maximum EVM chain
+     *      compatibility. This allows deployment to chains that haven't adopted the Cancun upgrade.
+     *      The flag is explicitly reset after the upgrade completes as defense-in-depth.
+     *
+     * @param newImplementation The new implementation address (unused - validation already done)
      */
-    function _authorizeUpgrade(address newImplementation) internal override {
-        // Authorization is already validated by upgradeToWithAuthorization or upgradeToAndCallWithAuthorization
-        // before this function is called via upgradeToAndCall
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        // Silence unused variable warning - validation was already performed in
+        // upgradeToAndCallWithAuthorization before setting the authorization flag
+        (newImplementation);
+
+        // Check the authorization flag from namespaced storage
+        // If this is false, it means someone called upgradeToAndCall directly without
+        // going through upgradeToAndCallWithAuthorization
+        if (!LibOrganizationUpgradeStorage.layout().authorized) {
+            revert UnauthorizedUpgrade();
+        }
     }
 }

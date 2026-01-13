@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Test } from "forge-std/Test.sol";
-import { LibOrganizationPolicy } from "../src/organization/libraries/LibOrganizationPolicy.sol";
-import { Policies } from "../src/libraries/Policies.sol";
+import {Policies} from "../src/libraries/Policies.sol";
+import {LibOrganizationPolicy} from "../src/organization/libraries/LibOrganizationPolicy.sol";
+import {Test} from "forge-std/Test.sol";
 
 /**
  * @title Time-Based Policy Limits Test
@@ -275,11 +275,16 @@ contract TimeBasedPolicyLimitsTest is Test {
     // Helper Functions - Create policies using new struct format with Merkle-based members
     // ================================
 
-    function _createPolicy(
-        uint16 hours_,
-        uint256 limit,
-        Policies.PolicyLimitation limitationType
-    )
+    /**
+     * @notice Creates a base policy with the specified time-based limit configuration
+     * @dev Creates a policy with anySourceAccount, anyFunction, and anyDestination enabled.
+     *      Uses AutoApprove policy type with anyInitiator.
+     * @param hours_ The time interval in hours for the limit window
+     * @param limit The maximum usage allowed within the time interval
+     * @param limitationType The type of limitation (None, SingleTransaction, or TimeInterval)
+     * @return policy The constructed policy struct
+     */
+    function _createPolicy(uint16 hours_, uint256 limit, Policies.PolicyLimitation limitationType)
         internal
         pure
         returns (Policies.Policy memory policy)
@@ -323,16 +328,31 @@ contract TimeBasedPolicyLimitsTest is Test {
         policy.roots.allowedFunctionsRoot = bytes32(0);
     }
 
+    /**
+     * @notice Creates a policy with PerEntity source account scope
+     * @dev Limits are tracked separately per source account
+     * @return policy The constructed policy struct with source scope set to PerEntity
+     */
     function _createPolicyWithSourceScope() internal pure returns (Policies.Policy memory policy) {
         policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
         policy.config.timeLimit.sourceScope = Policies.TimeIntervalScope.PerEntity;
     }
 
+    /**
+     * @notice Creates a policy with PerEntity destination scope
+     * @dev Limits are tracked separately per destination address
+     * @return policy The constructed policy struct with destination scope set to PerEntity
+     */
     function _createPolicyWithDestScope() internal pure returns (Policies.Policy memory policy) {
         policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
         policy.config.timeLimit.destinationScope = Policies.TimeIntervalScope.PerEntity;
     }
 
+    /**
+     * @notice Creates a policy with PerEntity initiator scope
+     * @dev Limits are tracked separately per initiator address
+     * @return policy The constructed policy struct with initiator scope set to PerEntity
+     */
     function _createPolicyWithInitiatorScope() internal pure returns (Policies.Policy memory policy) {
         policy = _createPolicy(24, 1000, Policies.PolicyLimitation.TimeInterval);
         policy.config.timeLimit.initiatorScope = Policies.TimeIntervalScope.PerEntity;

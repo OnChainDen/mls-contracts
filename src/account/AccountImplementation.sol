@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibAccountOrganizationAddressStorage } from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
-import { INativeTokenReceivedEventEmitter } from "./interfaces/INativeTokenReceivedEventEmitter.sol";
-import { IOrganizationSignatureValidator } from "../interfaces/IOrganization.sol";
-import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
+import {IAccountExecute} from "./interfaces/IAccountExecute.sol";
+import {INativeTokenReceivedEventEmitter} from "./interfaces/INativeTokenReceivedEventEmitter.sol";
+import {LibAccountOrganizationAddressStorage} from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
+
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 /**
  * @title Account Implementation
@@ -13,7 +15,7 @@ import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
+contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmitter, IERC1271 {
     /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction
@@ -27,12 +29,12 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
     );
 
     /**
-     * @notice Emitted when a transaction execution fails
+     * @notice Thrown when a transaction execution fails
      */
     error TransactionExecutionFailed();
 
     /**
-     * @notice Emitted when the caller is not the associated organization
+     * @notice Thrown when the caller is not the associated organization
      */
     error OnlyOrganization();
 
@@ -40,27 +42,17 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
      * @notice Modifier that enforces only the associated organization can call the function
      */
     modifier onlyOrganization() {
-        if (msg.sender != LibAccountOrganizationAddressStorage.getOrganizationAddress()) {
-            revert OnlyOrganization();
-        }
+        _onlyOrganization();
         _;
     }
 
-    // ================================
-    // Organization reference
-    // ================================
-
     /**
-     * @notice Gets the organization address that this account is associated with (the beacon)
-     * @return The organization address
+     * @notice Receives native tokens (ETH) sent to this account
+     * @dev Emits OnchainCustodyAccountNativeTokenReceived event when native tokens are received
      */
-    function getOrganizationAddress() external view returns (address) {
-        return LibAccountOrganizationAddressStorage.getOrganizationAddress();
+    receive() external payable override {
+        emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
     }
-
-    // ================================
-    // Transaction execution
-    // ================================
 
     /**
      * @notice Executes a transaction from this account
@@ -71,13 +63,7 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
      * @param nonce The nonce for this transaction (computed by Organization)
      * @param policyId The ID of the policy that governs this transaction
      */
-    function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 nonce,
-        uint256 policyId
-    )
+    function executeTransaction(address to, uint256 value, bytes calldata data, uint256 nonce, uint256 policyId)
         external
         onlyOrganization
     {
@@ -88,7 +74,34 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
             revert TransactionExecutionFailed();
         }
 
-        emit TransactionExecuted(to, value, data, nonce, policyId);
+        emit TransactionExecuted({to: to, value: value, data: data, nonce: nonce, policyId: policyId});
+    }
+
+    /**
+     * @notice Gets the organization address that this account is associated with (the beacon)
+     * @return The organization address
+     */
+    function getOrganizationAddress() external view returns (address) {
+        return LibAccountOrganizationAddressStorage.getOrganizationAddress();
+    }
+
+    /**
+     * @notice Validates a signature according to ERC-1271
+     * @dev Delegates signature validation to the associated Organization contract.
+     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
+     * @param hash The hash of the data that was signed
+     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
+     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
+     */
+    function isValidSignature(bytes32 hash, bytes calldata signature)
+        external
+        view
+        override
+        returns (bytes4 magicValue)
+    {
+        address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
+        return IOrganizationSignatureValidator(organization).isValidSignatureForAccount(address(this), hash, signature);
     }
 
     /**
@@ -105,42 +118,19 @@ contract AccountImplementation is INativeTokenReceivedEventEmitter, IERC1271 {
     function _execute(address to, uint256 value, bytes memory data, uint256 txGas) private returns (bool success) {
         /* solhint-disable no-inline-assembly */
         /// @solidity memory-safe-assembly
+        // slither-disable-next-line assembly
         assembly {
             success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
         }
     }
 
-    // ================================
-    // IERC1271 (Smart Contract Signatures)
-    // ================================
-
     /**
-     * @notice Validates a signature according to ERC-1271
-     * @dev Delegates signature validation to the associated Organization contract.
-     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
-     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
-     * @param hash The hash of the data that was signed
-     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
-     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
+     * @notice Internal function to check if the caller is the organization
+     * @dev Extracted from modifier to reduce code size
      */
-    function isValidSignature(
-        bytes32 hash,
-        bytes memory signature
-    )
-        external
-        view
-        override
-        returns (bytes4 magicValue)
-    {
-        address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
-        return IOrganizationSignatureValidator(organization).isValidSignatureForAccount(address(this), hash, signature);
-    }
-
-    // ================================
-    // INativeTokenReceivedEventEmitter
-    // ================================
-
-    receive() external payable override {
-        emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
+    function _onlyOrganization() private view {
+        if (msg.sender != LibAccountOrganizationAddressStorage.getOrganizationAddress()) {
+            revert OnlyOrganization();
+        }
     }
 }

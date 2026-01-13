@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  # JOB 1: Standards, Sizes, & Tests
+  standards:
+    name: "Tests & Standards"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install Solhint
+        # Installs the dev dependencies from your package.json
+        run: npm ci
+
+      - name: Check Formatting
+        # Fails if you forgot to run 'forge fmt'
+        run: forge fmt --check
+
+      - name: Check Contract Sizes
+        # Fails if contracts are too large (>24kb)
+        run: forge build --sizes
+
+      - name: Run Linter
+        # Uses your Makefile to run Solhint
+        run: make lint
+
+      - name: Run Tests
+        # Uses your Makefile to run tests
+        run: make test
+
+  # JOB 2: Security Analysis (Slither)
+  slither:
+    name: "Slither Analysis"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        with:
+          slither-config: 'slither.config.json'
+          fail-on: high

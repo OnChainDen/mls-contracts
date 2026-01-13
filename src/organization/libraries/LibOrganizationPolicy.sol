@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { LibOrganizationPolicyStorage } from "./storage/LibOrganizationPolicyStorage.sol";
-import { LibOrganizationMembers } from "./LibOrganizationMembers.sol";
-import { LibOrganizationGroups } from "./LibOrganizationGroups.sol";
-import { LibOrganizationSignatures } from "./LibOrganizationSignatures.sol";
-import { Policies } from "../../libraries/Policies.sol";
-import { SignatureUtils } from "../../libraries/SignatureUtils.sol";
-import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
-import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
+import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {Policies} from "../../libraries/Policies.sol";
+import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
+import {LibPolicyApproval} from "./policy/LibPolicyApproval.sol";
+import {LibPolicyContractInteraction} from "./policy/LibPolicyContractInteraction.sol";
+import {LibPolicyDestination} from "./policy/LibPolicyDestination.sol";
+import {LibPolicyInitiator} from "./policy/LibPolicyInitiator.sol";
+import {LibPolicyTimeBasedLimits} from "./policy/LibPolicyTimeBasedLimits.sol";
+import {LibPolicyTokenTransfer} from "./policy/LibPolicyTokenTransfer.sol";
+import {LibOrganizationPolicyStorage} from "./storage/LibOrganizationPolicyStorage.sol";
+
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
  * @title Lib Organization Policy
- * @notice Library for merkle-based policy operations
+ * @dev Library for merkle-based policy operations
  * @dev Policies are stored in a global merkle tree. Only the root is stored on-chain.
  *      Full policy data is provided via calldata and verified against the root.
  *      Members and Groups are also Merkle-based - membership is verified via proofs.
@@ -23,1043 +26,33 @@ import { MerkleUtils } from "../../libraries/MerkleUtils.sol";
  */
 library LibOrganizationPolicy {
     /**
-     * @notice Emitted when the policies merkle root is updated
+     * @dev Emitted when the policies merkle root is updated
      * @param newRoot The new merkle root
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
      */
     event PoliciesUpdated(bytes32 indexed newRoot, string ipfsCid);
 
     /**
-     * @notice Thrown when a token transfer transaction is malformed
-     */
-    error MalformedTokenTransfer();
-
-    /**
-     * @notice Thrown when policy verification fails
+     * @dev Thrown when policy verification fails
      * @param policyId The ID of the policy that failed verification
      */
     error PolicyVerificationFailed(uint256 policyId);
 
     /**
-     * @notice Thrown when member proofs array length doesn't match signature count
-     * @param expected The expected number of member proofs (signature count)
-     * @param actual The actual number of member proofs provided
-     */
-    error MemberProofsLengthMismatch(uint256 expected, uint256 actual);
-
-    /**
-     * @notice Thrown when member-in-group proofs array length doesn't match signature count
-     * @param expected The expected number of member-in-group proofs (signature count)
-     * @param actual The actual number of member-in-group proofs provided
-     */
-    error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
-
-    // ================================
-    // MERKLE HELPERS
-    // ================================
-
-    /**
-     * @notice Computes the merkle leaf for a policy
-     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
-     * @param policyId The unique identifier of the policy
-     * @param policy The policy data
-     * @return The computed merkle leaf
-     */
-    function _computePolicyLeaf(uint256 policyId, Policies.Policy calldata policy) private pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
-    }
-
-    /**
-     * @notice Computes the merkle leaf for an allowed function
-     * @dev Combines function selector with constraints hash
-     * @param selector The function selector (first 4 bytes of calldata)
-     * @param constraintsHash The keccak256 hash of the parameter constraints
-     * @return The computed merkle leaf
-     */
-    function _computeFunctionLeaf(bytes4 selector, bytes32 constraintsHash) private pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(selector, constraintsHash))));
-    }
-
-    // ================================
-    // POLICY VERIFICATION
-    // ================================
-
-    /**
-     * @notice Verifies that a policy exists in the global merkle tree
-     * @param policyId The unique identifier of the policy
-     * @param policy The policy data
-     * @param proof The merkle proof for the policy
-     * @return True if the policy exists in the tree, false otherwise
-     */
-    function policyExists(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        bytes32[] memory proof
-    )
-        internal
-        view
-        returns (bool)
-    {
-        bytes32 root = LibOrganizationPolicyStorage.layout().policiesRoot;
-        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
-        return MerkleProof.verify(proof, root, leaf);
-    }
-
-    // ================================
-    // MODIFY POLICIES
-    // ================================
-
-    /**
-     * @notice Updates the global policies merkle root
-     * @dev This is the only way to modify policies. All policy data is stored off-chain (IPFS).
+     * @dev Updates the global policies merkle root
+     * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
      *      Emits PoliciesUpdated event with the IPFS CID for disaster recovery.
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored
      */
-    function modifyPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) internal {
+    function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) internal {
         LibOrganizationPolicyStorage.layout().policiesRoot = newPoliciesRoot;
         emit PoliciesUpdated(newPoliciesRoot, ipfsCid);
     }
 
-    // ================================
-    // POLICY VALIDATION
-    // ================================
-
-    /**
-     * @notice Checks if a policy applies to a given transaction
-     * @dev Performs comprehensive validation including:
-     *      1. Policy existence (via merkle proof)
-     *      2. Source account matching
-     *      3. Initiator authorization (via merkle proofs for membership)
-     *      4. Transaction type matching (including token transfer and contract interaction checks)
-     *      5. Destination matching
-     * @param policyId The unique identifier of the policy
-     * @param sourceAccount The account executing the transaction
-     * @param to The transaction destination address
-     * @param value The transaction value in wei
-     * @param data The transaction calldata
-     * @param initiator The address that initiated the transaction
-     * @param proofs The validation proofs containing policy data and merkle proofs
-     * @return True if the policy applies to this transaction, false otherwise
-     */
-    function doesPolicyApplyToTransaction(
-        uint256 policyId,
-        address sourceAccount,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        address initiator,
-        Policies.ValidationProofs calldata proofs
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // 1. Verify policy exists in the global merkle tree
-        bytes32 policyLeaf = _computePolicyLeaf(policyId, proofs.policy);
-        bytes32 root = LibOrganizationPolicyStorage.layout().policiesRoot;
-        if (!MerkleProof.verify(proofs.policyProof, root, policyLeaf)) {
-            return false;
-        }
-
-        // 2. Check if the source account matches
-        if (!_doesMatchSourceAccount(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
-            return false;
-        }
-
-        // 3. Check if the initiator is authorized (using merkle proofs)
-        if (!_isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
-            return false;
-        }
-
-        // 4. Check if the transaction type matches
-        if (
-            !_doesMatchTransactionType(
-                proofs.policy, to, value, data, proofs.functionProof, proofs.constraints, proofs.addressParameterProofs
-            )
-        ) {
-            return false;
-        }
-
-        // 5. Check if the destination matches
-        if (!_doesMatchDestination(proofs.policy, to, value, data, proofs.destinationProof)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    // ================================
-    // FILTER MATCHING
-    // ================================
-
-    /**
-     * @notice Checks if the source account matches the policy's source account filter
-     * @dev If anySourceAccount is true, always returns true.
-     *      Otherwise, verifies the account is in the policy's source accounts merkle tree.
-     * @param policy The policy to check against
-     * @param sourceAccount The source account address
-     * @param sourceAccountProof The merkle proof for the source account
-     * @return True if the source account matches, false otherwise
-     */
-    function _doesMatchSourceAccount(
-        Policies.Policy memory policy,
-        address sourceAccount,
-        bytes32[] memory sourceAccountProof
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // Case: The policy matches transactions sent from any account
-        if (policy.config.anySourceAccount) return true;
-
-        // Case: The policy matches transactions sent from a list of specific source accounts
-        // Verify this account is in the source accounts merkle tree
-        bytes32 accountLeaf = MerkleUtils.computeAddressLeaf(sourceAccount);
-        return MerkleProof.verify(sourceAccountProof, policy.roots.sourceAccountsRoot, accountLeaf);
-    }
-
-    /**
-     * @notice Checks if the initiator is authorized by the policy
-     * @dev If anyInitiator is true, always returns true.
-     *      Otherwise, verifies the initiator is a member and matches policy requirements.
-     *      Uses Merkle proofs for membership verification.
-     * @param policy The policy to check against
-     * @param initiatorAddress The address of the transaction initiator
-     * @param initiatorProofs The proofs for initiator membership verification
-     * @return True if the initiator is authorized, false otherwise
-     */
-    function _isInitiatorAuthorized(
-        Policies.Policy memory policy,
-        address initiatorAddress,
-        Policies.InitiatorProofs memory initiatorProofs
-    )
-        internal
-        view
-        returns (bool)
-    {
-        // Case: The policy matches transactions with any initiator
-        if (policy.config.initiator.anyInitiator) return true;
-
-        // First, verify the initiator is a member of the organization
-        if (!LibOrganizationMembers.isMemberInOrg(initiatorAddress, initiatorProofs.initiatorInOrgMembersTreeProof)) {
-            return false;
-        }
-
-        Policies.ApproverType initType = policy.config.initiator.initiatorType;
-
-        // Case: The policy matches transactions made by a specific individual
-        if (initType == Policies.ApproverType.Member) {
-            // Check if the initiator is the specified member address
-            return initiatorAddress == policy.config.initiator.initiatorMember;
-        }
-
-        // Case: The policy matches transactions made by any individual from a specific group
-        if (initType == Policies.ApproverType.Group) {
-            // Check the group ID matches the policy's initiator group ID
-            if (initiatorProofs.group.groupId != policy.config.initiator.initiatorGroupId) {
-                return false;
-            }
-
-            // Verify the group exists and the initiator is in that group
-            return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
-                initiatorAddress,
-                initiatorProofs.group,
-                initiatorProofs.groupInOrgGroupsTreeProof,
-                initiatorProofs.memberInGroupProof
-            );
-        }
-
-        // Case: The policy does not match this transaction
-        return false;
-    }
-
-    /**
-     * @notice Checks if the transaction type matches the policy's transaction type filter
-     * @dev Handles different transaction types:
-     *      - Any: Always matches
-     *      - TokenTransfers: Must be a token transfer, optionally with token/amount constraints
-     *      - ContractInteractions: Must not be a token transfer, optionally with function constraints
-     * @param policy The policy to check against
-     * @param to The transaction destination address
-     * @param value The transaction value in wei
-     * @param data The transaction calldata
-     * @param functionProof The merkle proof for the function (for ContractInteractions)
-     * @param constraints The parameter constraints (for ContractInteractions)
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
-     * @return True if the transaction type matches, false otherwise
-     */
-    function _doesMatchTransactionType(
-        Policies.Policy calldata policy,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        bytes32[] calldata functionProof,
-        bytes calldata constraints,
-        bytes32[][] calldata addressParameterProofs
-    )
-        private
-        pure
-        returns (bool)
-    {
-        Policies.TransactionType txType = policy.config.transactionType;
-
-        // Case: The policy matches any type of transaction
-        if (txType == Policies.TransactionType.Any) return true;
-
-        // Case: Policy matches only transactions that are token transfers
-        if (txType == Policies.TransactionType.TokenTransfers) {
-            // Case: The transaction is not a token transfer
-            if (!isTransactionTokenTransfer(data, value)) return false;
-
-            // Case: The Policy matches only transactions that are token transfers that are of a
-            //       specific token, and the transaction is not transferring that token
-            if (!policy.config.token.anyToken) {
-                address transferToken = extractTokenAddress(to, data);
-                if (transferToken != policy.config.token.tokenAddress) return false;
-            }
-
-            // Case: The policy matches only transactions that are token transfers that are of a
-            //       specific token, and the transaction is transferring that token, but the
-            //       transaction amount is less than the amount threshold
-            if (policy.config.token.hasAmountThreshold) {
-                uint256 amount = extractTransferAmount(data, value);
-                if (amount >= policy.config.token.amountThreshold) return false;
-            }
-
-            return true;
-        }
-
-        // Case: The policy matches only transactions that are contract interactions that are not token transfers
-        if (txType == Policies.TransactionType.ContractInteractions) {
-            // Case: The policy matches only transactions that are contract interactions that are not token transfers,
-            //       but the transaction is a token transfer
-            if (isTransactionTokenTransfer(data, value)) return false;
-
-            // Case: The policy matches only transactions that are contract interactions that call a specific function,
-            //       but the transaction is not calling that function
-            if (!_doesMatchFunction(policy, data, functionProof, constraints, addressParameterProofs)) {
-                return false;
-            }
-
-            return true;
-        }
-
-        // Case: The policy does not fail to match the transaction based on the transaction type filters
-        return true;
-    }
-
-    /**
-     * @notice Checks if the destination matches the policy's destination filter
-     * @dev Handles different destination types:
-     *      - Any: Always matches
-     *      - CustomList: Must be in the policy's custom destinations merkle tree
-     * @param policy The policy to check against
-     * @param to The transaction destination address
-     * @param value The transaction value in wei
-     * @param data The transaction calldata
-     * @param destinationProof The merkle proof for the destination (for CustomList)
-     * @return True if the destination matches, false otherwise
-     */
-    function _doesMatchDestination(
-        Policies.Policy calldata policy,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        bytes32[] calldata destinationProof
-    )
-        private
-        view
-        returns (bool)
-    {
-        Policies.DestinationType destType = policy.config.destinationType;
-
-        // Case: Policy matches transaction to any address
-        if (destType == Policies.DestinationType.Any) return true;
-
-        // Determine the actual destination address based on transaction type
-        address actualDestination = getActualDestination(to, data, value);
-
-        // Case: Policy matches only transactions that are sent to a specific list of addresses
-        // Verify via merkle proof that destination is in the custom destinations tree
-        if (destType == Policies.DestinationType.CustomList) {
-            bytes32 destLeaf = MerkleUtils.computeAddressLeaf(actualDestination);
-            return MerkleProof.verify(destinationProof, policy.roots.customDestinationsRoot, destLeaf);
-        }
-
-        // Case: The policy does not match the transaction destination
-        return false;
-    }
-
-    /**
-     * @notice Checks if the function matches the policy's allowed functions filter
-     * @dev If anyFunction is true, always returns true.
-     *      Otherwise, verifies the function selector and constraints are in the allowed functions merkle tree.
-     * @param policy The policy to check against
-     * @param data The transaction calldata
-     * @param functionProof The merkle proof for the function
-     * @param constraints The parameter constraints to verify
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
-     * @return True if the function matches, false otherwise
-     */
-    function _doesMatchFunction(
-        Policies.Policy calldata policy,
-        bytes calldata data,
-        bytes32[] calldata functionProof,
-        bytes calldata constraints,
-        bytes32[][] calldata addressParameterProofs
-    )
-        private
-        pure
-        returns (bool)
-    {
-        // Case: Policy matches any function
-        if (policy.config.anyFunction) return true;
-
-        // Case: Policy matches only transactions that call a specific function, but the transaction is not calling
-        //       a function
-        if (data.length < 4) return false;
-
-        // Case: Policy matches only transactions that call a specific function, and the transaction is calling
-        //       a function - verify via merkle proof
-        bytes4 selector = bytes4(data[:4]);
-        bytes32 constraintsHash = keccak256(constraints);
-
-        // Verify function (selector + constraints hash) is in the allowed functions merkle tree
-        bytes32 funcLeaf = _computeFunctionLeaf(selector, constraintsHash);
-        if (!MerkleProof.verify(functionProof, policy.roots.allowedFunctionsRoot, funcLeaf)) {
-            return false;
-        }
-
-        // Case: Parameter constraints defined - validate them
-        // Verify parameters match constraints
-        return doParametersMatchConstraints(constraints, data, addressParameterProofs);
-    }
-
-    // ================================
-    // APPROVER HELPERS
-    // ================================
-
-    /**
-     * @notice Gets the number of required approvals for a policy
-     * @dev For Member approver type, always returns 1.
-     *      For Group approver type, returns the approval threshold.
-     * @param policy The policy to check
-     * @return The number of required approvals
-     */
-    function getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
-        // Case: Policy requires a single approval from a member
-        if (policy.config.approval.approverType == Policies.ApproverType.Member) {
-            return 1;
-        }
-
-        // Case: Policy requires a threshold number of approvals from any individual in a group
-        return policy.config.approval.approvalThreshold;
-    }
-
-    /**
-     * @notice Checks if a signer is authorized to approve for a policy (using Merkle proofs)
-     * @dev For Member approver type, the signer must be the specified member address.
-     *      For Group approver type, the signer must be in the specified group.
-     *      NOTE: Group existence must be verified by the caller before calling this function.
-     *      This function only verifies member-in-org and member-in-group to avoid redundant checks.
-     * @param policy The policy to check against
-     * @param signerAddress The address of the signer
-     * @param membersRoot The organization's members merkle root (cached by caller to avoid repeated storage reads)
-     * @param memberProof Proof that the signer is a member of the organization
-     * @param group The approver group data (if applicable)
-     * @param memberInGroupProof Proof that the signer is in the approver group (if applicable)
-     * @return True if the signer is authorized, false otherwise
-     */
-    function isSignerAuthorizedForPolicy(
-        Policies.Policy memory policy,
-        address signerAddress,
-        bytes32 membersRoot,
-        bytes32[] memory memberProof,
-        Policies.GroupData memory group,
-        bytes32[] memory memberInGroupProof
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // First verify the signer is a member of the organization (using cached root)
-        if (!LibOrganizationMembers.isMemberInTree(signerAddress, membersRoot, memberProof)) {
-            return false;
-        }
-
-        Policies.ApproverType approverType = policy.config.approval.approverType;
-
-        // Case: Policy requires approval from a specific member
-        if (approverType == Policies.ApproverType.Member) {
-            return signerAddress == policy.config.approval.approverMember;
-        }
-
-        // Case: Policy requires approval from any member of a specific group
-        if (approverType == Policies.ApproverType.Group) {
-            // Check the group ID matches the policy's approver group
-            if (group.groupId != policy.config.approval.approverGroupId) {
-                return false;
-            }
-
-            // Verify member is in the group (group existence and proofs length verified by caller)
-            return LibOrganizationGroups.isMemberInGroup(signerAddress, group.groupMembersRoot, memberInGroupProof);
-        }
-
-        return false;
-    }
-
-    /**
-     * @notice Counts valid approvals from a set of signatures (using Merkle proofs)
-     * @dev Signatures must be ordered by signer address (ascending) to prevent duplicates.
-     *      Each signature is verified against the message hash and checked for authorization.
-     *      Optimized to cache storage reads and verify group existence once before the loop.
-     * @param policy The policy to check against
-     * @param signatures The concatenated signatures (65 bytes each)
-     * @param messageHash The message hash that was signed
-     * @param approverProofs The proofs for approver membership verification
-     * @return The number of valid approvals
-     */
-    function getValidApprovals(
-        Policies.Policy memory policy,
-        bytes memory signatures,
-        bytes32 messageHash,
-        Policies.ApproverProofs memory approverProofs
-    )
-        internal
-        view
-        returns (uint8)
-    {
-        // Case: No signatures provided
-        if (signatures.length == 0) return 0;
-
-        // Each signature is 65 bytes (r: 32, s: 32, v: 1)
-        uint8 signatureCount = uint8(signatures.length / 65);
-
-        // Require member proofs array matches signature count
-        if (approverProofs.approverInOrgMembersTreeProofs.length != signatureCount) {
-            revert MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
-        }
-
-        // Cache membersRoot to avoid repeated storage reads in the loop
-        bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
-
-        // For Group approver type, verify group existence and memberInGroupProofs length before the loop
-        if (policy.config.approval.approverType == Policies.ApproverType.Group) {
-            // Require member-in-group proofs array matches signature count
-            if (approverProofs.memberInGroupProofs.length != signatureCount) {
-                revert MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
-            }
-
-            bytes32 groupsRoot = LibOrganizationGroups.getGroupsRoot();
-            if (
-                !LibOrganizationGroups.isGroupInTree(
-                    approverProofs.group, groupsRoot, approverProofs.groupInOrgGroupsTreeProof
-                )
-            ) {
-                return 0;
-            }
-        }
-
-        uint8 validApprovals = 0;
-
-        // Track last signer to prevent duplicates (similar to Safe contracts)
-        address lastSigner = address(0);
-
-        // Iterate over signatures to count valid approvals
-        for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
-
-            // Extract signer address from signature
-            address signer = LibOrganizationSignatures.extractSigner(signature);
-
-            // Skip if signer is invalid
-            if (signer == address(0)) continue;
-
-            // Check for duplicate signers - signers must be unique and in ascending order
-            if (signer <= lastSigner) continue;
-
-            // Update last signer for next iteration
-            lastSigner = signer;
-
-            // Verify the signature using ERC-1271
-            if (!SignatureChecker.isValidSignatureNow(signer, messageHash, signature)) {
-                continue;
-            }
-
-            // Get the proofs for this signer
-            bytes32[] memory memberProof = approverProofs.approverInOrgMembersTreeProofs[i];
-            bytes32[] memory memberInGroupProof = approverProofs.memberInGroupProofs[i];
-
-            // Check if signer is authorized based on policy (with Merkle proofs)
-            // Note: Group existence already verified above, membersRoot passed to avoid storage reads
-            if (
-                isSignerAuthorizedForPolicy(
-                    policy, signer, membersRoot, memberProof, approverProofs.group, memberInGroupProof
-                )
-            ) {
-                ++validApprovals;
-            }
-        }
-
-        return validApprovals;
-    }
-
-    // ================================
-    // TRANSACTION HELPERS
-    // ================================
-
-    /**
-     * @notice Gets the actual destination address for a transaction
-     * @dev For token transfers, the actual destination is the token recipient (extracted from calldata).
-     *      For other transactions, the actual destination is the `to` address.
-     * @param to The transaction `to` address
-     * @param data The transaction calldata
-     * @param value The transaction value in wei
-     * @return The actual destination address
-     */
-    function getActualDestination(address to, bytes calldata data, uint256 value) internal pure returns (address) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0) return to;
-
-        // Case: The transaction is a contract interaction
-        if (!isTransactionTokenTransfer(data, value)) return to;
-
-        // Case: The transaction is an ERC-20 token transfer
-        // Extract the recipient address from the transfer function call
-        return extractTokenRecipient(data);
-    }
-
-    /**
-     * @notice Extracts the token recipient from token transfer calldata
-     * @dev Supports ERC20 transfer(address,uint256) and transferFrom(address,address,uint256)
-     * @param data The transaction calldata
-     * @return The recipient address, or address(0) if not a valid token transfer
-     */
-    function extractTokenRecipient(bytes calldata data) internal pure returns (address) {
-        // Case: Transaction data is too short to contain a valid selector
-        if (data.length < 36) return address(0);
-
-        bytes4 selector = bytes4(data[:4]);
-
-        // Case: The transaction is calling the `transfer` function
-        // transfer(address to, uint256 amount)
-        // The recipient is the first parameter after the selector
-        if (selector == bytes4(keccak256("transfer(address,uint256)"))) {
-            return address(bytes20(data[16:36]));
-        }
-
-        // Case: The transaction is calling the `transferFrom` function
-        // transferFrom(address from, address to, uint256 amount)
-        // Note: The recipient is the second address parameter after the selector
-        if (selector == bytes4(keccak256("transferFrom(address,address,uint256)"))) {
-            // Case: Transaction data is too short to contain a valid recipient
-            if (data.length < 68) return address(0);
-            return address(bytes20(data[48:68]));
-        }
-
-        // Case: The transaction is not a valid ERC-20 transfer
-        return address(0);
-    }
-
-    /**
-     * @notice Checks if a transaction is a token transfer
-     * @dev A transaction is considered a token transfer if:
-     *      1. It has value > 0 and no data (native token transfer), OR
-     *      2. It calls transfer(address,uint256) or transferFrom(address,address,uint256)
-     * @param data The transaction calldata
-     * @param value The transaction value in wei
-     * @return True if the transaction is a token transfer, false otherwise
-     */
-    function isTransactionTokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0 && value > 0) return true;
-
-        // Case: The transaction data is too short to call a function
-        if (data.length < 4) return false;
-
-        // Case: The transaction is not a native token transfer, but the value is greater than zero
-        if (value > 0) return false;
-
-        // Case: The transaction is a token transfer
-        bytes4 selector = bytes4(data[:4]);
-
-        // Case: The transaction is a token transfer
-        if (
-            selector == bytes4(keccak256("transfer(address,uint256)"))
-                || selector == bytes4(keccak256("transferFrom(address,address,uint256)"))
-        ) {
-            return true;
-        }
-
-        // Case: The transaction is not a token transfer
-        return false;
-    }
-
-    /**
-     * @notice Extracts the token contract address from a token transfer
-     * @dev For ERC20 transfers, the token contract is the `to` address.
-     *      For native transfers, returns address(0).
-     * @param to The transaction `to` address
-     * @param data The transaction calldata
-     * @return The token contract address
-     */
-    function extractTokenAddress(address to, bytes calldata data) internal pure returns (address) {
-        if (data.length == 0) {
-            return address(0); // Native token
-        }
-        return to; // ERC20 token address
-    }
-
-    /**
-     * @notice Extracts the transfer amount from a token transfer
-     * @dev For native transfers, returns the transaction value.
-     *      For ERC20 transfers, extracts the amount from calldata.
-     * @param data The transaction calldata
-     * @param value The transaction value in wei
-     * @return The transfer amount
-     */
-    function extractTransferAmount(bytes calldata data, uint256 value) internal pure returns (uint256) {
-        // Case: The transaction is a native token transfer
-        if (data.length == 0) return value;
-
-        // Case: The ERC-20 transaction is malformed
-        // Note: 4 bytes selector + 32 bytes address + 32 bytes amount = 68 bytes
-        if (data.length < 68) revert MalformedTokenTransfer();
-
-        // Case: The ERC-20 transaction is transferring a non-zero value
-        // ERC20 transfer - amount is second parameter (offset 36-68)
-        return uint256(bytes32(data[36:68]));
-    }
-
-    // ================================
-    // PARAMETER CONSTRAINTS
-    // ================================
-
-    /**
-     * @notice Checks if transaction parameters match the specified constraints
-     * @dev Iterates through each constraint and validates the corresponding parameter.
-     *      Supports various parameter types (uint, int, address, bool, bytes, etc.) and
-     *      constraint types (exact, range, list).
-     * @param parameterConstraints ABI-encoded array of ParameterConstraint structs
-     * @param data The transaction calldata
-     * @param addressParameterProofs Merkle proofs for address parameters with List constraints
-     * @return True if all constraints are satisfied, false otherwise
-     */
-    function doParametersMatchConstraints(
-        bytes calldata parameterConstraints,
-        bytes calldata data,
-        bytes32[][] calldata addressParameterProofs
-    )
-        internal
-        pure
-        returns (bool)
-    {
-        // Case: No constraints defined, any parameters are accepted
-        if (parameterConstraints.length == 0) return true;
-
-        // Decode the constraints array
-        Policies.ParameterConstraint[] memory constraints =
-            abi.decode(parameterConstraints, (Policies.ParameterConstraint[]));
-
-        // Case: No constraints in the array
-        if (constraints.length == 0) return true;
-
-        // Use a helper function to process constraints (reduces stack depth)
-        return _processConstraints(constraints, data, addressParameterProofs);
-    }
-
-    /**
-     * @notice Internal helper to process parameter constraints
-     * @dev Separated to manage stack depth in the main function
-     */
-    function _processConstraints(
-        Policies.ParameterConstraint[] memory constraints,
-        bytes calldata data,
-        bytes32[][] calldata addressParameterProofs
-    )
-        private
-        pure
-        returns (bool)
-    {
-        // Validate each parameter against its constraint
-        // Parameters start at byte 4 (after the selector)
-        uint256 paramOffset = 4;
-        // Track which address List proof to use (incremented for each List constraint encountered)
-        uint256 addressListProofIndex = 0;
-
-        for (uint256 i = 0; i < constraints.length; ++i) {
-            // Use block scoping to reduce stack depth
-            {
-                uint256 slotsToSkip = uint256(constraints[i].slotsToSkip);
-                if (slotsToSkip == 0) {
-                    return false; // Invalid constraint configuration
-                }
-
-                // Case: Wildcard constraint - any value is accepted
-                if (constraints[i].constraintType == Policies.ConstraintType.Any) {
-                    paramOffset += slotsToSkip * 32;
-                    continue;
-                }
-
-                // Static-sized arrays/structs can only have Any constraint
-                if (slotsToSkip > 1) {
-                    return false;
-                }
-            }
-
-            // Case: Transaction data is too short for this parameter
-            if (data.length < paramOffset + 32) {
-                return false;
-            }
-
-            // Extract parameter value and get proof if needed (in separate scope)
-            {
-                bytes32 paramHeadValue = bytes32(data[paramOffset:paramOffset + 32]);
-                bytes32[] memory addressListProof;
-
-                // Get merkle proof for List constraints on Address parameters
-                if (
-                    constraints[i].constraintType == Policies.ConstraintType.List
-                        && constraints[i].paramType == Policies.ParamType.Address
-                ) {
-                    if (addressListProofIndex >= addressParameterProofs.length) {
-                        return false; // Missing proof for address List constraint
-                    }
-                    addressListProof = addressParameterProofs[addressListProofIndex];
-                    ++addressListProofIndex;
-                }
-
-                // Validate the parameter
-                if (!_validateParameter(constraints[i], paramHeadValue, data, addressListProof)) {
-                    return false;
-                }
-            }
-
-            paramOffset += 32; // Move past this parameter (we already checked slotsToSkip == 1)
-        }
-
-        return true;
-    }
-
-    /**
-     * @notice Validates a single parameter against its constraint
-     * @dev Handles different parameter types and constraint types
-     * @param constraint The constraint to validate against
-     * @param paramHeadValue The parameter value (first 32 bytes)
-     * @param data The full transaction calldata (for dynamic types)
-     * @param addressListProof Merkle proof for List constraint on Address type (empty for other constraints)
-     * @return True if the parameter satisfies the constraint, false otherwise
-     */
-    function _validateParameter(
-        Policies.ParameterConstraint memory constraint,
-        bytes32 paramHeadValue,
-        bytes calldata data,
-        bytes32[] memory addressListProof
-    )
-        private
-        pure
-        returns (bool)
-    {
-        Policies.ParamType pType = constraint.paramType;
-        Policies.ConstraintType constraintType = constraint.constraintType;
-        bytes memory comparisonData = constraint.comparisonData;
-
-        // Handle Bool type
-        // Bool only supports Exact constraint
-        if (pType == Policies.ParamType.Bool) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-            bool expectedValue = abi.decode(comparisonData, (bool));
-            bool actualValue = uint256(paramHeadValue) != 0;
-            return actualValue == expectedValue;
-        }
-
-        // Handle Uint type (and enums which are treated as uint)
-        if (pType == Policies.ParamType.Uint) {
-            uint256 actualValue = uint256(paramHeadValue);
-            if (constraintType == Policies.ConstraintType.Exact) {
-                uint256 expectedValue = abi.decode(comparisonData, (uint256));
-                return actualValue == expectedValue;
-            }
-            if (constraintType == Policies.ConstraintType.Range) {
-                (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
-                return actualValue >= minValue && actualValue <= maxValue;
-            }
-            // Uint doesn't support List constraint
-            return false;
-        }
-
-        // Handle Int type
-        if (pType == Policies.ParamType.Int) {
-            int256 actualValue = int256(uint256(paramHeadValue));
-            if (constraintType == Policies.ConstraintType.Exact) {
-                int256 expectedValue = abi.decode(comparisonData, (int256));
-                return actualValue == expectedValue;
-            }
-            if (constraintType == Policies.ConstraintType.Range) {
-                (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
-                return actualValue >= minValue && actualValue <= maxValue;
-            }
-            // Int doesn't support List constraint
-            return false;
-        }
-
-        // Handle Address type
-        if (pType == Policies.ParamType.Address) {
-            address actualValue = address(uint160(uint256(paramHeadValue)));
-            if (constraintType == Policies.ConstraintType.Exact) {
-                address expectedValue = abi.decode(comparisonData, (address));
-                return actualValue == expectedValue;
-            }
-            if (constraintType == Policies.ConstraintType.List) {
-                // comparisonData contains the merkle root of allowed addresses
-                bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
-                // Compute leaf for the actual address using double-hashing
-                bytes32 addressLeaf = MerkleUtils.computeAddressLeaf(actualValue);
-                // Verify the address is in the allowed addresses merkle tree
-                return MerkleProof.verify(addressListProof, allowedAddressesRoot, addressLeaf);
-            }
-            // Address doesn't support Range constraint
-            return false;
-        }
-
-        // Handle FixedBytes type (bytes1-bytes32, stored inline)
-        // FixedBytes only supports Exact constraint
-        // For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned)
-        if (pType == Policies.ParamType.FixedBytes) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-            bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
-            return paramHeadValue == expectedValue;
-        }
-
-        // Handle Bytes type (dynamic bytes, stored as offset)
-        // Dynamic bytes only supports Exact constraint (hash comparison)
-        // The paramHeadValue contains the offset to the data location in calldata.
-        // The comparisonData should contain the keccak256 hash of the expected bytes.
-        if (pType == Policies.ParamType.Bytes) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-
-            // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
-            uint256 offset = uint256(paramHeadValue);
-
-            // The offset is relative to the start of the encoded parameters (after selector)
-            // So actual position in data = 4 (selector) + offset
-            uint256 dataPosition = 4 + offset;
-
-            // First 32 bytes at that position is the length
-            if (data.length < dataPosition + 32) return false;
-
-            uint256 bytesLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
-
-            // Check we have enough data for the bytes content
-            if (data.length < dataPosition + 32 + bytesLength) return false;
-
-            // Hash the actual bytes content
-            bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + bytesLength]);
-            bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
-            return actualHash == expectedHash;
-        }
-
-        // Handle String type (dynamic string, stored as offset)
-        // String only supports Exact constraint (hash comparison)
-        // The paramHeadValue contains the offset to the string data in calldata.
-        // The comparisonData should contain the keccak256 hash of the expected string.
-        if (pType == Policies.ParamType.String) {
-            if (constraintType != Policies.ConstraintType.Exact) return false;
-
-            // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
-            uint256 offset = uint256(paramHeadValue);
-
-            // The offset is relative to the start of the encoded parameters (after selector)
-            // So actual position in data = 4 (selector) + offset
-            uint256 dataPosition = 4 + offset;
-
-            // First 32 bytes at that position is the string length
-            if (data.length < dataPosition + 32) return false;
-
-            uint256 strLength = uint256(bytes32(data[dataPosition:dataPosition + 32]));
-
-            // Check we have enough data for the string content
-            if (data.length < dataPosition + 32 + strLength) return false;
-
-            // Hash the actual string content
-            bytes32 actualHash = keccak256(data[dataPosition + 32:dataPosition + 32 + strLength]);
-            bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
-            return actualHash == expectedHash;
-        }
-
-        // Handle Array and Struct types - only Any constraint is valid
-        // These types can only have Any constraint, which is handled earlier
-        // If we reach here with a non-Any constraint, it's invalid configuration
-
-        // Unknown type - fail safe
-        return false;
-    }
-
-    // ================================
-    // TIME-BASED LIMITS
-    // ================================
-
-    /**
-     * @notice Computes the usage key for time-based limit tracking
-     * @dev The usage key is a hash of the policy ID and scoped entities.
-     *      If a scope is AcrossAll, address(0) is used for that component.
-     *      If a scope is PerEntity, the actual address is used.
-     * @param policyId The policy ID
-     * @param policy The policy data
-     * @param account The source account address
-     * @param destination The destination address
-     * @param initiator The initiator address
-     * @return The computed usage key
-     */
-    function computeUsageKey(
-        uint256 policyId,
-        Policies.Policy memory policy,
-        address account,
-        address destination,
-        address initiator
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
-        // Determine scoped values based on policy configuration
-        // When scope is AcrossAll, address(0) is used for that entity.
-        // When scope is PerEntity, the actual address is used.
-        address scopedAccount =
-            policy.config.timeLimit.sourceScope == Policies.TimeIntervalScope.PerEntity ? account : address(0);
-
-        address scopedDestination =
-            policy.config.timeLimit.destinationScope == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
-
-        address scopedInitiator =
-            policy.config.timeLimit.initiatorScope == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
-
-        return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
-    }
-
-    /**
-     * @notice Computes the current time window for a policy
-     * @dev Time windows are calculated as: block.timestamp / (timeIntervalHours * 3600)
-     * @param policy The policy data
-     * @return The current time window, or 0 if timeIntervalHours is 0
-     */
-    function computeTimeWindow(Policies.Policy memory policy) internal view returns (uint256) {
-        // Uses fixed time windows based on timeIntervalHours
-        uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
-
-        // Avoid division by zero
-        if (hours_ == 0) return 0;
-
-        return block.timestamp / (uint256(hours_) * 3600);
-    }
-
     /**
      * @notice Checks and updates time-based usage limits
-     * @dev Checks if the usage amount would exceed the limit for the current time window.
-     *      If within limit, updates the usage and returns true.
-     *      If exceeding limit, returns false without updating.
+     * @dev Delegates to LibPolicyTimeBasedLimits.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -1075,34 +68,148 @@ library LibOrganizationPolicy {
         address destination,
         address initiator,
         uint256 usageAmount
-    )
-        internal
-        returns (bool withinLimit)
-    {
-        // Skip check if no time-based limitation
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return true;
-
-        // Skip if time interval is not configured (0 hours)
-        if (policy.config.timeLimit.timeIntervalHours == 0) return true;
-
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
-
-        bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
-        uint256 timeWindow = computeTimeWindow(policy);
-
-        uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
-
-        // Check if adding usageAmount would exceed the limit
-        if (currentUsage + usageAmount > policy.config.timeLimit.timeIntervalLimit) return false;
-
-        // Update usage
-        policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
-
-        return true;
+    ) internal returns (bool withinLimit) {
+        return LibPolicyTimeBasedLimits.checkAndUpdateTimeBasedLimit({
+            policyId: policyId,
+            policy: policy,
+            account: account,
+            destination: destination,
+            initiator: initiator,
+            usageAmount: usageAmount
+        });
     }
 
     /**
-     * @notice Gets the current usage for a time-based policy
+     * @dev Checks if a policy exists in the organization's policy merkle tree
+     * @param policyId The unique identifier of the policy
+     * @param policy The policy data
+     * @param proof The merkle proof for the policy
+     * @return True if the policy is in the tree, false otherwise
+     */
+    function isPolicyInOrg(uint256 policyId, Policies.Policy memory policy, bytes32[] memory proof)
+        internal
+        view
+        returns (bool)
+    {
+        bytes32 root = LibOrganizationPolicyStorage.layout().policiesRoot;
+        bytes32 leaf = _computePolicyLeaf(policyId, policy);
+        return MerkleProof.verify(proof, root, leaf);
+    }
+
+    /**
+     * @dev Checks if a policy applies to a given transaction
+     * @dev Performs comprehensive validation including:
+     *      1. Policy existence (via merkle proof)
+     *      2. Source account matching
+     *      3. Initiator authorization (via merkle proofs for membership)
+     *      4. Transaction type matching (including token transfer and contract interaction checks)
+     *      5. Destination matching
+     * @param policyId The unique identifier of the policy
+     * @param sourceAccount The account executing the transaction
+     * @param to The transaction destination address
+     * @param value The transaction value in wei
+     * @param data The transaction calldata
+     * @param initiator The address that initiated the transaction
+     * @param proofs The validation proofs containing policy data and merkle proofs
+     * @return True if the policy applies to this transaction, false otherwise
+     */
+    function isTransactionAllowedByPolicy(
+        uint256 policyId,
+        address sourceAccount,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        address initiator,
+        Policies.ValidationProofs calldata proofs
+    ) internal view returns (bool) {
+        // Case: The policy does not exist in the organization
+        if (!isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) return false;
+
+        // Case: The source account is not allowed by the policy
+        if (!isSourceAccountAllowedByPolicy(proofs.policy, sourceAccount, proofs.sourceAccountProof)) {
+            return false;
+        }
+
+        // Case: The initiator is not authorized by the policy
+        if (!LibPolicyInitiator.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+            return false;
+        }
+
+        Policies.TransactionType txType = proofs.policy.config.transactionType;
+
+        // Case: Policy matches only transactions that are token transfers
+        if (txType == Policies.TransactionType.TokenTransfers) {
+            // Case: The transaction is not a token transfer
+            if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
+
+            return LibPolicyTokenTransfer.isTokenTransferAllowedByPolicy({
+                policy: proofs.policy, to: to, value: value, data: data, destinationProof: proofs.destinationProof
+            });
+        }
+
+        // Case: The policy matches only transactions that are contract interactions that are not token transfers
+        if (txType == Policies.TransactionType.ContractInteractions) {
+            // Case: The transaction is a token transfer (not a contract interaction)
+            if (TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
+
+            return LibPolicyContractInteraction.isContractInteractionAllowedByPolicy({
+                policy: proofs.policy,
+                to: to,
+                value: value,
+                data: data,
+                functionProof: proofs.functionProof,
+                constraints: proofs.constraints,
+                destinationProof: proofs.destinationProof
+            });
+        }
+
+        // Case: The policy can be applied to any type of transaction (Token transfers or Contract interactions)
+        // and the destination is allowed by the policy
+        if (
+            txType == Policies.TransactionType.Any
+                && LibPolicyDestination.isDestinationAllowedByPolicy({
+                    policy: proofs.policy, to: to, value: value, data: data, destinationProof: proofs.destinationProof
+                })
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @dev Counts valid approvals from a set of signatures (using Merkle proofs)
+     * @dev Delegates to LibPolicyApproval.
+     * @param policy The policy to check against
+     * @param signatures The concatenated signatures (65 bytes each)
+     * @param messageHash The message hash that was signed
+     * @param approverProofs The proofs for approver membership verification
+     * @return The number of valid approvals
+     */
+    function getValidApprovals(
+        Policies.Policy memory policy,
+        bytes memory signatures,
+        bytes32 messageHash,
+        Policies.ApproverProofs memory approverProofs
+    ) internal view returns (uint8) {
+        return LibPolicyApproval.getValidApprovals({
+            policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
+        });
+    }
+
+    /**
+     * @dev Computes the current time window for a policy
+     * @dev Delegates to LibPolicyTimeBasedLimits.
+     * @param policy The policy data
+     * @return The current time window, or 0 if timeIntervalHours is 0
+     */
+    function computeTimeWindow(Policies.Policy memory policy) internal view returns (uint256) {
+        return LibPolicyTimeBasedLimits.computeTimeWindow(policy);
+    }
+
+    /**
+     * @dev Gets the current usage for a time-based policy
+     * @dev Delegates to LibPolicyTimeBasedLimits.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -1116,22 +223,103 @@ library LibOrganizationPolicy {
         address account,
         address destination,
         address initiator
-    )
-        internal
-        view
-        returns (uint256)
-    {
-        // Return 0 if no time-based limitation
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return 0;
+    ) internal view returns (uint256) {
+        return LibPolicyTimeBasedLimits.getCurrentUsage({
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
+        });
+    }
 
-        // Return 0 if time interval is not configured
-        if (policy.config.timeLimit.timeIntervalHours == 0) return 0;
+    /**
+     * @dev Checks if the initiator is authorized by the policy
+     * @dev Delegates to LibPolicyInitiator.
+     * @param policy The policy to check against
+     * @param initiatorAddress The address of the transaction initiator
+     * @param initiatorProofs The proofs for initiator membership verification
+     * @return True if the initiator is authorized, false otherwise
+     */
+    function isInitiatorAuthorized(
+        Policies.Policy memory policy,
+        address initiatorAddress,
+        Policies.InitiatorProofs memory initiatorProofs
+    ) internal view returns (bool) {
+        return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorProofs);
+    }
 
-        LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
+    /**
+     * @dev Checks if the source account matches the policy's source account filter
+     * @dev If anySourceAccount is true, always returns true.
+     *      Otherwise, verifies the account is in the policy's source accounts merkle tree.
+     * @param policy The policy to check against
+     * @param sourceAccount The source account address
+     * @param sourceAccountProof The merkle proof for the source account
+     * @return True if the source account matches, false otherwise
+     */
+    function isSourceAccountAllowedByPolicy(
+        Policies.Policy memory policy,
+        address sourceAccount,
+        bytes32[] memory sourceAccountProof
+    ) internal pure returns (bool) {
+        // Case: The policy matches transactions sent from any account
+        if (policy.config.anySourceAccount) return true;
 
-        bytes32 usageKey = computeUsageKey(policyId, policy, account, destination, initiator);
-        uint256 timeWindow = computeTimeWindow(policy);
+        // Case: The policy matches transactions sent from a list of specific source accounts
+        // Verify this account is in the source accounts merkle tree
+        bytes32 accountLeaf = MerkleUtils.computeAddressLeaf(sourceAccount);
+        return MerkleProof.verify(sourceAccountProof, policy.roots.sourceAccountsRoot, accountLeaf);
+    }
 
-        return policyLayout.policyUsage[usageKey][timeWindow];
+    /**
+     * @dev Gets the number of required approvals for a policy
+     * @dev Delegates to LibPolicyApproval.
+     * @param policy The policy to check
+     * @return The number of required approvals
+     */
+    function getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
+        return LibPolicyApproval.getRequiredApprovals(policy);
+    }
+
+    /**
+     * @dev Gets the actual destination address for a transaction
+     * @dev Delegates to LibPolicyDestination.
+     * @param to The transaction `to` address
+     * @param data The transaction calldata
+     * @param value The transaction value in wei
+     * @return The actual destination address
+     */
+    function getActualDestination(address to, bytes calldata data, uint256 value) internal pure returns (address) {
+        return LibPolicyDestination.getActualDestination(to, data, value);
+    }
+
+    /**
+     * @notice Computes the usage key for time-based limit tracking
+     * @dev Delegates to LibPolicyTimeBasedLimits.
+     * @param policyId The policy ID
+     * @param policy The policy data
+     * @param account The source account address
+     * @param destination The destination address
+     * @param initiator The initiator address
+     * @return The computed usage key
+     */
+    function computeUsageKey(
+        uint256 policyId,
+        Policies.Policy memory policy,
+        address account,
+        address destination,
+        address initiator
+    ) internal pure returns (bytes32) {
+        return LibPolicyTimeBasedLimits.computeUsageKey({
+            policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
+        });
+    }
+
+    /**
+     * @dev Computes the merkle leaf for a policy
+     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
+     * @param policyId The unique identifier of the policy
+     * @param policy The policy data
+     * @return The computed merkle leaf
+     */
+    function _computePolicyLeaf(uint256 policyId, Policies.Policy memory policy) private pure returns (bytes32) {
+        return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
     }
 }
