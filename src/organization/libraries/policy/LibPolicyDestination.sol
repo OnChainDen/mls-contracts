@@ -16,8 +16,9 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 library LibPolicyDestination {
     /**
      * @dev Gets the actual destination address for a transaction
-     * @dev For token transfers, the actual destination is the token recipient (extracted from calldata).
-     *      For other transactions, the actual destination is the `to` address.
+     * @dev For ERC-20 token transfers, the actual destination is the token recipient (extracted from calldata).
+     *      For native token transfers, the actual destination is the `to` address.
+     *      For contract interactions, the actual destination is the `to` address.
      * @param to The transaction `to` address
      * @param data The transaction calldata
      * @param value The transaction value in wei
