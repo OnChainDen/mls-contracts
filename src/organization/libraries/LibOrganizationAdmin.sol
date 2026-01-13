@@ -214,7 +214,7 @@ library LibOrganizationAdmin {
      * @param isApproval Whether this is an approval (true) or rejection (false)
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function validateAdminAuthorizationOrRevert(
+    function validateAdminAuthAndConsumeNonceOrRevert(
         OperationType operationType,
         bytes memory operationData,
         bool isApproval,

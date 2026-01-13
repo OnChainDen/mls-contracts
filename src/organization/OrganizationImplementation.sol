@@ -147,7 +147,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             isApproval: true,
@@ -179,7 +179,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newGuardian);
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.UpdateGuardian,
             operationData: operationData,
             isApproval: true,
@@ -206,7 +206,7 @@ contract OrganizationImplementation is
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
         // Validate admin authorization and consume the nonce (isApproval = false for rejection)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: operationType, operationData: operationData, isApproval: false, authParams: authParams
         });
 
@@ -232,7 +232,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
             isApproval: true,
@@ -258,7 +258,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyGroups,
             operationData: operationData,
             isApproval: true,
@@ -284,7 +284,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyPolicies,
             operationData: operationData,
             isApproval: true,
@@ -310,7 +310,7 @@ contract OrganizationImplementation is
         bytes memory operationData = abi.encode(create2Salt);
 
         // isApproval = true for execution
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.DeployAccount,
             operationData: operationData,
             isApproval: true,
@@ -332,7 +332,7 @@ contract OrganizationImplementation is
     ) external onlyGuardian {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
             isApproval: true,
@@ -512,7 +512,7 @@ contract OrganizationImplementation is
     ) external onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
-        LibOrganizationAdmin.validateAdminAuthorizationOrRevert({
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
         });
 
