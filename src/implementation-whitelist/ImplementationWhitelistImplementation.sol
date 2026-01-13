@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
@@ -15,7 +15,7 @@ import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWh
  * @notice Contract for managing whitelisted implementation addresses
  * @author Den Technologies Inc
  */
-contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable, Ownable, IImplementationWhitelist {
+contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable, Ownable2StepUpgradeable, IImplementationWhitelist {
     /**
      * @notice Emitted when an implementation is whitelisted
      * @param contractType The type of contract (Account or Organization)
@@ -50,7 +50,7 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() Ownable(msg.sender) {
+    constructor() {
         _disableInitializers();
     }
 
@@ -59,7 +59,8 @@ contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable
      * @param initialOwner The initial owner address
      */
     function initialize(address initialOwner) external initializer onlyDeployer {
-        _transferOwnership(initialOwner);
+        __Ownable_init(initialOwner);
+        __Ownable2Step_init();
 
         emit ImplementationWhitelistInitialized(initialOwner);
     }
