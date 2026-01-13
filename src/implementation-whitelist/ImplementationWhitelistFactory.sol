@@ -8,7 +8,8 @@ import {ImplementationWhitelistProxy} from "./ImplementationWhitelistProxy.sol";
 
 /**
  * @title Implementation Whitelist Factory
- * @notice Factory contract for deploying ImplementationWhitelistProxy contracts at deterministic addresses across chains
+ * @notice Factory contract for deploying ImplementationWhitelistProxy contracts at deterministic addresses across
+ * chains
  * @author Den Technologies Inc
  */
 contract ImplementationWhitelistFactory {

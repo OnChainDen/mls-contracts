@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
-import {LibImplementationWhitelistDeployerAddressStorage} from
-    "./libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
+import {
+    LibImplementationWhitelistDeployerAddressStorage
+} from "./libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
 import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWhitelistStorage.sol";
 
 /**
@@ -15,7 +16,12 @@ import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWh
  * @notice Contract for managing whitelisted implementation addresses
  * @author Den Technologies Inc
  */
-contract ImplementationWhitelistImplementation is Initializable, UUPSUpgradeable, Ownable2StepUpgradeable, IImplementationWhitelist {
+contract ImplementationWhitelistImplementation is
+    Initializable,
+    UUPSUpgradeable,
+    Ownable2StepUpgradeable,
+    IImplementationWhitelist
+{
     /**
      * @notice Emitted when an implementation is whitelisted
      * @param contractType The type of contract (Account or Organization)
