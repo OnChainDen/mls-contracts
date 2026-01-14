@@ -7,10 +7,10 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 
 import {
     LibImplementationWhitelistDeployerAddressStorage
-} from "implementation-whitelist/libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistDeployerAddressStorage.sol";
 import {
     LibImplementationWhitelistStorage
-} from "implementation-whitelist/libraries/LibImplementationWhitelistStorage.sol";
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 
 /**

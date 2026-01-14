@@ -22,10 +22,10 @@ import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibO
 // Implementation whitelist storage libraries
 import {
     LibImplementationWhitelistDeployerAddressStorage
-} from "implementation-whitelist/libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistDeployerAddressStorage.sol";
 import {
     LibImplementationWhitelistStorage
-} from "implementation-whitelist/libraries/LibImplementationWhitelistStorage.sol";
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol";
 
 /**
  * @title ERC7201 Storage Slots Test

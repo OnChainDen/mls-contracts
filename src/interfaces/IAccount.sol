@@ -10,20 +10,6 @@ pragma solidity ^0.8.24;
  */
 interface IAccount {
     // ═══════════════════════════════════════════════════════════════════════════
-    // Errors
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @notice Thrown when a transaction execution fails
-     */
-    error TransactionExecutionFailed();
-
-    /**
-     * @notice Thrown when the caller is not the associated organization
-     */
-    error OnlyOrganization();
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // Events
     // ═══════════════════════════════════════════════════════════════════════════
 
@@ -48,6 +34,20 @@ interface IAccount {
      */
     // solhint-disable-next-line gas-indexed-events
     event OnchainCustodyAccountNativeTokenReceived(address indexed sender, uint256 value);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Errors
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Thrown when a transaction execution fails
+     */
+    error TransactionExecutionFailed();
+
+    /**
+     * @notice Thrown when the caller is not the associated organization
+     */
+    error OnlyOrganization();
 
     /**
      * @notice Receives native tokens (ETH) sent to this account

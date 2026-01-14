@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {
     LibImplementationWhitelistDeployerAddressStorage
-} from "implementation-whitelist/libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistDeployerAddressStorage.sol";
 
 /**
  * @title Implementation Whitelist Proxy
