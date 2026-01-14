@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationSignatures} from "../../interfaces/organization/IOrganizationSignatures.sol";
-import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
-import {OperationType} from "../../types/CommonTypes.sol";
-import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignaturesStorage.sol";
 import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
+import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Signatures

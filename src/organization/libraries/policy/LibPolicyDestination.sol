@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {MerkleUtils} from "../../../libraries/MerkleUtils.sol";
-import {TokenTransferUtils} from "../../../libraries/TokenTransferUtils.sol";
-import {DestinationType, Policy} from "../../../types/PolicyTypes.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
+import {DestinationType, Policy} from "types/PolicyTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

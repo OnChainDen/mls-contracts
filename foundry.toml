@@ -11,7 +11,14 @@ via_ir = false
 fs_permissions = [{ access = "read-write", path = "./"}]
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
-    "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
+    "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "account/=src/account/",
+    "implementation-whitelist/=src/implementation-whitelist/",
+    "interfaces/=src/interfaces/",
+    "libraries/=src/libraries/",
+    "organization/=src/organization/",
+    "types/=src/types/"
 ]
 
 [profile.ci]

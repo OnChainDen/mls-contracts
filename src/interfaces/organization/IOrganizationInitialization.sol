@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InitializationParams} from "../../types/CommonTypes.sol";
+import {InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @title IOrganizationInitialization

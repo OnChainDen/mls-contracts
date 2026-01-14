@@ -2,23 +2,23 @@
 pragma solidity ^0.8.24;
 
 // Module interfaces (spokes)
-import {IOrganizationAccountFactory} from "./organization/IOrganizationAccountFactory.sol";
-import {IOrganizationAccountSignature} from "./organization/IOrganizationAccountSignature.sol";
-import {IOrganizationAccountTransaction} from "./organization/IOrganizationAccountTransaction.sol";
-import {IOrganizationAdmin} from "./organization/IOrganizationAdmin.sol";
-import {IOrganizationGroups} from "./organization/IOrganizationGroups.sol";
-import {IOrganizationGuardian} from "./organization/IOrganizationGuardian.sol";
-import {IOrganizationInitialization} from "./organization/IOrganizationInitialization.sol";
-import {IOrganizationMembers} from "./organization/IOrganizationMembers.sol";
-import {IOrganizationPolicy} from "./organization/IOrganizationPolicy.sol";
-import {IOrganizationSignatures} from "./organization/IOrganizationSignatures.sol";
+import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
+import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
+import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
+import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 
 // Types
-import {AdminAuthParams} from "../types/AdminTypes.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
 
 // Re-export types for backward compatibility
 // solhint-disable-next-line no-unused-import
-import {InitializationParams, OperationType} from "../types/CommonTypes.sol";
+import {InitializationParams, OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title IOrganization

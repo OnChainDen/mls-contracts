@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IAccountErrors} from "./IAccountErrors.sol";
+import {IAccountErrors} from "interfaces/IAccountErrors.sol";
 
 /**
  * @title IAccount

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationGroups} from "../../interfaces/organization/IOrganizationGroups.sol";
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {GroupData} from "../../types/PolicyTypes.sol";
-import {LibOrganizationGroupsStorage} from "./storage/LibOrganizationGroupsStorage.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {GroupData} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Organization Groups

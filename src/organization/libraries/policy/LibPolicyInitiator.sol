@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {ApproverType, InitiatorProofs, Policy} from "../../../types/PolicyTypes.sol";
-import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
-import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
+import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {ApproverType, InitiatorProofs, Policy} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Policy Initiator

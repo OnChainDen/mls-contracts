@@ -5,11 +5,13 @@ import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/access/Ownable2
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
 import {
     LibImplementationWhitelistDeployerAddressStorage
-} from "./libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
-import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWhitelistStorage.sol";
+} from "implementation-whitelist/libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
+import {
+    LibImplementationWhitelistStorage
+} from "implementation-whitelist/libraries/LibImplementationWhitelistStorage.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 
 /**
  * @title Implementation Whitelist

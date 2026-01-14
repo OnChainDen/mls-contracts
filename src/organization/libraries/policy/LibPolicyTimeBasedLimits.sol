@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policy, PolicyLimitation, TimeIntervalScope} from "../../../types/PolicyTypes.sol";
-import {LibOrganizationPolicyStorage} from "../storage/LibOrganizationPolicyStorage.sol";
+import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
+import {Policy, PolicyLimitation, TimeIntervalScope} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Policy Time Based Limits

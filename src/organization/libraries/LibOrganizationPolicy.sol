@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationPolicy} from "../../interfaces/organization/IOrganizationPolicy.sol";
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
-import {ApproverProofs, InitiatorProofs, Policy, TransactionType, ValidationProofs} from "../../types/PolicyTypes.sol";
-import {LibPolicyApproval} from "./policy/LibPolicyApproval.sol";
-import {LibPolicyContractInteraction} from "./policy/LibPolicyContractInteraction.sol";
-import {LibPolicyDestination} from "./policy/LibPolicyDestination.sol";
-import {LibPolicyInitiator} from "./policy/LibPolicyInitiator.sol";
-import {LibPolicyTimeBasedLimits} from "./policy/LibPolicyTimeBasedLimits.sol";
-import {LibPolicyTokenTransfer} from "./policy/LibPolicyTokenTransfer.sol";
-import {LibOrganizationPolicyStorage} from "./storage/LibOrganizationPolicyStorage.sol";
+import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
+import {LibPolicyApproval} from "organization/libraries/policy/LibPolicyApproval.sol";
+import {LibPolicyContractInteraction} from "organization/libraries/policy/LibPolicyContractInteraction.sol";
+import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
+import {LibPolicyInitiator} from "organization/libraries/policy/LibPolicyInitiator.sol";
+import {LibPolicyTimeBasedLimits} from "organization/libraries/policy/LibPolicyTimeBasedLimits.sol";
+import {LibPolicyTokenTransfer} from "organization/libraries/policy/LibPolicyTokenTransfer.sol";
+import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
+import {ApproverProofs, InitiatorProofs, Policy, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

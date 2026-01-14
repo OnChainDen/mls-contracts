@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AdminConfig} from "../../../types/AdminTypes.sol";
+import {AdminConfig} from "types/AdminTypes.sol";
 
 /**
  * @title Organization Admin Storage

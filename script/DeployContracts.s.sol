@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AccountImplementation} from "../src/account/AccountImplementation.sol";
+import {AccountImplementation} from "account/AccountImplementation.sol";
+import {Script, console} from "forge-std/Script.sol";
 import {
     ImplementationWhitelistImplementation
-} from "../src/implementation-whitelist/ImplementationWhitelistImplementation.sol";
-import {IImplementationWhitelist} from "../src/implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {OrganizationFactory} from "../src/organization/OrganizationFactory.sol";
-import {OrganizationImplementation} from "../src/organization/OrganizationImplementation.sol";
-import {Script, console} from "forge-std/Script.sol";
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {OrganizationFactory} from "organization/OrganizationFactory.sol";
+import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 
 /**
  * @title Deploy Contracts

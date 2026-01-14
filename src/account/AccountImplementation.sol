@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IAccount} from "../interfaces/IAccount.sol";
-import {IOrganizationAccountSignature} from "../interfaces/organization/IOrganizationAccountSignature.sol";
-import {LibAccountOrganizationAddressStorage} from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
+import {LibAccountOrganizationAddressStorage} from "account/libraries/storage/LibAccountOrganizationAddressStorage.sol";
+import {IAccount} from "interfaces/IAccount.sol";
+import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
 
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 

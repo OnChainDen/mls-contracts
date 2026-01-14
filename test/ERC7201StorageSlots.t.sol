@@ -7,27 +7,25 @@ import {Test} from "forge-std/Test.sol";
 // Organization storage libraries
 import {
     LibOrganizationAccountFactoryStorage
-} from "../src/organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
-import {LibOrganizationAdminStorage} from "../src/organization/libraries/storage/LibOrganizationAdminStorage.sol";
+} from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
     LibOrganizationDeployerAddressStorage
-} from "../src/organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
-import {LibOrganizationGroupsStorage} from "../src/organization/libraries/storage/LibOrganizationGroupsStorage.sol";
-import {LibOrganizationGuardianStorage} from "../src/organization/libraries/storage/LibOrganizationGuardianStorage.sol";
-import {LibOrganizationMembersStorage} from "../src/organization/libraries/storage/LibOrganizationMembersStorage.sol";
-import {LibOrganizationPolicyStorage} from "../src/organization/libraries/storage/LibOrganizationPolicyStorage.sol";
-import {
-    LibOrganizationSignaturesStorage
-} from "../src/organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
-import {LibOrganizationUpgradeStorage} from "../src/organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
+} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
+import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
+import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
+import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
+import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
 // Implementation whitelist storage libraries
 import {
     LibImplementationWhitelistDeployerAddressStorage
-} from "../src/implementation-whitelist/libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
+} from "implementation-whitelist/libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
 import {
     LibImplementationWhitelistStorage
-} from "../src/implementation-whitelist/libraries/LibImplementationWhitelistStorage.sol";
+} from "implementation-whitelist/libraries/LibImplementationWhitelistStorage.sol";
 
 /**
  * @title ERC7201 Storage Slots Test

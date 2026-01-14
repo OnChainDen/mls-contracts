@@ -5,31 +5,33 @@ import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
+import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
 // Interfaces
-import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
-import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {IOrganization} from "../interfaces/IOrganization.sol";
+import {IAccountExecute} from "account/interfaces/IAccountExecute.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganization} from "interfaces/IOrganization.sol";
 
 // Types
-import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "../types/AdminTypes.sol";
-import {InitializationParams, OperationType} from "../types/CommonTypes.sol";
-import {GroupData, Policy, ValidationProofs} from "../types/PolicyTypes.sol";
+import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {InitializationParams, OperationType} from "types/CommonTypes.sol";
+import {GroupData, Policy, ValidationProofs} from "types/PolicyTypes.sol";
 
 // Libraries
-import {LibOrganizationAccountFactory} from "./libraries/LibOrganizationAccountFactory.sol";
-import {LibOrganizationAccountSignature} from "./libraries/LibOrganizationAccountSignature.sol";
-import {LibOrganizationAccountTransaction} from "./libraries/LibOrganizationAccountTransaction.sol";
-import {LibOrganizationAdmin} from "./libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationGroups} from "./libraries/LibOrganizationGroups.sol";
-import {LibOrganizationGuardian} from "./libraries/LibOrganizationGuardian.sol";
-import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
-import {LibOrganizationMembers} from "./libraries/LibOrganizationMembers.sol";
-import {LibOrganizationPolicy} from "./libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationSignatures} from "./libraries/LibOrganizationSignatures.sol";
-import {LibOrganizationAccountFactoryStorage} from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
-import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationPolicyStorage.sol";
+import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
+import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
+import {LibOrganizationAccountTransaction} from "organization/libraries/LibOrganizationAccountTransaction.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
+import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
+import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {
+    LibOrganizationAccountFactoryStorage
+} from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
 
 /**
  * @title Organization Implementation

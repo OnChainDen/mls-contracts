@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationInitialization} from "../../interfaces/organization/IOrganizationInitialization.sol";
-import {AdminConfig, AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
-import {InitializationParams} from "../../types/CommonTypes.sol";
-import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
-import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
-import {LibOrganizationDeployerAddressStorage} from "./storage/LibOrganizationDeployerAddressStorage.sol";
-import {LibOrganizationGroupsStorage} from "./storage/LibOrganizationGroupsStorage.sol";
-import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianStorage.sol";
-import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersStorage.sol";
+import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
+import {
+    LibOrganizationDeployerAddressStorage
+} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
+import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Initialization

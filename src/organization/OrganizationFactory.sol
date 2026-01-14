@@ -3,12 +3,12 @@ pragma solidity ^0.8.24;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
-import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {IOrganizationInitialization} from "../interfaces/organization/IOrganizationInitialization.sol";
-import {InitializationParams} from "../types/CommonTypes.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {InitializationParams} from "types/CommonTypes.sol";
 
-import {OrganizationImplementation} from "./OrganizationImplementation.sol";
-import {OrganizationProxy} from "./OrganizationProxy.sol";
+import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
+import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 
 /**
  * @title Organization Factory

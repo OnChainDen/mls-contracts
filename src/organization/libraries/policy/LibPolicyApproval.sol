@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationPolicy} from "../../../interfaces/organization/IOrganizationPolicy.sol";
-import {SignatureUtils} from "../../../libraries/SignatureUtils.sol";
-import {ApproverProofs, ApproverType, GroupData, Policy} from "../../../types/PolicyTypes.sol";
-import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
-import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
+import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {ApproverProofs, ApproverType, GroupData, Policy} from "types/PolicyTypes.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 

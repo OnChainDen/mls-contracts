@@ -2,19 +2,19 @@
 pragma solidity ^0.8.24;
 
 // Interfaces
-import {IOrganizationAdmin} from "../../interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 
 // Types
-import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs, SigningAdminsInOrgProofs} from "../../types/AdminTypes.sol";
-import {OperationType} from "../../types/CommonTypes.sol";
+import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs, SigningAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 // Libraries
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
-import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
-import {LibOrganizationMembers} from "./LibOrganizationMembers.sol";
-import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
-import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";

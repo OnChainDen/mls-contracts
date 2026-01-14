@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationAccountTransaction} from "../../interfaces/organization/IOrganizationAccountTransaction.sol";
-import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
-import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
-import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs} from "../../types/PolicyTypes.sol";
-import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
-import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
-import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
+import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
+import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
+import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 

@@ -3,8 +3,10 @@ pragma solidity ^0.8.24;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
-import {ImplementationWhitelistImplementation} from "./ImplementationWhitelistImplementation.sol";
-import {ImplementationWhitelistProxy} from "./ImplementationWhitelistProxy.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 
 /**
  * @title Implementation Whitelist Factory

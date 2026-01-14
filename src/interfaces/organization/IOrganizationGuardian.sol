@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AdminAuthParams} from "../../types/AdminTypes.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
 
 /**
  * @title IOrganizationGuardian

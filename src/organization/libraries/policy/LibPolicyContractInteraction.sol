@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {ContractInteractionUtils} from "../../../libraries/ContractInteractionUtils.sol";
-import {Policy} from "../../../types/PolicyTypes.sol";
-import {LibPolicyDestination} from "./LibPolicyDestination.sol";
-import {LibPolicyParameterConstraints} from "./LibPolicyParameterConstraints.sol";
+import {ContractInteractionUtils} from "libraries/ContractInteractionUtils.sol";
+import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
+import {LibPolicyParameterConstraints} from "organization/libraries/policy/LibPolicyParameterConstraints.sol";
+import {Policy} from "types/PolicyTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

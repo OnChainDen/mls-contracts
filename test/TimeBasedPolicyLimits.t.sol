@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {LibOrganizationPolicy} from "../src/organization/libraries/LibOrganizationPolicy.sol";
+import {Test} from "forge-std/Test.sol";
+import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {
     ApproverType,
     DestinationType,
@@ -10,8 +11,7 @@ import {
     PolicyType,
     TimeIntervalScope,
     TransactionType
-} from "../src/types/PolicyTypes.sol";
-import {Test} from "forge-std/Test.sol";
+} from "types/PolicyTypes.sol";
 
 /**
  * @title Time-Based Policy Limits Test

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationMembers} from "../../interfaces/organization/IOrganizationMembers.sol";
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {AdminConfig, AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
-import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
-import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
-import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersStorage.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
+import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
