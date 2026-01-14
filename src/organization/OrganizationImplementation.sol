@@ -11,7 +11,6 @@ import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganization
 import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
 import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
 import {IOrganization, IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
-import {IUpgradeable} from "../interfaces/IUpgradeable.sol";
 
 // Types
 import {AdminAuthParams, AllAdminsInOrgProofs, AdminPermission} from "../types/AdminTypes.sol";
@@ -42,7 +41,6 @@ import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationP
 contract OrganizationImplementation is
     UUPSUpgradeable,
     Initializable,
-    IUpgradeable,
     IBeacon,
     IOrganization
 {
@@ -447,7 +445,7 @@ contract OrganizationImplementation is
         address newImplementation,
         bytes calldata data,
         AdminAuthParams calldata authParams
-    ) external override(IOrganization, IUpgradeable) onlyGuardian {
+    ) external override onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
