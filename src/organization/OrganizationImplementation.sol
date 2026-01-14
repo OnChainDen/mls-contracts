@@ -13,7 +13,6 @@ import {IOrganizationSignatureValidator, InitializationParams, OperationType} fr
 import {IUpgradeable} from "../interfaces/IUpgradeable.sol";
 import {Policies} from "../libraries/Policies.sol";
 
-import {UpgradeAuthorizationStorage} from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
 import {LibOrganizationAccountFactory} from "./libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAccountSignature} from "./libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAccountTransaction} from "./libraries/LibOrganizationAccountTransaction.sol";
@@ -341,7 +340,7 @@ contract OrganizationImplementation is
 
         // 2. Validate implementation against whitelist
         // forgefmt: disable-next-item
-        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+        IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
                 IImplementationWhitelist.ContractType.Account, 
                 newImplementation
@@ -518,7 +517,7 @@ contract OrganizationImplementation is
 
         // Validate implementation against whitelist
         // forgefmt: disable-next-item
-        IImplementationWhitelist(UpgradeAuthorizationStorage.layout().whitelistAddress)
+        IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
                 IImplementationWhitelist.ContractType.Organization,
                 newImplementation
@@ -527,7 +526,7 @@ contract OrganizationImplementation is
         // Set authorization flag in namespaced storage
         // This flag tells _authorizeUpgrade that we've done proper validation.
         // Using EIP-7201 namespaced storage to prevent slot collisions during upgrades.
-        LibOrganizationUpgradeStorage.layout().authorized = true;
+        LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = true;
 
         // Perform the upgrade
         // This calls the inherited UUPSUpgradeable.upgradeToAndCall which will:
@@ -540,7 +539,7 @@ contract OrganizationImplementation is
         // Even though the flag can't persist if the tx reverts, we reset it explicitly
         // as a security best practice. This also protects against any theoretical
         // scenario where the flag might persist.
-        LibOrganizationUpgradeStorage.layout().authorized = false;
+        LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = false;
     }
 
     /**
@@ -788,7 +787,7 @@ contract OrganizationImplementation is
         // Check the authorization flag from namespaced storage
         // If this is false, it means someone called upgradeToAndCall directly without
         // going through upgradeToAndCallWithAuthorization
-        if (!LibOrganizationUpgradeStorage.layout().authorized) {
+        if (!LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized) {
             revert UnauthorizedUpgrade();
         }
     }

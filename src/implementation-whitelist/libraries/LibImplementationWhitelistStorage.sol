@@ -5,31 +5,31 @@ import {IImplementationWhitelist} from "../interfaces/IImplementationWhitelist.s
 
 /**
  * @title Implementation Whitelist Storage
- * @dev Storage layout for implementation whitelist functionality
+ * @dev ERC-7201 namespaced storage for implementation whitelist functionality
  * @author Den Technologies Inc
  */
 library LibImplementationWhitelistStorage {
     /**
      * @dev Storage layout for implementation whitelist
+     * @custom:storage-location erc7201:den.mls-wallet.implementation-whitelist.main
      * @param whitelisted Nested mapping of contract type to implementation address to whitelist status
      */
     struct Layout {
         mapping(IImplementationWhitelist.ContractType => mapping(address => bool)) whitelisted;
     }
 
-    /// @dev Storage slot for the whitelist storage layout, computed as
-    /// keccak256("onchain.custody.implementation.whitelist.storage")
-    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.implementation.whitelist.storage");
+    /// @dev Storage location for WhitelistStorage, following ERC-7201 namespaced storage pattern.
+    /// @dev Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.implementation-whitelist.main")) - 1)) &
+    /// ~bytes32(uint256(0xff)) @dev Verify: `cast index-erc7201 "den.mls-wallet.implementation-whitelist.main"`
+    bytes32 internal constant STORAGE_LOCATION = 0xca671afbd25869f26c28645085add0f916fc247d25fcba9293e21543f45bd300;
 
     /**
      * @dev Returns the storage layout at the namespaced slot
-     * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */
     function layout() internal pure returns (Layout storage _layout) {
-        bytes32 slot = STORAGE_SLOT;
         assembly {
-            _layout.slot := slot
+            _layout.slot := STORAGE_LOCATION
         }
     }
 }

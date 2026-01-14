@@ -3,19 +3,19 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Upgrade Storage
- * @dev Storage layout for UUPS upgrade authorization functionality
- * @dev This library provides namespaced storage for the upgrade authorization flag used to
- *      secure the UUPS upgrade flow. The flag ensures that upgrades can only occur through
- *      the authorized `upgradeToAndCallWithAuthorization` function.
+ * @dev ERC-7201 namespaced storage for Organization UUPS upgrade functionality.
+ *      This library provides namespaced storage for:
+ *      1. The implementation whitelist address for upgrade validation
+ *      2. The upgrade authorization flag used to secure the UUPS upgrade flow
  *
- *      SECURITY CONTEXT:
+ *      UPGRADE AUTHORIZATION SECURITY CONTEXT:
  *      OpenZeppelin's UUPSUpgradeable exposes a public `upgradeToAndCall` function that anyone
  *      can call. The `_authorizeUpgrade` hook only receives `newImplementation` - it cannot
- *      receive our signatures/proofs. So we use this storage flag to:
- *      1. Set `authorized = true` in `upgradeToAndCallWithAuthorization` AFTER validating
+ *      receive our signatures/proofs. So we use the `isUpgradeAuthorized` flag to:
+ *      1. Set `isUpgradeAuthorized = true` in `upgradeToAndCallWithAuthorization` AFTER validating
  *         guardian access, admin signatures, and implementation whitelist
  *      2. Check the flag in `_authorizeUpgrade` and revert if not set
- *      3. Reset the flag after the upgrade completes
+ *      3. Reset the flag to `false` after the upgrade completes
  *
  *      This prevents attackers from bypassing our authorization by calling
  *      `upgradeToAndCall` directly on the proxy.
@@ -24,31 +24,34 @@ pragma solidity ^0.8.24;
  */
 library LibOrganizationUpgradeStorage {
     /**
-     * @dev Storage layout for upgrade authorization
-     * @param authorized Flag indicating if an upgrade has been authorized through
-     *        the proper flow (upgradeToAndCallWithAuthorization)
+     * @dev Storage layout for upgrade functionality
+     * @custom:storage-location erc7201:den.mls-wallet.organization.upgrade
+     * @param whitelistAddress Address of the implementation whitelist contract used to validate
+     *        that new implementations are approved before upgrading
+     * @param isUpgradeAuthorized Flag indicating if an upgrade has been authorized through
+     *        the proper flow (upgradeToAndCallWithAuthorization). This flag is:
+     *        - Set to `true` after validating guardian, admin signatures, and whitelist
+     *        - Checked in `_authorizeUpgrade` to ensure proper authorization flow
+     *        - Reset to `false` after the upgrade completes
+     *        - CRITICAL: Prevents direct calls to `upgradeToAndCall` from bypassing authorization
      */
     struct Layout {
-        bool authorized;
+        address whitelistAddress;
+        bool isUpgradeAuthorized;
     }
 
-    /**
-     * @dev Storage slot for the upgrade authorization data
-     * @dev Uses a deterministic slot computed from a unique namespace string.
-     *      This prevents storage collisions when upgrading contracts and ensures
-     *      the slot won't shift if new state variables are added to the contract.
-     */
-    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.upgrade.storage");
+    /// @dev Storage location for UpgradeStorage, following ERC-7201 namespaced storage pattern.
+    /// @dev Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.upgrade")) - 1)) &
+    /// ~bytes32(uint256(0xff)) @dev Verify: `cast index-erc7201 "den.mls-wallet.organization.upgrade"`
+    bytes32 internal constant STORAGE_LOCATION = 0x3040d5b43dcdbaf37e16e33851653f3198dd40add83f07a3836a4d13c1d85d00;
 
     /**
      * @dev Returns the storage layout at the namespaced slot
-     * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage struct at the namespaced slot
      */
     function layout() internal pure returns (Layout storage _layout) {
-        bytes32 slot = STORAGE_SLOT;
         assembly {
-            _layout.slot := slot
+            _layout.slot := STORAGE_LOCATION
         }
     }
 }
