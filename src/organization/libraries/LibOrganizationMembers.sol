@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationMembers} from "../../interfaces/organization/IOrganizationMembers.sol";
-import {AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
 import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
 import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
 import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
@@ -33,7 +33,7 @@ library LibOrganizationMembers {
         internal
     {
         // Get current admin configuration
-        LibOrganizationAdminStorage.AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
+        AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
 
         // Validate that ALL admins are still members in the NEW members tree
         // This prevents accidentally bricking the organization by removing admins from membership

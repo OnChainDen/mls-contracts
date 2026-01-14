@@ -54,11 +54,7 @@ library LibOrganizationAdmin {
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
         // Store previous admin configuration for the event
-        AdminConfig memory previousAdmin = AdminConfig({
-            adminsRoot: adminLayout.adminConfig.adminsRoot,
-            adminCount: adminLayout.adminConfig.adminCount,
-            votingThreshold: adminLayout.adminConfig.votingThreshold
-        });
+        AdminConfig memory previousAdmin = adminLayout.adminConfig;
 
         // Update admin permissions
         adminLayout.adminConfig.adminsRoot = newAdminsRoot;
@@ -135,12 +131,7 @@ library LibOrganizationAdmin {
      * @return The current admin permission configuration
      */
     function getAdminConfig() internal view returns (AdminConfig memory) {
-        LibOrganizationAdminStorage.Layout storage layout = LibOrganizationAdminStorage.layout();
-        return AdminConfig({
-            adminsRoot: layout.adminConfig.adminsRoot,
-            adminCount: layout.adminConfig.adminCount,
-            votingThreshold: layout.adminConfig.votingThreshold
-        });
+        return LibOrganizationAdminStorage.layout().adminConfig;
     }
 
     /**

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationInitialization} from "../../interfaces/organization/IOrganizationInitialization.sol";
-import {AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
 import {InitializationParams} from "../../types/CommonTypes.sol";
 import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
 import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
@@ -63,7 +63,7 @@ library LibOrganizationInitialization {
 
         // Set admin configuration
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        adminLayout.adminConfig = LibOrganizationAdminStorage.AdminConfig({
+        adminLayout.adminConfig = AdminConfig({
             adminsRoot: params.adminsRoot, adminCount: params.adminCount, votingThreshold: params.votingThreshold
         });
 
