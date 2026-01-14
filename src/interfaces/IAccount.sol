@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IAccountErrors} from "interfaces/IAccountErrors.sol";
-
 /**
  * @title IAccount
  * @notice Interface for Account contracts (used with BeaconProxy)
@@ -10,7 +8,25 @@ import {IAccountErrors} from "interfaces/IAccountErrors.sol";
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-interface IAccount is IAccountErrors {
+interface IAccount {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Errors
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Thrown when a transaction execution fails
+     */
+    error TransactionExecutionFailed();
+
+    /**
+     * @notice Thrown when the caller is not the associated organization
+     */
+    error OnlyOrganization();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Events
+    // ═══════════════════════════════════════════════════════════════════════════
+
     /**
      * @notice Emitted when a transaction is executed
      * @param to The destination address of the transaction

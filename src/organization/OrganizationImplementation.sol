@@ -8,7 +8,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
 // Interfaces
-import {IAccountExecute} from "account/interfaces/IAccountExecute.sol";
+import {IAccount} from "interfaces/IAccount.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 
@@ -343,7 +343,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
 
         // Execute the transaction on the account
         // forgefmt: disable-next-item
-        IAccountExecute(account).executeTransaction({
+        IAccount(payable(account)).executeTransaction({
             to: to,
             value: value, 
             data: data, 
