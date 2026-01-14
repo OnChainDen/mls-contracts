@@ -10,7 +10,7 @@ import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganization
 // Interfaces
 import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
 import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {IOrganization, IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
+import {IOrganization} from "../interfaces/IOrganization.sol";
 
 // Types
 import {AdminAuthParams, AllAdminsInOrgProofs, AdminPermission} from "../types/AdminTypes.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
+import {IOrganizationAccountSignature} from "../interfaces/organization/IOrganizationAccountSignature.sol";
 import {IAccount} from "../interfaces/IAccount.sol";
 import {LibAccountOrganizationAddressStorage} from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
 
@@ -78,7 +78,7 @@ contract AccountImplementation is IAccount, IERC1271 {
         returns (bytes4 magicValue)
     {
         address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
-        return IOrganizationSignatureValidator(organization).isValidSignatureForAccount(address(this), hash, signature);
+        return IOrganizationAccountSignature(organization).isValidSignatureForAccount(address(this), hash, signature);
     }
 
     /**

@@ -2,43 +2,23 @@
 pragma solidity ^0.8.24;
 
 // Module interfaces (spokes)
-import {IOrganizationAdmin} from "./organization/IOrganizationAdmin.sol";
-import {IOrganizationMembers} from "./organization/IOrganizationMembers.sol";
-import {IOrganizationGroups} from "./organization/IOrganizationGroups.sol";
-import {IOrganizationPolicy} from "./organization/IOrganizationPolicy.sol";
-import {IOrganizationGuardian} from "./organization/IOrganizationGuardian.sol";
 import {IOrganizationAccountFactory} from "./organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAccountSignature} from "./organization/IOrganizationAccountSignature.sol";
 import {IOrganizationAccountTransaction} from "./organization/IOrganizationAccountTransaction.sol";
-import {IOrganizationSignatures} from "./organization/IOrganizationSignatures.sol";
+import {IOrganizationAdmin} from "./organization/IOrganizationAdmin.sol";
+import {IOrganizationGroups} from "./organization/IOrganizationGroups.sol";
+import {IOrganizationGuardian} from "./organization/IOrganizationGuardian.sol";
 import {IOrganizationInitialization} from "./organization/IOrganizationInitialization.sol";
+import {IOrganizationMembers} from "./organization/IOrganizationMembers.sol";
+import {IOrganizationPolicy} from "./organization/IOrganizationPolicy.sol";
+import {IOrganizationSignatures} from "./organization/IOrganizationSignatures.sol";
 
 // Types
 import {AdminAuthParams} from "../types/AdminTypes.sol";
 
 // Re-export types for backward compatibility
 // solhint-disable-next-line no-unused-import
-import {OperationType, InitializationParams} from "../types/CommonTypes.sol";
-
-/**
- * @title IOrganizationSignatureValidator
- * @notice Interface for validating ERC-1271 signatures on behalf of accounts
- * @author Den Technologies Inc
- */
-interface IOrganizationSignatureValidator {
-    /**
-     * @notice Validates an ERC-1271 signature for a given account
-     * @dev Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
-     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
-     * @param account The account address on behalf of which the signature is being validated
-     * @param hash The hash that was signed
-     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
-     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
-     */
-    function isValidSignatureForAccount(address account, bytes32 hash, bytes calldata signature)
-        external
-        view
-        returns (bytes4 magicValue);
-}
+import {InitializationParams, OperationType} from "../types/CommonTypes.sol";
 
 /**
  * @title IOrganization
@@ -56,9 +36,9 @@ interface IOrganization is
     IOrganizationGuardian,
     IOrganizationAccountFactory,
     IOrganizationAccountTransaction,
+    IOrganizationAccountSignature,
     IOrganizationSignatures,
-    IOrganizationInitialization,
-    IOrganizationSignatureValidator
+    IOrganizationInitialization
 {
     // ═══════════════════════════════════════════════════════════════════════════
     // Errors (OrganizationImplementation-specific errors that don't belong to modules)
