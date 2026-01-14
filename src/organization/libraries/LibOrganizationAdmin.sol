@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
 import {IOrganizationAdmin} from "../../interfaces/organization/IOrganizationAdmin.sol";
 
 // Types
-import {AdminAuthParams, AllAdminsInOrgProofs, SigningAdminsInOrgProofs, AdminPermission} from "../../types/AdminTypes.sol";
+import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs, SigningAdminsInOrgProofs} from "../../types/AdminTypes.sol";
 import {OperationType} from "../../types/CommonTypes.sol";
 
 // Libraries
@@ -28,7 +28,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * @author Den Technologies Inc
  */
 library LibOrganizationAdmin {
-
     /**
      * @dev Sets the admin permissions for the organization
      * @dev Validates that all new admins are members before updating.
@@ -55,19 +54,19 @@ library LibOrganizationAdmin {
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
         // Store previous admin configuration for the event
-        AdminPermission memory previousAdmin = AdminPermission({
-            adminsRoot: adminLayout.adminPermission.adminsRoot,
-            adminCount: adminLayout.adminPermission.adminCount,
-            votingThreshold: adminLayout.adminPermission.votingThreshold
+        AdminConfig memory previousAdmin = AdminConfig({
+            adminsRoot: adminLayout.adminConfig.adminsRoot,
+            adminCount: adminLayout.adminConfig.adminCount,
+            votingThreshold: adminLayout.adminConfig.votingThreshold
         });
 
         // Update admin permissions
-        adminLayout.adminPermission.adminsRoot = newAdminsRoot;
-        adminLayout.adminPermission.adminCount = newAdminCount;
-        adminLayout.adminPermission.votingThreshold = newVotingThreshold;
+        adminLayout.adminConfig.adminsRoot = newAdminsRoot;
+        adminLayout.adminConfig.adminCount = newAdminCount;
+        adminLayout.adminConfig.votingThreshold = newVotingThreshold;
 
         // Emit event
-        emit IOrganizationAdmin.AdminPermissionUpdated({
+        emit IOrganizationAdmin.AdminConfigUpdated({
             previousAdminsRoot: previousAdmin.adminsRoot,
             previousAdminCount: previousAdmin.adminCount,
             previousVotingThreshold: previousAdmin.votingThreshold,
@@ -126,7 +125,7 @@ library LibOrganizationAdmin {
         );
 
         // Check if we have enough valid signatures
-        if (validSignatures < adminLayout.adminPermission.votingThreshold) {
+        if (validSignatures < adminLayout.adminConfig.votingThreshold) {
             revert IOrganizationAdmin.AdminAuthorizationFailed("Insufficient authorization for admin operation");
         }
     }
@@ -135,12 +134,12 @@ library LibOrganizationAdmin {
      * @dev Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
-    function getAdminPermission() internal view returns (AdminPermission memory) {
+    function getAdminConfig() internal view returns (AdminConfig memory) {
         LibOrganizationAdminStorage.Layout storage layout = LibOrganizationAdminStorage.layout();
-        return AdminPermission({
-            adminsRoot: layout.adminPermission.adminsRoot,
-            adminCount: layout.adminPermission.adminCount,
-            votingThreshold: layout.adminPermission.votingThreshold
+        return AdminConfig({
+            adminsRoot: layout.adminConfig.adminsRoot,
+            adminCount: layout.adminConfig.adminCount,
+            votingThreshold: layout.adminConfig.votingThreshold
         });
     }
 
@@ -238,7 +237,7 @@ library LibOrganizationAdmin {
         address lastSigner = address(0);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        bytes32 adminsRoot = adminLayout.adminPermission.adminsRoot;
+        bytes32 adminsRoot = adminLayout.adminConfig.adminsRoot;
 
         // Cache membersRoot to avoid repeated storage reads in the loop
         bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();

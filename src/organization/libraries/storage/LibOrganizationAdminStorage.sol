@@ -15,7 +15,7 @@ library LibOrganizationAdminStorage {
      * @param adminCount Number of admins in the tree (for completeness validation)
      * @param votingThreshold Number of signatures required for admin operations
      */
-    struct AdminPermission {
+    struct AdminConfig {
         bytes32 adminsRoot;
         uint256 adminCount;
         uint256 votingThreshold;
@@ -24,10 +24,10 @@ library LibOrganizationAdminStorage {
     /**
      * @dev Storage layout for admin permissions
      * @custom:storage-location erc7201:den.mls-wallet.organization.admin
-     * @param adminPermission The admin permission configuration
+     * @param adminConfig The admin permission configuration
      */
     struct Layout {
-        AdminPermission adminPermission;
+        AdminConfig adminConfig;
     }
 
     /// @dev Storage location for AdminStorage, following ERC-7201 namespaced storage pattern.

@@ -33,7 +33,7 @@ library LibOrganizationMembers {
         internal
     {
         // Get current admin configuration
-        LibOrganizationAdminStorage.AdminPermission memory admin = LibOrganizationAdminStorage.layout().adminPermission;
+        LibOrganizationAdminStorage.AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
 
         // Validate that ALL admins are still members in the NEW members tree
         // This prevents accidentally bricking the organization by removing admins from membership

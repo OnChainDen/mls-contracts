@@ -57,7 +57,7 @@ struct AdminAuthParams {
  * @param adminCount Number of admins in the tree (for completeness validation)
  * @param votingThreshold Number of signatures required for admin operations
  */
-struct AdminPermission {
+struct AdminConfig {
     bytes32 adminsRoot;
     uint256 adminCount;
     uint256 votingThreshold;

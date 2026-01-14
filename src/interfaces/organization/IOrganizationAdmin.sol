@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AdminAuthParams, AllAdminsInOrgProofs, AdminPermission} from "../../types/AdminTypes.sol";
+import {AdminAuthParams, AllAdminsInOrgProofs, AdminConfig} from "../../types/AdminTypes.sol";
 import {OperationType} from "../../types/CommonTypes.sol";
 
 /**
@@ -25,7 +25,7 @@ interface IOrganizationAdmin {
      * @param newVotingThreshold The new voting threshold
      * @param newAdminAddresses The new admin addresses (in ascending order)
      */
-    event AdminPermissionUpdated(
+    event AdminConfigUpdated(
         bytes32 previousAdminsRoot,
         uint256 previousAdminCount,
         uint256 previousVotingThreshold,
@@ -163,5 +163,5 @@ interface IOrganizationAdmin {
      * @notice Returns the current admin permission settings for the organization
      * @return The admin permission configuration including admins root, count, and voting threshold
      */
-    function adminPermission() external view returns (AdminPermission memory);
+    function adminConfig() external view returns (AdminConfig memory);
 }

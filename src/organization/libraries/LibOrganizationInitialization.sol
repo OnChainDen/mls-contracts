@@ -63,7 +63,7 @@ library LibOrganizationInitialization {
 
         // Set admin configuration
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
+        adminLayout.adminConfig = LibOrganizationAdminStorage.AdminConfig({
             adminsRoot: params.adminsRoot, adminCount: params.adminCount, votingThreshold: params.votingThreshold
         });
 

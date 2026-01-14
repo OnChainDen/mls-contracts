@@ -13,7 +13,7 @@ import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/I
 import {IOrganization} from "../interfaces/IOrganization.sol";
 
 // Types
-import {AdminAuthParams, AllAdminsInOrgProofs, AdminPermission} from "../types/AdminTypes.sol";
+import {AdminAuthParams, AllAdminsInOrgProofs, AdminConfig} from "../types/AdminTypes.sol";
 import {OperationType, InitializationParams} from "../types/CommonTypes.sol";
 import {ValidationProofs, Policy, GroupData} from "../types/PolicyTypes.sol";
 
@@ -499,8 +499,8 @@ contract OrganizationImplementation is
      * @notice Returns the current admin permission settings for the organization
      * @return The admin permission configuration including admins root, count, and voting threshold
      */
-    function adminPermission() external view returns (AdminPermission memory) {
-        return LibOrganizationAdmin.getAdminPermission();
+    function adminConfig() external view returns (AdminConfig memory) {
+        return LibOrganizationAdmin.getAdminConfig();
     }
 
     /**
