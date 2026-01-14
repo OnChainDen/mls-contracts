@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {UpgradeAuthorizationStorage} from "../proxy/libraries/UpgradeAuthorizationStorage.sol";
 import {LibOrganizationDeployerAddressStorage} from "./libraries/storage/LibOrganizationDeployerAddressStorage.sol";
+import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
@@ -23,9 +22,7 @@ contract OrganizationProxy is ERC1967Proxy {
         // Store deployer address (the factory) in storage for initialization authorization
         LibOrganizationDeployerAddressStorage.layout().deployerAddress = msg.sender;
 
-        // Store whitelist address and contract type in storage
-        UpgradeAuthorizationStorage.Layout storage upgradeAuthLayout = UpgradeAuthorizationStorage.layout();
-        upgradeAuthLayout.whitelistAddress = whitelistAddress;
-        upgradeAuthLayout.contractType = IImplementationWhitelist.ContractType.Organization;
+        // Store whitelist address in storage for upgrade validation
+        LibOrganizationUpgradeStorage.layout().whitelistAddress = whitelistAddress;
     }
 }

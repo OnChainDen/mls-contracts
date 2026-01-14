@@ -3,34 +3,37 @@ pragma solidity ^0.8.24;
 
 /**
  * @title Organization Policy Storage
- * @dev Minimal storage layout for merkle-based policy functionality
- * @dev Policies are stored in a global merkle tree. Only the root is stored on-chain.
+ * @dev ERC-7201 namespaced storage for merkle-based policy functionality.
+ *      Policies are stored in a global merkle tree. Only the root is stored on-chain.
  *      Full policy data is stored off-chain (IPFS) and provided via calldata at validation time.
  * @author Den Technologies Inc
  */
 library LibOrganizationPolicyStorage {
+    /**
+     * @dev Storage layout for policy functionality
+     * @custom:storage-location erc7201:den.mls-wallet.organization.policy
+     * @param policiesRoot Global merkle root containing ALL policies.
+     *        Each leaf is hash(policyId, Policy struct)
+     * @param policyUsage Time-based usage tracking: usageKey => timeWindow => usedAmount/count.
+     *        usageKey is computed from policyId and scoped entities (account, destination, initiator)
+     */
     struct Layout {
-        /// @dev Global merkle root containing ALL policies
-        /// @dev Each leaf is hash(policyId, Policy struct)
         bytes32 policiesRoot;
-        /// @dev Time-based usage tracking: usageKey => timeWindow => usedAmount/count
-        /// @dev usageKey is computed from policyId and scoped entities (account, destination, initiator)
         mapping(bytes32 => mapping(uint256 => uint256)) policyUsage;
     }
 
-    /// @dev Storage slot for the policy storage layout, computed as
-    /// keccak256("onchain.custody.organization.policy.storage")
-    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.organization.policy.storage");
+    /// @dev Storage location for PolicyStorage, following ERC-7201 namespaced storage pattern.
+    /// @dev Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.policy")) - 1)) &
+    /// ~bytes32(uint256(0xff)) @dev Verify: `cast index-erc7201 "den.mls-wallet.organization.policy"`
+    bytes32 internal constant STORAGE_LOCATION = 0x3dd17025b978cb0623dedaddffeab8b6f146372bd98577f4daffa1ab83af1c00;
 
     /**
      * @dev Returns the storage layout at the namespaced slot
-     * @dev Uses assembly to access storage at the precomputed slot
      * @return _layout The storage layout struct
      */
     function layout() internal pure returns (Layout storage _layout) {
-        bytes32 slot = STORAGE_SLOT;
         assembly {
-            _layout.slot := slot
+            _layout.slot := STORAGE_LOCATION
         }
     }
 }
