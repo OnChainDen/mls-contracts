@@ -41,7 +41,7 @@ library LibOrganizationGuardian {
     function enforceOnlyGuardian() internal view {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
         if (msg.sender != guardianLayout.guardian) {
-            revert IOrganizationGuardian.UnauthorizedCaller(msg.sender, guardianLayout.guardian);
+            revert IOrganizationGuardian.UnauthorizedGuardian(msg.sender, guardianLayout.guardian);
         }
     }
 

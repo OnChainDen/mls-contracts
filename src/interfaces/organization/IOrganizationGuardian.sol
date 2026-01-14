@@ -30,7 +30,7 @@ interface IOrganizationGuardian {
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
      */
-    error UnauthorizedCaller(address caller, address guardian);
+    error UnauthorizedGuardian(address caller, address guardian);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
