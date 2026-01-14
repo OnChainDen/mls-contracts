@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policies} from "../../libraries/Policies.sol";
+import {IOrganizationAccountTransaction} from "../../interfaces/organization/IOrganizationAccountTransaction.sol";
+import {Policy, ValidationProofs, PolicyType, PolicyLimitation, TransactionType} from "../../types/PolicyTypes.sol";
 import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
 import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
 import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
@@ -49,27 +50,6 @@ library LibOrganizationAccountTransaction {
         uint256 policyId;
     }
 
-    /// @notice Thrown when a transaction is rejected due to policy rules
-    error TransactionRejectedByPolicy(string reason);
-
-    /// @dev Thrown when a rejection attempt is not authorized
-    error TransactionRejectionNotAllowed(string reason);
-
-    /// @dev Thrown when not enough valid approval signatures are provided
-    error InsufficientApprovals(uint256 required, uint256 provided);
-
-    /// @dev Thrown when the policy doesn't apply to this transaction
-    error PolicyDoesNotApply(uint256 policyId);
-
-    /// @dev Thrown when the transaction authorization has expired
-    error TransactionExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
-
-    /// @dev Thrown when the signatures bytes is too short
-    error InsufficientSignaturesLength();
-
-    /// @dev Thrown when the transaction exceeds the policy's time-based limit
-    error TimeBasedLimitExceeded(uint256 policyId);
-
     /**
      * @dev Validates a transaction against the specified policy using merkle proofs
      * @dev Main entry point for transaction approval validation. This function:
@@ -98,16 +78,16 @@ library LibOrganizationAccountTransaction {
         uint256 expirationTimestamp,
         uint256 policyId,
         bytes memory signatures,
-        Policies.ValidationProofs calldata proofs
+        ValidationProofs calldata proofs
     ) internal {
         // Check transaction hasn't expired
         if (block.timestamp > expirationTimestamp) {
-            revert TransactionExpired(expirationTimestamp, block.timestamp);
+            revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
         // Need at least one signature (initiator's SIGNATURE_LENGTH-byte signature)
         if (signatures.length < SignatureUtils.SIGNATURE_LENGTH) {
-            revert InsufficientSignaturesLength();
+            revert IOrganizationAccountTransaction.InsufficientSignaturesLength();
         }
 
         // Pack parameters into struct to manage stack depth
@@ -125,7 +105,8 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify the policy exists and applies to this specific transaction
-        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
+        if (
+            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
                 policyId: policyId,
                 sourceAccount: account,
                 to: to,
@@ -133,13 +114,14 @@ library LibOrganizationAccountTransaction {
                 data: data,
                 initiator: initiator,
                 proofs: proofs
-            })) {
-            revert PolicyDoesNotApply(policyId);
+            })
+        ) {
+            revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
         // Case: Policy requires manual approval
         // Validate that we have enough valid approvals
-        if (proofs.policy.config.approval.policyType == Policies.PolicyType.RequireManualApproval) {
+        if (proofs.policy.config.approval.policyType == PolicyType.RequireManualApproval) {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
@@ -151,9 +133,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Update time-based limits if applicable (for all policy types)
-        _validateAndUpdateTimeBasedLimitOrRevert({
-            params: params, data: data, initiator: initiator, policy: proofs.policy
-        });
+        _validateAndUpdateTimeBasedLimitOrRevert({params: params, data: data, initiator: initiator, policy: proofs.policy});
     }
 
     /**
@@ -184,16 +164,16 @@ library LibOrganizationAccountTransaction {
         uint256 expirationTimestamp,
         uint256 policyId,
         bytes memory signatures,
-        Policies.ValidationProofs calldata proofs
+        ValidationProofs calldata proofs
     ) internal view {
         // Check transaction hasn't expired (can only reject pending transactions)
         if (block.timestamp > expirationTimestamp) {
-            revert TransactionExpired(expirationTimestamp, block.timestamp);
+            revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
         // Need at least one signature
         if (signatures.length < SignatureUtils.SIGNATURE_LENGTH) {
-            revert InsufficientSignaturesLength();
+            revert IOrganizationAccountTransaction.InsufficientSignaturesLength();
         }
 
         // Pack parameters into struct
@@ -211,7 +191,8 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify policy applies to this transaction
-        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
+        if (
+            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
                 policyId: policyId,
                 sourceAccount: account,
                 to: to,
@@ -219,19 +200,20 @@ library LibOrganizationAccountTransaction {
                 data: data,
                 initiator: initiator,
                 proofs: proofs
-            })) {
-            revert PolicyDoesNotApply(policyId);
+            })
+        ) {
+            revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
         // Route to appropriate rejection validation based on policy type
-        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
+        PolicyType pType = proofs.policy.config.approval.policyType;
 
         // AutoApprove: Need an authorized initiator to sign the rejection
-        if (pType == Policies.PolicyType.AutoApprove) {
+        if (pType == PolicyType.AutoApprove) {
             _validateAutoApproveRejectionOrRevert({params: params, data: data, signatures: signatures, proofs: proofs});
         }
         // ManualApproval: Need threshold approvals for the rejection
-        else if (pType == Policies.PolicyType.RequireManualApproval) {
+        else if (pType == PolicyType.RequireManualApproval) {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
@@ -258,10 +240,10 @@ library LibOrganizationAccountTransaction {
         TxParams memory params,
         bytes calldata data,
         address initiator,
-        Policies.Policy calldata policy
+        Policy calldata policy
     ) private {
         // Only process if policy has time-based limits
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) {
+        if (policy.config.timeLimit.limitation != PolicyLimitation.TimeInterval) {
             return;
         }
 
@@ -270,7 +252,7 @@ library LibOrganizationAccountTransaction {
 
         // Calculate usage amount: token amount for transfers, 1 for other transactions
         uint256 usageAmount;
-        if (policy.config.transactionType == Policies.TransactionType.TokenTransfers) {
+        if (policy.config.transactionType == TransactionType.TokenTransfers) {
             usageAmount = TokenTransferUtils.extractTransferAmount(data, params.value);
         } else {
             usageAmount = 1; // Count-based limit for non-transfer transactions
@@ -287,7 +269,7 @@ library LibOrganizationAccountTransaction {
         });
 
         if (!withinLimit) {
-            revert TimeBasedLimitExceeded(params.policyId);
+            revert IOrganizationAccountTransaction.TimeBasedLimitExceeded(params.policyId);
         }
     }
 
@@ -304,21 +286,21 @@ library LibOrganizationAccountTransaction {
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
-        Policies.ValidationProofs calldata proofs
+        ValidationProofs calldata proofs
     ) private view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
         // Need a second signature for rejection authorization
         if (signatures.length < 130) {
-            revert TransactionRejectionNotAllowed("AutoApprove rejection requires authorized initiator signature");
+            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed("AutoApprove rejection requires authorized initiator signature");
         }
         bytes memory rejectionSignature = SignatureUtils.extractSignature(signatures, 1);
 
         // Verify the rejection signer is an authorized initiator for this policy
         address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
-            revert TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
+            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
         }
     }
 
@@ -359,7 +341,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bytes memory signatures,
         bytes memory initiatorSignature,
-        Policies.ValidationProofs calldata proofs,
+        ValidationProofs calldata proofs,
         bool isApproval
     ) private view {
         // Get required approval count from policy
@@ -373,12 +355,11 @@ library LibOrganizationAccountTransaction {
         bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
 
         // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
-            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
-        );
+        uint256 validApprovals =
+            LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs);
 
         if (validApprovals < requiredApprovals) {
-            revert InsufficientApprovals(requiredApprovals, validApprovals);
+            revert IOrganizationAccountTransaction.InsufficientApprovals(requiredApprovals, validApprovals);
         }
     }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {ContractInteractionUtils} from "../../../libraries/ContractInteractionUtils.sol";
 import {MerkleUtils} from "../../../libraries/MerkleUtils.sol";
-import {Policies} from "../../../libraries/Policies.sol";
+import {ParameterConstraint, ParamType, ConstraintType} from "../../../types/PolicyTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -34,8 +34,7 @@ library LibPolicyParameterConstraints {
         if (parameterConstraints.length == 0) return true;
 
         // Decode the constraints array
-        Policies.ParameterConstraint[] memory constraints =
-            abi.decode(parameterConstraints, (Policies.ParameterConstraint[]));
+        ParameterConstraint[] memory constraints = abi.decode(parameterConstraints, (ParameterConstraint[]));
 
         // Case: No constraints in the array
         if (constraints.length == 0) return true;
@@ -52,7 +51,7 @@ library LibPolicyParameterConstraints {
      * @param data The full transaction calldata
      * @return True if all constraints are satisfied, false otherwise
      */
-    function _processConstraints(Policies.ParameterConstraint[] memory constraints, bytes calldata data)
+    function _processConstraints(ParameterConstraint[] memory constraints, bytes calldata data)
         private
         pure
         returns (bool)
@@ -104,51 +103,51 @@ library LibPolicyParameterConstraints {
      * @param data The full transaction calldata (for dynamic types)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
-    function _isParameterAllowedByConstraint(
-        Policies.ParameterConstraint memory constraint,
-        bytes32 paramHeadValue,
-        bytes calldata data
-    ) private pure returns (bool) {
-        Policies.ParamType pType = constraint.paramType;
-        Policies.ConstraintType constraintType = constraint.constraintType;
+    function _isParameterAllowedByConstraint(ParameterConstraint memory constraint, bytes32 paramHeadValue, bytes calldata data)
+        private
+        pure
+        returns (bool)
+    {
+        ParamType pType = constraint.paramType;
+        ConstraintType constraintType_ = constraint.constraintType;
 
         // Case: Constraint is a wildcard constraint (any value is accepted)
-        if (constraintType == Policies.ConstraintType.Any) {
+        if (constraintType_ == ConstraintType.Any) {
             return true;
         }
 
         bytes memory comparisonData = constraint.comparisonData;
 
-        if (pType == Policies.ParamType.Bool) {
-            return _isBoolParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
+        if (pType == ParamType.Bool) {
+            return _isBoolParameterAllowedByConstraint(constraintType_, comparisonData, paramHeadValue);
         }
 
-        if (pType == Policies.ParamType.Uint) {
-            return _isUintParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
+        if (pType == ParamType.Uint) {
+            return _isUintParameterAllowedByConstraint(constraintType_, comparisonData, paramHeadValue);
         }
 
-        if (pType == Policies.ParamType.Int) {
-            return _isIntParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
+        if (pType == ParamType.Int) {
+            return _isIntParameterAllowedByConstraint(constraintType_, comparisonData, paramHeadValue);
         }
 
-        if (pType == Policies.ParamType.Address) {
+        if (pType == ParamType.Address) {
             return _isAddressParameterAllowedByConstraint(
-                constraintType, comparisonData, paramHeadValue, constraint.paramValueInListProof
+                constraintType_, comparisonData, paramHeadValue, constraint.paramValueInListProof
             );
         }
 
-        if (pType == Policies.ParamType.FixedBytes) {
-            return _isFixedBytesParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue);
+        if (pType == ParamType.FixedBytes) {
+            return _isFixedBytesParameterAllowedByConstraint(constraintType_, comparisonData, paramHeadValue);
         }
 
         // Bytes and String have identical ABI encoding, so we use the same validation function
-        if (pType == Policies.ParamType.Bytes || pType == Policies.ParamType.String) {
-            return _isBytesOrStringParameterAllowedByConstraint(constraintType, comparisonData, paramHeadValue, data);
+        if (pType == ParamType.Bytes || pType == ParamType.String) {
+            return _isBytesOrStringParameterAllowedByConstraint(constraintType_, comparisonData, paramHeadValue, data);
         }
 
         // Case: The parameter is an Array or Struct type, which only support the "Any" constraint
         // If we reach here, the constraint type is not "Any", which is invalid for these types.
-        if (pType == Policies.ParamType.Array || pType == Policies.ParamType.Struct) {
+        if (pType == ParamType.Array || pType == ParamType.Struct) {
             return false;
         }
 
@@ -159,17 +158,17 @@ library LibPolicyParameterConstraints {
     /**
      * @dev Validates a Bool parameter against its constraint
      * @dev Bool only supports Exact constraint
-     * @param constraintType The type of constraint to apply
+     * @param constraintType_ The type of constraint to apply
      * @param comparisonData The expected value encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isBoolParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
+        ConstraintType constraintType_,
         bytes memory comparisonData,
         bytes32 paramHeadValue
     ) private pure returns (bool) {
-        if (constraintType != Policies.ConstraintType.Exact) return false;
+        if (constraintType_ != ConstraintType.Exact) return false;
         bool expectedValue = abi.decode(comparisonData, (bool));
         bool actualValue = uint256(paramHeadValue) != 0;
         return actualValue == expectedValue;
@@ -178,22 +177,22 @@ library LibPolicyParameterConstraints {
     /**
      * @dev Validates a Uint parameter against its constraint
      * @dev Uint supports Exact and Range constraints (also used for enums)
-     * @param constraintType The type of constraint to apply
+     * @param constraintType_ The type of constraint to apply
      * @param comparisonData The expected value(s) encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isUintParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
+        ConstraintType constraintType_,
         bytes memory comparisonData,
         bytes32 paramHeadValue
     ) private pure returns (bool) {
         uint256 actualValue = uint256(paramHeadValue);
-        if (constraintType == Policies.ConstraintType.Exact) {
+        if (constraintType_ == ConstraintType.Exact) {
             uint256 expectedValue = abi.decode(comparisonData, (uint256));
             return actualValue == expectedValue;
         }
-        if (constraintType == Policies.ConstraintType.Range) {
+        if (constraintType_ == ConstraintType.Range) {
             (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
             return actualValue >= minValue && actualValue <= maxValue;
         }
@@ -204,22 +203,22 @@ library LibPolicyParameterConstraints {
     /**
      * @dev Validates an Int parameter against its constraint
      * @dev Int supports Exact and Range constraints
-     * @param constraintType The type of constraint to apply
+     * @param constraintType_ The type of constraint to apply
      * @param comparisonData The expected value(s) encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isIntParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
+        ConstraintType constraintType_,
         bytes memory comparisonData,
         bytes32 paramHeadValue
     ) private pure returns (bool) {
         int256 actualValue = int256(uint256(paramHeadValue));
-        if (constraintType == Policies.ConstraintType.Exact) {
+        if (constraintType_ == ConstraintType.Exact) {
             int256 expectedValue = abi.decode(comparisonData, (int256));
             return actualValue == expectedValue;
         }
-        if (constraintType == Policies.ConstraintType.Range) {
+        if (constraintType_ == ConstraintType.Range) {
             (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
             return actualValue >= minValue && actualValue <= maxValue;
         }
@@ -230,24 +229,24 @@ library LibPolicyParameterConstraints {
     /**
      * @dev Validates an Address parameter against its constraint
      * @dev Address supports Exact and OneOf constraints
-     * @param constraintType The type of constraint to apply
+     * @param constraintType_ The type of constraint to apply
      * @param comparisonData The expected value or merkle root encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @param addressListProof Merkle proof for OneOf constraint (empty for Exact constraint)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isAddressParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
+        ConstraintType constraintType_,
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes32[] memory addressListProof
     ) private pure returns (bool) {
         address actualValue = address(uint160(uint256(paramHeadValue)));
-        if (constraintType == Policies.ConstraintType.Exact) {
+        if (constraintType_ == ConstraintType.Exact) {
             address expectedValue = abi.decode(comparisonData, (address));
             return actualValue == expectedValue;
         }
-        if (constraintType == Policies.ConstraintType.OneOf) {
+        if (constraintType_ == ConstraintType.OneOf) {
             // comparisonData contains the merkle root of allowed addresses
             bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
             // Compute leaf for the actual address using double-hashing
@@ -263,17 +262,17 @@ library LibPolicyParameterConstraints {
      * @dev Validates a FixedBytes parameter against its constraint
      * @dev FixedBytes (bytes1-bytes32) only supports Exact constraint.
      *      For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned).
-     * @param constraintType The type of constraint to apply
+     * @param constraintType_ The type of constraint to apply
      * @param comparisonData The expected value encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isFixedBytesParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
+        ConstraintType constraintType_,
         bytes memory comparisonData,
         bytes32 paramHeadValue
     ) private pure returns (bool) {
-        if (constraintType != Policies.ConstraintType.Exact) return false;
+        if (constraintType_ != ConstraintType.Exact) return false;
         bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
         return paramHeadValue == expectedValue;
     }
@@ -285,19 +284,19 @@ library LibPolicyParameterConstraints {
      *      function handles both ParamType.Bytes and ParamType.String.
      *      The paramHeadValue contains the offset to the data location in calldata.
      *      The comparisonData should contain the keccak256 hash of the expected bytes/string.
-     * @param constraintType The type of constraint to apply
+     * @param constraintType_ The type of constraint to apply
      * @param comparisonData The expected hash encoded as bytes
      * @param paramHeadValue The parameter value (offset to bytes/string data)
      * @param data The full transaction calldata
      * @return True if the parameter satisfies the constraint, false otherwise
      */
     function _isBytesOrStringParameterAllowedByConstraint(
-        Policies.ConstraintType constraintType,
+        ConstraintType constraintType_,
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes calldata data
     ) private pure returns (bool) {
-        if (constraintType != Policies.ConstraintType.Exact) return false;
+        if (constraintType_ != ConstraintType.Exact) return false;
 
         // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
         uint256 offset = uint256(paramHeadValue);
@@ -316,9 +315,7 @@ library LibPolicyParameterConstraints {
 
         // Hash the actual content
         bytes32 actualHash = keccak256(
-            data[dataPosition
-                    + ContractInteractionUtils.SLOT_SIZE:dataPosition + ContractInteractionUtils.SLOT_SIZE + length
-            ]
+            data[dataPosition + ContractInteractionUtils.SLOT_SIZE:dataPosition + ContractInteractionUtils.SLOT_SIZE + length]
         );
         bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
         return actualHash == expectedHash;

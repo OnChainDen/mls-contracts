@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policies} from "../../../libraries/Policies.sol";
+import {Policy} from "../../../types/PolicyTypes.sol";
 import {TokenTransferUtils} from "../../../libraries/TokenTransferUtils.sol";
 import {LibPolicyDestination} from "./LibPolicyDestination.sol";
 
@@ -26,7 +26,7 @@ library LibPolicyTokenTransfer {
      * @return True if the token transfer is allowed, false otherwise
      */
     function isTokenTransferAllowedByPolicy(
-        Policies.Policy calldata policy,
+        Policy calldata policy,
         address to,
         uint256 value,
         bytes calldata data,
@@ -53,7 +53,7 @@ library LibPolicyTokenTransfer {
      * @param data The transaction calldata
      * @return True if the token is allowed, false otherwise
      */
-    function _isTokenAllowedByPolicy(Policies.Policy calldata policy, address to, bytes calldata data)
+    function _isTokenAllowedByPolicy(Policy calldata policy, address to, bytes calldata data)
         private
         pure
         returns (bool)
@@ -75,7 +75,7 @@ library LibPolicyTokenTransfer {
      * @param value The transaction value in wei
      * @return True if the amount is allowed, false otherwise
      */
-    function _isTokenAmountAllowedByPolicy(Policies.Policy calldata policy, bytes calldata data, uint256 value)
+    function _isTokenAmountAllowedByPolicy(Policy calldata policy, bytes calldata data, uint256 value)
         private
         pure
         returns (bool)

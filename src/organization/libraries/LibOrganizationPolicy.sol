@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IOrganizationPolicy} from "../../interfaces/organization/IOrganizationPolicy.sol";
 import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {Policies} from "../../libraries/Policies.sol";
+import {Policy, ValidationProofs, ApproverProofs, InitiatorProofs, TransactionType} from "../../types/PolicyTypes.sol";
 import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
 import {LibPolicyApproval} from "./policy/LibPolicyApproval.sol";
 import {LibPolicyContractInteraction} from "./policy/LibPolicyContractInteraction.sol";
@@ -26,19 +27,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationPolicy {
     /**
-     * @dev Emitted when the policies merkle root is updated
-     * @param newRoot The new merkle root
-     * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
-     */
-    event PoliciesUpdated(bytes32 indexed newRoot, string ipfsCid);
-
-    /**
-     * @dev Thrown when policy verification fails
-     * @param policyId The ID of the policy that failed verification
-     */
-    error PolicyVerificationFailed(uint256 policyId);
-
-    /**
      * @dev Updates the global policies merkle root
      * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
      *      Emits PoliciesUpdated event with the IPFS CID for disaster recovery.
@@ -47,7 +35,7 @@ library LibOrganizationPolicy {
      */
     function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) internal {
         LibOrganizationPolicyStorage.layout().policiesRoot = newPoliciesRoot;
-        emit PoliciesUpdated(newPoliciesRoot, ipfsCid);
+        emit IOrganizationPolicy.PoliciesUpdated(newPoliciesRoot, ipfsCid);
     }
 
     /**
@@ -63,7 +51,7 @@ library LibOrganizationPolicy {
      */
     function checkAndUpdateTimeBasedLimit(
         uint256 policyId,
-        Policies.Policy memory policy,
+        Policy memory policy,
         address account,
         address destination,
         address initiator,
@@ -86,7 +74,7 @@ library LibOrganizationPolicy {
      * @param proof The merkle proof for the policy
      * @return True if the policy is in the tree, false otherwise
      */
-    function isPolicyInOrg(uint256 policyId, Policies.Policy memory policy, bytes32[] memory proof)
+    function isPolicyInOrg(uint256 policyId, Policy memory policy, bytes32[] memory proof)
         internal
         view
         returns (bool)
@@ -120,7 +108,7 @@ library LibOrganizationPolicy {
         uint256 value,
         bytes calldata data,
         address initiator,
-        Policies.ValidationProofs calldata proofs
+        ValidationProofs calldata proofs
     ) internal view returns (bool) {
         // Case: The policy does not exist in the organization
         if (!isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) return false;
@@ -135,10 +123,10 @@ library LibOrganizationPolicy {
             return false;
         }
 
-        Policies.TransactionType txType = proofs.policy.config.transactionType;
+        TransactionType txType = proofs.policy.config.transactionType;
 
         // Case: Policy matches only transactions that are token transfers
-        if (txType == Policies.TransactionType.TokenTransfers) {
+        if (txType == TransactionType.TokenTransfers) {
             // Case: The transaction is not a token transfer
             if (!TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
@@ -148,7 +136,7 @@ library LibOrganizationPolicy {
         }
 
         // Case: The policy matches only transactions that are contract interactions that are not token transfers
-        if (txType == Policies.TransactionType.ContractInteractions) {
+        if (txType == TransactionType.ContractInteractions) {
             // Case: The transaction is a token transfer (not a contract interaction)
             if (TokenTransferUtils.isTransactionTokenTransfer(data, value)) return false;
 
@@ -166,7 +154,7 @@ library LibOrganizationPolicy {
         // Case: The policy can be applied to any type of transaction (Token transfers or Contract interactions)
         // and the destination is allowed by the policy
         if (
-            txType == Policies.TransactionType.Any
+            txType == TransactionType.Any
                 && LibPolicyDestination.isDestinationAllowedByPolicy({
                     policy: proofs.policy, to: to, value: value, data: data, destinationProof: proofs.destinationProof
                 })
@@ -187,10 +175,10 @@ library LibOrganizationPolicy {
      * @return The number of valid approvals
      */
     function getValidApprovals(
-        Policies.Policy memory policy,
+        Policy memory policy,
         bytes memory signatures,
         bytes32 messageHash,
-        Policies.ApproverProofs memory approverProofs
+        ApproverProofs memory approverProofs
     ) internal view returns (uint8) {
         return LibPolicyApproval.getValidApprovals({
             policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
@@ -203,7 +191,7 @@ library LibOrganizationPolicy {
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
-    function computeTimeWindow(Policies.Policy memory policy) internal view returns (uint256) {
+    function computeTimeWindow(Policy memory policy) internal view returns (uint256) {
         return LibPolicyTimeBasedLimits.computeTimeWindow(policy);
     }
 
@@ -219,7 +207,7 @@ library LibOrganizationPolicy {
      */
     function getCurrentUsage(
         uint256 policyId,
-        Policies.Policy memory policy,
+        Policy memory policy,
         address account,
         address destination,
         address initiator
@@ -237,11 +225,11 @@ library LibOrganizationPolicy {
      * @param initiatorProofs The proofs for initiator membership verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function isInitiatorAuthorized(
-        Policies.Policy memory policy,
-        address initiatorAddress,
-        Policies.InitiatorProofs memory initiatorProofs
-    ) internal view returns (bool) {
+    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress, InitiatorProofs memory initiatorProofs)
+        internal
+        view
+        returns (bool)
+    {
         return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorProofs);
     }
 
@@ -254,11 +242,11 @@ library LibOrganizationPolicy {
      * @param sourceAccountProof The merkle proof for the source account
      * @return True if the source account matches, false otherwise
      */
-    function isSourceAccountAllowedByPolicy(
-        Policies.Policy memory policy,
-        address sourceAccount,
-        bytes32[] memory sourceAccountProof
-    ) internal pure returns (bool) {
+    function isSourceAccountAllowedByPolicy(Policy memory policy, address sourceAccount, bytes32[] memory sourceAccountProof)
+        internal
+        pure
+        returns (bool)
+    {
         // Case: The policy matches transactions sent from any account
         if (policy.config.anySourceAccount) return true;
 
@@ -274,7 +262,7 @@ library LibOrganizationPolicy {
      * @param policy The policy to check
      * @return The number of required approvals
      */
-    function getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
+    function getRequiredApprovals(Policy memory policy) internal pure returns (uint256) {
         return LibPolicyApproval.getRequiredApprovals(policy);
     }
 
@@ -302,7 +290,7 @@ library LibOrganizationPolicy {
      */
     function computeUsageKey(
         uint256 policyId,
-        Policies.Policy memory policy,
+        Policy memory policy,
         address account,
         address destination,
         address initiator
@@ -319,7 +307,7 @@ library LibOrganizationPolicy {
      * @param policy The policy data
      * @return The computed merkle leaf
      */
-    function _computePolicyLeaf(uint256 policyId, Policies.Policy memory policy) private pure returns (bytes32) {
+    function _computePolicyLeaf(uint256 policyId, Policy memory policy) private pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
     }
 }

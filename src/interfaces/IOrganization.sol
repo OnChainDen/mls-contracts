@@ -1,53 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/**
- * @notice Enum to specify the type of operation being performed
- * @dev Used for nonce computation and signature validation across all organization operations
- */
-enum OperationType {
-    // Admin/Organization operations
-    ModifyAdmins,
-    ModifyGroups,
-    ModifyMembers,
-    ModifyPolicies,
-    UpdateGuardian,
-    Upgrade,
-    DeployAccount,
-    UpgradeAccount,
-    // Account transaction operations
-    AccountTransaction,
-    AccountTransactionRejection
-}
+// Module interfaces (spokes)
+import {IOrganizationAdmin} from "./organization/IOrganizationAdmin.sol";
+import {IOrganizationMembers} from "./organization/IOrganizationMembers.sol";
+import {IOrganizationGroups} from "./organization/IOrganizationGroups.sol";
+import {IOrganizationPolicy} from "./organization/IOrganizationPolicy.sol";
+import {IOrganizationGuardian} from "./organization/IOrganizationGuardian.sol";
+import {IOrganizationAccountFactory} from "./organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAccountTransaction} from "./organization/IOrganizationAccountTransaction.sol";
+import {IOrganizationSignatures} from "./organization/IOrganizationSignatures.sol";
+import {IOrganizationInitialization} from "./organization/IOrganizationInitialization.sol";
 
-/**
- * @notice Parameters for organization initialization
- * @dev Packed into a struct to avoid stack too deep errors
- * @param adminsRoot Merkle root of admin member addresses
- * @param adminCount Number of admins in the admin tree (for completeness validation)
- * @param votingThreshold Number of admin signatures required
- * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
- * @param adminInAdminTreeProofs Merkle proofs that each admin address is in adminsRoot
- * @param adminInMembersTreeProofs Merkle proofs that each admin address is in membersRoot
- * @param guardian Guardian address for the organization
- * @param membersRoot The initial Merkle root for all members
- * @param groupsRoot The initial Merkle root for all groups
- * @param membersIpfsCid The IPFS CID where full members data is stored
- * @param groupsIpfsCid The IPFS CID where full groups data is stored
- */
-struct InitializationParams {
-    bytes32 adminsRoot;
-    uint256 adminCount;
-    uint256 votingThreshold;
-    address[] adminAddresses;
-    bytes32[][] adminInAdminTreeProofs;
-    bytes32[][] adminInMembersTreeProofs;
-    address guardian;
-    bytes32 membersRoot;
-    bytes32 groupsRoot;
-    string membersIpfsCid;
-    string groupsIpfsCid;
-}
+// Types
+import {AdminAuthParams} from "../types/AdminTypes.sol";
+
+// Re-export types for backward compatibility
+// solhint-disable-next-line no-unused-import
+import {OperationType, InitializationParams} from "../types/CommonTypes.sol";
 
 /**
  * @title IOrganizationSignatureValidator
@@ -68,4 +38,75 @@ interface IOrganizationSignatureValidator {
         external
         view
         returns (bytes4 magicValue);
+}
+
+/**
+ * @title IOrganization
+ * @notice Hub interface that aggregates all Organization module interfaces
+ * @dev This is a composite interface that inherits from all module interfaces.
+ *      Each module interface maps 1:1 to a library for easy auditor navigation.
+ *      The hub itself contains only functions that don't belong to any specific module.
+ * @author Den Technologies Inc
+ */
+interface IOrganization is
+    IOrganizationAdmin,
+    IOrganizationMembers,
+    IOrganizationGroups,
+    IOrganizationPolicy,
+    IOrganizationGuardian,
+    IOrganizationAccountFactory,
+    IOrganizationAccountTransaction,
+    IOrganizationSignatures,
+    IOrganizationInitialization,
+    IOrganizationSignatureValidator
+{
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Errors (OrganizationImplementation-specific errors that don't belong to modules)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Emitted when a transaction is rejected because of wrong chain ID
+     * @param expected The expected chain ID
+     * @param provided The provided chain ID
+     */
+    error InvalidChainId(uint256 expected, uint256 provided);
+
+    /**
+     * @notice Thrown when the account implementation has not been set
+     */
+    error AccountImplementationNotSet();
+
+    /**
+     * @notice Emitted when someone tries to call upgradeToAndCall directly without going through
+     *         the authorized upgrade flow (upgradeToAndCallWithAuthorization)
+     * @dev This protects against attackers bypassing admin signature validation by calling
+     *      the inherited public upgradeToAndCall function directly on the proxy
+     */
+    error UnauthorizedUpgrade();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Functions that don't belong to any specific module
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Returns the current implementation address for all Account BeaconProxies
+     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
+     * @return The current account implementation address
+     */
+    function implementation() external view returns (address);
+
+    /**
+     * @notice Upgrade the organization implementation to a new address and optionally call a function
+     * @dev This is the ONLY authorized way to upgrade this contract. Direct calls to the inherited
+     *      `upgradeToAndCall` function will revert with `UnauthorizedUpgrade`.
+     * @param newImplementation The new implementation address (must be whitelisted)
+     * @param data Optional calldata to execute on the new implementation after upgrade.
+     *             Pass empty bytes ("") if no post-upgrade call is needed.
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     */
+    function upgradeToAndCallWithAuthorization(
+        address newImplementation,
+        bytes calldata data,
+        AdminAuthParams calldata authParams
+    ) external;
 }

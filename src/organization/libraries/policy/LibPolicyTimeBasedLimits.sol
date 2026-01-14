@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policies} from "../../../libraries/Policies.sol";
+import {Policy, PolicyLimitation, TimeIntervalScope} from "../../../types/PolicyTypes.sol";
 import {LibOrganizationPolicyStorage} from "../storage/LibOrganizationPolicyStorage.sol";
 
 /**
@@ -30,14 +30,14 @@ library LibPolicyTimeBasedLimits {
      */
     function checkAndUpdateTimeBasedLimit(
         uint256 policyId,
-        Policies.Policy memory policy,
+        Policy memory policy,
         address account,
         address destination,
         address initiator,
         uint256 usageAmount
     ) internal returns (bool withinLimit) {
         // Skip check if no time-based limitation
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return true;
+        if (policy.config.timeLimit.limitation != PolicyLimitation.TimeInterval) return true;
 
         // Skip if time interval is not configured (0 hours)
         if (policy.config.timeLimit.timeIntervalHours == 0) return true;
@@ -66,7 +66,7 @@ library LibPolicyTimeBasedLimits {
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
-    function computeTimeWindow(Policies.Policy memory policy) internal view returns (uint256) {
+    function computeTimeWindow(Policy memory policy) internal view returns (uint256) {
         // Uses fixed time windows based on timeIntervalHours
         uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
 
@@ -87,13 +87,13 @@ library LibPolicyTimeBasedLimits {
      */
     function getCurrentUsage(
         uint256 policyId,
-        Policies.Policy memory policy,
+        Policy memory policy,
         address account,
         address destination,
         address initiator
     ) internal view returns (uint256) {
         // Return 0 if no time-based limitation
-        if (policy.config.timeLimit.limitation != Policies.PolicyLimitation.TimeInterval) return 0;
+        if (policy.config.timeLimit.limitation != PolicyLimitation.TimeInterval) return 0;
 
         // Return 0 if time interval is not configured
         if (policy.config.timeLimit.timeIntervalHours == 0) return 0;
@@ -122,7 +122,7 @@ library LibPolicyTimeBasedLimits {
      */
     function computeUsageKey(
         uint256 policyId,
-        Policies.Policy memory policy,
+        Policy memory policy,
         address account,
         address destination,
         address initiator
@@ -131,13 +131,13 @@ library LibPolicyTimeBasedLimits {
         // When scope is AcrossAll, address(0) is used for that entity.
         // When scope is PerEntity, the actual address is used.
         address scopedAccount =
-            policy.config.timeLimit.sourceScope == Policies.TimeIntervalScope.PerEntity ? account : address(0);
+            policy.config.timeLimit.sourceScope == TimeIntervalScope.PerEntity ? account : address(0);
 
         address scopedDestination =
-            policy.config.timeLimit.destinationScope == Policies.TimeIntervalScope.PerEntity ? destination : address(0);
+            policy.config.timeLimit.destinationScope == TimeIntervalScope.PerEntity ? destination : address(0);
 
         address scopedInitiator =
-            policy.config.timeLimit.initiatorScope == Policies.TimeIntervalScope.PerEntity ? initiator : address(0);
+            policy.config.timeLimit.initiatorScope == TimeIntervalScope.PerEntity ? initiator : address(0);
 
         return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
     }

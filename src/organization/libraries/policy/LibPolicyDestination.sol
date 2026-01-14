@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {MerkleUtils} from "../../../libraries/MerkleUtils.sol";
-import {Policies} from "../../../libraries/Policies.sol";
+import {Policy, DestinationType} from "../../../types/PolicyTypes.sol";
 import {TokenTransferUtils} from "../../../libraries/TokenTransferUtils.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -49,23 +49,23 @@ library LibPolicyDestination {
      * @return True if the destination matches, false otherwise
      */
     function isDestinationAllowedByPolicy(
-        Policies.Policy calldata policy,
+        Policy calldata policy,
         address to,
         uint256 value,
         bytes calldata data,
         bytes32[] calldata destinationProof
     ) internal pure returns (bool) {
-        Policies.DestinationType destType = policy.config.destinationType;
+        DestinationType destType = policy.config.destinationType;
 
         // Case: Policy matches transaction to any address
-        if (destType == Policies.DestinationType.Any) return true;
+        if (destType == DestinationType.Any) return true;
 
         // Determine the actual destination address based on transaction type
         address actualDestination = getActualDestination(to, data, value);
 
         // Case: Policy matches only transactions that are sent to a specific list of addresses
         // Verify via merkle proof that destination is in the custom destinations tree
-        if (destType == Policies.DestinationType.CustomList) {
+        if (destType == DestinationType.CustomList) {
             bytes32 destLeaf = MerkleUtils.computeAddressLeaf(actualDestination);
             return MerkleProof.verify(destinationProof, policy.roots.customDestinationsRoot, destLeaf);
         }

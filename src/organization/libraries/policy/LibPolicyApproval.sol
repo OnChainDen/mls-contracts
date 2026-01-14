@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policies} from "../../../libraries/Policies.sol";
+import {IOrganizationPolicy} from "../../../interfaces/organization/IOrganizationPolicy.sol";
+import {Policy, ApproverProofs, GroupData, ApproverType} from "../../../types/PolicyTypes.sol";
 import {SignatureUtils} from "../../../libraries/SignatureUtils.sol";
 import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
@@ -16,19 +17,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Den Technologies Inc
  */
 library LibPolicyApproval {
-    /**
-     * @dev Thrown when member proofs array length doesn't match signature count
-     * @param expected The expected number of member proofs (signature count)
-     * @param actual The actual number of member proofs provided
-     */
-    error MemberProofsLengthMismatch(uint256 expected, uint256 actual);
-
-    /**
-     * @dev Thrown when member-in-group proofs array length doesn't match signature count
-     * @param expected The expected number of member-in-group proofs (signature count)
-     * @param actual The actual number of member-in-group proofs provided
-     */
-    error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
 
     /**
      * @dev Counts valid approvals from a set of signatures (using Merkle proofs)
@@ -42,10 +30,10 @@ library LibPolicyApproval {
      * @return The number of valid approvals
      */
     function getValidApprovals(
-        Policies.Policy memory policy,
+        Policy memory policy,
         bytes memory signatures,
         bytes32 messageHash,
-        Policies.ApproverProofs memory approverProofs
+        ApproverProofs memory approverProofs
     ) internal view returns (uint8) {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
@@ -59,7 +47,7 @@ library LibPolicyApproval {
         bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
 
         // For Group approver type, verify group existence before the loop
-        if (policy.config.approval.approverType == Policies.ApproverType.Group) {
+        if (policy.config.approval.approverType == ApproverType.Group) {
             if (!LibOrganizationGroups.isGroupInOrg(approverProofs.group, approverProofs.groupInOrgGroupsTreeProof)) {
                 return 0;
             }
@@ -89,14 +77,16 @@ library LibPolicyApproval {
 
             // Check if signer is authorized based on policy (with Merkle proofs)
             // Note: Group existence already verified above, membersRoot passed to avoid storage reads
-            if (isSignerAuthorizedForPolicy({
+            if (
+                isSignerAuthorizedForPolicy({
                     policy: policy,
                     signerAddress: signer,
                     membersRoot: membersRoot,
                     memberProof: memberProof,
                     group: approverProofs.group,
                     memberInGroupProof: memberInGroupProof
-                })) {
+                })
+            ) {
                 ++validApprovals;
             }
         }
@@ -111,9 +101,9 @@ library LibPolicyApproval {
      * @param policy The policy to check
      * @return The number of required approvals
      */
-    function getRequiredApprovals(Policies.Policy memory policy) internal pure returns (uint256) {
+    function getRequiredApprovals(Policy memory policy) internal pure returns (uint256) {
         // Case: Policy requires a single approval from a member
-        if (policy.config.approval.approverType == Policies.ApproverType.Member) {
+        if (policy.config.approval.approverType == ApproverType.Member) {
             return 1;
         }
 
@@ -136,11 +126,11 @@ library LibPolicyApproval {
      * @return True if the signer is authorized, false otherwise
      */
     function isSignerAuthorizedForPolicy(
-        Policies.Policy memory policy,
+        Policy memory policy,
         address signerAddress,
         bytes32 membersRoot,
         bytes32[] memory memberProof,
-        Policies.GroupData memory group,
+        GroupData memory group,
         bytes32[] memory memberInGroupProof
     ) internal pure returns (bool) {
         // First verify the signer is a member of the organization (using cached root)
@@ -148,15 +138,15 @@ library LibPolicyApproval {
             return false;
         }
 
-        Policies.ApproverType approverType = policy.config.approval.approverType;
+        ApproverType approverType = policy.config.approval.approverType;
 
         // Case: Policy requires approval from a specific member
-        if (approverType == Policies.ApproverType.Member) {
+        if (approverType == ApproverType.Member) {
             return signerAddress == policy.config.approval.approverMember;
         }
 
         // Case: Policy requires approval from any member of a specific group
-        if (approverType == Policies.ApproverType.Group) {
+        if (approverType == ApproverType.Group) {
             // Check the group ID matches the policy's approver group
             if (group.groupId != policy.config.approval.approverGroupId) {
                 return false;
@@ -176,18 +166,17 @@ library LibPolicyApproval {
      * @param approverProofs The proofs for approver membership verification
      * @param signatureCount The number of signatures provided
      */
-    function _validateApproverProofsOrRevert(
-        Policies.Policy memory policy,
-        Policies.ApproverProofs memory approverProofs,
-        uint8 signatureCount
-    ) private pure {
+    function _validateApproverProofsOrRevert(Policy memory policy, ApproverProofs memory approverProofs, uint8 signatureCount)
+        private
+        pure
+    {
         if (approverProofs.approverInOrgMembersTreeProofs.length != signatureCount) {
-            revert MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
+            revert IOrganizationPolicy.MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
         }
 
-        if (policy.config.approval.approverType == Policies.ApproverType.Group) {
+        if (policy.config.approval.approverType == ApproverType.Group) {
             if (approverProofs.memberInGroupProofs.length != signatureCount) {
-                revert MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
+                revert IOrganizationPolicy.MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
             }
         }
     }

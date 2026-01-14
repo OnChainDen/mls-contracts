@@ -4,11 +4,11 @@ pragma solidity ^0.8.24;
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {InitializationParams} from "../interfaces/IOrganization.sol";
+import {IOrganizationInitialization} from "../interfaces/organization/IOrganizationInitialization.sol";
+import {InitializationParams} from "../types/CommonTypes.sol";
 
 import {OrganizationImplementation} from "./OrganizationImplementation.sol";
 import {OrganizationProxy} from "./OrganizationProxy.sol";
-import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
 
 /**
  * @title Organization Factory
@@ -70,7 +70,7 @@ contract OrganizationFactory {
     ) external returns (address organizationAddress) {
         // Only the authorized deployer can deploy organizations
         if (msg.sender != DEPLOYER_ADDRESS) {
-            revert LibOrganizationInitialization.UnauthorizedDeployer();
+            revert IOrganizationInitialization.UnauthorizedDeployer();
         }
 
         // Validate that the implementation is whitelisted

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policies} from "../../libraries/Policies.sol";
+import {Policy, ValidationProofs, PolicyType, TransactionType} from "../../types/PolicyTypes.sol";
 import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
 import {LibOrganizationGuardian} from "./LibOrganizationGuardian.sol";
@@ -61,8 +61,8 @@ library LibOrganizationAccountSignature {
             uint256 expirationTimestamp,
             bytes memory approverSignatures,
             bytes memory guardianSignature,
-            Policies.ValidationProofs memory proofs
-        ) = abi.decode(signature, (uint256, uint256, bytes, bytes, Policies.ValidationProofs));
+            ValidationProofs memory proofs
+        ) = abi.decode(signature, (uint256, uint256, bytes, bytes, ValidationProofs));
 
         // Case: Signature request has expired
         if (block.timestamp > expirationTimestamp) {
@@ -70,13 +70,15 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Guardian signature is invalid
-        if (!_isGuardianSignatureValid({
+        if (
+            !_isGuardianSignatureValid({
                 account: account,
                 hash: hash,
                 policyId: policyId,
                 expirationTimestamp: expirationTimestamp,
                 guardianSignature: guardianSignature
-            })) {
+            })
+        ) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -96,17 +98,18 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        Policies.PolicyType pType = proofs.policy.config.approval.policyType;
+        PolicyType pType = proofs.policy.config.approval.policyType;
 
         // Case: Policy is an AutoApprove approval policy (Guardian and initiator signatures are sufficient)
-        if (pType == Policies.PolicyType.AutoApprove) {
+        if (pType == PolicyType.AutoApprove) {
             return ERC1271_MAGIC_VALUE;
         }
 
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
-        if (pType == Policies.PolicyType.RequireManualApproval) {
+        if (pType == PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
-            if (_hasSufficientValidApprovalSignatures({
+            if (
+                _hasSufficientValidApprovalSignatures({
                     account: account,
                     hash: hash,
                     policyId: policyId,
@@ -114,7 +117,8 @@ library LibOrganizationAccountSignature {
                     approverSignatures: approverSignatures,
                     initiatorSignature: initiatorSignature,
                     proofs: proofs
-                })) {
+                })
+            ) {
                 return ERC1271_MAGIC_VALUE;
             }
         }
@@ -140,7 +144,7 @@ library LibOrganizationAccountSignature {
         address account,
         address initiator,
         uint256 policyId,
-        Policies.ValidationProofs memory proofs
+        ValidationProofs memory proofs
     ) private view returns (bool) {
         // Case: Policy is not in the organization's policy tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) {
@@ -148,7 +152,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Policy can't be used for signature operations
-        if (proofs.policy.config.transactionType != Policies.TransactionType.Signatures) {
+        if (proofs.policy.config.transactionType != TransactionType.Signatures) {
             return false;
         }
 
@@ -185,7 +189,7 @@ library LibOrganizationAccountSignature {
         uint256 expirationTimestamp,
         bytes memory approverSignatures,
         bytes memory initiatorSignature,
-        Policies.ValidationProofs memory proofs
+        ValidationProofs memory proofs
     ) private view returns (bool) {
         // Case: Not enough data provided to check for valid approval signatures
         if (approverSignatures.length < SignatureUtils.SIGNATURE_LENGTH) {

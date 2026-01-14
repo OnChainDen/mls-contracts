@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {ContractInteractionUtils} from "../../../libraries/ContractInteractionUtils.sol";
-import {Policies} from "../../../libraries/Policies.sol";
+import {Policy} from "../../../types/PolicyTypes.sol";
 import {LibPolicyDestination} from "./LibPolicyDestination.sol";
 import {LibPolicyParameterConstraints} from "./LibPolicyParameterConstraints.sol";
 
@@ -31,7 +31,7 @@ library LibPolicyContractInteraction {
      * @return True if the contract interaction is allowed, false otherwise
      */
     function isContractInteractionAllowedByPolicy(
-        Policies.Policy calldata policy,
+        Policy calldata policy,
         address to,
         uint256 value,
         bytes calldata data,
@@ -62,7 +62,7 @@ library LibPolicyContractInteraction {
      * @return True if the function matches, false otherwise
      */
     function _isFunctionAllowedByPolicy(
-        Policies.Policy calldata policy,
+        Policy calldata policy,
         bytes calldata data,
         bytes32[] calldata functionProof,
         bytes calldata constraints
