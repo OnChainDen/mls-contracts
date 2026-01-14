@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {MerkleUtils} from "../../../libraries/MerkleUtils.sol";
-import {Policy, DestinationType} from "../../../types/PolicyTypes.sol";
 import {TokenTransferUtils} from "../../../libraries/TokenTransferUtils.sol";
+import {DestinationType, Policy} from "../../../types/PolicyTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

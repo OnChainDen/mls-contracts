@@ -13,9 +13,9 @@ import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/I
 import {IOrganization} from "../interfaces/IOrganization.sol";
 
 // Types
-import {AdminAuthParams, AllAdminsInOrgProofs, AdminConfig} from "../types/AdminTypes.sol";
-import {OperationType, InitializationParams} from "../types/CommonTypes.sol";
-import {ValidationProofs, Policy, GroupData} from "../types/PolicyTypes.sol";
+import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "../types/AdminTypes.sol";
+import {InitializationParams, OperationType} from "../types/CommonTypes.sol";
+import {GroupData, Policy, ValidationProofs} from "../types/PolicyTypes.sol";
 
 // Libraries
 import {LibOrganizationAccountFactory} from "./libraries/LibOrganizationAccountFactory.sol";
@@ -38,12 +38,7 @@ import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationP
  *      Full data is provided via calldata and verified against the roots.
  * @author Den Technologies Inc
  */
-contract OrganizationImplementation is
-    UUPSUpgradeable,
-    Initializable,
-    IBeacon,
-    IOrganization
-{
+contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, IOrganization {
     /**
      * @notice Modifier that enforces only the guardian can call the function
      */

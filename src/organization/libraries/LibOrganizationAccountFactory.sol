@@ -3,8 +3,8 @@ pragma solidity ^0.8.24;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
-import {IOrganizationAccountFactory} from "../../interfaces/organization/IOrganizationAccountFactory.sol";
 import {AccountProxy} from "../../account/AccountProxy.sol";
+import {IOrganizationAccountFactory} from "../../interfaces/organization/IOrganizationAccountFactory.sol";
 import {LibOrganizationAccountFactoryStorage} from "./storage/LibOrganizationAccountFactoryStorage.sol";
 
 /**

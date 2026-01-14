@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationGroups} from "../../interfaces/organization/IOrganizationGroups.sol";
-import {GroupData} from "../../types/PolicyTypes.sol";
 import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {GroupData} from "../../types/PolicyTypes.sol";
 import {LibOrganizationGroupsStorage} from "./storage/LibOrganizationGroupsStorage.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 

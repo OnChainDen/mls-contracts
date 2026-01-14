@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationSignatures} from "../../interfaces/organization/IOrganizationSignatures.sol";
-import {OperationType} from "../../types/CommonTypes.sol";
 import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
+import {OperationType} from "../../types/CommonTypes.sol";
 import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignaturesStorage.sol";
 import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
 

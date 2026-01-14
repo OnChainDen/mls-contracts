@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {ContractInteractionUtils} from "../../../libraries/ContractInteractionUtils.sol";
 import {MerkleUtils} from "../../../libraries/MerkleUtils.sol";
-import {ParameterConstraint, ParamType, ConstraintType} from "../../../types/PolicyTypes.sol";
+import {ConstraintType, ParamType, ParameterConstraint} from "../../../types/PolicyTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -103,11 +103,11 @@ library LibPolicyParameterConstraints {
      * @param data The full transaction calldata (for dynamic types)
      * @return True if the parameter satisfies the constraint, false otherwise
      */
-    function _isParameterAllowedByConstraint(ParameterConstraint memory constraint, bytes32 paramHeadValue, bytes calldata data)
-        private
-        pure
-        returns (bool)
-    {
+    function _isParameterAllowedByConstraint(
+        ParameterConstraint memory constraint,
+        bytes32 paramHeadValue,
+        bytes calldata data
+    ) private pure returns (bool) {
         ParamType pType = constraint.paramType;
         ConstraintType constraintType = constraint.constraintType;
 
@@ -315,7 +315,9 @@ library LibPolicyParameterConstraints {
 
         // Hash the actual content
         bytes32 actualHash = keccak256(
-            data[dataPosition + ContractInteractionUtils.SLOT_SIZE:dataPosition + ContractInteractionUtils.SLOT_SIZE + length]
+            data[dataPosition
+                    + ContractInteractionUtils.SLOT_SIZE:dataPosition + ContractInteractionUtils.SLOT_SIZE + length
+            ]
         );
         bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
         return actualHash == expectedHash;

@@ -57,8 +57,12 @@ interface IOrganizationPolicy {
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid, AdminAuthParams calldata authParams)
-        external;
+    // forgefmt: disable-next-item
+    function setPolicies(
+        bytes32 newPoliciesRoot, 
+        string calldata ipfsCid, 
+        AdminAuthParams calldata authParams
+    ) external;
 
     /**
      * @notice Returns the current global policies merkle root

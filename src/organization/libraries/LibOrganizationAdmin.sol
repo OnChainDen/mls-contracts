@@ -151,7 +151,11 @@ library LibOrganizationAdmin {
     ) internal pure {
         // Case: Admin addresses array does not match expected count
         if (allAdminsInOrgProofs.adminAddresses.length != expectedAdminCount) {
-            revert IOrganizationAdmin.AdminCountMismatch(expectedAdminCount, allAdminsInOrgProofs.adminAddresses.length);
+            // forgefmt: disable-next-item
+            revert IOrganizationAdmin.AdminCountMismatch(
+                    expectedAdminCount, 
+                    allAdminsInOrgProofs.adminAddresses.length
+                );
         }
 
         // Track last admin address to ensure ascending order (prevents duplicates)

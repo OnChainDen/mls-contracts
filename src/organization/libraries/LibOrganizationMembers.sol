@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationMembers} from "../../interfaces/organization/IOrganizationMembers.sol";
-import {AdminConfig, AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
 import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "../../types/AdminTypes.sol";
 import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
 import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
 import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersStorage.sol";
@@ -29,9 +29,11 @@ library LibOrganizationMembers {
      * @param ipfsCid The IPFS CID where full member data is stored
      * @param allAdminsInOrgProofs Proofs that all admins are in the new members tree
      */
-    function setMembers(bytes32 newMembersRoot, string calldata ipfsCid, AllAdminsInOrgProofs memory allAdminsInOrgProofs)
-        internal
-    {
+    function setMembers(
+        bytes32 newMembersRoot,
+        string calldata ipfsCid,
+        AllAdminsInOrgProofs memory allAdminsInOrgProofs
+    ) internal {
         // Get current admin configuration
         AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
 

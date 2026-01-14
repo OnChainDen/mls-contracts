@@ -52,9 +52,8 @@ interface IOrganizationAccountTransaction {
 
     /**
      * @notice Thrown when a transaction rejection is not allowed
-     * @param reason The reason rejection is not allowed
      */
-    error TransactionRejectionNotAllowed(string reason);
+    error TransactionRejectionNotAllowed();
 
     /**
      * @notice Thrown when there are insufficient approvals for a transaction

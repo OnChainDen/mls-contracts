@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationAccountTransaction} from "../../interfaces/organization/IOrganizationAccountTransaction.sol";
-import {Policy, ValidationProofs, PolicyType, PolicyLimitation, TransactionType} from "../../types/PolicyTypes.sol";
 import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
 import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
+import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs} from "../../types/PolicyTypes.sol";
 import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
 import {LibOrganizationPolicy} from "./LibOrganizationPolicy.sol";
 import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
@@ -105,8 +105,7 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify the policy exists and applies to this specific transaction
-        if (
-            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
+        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
                 policyId: policyId,
                 sourceAccount: account,
                 to: to,
@@ -114,8 +113,7 @@ library LibOrganizationAccountTransaction {
                 data: data,
                 initiator: initiator,
                 proofs: proofs
-            })
-        ) {
+            })) {
             revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
@@ -133,7 +131,9 @@ library LibOrganizationAccountTransaction {
         }
 
         // Update time-based limits if applicable (for all policy types)
-        _validateAndUpdateTimeBasedLimitOrRevert({params: params, data: data, initiator: initiator, policy: proofs.policy});
+        _validateAndUpdateTimeBasedLimitOrRevert({
+            params: params, data: data, initiator: initiator, policy: proofs.policy
+        });
     }
 
     /**
@@ -191,8 +191,7 @@ library LibOrganizationAccountTransaction {
         address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
 
         // Verify policy applies to this transaction
-        if (
-            !LibOrganizationPolicy.isTransactionAllowedByPolicy({
+        if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
                 policyId: policyId,
                 sourceAccount: account,
                 to: to,
@@ -200,8 +199,7 @@ library LibOrganizationAccountTransaction {
                 data: data,
                 initiator: initiator,
                 proofs: proofs
-            })
-        ) {
+            })) {
             revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
@@ -293,14 +291,14 @@ library LibOrganizationAccountTransaction {
 
         // Need a second signature for rejection authorization
         if (signatures.length < 130) {
-            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed("AutoApprove rejection requires authorized initiator signature");
+            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
         bytes memory rejectionSignature = SignatureUtils.extractSignature(signatures, 1);
 
         // Verify the rejection signer is an authorized initiator for this policy
         address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
-            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed("Rejection signature must be from an authorized initiator");
+            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
     }
 
@@ -355,8 +353,9 @@ library LibOrganizationAccountTransaction {
         bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
 
         // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
-        uint256 validApprovals =
-            LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs);
+        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
+            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
+        );
 
         if (validApprovals < requiredApprovals) {
             revert IOrganizationAccountTransaction.InsufficientApprovals(requiredApprovals, validApprovals);

@@ -69,13 +69,6 @@ interface IOrganization is
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Returns the current implementation address for all Account BeaconProxies
-     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
-     * @return The current account implementation address
-     */
-    function implementation() external view returns (address);
-
-    /**
      * @notice Upgrade the organization implementation to a new address and optionally call a function
      * @dev This is the ONLY authorized way to upgrade this contract. Direct calls to the inherited
      *      `upgradeToAndCall` function will revert with `UnauthorizedUpgrade`.
@@ -89,4 +82,11 @@ interface IOrganization is
         bytes calldata data,
         AdminAuthParams calldata authParams
     ) external;
+
+    /**
+     * @notice Returns the current implementation address for all Account BeaconProxies
+     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
+     * @return The current account implementation address
+     */
+    function implementation() external view returns (address);
 }

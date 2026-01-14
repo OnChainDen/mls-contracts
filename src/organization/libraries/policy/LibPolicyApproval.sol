@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {IOrganizationPolicy} from "../../../interfaces/organization/IOrganizationPolicy.sol";
-import {Policy, ApproverProofs, GroupData, ApproverType} from "../../../types/PolicyTypes.sol";
 import {SignatureUtils} from "../../../libraries/SignatureUtils.sol";
+import {ApproverProofs, ApproverType, GroupData, Policy} from "../../../types/PolicyTypes.sol";
 import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
 
@@ -17,7 +17,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Den Technologies Inc
  */
 library LibPolicyApproval {
-
     /**
      * @dev Counts valid approvals from a set of signatures (using Merkle proofs)
      * @dev Signatures must be ordered by signer address (ascending) to prevent duplicates.
@@ -77,16 +76,14 @@ library LibPolicyApproval {
 
             // Check if signer is authorized based on policy (with Merkle proofs)
             // Note: Group existence already verified above, membersRoot passed to avoid storage reads
-            if (
-                isSignerAuthorizedForPolicy({
+            if (isSignerAuthorizedForPolicy({
                     policy: policy,
                     signerAddress: signer,
                     membersRoot: membersRoot,
                     memberProof: memberProof,
                     group: approverProofs.group,
                     memberInGroupProof: memberInGroupProof
-                })
-            ) {
+                })) {
                 ++validApprovals;
             }
         }
@@ -166,17 +163,22 @@ library LibPolicyApproval {
      * @param approverProofs The proofs for approver membership verification
      * @param signatureCount The number of signatures provided
      */
-    function _validateApproverProofsOrRevert(Policy memory policy, ApproverProofs memory approverProofs, uint8 signatureCount)
-        private
-        pure
-    {
+    function _validateApproverProofsOrRevert(
+        Policy memory policy,
+        ApproverProofs memory approverProofs,
+        uint8 signatureCount
+    ) private pure {
         if (approverProofs.approverInOrgMembersTreeProofs.length != signatureCount) {
-            revert IOrganizationPolicy.MemberProofsLengthMismatch(signatureCount, approverProofs.approverInOrgMembersTreeProofs.length);
+            revert IOrganizationPolicy.MemberProofsLengthMismatch(
+                signatureCount, approverProofs.approverInOrgMembersTreeProofs.length
+            );
         }
 
         if (policy.config.approval.approverType == ApproverType.Group) {
             if (approverProofs.memberInGroupProofs.length != signatureCount) {
-                revert IOrganizationPolicy.MemberInGroupProofsLengthMismatch(signatureCount, approverProofs.memberInGroupProofs.length);
+                revert IOrganizationPolicy.MemberInGroupProofsLengthMismatch(
+                    signatureCount, approverProofs.memberInGroupProofs.length
+                );
             }
         }
     }

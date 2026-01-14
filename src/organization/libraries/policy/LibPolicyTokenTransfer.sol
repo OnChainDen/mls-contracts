@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policy} from "../../../types/PolicyTypes.sol";
 import {TokenTransferUtils} from "../../../libraries/TokenTransferUtils.sol";
+import {Policy} from "../../../types/PolicyTypes.sol";
 import {LibPolicyDestination} from "./LibPolicyDestination.sol";
 
 /**

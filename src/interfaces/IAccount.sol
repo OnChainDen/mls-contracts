@@ -34,6 +34,12 @@ interface IAccount is IAccountErrors {
     event OnchainCustodyAccountNativeTokenReceived(address indexed sender, uint256 value);
 
     /**
+     * @notice Receives native tokens (ETH) sent to this account
+     * @dev Emits OnchainCustodyAccountNativeTokenReceived event when native tokens are received
+     */
+    receive() external payable;
+
+    /**
      * @notice Executes a transaction from this account
      * @dev Can only be called by the associated Organization contract
      * @param to The destination address of the transaction
@@ -61,10 +67,4 @@ interface IAccount is IAccountErrors {
      * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
      */
     function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4 magicValue);
-
-    /**
-     * @notice Receives native tokens (ETH) sent to this account
-     * @dev Emits OnchainCustodyAccountNativeTokenReceived event when native tokens are received
-     */
-    receive() external payable;
 }

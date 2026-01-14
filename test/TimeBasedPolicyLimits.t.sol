@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {LibOrganizationPolicy} from "../src/organization/libraries/LibOrganizationPolicy.sol";
 import {
+    ApproverType,
+    DestinationType,
     Policy,
     PolicyLimitation,
-    TransactionType,
-    DestinationType,
     PolicyType,
-    ApproverType,
-    TimeIntervalScope
+    TimeIntervalScope,
+    TransactionType
 } from "../src/types/PolicyTypes.sol";
-import {LibOrganizationPolicy} from "../src/organization/libraries/LibOrganizationPolicy.sol";
 import {Test} from "forge-std/Test.sol";
 
 /**

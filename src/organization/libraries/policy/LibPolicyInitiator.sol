@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policy, InitiatorProofs, ApproverType} from "../../../types/PolicyTypes.sol";
+import {ApproverType, InitiatorProofs, Policy} from "../../../types/PolicyTypes.sol";
 import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
 
@@ -23,11 +23,11 @@ library LibPolicyInitiator {
      * @param initiatorProofs The proofs for initiator membership verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress, InitiatorProofs memory initiatorProofs)
-        internal
-        view
-        returns (bool)
-    {
+    function isInitiatorAuthorized(
+        Policy memory policy,
+        address initiatorAddress,
+        InitiatorProofs memory initiatorProofs
+    ) internal view returns (bool) {
         // Case: The policy matches transactions with any initiator
         if (policy.config.initiator.anyInitiator) return true;
 

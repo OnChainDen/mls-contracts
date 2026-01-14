@@ -3,8 +3,8 @@ pragma solidity ^0.8.24;
 
 import {IOrganizationPolicy} from "../../interfaces/organization/IOrganizationPolicy.sol";
 import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {Policy, ValidationProofs, ApproverProofs, InitiatorProofs, TransactionType} from "../../types/PolicyTypes.sol";
 import {TokenTransferUtils} from "../../libraries/TokenTransferUtils.sol";
+import {ApproverProofs, InitiatorProofs, Policy, TransactionType, ValidationProofs} from "../../types/PolicyTypes.sol";
 import {LibPolicyApproval} from "./policy/LibPolicyApproval.sol";
 import {LibPolicyContractInteraction} from "./policy/LibPolicyContractInteraction.sol";
 import {LibPolicyDestination} from "./policy/LibPolicyDestination.sol";
@@ -225,11 +225,11 @@ library LibOrganizationPolicy {
      * @param initiatorProofs The proofs for initiator membership verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress, InitiatorProofs memory initiatorProofs)
-        internal
-        view
-        returns (bool)
-    {
+    function isInitiatorAuthorized(
+        Policy memory policy,
+        address initiatorAddress,
+        InitiatorProofs memory initiatorProofs
+    ) internal view returns (bool) {
         return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorProofs);
     }
 
@@ -242,11 +242,11 @@ library LibOrganizationPolicy {
      * @param sourceAccountProof The merkle proof for the source account
      * @return True if the source account matches, false otherwise
      */
-    function isSourceAccountAllowedByPolicy(Policy memory policy, address sourceAccount, bytes32[] memory sourceAccountProof)
-        internal
-        pure
-        returns (bool)
-    {
+    function isSourceAccountAllowedByPolicy(
+        Policy memory policy,
+        address sourceAccount,
+        bytes32[] memory sourceAccountProof
+    ) internal pure returns (bool) {
         // Case: The policy matches transactions sent from any account
         if (policy.config.anySourceAccount) return true;
 
