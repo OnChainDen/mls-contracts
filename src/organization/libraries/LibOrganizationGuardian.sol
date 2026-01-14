@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationAdmin} from "../../interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGuardian} from "../../interfaces/organization/IOrganizationGuardian.sol";
 import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianStorage.sol";
 
@@ -19,7 +18,7 @@ library LibOrganizationGuardian {
     function setGuardian(address newGuardian) internal {
         // Validate input parameters
         if (newGuardian == address(0)) {
-            revert IOrganizationAdmin.AdminAuthorizationFailed("Guardian address cannot be zero address");
+            revert IOrganizationGuardian.InvalidGuardianAddress();
         }
 
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();

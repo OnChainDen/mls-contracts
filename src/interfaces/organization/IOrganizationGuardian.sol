@@ -26,6 +26,11 @@ interface IOrganizationGuardian {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
+     * @notice Thrown when attempting to set the guardian to the zero address
+     */
+    error InvalidGuardianAddress();
+
+    /**
      * @notice Thrown when a function is called by an unauthorized address (not the guardian)
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
