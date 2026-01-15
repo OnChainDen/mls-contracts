@@ -17,8 +17,8 @@ library TokenTransferUtils {
     error MalformedTokenTransfer();
 
     /**
-     * @dev Checks if a transaction is a token transfer
-     * @dev A transaction is considered a token transfer if:
+     * @dev Checks if a transaction is a token transfer.
+     *      A transaction is considered a token transfer if:
      *      1. It has value > 0 and no data (native token transfer), OR
      *      2. It calls transfer(address,uint256) for ERC-20 transfers
      * @param data The transaction calldata
@@ -37,8 +37,8 @@ library TokenTransferUtils {
     }
 
     /**
-     * @dev Checks if a transaction is a native token transfer
-     * @dev A transaction is considered a native token transfer if it has value > 0 and no data
+     * @dev Checks if a transaction is a native token transfer.
+     *      A transaction is considered a native token transfer if it has value > 0 and no data.
      * @param data The transaction calldata
      * @param value The transaction value in wei
      * @return True if the transaction is a native token transfer, false otherwise
@@ -69,8 +69,8 @@ library TokenTransferUtils {
     }
 
     /**
-     * @dev Extracts the token recipient from ERC-20 transfer calldata
-     * @dev Only supports ERC20 transfer(address,uint256)
+     * @dev Extracts the token recipient from ERC-20 transfer calldata.
+     *      Only supports ERC20 transfer(address,uint256).
      * @param data The transaction calldata (must be a valid ERC-20 transfer call)
      * @return The recipient address
      */
@@ -108,8 +108,8 @@ library TokenTransferUtils {
     }
 
     /**
-     * @dev Extracts the transfer amount from a token transfer
-     * @dev For native transfers, returns the transaction value.
+     * @dev Extracts the transfer amount from a token transfer.
+     *      For native transfers, returns the transaction value.
      *      For ERC20 transfers, extracts the amount from calldata.
      * @param data The transaction calldata
      * @param value The transaction value in wei

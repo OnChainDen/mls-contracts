@@ -15,16 +15,16 @@ import {InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Initialization
- * @dev Library for post-deployment initialization of Organization contracts
- * @dev This library should ONLY be used by Organization contracts.
+ * @dev Library for post-deployment initialization of Organization contracts.
+ *      This library should ONLY be used by Organization contracts.
  *      Members and Groups are stored as Merkle trees - only the roots are stored on-chain.
  *      Full member/group data is stored off-chain (IPFS) and provided via calldata at validation time.
  * @author Den Technologies Inc
  */
 library LibOrganizationInitialization {
     /**
-     * @dev Initializes the organization contract with Merkle-based members/groups and admin configuration
-     * @dev Deployer authorization is enforced by the external wrapper function.
+     * @dev Initializes the organization contract with Merkle-based members/groups and admin configuration.
+     *      Deployer authorization is enforced by the external wrapper function.
      *      Members and groups are represented as Merkle trees - only roots are stored on-chain.
      *      Validates that all admin addresses are members to prevent bricking.
      * @param params The initialization parameters struct
@@ -86,8 +86,8 @@ library LibOrganizationInitialization {
     }
 
     /**
-     * @dev Enforces that the caller is the deployer address
-     * @dev This function will revert if msg.sender is not the deployer
+     * @dev Enforces that the caller is the deployer address.
+     *      This function will revert if msg.sender is not the deployer.
      */
     function enforceOnlyDeployer() public view {
         if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
@@ -104,8 +104,8 @@ library LibOrganizationInitialization {
     }
 
     /**
-     * @dev Checks if the organization has been initialized
-     * @dev Checks if membersRoot is set (since every organization must have at least one member)
+     * @dev Checks if the organization has been initialized.
+     *      Checks if membersRoot is set (since every organization must have at least one member).
      * @return True if initialized, false otherwise
      */
     function isInitialized() public view returns (bool) {

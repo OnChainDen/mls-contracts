@@ -9,8 +9,8 @@ import {GroupData} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Organization Groups
- * @dev Library for merkle-based group operations for Organization contracts
- * @dev Groups are stored in a nested merkle tree. Only the root is stored on-chain.
+ * @dev Library for merkle-based group operations for Organization contracts.
+ *      Groups are stored in a nested merkle tree. Only the root is stored on-chain.
  *      Full group data is stored off-chain (IPFS) and provided via calldata at validation time.
  *      Each group leaf is hash(hash(groupId, groupMembersRoot)) where groupMembersRoot is
  *      a separate merkle tree containing the member addresses in that group.
@@ -20,8 +20,8 @@ import {GroupData} from "types/PolicyTypes.sol";
  */
 library LibOrganizationGroups {
     /**
-     * @dev Updates the global groups merkle root
-     * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
+     * @dev Updates the global groups merkle root.
+     *      This is the only way to set groups. All group data is stored off-chain (IPFS).
      *      Emits GroupsUpdated event with the IPFS CID for disaster recovery.
      * @param newGroupsRoot The new merkle root containing all groups
      * @param ipfsCid The IPFS CID where full group data is stored
@@ -78,8 +78,8 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @dev Checks if a group exists in a groups tree given an explicit root
-     * @dev Used to verify against potentially different roots or to avoid storage reads in loops
+     * @dev Checks if a group exists in a groups tree given an explicit root.
+     *      Used to verify against potentially different roots or to avoid storage reads in loops.
      * @param groupData The group data containing groupId and groupMembersRoot
      * @param groupsRoot The merkle root to verify against
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
@@ -98,8 +98,8 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @dev Verifies that a member is in a specific group
-     * @dev Verifies against the group's internal members merkle tree (groupMembersRoot)
+     * @dev Verifies that a member is in a specific group.
+     *      Verifies against the group's internal members merkle tree (groupMembersRoot).
      * @param memberAddress The address to verify
      * @param groupMembersRoot The merkle root of the group's members tree
      * @param memberInGroupProof The merkle proof that the member is in the group
@@ -118,8 +118,8 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @dev Computes the merkle leaf for a group
-     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
+     * @dev Computes the merkle leaf for a group.
+     *      Uses double hashing (hash of hash) for security against second preimage attacks.
      * @param groupId The group's unique identifier
      * @param groupMembersRoot The merkle root of all member addresses in this group
      * @return The computed merkle leaf

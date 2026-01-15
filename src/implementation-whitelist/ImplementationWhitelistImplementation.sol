@@ -129,8 +129,8 @@ contract ImplementationWhitelistImplementation is
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
 
     /**
-     * @dev Enforces that the caller is the deployer address
-     * @dev This function will revert if msg.sender is not the deployer
+     * @dev Enforces that the caller is the deployer address.
+     *      This function will revert if msg.sender is not the deployer.
      */
     function _enforceOnlyDeployer() private view {
         if (msg.sender != LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress) {

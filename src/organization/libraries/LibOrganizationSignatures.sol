@@ -8,14 +8,14 @@ import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Signatures
- * @dev Library for signature and nonce-related operations for Organization contracts
- * @dev This library handles nonce management for all operation types (admin operations and account transactions)
+ * @dev Library for signature and nonce-related operations for Organization contracts.
+ *      This library handles nonce management for all operation types (admin operations and account transactions).
  * @author Den Technologies Inc
  */
 library LibOrganizationSignatures {
     /**
-     * @dev Validates that a nonce has not been used and marks it as used
-     * @dev Reverts if the nonce has already been used
+     * @dev Validates that a nonce has not been used and marks it as used.
+     *      Reverts if the nonce has already been used.
      * @param nonce The nonce to validate and consume
      */
     function validateAndConsumeNonceOrRevert(uint256 nonce) internal {
@@ -53,8 +53,8 @@ library LibOrganizationSignatures {
     }
 
     /**
-     * @dev Extracts the review signatures from a signatures bytes array (everything after the first signature)
-     * @dev The first SIGNATURE_LENGTH bytes are assumed to be the initiator signature.
+     * @dev Extracts the review signatures from a signatures bytes array (everything after the first signature).
+     *      The first SIGNATURE_LENGTH bytes are assumed to be the initiator signature.
      *      Review signatures start after the initiator signature and continue to the end.
      * @param signatures The full signatures bytes array
      * @return The review signatures (may be empty if only initiator signature provided)
@@ -72,7 +72,7 @@ library LibOrganizationSignatures {
 
     /**
      * @dev Slices a bytes array from a start index to the end, without using the mcopy opcode.
-     * @dev This is a Paris EVM-compatible replacement for OpenZeppelin's Bytes.slice which uses mcopy (Cancun).
+     *      This is a Paris EVM-compatible replacement for OpenZeppelin's Bytes.slice which uses mcopy (Cancun).
      *      The implementation copies full 32-byte words, then handles any remaining bytes using a bitmask
      *      to ensure no garbage bytes are included in the result.
      * @param buffer The source bytes array to slice from

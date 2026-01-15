@@ -6,8 +6,8 @@ import {Policy, PolicyLimitation, TimeIntervalScope} from "types/PolicyTypes.sol
 
 /**
  * @title Lib Policy Time Based Limits
- * @dev Library for time-based policy limit tracking and validation
- * @dev Handles checking and updating time-based usage limits for policies.
+ * @dev Library for time-based policy limit tracking and validation.
+ *      Handles checking and updating time-based usage limits for policies.
  *      Time windows are calculated as fixed intervals based on block.timestamp.
  * @author Den Technologies Inc
  */
@@ -16,8 +16,8 @@ library LibPolicyTimeBasedLimits {
     uint256 private constant SECONDS_PER_HOUR = 3600;
 
     /**
-     * @dev Checks and updates time-based usage limits
-     * @dev Checks if the usage amount would exceed the limit for the current time window.
+     * @dev Checks and updates time-based usage limits.
+     *      Checks if the usage amount would exceed the limit for the current time window.
      *      If within limit, updates the usage and returns true.
      *      If exceeding limit, returns false without updating.
      * @param policyId The policy ID
@@ -61,8 +61,8 @@ library LibPolicyTimeBasedLimits {
     }
 
     /**
-     * @dev Computes the current time window for a policy
-     * @dev Time windows are calculated as: block.timestamp / (timeIntervalHours * 3600)
+     * @dev Computes the current time window for a policy.
+     *      Time windows are calculated as: block.timestamp / (timeIntervalHours * 3600)
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
@@ -109,8 +109,8 @@ library LibPolicyTimeBasedLimits {
     }
 
     /**
-     * @dev Computes the usage key for time-based limit tracking
-     * @dev The usage key is a hash of the policy ID and scoped entities.
+     * @dev Computes the usage key for time-based limit tracking.
+     *      The usage key is a hash of the policy ID and scoped entities.
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
      * @param policyId The policy ID

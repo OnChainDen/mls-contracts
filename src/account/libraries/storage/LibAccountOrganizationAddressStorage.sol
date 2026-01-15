@@ -5,8 +5,8 @@ import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.s
 
 /**
  * @title Account Organization Address Storage
- * @dev Reads the organization address from the EIP-1967 Beacon slot
- * @dev Since the Account is a BeaconProxy and the Organization acts as the Beacon,
+ * @dev Reads the organization address from the EIP-1967 Beacon slot.
+ *      Since the Account is a BeaconProxy and the Organization acts as the Beacon,
  *      the organization address is stored in the standard EIP-1967 Beacon slot.
  * @author Den Technologies Inc
  */

@@ -13,8 +13,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
  * @title Lib Organization Account Transaction
- * @dev Library for validating account transactions through the Organization contract
- * @dev This library handles the core transaction validation logic for the organization.
+ * @dev Library for validating account transactions through the Organization contract.
+ *      This library handles the core transaction validation logic for the organization.
  *      It validates that:
  *      1. The transaction hasn't expired
  *      2. A valid policy exists and applies to this transaction
@@ -32,8 +32,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  */
 library LibOrganizationAccountTransaction {
     /**
-     * @dev Struct to reduce stack depth when passing transaction parameters
-     * @dev Groups common transaction parameters that are used across multiple functions
+     * @dev Struct to reduce stack depth when passing transaction parameters.
+     *      Groups common transaction parameters that are used across multiple functions.
      * @param account The source account executing the transaction
      * @param to The destination address
      * @param value The ETH value being sent
@@ -51,8 +51,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates a transaction against the specified policy using merkle proofs
-     * @dev Main entry point for transaction approval validation. This function:
+     * @dev Validates a transaction against the specified policy using merkle proofs.
+     *      Main entry point for transaction approval validation. This function:
      *      1. Verifies the transaction hasn't expired
      *      2. Extracts and validates the initiator signature
      *      3. Checks that the policy applies to this transaction
@@ -137,8 +137,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates that the caller is authorized to reject the given transaction
-     * @dev Rejection validation ensures that only authorized parties can reject transactions.
+     * @dev Validates that the caller is authorized to reject the given transaction.
+     *      Rejection validation ensures that only authorized parties can reject transactions.
      *      This prevents griefing attacks where unauthorized actors could reject
      *      legitimate pending transactions.
      *      Reverts on validation failure.
@@ -224,8 +224,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates and updates time-based limits for approved transactions
-     * @dev Only applies if the policy has TimeInterval limitation.
+     * @dev Validates and updates time-based limits for approved transactions.
+     *      Only applies if the policy has TimeInterval limitation.
      *      For token transfers, tracks the transfer amount.
      *      For other transactions, tracks count (usage = 1).
      *      Reverts if the limit would be exceeded.
@@ -272,8 +272,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates rejection for auto-approve policies
-     * @dev For auto-approve policies, rejection requires a second signature from
+     * @dev Validates rejection for auto-approve policies.
+     *      For auto-approve policies, rejection requires a second signature from
      *      an authorized initiator signing the rejection hash (isApproval = false)
      * @param params The packed transaction parameters
      * @param data The transaction calldata
@@ -303,8 +303,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Recovers the initiator address from the transaction parameters and signature
-     * @dev Computes the EIP-712 hash of the transaction and recovers the signer
+     * @dev Recovers the initiator address from the transaction parameters and signature.
+     *      Computes the EIP-712 hash of the transaction and recovers the signer.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param initiatorSignature The initiator's ECDSA signature
@@ -323,8 +323,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates manual approval/rejection signatures meet the required threshold
-     * @dev Extracts reviewer signatures and validates against required threshold.
+     * @dev Validates manual approval/rejection signatures meet the required threshold.
+     *      Extracts reviewer signatures and validates against required threshold.
      *      Used for both approval and rejection flows - the isApproval flag determines
      *      which hash is computed for signature verification.
      * @param params The packed transaction parameters
@@ -363,8 +363,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Computes the EIP-712 hash for initiator signatures
-     * @dev Creates a typed data hash following EIP-712 standard for the
+     * @dev Computes the EIP-712 hash for initiator signatures.
+     *      Creates a typed data hash following EIP-712 standard for the
      *      InitiateAccountTransaction struct type. The isApproval flag
      *      distinguishes between approval and rejection signatures.
      * @param params The packed transaction parameters
@@ -397,8 +397,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Computes the EIP-712 hash for reviewer signatures
-     * @dev Creates a typed data hash for the ReviewAccountTransaction struct type.
+     * @dev Computes the EIP-712 hash for reviewer signatures.
+     *      Creates a typed data hash for the ReviewAccountTransaction struct type.
      *      Includes the initiator signature to bind approvals to a specific request.
      * @param params The packed transaction parameters
      * @param data The transaction calldata

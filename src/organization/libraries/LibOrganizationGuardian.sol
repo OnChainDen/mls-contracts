@@ -6,8 +6,8 @@ import {LibOrganizationGuardianStorage} from "organization/libraries/storage/Lib
 
 /**
  * @title Lib Organization Guardian
- * @dev Library for guardian-related operations for Organization contracts
- * @dev This library should ONLY be used by Organization contracts
+ * @dev Library for guardian-related operations for Organization contracts.
+ *      This library should ONLY be used by Organization contracts.
  * @author Den Technologies Inc
  */
 library LibOrganizationGuardian {
@@ -34,8 +34,8 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @dev Enforces that the caller is the guardian address
-     * @dev This function will revert if msg.sender is not the guardian
+     * @dev Enforces that the caller is the guardian address.
+     *      This function will revert if msg.sender is not the guardian.
      */
     function enforceOnlyGuardian() internal view {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();

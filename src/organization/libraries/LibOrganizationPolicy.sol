@@ -17,8 +17,8 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Organization Policy
- * @dev Library for merkle-based policy operations
- * @dev Policies are stored in a global merkle tree. Only the root is stored on-chain.
+ * @dev Library for merkle-based policy operations.
+ *      Policies are stored in a global merkle tree. Only the root is stored on-chain.
  *      Full policy data is provided via calldata and verified against the root.
  *      Members and Groups are also Merkle-based - membership is verified via proofs.
  *      This approach drastically reduces gas costs for policy creation/modification (1 SSTORE)
@@ -27,8 +27,8 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationPolicy {
     /**
-     * @dev Updates the global policies merkle root
-     * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
+     * @dev Updates the global policies merkle root.
+     *      This is the only way to set policies. All policy data is stored off-chain (IPFS).
      *      Emits PoliciesUpdated event with the IPFS CID for disaster recovery.
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored
@@ -85,8 +85,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Checks if a policy applies to a given transaction
-     * @dev Performs comprehensive validation including:
+     * @dev Checks if a policy applies to a given transaction.
+     *      Performs comprehensive validation including:
      *      1. Policy existence (via merkle proof)
      *      2. Source account matching
      *      3. Initiator authorization (via merkle proofs for membership)
@@ -166,8 +166,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Counts valid approvals from a set of signatures (using Merkle proofs)
-     * @dev Delegates to LibPolicyApproval.
+     * @dev Counts valid approvals from a set of signatures (using Merkle proofs).
+     *      Delegates to LibPolicyApproval.
      * @param policy The policy to check against
      * @param signatures The concatenated signatures (65 bytes each)
      * @param messageHash The message hash that was signed
@@ -186,8 +186,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Computes the current time window for a policy
-     * @dev Delegates to LibPolicyTimeBasedLimits.
+     * @dev Computes the current time window for a policy.
+     *      Delegates to LibPolicyTimeBasedLimits.
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
@@ -196,8 +196,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Gets the current usage for a time-based policy
-     * @dev Delegates to LibPolicyTimeBasedLimits.
+     * @dev Gets the current usage for a time-based policy.
+     *      Delegates to LibPolicyTimeBasedLimits.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -218,8 +218,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Checks if the initiator is authorized by the policy
-     * @dev Delegates to LibPolicyInitiator.
+     * @dev Checks if the initiator is authorized by the policy.
+     *      Delegates to LibPolicyInitiator.
      * @param policy The policy to check against
      * @param initiatorAddress The address of the transaction initiator
      * @param initiatorProofs The proofs for initiator membership verification
@@ -234,8 +234,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Checks if the source account matches the policy's source account filter
-     * @dev If anySourceAccount is true, always returns true.
+     * @dev Checks if the source account matches the policy's source account filter.
+     *      If anySourceAccount is true, always returns true.
      *      Otherwise, verifies the account is in the policy's source accounts merkle tree.
      * @param policy The policy to check against
      * @param sourceAccount The source account address
@@ -257,8 +257,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Gets the number of required approvals for a policy
-     * @dev Delegates to LibPolicyApproval.
+     * @dev Gets the number of required approvals for a policy.
+     *      Delegates to LibPolicyApproval.
      * @param policy The policy to check
      * @return The number of required approvals
      */
@@ -267,8 +267,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Gets the actual destination address for a transaction
-     * @dev Delegates to LibPolicyDestination.
+     * @dev Gets the actual destination address for a transaction.
+     *      Delegates to LibPolicyDestination.
      * @param to The transaction `to` address
      * @param data The transaction calldata
      * @param value The transaction value in wei
@@ -301,8 +301,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Computes the merkle leaf for a policy
-     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
+     * @dev Computes the merkle leaf for a policy.
+     *      Uses double hashing (hash of hash) for security against second preimage attacks.
      * @param policyId The unique identifier of the policy
      * @param policy The policy data
      * @return The computed merkle leaf

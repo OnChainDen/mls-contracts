@@ -9,16 +9,16 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Policy Parameter Constraints
- * @dev Library for validating function call parameter constraints
- * @dev Handles validation of function parameters against policy-defined constraints.
+ * @dev Library for validating function call parameter constraints.
+ *      Handles validation of function parameters against policy-defined constraints.
  *      Supports various parameter types (uint, int, address, bool, bytes, etc.) and
  *      constraint types (exact, range, list).
  * @author Den Technologies Inc
  */
 library LibPolicyParameterConstraints {
     /**
-     * @dev Checks if transaction parameters match the specified constraints
-     * @dev Iterates through each constraint and validates the corresponding parameter.
+     * @dev Checks if transaction parameters match the specified constraints.
+     *      Iterates through each constraint and validates the corresponding parameter.
      *      Each constraint contains its own proof for OneOf constraints, eliminating
      *      the need for separate proof arrays.
      * @param parameterConstraints ABI-encoded array of ParameterConstraint structs
@@ -44,8 +44,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Internal helper to process parameter constraints
-     * @dev Separated to manage stack depth in the main function.
+     * @dev Internal helper to process parameter constraints.
+     *      Separated to manage stack depth in the main function.
      *      Each constraint is self-contained with its own merkle proof for OneOf constraints.
      * @param constraints The array of parameter constraints to validate
      * @param data The full transaction calldata
@@ -95,8 +95,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates a single parameter against its constraint
-     * @dev Dispatches to type-specific validation functions based on parameter type.
+     * @dev Validates a single parameter against its constraint.
+     *      Dispatches to type-specific validation functions based on parameter type.
      *      For Address+OneOf constraints, the merkle proof is read from constraint.paramValueInListProof.
      * @param constraint The constraint to validate against (includes proof for OneOf constraints)
      * @param paramHeadValue The parameter value (first 32 bytes)
@@ -156,8 +156,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates a Bool parameter against its constraint
-     * @dev Bool only supports Exact constraint
+     * @dev Validates a Bool parameter against its constraint.
+     *      Bool only supports Exact constraint.
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
@@ -175,8 +175,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates a Uint parameter against its constraint
-     * @dev Uint supports Exact and Range constraints (also used for enums)
+     * @dev Validates a Uint parameter against its constraint.
+     *      Uint supports Exact and Range constraints (also used for enums).
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value(s) encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
@@ -201,8 +201,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates an Int parameter against its constraint
-     * @dev Int supports Exact and Range constraints
+     * @dev Validates an Int parameter against its constraint.
+     *      Int supports Exact and Range constraints.
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value(s) encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
@@ -227,8 +227,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates an Address parameter against its constraint
-     * @dev Address supports Exact and OneOf constraints
+     * @dev Validates an Address parameter against its constraint.
+     *      Address supports Exact and OneOf constraints.
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value or merkle root encoded as bytes
      * @param paramHeadValue The parameter value (first 32 bytes)
@@ -259,8 +259,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates a FixedBytes parameter against its constraint
-     * @dev FixedBytes (bytes1-bytes32) only supports Exact constraint.
+     * @dev Validates a FixedBytes parameter against its constraint.
+     *      FixedBytes (bytes1-bytes32) only supports Exact constraint.
      *      For fixed-size bytes, the value is stored directly in the 32-byte slot (left-aligned).
      * @param constraintType The type of constraint to apply
      * @param comparisonData The expected value encoded as bytes
@@ -278,8 +278,8 @@ library LibPolicyParameterConstraints {
     }
 
     /**
-     * @dev Validates a dynamic Bytes or String parameter against its constraint
-     * @dev Dynamic bytes and strings only support Exact constraint (hash comparison).
+     * @dev Validates a dynamic Bytes or String parameter against its constraint.
+     *      Dynamic bytes and strings only support Exact constraint (hash comparison).
      *      Both types have identical ABI encoding (offset -> length -> data), so this
      *      function handles both ParamType.Bytes and ParamType.String.
      *      The paramHeadValue contains the offset to the data location in calldata.
