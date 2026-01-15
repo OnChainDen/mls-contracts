@@ -32,7 +32,7 @@ library LibOrganizationMembers {
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
-        AllAdminsInOrgProofs memory allAdminsInOrgProofs
+        AllAdminsInOrgProofs calldata allAdminsInOrgProofs
     ) internal {
         // Get current admin configuration
         AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
