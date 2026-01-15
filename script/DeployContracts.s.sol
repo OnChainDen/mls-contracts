@@ -36,8 +36,12 @@ contract DeployContracts is Script {
         console.log("ImplementationWhitelistImplementation deployed at:", address(whitelist));
 
         // Deploy OrganizationImplementation
+        // Note: LibOrganizationAdmin, LibOrganizationInitialization, and LibOrganizationAccountSignature
+        // are external libraries that Foundry will automatically deploy and link.
+        // For production deployments, use --libraries flag to specify pre-deployed library addresses.
         OrganizationImplementation organizationImplementation = new OrganizationImplementation();
         console.log("OrganizationImplementation deployed at:", address(organizationImplementation));
+        console.log("(External libraries were automatically deployed and linked)");
 
         // Deploy AccountImplementation
         AccountImplementation accountImplementation = new AccountImplementation();

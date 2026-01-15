@@ -42,9 +42,9 @@ library LibOrganizationAdmin {
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
-        AllAdminsInOrgProofs memory newAdminsInOrgProofs,
+        AllAdminsInOrgProofs calldata newAdminsInOrgProofs,
         bytes32 currentMembersRoot
-    ) internal {
+    ) public {
         // Validate admin configuration (root, count, threshold)
         validateAdminConfigurationOrRevert(newAdminsRoot, newAdminCount, newVotingThreshold);
 
@@ -85,10 +85,10 @@ library LibOrganizationAdmin {
      */
     function validateAdminAuthAndConsumeNonceOrRevert(
         OperationType operationType,
-        bytes memory operationData,
+        bytes calldata operationData,
         bool isApproval,
-        AdminAuthParams memory authParams
-    ) internal {
+        AdminAuthParams calldata authParams
+    ) public {
         // Check if the operation has expired
         if (block.timestamp > authParams.expirationTimestamp) {
             revert IOrganizationAdmin.AdminOperationExpired(authParams.expirationTimestamp, block.timestamp);
@@ -130,7 +130,7 @@ library LibOrganizationAdmin {
      * @dev Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
-    function getAdminConfig() internal view returns (AdminConfig memory) {
+    function getAdminConfig() public view returns (AdminConfig memory) {
         return LibOrganizationAdminStorage.layout().adminConfig;
     }
 
@@ -144,11 +144,11 @@ library LibOrganizationAdmin {
      * @param expectedAdminCount The expected number of admins (for completeness check)
      */
     function validateAllAdminsAreMembersOrRevert(
-        AllAdminsInOrgProofs memory allAdminsInOrgProofs,
+        AllAdminsInOrgProofs calldata allAdminsInOrgProofs,
         bytes32 adminsRoot,
         bytes32 membersRoot,
         uint256 expectedAdminCount
-    ) internal pure {
+    ) public pure {
         // Case: Admin addresses array does not match expected count
         if (allAdminsInOrgProofs.adminAddresses.length != expectedAdminCount) {
             // forgefmt: disable-next-item
@@ -192,7 +192,7 @@ library LibOrganizationAdmin {
      * @param votingThreshold The voting threshold for admin operations
      */
     function validateAdminConfigurationOrRevert(bytes32 adminsRoot, uint256 adminCount, uint256 votingThreshold)
-        internal
+        public
         pure
     {
         if (adminsRoot == bytes32(0) || adminCount == 0 || votingThreshold == 0 || votingThreshold > adminCount) {
@@ -208,9 +208,9 @@ library LibOrganizationAdmin {
      * @return The number of valid signatures from admins
      */
     function _getValidAdminSignatures(
-        bytes memory signatures,
+        bytes calldata signatures,
         bytes32 operationHash,
-        SigningAdminsInOrgProofs memory signingAdminsInOrgProofs
+        SigningAdminsInOrgProofs calldata signingAdminsInOrgProofs
     ) private view returns (uint256) {
         // Case: No signatures provided
         if (signatures.length == 0) return 0;
@@ -273,7 +273,7 @@ library LibOrganizationAdmin {
      */
     function _getAdminOperationHash(
         OperationType operationType,
-        bytes memory operationData,
+        bytes calldata operationData,
         uint256 salt,
         uint256 expirationTimestamp,
         bool isApproval
@@ -304,7 +304,7 @@ library LibOrganizationAdmin {
      * @param signatureCount The number of signatures provided
      */
     function _validateSigningAdminsProofsOrRevert(
-        SigningAdminsInOrgProofs memory signingAdminsInOrgProofs,
+        SigningAdminsInOrgProofs calldata signingAdminsInOrgProofs,
         uint8 signatureCount
     ) private pure {
         uint256 adminTreeProofsLength = signingAdminsInOrgProofs.adminInOrgAdminTreeProofs.length;

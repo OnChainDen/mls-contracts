@@ -29,7 +29,7 @@ library LibOrganizationInitialization {
      *      Validates that all admin addresses are members to prevent bricking.
      * @param params The initialization parameters struct
      */
-    function initialize(InitializationParams calldata params) internal {
+    function initialize(InitializationParams calldata params) public {
         // Check if already initialized
         if (isInitialized()) {
             revert IOrganizationInitialization.AlreadyInitialized();
@@ -89,7 +89,7 @@ library LibOrganizationInitialization {
      * @dev Enforces that the caller is the deployer address
      * @dev This function will revert if msg.sender is not the deployer
      */
-    function enforceOnlyDeployer() internal view {
+    function enforceOnlyDeployer() public view {
         if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
             revert IOrganizationInitialization.UnauthorizedDeployer();
         }
@@ -99,7 +99,7 @@ library LibOrganizationInitialization {
      * @dev Gets the deployer address from storage
      * @return The deployer address
      */
-    function getDeployerAddress() internal view returns (address) {
+    function getDeployerAddress() public view returns (address) {
         return LibOrganizationDeployerAddressStorage.layout().deployerAddress;
     }
 
@@ -108,7 +108,7 @@ library LibOrganizationInitialization {
      * @dev Checks if membersRoot is set (since every organization must have at least one member)
      * @return True if initialized, false otherwise
      */
-    function isInitialized() internal view returns (bool) {
+    function isInitialized() public view returns (bool) {
         return LibOrganizationMembersStorage.layout().membersRoot != bytes32(0);
     }
 }

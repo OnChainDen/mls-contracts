@@ -51,7 +51,7 @@ library LibOrganizationAccountSignature {
      * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
      */
     function isValidSignature(address account, bytes32 hash, bytes memory signature)
-        internal
+        public
         view
         returns (bytes4 magicValue)
     {
