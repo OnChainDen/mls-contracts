@@ -48,10 +48,9 @@ interface IOrganizationAdmin {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Thrown when an admin operation fails authorization
-     * @param reason The reason for the failure
+     * @notice Thrown when an admin operation has insufficient valid signatures to meet threshold
      */
-    error AdminAuthorizationFailed(string reason);
+    error InsufficientAdminAuthorization();
 
     /**
      * @notice Thrown when an admin operation has insufficient signatures
@@ -105,10 +104,9 @@ interface IOrganizationAdmin {
     error AdminNotMember(address admin);
 
     /**
-     * @notice Thrown when admin configuration is invalid
-     * @param reason The reason for the invalid configuration
+     * @notice Thrown when admin configuration is invalid (zero root, zero count, or invalid threshold)
      */
-    error InvalidAdminConfiguration(string reason);
+    error InvalidAdminConfig();
 
     /**
      * @notice Thrown when admin tree proofs length doesn't match signature count

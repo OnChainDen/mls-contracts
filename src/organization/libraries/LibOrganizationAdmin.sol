@@ -122,7 +122,7 @@ library LibOrganizationAdmin {
 
         // Check if we have enough valid signatures
         if (validSignatures < adminLayout.adminConfig.votingThreshold) {
-            revert IOrganizationAdmin.AdminAuthorizationFailed("Insufficient authorization for admin operation");
+            revert IOrganizationAdmin.InsufficientAdminAuthorization();
         }
     }
 
@@ -195,14 +195,8 @@ library LibOrganizationAdmin {
         internal
         pure
     {
-        if (adminsRoot == bytes32(0)) {
-            revert IOrganizationAdmin.InvalidAdminConfiguration("Admin root cannot be zero");
-        }
-        if (adminCount == 0) {
-            revert IOrganizationAdmin.InvalidAdminConfiguration("Admin count cannot be zero");
-        }
-        if (votingThreshold == 0 || votingThreshold > adminCount) {
-            revert IOrganizationAdmin.InvalidAdminConfiguration("Invalid voting threshold");
+        if (adminsRoot == bytes32(0) || adminCount == 0 || votingThreshold == 0 || votingThreshold > adminCount) {
+            revert IOrganizationAdmin.InvalidAdminConfig();
         }
     }
 
