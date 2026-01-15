@@ -2,11 +2,15 @@
 pragma solidity ^0.8.24;
 
 /**
- * @title I Implementation Whitelist
- * @notice Interface for validating implementation addresses
+ * @title IImplementationWhitelist
+ * @notice Interface for managing and validating whitelisted implementation addresses
  * @author Den Technologies Inc
  */
 interface IImplementationWhitelist {
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Enums
+    // ═══════════════════════════════════════════════════════════════════════════
+
     /**
      * @notice Enum to specify the contract type
      */
@@ -15,11 +19,78 @@ interface IImplementationWhitelist {
         Organization
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Events
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Emitted when an implementation is whitelisted
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementation The implementation address
+     */
+    event ImplementationWhitelisted(ContractType indexed contractType, address indexed implementation);
+
+    /**
+     * @notice Emitted when an implementation is removed from the whitelist
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementation The implementation address
+     */
+    event ImplementationUnwhitelisted(ContractType indexed contractType, address indexed implementation);
+
+    /**
+     * @notice Emitted when the implementation whitelist is initialized
+     * @param owner The initial owner address
+     */
+    event ImplementationWhitelistInitialized(address indexed owner);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Errors
+    // ═══════════════════════════════════════════════════════════════════════════
+
     /**
      * @notice Emitted when an implementation is not whitelisted
      * @param implementation The implementation address that was not whitelisted
      */
     error ImplementationNotWhitelisted(address implementation);
+
+    /**
+     * @notice Error thrown when caller is not the authorized deployer
+     */
+    error UnauthorizedDeployer();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Functions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Initialize the implementation whitelist
+     * @param initialOwner The initial owner address
+     */
+    function initialize(address initialOwner) external;
+
+    /**
+     * @notice Whitelists and/or unwhitelists implementation addresses
+     * @param contractType The type of contract (Account or Organization)
+     * @param toWhitelist The implementation addresses to whitelist
+     * @param toUnwhitelist The implementation addresses to remove from whitelist
+     */
+    function whitelistImplementations(
+        ContractType contractType,
+        address[] calldata toWhitelist,
+        address[] calldata toUnwhitelist
+    ) external;
+
+    /**
+     * @notice Returns the address that deployed this implementation whitelist proxy
+     * @return The deployer address
+     */
+    function getDeployerAddress() external view returns (address);
+
+    /**
+     * @notice Checks if the implementation whitelist has been initialized
+     * @return True if initialized, false otherwise
+     */
+    function isInitialized() external view returns (bool);
 
     /**
      * @notice Checks if an implementation address is whitelisted
@@ -28,7 +99,6 @@ interface IImplementationWhitelist {
      * @return True if the implementation is whitelisted, false otherwise
      * @dev The contract maintains separate whitelists for Account and Organization implementations
      */
-    // forgefmt: disable-next-item
     function isImplementationWhitelisted(ContractType contractType, address implementation)
         external
         view
