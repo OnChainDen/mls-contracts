@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// Module interfaces (spokes)
+import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
@@ -12,11 +13,7 @@ import {IOrganizationInitialization} from "interfaces/organization/IOrganization
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
-
-// Types
 import {AdminAuthParams} from "types/AdminTypes.sol";
-
-// Re-export types for backward compatibility
 // solhint-disable-next-line no-unused-import
 import {InitializationParams, OperationType} from "types/CommonTypes.sol";
 
@@ -26,9 +23,11 @@ import {InitializationParams, OperationType} from "types/CommonTypes.sol";
  * @dev This is a composite interface that inherits from all module interfaces.
  *      Each module interface maps 1:1 to a library for easy auditor navigation.
  *      The hub itself contains only functions that don't belong to any specific module.
+ *      Extends IBeacon to act as a beacon for Account proxies.
  * @author Den Technologies Inc
  */
 interface IOrganization is
+    IBeacon,
     IOrganizationAdmin,
     IOrganizationMembers,
     IOrganizationGroups,
@@ -83,10 +82,6 @@ interface IOrganization is
         AdminAuthParams calldata authParams
     ) external;
 
-    /**
-     * @notice Returns the current implementation address for all Account BeaconProxies
-     * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
-     * @return The current account implementation address
-     */
-    function implementation() external view returns (address);
+    // Note: implementation() is inherited from IBeacon.
+    // It returns the current implementation address for all Account BeaconProxies.
 }

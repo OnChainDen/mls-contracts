@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
-
-// Interfaces
 import {IAccount} from "interfaces/IAccount.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
 // Types
 import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
@@ -40,7 +37,7 @@ import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOr
  *      Full data is provided via calldata and verified against the roots.
  * @author Den Technologies Inc
  */
-contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, IOrganization {
+contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganization {
     /**
      * @notice Modifier that enforces only the guardian can call the function
      */
@@ -645,7 +642,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @dev Required by IBeacon interface. Called by BeaconProxy to get the implementation.
      * @return The current account implementation address
      */
-    function implementation() external view override(IBeacon, IOrganization) returns (address) {
+    function implementation() external view override returns (address) {
         address impl = LibOrganizationAccountFactoryStorage.layout().accountImplementation;
         if (impl == address(0)) {
             revert AccountImplementationNotSet();
