@@ -5,8 +5,6 @@ import {LibAccountOrganizationAddressStorage} from "account/libraries/storage/Li
 import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
 
-import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-
 /**
  * @title Account Implementation
  * @notice Implementation contract for Account (used with BeaconProxy)
@@ -14,7 +12,7 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-contract AccountImplementation is IAccount, IERC1271 {
+contract AccountImplementation is IAccount {
     /**
      * @notice Modifier that enforces only the associated organization can call the function
      */
@@ -74,7 +72,7 @@ contract AccountImplementation is IAccount, IERC1271 {
     function isValidSignature(bytes32 hash, bytes calldata signature)
         external
         view
-        override(IAccount, IERC1271)
+        override
         returns (bytes4 magicValue)
     {
         address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();

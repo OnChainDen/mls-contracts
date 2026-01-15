@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+
 /**
  * @title IAccount
  * @notice Interface for Account contracts (used with BeaconProxy)
  * @dev This contract is used behind a BeaconProxy where the Organization acts as the beacon.
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
+ *      Extends IERC1271 to support smart contract signature validation.
  * @author Den Technologies Inc
  */
-interface IAccount {
+interface IAccount is IERC1271 {
     // ═══════════════════════════════════════════════════════════════════════════
     // Events
     // ═══════════════════════════════════════════════════════════════════════════
@@ -73,14 +76,8 @@ interface IAccount {
      */
     function getOrganizationAddress() external view returns (address);
 
-    /**
-     * @notice Validates a signature according to ERC-1271
-     * @dev Delegates signature validation to the associated Organization contract.
-     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
-     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
-     * @param hash The hash of the data that was signed
-     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
-     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
-     */
-    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4 magicValue);
+    // Note: isValidSignature is inherited from IERC1271
+    // Implementation delegates signature validation to the associated Organization contract.
+    // Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+    // requires isValidSignature to be a view function (cannot modify storage to track usage).
 }
