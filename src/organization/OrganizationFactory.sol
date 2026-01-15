@@ -4,42 +4,22 @@ pragma solidity ^0.8.24;
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
-import {ContractType, InitializationParams} from "types/CommonTypes.sol";
-
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
+import {ContractType, InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @title Organization Factory
  * @notice Factory contract for deploying OrganizationProxy contracts at deterministic addresses across chains
  * @author Den Technologies Inc
  */
-contract OrganizationFactory {
+contract OrganizationFactory is IOrganizationFactory {
     /**
      * @notice The address authorized to deploy organization proxies
      */
-    address public immutable DEPLOYER_ADDRESS;
-
-    /**
-     * @notice Emitted when a new organization proxy is deployed
-     * @param organizationAddress The address of the deployed organization proxy
-     * @param salt The salt used for CREATE2 deployment
-     * @param deployerAddress The address that deployed the organization
-     */
-    event OrganizationDeployed(
-        address indexed organizationAddress, bytes32 indexed salt, address indexed deployerAddress
-    );
-
-    /**
-     * @notice Error thrown when the deployed address does not match the computed address
-     */
-    error DeploymentAddressMismatch();
-
-    /**
-     * @notice Error thrown when a zero address is provided where a valid address is required
-     */
-    error ZeroAddress();
+    address public immutable override DEPLOYER_ADDRESS;
 
     /**
      * @notice Constructor to set the deployer address
@@ -67,16 +47,15 @@ contract OrganizationFactory {
         address implementationAddress,
         address whitelistAddress,
         InitializationParams calldata initParams
-    ) external returns (address organizationAddress) {
+    ) external override returns (address organizationAddress) {
         // Only the authorized deployer can deploy organizations
         if (msg.sender != DEPLOYER_ADDRESS) {
             revert IOrganizationInitialization.UnauthorizedDeployer();
         }
 
         // Validate that the implementation is whitelisted
-        IImplementationWhitelist(whitelistAddress).validateIsImplementationWhitelistedOrRevert(
-            ContractType.Organization, implementationAddress
-        );
+        IImplementationWhitelist(whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(ContractType.Organization, implementationAddress);
 
         bytes memory bytecode = _getOrganizationProxyBytecode(implementationAddress, whitelistAddress);
 
@@ -105,6 +84,7 @@ contract OrganizationFactory {
     function computeOrganizationAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
         public
         view
+        override
         returns (address)
     {
         return Create2.computeAddress(
