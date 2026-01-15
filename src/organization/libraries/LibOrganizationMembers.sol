@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
@@ -12,8 +12,8 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Organization Members
- * @dev Library for merkle-based member operations for Organization contracts
- * @dev Members are stored in a merkle tree. Only the root is stored on-chain.
+ * @dev Library for merkle-based member operations for Organization contracts.
+ *      Members are stored in a merkle tree. Only the root is stored on-chain.
  *      Full member data is stored off-chain (IPFS) and provided via calldata at validation time.
  *      This approach drastically reduces gas costs for member management (1 SSTORE)
  *      while keeping verification costs reasonable (O(log n) hash operations).
@@ -21,8 +21,8 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationMembers {
     /**
-     * @dev Updates the global members merkle root
-     * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
+     * @dev Updates the global members merkle root.
+     *      This is the only way to set members. All member data is stored off-chain (IPFS).
      *      Validates that ALL admins remain members in the new tree to prevent bricking.
      *      Emits MembersUpdated event with the IPFS CID for disaster recovery.
      * @param newMembersRoot The new merkle root containing all members
@@ -32,7 +32,7 @@ library LibOrganizationMembers {
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
-        AllAdminsInOrgProofs memory allAdminsInOrgProofs
+        AllAdminsInOrgProofs calldata allAdminsInOrgProofs
     ) internal {
         // Get current admin configuration
         AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
@@ -68,8 +68,8 @@ library LibOrganizationMembers {
     }
 
     /**
-     * @dev Checks if an address is in a member tree given an explicit root
-     * @dev Used to verify against potentially different roots (current vs new)
+     * @dev Checks if an address is in a member tree given an explicit root.
+     *      Used to verify against potentially different roots (current vs new).
      * @param memberAddress The address to verify
      * @param membersRoot The merkle root to verify against
      * @param proof The merkle proof

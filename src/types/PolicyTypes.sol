@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 /**
  * @title Policy Types
@@ -20,8 +20,8 @@ pragma solidity ^0.8.24;
  */
 
 /**
- * @dev Defines whether a policy auto-approves transactions or requires manual approval
- * @dev AutoApprove: Transaction proceeds if initiator is authorized
+ * @dev Defines whether a policy auto-approves transactions or requires manual approval.
+ *      AutoApprove: Transaction proceeds if initiator is authorized.
  *      RequireManualApproval: Additional signatures from approvers are required
  */
 enum PolicyType {
@@ -30,8 +30,8 @@ enum PolicyType {
 }
 
 /**
- * @dev Defines whether an approver/initiator is a group or individual member
- * @dev Used for both initiator and approver configurations
+ * @dev Defines whether an approver/initiator is a group or individual member.
+ *      Used for both initiator and approver configurations.
  */
 enum ApproverType {
     Group, // Refers to a group of members (threshold applies)
@@ -39,8 +39,8 @@ enum ApproverType {
 }
 
 /**
- * @dev Categorizes the type of transaction a policy applies to
- * @dev Helps filter policies based on what kind of operation is being performed
+ * @dev Categorizes the type of transaction a policy applies to.
+ *      Helps filter policies based on what kind of operation is being performed.
  */
 enum TransactionType {
     Any, // Policy applies to all transaction types
@@ -50,8 +50,8 @@ enum TransactionType {
 }
 
 /**
- * @dev Defines how destination addresses are filtered for a policy
- * @dev Controls which addresses can receive funds or be called
+ * @dev Defines how destination addresses are filtered for a policy.
+ *      Controls which addresses can receive funds or be called.
  */
 enum DestinationType {
     Any, // Any destination address is allowed
@@ -59,8 +59,8 @@ enum DestinationType {
 }
 
 /**
- * @dev Defines rate limiting behavior for a policy
- * @dev Controls how transaction frequency/amounts are limited
+ * @dev Defines rate limiting behavior for a policy.
+ *      Controls how transaction frequency/amounts are limited.
  */
 enum PolicyLimitation {
     None, // No limit on transactions
@@ -69,8 +69,8 @@ enum PolicyLimitation {
 }
 
 /**
- * @dev Defines how time-based limits are scoped across entities
- * @dev When tracking usage for time-based limits, determines if limits are:
+ * @dev Defines how time-based limits are scoped across entities.
+ *      When tracking usage for time-based limits, determines if limits are:
  *      - Shared across all entities (AcrossAll)
  *      - Tracked separately per entity (PerEntity)
  */
@@ -80,8 +80,8 @@ enum TimeIntervalScope {
 }
 
 /**
- * @dev Supported parameter types for function call constraints
- * @dev Used to specify how to interpret calldata parameters when validating
+ * @dev Supported parameter types for function call constraints.
+ *      Used to specify how to interpret calldata parameters when validating
  *      function calls against policy constraints
  */
 enum ParamType {
@@ -126,8 +126,8 @@ enum ConstraintType {
 }
 
 /**
- * @dev Defines a constraint on a single function parameter
- * @dev Used to restrict what values can be passed to specific function parameters
+ * @dev Defines a constraint on a single function parameter.
+ *      Used to restrict what values can be passed to specific function parameters.
  * @param paramType The type of the parameter being constrained
  * @param constraintType How the constraint should be evaluated
  * @param paramCalldataHeadSlotCount Number of 32-byte head slots this parameter occupies in calldata (must be >= 1)
@@ -143,8 +143,8 @@ struct ParameterConstraint {
 }
 
 /**
- * @dev Approval configuration - defines who must approve transactions
- * @dev Specifies the approval requirements for a policy.
+ * @dev Approval configuration - defines who must approve transactions.
+ *      Specifies the approval requirements for a policy.
  *      Uses address for Member approver and uint256 groupId for Group approver.
  * @param policyType Whether transactions auto-approve or require manual approval
  * @param approverType Whether approver is a group or individual member
@@ -165,8 +165,8 @@ struct ApprovalConfig {
 }
 
 /**
- * @dev Initiator configuration - defines who can initiate transactions
- * @dev Specifies who is authorized to create and sign the initial transaction request.
+ * @dev Initiator configuration - defines who can initiate transactions.
+ *      Specifies who is authorized to create and sign the initial transaction request.
  *      Uses address for Member initiator and uint256 groupId for Group initiator.
  * @param anyInitiator If true, any member can initiate (ignores other fields)
  * @param initiatorType Whether initiator must be from a group or specific member
@@ -200,8 +200,8 @@ struct TokenFilter {
 }
 
 /**
- * @dev Time-based limit configuration - defines rate limiting rules
- * @dev Controls how frequently transactions can occur and cumulative limits
+ * @dev Time-based limit configuration - defines rate limiting rules.
+ *      Controls how frequently transactions can occur and cumulative limits.
  * @param limitation The type of limitation (None, SingleTransaction, TimeInterval)
  * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
  * @param timeIntervalLimit Maximum cumulative amount/count per time window
@@ -219,8 +219,8 @@ struct TimeLimitConfig {
 }
 
 /**
- * @dev Main policy configuration - the complete set of policy rules
- * @dev This struct contains all the configuration that defines a policy's behavior.
+ * @dev Main policy configuration - the complete set of policy rules.
+ *      This struct contains all the configuration that defines a policy's behavior.
  *      Replaces the previous packed uint256 approach for improved readability.
  * @param transactionType What types of transactions this policy applies to
  * @param anySourceAccount If true, policy applies to all accounts
@@ -243,8 +243,8 @@ struct PolicyConfig {
 }
 
 /**
- * @dev Merkle roots for policy-specific address and function lists
- * @dev These roots allow policies to reference large lists of addresses/functions
+ * @dev Merkle roots for policy-specific address and function lists.
+ *      These roots allow policies to reference large lists of addresses/functions
  *      without storing them on-chain. The actual lists are provided in calldata
  *      and verified via merkle proofs.
  * @param sourceAccountsRoot Root of merkle tree containing allowed source accounts
@@ -270,8 +270,8 @@ struct Policy {
 }
 
 /**
- * @dev Data needed to identify and verify a group
- * @dev Groups are stored in a merkle tree where each leaf is hash(groupId, groupMembersRoot)
+ * @dev Data needed to identify and verify a group.
+ *      Groups are stored in a merkle tree where each leaf is hash(groupId, groupMembersRoot).
  * @param groupId The unique identifier for the group
  * @param groupMembersRoot The merkle root of all member addresses in this group
  */
@@ -281,8 +281,8 @@ struct GroupData {
 }
 
 /**
- * @dev Proofs needed to verify an initiator's authorization
- * @dev Contains proofs for both organization membership and optional group membership
+ * @dev Proofs needed to verify an initiator's authorization.
+ *      Contains proofs for both organization membership and optional group membership.
  * @param initiatorInOrgMembersTreeProof Merkle proof that the initiator address is in the organization's
  * membersRoot
  * @param group Group data if the initiator must be from a specific group (ignored if anyInitiator or Member type)
@@ -297,8 +297,8 @@ struct InitiatorProofs {
 }
 
 /**
- * @dev Proofs needed to verify approvers' authorization
- * @dev Contains per-signer proofs for organization membership and optional group membership.
+ * @dev Proofs needed to verify approvers' authorization.
+ *      Contains per-signer proofs for organization membership and optional group membership.
  *      Arrays are indexed by signer position (same order as signatures).
  * @param approverInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's
  * membersRoot
@@ -337,8 +337,8 @@ struct ValidationProofs {
 }
 
 /**
- * @dev Structure for function selector leaves in the allowed functions merkle tree
- * @dev Each allowed function has a selector and optional parameter constraints
+ * @dev Structure for function selector leaves in the allowed functions merkle tree.
+ *      Each allowed function has a selector and optional parameter constraints.
  * @param selector The 4-byte function selector
  * @param constraintsHash Hash of the parameter constraints for this function
  */

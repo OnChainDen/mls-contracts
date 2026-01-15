@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
@@ -7,15 +7,15 @@ import {ApproverType, InitiatorProofs, Policy} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Policy Initiator
- * @dev Library for validating transaction initiator authorization
- * @dev Handles checking if an initiator is authorized by a policy.
+ * @dev Library for validating transaction initiator authorization.
+ *      Handles checking if an initiator is authorized by a policy.
  *      Uses Merkle proofs for membership verification.
  * @author Den Technologies Inc
  */
 library LibPolicyInitiator {
     /**
-     * @dev Checks if the initiator is authorized by the policy
-     * @dev If anyInitiator is true, always returns true.
+     * @dev Checks if the initiator is authorized by the policy.
+     *      If anyInitiator is true, always returns true.
      *      Otherwise, verifies the initiator is a member and matches policy requirements.
      *      Uses Merkle proofs for membership verification.
      * @param policy The policy to check against

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
  * @title SignatureUtils
- * @dev Utilities for handling pure 65-byte ECDSA signatures
- * @dev Canonical signature format: r (32 bytes) || s (32 bytes) || v (1 byte)
+ * @dev Utilities for handling pure 65-byte ECDSA signatures.
+ *      Canonical signature format: r (32 bytes) || s (32 bytes) || v (1 byte)
  *
  *      This library provides utilities for working with concatenated ECDSA signatures.
  *      Multiple signatures are stored as a single bytes array where each signature

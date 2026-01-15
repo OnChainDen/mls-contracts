@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {ContractInteractionUtils} from "libraries/ContractInteractionUtils.sol";
 import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
@@ -10,14 +10,14 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Policy Contract Interaction
- * @dev Library for validating contract interaction transactions against policies
- * @dev Handles validation of contract calls including function selector, parameters, and destination checks.
+ * @dev Library for validating contract interaction transactions against policies.
+ *      Handles validation of contract calls including function selector, parameters, and destination checks.
  * @author Den Technologies Inc
  */
 library LibPolicyContractInteraction {
     /**
-     * @dev Checks if a contract interaction transaction is allowed by the policy
-     * @dev Validates that:
+     * @dev Checks if a contract interaction transaction is allowed by the policy.
+     *      Validates that:
      *      1. The function being called is allowed by the policy
      *      2. The transaction parameters match the policy's constraints
      *      3. The destination (contract being called) is allowed by the policy
@@ -52,8 +52,8 @@ library LibPolicyContractInteraction {
     }
 
     /**
-     * @dev Checks if the function matches the policy's allowed functions filter
-     * @dev If anyFunction is true, always returns true.
+     * @dev Checks if the function matches the policy's allowed functions filter.
+     *      If anyFunction is true, always returns true.
      *      Otherwise, verifies the function selector and constraints are in the allowed functions merkle tree.
      * @param policy The policy to check against
      * @param data The transaction calldata
@@ -85,8 +85,8 @@ library LibPolicyContractInteraction {
     }
 
     /**
-     * @dev Computes the merkle leaf for an allowed function
-     * @dev Combines function selector with constraints hash
+     * @dev Computes the merkle leaf for an allowed function.
+     *      Combines function selector with constraints hash.
      * @param selector The function selector (first 4 bytes of calldata)
      * @param constraintsHash The keccak256 hash of the parameter constraints
      * @return The computed merkle leaf

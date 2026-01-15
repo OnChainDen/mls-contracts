@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 // Interfaces
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
@@ -21,16 +21,16 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 
 /**
  * @title Lib Organization Admin
- * @dev Library for admin-related operations for Organization contracts
- * @dev This library should ONLY be used by Organization contracts.
+ * @dev Library for admin-related operations for Organization contracts.
+ *      This library should ONLY be used by Organization contracts.
  *      Admin membership is verified via Merkle proofs.
  *      Admins are stored as a Merkle tree of member addresses.
  * @author Den Technologies Inc
  */
 library LibOrganizationAdmin {
     /**
-     * @dev Sets the admin permissions for the organization
-     * @dev Validates that all new admins are members before updating.
+     * @dev Sets the admin permissions for the organization.
+     *      Validates that all new admins are members before updating.
      *      Admin addresses must be in ascending order.
      * @param newAdminsRoot The new merkle root of admin addresses
      * @param newAdminCount The number of admins in the new tree
@@ -74,8 +74,8 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Validates that the provided signatures meet the admin authorization requirements
-     * @dev This function computes the nonce, verifies that the signatures are from authorized admins
+     * @dev Validates that the provided signatures meet the admin authorization requirements.
+     *      This function computes the nonce, verifies that the signatures are from authorized admins
      *      using Merkle proofs, meets the required voting threshold, checks nonce and chainId for replay protection,
      *      and marks the nonce as used. Reverts if authorization fails.
      * @param operationType The type of operation being performed
@@ -135,8 +135,8 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Validates that all admins are members of the organization
-     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
+     * @dev Validates that all admins are members of the organization.
+     *      Used by setMembers, setAdmins, and initialize to prevent bricking.
      *      Admin addresses must be in strictly ascending order to prevent duplicates.
      * @param allAdminsInOrgProofs Proofs that all admins are in the organization (admin tree and members tree)
      * @param adminsRoot The merkle root of the admin tree
@@ -298,8 +298,8 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Validates that signing admin proofs have correct lengths
-     * @dev Reverts if proof arrays don't match signature count
+     * @dev Validates that signing admin proofs have correct lengths.
+     *      Reverts if proof arrays don't match signature count.
      * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
      * @param signatureCount The number of signatures provided
      */

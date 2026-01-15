@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -507,13 +507,6 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      */
     function guardian() external view override returns (address) {
         return LibOrganizationGuardian.getGuardian();
-    }
-
-    /**
-     * @notice Reverts if the caller is not the guardian
-     */
-    function enforceOnlyGuardian() external view override {
-        LibOrganizationGuardian.enforceOnlyGuardian();
     }
 
     /**

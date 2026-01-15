@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
@@ -11,14 +11,14 @@ import {
 
 /**
  * @title Lib Organization Account Factory
- * @dev Library for deploying Account contracts as BeaconProxies with the Organization as the beacon
- * @dev This library should ONLY be used by Organization contracts
+ * @dev Library for deploying Account contracts as BeaconProxies with the Organization as the beacon.
+ *      This library should ONLY be used by Organization contracts.
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountFactory {
     /**
-     * @dev Deploys a new Account BeaconProxy at a deterministic address
-     * @dev Uses CREATE2 to ensure the same address across different chains.
+     * @dev Deploys a new Account BeaconProxy at a deterministic address.
+     *      Uses CREATE2 to ensure the same address across different chains.
      *      The Organization (this contract) acts as the beacon.
      * @param create2Salt The salt for CREATE2 deployment
      * @return accountAddress The address of the deployed account proxy
@@ -59,8 +59,8 @@ library LibOrganizationAccountFactory {
     }
 
     /**
-     * @dev Validates that an account was deployed by this organization
-     * @dev Reverts with AccountNotDeployedByOrganization if the account was not deployed by this organization
+     * @dev Validates that an account was deployed by this organization.
+     *      Reverts with AccountNotDeployedByOrganization if the account was not deployed by this organization.
      * @param accountAddress The address of the account to validate
      */
     function validateIsAccountDeployedByOrgOrRevert(address accountAddress) internal view {

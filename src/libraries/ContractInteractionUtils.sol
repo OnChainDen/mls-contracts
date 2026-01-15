@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 /**
  * @title ContractInteractionUtils
@@ -14,8 +14,8 @@ library ContractInteractionUtils {
     uint256 internal constant SLOT_SIZE = 32;
 
     /**
-     * @dev Extracts the function selector from transaction calldata
-     * @dev The function selector is the first 4 bytes of the calldata
+     * @dev Extracts the function selector from transaction calldata.
+     *      The function selector is the first 4 bytes of the calldata.
      * @param data The transaction calldata
      * @return The function selector (first 4 bytes)
      */

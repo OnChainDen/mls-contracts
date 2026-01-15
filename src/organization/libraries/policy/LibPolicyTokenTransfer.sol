@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
 import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
@@ -7,14 +7,14 @@ import {Policy} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Policy Token Transfer
- * @dev Library for validating token transfer transactions against policies
- * @dev Handles validation of token transfers including token type, amount, and destination checks.
+ * @dev Library for validating token transfer transactions against policies.
+ *      Handles validation of token transfers including token type, amount, and destination checks.
  * @author Den Technologies Inc
  */
 library LibPolicyTokenTransfer {
     /**
-     * @dev Checks if a token transfer transaction is allowed by the policy
-     * @dev Validates that:
+     * @dev Checks if a token transfer transaction is allowed by the policy.
+     *      Validates that:
      *      1. The token being transferred is allowed by the policy
      *      2. The amount being transferred is within policy limits
      *      3. The destination (token recipient) is allowed by the policy
@@ -45,8 +45,8 @@ library LibPolicyTokenTransfer {
     }
 
     /**
-     * @dev Checks if the token is allowed by the policy for a token transfer
-     * @dev If anyToken is true, always returns true.
+     * @dev Checks if the token is allowed by the policy for a token transfer.
+     *      If anyToken is true, always returns true.
      *      Otherwise, verifies the token address matches the policy's specified token.
      * @param policy The policy to check against
      * @param to The transaction destination address (token contract for ERC20)
@@ -67,8 +67,8 @@ library LibPolicyTokenTransfer {
     }
 
     /**
-     * @dev Checks if the token amount is allowed by the policy for a token transfer
-     * @dev If hasAmountThreshold is false, always returns true.
+     * @dev Checks if the token amount is allowed by the policy for a token transfer.
+     *      If hasAmountThreshold is false, always returns true.
      *      Otherwise, verifies the amount is below the threshold.
      * @param policy The policy to check against
      * @param data The transaction calldata

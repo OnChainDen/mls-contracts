@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
@@ -8,15 +8,16 @@ import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolic
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
+import {SignatureChecker} from "libraries/SignatureChecker.sol";
+
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Account Signature
- * @dev Library for validating ERC-1271 signatures through the Organization contract
- * @dev This library enables smart accounts to sign messages in a policy-controlled manner.
+ * @dev Library for validating ERC-1271 signatures through the Organization contract.
+ *      This library enables smart accounts to sign messages in a policy-controlled manner.
  *      When an external contract calls isValidSignature() on an Account, the Account
  *      delegates to the Organization, which uses this library to validate that:
  *      1. The signature request hasn't expired
@@ -38,8 +39,8 @@ library LibOrganizationAccountSignature {
     bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
 
     /**
-     * @dev Validates an ERC-1271 signature for a given account
-     * @dev The signature parameter is ABI-encoded and contains:
+     * @dev Validates an ERC-1271 signature for a given account.
+     *      The signature parameter is ABI-encoded and contains:
      *      - policyId: ID of the policy authorizing this signature
      *      - expirationTimestamp: When the signature request expires
      *      - approverSignatures: Concatenated signatures (initiator + reviewers)
@@ -51,7 +52,7 @@ library LibOrganizationAccountSignature {
      * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
      */
     function isValidSignature(address account, bytes32 hash, bytes memory signature)
-        internal
+        public
         view
         returns (bytes4 magicValue)
     {
@@ -123,8 +124,8 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @dev Checks if an ERC-1271 signature operation is allowed by the policy
-     * @dev Validates that:
+     * @dev Checks if an ERC-1271 signature operation is allowed by the policy.
+     *      Validates that:
      *      1. The policy exists in the organization's policy tree
      *      2. The policy is configured for signature operations
      *      3. The policy applies to the source account
@@ -166,8 +167,8 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @dev Checks if manual approval signatures meet the required threshold
-     * @dev Extracts reviewer signatures (all after the first initiator signature),
+     * @dev Checks if manual approval signatures meet the required threshold.
+     *      Extracts reviewer signatures (all after the first initiator signature),
      *      computes the review hash, and counts valid approvals from authorized approvers.
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
@@ -216,8 +217,8 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @dev Checks if the guardian's signature is valid for an ERC-1271 signature request
-     * @dev The guardian provides an additional layer of security by approving
+     * @dev Checks if the guardian's signature is valid for an ERC-1271 signature request.
+     *      The guardian provides an additional layer of security by approving
      *      signature requests off-chain before they can be validated on-chain.
      * @param account The account whose signature is being validated
      * @param hash The message hash being signed
@@ -243,8 +244,8 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @dev Computes the EIP-712 hash for initiator signatures
-     * @dev Creates a typed data hash following EIP-712 standard for the
+     * @dev Computes the EIP-712 hash for initiator signatures.
+     *      Creates a typed data hash following EIP-712 standard for the
      *      InitiateSignatureValidation struct type.
      * @param account The account whose signature is being validated
      * @param hash The message hash being signed
@@ -273,8 +274,8 @@ library LibOrganizationAccountSignature {
     }
 
     /**
-     * @dev Computes the EIP-712 hash for reviewer signatures
-     * @dev Creates a typed data hash for the ReviewSignatureValidation struct type.
+     * @dev Computes the EIP-712 hash for reviewer signatures.
+     *      Creates a typed data hash for the ReviewSignatureValidation struct type.
      *      Includes the initiator signature to bind approval to a specific request.
      * @param account The account whose signature is being validated
      * @param hash The message hash being signed

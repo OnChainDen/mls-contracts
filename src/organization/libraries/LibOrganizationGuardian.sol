@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 
 /**
  * @title Lib Organization Guardian
- * @dev Library for guardian-related operations for Organization contracts
- * @dev This library should ONLY be used by Organization contracts
+ * @dev Library for guardian-related operations for Organization contracts.
+ *      This library should ONLY be used by Organization contracts.
  * @author Den Technologies Inc
  */
 library LibOrganizationGuardian {
@@ -34,8 +34,8 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @dev Enforces that the caller is the guardian address
-     * @dev This function will revert if msg.sender is not the guardian
+     * @dev Enforces that the caller is the guardian address.
+     *      This function will revert if msg.sender is not the guardian.
      */
     function enforceOnlyGuardian() internal view {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();

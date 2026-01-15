@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -129,8 +129,8 @@ contract ImplementationWhitelistImplementation is
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
 
     /**
-     * @dev Enforces that the caller is the deployer address
-     * @dev This function will revert if msg.sender is not the deployer
+     * @dev Enforces that the caller is the deployer address.
+     *      This function will revert if msg.sender is not the deployer.
      */
     function _enforceOnlyDeployer() private view {
         if (msg.sender != LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress) {

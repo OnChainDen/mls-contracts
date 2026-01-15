@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 /**
  * @title Admin Types
@@ -10,8 +10,8 @@ pragma solidity ^0.8.24;
  */
 
 /**
- * @dev Proofs that ALL admins are members of the organization (in both admin tree and members tree)
- * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
+ * @dev Proofs that ALL admins are members of the organization (in both admin tree and members tree).
+ *      Used by setMembers, setAdmins, and initialize to prevent bricking.
  *      Contains proofs for every admin in the organization, not just signers.
  * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
  * @param adminInOrgAdminTreeProofs Merkle proofs that each address is in adminsRoot
@@ -24,8 +24,8 @@ struct AllAdminsInOrgProofs {
 }
 
 /**
- * @dev Proofs that the SIGNING admins are members of the organization (in both admin tree and members tree)
- * @dev Contains per-signer proofs for admin tree and organization membership.
+ * @dev Proofs that the SIGNING admins are members of the organization (in both admin tree and members tree).
+ *      Contains per-signer proofs for admin tree and organization membership.
  *      Only contains proofs for admins who signed the operation, not all admins.
  * @param adminInOrgAdminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
  * @param adminInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
@@ -36,8 +36,8 @@ struct SigningAdminsInOrgProofs {
 }
 
 /**
- * @dev Parameters for authorizing admin operations
- * @dev Groups common authorization parameters to reduce function parameter count
+ * @dev Parameters for authorizing admin operations.
+ *      Groups common authorization parameters to reduce function parameter count.
  * @param salt A user-provided salt for nonce computation
  * @param expirationTimestamp The timestamp after which the signatures are no longer valid
  * @param signatures The signatures from admin(s) authorizing this operation

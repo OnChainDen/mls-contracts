@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 /**
  * @title Merkle Utils
- * @dev Shared utility library for merkle tree leaf computation
- * @dev Provides standardized leaf computation using double hashing for security against second preimage attacks
+ * @dev Shared utility library for merkle tree leaf computation.
+ *      Provides standardized leaf computation using double hashing for security against second preimage attacks.
  * @author Den Technologies Inc
  */
 library MerkleUtils {
     /**
-     * @dev Computes the merkle leaf for an address
-     * @dev Uses double hashing (hash of hash) for security against second preimage attacks
+     * @dev Computes the merkle leaf for an address.
+     *      Uses double hashing (hash of hash) for security against second preimage attacks.
      * @param addr The address to compute the leaf for
      * @return The computed merkle leaf
      */
