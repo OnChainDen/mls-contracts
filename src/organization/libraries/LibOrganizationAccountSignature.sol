@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
@@ -8,10 +8,11 @@ import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolic
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
+import {SignatureChecker} from "libraries/SignatureChecker.sol";
+
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 /**
  * @title Lib Organization Account Signature

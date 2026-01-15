@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";

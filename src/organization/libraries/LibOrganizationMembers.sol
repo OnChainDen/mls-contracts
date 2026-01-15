@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.33;
 
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
