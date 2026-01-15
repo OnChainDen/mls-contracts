@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
-import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianStorage.sol";
+import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 
 /**
  * @title Lib Organization Guardian
@@ -12,27 +12,13 @@ import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianS
  */
 library LibOrganizationGuardian {
     /**
-     * @dev Emitted when the guardian address is updated
-     * @param previousGuardian The previous guardian address
-     * @param newGuardian The new guardian address
-     */
-    event GuardianUpdated(address indexed previousGuardian, address indexed newGuardian);
-
-    /**
-     * @dev Thrown when a function is called by an unauthorized address (not the guardian)
-     * @param caller The address that attempted to call the function
-     * @param guardian The current guardian address
-     */
-    error UnauthorizedCaller(address caller, address guardian);
-
-    /**
      * @dev Sets the guardian address for the organization
      * @param newGuardian The new guardian address
      */
     function setGuardian(address newGuardian) internal {
         // Validate input parameters
         if (newGuardian == address(0)) {
-            revert LibOrganizationAdmin.AdminOperationRejected("Guardian address cannot be zero address");
+            revert IOrganizationGuardian.InvalidGuardianAddress();
         }
 
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
@@ -44,7 +30,7 @@ library LibOrganizationGuardian {
         guardianLayout.guardian = newGuardian;
 
         // Emit event
-        emit GuardianUpdated(previousGuardian, newGuardian);
+        emit IOrganizationGuardian.GuardianUpdated(previousGuardian, newGuardian);
     }
 
     /**
@@ -54,7 +40,7 @@ library LibOrganizationGuardian {
     function enforceOnlyGuardian() internal view {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
         if (msg.sender != guardianLayout.guardian) {
-            revert UnauthorizedCaller(msg.sender, guardianLayout.guardian);
+            revert IOrganizationGuardian.UnauthorizedGuardian(msg.sender, guardianLayout.guardian);
         }
     }
 

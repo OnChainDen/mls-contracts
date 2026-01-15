@@ -3,8 +3,11 @@ pragma solidity ^0.8.24;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
-import {AccountProxy} from "../../account/AccountProxy.sol";
-import {LibOrganizationAccountFactoryStorage} from "./storage/LibOrganizationAccountFactoryStorage.sol";
+import {AccountProxy} from "account/AccountProxy.sol";
+import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {
+    LibOrganizationAccountFactoryStorage
+} from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
 
 /**
  * @title Lib Organization Account Factory
@@ -13,25 +16,6 @@ import {LibOrganizationAccountFactoryStorage} from "./storage/LibOrganizationAcc
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountFactory {
-    /**
-     * @dev Emitted when a new account proxy is deployed
-     * @param accountAddress The address of the deployed account proxy
-     * @param organizationAddress The address of the organization that deployed it (beacon)
-     * @param salt The salt used for CREATE2 deployment
-     */
-    event AccountDeployed(address indexed accountAddress, address indexed organizationAddress, bytes32 indexed salt);
-
-    /**
-     * @dev Error thrown when the deployed address does not match the computed address
-     */
-    error AccountDeploymentAddressMismatch();
-
-    /**
-     * @dev Error thrown when an account was not deployed by this organization
-     * @param accountAddress The address of the account that was not deployed by this organization
-     */
-    error AccountNotDeployedByOrganization(address accountAddress);
-
     /**
      * @dev Deploys a new Account BeaconProxy at a deterministic address
      * @dev Uses CREATE2 to ensure the same address across different chains.
@@ -47,13 +31,13 @@ library LibOrganizationAccountFactory {
 
         // Case: The deployed address does not match the address we expected
         if (accountAddress != computeAccountAddress(create2Salt)) {
-            revert AccountDeploymentAddressMismatch();
+            revert IOrganizationAccountFactory.AccountDeploymentAddressMismatch();
         }
 
         // Mark the account as deployed by this organization
         LibOrganizationAccountFactoryStorage.layout().deployedAccounts[accountAddress] = true;
 
-        emit AccountDeployed(accountAddress, address(this), create2Salt);
+        emit IOrganizationAccountFactory.AccountDeployed(accountAddress, address(this), create2Salt);
     }
 
     /**
@@ -81,7 +65,7 @@ library LibOrganizationAccountFactory {
      */
     function validateIsAccountDeployedByOrgOrRevert(address accountAddress) internal view {
         if (!isAccountDeployedByOrganization(accountAddress)) {
-            revert AccountNotDeployedByOrganization(accountAddress);
+            revert IOrganizationAccountFactory.AccountNotDeployedByOrganization(accountAddress);
         }
     }
 

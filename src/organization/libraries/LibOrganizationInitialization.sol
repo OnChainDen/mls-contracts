@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {InitializationParams} from "../../interfaces/IOrganization.sol";
-import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
-import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
-import {LibOrganizationDeployerAddressStorage} from "./storage/LibOrganizationDeployerAddressStorage.sol";
-import {LibOrganizationGroupsStorage} from "./storage/LibOrganizationGroupsStorage.sol";
-import {LibOrganizationGuardianStorage} from "./storage/LibOrganizationGuardianStorage.sol";
-import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersStorage.sol";
+import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
+import {
+    LibOrganizationDeployerAddressStorage
+} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
+import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Initialization
@@ -19,45 +23,6 @@ import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersSto
  */
 library LibOrganizationInitialization {
     /**
-     * @dev Emitted when organization is successfully initialized
-     * @param adminsRoot The merkle root of admin addresses
-     * @param adminCount The number of admins
-     * @param votingThreshold The voting threshold for admin operations
-     * @param adminAddresses The admin addresses (in ascending order)
-     * @param guardian The guardian address set during initialization
-     * @param membersRoot The initial members Merkle root
-     * @param groupsRoot The initial groups Merkle root
-     * @param membersIpfsCid The IPFS CID for members data
-     * @param groupsIpfsCid The IPFS CID for groups data
-     */
-    event OrganizationInitialized(
-        bytes32 adminsRoot,
-        uint256 adminCount,
-        uint256 votingThreshold,
-        address[] adminAddresses,
-        address guardian,
-        bytes32 membersRoot,
-        bytes32 groupsRoot,
-        string membersIpfsCid,
-        string groupsIpfsCid
-    );
-
-    /**
-     * @dev Error thrown when caller is not the authorized deployer
-     */
-    error UnauthorizedDeployer();
-
-    /**
-     * @dev Error thrown when organization is already initialized
-     */
-    error AlreadyInitialized();
-
-    /**
-     * @dev Error thrown when invalid members root is provided
-     */
-    error InvalidMembersRoot();
-
-    /**
      * @dev Initializes the organization contract with Merkle-based members/groups and admin configuration
      * @dev Deployer authorization is enforced by the external wrapper function.
      *      Members and groups are represented as Merkle trees - only roots are stored on-chain.
@@ -67,12 +32,12 @@ library LibOrganizationInitialization {
     function initialize(InitializationParams calldata params) internal {
         // Check if already initialized
         if (isInitialized()) {
-            revert AlreadyInitialized();
+            revert IOrganizationInitialization.AlreadyInitialized();
         }
 
         // Validate members root is provided (organization must have at least one member)
         if (params.membersRoot == bytes32(0)) {
-            revert InvalidMembersRoot();
+            revert IOrganizationInitialization.InvalidMembersRoot();
         }
 
         // Validate admin configuration
@@ -82,8 +47,8 @@ library LibOrganizationInitialization {
 
         // Create proofs struct to verify all admins are in the organization
         // forgefmt: disable-next-item
-        LibOrganizationAdmin.AllAdminsInOrgProofs memory allAdminsInOrgProofs =
-            LibOrganizationAdmin.AllAdminsInOrgProofs({
+        AllAdminsInOrgProofs memory allAdminsInOrgProofs =
+            AllAdminsInOrgProofs({
                 adminAddresses: params.adminAddresses,
                 adminInOrgAdminTreeProofs: params.adminInAdminTreeProofs,
                 adminInOrgMembersTreeProofs: params.adminInMembersTreeProofs
@@ -100,14 +65,14 @@ library LibOrganizationInitialization {
 
         // Set admin configuration
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
+        adminLayout.adminConfig = AdminConfig({
             adminsRoot: params.adminsRoot, adminCount: params.adminCount, votingThreshold: params.votingThreshold
         });
 
         // Set guardian
         LibOrganizationGuardianStorage.layout().guardian = params.guardian;
 
-        emit OrganizationInitialized({
+        emit IOrganizationInitialization.OrganizationInitialized({
             adminsRoot: params.adminsRoot,
             adminCount: params.adminCount,
             votingThreshold: params.votingThreshold,
@@ -126,7 +91,7 @@ library LibOrganizationInitialization {
      */
     function enforceOnlyDeployer() internal view {
         if (msg.sender != LibOrganizationDeployerAddressStorage.layout().deployerAddress) {
-            revert UnauthorizedDeployer();
+            revert IOrganizationInitialization.UnauthorizedDeployer();
         }
     }
 

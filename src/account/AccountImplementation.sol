@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IOrganizationSignatureValidator} from "../interfaces/IOrganization.sol";
-import {IAccountExecute} from "./interfaces/IAccountExecute.sol";
-import {INativeTokenReceivedEventEmitter} from "./interfaces/INativeTokenReceivedEventEmitter.sol";
-import {LibAccountOrganizationAddressStorage} from "./libraries/storage/LibAccountOrganizationAddressStorage.sol";
-
-import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {LibAccountOrganizationAddressStorage} from "account/libraries/storage/LibAccountOrganizationAddressStorage.sol";
+import {IAccount} from "interfaces/IAccount.sol";
+import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
 
 /**
  * @title Account Implementation
@@ -15,29 +12,7 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  *      Upgrades are handled by the beacon (Organization), not by this contract directly.
  * @author Den Technologies Inc
  */
-contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmitter, IERC1271 {
-    /**
-     * @notice Emitted when a transaction is executed
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param nonce The nonce used for this transaction
-     * @param policyId The policy ID that governed this transaction
-     */
-    event TransactionExecuted(
-        address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 indexed policyId
-    );
-
-    /**
-     * @notice Thrown when a transaction execution fails
-     */
-    error TransactionExecutionFailed();
-
-    /**
-     * @notice Thrown when the caller is not the associated organization
-     */
-    error OnlyOrganization();
-
+contract AccountImplementation is IAccount {
     /**
      * @notice Modifier that enforces only the associated organization can call the function
      */
@@ -65,6 +40,7 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
      */
     function executeTransaction(address to, uint256 value, bytes calldata data, uint256 nonce, uint256 policyId)
         external
+        override
         onlyOrganization
     {
         // Execute the transaction
@@ -81,7 +57,7 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
      * @notice Gets the organization address that this account is associated with (the beacon)
      * @return The organization address
      */
-    function getOrganizationAddress() external view returns (address) {
+    function getOrganizationAddress() external view override returns (address) {
         return LibAccountOrganizationAddressStorage.getOrganizationAddress();
     }
 
@@ -101,7 +77,7 @@ contract AccountImplementation is IAccountExecute, INativeTokenReceivedEventEmit
         returns (bytes4 magicValue)
     {
         address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
-        return IOrganizationSignatureValidator(organization).isValidSignatureForAccount(address(this), hash, signature);
+        return IOrganizationAccountSignature(organization).isValidSignatureForAccount(address(this), hash, signature);
     }
 
     /**

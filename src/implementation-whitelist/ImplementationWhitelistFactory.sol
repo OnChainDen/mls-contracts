@@ -3,8 +3,11 @@ pragma solidity ^0.8.24;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
-import {ImplementationWhitelistImplementation} from "./ImplementationWhitelistImplementation.sol";
-import {ImplementationWhitelistProxy} from "./ImplementationWhitelistProxy.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
+import {IImplementationWhitelistFactory} from "interfaces/IImplementationWhitelistFactory.sol";
 
 /**
  * @title Implementation Whitelist Factory
@@ -12,37 +15,11 @@ import {ImplementationWhitelistProxy} from "./ImplementationWhitelistProxy.sol";
  * chains
  * @author Den Technologies Inc
  */
-contract ImplementationWhitelistFactory {
+contract ImplementationWhitelistFactory is IImplementationWhitelistFactory {
     /**
      * @notice The address authorized to deploy implementation whitelist proxies
      */
-    address public immutable DEPLOYER_ADDRESS;
-
-    /**
-     * @notice Emitted when a new implementation whitelist proxy is deployed
-     * @param whitelistAddress The address of the deployed implementation whitelist proxy
-     * @param salt The salt used for CREATE2 deployment
-     * @param deployerAddress The address that deployed the whitelist
-     * @param owner The initial owner of the whitelist
-     */
-    event ImplementationWhitelistDeployed(
-        address indexed whitelistAddress, bytes32 indexed salt, address indexed deployerAddress, address owner
-    );
-
-    /**
-     * @notice Error thrown when the deployed address does not match the computed address
-     */
-    error DeploymentAddressMismatch();
-
-    /**
-     * @notice Error thrown when a zero address is provided where a valid address is required
-     */
-    error ZeroAddress();
-
-    /**
-     * @notice Error thrown when caller is not the authorized deployer
-     */
-    error UnauthorizedDeployer();
+    address public immutable override DEPLOYER_ADDRESS;
 
     /**
      * @notice Constructor to set the deployer address
@@ -66,6 +43,7 @@ contract ImplementationWhitelistFactory {
      */
     function deployImplementationWhitelist(bytes32 salt, address implementationAddress, address initialOwner)
         external
+        override
         returns (address whitelistAddress)
     {
         // Only the authorized deployer can deploy implementation whitelists
@@ -99,6 +77,7 @@ contract ImplementationWhitelistFactory {
     function computeImplementationWhitelistAddress(bytes32 salt, address implementationAddress)
         public
         view
+        override
         returns (address)
     {
         return Create2.computeAddress(salt, keccak256(_getImplementationWhitelistProxyBytecode(implementationAddress)));

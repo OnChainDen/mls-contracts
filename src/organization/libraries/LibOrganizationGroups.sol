@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {Policies} from "../../libraries/Policies.sol";
-import {LibOrganizationGroupsStorage} from "./storage/LibOrganizationGroupsStorage.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {GroupData} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Organization Groups
@@ -19,13 +20,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationGroups {
     /**
-     * @dev Emitted when the groups merkle root is updated
-     * @param newRoot The new merkle root
-     * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
-     */
-    event GroupsUpdated(bytes32 indexed newRoot, string ipfsCid);
-
-    /**
      * @dev Updates the global groups merkle root
      * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
      *      Emits GroupsUpdated event with the IPFS CID for disaster recovery.
@@ -34,7 +28,7 @@ library LibOrganizationGroups {
      */
     function setGroups(bytes32 newGroupsRoot, string calldata ipfsCid) internal {
         LibOrganizationGroupsStorage.layout().groupsRoot = newGroupsRoot;
-        emit GroupsUpdated(newGroupsRoot, ipfsCid);
+        emit IOrganizationGroups.GroupsUpdated(newGroupsRoot, ipfsCid);
     }
 
     /**
@@ -43,7 +37,7 @@ library LibOrganizationGroups {
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function isGroupInOrg(Policies.GroupData memory groupData, bytes32[] memory groupInOrgGroupsTreeProof)
+    function isGroupInOrg(GroupData memory groupData, bytes32[] memory groupInOrgGroupsTreeProof)
         internal
         view
         returns (bool)
@@ -62,7 +56,7 @@ library LibOrganizationGroups {
      */
     function isMemberInGroupAndGroupInOrg(
         address memberAddress,
-        Policies.GroupData memory groupData,
+        GroupData memory groupData,
         bytes32[] memory groupInOrgGroupsTreeProof,
         bytes32[] memory memberInGroupProof
     ) internal view returns (bool) {
@@ -91,11 +85,11 @@ library LibOrganizationGroups {
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists in the tree, false otherwise
      */
-    function isGroupInTree(
-        Policies.GroupData memory groupData,
-        bytes32 groupsRoot,
-        bytes32[] memory groupInOrgGroupsTreeProof
-    ) internal pure returns (bool) {
+    function isGroupInTree(GroupData memory groupData, bytes32 groupsRoot, bytes32[] memory groupInOrgGroupsTreeProof)
+        internal
+        pure
+        returns (bool)
+    {
         // Empty root means no groups (organization not initialized or all groups removed)
         if (groupsRoot == bytes32(0)) return false;
 

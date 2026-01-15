@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {LibOrganizationAdmin} from "./LibOrganizationAdmin.sol";
-import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
-import {LibOrganizationMembersStorage} from "./storage/LibOrganizationMembersStorage.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
+import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
+import {AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
 
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -19,19 +21,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  */
 library LibOrganizationMembers {
     /**
-     * @dev Emitted when the members merkle root is updated
-     * @param newRoot The new merkle root
-     * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
-     */
-    event MembersUpdated(bytes32 indexed newRoot, string ipfsCid);
-
-    /**
-     * @dev Thrown when membership verification fails
-     * @param memberAddress The address that failed verification
-     */
-    error MemberVerificationFailed(address memberAddress);
-
-    /**
      * @dev Updates the global members merkle root
      * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
      *      Validates that ALL admins remain members in the new tree to prevent bricking.
@@ -43,10 +32,10 @@ library LibOrganizationMembers {
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
-        LibOrganizationAdmin.AllAdminsInOrgProofs memory allAdminsInOrgProofs
+        AllAdminsInOrgProofs memory allAdminsInOrgProofs
     ) internal {
         // Get current admin configuration
-        LibOrganizationAdminStorage.AdminPermission memory admin = LibOrganizationAdminStorage.layout().adminPermission;
+        AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
 
         // Validate that ALL admins are still members in the NEW members tree
         // This prevents accidentally bricking the organization by removing admins from membership
@@ -56,7 +45,7 @@ library LibOrganizationMembers {
 
         // Update the members root
         LibOrganizationMembersStorage.layout().membersRoot = newMembersRoot;
-        emit MembersUpdated(newMembersRoot, ipfsCid);
+        emit IOrganizationMembers.MembersUpdated(newMembersRoot, ipfsCid);
     }
 
     /**

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {AdminConfig} from "types/AdminTypes.sol";
+
 /**
  * @title Organization Admin Storage
  * @dev ERC-7201 namespaced storage for organization admin functionality.
@@ -9,25 +11,12 @@ pragma solidity ^0.8.24;
  */
 library LibOrganizationAdminStorage {
     /**
-     * @dev Structure to define admin permissions.
-     *      Admins are stored as a Merkle tree of member addresses.
-     * @param adminsRoot Merkle root of admin member addresses
-     * @param adminCount Number of admins in the tree (for completeness validation)
-     * @param votingThreshold Number of signatures required for admin operations
-     */
-    struct AdminPermission {
-        bytes32 adminsRoot;
-        uint256 adminCount;
-        uint256 votingThreshold;
-    }
-
-    /**
      * @dev Storage layout for admin permissions
      * @custom:storage-location erc7201:den.mls-wallet.organization.admin
-     * @param adminPermission The admin permission configuration
+     * @param adminConfig The admin permission configuration
      */
     struct Layout {
-        AdminPermission adminPermission;
+        AdminConfig adminConfig;
     }
 
     /// @dev Storage location for AdminStorage, following ERC-7201 namespaced storage pattern.

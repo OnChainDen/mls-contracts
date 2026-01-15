@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {OperationType} from "../../interfaces/IOrganization.sol";
-import {MerkleUtils} from "../../libraries/MerkleUtils.sol";
-import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
-import {LibOrganizationEIP712} from "./LibOrganizationEIP712.sol";
-import {LibOrganizationMembers} from "./LibOrganizationMembers.sol";
-import {LibOrganizationSignatures} from "./LibOrganizationSignatures.sol";
-import {LibOrganizationAdminStorage} from "./storage/LibOrganizationAdminStorage.sol";
+// Interfaces
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+
+// Types
+import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs, SigningAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
+
+// Libraries
+import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -21,144 +28,6 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
  * @author Den Technologies Inc
  */
 library LibOrganizationAdmin {
-    /**
-     * @dev Proofs that ALL admins are members of the organization (in both admin tree and members tree)
-     * @dev Used by setMembers, setAdmins, and initialize to prevent bricking.
-     *      Contains proofs for every admin in the organization, not just signers.
-     * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
-     * @param adminInOrgAdminTreeProofs Merkle proofs that each address is in adminsRoot
-     * @param adminInOrgMembersTreeProofs Merkle proofs that each address is in membersRoot
-     */
-    struct AllAdminsInOrgProofs {
-        address[] adminAddresses;
-        bytes32[][] adminInOrgAdminTreeProofs;
-        bytes32[][] adminInOrgMembersTreeProofs;
-    }
-
-    /**
-     * @dev Proofs that the SIGNING admins are members of the organization (in both admin tree and members tree)
-     * @dev Contains per-signer proofs for admin tree and organization membership.
-     *      Only contains proofs for admins who signed the operation, not all admins.
-     * @param adminInOrgAdminTreeProofs Per-signer merkle proofs that each signer is in the adminsRoot
-     * @param adminInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's membersRoot
-     */
-    struct SigningAdminsInOrgProofs {
-        bytes32[][] adminInOrgAdminTreeProofs;
-        bytes32[][] adminInOrgMembersTreeProofs;
-    }
-
-    /**
-     * @dev Parameters for authorizing admin operations
-     * @dev Groups common authorization parameters to reduce function parameter count
-     * @param salt A user-provided salt for nonce computation
-     * @param expirationTimestamp The timestamp after which the signatures are no longer valid
-     * @param signatures The signatures from admin(s) authorizing this operation
-     * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
-     */
-    struct AdminAuthParams {
-        uint256 salt;
-        uint256 expirationTimestamp;
-        bytes signatures;
-        SigningAdminsInOrgProofs signingAdminsInOrgProofs;
-    }
-
-    /**
-     * @dev Emitted when admin permissions are updated
-     * @param previousAdminsRoot The previous admins merkle root
-     * @param previousAdminCount The previous admin count
-     * @param previousVotingThreshold The previous voting threshold
-     * @param newAdminsRoot The new admins merkle root
-     * @param newAdminCount The new admin count
-     * @param newVotingThreshold The new voting threshold
-     * @param newAdminAddresses The new admin addresses (in ascending order)
-     */
-    event AdminPermissionUpdated(
-        bytes32 previousAdminsRoot,
-        uint256 previousAdminCount,
-        uint256 previousVotingThreshold,
-        bytes32 newAdminsRoot,
-        uint256 newAdminCount,
-        uint256 newVotingThreshold,
-        address[] newAdminAddresses
-    );
-
-    /**
-     * @dev Thrown when an admin operation is rejected due to insufficient authorization
-     * @param reason The reason for the rejection
-     */
-    error AdminOperationRejected(string reason);
-
-    /**
-     * @dev Thrown when an admin operation has insufficient signatures
-     * @param required The number of required signatures
-     * @param provided The number of provided signatures
-     */
-    error InsufficientAdminSignatures(uint256 required, uint256 provided);
-
-    /**
-     * @dev Thrown when an admin operation has an invalid signature
-     */
-    error InvalidAdminSignature();
-
-    /**
-     * @dev Thrown when an admin operation has wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidAdminChainId(uint256 expected, uint256 provided);
-
-    /**
-     * @dev Thrown when an admin operation has expired
-     * @param expirationTimestamp The expiration timestamp that was exceeded
-     * @param currentTimestamp The current block timestamp
-     */
-    error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
-
-    /**
-     * @dev Thrown when admin count doesn't match expected
-     * @param expected The expected admin count
-     * @param provided The provided admin count
-     */
-    error AdminCountMismatch(uint256 expected, uint256 provided);
-
-    /**
-     * @dev Thrown when admin addresses are not in ascending order or have duplicates
-     * @param address_ The duplicate or out-of-order address
-     */
-    error DuplicateOrUnorderedAdminAddress(address address_);
-
-    /**
-     * @notice Thrown when an admin is not in the admin tree
-     * @param admin The address that is not in the admin tree
-     */
-    error AdminNotInTree(address admin);
-
-    /**
-     * @dev Thrown when an admin is not a member of the organization
-     * @param admin The address that is not a member
-     */
-    error AdminNotMember(address admin);
-
-    /**
-     * @dev Thrown when admin configuration is invalid
-     * @param reason The reason for the invalid configuration
-     */
-    error InvalidAdminConfiguration(string reason);
-
-    /**
-     * @dev Thrown when admin tree proofs length doesn't match signature count
-     * @param expected The expected length (signature count)
-     * @param actual The actual length of proofs array
-     */
-    error AdminTreeProofsLengthMismatch(uint256 expected, uint256 actual);
-
-    /**
-     * @dev Thrown when members tree proofs length doesn't match signature count
-     * @param expected The expected length (signature count)
-     * @param actual The actual length of proofs array
-     */
-    error MembersTreeProofsLengthMismatch(uint256 expected, uint256 actual);
-
     /**
      * @dev Sets the admin permissions for the organization
      * @dev Validates that all new admins are members before updating.
@@ -185,15 +54,15 @@ library LibOrganizationAdmin {
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
         // Store previous admin configuration for the event
-        LibOrganizationAdminStorage.AdminPermission memory previousAdmin = adminLayout.adminPermission;
+        AdminConfig memory previousAdmin = adminLayout.adminConfig;
 
         // Update admin permissions
-        adminLayout.adminPermission = LibOrganizationAdminStorage.AdminPermission({
-            adminsRoot: newAdminsRoot, adminCount: newAdminCount, votingThreshold: newVotingThreshold
-        });
+        adminLayout.adminConfig.adminsRoot = newAdminsRoot;
+        adminLayout.adminConfig.adminCount = newAdminCount;
+        adminLayout.adminConfig.votingThreshold = newVotingThreshold;
 
         // Emit event
-        emit AdminPermissionUpdated({
+        emit IOrganizationAdmin.AdminConfigUpdated({
             previousAdminsRoot: previousAdmin.adminsRoot,
             previousAdminCount: previousAdmin.adminCount,
             previousVotingThreshold: previousAdmin.votingThreshold,
@@ -222,7 +91,7 @@ library LibOrganizationAdmin {
     ) internal {
         // Check if the operation has expired
         if (block.timestamp > authParams.expirationTimestamp) {
-            revert AdminOperationExpired(authParams.expirationTimestamp, block.timestamp);
+            revert IOrganizationAdmin.AdminOperationExpired(authParams.expirationTimestamp, block.timestamp);
         }
 
         // Compute deterministic nonce from operation data and salt
@@ -252,8 +121,8 @@ library LibOrganizationAdmin {
         );
 
         // Check if we have enough valid signatures
-        if (validSignatures < adminLayout.adminPermission.votingThreshold) {
-            revert AdminOperationRejected("Insufficient authorization for admin operation");
+        if (validSignatures < adminLayout.adminConfig.votingThreshold) {
+            revert IOrganizationAdmin.InsufficientAdminAuthorization();
         }
     }
 
@@ -261,8 +130,8 @@ library LibOrganizationAdmin {
      * @dev Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
-    function getAdminPermission() internal view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdminStorage.layout().adminPermission;
+    function getAdminConfig() internal view returns (AdminConfig memory) {
+        return LibOrganizationAdminStorage.layout().adminConfig;
     }
 
     /**
@@ -282,7 +151,11 @@ library LibOrganizationAdmin {
     ) internal pure {
         // Case: Admin addresses array does not match expected count
         if (allAdminsInOrgProofs.adminAddresses.length != expectedAdminCount) {
-            revert AdminCountMismatch(expectedAdminCount, allAdminsInOrgProofs.adminAddresses.length);
+            // forgefmt: disable-next-item
+            revert IOrganizationAdmin.AdminCountMismatch(
+                    expectedAdminCount, 
+                    allAdminsInOrgProofs.adminAddresses.length
+                );
         }
 
         // Track last admin address to ensure ascending order (prevents duplicates)
@@ -293,19 +166,19 @@ library LibOrganizationAdmin {
 
             // Case: Admin address is not in ascending order or has duplicates
             if (admin <= lastAdmin) {
-                revert DuplicateOrUnorderedAdminAddress(admin);
+                revert IOrganizationAdmin.DuplicateOrUnorderedAdminAddress(admin);
             }
             lastAdmin = admin;
 
             // Case: Admin is not in the admin tree
             if (!_isAdminInTree(admin, adminsRoot, allAdminsInOrgProofs.adminInOrgAdminTreeProofs[i])) {
-                revert AdminNotInTree(admin);
+                revert IOrganizationAdmin.AdminNotInTree(admin);
             }
 
             // Case: Admin is not a member in the members tree
             bytes32[] memory memberProof = allAdminsInOrgProofs.adminInOrgMembersTreeProofs[i];
             if (!LibOrganizationMembers.isMemberInTree(admin, membersRoot, memberProof)) {
-                revert AdminNotMember(admin);
+                revert IOrganizationAdmin.AdminNotMember(admin);
             }
         }
     }
@@ -322,14 +195,8 @@ library LibOrganizationAdmin {
         internal
         pure
     {
-        if (adminsRoot == bytes32(0)) {
-            revert InvalidAdminConfiguration("Admin root cannot be zero");
-        }
-        if (adminCount == 0) {
-            revert InvalidAdminConfiguration("Admin count cannot be zero");
-        }
-        if (votingThreshold == 0 || votingThreshold > adminCount) {
-            revert InvalidAdminConfiguration("Invalid voting threshold");
+        if (adminsRoot == bytes32(0) || adminCount == 0 || votingThreshold == 0 || votingThreshold > adminCount) {
+            revert IOrganizationAdmin.InvalidAdminConfig();
         }
     }
 
@@ -359,7 +226,7 @@ library LibOrganizationAdmin {
         address lastSigner = address(0);
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-        bytes32 adminsRoot = adminLayout.adminPermission.adminsRoot;
+        bytes32 adminsRoot = adminLayout.adminConfig.adminsRoot;
 
         // Cache membersRoot to avoid repeated storage reads in the loop
         bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
@@ -442,12 +309,12 @@ library LibOrganizationAdmin {
     ) private pure {
         uint256 adminTreeProofsLength = signingAdminsInOrgProofs.adminInOrgAdminTreeProofs.length;
         if (adminTreeProofsLength != signatureCount) {
-            revert AdminTreeProofsLengthMismatch(signatureCount, adminTreeProofsLength);
+            revert IOrganizationAdmin.AdminTreeProofsLengthMismatch(signatureCount, adminTreeProofsLength);
         }
 
         uint256 membersTreeProofsLength = signingAdminsInOrgProofs.adminInOrgMembersTreeProofs.length;
         if (membersTreeProofsLength != signatureCount) {
-            revert MembersTreeProofsLengthMismatch(signatureCount, membersTreeProofsLength);
+            revert IOrganizationAdmin.MembersTreeProofsLengthMismatch(signatureCount, membersTreeProofsLength);
         }
     }
 

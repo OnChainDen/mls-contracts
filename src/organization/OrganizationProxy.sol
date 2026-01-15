@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {LibOrganizationDeployerAddressStorage} from "./libraries/storage/LibOrganizationDeployerAddressStorage.sol";
-import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    LibOrganizationDeployerAddressStorage
+} from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
+import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
 /**
  * @title Organization Proxy

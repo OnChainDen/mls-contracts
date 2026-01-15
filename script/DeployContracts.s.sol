@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AccountImplementation} from "../src/account/AccountImplementation.sol";
+import {AccountImplementation} from "account/AccountImplementation.sol";
+import {Script, console} from "forge-std/Script.sol";
 import {
     ImplementationWhitelistImplementation
-} from "../src/implementation-whitelist/ImplementationWhitelistImplementation.sol";
-import {IImplementationWhitelist} from "../src/implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {OrganizationFactory} from "../src/organization/OrganizationFactory.sol";
-import {OrganizationImplementation} from "../src/organization/OrganizationImplementation.sol";
-import {Script, console} from "forge-std/Script.sol";
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {OrganizationFactory} from "organization/OrganizationFactory.sol";
+import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title Deploy Contracts
@@ -47,12 +47,12 @@ contract DeployContracts is Script {
         address[] memory orgImpl = new address[](1);
         orgImpl[0] = address(organizationImplementation);
         address[] memory empty = new address[](0);
-        whitelist.whitelistImplementations(IImplementationWhitelist.ContractType.Organization, orgImpl, empty);
+        whitelist.whitelistImplementations(ContractType.Organization, orgImpl, empty);
         console.log("Organization implementation whitelisted at:", address(organizationImplementation));
 
         address[] memory accImpl = new address[](1);
         accImpl[0] = address(accountImplementation);
-        whitelist.whitelistImplementations(IImplementationWhitelist.ContractType.Account, accImpl, empty);
+        whitelist.whitelistImplementations(ContractType.Account, accImpl, empty);
         console.log("Account implementation whitelisted at:", address(accountImplementation));
 
         // Deploy OrganizationFactory

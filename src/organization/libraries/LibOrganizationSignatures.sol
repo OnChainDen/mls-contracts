@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {OperationType} from "../../interfaces/IOrganization.sol";
-import {SignatureUtils} from "../../libraries/SignatureUtils.sol";
-import {LibOrganizationSignaturesStorage} from "./storage/LibOrganizationSignaturesStorage.sol";
 import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
+import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Signatures
@@ -14,12 +15,6 @@ import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
  */
 library LibOrganizationSignatures {
     /**
-     * @dev Thrown when an operation uses a nonce that has already been used
-     * @param nonce The nonce that was attempted to be used
-     */
-    error NonceAlreadyUsed(uint256 nonce);
-
-    /**
      * @dev Validates that a nonce has not been used and marks it as used
      * @dev Reverts if the nonce has already been used
      * @param nonce The nonce to validate and consume
@@ -28,7 +23,7 @@ library LibOrganizationSignatures {
         LibOrganizationSignaturesStorage.Layout storage sigLayout = LibOrganizationSignaturesStorage.layout();
 
         if (sigLayout.usedNonces[nonce]) {
-            revert NonceAlreadyUsed(nonce);
+            revert IOrganizationSignatures.NonceAlreadyUsed(nonce);
         }
 
         sigLayout.usedNonces[nonce] = true;

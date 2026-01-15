@@ -1,32 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {LibOrganizationUpgradeStorage} from "./libraries/storage/LibOrganizationUpgradeStorage.sol";
+import {IAccount} from "interfaces/IAccount.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganization} from "interfaces/IOrganization.sol";
+import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
-import {IAccountExecute} from "../account/interfaces/IAccountExecute.sol";
-import {IImplementationWhitelist} from "../implementation-whitelist/interfaces/IImplementationWhitelist.sol";
-import {IOrganizationSignatureValidator, InitializationParams, OperationType} from "../interfaces/IOrganization.sol";
-import {IUpgradeable} from "../interfaces/IUpgradeable.sol";
-import {Policies} from "../libraries/Policies.sol";
+// Types
+import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {ContractType, InitializationParams, OperationType} from "types/CommonTypes.sol";
+import {GroupData, Policy, ValidationProofs} from "types/PolicyTypes.sol";
 
-import {LibOrganizationAccountFactory} from "./libraries/LibOrganizationAccountFactory.sol";
-import {LibOrganizationAccountSignature} from "./libraries/LibOrganizationAccountSignature.sol";
-import {LibOrganizationAccountTransaction} from "./libraries/LibOrganizationAccountTransaction.sol";
-import {LibOrganizationAdmin} from "./libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationGroups} from "./libraries/LibOrganizationGroups.sol";
-import {LibOrganizationGuardian} from "./libraries/LibOrganizationGuardian.sol";
-import {LibOrganizationInitialization} from "./libraries/LibOrganizationInitialization.sol";
-import {LibOrganizationMembers} from "./libraries/LibOrganizationMembers.sol";
-import {LibOrganizationPolicy} from "./libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationSignatures} from "./libraries/LibOrganizationSignatures.sol";
-import {LibOrganizationAccountFactoryStorage} from "./libraries/storage/LibOrganizationAccountFactoryStorage.sol";
-
-import {LibOrganizationAdminStorage} from "./libraries/storage/LibOrganizationAdminStorage.sol";
-import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationPolicyStorage.sol";
+// Libraries
+import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
+import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
+import {LibOrganizationAccountTransaction} from "organization/libraries/LibOrganizationAccountTransaction.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
+import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
+import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {
+    LibOrganizationAccountFactoryStorage
+} from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
 
 /**
  * @title Organization Implementation
@@ -35,73 +37,7 @@ import {LibOrganizationPolicyStorage} from "./libraries/storage/LibOrganizationP
  *      Full data is provided via calldata and verified against the roots.
  * @author Den Technologies Inc
  */
-contract OrganizationImplementation is
-    UUPSUpgradeable,
-    Initializable,
-    IUpgradeable,
-    IBeacon,
-    IOrganizationSignatureValidator
-{
-    /**
-     * @notice Emitted when a transaction is executed on an account
-     * @param account The account that executed the transaction
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param nonce The nonce used for this transaction
-     * @param policyId The policy ID that governed this transaction
-     */
-    event AccountTransactionExecuted(
-        address indexed account, address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 policyId
-    );
-
-    /**
-     * @notice Emitted when a transaction is rejected by authorized users
-     * @param account The account for which the transaction was rejected
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param nonce The nonce used for this transaction
-     * @param policyId The policy ID that governed this transaction
-     */
-    event AccountTransactionRejected(
-        address indexed account, address indexed to, uint256 value, bytes data, uint256 indexed nonce, uint256 policyId
-    );
-
-    /**
-     * @notice Emitted when the account implementation is updated (affects all accounts via beacon)
-     * @param newImplementation The new implementation address for all accounts
-     */
-    event AccountImplementationUpdated(address indexed newImplementation);
-
-    /**
-     * @notice Emitted when an admin operation is rejected by authorized admins
-     * @param operationType The type of admin operation that was rejected
-     * @param operationData The encoded operation data
-     * @param nonce The nonce that was consumed/burned
-     */
-    event AdminOperationRejected(OperationType indexed operationType, bytes operationData, uint256 indexed nonce);
-
-    /**
-     * @notice Emitted when a transaction is rejected because of wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidChainId(uint256 expected, uint256 provided);
-
-    /**
-     * @notice Thrown when the account implementation has not been set
-     */
-    error AccountImplementationNotSet();
-
-    /**
-     * @notice Emitted when someone tries to call upgradeToAndCall directly without going through
-     *         the authorized upgrade flow (upgradeToAndCallWithAuthorization)
-     * @dev This protects against attackers bypassing admin signature validation by calling
-     *      the inherited public upgradeToAndCall function directly on the proxy
-     */
-    error UnauthorizedUpgrade();
-
+contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganization {
     /**
      * @notice Modifier that enforces only the guardian can call the function
      */
@@ -122,7 +58,7 @@ contract OrganizationImplementation is
      * @notice Initialize the organization implementation with Merkle-based members and groups
      * @param params The initialization parameters struct containing all required configuration
      */
-    function initialize(InitializationParams calldata params) external initializer onlyDeployer {
+    function initialize(InitializationParams calldata params) external override initializer onlyDeployer {
         LibOrganizationInitialization.initialize(params);
     }
 
@@ -139,9 +75,9 @@ contract OrganizationImplementation is
         bytes32 newAdminsRoot,
         uint256 newAdminCount,
         uint256 newVotingThreshold,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams,
-        LibOrganizationAdmin.AllAdminsInOrgProofs calldata newAdminsInOrgProofs
-    ) external onlyGuardian {
+        AdminAuthParams calldata authParams,
+        AllAdminsInOrgProofs calldata newAdminsInOrgProofs
+    ) external override onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
@@ -170,10 +106,7 @@ contract OrganizationImplementation is
      * @param newGuardian The address of the new guardian
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setGuardian(address newGuardian, LibOrganizationAdmin.AdminAuthParams calldata authParams)
-        external
-        onlyGuardian
-    {
+    function setGuardian(address newGuardian, AdminAuthParams calldata authParams) external override onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
@@ -199,8 +132,8 @@ contract OrganizationImplementation is
     function rejectAdminOperation(
         OperationType operationType,
         bytes calldata operationData,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams
-    ) external onlyGuardian {
+        AdminAuthParams calldata authParams
+    ) external override onlyGuardian {
         // Compute nonce for this operation
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
@@ -224,9 +157,9 @@ contract OrganizationImplementation is
     function setMembers(
         bytes32 newMembersRoot,
         string calldata ipfsCid,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams,
-        LibOrganizationAdmin.AllAdminsInOrgProofs calldata allAdminsInOrgProofs
-    ) external onlyGuardian {
+        AdminAuthParams calldata authParams,
+        AllAdminsInOrgProofs calldata allAdminsInOrgProofs
+    ) external override onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
@@ -248,11 +181,11 @@ contract OrganizationImplementation is
      * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setGroups(
-        bytes32 newGroupsRoot,
-        string calldata ipfsCid,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams
-    ) external onlyGuardian {
+    function setGroups(bytes32 newGroupsRoot, string calldata ipfsCid, AdminAuthParams calldata authParams)
+        external
+        override
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGroupsRoot, keccak256(bytes(ipfsCid)));
 
@@ -274,11 +207,11 @@ contract OrganizationImplementation is
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setPolicies(
-        bytes32 newPoliciesRoot,
-        string calldata ipfsCid,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams
-    ) external onlyGuardian {
+    function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid, AdminAuthParams calldata authParams)
+        external
+        override
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newPoliciesRoot, keccak256(bytes(ipfsCid)));
 
@@ -300,8 +233,9 @@ contract OrganizationImplementation is
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      * @return The address of the deployed account proxy
      */
-    function deployAccount(bytes32 create2Salt, LibOrganizationAdmin.AdminAuthParams calldata authParams)
+    function deployAccount(bytes32 create2Salt, AdminAuthParams calldata authParams)
         external
+        override
         onlyGuardian
         returns (address)
     {
@@ -325,10 +259,11 @@ contract OrganizationImplementation is
      * @param newImplementation The new implementation address
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setAccountImplementation(
-        address newImplementation,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams
-    ) external onlyGuardian {
+    function setAccountImplementation(address newImplementation, AdminAuthParams calldata authParams)
+        external
+        override
+        onlyGuardian
+    {
         // 1. Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -342,7 +277,7 @@ contract OrganizationImplementation is
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
-                IImplementationWhitelist.ContractType.Account, 
+                ContractType.Account, 
                 newImplementation
             );
 
@@ -374,8 +309,8 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         uint256 policyId,
         bytes calldata signatures,
-        Policies.ValidationProofs calldata proofs
-    ) external onlyGuardian {
+        ValidationProofs calldata proofs
+    ) external override onlyGuardian {
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
@@ -409,7 +344,7 @@ contract OrganizationImplementation is
 
         // Execute the transaction on the account
         // forgefmt: disable-next-item
-        IAccountExecute(account).executeTransaction({
+        IAccount(payable(account)).executeTransaction({
             to: to,
             value: value, 
             data: data, 
@@ -440,8 +375,8 @@ contract OrganizationImplementation is
         uint256 expirationTimestamp,
         uint256 policyId,
         bytes calldata signatures,
-        Policies.ValidationProofs calldata proofs
-    ) external onlyGuardian {
+        ValidationProofs calldata proofs
+    ) external override onlyGuardian {
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
@@ -507,8 +442,8 @@ contract OrganizationImplementation is
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
         bytes calldata data,
-        LibOrganizationAdmin.AdminAuthParams calldata authParams
-    ) external onlyGuardian {
+        AdminAuthParams calldata authParams
+    ) external override onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
         bytes memory operationData = abi.encode(newImplementation);
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -519,7 +454,7 @@ contract OrganizationImplementation is
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
-                IImplementationWhitelist.ContractType.Organization,
+                ContractType.Organization,
                 newImplementation
             );
 
@@ -546,7 +481,7 @@ contract OrganizationImplementation is
      * @notice Returns the address that deployed this organization
      * @return The deployer address
      */
-    function getDeployerAddress() external view returns (address) {
+    function getDeployerAddress() external view override returns (address) {
         return LibOrganizationInitialization.getDeployerAddress();
     }
 
@@ -554,7 +489,7 @@ contract OrganizationImplementation is
      * @notice Checks if the organization has been initialized
      * @return True if initialized, false otherwise
      */
-    function isInitialized() external view returns (bool) {
+    function isInitialized() external view override returns (bool) {
         return LibOrganizationInitialization.isInitialized();
     }
 
@@ -562,22 +497,22 @@ contract OrganizationImplementation is
      * @notice Returns the current admin permission settings for the organization
      * @return The admin permission configuration including admins root, count, and voting threshold
      */
-    function adminPermission() external view returns (LibOrganizationAdminStorage.AdminPermission memory) {
-        return LibOrganizationAdmin.getAdminPermission();
+    function adminConfig() external view override returns (AdminConfig memory) {
+        return LibOrganizationAdmin.getAdminConfig();
     }
 
     /**
      * @notice Returns the current guardian address
      * @return The address of the guardian
      */
-    function guardian() external view returns (address) {
+    function guardian() external view override returns (address) {
         return LibOrganizationGuardian.getGuardian();
     }
 
     /**
      * @notice Reverts if the caller is not the guardian
      */
-    function enforceOnlyGuardian() external view {
+    function enforceOnlyGuardian() external view override {
         LibOrganizationGuardian.enforceOnlyGuardian();
     }
 
@@ -585,7 +520,7 @@ contract OrganizationImplementation is
      * @notice Returns the current members merkle root
      * @return The members merkle root
      */
-    function membersRoot() external view returns (bytes32) {
+    function membersRoot() external view override returns (bytes32) {
         return LibOrganizationMembers.getMembersRoot();
     }
 
@@ -595,7 +530,7 @@ contract OrganizationImplementation is
      * @param proof The merkle proof for the address
      * @return True if the address is a verified member, false otherwise
      */
-    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
+    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view override returns (bool) {
         return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
     }
 
@@ -603,7 +538,7 @@ contract OrganizationImplementation is
      * @notice Returns the current groups merkle root
      * @return The groups merkle root
      */
-    function groupsRoot() external view returns (bytes32) {
+    function groupsRoot() external view override returns (bytes32) {
         return LibOrganizationGroups.getGroupsRoot();
     }
 
@@ -613,9 +548,10 @@ contract OrganizationImplementation is
      * @param groupInOrgGroupsTreeProof The merkle proof for the group
      * @return True if the group exists, false otherwise
      */
-    function isGroupInOrg(Policies.GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
+    function isGroupInOrg(GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
         external
         view
+        override
         returns (bool)
     {
         return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
@@ -631,10 +567,10 @@ contract OrganizationImplementation is
      */
     function isMemberInGroupAndGroupInOrg(
         address memberAddress,
-        Policies.GroupData calldata groupData,
+        GroupData calldata groupData,
         bytes32[] calldata groupInOrgGroupsTreeProof,
         bytes32[] calldata memberInGroupProof
-    ) external view returns (bool) {
+    ) external view override returns (bool) {
         return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
             memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
         );
@@ -644,7 +580,7 @@ contract OrganizationImplementation is
      * @notice Returns the current global policies merkle root
      * @return The policies merkle root
      */
-    function policiesRoot() external view returns (bytes32) {
+    function policiesRoot() external view override returns (bytes32) {
         return LibOrganizationPolicyStorage.layout().policiesRoot;
     }
 
@@ -660,15 +596,15 @@ contract OrganizationImplementation is
      */
     function getPolicyUsage(
         uint256 policyId,
-        Policies.Policy calldata policy,
+        Policy calldata policy,
         address account,
         address destination,
         address initiator,
         bytes32[] calldata policyProof
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         // Verify policy exists in merkle tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
-            revert LibOrganizationPolicy.PolicyVerificationFailed(policyId);
+            revert PolicyVerificationFailed(policyId);
         }
 
         return LibOrganizationPolicy.getCurrentUsage({
@@ -681,7 +617,7 @@ contract OrganizationImplementation is
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
      */
-    function isNonceUsed(uint256 nonce) external view returns (bool) {
+    function isNonceUsed(uint256 nonce) external view override returns (bool) {
         return LibOrganizationSignatures.isNonceUsed(nonce);
     }
 
@@ -695,6 +631,7 @@ contract OrganizationImplementation is
     function computeNonce(OperationType operationType, bytes calldata operationData, uint256 salt)
         external
         view
+        override
         returns (uint256)
     {
         return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
@@ -718,7 +655,7 @@ contract OrganizationImplementation is
      * @param salt The salt for CREATE2 deployment
      * @return The computed address
      */
-    function computeAccountAddress(bytes32 salt) external view returns (address) {
+    function computeAccountAddress(bytes32 salt) external view override returns (address) {
         return LibOrganizationAccountFactory.computeAccountAddress(salt);
     }
 
@@ -742,7 +679,7 @@ contract OrganizationImplementation is
     {
         // Verify the caller is the account
         if (msg.sender != account) {
-            revert LibOrganizationAccountFactory.AccountNotDeployedByOrganization(account);
+            revert AccountNotDeployedByOrganization(account);
         }
 
         // Verify the account is deployed by this organization

@@ -5,11 +5,14 @@ import {Ownable2StepUpgradeable} from "@openzeppelin-upgradeable/access/Ownable2
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {IImplementationWhitelist} from "./interfaces/IImplementationWhitelist.sol";
 import {
     LibImplementationWhitelistDeployerAddressStorage
-} from "./libraries/LibImplementationWhitelistDeployerAddressStorage.sol";
-import {LibImplementationWhitelistStorage} from "./libraries/LibImplementationWhitelistStorage.sol";
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistDeployerAddressStorage.sol";
+import {
+    LibImplementationWhitelistStorage
+} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title Implementation Whitelist
@@ -22,31 +25,6 @@ contract ImplementationWhitelistImplementation is
     Ownable2StepUpgradeable,
     IImplementationWhitelist
 {
-    /**
-     * @notice Emitted when an implementation is whitelisted
-     * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address
-     */
-    event ImplementationWhitelisted(ContractType indexed contractType, address indexed implementation);
-
-    /**
-     * @notice Emitted when an implementation is removed from the whitelist
-     * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address
-     */
-    event ImplementationUnwhitelisted(ContractType indexed contractType, address indexed implementation);
-
-    /**
-     * @notice Emitted when the implementation whitelist is initialized
-     * @param owner The initial owner address
-     */
-    event ImplementationWhitelistInitialized(address indexed owner);
-
-    /**
-     * @notice Error thrown when caller is not the authorized deployer
-     */
-    error UnauthorizedDeployer();
-
     /**
      * @notice Modifier that enforces only the deployer can call the function
      */
@@ -64,7 +42,7 @@ contract ImplementationWhitelistImplementation is
      * @notice Initialize the implementation whitelist
      * @param initialOwner The initial owner address
      */
-    function initialize(address initialOwner) external initializer onlyDeployer {
+    function initialize(address initialOwner) external override initializer onlyDeployer {
         __Ownable_init(initialOwner);
         __Ownable2Step_init();
 
@@ -81,7 +59,7 @@ contract ImplementationWhitelistImplementation is
         ContractType contractType,
         address[] calldata toWhitelist,
         address[] calldata toUnwhitelist
-    ) external onlyOwner {
+    ) external override onlyOwner {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
         for (uint256 i = 0; i < toWhitelist.length; ++i) {
@@ -99,7 +77,7 @@ contract ImplementationWhitelistImplementation is
      * @notice Returns the address that deployed this implementation whitelist proxy
      * @return The deployer address
      */
-    function getDeployerAddress() external view returns (address) {
+    function getDeployerAddress() external view override returns (address) {
         return LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress;
     }
 
@@ -108,7 +86,7 @@ contract ImplementationWhitelistImplementation is
      * @dev Checks if owner is set (since every initialized whitelist must have an owner)
      * @return True if initialized, false otherwise
      */
-    function isInitialized() external view returns (bool) {
+    function isInitialized() external view override returns (bool) {
         return owner() != address(0);
     }
 

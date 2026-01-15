@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Policies} from "../../../libraries/Policies.sol";
-import {LibOrganizationGroups} from "../LibOrganizationGroups.sol";
-import {LibOrganizationMembers} from "../LibOrganizationMembers.sol";
+import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
+import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {ApproverType, InitiatorProofs, Policy} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Policy Initiator
@@ -24,9 +24,9 @@ library LibPolicyInitiator {
      * @return True if the initiator is authorized, false otherwise
      */
     function isInitiatorAuthorized(
-        Policies.Policy memory policy,
+        Policy memory policy,
         address initiatorAddress,
-        Policies.InitiatorProofs memory initiatorProofs
+        InitiatorProofs memory initiatorProofs
     ) internal view returns (bool) {
         // Case: The policy matches transactions with any initiator
         if (policy.config.initiator.anyInitiator) return true;
@@ -36,16 +36,16 @@ library LibPolicyInitiator {
             return false;
         }
 
-        Policies.ApproverType initType = policy.config.initiator.initiatorType;
+        ApproverType initType = policy.config.initiator.initiatorType;
 
         // Case: The policy matches transactions made by a specific individual
-        if (initType == Policies.ApproverType.Member) {
+        if (initType == ApproverType.Member) {
             // Check if the initiator is the specified member address
             return initiatorAddress == policy.config.initiator.initiatorMember;
         }
 
         // Case: The policy matches transactions made by any individual from a specific group
-        if (initType == Policies.ApproverType.Group) {
+        if (initType == ApproverType.Group) {
             // Check the group ID matches the policy's initiator group ID
             if (initiatorProofs.group.groupId != policy.config.initiator.initiatorGroupId) {
                 return false;
