@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title Implementation Whitelist Storage
@@ -15,7 +15,7 @@ library LibImplementationWhitelistStorage {
      * @param whitelisted Nested mapping of contract type to implementation address to whitelist status
      */
     struct Layout {
-        mapping(IImplementationWhitelist.ContractType => mapping(address => bool)) whitelisted;
+        mapping(ContractType => mapping(address => bool)) whitelisted;
     }
 
     /// @dev Storage location for WhitelistStorage, following ERC-7201 namespaced storage pattern.

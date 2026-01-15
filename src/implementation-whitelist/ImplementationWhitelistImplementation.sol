@@ -12,6 +12,7 @@ import {
     LibImplementationWhitelistStorage
 } from "implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title Implementation Whitelist

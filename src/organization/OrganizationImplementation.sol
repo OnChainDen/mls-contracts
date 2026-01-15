@@ -14,7 +14,7 @@ import {IOrganization} from "interfaces/IOrganization.sol";
 
 // Types
 import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
-import {InitializationParams, OperationType} from "types/CommonTypes.sol";
+import {ContractType, InitializationParams, OperationType} from "types/CommonTypes.sol";
 import {GroupData, Policy, ValidationProofs} from "types/PolicyTypes.sol";
 
 // Libraries
@@ -280,7 +280,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
-                IImplementationWhitelist.ContractType.Account, 
+                ContractType.Account, 
                 newImplementation
             );
 
@@ -457,7 +457,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(
-                IImplementationWhitelist.ContractType.Organization,
+                ContractType.Organization,
                 newImplementation
             );
 

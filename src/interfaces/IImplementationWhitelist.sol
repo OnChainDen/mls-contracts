@@ -1,24 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {ContractType} from "types/CommonTypes.sol";
+
 /**
  * @title IImplementationWhitelist
  * @notice Interface for managing and validating whitelisted implementation addresses
  * @author Den Technologies Inc
  */
 interface IImplementationWhitelist {
-    // ═══════════════════════════════════════════════════════════════════════════
-    // Enums
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @notice Enum to specify the contract type
-     */
-    enum ContractType {
-        Account,
-        Organization
-    }
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Events
     // ═══════════════════════════════════════════════════════════════════════════

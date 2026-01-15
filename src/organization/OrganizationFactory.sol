@@ -5,7 +5,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
-import {InitializationParams} from "types/CommonTypes.sol";
+import {ContractType, InitializationParams} from "types/CommonTypes.sol";
 
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
@@ -74,10 +74,9 @@ contract OrganizationFactory {
         }
 
         // Validate that the implementation is whitelisted
-        IImplementationWhitelist(whitelistAddress)
-            .validateIsImplementationWhitelistedOrRevert(
-                IImplementationWhitelist.ContractType.Organization, implementationAddress
-            );
+        IImplementationWhitelist(whitelistAddress).validateIsImplementationWhitelistedOrRevert(
+            ContractType.Organization, implementationAddress
+        );
 
         bytes memory bytecode = _getOrganizationProxyBytecode(implementationAddress, whitelistAddress);
 
