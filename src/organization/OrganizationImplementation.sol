@@ -510,13 +510,6 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
-     * @notice Reverts if the caller is not the guardian
-     */
-    function enforceOnlyGuardian() external view override {
-        LibOrganizationGuardian.enforceOnlyGuardian();
-    }
-
-    /**
      * @notice Returns the current members merkle root
      * @return The members merkle root
      */

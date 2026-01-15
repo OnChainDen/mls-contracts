@@ -53,9 +53,4 @@ interface IOrganizationGuardian {
      * @return The address of the guardian
      */
     function guardian() external view returns (address);
-
-    /**
-     * @notice Reverts if the caller is not the guardian
-     */
-    function enforceOnlyGuardian() external view;
 }
