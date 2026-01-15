@@ -40,6 +40,7 @@ contract AccountImplementation is IAccount {
      */
     function executeTransaction(address to, uint256 value, bytes calldata data, uint256 nonce, uint256 policyId)
         external
+        override
         onlyOrganization
     {
         // Execute the transaction
@@ -56,7 +57,7 @@ contract AccountImplementation is IAccount {
      * @notice Gets the organization address that this account is associated with (the beacon)
      * @return The organization address
      */
-    function getOrganizationAddress() external view returns (address) {
+    function getOrganizationAddress() external view override returns (address) {
         return LibAccountOrganizationAddressStorage.getOrganizationAddress();
     }
 

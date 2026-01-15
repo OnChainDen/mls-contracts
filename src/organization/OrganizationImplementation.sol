@@ -61,7 +61,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Initialize the organization implementation with Merkle-based members and groups
      * @param params The initialization parameters struct containing all required configuration
      */
-    function initialize(InitializationParams calldata params) external initializer onlyDeployer {
+    function initialize(InitializationParams calldata params) external override initializer onlyDeployer {
         LibOrganizationInitialization.initialize(params);
     }
 
@@ -80,7 +80,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         uint256 newVotingThreshold,
         AdminAuthParams calldata authParams,
         AllAdminsInOrgProofs calldata newAdminsInOrgProofs
-    ) external onlyGuardian {
+    ) external override onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
 
@@ -109,7 +109,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @param newGuardian The address of the new guardian
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setGuardian(address newGuardian, AdminAuthParams calldata authParams) external onlyGuardian {
+    function setGuardian(address newGuardian, AdminAuthParams calldata authParams) external override onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
@@ -136,7 +136,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         OperationType operationType,
         bytes calldata operationData,
         AdminAuthParams calldata authParams
-    ) external onlyGuardian {
+    ) external override onlyGuardian {
         // Compute nonce for this operation
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
@@ -162,7 +162,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         string calldata ipfsCid,
         AdminAuthParams calldata authParams,
         AllAdminsInOrgProofs calldata allAdminsInOrgProofs
-    ) external onlyGuardian {
+    ) external override onlyGuardian {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
 
@@ -186,6 +186,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      */
     function setGroups(bytes32 newGroupsRoot, string calldata ipfsCid, AdminAuthParams calldata authParams)
         external
+        override
         onlyGuardian
     {
         // Encode the operation data for validation
@@ -211,6 +212,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      */
     function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid, AdminAuthParams calldata authParams)
         external
+        override
         onlyGuardian
     {
         // Encode the operation data for validation
@@ -236,6 +238,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      */
     function deployAccount(bytes32 create2Salt, AdminAuthParams calldata authParams)
         external
+        override
         onlyGuardian
         returns (address)
     {
@@ -261,6 +264,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      */
     function setAccountImplementation(address newImplementation, AdminAuthParams calldata authParams)
         external
+        override
         onlyGuardian
     {
         // 1. Validate admin authorization (isApproval = true for execution)
@@ -309,7 +313,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         uint256 policyId,
         bytes calldata signatures,
         ValidationProofs calldata proofs
-    ) external onlyGuardian {
+    ) external override onlyGuardian {
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
@@ -375,7 +379,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         uint256 policyId,
         bytes calldata signatures,
         ValidationProofs calldata proofs
-    ) external onlyGuardian {
+    ) external override onlyGuardian {
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
@@ -480,7 +484,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Returns the address that deployed this organization
      * @return The deployer address
      */
-    function getDeployerAddress() external view returns (address) {
+    function getDeployerAddress() external view override returns (address) {
         return LibOrganizationInitialization.getDeployerAddress();
     }
 
@@ -488,7 +492,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Checks if the organization has been initialized
      * @return True if initialized, false otherwise
      */
-    function isInitialized() external view returns (bool) {
+    function isInitialized() external view override returns (bool) {
         return LibOrganizationInitialization.isInitialized();
     }
 
@@ -496,7 +500,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Returns the current admin permission settings for the organization
      * @return The admin permission configuration including admins root, count, and voting threshold
      */
-    function adminConfig() external view returns (AdminConfig memory) {
+    function adminConfig() external view override returns (AdminConfig memory) {
         return LibOrganizationAdmin.getAdminConfig();
     }
 
@@ -504,14 +508,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Returns the current guardian address
      * @return The address of the guardian
      */
-    function guardian() external view returns (address) {
+    function guardian() external view override returns (address) {
         return LibOrganizationGuardian.getGuardian();
     }
 
     /**
      * @notice Reverts if the caller is not the guardian
      */
-    function enforceOnlyGuardian() external view {
+    function enforceOnlyGuardian() external view override {
         LibOrganizationGuardian.enforceOnlyGuardian();
     }
 
@@ -519,7 +523,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Returns the current members merkle root
      * @return The members merkle root
      */
-    function membersRoot() external view returns (bytes32) {
+    function membersRoot() external view override returns (bytes32) {
         return LibOrganizationMembers.getMembersRoot();
     }
 
@@ -529,7 +533,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @param proof The merkle proof for the address
      * @return True if the address is a verified member, false otherwise
      */
-    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool) {
+    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view override returns (bool) {
         return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
     }
 
@@ -537,7 +541,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Returns the current groups merkle root
      * @return The groups merkle root
      */
-    function groupsRoot() external view returns (bytes32) {
+    function groupsRoot() external view override returns (bytes32) {
         return LibOrganizationGroups.getGroupsRoot();
     }
 
@@ -550,6 +554,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
     function isGroupInOrg(GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
         external
         view
+        override
         returns (bool)
     {
         return LibOrganizationGroups.isGroupInOrg(groupData, groupInOrgGroupsTreeProof);
@@ -568,7 +573,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         GroupData calldata groupData,
         bytes32[] calldata groupInOrgGroupsTreeProof,
         bytes32[] calldata memberInGroupProof
-    ) external view returns (bool) {
+    ) external view override returns (bool) {
         return LibOrganizationGroups.isMemberInGroupAndGroupInOrg(
             memberAddress, groupData, groupInOrgGroupsTreeProof, memberInGroupProof
         );
@@ -578,7 +583,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @notice Returns the current global policies merkle root
      * @return The policies merkle root
      */
-    function policiesRoot() external view returns (bytes32) {
+    function policiesRoot() external view override returns (bytes32) {
         return LibOrganizationPolicyStorage.layout().policiesRoot;
     }
 
@@ -599,7 +604,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
         address destination,
         address initiator,
         bytes32[] calldata policyProof
-    ) external view returns (uint256) {
+    ) external view override returns (uint256) {
         // Verify policy exists in merkle tree
         if (!LibOrganizationPolicy.isPolicyInOrg(policyId, policy, policyProof)) {
             revert PolicyVerificationFailed(policyId);
@@ -615,7 +620,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @param nonce The nonce to check
      * @return True if the nonce has been used, false otherwise
      */
-    function isNonceUsed(uint256 nonce) external view returns (bool) {
+    function isNonceUsed(uint256 nonce) external view override returns (bool) {
         return LibOrganizationSignatures.isNonceUsed(nonce);
     }
 
@@ -629,6 +634,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
     function computeNonce(OperationType operationType, bytes calldata operationData, uint256 salt)
         external
         view
+        override
         returns (uint256)
     {
         return LibOrganizationSignatures.computeNonce(operationType, operationData, salt);
@@ -652,7 +658,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IBeacon, 
      * @param salt The salt for CREATE2 deployment
      * @return The computed address
      */
-    function computeAccountAddress(bytes32 salt) external view returns (address) {
+    function computeAccountAddress(bytes32 salt) external view override returns (address) {
         return LibOrganizationAccountFactory.computeAccountAddress(salt);
     }
 
