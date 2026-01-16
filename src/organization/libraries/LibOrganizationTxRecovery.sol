@@ -46,11 +46,12 @@ library LibOrganizationTxRecovery {
             }
         }
 
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        recoveryLayout.isRecoverySupportedForTransactionsAndERC1271 = isRecoverySupportedForTransactionsAndERC1271;
-        recoveryLayout.transactionAndERC1271RecoveryAddress = transactionAndERC1271RecoveryAddress;
-        recoveryLayout.txRecoveryTimelockDuration = txRecoveryTimelockDuration;
+        txRecovery.isSupported = isRecoverySupportedForTransactionsAndERC1271;
+        txRecovery.recoveryAddress = transactionAndERC1271RecoveryAddress;
+        txRecovery.timelockDuration = txRecoveryTimelockDuration;
     }
 
     /**
@@ -58,25 +59,26 @@ library LibOrganizationTxRecovery {
      *      Reverts if recovery is not supported or if a request is already pending.
      */
     function initiateEnableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: Recovery not supported
-        if (!recoveryLayout.isRecoverySupportedForTransactionsAndERC1271) {
+        if (!txRecovery.isSupported) {
             revert IOrganizationTxRecovery.TxRecoveryNotSupported();
         }
 
         // Case: Already enabled
-        if (recoveryLayout.isRecoveryEnabledForTransactionsAndERC1271) {
+        if (txRecovery.isEnabled) {
             revert IOrganizationTxRecovery.TxRecoveryAlreadyEnabled();
         }
 
         // Case: Already pending
-        if (recoveryLayout.pendingTxRecoveryEnableTimestamp != 0) {
+        if (txRecovery.pendingEnableTimestamp != 0) {
             revert IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending();
         }
 
-        uint256 canFinalizeAt = block.timestamp + recoveryLayout.txRecoveryTimelockDuration;
-        recoveryLayout.pendingTxRecoveryEnableTimestamp = canFinalizeAt;
+        uint256 canFinalizeAt = block.timestamp + txRecovery.timelockDuration;
+        txRecovery.pendingEnableTimestamp = canFinalizeAt;
 
         emit IOrganizationTxRecovery.TxRecoveryEnableInitiated(canFinalizeAt);
     }
@@ -86,9 +88,10 @@ library LibOrganizationTxRecovery {
      *      Reverts if no request is pending or timelock has not expired.
      */
     function finalizeEnableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        uint256 canFinalizeAt = recoveryLayout.pendingTxRecoveryEnableTimestamp;
+        uint256 canFinalizeAt = txRecovery.pendingEnableTimestamp;
 
         // Case: No pending request
         if (canFinalizeAt == 0) {
@@ -101,8 +104,8 @@ library LibOrganizationTxRecovery {
         }
 
         // Enable recovery and clear pending state
-        recoveryLayout.isRecoveryEnabledForTransactionsAndERC1271 = true;
-        recoveryLayout.pendingTxRecoveryEnableTimestamp = 0;
+        txRecovery.isEnabled = true;
+        txRecovery.pendingEnableTimestamp = 0;
 
         emit IOrganizationTxRecovery.TxRecoveryEnableFinalized();
     }
@@ -112,28 +115,30 @@ library LibOrganizationTxRecovery {
      *      Reverts if no request is pending.
      */
     function cancelEnableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: No pending request
-        if (recoveryLayout.pendingTxRecoveryEnableTimestamp == 0) {
+        if (txRecovery.pendingEnableTimestamp == 0) {
             revert IOrganizationTxRecovery.NoTxRecoveryEnablePending();
         }
 
-        recoveryLayout.pendingTxRecoveryEnableTimestamp = 0;
+        txRecovery.pendingEnableTimestamp = 0;
 
         emit IOrganizationTxRecovery.TxRecoveryEnableCancelled();
     }
 
     /**
      * @dev Immediately disables transaction and ERC1271 recovery (no timelock).
-     *      Also cancels any pending enable request (clears pendingTxRecoveryEnableTimestamp),
+     *      Also cancels any pending enable request (clears pendingEnableTimestamp),
      *      even if the timelock has already expired. This ensures recovery is fully disabled.
      */
     function disableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        recoveryLayout.isRecoveryEnabledForTransactionsAndERC1271 = false;
-        recoveryLayout.pendingTxRecoveryEnableTimestamp = 0;
+        txRecovery.isEnabled = false;
+        txRecovery.pendingEnableTimestamp = 0;
 
         emit IOrganizationTxRecovery.TxRecoveryDisabled();
     }
@@ -143,15 +148,16 @@ library LibOrganizationTxRecovery {
      *      Reverts if recovery is not both supported AND enabled.
      */
     function validateRecoveryAccountTransactionAllowedOrRevert() internal view {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: Recovery not supported
-        if (!recoveryLayout.isRecoverySupportedForTransactionsAndERC1271) {
+        if (!txRecovery.isSupported) {
             revert IOrganizationTxRecovery.TxRecoveryNotSupported();
         }
 
         // Case: Recovery not enabled
-        if (!recoveryLayout.isRecoveryEnabledForTransactionsAndERC1271) {
+        if (!txRecovery.isEnabled) {
             revert IOrganizationTxRecovery.TxRecoveryNotEnabled();
         }
     }
@@ -165,9 +171,7 @@ library LibOrganizationTxRecovery {
      * @return True if the signature is valid from the recovery address
      */
     function isValidRecoverySignature(bytes32 hash, bytes memory signature) internal view returns (bool) {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-
-        address recoveryAddress = recoveryLayout.transactionAndERC1271RecoveryAddress;
+        address recoveryAddress = LibOrganizationRecoveryStorage.layout().txRecovery.recoveryAddress;
 
         // Case: No recovery address configured
         if (recoveryAddress == address(0)) {
@@ -183,8 +187,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if msg.sender is not the tx recovery address.
      */
     function enforceOnlyTxRecoveryAddress() internal view {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-        address expected = recoveryLayout.transactionAndERC1271RecoveryAddress;
+        address expected = LibOrganizationRecoveryStorage.layout().txRecovery.recoveryAddress;
 
         if (msg.sender != expected) {
             revert IOrganizationTxRecovery.UnauthorizedTxRecoveryAddress(msg.sender, expected);
@@ -196,7 +199,7 @@ library LibOrganizationTxRecovery {
      * @return True if supported
      */
     function isRecoverySupportedForTxAndERC1271() internal view returns (bool) {
-        return LibOrganizationRecoveryStorage.layout().isRecoverySupportedForTransactionsAndERC1271;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.isSupported;
     }
 
     /**
@@ -204,7 +207,7 @@ library LibOrganizationTxRecovery {
      * @return True if enabled
      */
     function isRecoveryEnabledForTxAndERC1271() internal view returns (bool) {
-        return LibOrganizationRecoveryStorage.layout().isRecoveryEnabledForTransactionsAndERC1271;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.isEnabled;
     }
 
     /**
@@ -212,7 +215,7 @@ library LibOrganizationTxRecovery {
      * @return The recovery address
      */
     function getTxRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().transactionAndERC1271RecoveryAddress;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.recoveryAddress;
     }
 
     /**
@@ -220,7 +223,7 @@ library LibOrganizationTxRecovery {
      * @return The timestamp (0 if no pending request)
      */
     function getPendingTxRecoveryEnableTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().pendingTxRecoveryEnableTimestamp;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingEnableTimestamp;
     }
 
     /**
@@ -228,6 +231,6 @@ library LibOrganizationTxRecovery {
      * @return The duration
      */
     function getTxRecoveryTimelockDuration() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecoveryTimelockDuration;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.timelockDuration;
     }
 }

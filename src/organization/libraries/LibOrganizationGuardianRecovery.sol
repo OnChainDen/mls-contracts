@@ -39,10 +39,11 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
         }
 
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
-        recoveryLayout.guardianRecoveryAddress = guardianRecoveryAddress;
-        recoveryLayout.guardianRecoveryTimelockDuration = guardianRecoveryTimelockDuration;
+        guardianRecovery.recoveryAddress = guardianRecoveryAddress;
+        guardianRecovery.timelockDuration = guardianRecoveryTimelockDuration;
     }
 
     /**
@@ -51,10 +52,11 @@ library LibOrganizationGuardianRecovery {
      * @param newGuardian The proposed new guardian address
      */
     function initiateRecoveryGuardianUpdate(address newGuardian) internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: Already a pending recovery guardian update
-        if (recoveryLayout.recoveryPendingGuardian != address(0)) {
+        if (guardianRecovery.pendingGuardian != address(0)) {
             revert IOrganizationGuardianRecovery.RecoveryGuardianUpdateAlreadyPending();
         }
 
@@ -63,12 +65,12 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidNewGuardianAddress();
         }
 
-        uint256 canFinalizeAt = block.timestamp + recoveryLayout.guardianRecoveryTimelockDuration;
+        uint256 canFinalizeAt = block.timestamp + guardianRecovery.timelockDuration;
 
         // Set pending state in recovery storage
-        recoveryLayout.recoveryPendingGuardian = newGuardian;
-        recoveryLayout.recoveryPendingGuardianTimestamp = canFinalizeAt;
-        recoveryLayout.isRecoveryGuardianUpdateReadyForAcceptance = false;
+        guardianRecovery.pendingGuardian = newGuardian;
+        guardianRecovery.pendingGuardianTimestamp = canFinalizeAt;
+        guardianRecovery.isUpdateReadyForAcceptance = false;
 
         // Get current guardian for event
         address currentGuardian = LibOrganizationGuardianStorage.layout().guardian;
@@ -81,14 +83,15 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if no recovery guardian update is pending or timelock has not expired.
      */
     function finalizeRecoveryGuardianUpdate() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending recovery guardian update
-        if (recoveryLayout.recoveryPendingGuardian == address(0)) {
+        if (guardianRecovery.pendingGuardian == address(0)) {
             revert IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate();
         }
 
-        uint256 canFinalizeAt = recoveryLayout.recoveryPendingGuardianTimestamp;
+        uint256 canFinalizeAt = guardianRecovery.pendingGuardianTimestamp;
 
         // Case: Timelock not expired
         if (block.timestamp < canFinalizeAt) {
@@ -96,9 +99,9 @@ library LibOrganizationGuardianRecovery {
         }
 
         // Mark as ready for acceptance (new guardian must call acceptGuardianRecovery)
-        recoveryLayout.isRecoveryGuardianUpdateReadyForAcceptance = true;
+        guardianRecovery.isUpdateReadyForAcceptance = true;
 
-        emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateFinalized(recoveryLayout.recoveryPendingGuardian);
+        emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateFinalized(guardianRecovery.pendingGuardian);
     }
 
     /**
@@ -106,19 +109,20 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if no recovery guardian update is pending.
      */
     function cancelRecoveryGuardianUpdate() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending recovery guardian update
-        if (recoveryLayout.recoveryPendingGuardian == address(0)) {
+        if (guardianRecovery.pendingGuardian == address(0)) {
             revert IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate();
         }
 
-        address cancelledGuardian = recoveryLayout.recoveryPendingGuardian;
+        address cancelledGuardian = guardianRecovery.pendingGuardian;
 
         // Clear all pending state
-        recoveryLayout.recoveryPendingGuardian = address(0);
-        recoveryLayout.recoveryPendingGuardianTimestamp = 0;
-        recoveryLayout.isRecoveryGuardianUpdateReadyForAcceptance = false;
+        guardianRecovery.pendingGuardian = address(0);
+        guardianRecovery.pendingGuardianTimestamp = 0;
+        guardianRecovery.isUpdateReadyForAcceptance = false;
 
         emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateCancelled(cancelledGuardian);
     }
@@ -128,9 +132,10 @@ library LibOrganizationGuardianRecovery {
      *      Caller must be the recovery pending guardian (enforced by modifier in OrganizationImplementation).
      */
     function acceptGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
-        address pendingGuardianAddr = recoveryLayout.recoveryPendingGuardian;
+        address pendingGuardianAddr = guardianRecovery.pendingGuardian;
 
         // Case: No pending recovery guardian update
         if (pendingGuardianAddr == address(0)) {
@@ -138,7 +143,7 @@ library LibOrganizationGuardianRecovery {
         }
 
         // Case: Not ready for acceptance (finalize hasn't been called)
-        if (!recoveryLayout.isRecoveryGuardianUpdateReadyForAcceptance) {
+        if (!guardianRecovery.isUpdateReadyForAcceptance) {
             revert IOrganizationGuardianRecovery.RecoveryGuardianUpdateNotReadyForAcceptance();
         }
 
@@ -150,9 +155,9 @@ library LibOrganizationGuardianRecovery {
         guardianLayout.guardian = pendingGuardianAddr;
 
         // Clear all recovery pending state
-        recoveryLayout.recoveryPendingGuardian = address(0);
-        recoveryLayout.recoveryPendingGuardianTimestamp = 0;
-        recoveryLayout.isRecoveryGuardianUpdateReadyForAcceptance = false;
+        guardianRecovery.pendingGuardian = address(0);
+        guardianRecovery.pendingGuardianTimestamp = 0;
+        guardianRecovery.isUpdateReadyForAcceptance = false;
 
         emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateAccepted(previousGuardian, pendingGuardianAddr);
     }
@@ -162,8 +167,7 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if msg.sender is not the guardian recovery address.
      */
     function enforceOnlyGuardianRecoveryAddress() internal view {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-        address expected = recoveryLayout.guardianRecoveryAddress;
+        address expected = LibOrganizationRecoveryStorage.layout().guardianRecovery.recoveryAddress;
 
         if (msg.sender != expected) {
             revert IOrganizationGuardianRecovery.UnauthorizedGuardianRecoveryAddress(msg.sender, expected);
@@ -175,7 +179,7 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if msg.sender is not the recovery pending guardian.
      */
     function enforceOnlyRecoveryPendingGuardian() internal view {
-        address pendingGuardianAddr = LibOrganizationRecoveryStorage.layout().recoveryPendingGuardian;
+        address pendingGuardianAddr = LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingGuardian;
         if (msg.sender != pendingGuardianAddr) {
             // solhint-disable-next-line max-line-length
             revert IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance(msg.sender, pendingGuardianAddr);
@@ -187,7 +191,7 @@ library LibOrganizationGuardianRecovery {
      * @return The recovery address
      */
     function getGuardianRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecoveryAddress;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.recoveryAddress;
     }
 
     /**
@@ -195,7 +199,7 @@ library LibOrganizationGuardianRecovery {
      * @return The duration
      */
     function getGuardianRecoveryTimelockDuration() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecoveryTimelockDuration;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.timelockDuration;
     }
 
     /**
@@ -203,7 +207,7 @@ library LibOrganizationGuardianRecovery {
      * @return The pending guardian address (zero if no pending recovery update)
      */
     function getRecoveryPendingGuardian() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().recoveryPendingGuardian;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingGuardian;
     }
 
     /**
@@ -211,7 +215,7 @@ library LibOrganizationGuardianRecovery {
      * @return The timestamp when the recovery update can be finalized (0 if no pending)
      */
     function getRecoveryPendingGuardianTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().recoveryPendingGuardianTimestamp;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingGuardianTimestamp;
     }
 
     /**
@@ -219,6 +223,6 @@ library LibOrganizationGuardianRecovery {
      * @return True if the recovery update has been finalized and is waiting for the new guardian to accept
      */
     function getIsRecoveryGuardianUpdateReadyForAcceptance() internal view returns (bool) {
-        return LibOrganizationRecoveryStorage.layout().isRecoveryGuardianUpdateReadyForAcceptance;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.isUpdateReadyForAcceptance;
     }
 }

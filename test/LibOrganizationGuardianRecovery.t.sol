@@ -126,16 +126,20 @@ contract GuardianRecoveryTestHarness {
 
     function resetRecoveryStorage() external {
         LibOrganizationRecoveryStorage.Layout storage layout = LibOrganizationRecoveryStorage.layout();
-        layout.isRecoverySupportedForTransactionsAndERC1271 = false;
-        layout.transactionAndERC1271RecoveryAddress = address(0);
-        layout.guardianRecoveryAddress = address(0);
-        layout.txRecoveryTimelockDuration = 0;
-        layout.guardianRecoveryTimelockDuration = 0;
-        layout.isRecoveryEnabledForTransactionsAndERC1271 = false;
-        layout.pendingTxRecoveryEnableTimestamp = 0;
-        layout.recoveryPendingGuardian = address(0);
-        layout.recoveryPendingGuardianTimestamp = 0;
-        layout.isRecoveryGuardianUpdateReadyForAcceptance = false;
+
+        // Reset tx recovery state
+        layout.txRecovery.recoveryAddress = address(0);
+        layout.txRecovery.isSupported = false;
+        layout.txRecovery.isEnabled = false;
+        layout.txRecovery.timelockDuration = 0;
+        layout.txRecovery.pendingEnableTimestamp = 0;
+
+        // Reset guardian recovery state
+        layout.guardianRecovery.recoveryAddress = address(0);
+        layout.guardianRecovery.timelockDuration = 0;
+        layout.guardianRecovery.pendingGuardian = address(0);
+        layout.guardianRecovery.pendingGuardianTimestamp = 0;
+        layout.guardianRecovery.isUpdateReadyForAcceptance = false;
     }
 
     function resetGuardianStorage() external {
