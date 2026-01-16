@@ -114,7 +114,8 @@ library LibOrganizationTxRecovery {
 
     /**
      * @dev Immediately disables transaction and ERC1271 recovery (no timelock).
-     *      Also clears any pending enable request.
+     *      Also cancels any pending enable request (clears pendingTxRecoveryEnableTimestamp),
+     *      even if the timelock has already expired. This ensures recovery is fully disabled.
      */
     function disableTxRecovery() internal {
         LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();

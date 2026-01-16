@@ -583,6 +583,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     /**
      * @notice Immediately disables transaction and ERC1271 recovery
      * @dev Can only be called by the transaction recovery address. No timelock required.
+     *      Also cancels any pending enable request, even if the timelock has already expired.
+     *      This ensures recovery is fully disabled.
      */
     function disableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
         LibOrganizationTxRecovery.disableTxRecovery();
