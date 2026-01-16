@@ -17,11 +17,11 @@ interface IOrganizationGuardian {
      * @notice Emitted when a guardian update is initiated (timelock started)
      * @param currentGuardian The current guardian address
      * @param proposedGuardian The proposed new guardian address
-     * @param canFinalizeAt The timestamp when the update can be finalized
+     * @param canFinalizeAtTimestamp The timestamp when the update can be finalized
      */
     // solhint-disable-next-line gas-indexed-events
     event GuardianUpdateInitiated(
-        address indexed currentGuardian, address indexed proposedGuardian, uint256 canFinalizeAt
+        address indexed currentGuardian, address indexed proposedGuardian, uint256 canFinalizeAtTimestamp
     );
 
     /**
@@ -80,10 +80,10 @@ interface IOrganizationGuardian {
 
     /**
      * @notice Thrown when trying to finalize a guardian update before the timelock expires
-     * @param canFinalizeAt The timestamp when finalization becomes possible
+     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
      * @param currentTime The current block timestamp
      */
-    error GuardianUpdateTimelockNotExpired(uint256 canFinalizeAt, uint256 currentTime);
+    error GuardianUpdateTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Thrown when trying to initiate a guardian update while one is already pending

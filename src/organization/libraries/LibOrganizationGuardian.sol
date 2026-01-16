@@ -52,14 +52,14 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.GuardianUpdateAlreadyPending();
         }
 
-        uint256 canFinalizeAt = block.timestamp + guardianLayout.guardianTimelockDuration;
+        uint256 canFinalizeAtTimestamp = block.timestamp + guardianLayout.guardianTimelockDuration;
 
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
-        guardianLayout.pendingGuardianUpdateTimestamp = canFinalizeAt;
+        guardianLayout.pendingGuardianUpdateTimestamp = canFinalizeAtTimestamp;
         guardianLayout.isGuardianUpdateReadyForAcceptance = false;
 
-        emit IOrganizationGuardian.GuardianUpdateInitiated(guardianLayout.guardian, newGuardian, canFinalizeAt);
+        emit IOrganizationGuardian.GuardianUpdateInitiated(guardianLayout.guardian, newGuardian, canFinalizeAtTimestamp);
     }
 
     /**
@@ -73,11 +73,11 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.NoPendingGuardianUpdate();
         }
 
-        uint256 canFinalizeAt = guardianLayout.pendingGuardianUpdateTimestamp;
+        uint256 canFinalizeAtTimestamp = guardianLayout.pendingGuardianUpdateTimestamp;
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAt) {
-            revert IOrganizationGuardian.GuardianUpdateTimelockNotExpired(canFinalizeAt, block.timestamp);
+        if (block.timestamp < canFinalizeAtTimestamp) {
+            revert IOrganizationGuardian.GuardianUpdateTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
         }
 
         // Mark as ready for acceptance (new guardian must call acceptGuardian)

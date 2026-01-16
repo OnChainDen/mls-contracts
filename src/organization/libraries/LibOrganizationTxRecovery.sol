@@ -77,10 +77,10 @@ library LibOrganizationTxRecovery {
             revert IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending();
         }
 
-        uint256 canFinalizeAt = block.timestamp + txRecovery.timelockDuration;
-        txRecovery.pendingEnableTimestamp = canFinalizeAt;
+        uint256 canFinalizeAtTimestamp = block.timestamp + txRecovery.timelockDuration;
+        txRecovery.pendingEnableTimestamp = canFinalizeAtTimestamp;
 
-        emit IOrganizationTxRecovery.TxRecoveryEnableInitiated(canFinalizeAt);
+        emit IOrganizationTxRecovery.TxRecoveryEnableInitiated(canFinalizeAtTimestamp);
     }
 
     /**
@@ -91,16 +91,16 @@ library LibOrganizationTxRecovery {
         LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
         LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        uint256 canFinalizeAt = txRecovery.pendingEnableTimestamp;
+        uint256 canFinalizeAtTimestamp = txRecovery.pendingEnableTimestamp;
 
         // Case: No pending request
-        if (canFinalizeAt == 0) {
+        if (canFinalizeAtTimestamp == 0) {
             revert IOrganizationTxRecovery.NoTxRecoveryEnablePending();
         }
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAt) {
-            revert IOrganizationTxRecovery.TxRecoveryTimelockNotExpired(canFinalizeAt, block.timestamp);
+        if (block.timestamp < canFinalizeAtTimestamp) {
+            revert IOrganizationTxRecovery.TxRecoveryTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
         }
 
         // Enable recovery and clear pending state

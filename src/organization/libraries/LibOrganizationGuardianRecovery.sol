@@ -65,17 +65,17 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidNewGuardianAddress();
         }
 
-        uint256 canFinalizeAt = block.timestamp + guardianRecovery.timelockDuration;
+        uint256 canFinalizeAtTimestamp = block.timestamp + guardianRecovery.timelockDuration;
 
         // Set pending state in recovery storage
         guardianRecovery.pendingGuardian = newGuardian;
-        guardianRecovery.pendingGuardianTimestamp = canFinalizeAt;
+        guardianRecovery.pendingGuardianTimestamp = canFinalizeAtTimestamp;
         guardianRecovery.isUpdateReadyForAcceptance = false;
 
         // Get current guardian for event
         address currentGuardian = LibOrganizationGuardianStorage.layout().guardian;
 
-        emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateInitiated(currentGuardian, newGuardian, canFinalizeAt);
+        emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateInitiated(currentGuardian, newGuardian, canFinalizeAtTimestamp);
     }
 
     /**
@@ -91,11 +91,11 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate();
         }
 
-        uint256 canFinalizeAt = guardianRecovery.pendingGuardianTimestamp;
+        uint256 canFinalizeAtTimestamp = guardianRecovery.pendingGuardianTimestamp;
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAt) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired(canFinalizeAt, block.timestamp);
+        if (block.timestamp < canFinalizeAtTimestamp) {
+            revert IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
         }
 
         // Mark as ready for acceptance (new guardian must call acceptGuardianRecovery)

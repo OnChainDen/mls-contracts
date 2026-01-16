@@ -12,10 +12,10 @@ pragma solidity 0.8.33;
 interface IOrganizationTxRecovery {
     /**
      * @notice Emitted when transaction recovery enable is initiated (timelock started)
-     * @param canFinalizeAt The timestamp when the enable can be finalized
+     * @param canFinalizeAtTimestamp The timestamp when the enable can be finalized
      */
     // solhint-disable-next-line gas-indexed-events
-    event TxRecoveryEnableInitiated(uint256 canFinalizeAt);
+    event TxRecoveryEnableInitiated(uint256 canFinalizeAtTimestamp);
 
     /**
      * @notice Emitted when transaction recovery is enabled (timelock completed)
@@ -71,10 +71,10 @@ interface IOrganizationTxRecovery {
 
     /**
      * @notice Thrown when trying to finalize a tx recovery enable before the timelock expires
-     * @param canFinalizeAt The timestamp when finalization becomes possible
+     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
      * @param currentTime The current block timestamp
      */
-    error TxRecoveryTimelockNotExpired(uint256 canFinalizeAt, uint256 currentTime);
+    error TxRecoveryTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Thrown when trying to initiate a tx recovery enable while one is already pending

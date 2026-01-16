@@ -19,11 +19,11 @@ interface IOrganizationGuardianRecovery {
      * @notice Emitted when a recovery guardian update is initiated (timelock started)
      * @param currentGuardian The current guardian address
      * @param proposedGuardian The proposed new guardian address
-     * @param canFinalizeAt The timestamp when the update can be finalized
+     * @param canFinalizeAtTimestamp The timestamp when the update can be finalized
      */
     // solhint-disable-next-line gas-indexed-events
     event RecoveryGuardianUpdateInitiated(
-        address indexed currentGuardian, address indexed proposedGuardian, uint256 canFinalizeAt
+        address indexed currentGuardian, address indexed proposedGuardian, uint256 canFinalizeAtTimestamp
     );
 
     /**
@@ -69,10 +69,10 @@ interface IOrganizationGuardianRecovery {
 
     /**
      * @notice Thrown when trying to finalize a recovery guardian update before the timelock expires
-     * @param canFinalizeAt The timestamp when finalization becomes possible
+     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
      * @param currentTime The current block timestamp
      */
-    error GuardianRecoveryTimelockNotExpired(uint256 canFinalizeAt, uint256 currentTime);
+    error GuardianRecoveryTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Thrown when there's no pending recovery guardian update
