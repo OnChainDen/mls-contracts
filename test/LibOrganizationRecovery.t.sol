@@ -39,6 +39,7 @@ contract RecoveryTestHarness {
     }
 
     function acceptGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.enforceOnlyRecoveryPendingGuardian();
         LibOrganizationGuardianRecovery.acceptGuardianRecovery();
     }
 
@@ -50,13 +51,8 @@ contract RecoveryTestHarness {
     // Transaction Recovery Library Functions
     // ================================
 
-    function initializeTxRecovery(
-        bool isRecoverySupportedForTransactionsAndERC1271,
-        address transactionAndERC1271RecoveryAddress
-    ) external {
-        LibOrganizationTxRecovery.initializeTxRecovery(
-            isRecoverySupportedForTransactionsAndERC1271, transactionAndERC1271RecoveryAddress
-        );
+    function initializeTxRecovery(bool isTxRecoverySupported, address transactionAndERC1271RecoveryAddress) external {
+        LibOrganizationTxRecovery.initializeTxRecovery(isTxRecoverySupported, transactionAndERC1271RecoveryAddress);
     }
 
     function initiateEnableTransactionAndERC1271Recovery() external {
@@ -100,6 +96,7 @@ contract RecoveryTestHarness {
     }
 
     function acceptGuardian() external {
+        LibOrganizationGuardian.enforceOnlyPendingGuardian();
         LibOrganizationGuardian.acceptGuardian();
     }
 
@@ -218,8 +215,7 @@ contract LibOrganizationRecoveryTest is Test {
 
         // Initialize tx recovery configuration
         harness.initializeTxRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: true,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS
+            isTxRecoverySupported: true, transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS
         });
     }
 
@@ -284,9 +280,7 @@ contract LibOrganizationRecoveryTest is Test {
         harness.resetRecoveryStorage();
 
         vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
-        harness.initializeTxRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: true, transactionAndERC1271RecoveryAddress: address(0)
-        });
+        harness.initializeTxRecovery({isTxRecoverySupported: true, transactionAndERC1271RecoveryAddress: address(0)});
     }
 
     function test_initializeTxRecovery_revertsOnNonZeroTxRecoveryAddressWhenNotSupported() public {
@@ -294,8 +288,7 @@ contract LibOrganizationRecoveryTest is Test {
 
         vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
         harness.initializeTxRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: false,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS
+            isTxRecoverySupported: false, transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS
         });
     }
 
@@ -498,8 +491,14 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_acceptGuardianRecovery_revertsIfNoPending() public {
+        // When there's no pending guardian, pendingGuardianAddr is address(0)
+        // The modifier check fails first with UnauthorizedRecoveryGuardianAcceptance
         vm.prank(NEW_GUARDIAN);
-        vm.expectRevert(IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance.selector, NEW_GUARDIAN, address(0)
+            )
+        );
         harness.acceptGuardianRecovery();
     }
 

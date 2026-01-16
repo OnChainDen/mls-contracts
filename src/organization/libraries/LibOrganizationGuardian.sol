@@ -94,7 +94,7 @@ library LibOrganizationGuardian {
 
     /**
      * @dev Accepts the guardian role (completes the normal flow update).
-     *      Can only be called by the pending guardian after the update has been finalized.
+     *      Caller must be the pending guardian (enforced by modifier in OrganizationImplementation).
      */
     function acceptGuardian() internal {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
@@ -109,11 +109,6 @@ library LibOrganizationGuardian {
         // Case: Not ready for acceptance (finalize hasn't been called)
         if (!guardianLayout.isGuardianUpdateReadyForAcceptance) {
             revert IOrganizationGuardian.GuardianUpdateNotReadyForAcceptance();
-        }
-
-        // Case: Caller is not the pending guardian
-        if (msg.sender != pendingGuardianAddr) {
-            revert IOrganizationGuardian.UnauthorizedGuardianAcceptance(msg.sender, pendingGuardianAddr);
         }
 
         address previousGuardian = guardianLayout.guardian;
@@ -137,6 +132,17 @@ library LibOrganizationGuardian {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
         if (msg.sender != guardianLayout.guardian) {
             revert IOrganizationGuardian.UnauthorizedGuardian(msg.sender, guardianLayout.guardian);
+        }
+    }
+
+    /**
+     * @dev Enforces that the caller is the pending guardian address.
+     *      This function will revert if msg.sender is not the pending guardian.
+     */
+    function enforceOnlyPendingGuardian() internal view {
+        address pendingGuardianAddr = LibOrganizationGuardianStorage.layout().pendingGuardian;
+        if (msg.sender != pendingGuardianAddr) {
+            revert IOrganizationGuardian.UnauthorizedGuardianAcceptance(msg.sender, pendingGuardianAddr);
         }
     }
 

@@ -123,7 +123,7 @@ library LibOrganizationGuardianRecovery {
 
     /**
      * @dev Accepts the guardian role via recovery flow (completes the recovery update).
-     *      Can only be called by the recovery pending guardian after the update has been finalized.
+     *      Caller must be the recovery pending guardian (enforced by modifier in OrganizationImplementation).
      */
     function acceptGuardianRecovery() internal {
         LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
@@ -138,15 +138,6 @@ library LibOrganizationGuardianRecovery {
         // Case: Not ready for acceptance (finalize hasn't been called)
         if (!recoveryLayout.isRecoveryGuardianUpdateReadyForAcceptance) {
             revert IOrganizationGuardianRecovery.RecoveryGuardianUpdateNotReadyForAcceptance();
-        }
-
-        // Case: Caller is not the pending guardian
-        if (msg.sender != pendingGuardianAddr) {
-            // forgefmt: skip-next-item
-            revert IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance(
-                msg.sender,
-                pendingGuardianAddr
-            );
         }
 
         // Get current guardian for event
@@ -174,6 +165,18 @@ library LibOrganizationGuardianRecovery {
 
         if (msg.sender != expected) {
             revert IOrganizationGuardianRecovery.UnauthorizedGuardianRecoveryAddress(msg.sender, expected);
+        }
+    }
+
+    /**
+     * @dev Enforces that the caller is the recovery pending guardian address.
+     *      Reverts if msg.sender is not the recovery pending guardian.
+     */
+    function enforceOnlyRecoveryPendingGuardian() internal view {
+        address pendingGuardianAddr = LibOrganizationRecoveryStorage.layout().recoveryPendingGuardian;
+        if (msg.sender != pendingGuardianAddr) {
+            // solhint-disable-next-line max-line-length
+            revert IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance(msg.sender, pendingGuardianAddr);
         }
     }
 

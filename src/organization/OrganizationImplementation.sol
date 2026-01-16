@@ -73,6 +73,22 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
+     * @notice Modifier that enforces only the pending guardian can call the function
+     */
+    modifier onlyPendingGuardian() {
+        LibOrganizationGuardian.enforceOnlyPendingGuardian();
+        _;
+    }
+
+    /**
+     * @notice Modifier that enforces only the recovery pending guardian can call the function
+     */
+    modifier onlyRecoveryPendingGuardian() {
+        LibOrganizationGuardianRecovery.enforceOnlyRecoveryPendingGuardian();
+        _;
+    }
+
+    /**
      * @notice Initialize the organization implementation with Merkle-based members and groups
      * @param params The initialization parameters struct containing all required configuration
      */
@@ -196,7 +212,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Accepts the guardian role (completes the update)
      * @dev Can only be called by the pending guardian after the update has been finalized.
      */
-    function acceptGuardian() external override {
+    function acceptGuardian() external override onlyPendingGuardian {
         LibOrganizationGuardian.acceptGuardian();
     }
 
@@ -646,7 +662,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Accepts the guardian role via recovery (completes the recovery update)
      * @dev Can only be called by the recovery pending guardian after the update has been finalized.
      */
-    function acceptGuardianRecovery() external override {
+    function acceptGuardianRecovery() external override onlyRecoveryPendingGuardian {
         LibOrganizationGuardianRecovery.acceptGuardianRecovery();
     }
 

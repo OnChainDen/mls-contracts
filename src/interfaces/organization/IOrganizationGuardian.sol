@@ -19,6 +19,7 @@ interface IOrganizationGuardian {
      * @param proposedGuardian The proposed new guardian address
      * @param canFinalizeAt The timestamp when the update can be finalized
      */
+    // solhint-disable-next-line gas-indexed-events
     event GuardianUpdateInitiated(
         address indexed currentGuardian, address indexed proposedGuardian, uint256 canFinalizeAt
     );

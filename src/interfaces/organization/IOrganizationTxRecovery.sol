@@ -14,6 +14,7 @@ interface IOrganizationTxRecovery {
      * @notice Emitted when transaction recovery enable is initiated (timelock started)
      * @param canFinalizeAt The timestamp when the enable can be finalized
      */
+    // solhint-disable-next-line gas-indexed-events
     event TxRecoveryEnableInitiated(uint256 canFinalizeAt);
 
     /**
@@ -38,6 +39,7 @@ interface IOrganizationTxRecovery {
      * @param value The ETH value sent
      * @param data The transaction calldata
      */
+    // solhint-disable-next-line gas-indexed-events
     event RecoveryAccountTransactionExecuted(address indexed account, address indexed to, uint256 value, bytes data);
 
     /**
