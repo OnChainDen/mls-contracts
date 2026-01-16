@@ -24,6 +24,7 @@ import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGua
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationRecovery} from "organization/libraries/LibOrganizationRecovery.sol";
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {
     LibOrganizationAccountFactoryStorage
@@ -51,6 +52,22 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      */
     modifier onlyDeployer() {
         LibOrganizationInitialization.enforceOnlyDeployer();
+        _;
+    }
+
+    /**
+     * @notice Modifier that enforces only the transaction recovery address can call the function
+     */
+    modifier onlyTxRecoveryAddress() {
+        LibOrganizationRecovery.enforceOnlyTxRecoveryAddress();
+        _;
+    }
+
+    /**
+     * @notice Modifier that enforces only the guardian recovery address can call the function
+     */
+    modifier onlyGuardianRecoveryAddress() {
+        LibOrganizationRecovery.enforceOnlyGuardianRecoveryAddress();
         _;
     }
 
@@ -102,11 +119,18 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
-     * @notice Sets a new guardian address for the organization
-     * @param newGuardian The address of the new guardian
+     * @notice Initiates a guardian update (starts timelock)
+     * @dev Can only be called by the current guardian with admin authorization.
+     *      After timelock expires, finalizeGuardianUpdate must be called, then the new guardian must call
+     * acceptGuardian.
+     * @param newGuardian The proposed new guardian address
      * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
      */
-    function setGuardian(address newGuardian, AdminAuthParams calldata authParams) external override onlyGuardian {
+    function initiateGuardianUpdate(address newGuardian, AdminAuthParams calldata authParams)
+        external
+        override
+        onlyGuardian
+    {
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(newGuardian);
 
@@ -118,7 +142,61 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
             authParams: authParams
         });
 
-        LibOrganizationGuardian.setGuardian(newGuardian);
+        LibOrganizationGuardian.initiateGuardianUpdate(newGuardian);
+    }
+
+    /**
+     * @notice Finalizes a guardian update (after timelock, ready for new guardian to accept)
+     * @dev Can only be called by the current guardian with admin authorization after timelock expires.
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     */
+    function finalizeGuardianUpdate(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Get pending guardian for operation data
+        address pendingGuardianAddr = LibOrganizationGuardian.getPendingGuardian();
+
+        // Encode the operation data for validation (same as initiate)
+        bytes memory operationData = abi.encode(pendingGuardianAddr);
+
+        // Validate that the current admin has authorized this operation
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.UpdateGuardian,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        LibOrganizationGuardian.finalizeGuardianUpdate();
+    }
+
+    /**
+     * @notice Cancels a pending guardian update
+     * @dev Can only be called by the current guardian with admin authorization.
+     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     */
+    function cancelGuardianUpdate(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Get pending guardian for operation data
+        address pendingGuardianAddr = LibOrganizationGuardian.getPendingGuardian();
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingGuardianAddr);
+
+        // Validate that the current admin has authorized this operation (isApproval = false for cancellation)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.UpdateGuardian,
+            operationData: operationData,
+            isApproval: false,
+            authParams: authParams
+        });
+
+        LibOrganizationGuardian.cancelGuardianUpdate();
+    }
+
+    /**
+     * @notice Accepts the guardian role (completes the update)
+     * @dev Can only be called by the pending guardian after the update has been finalized.
+     */
+    function acceptGuardian() external override {
+        LibOrganizationGuardian.acceptGuardian();
     }
 
     /**
@@ -478,6 +556,123 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
+     * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
+     * @dev Can only be called by the transaction recovery address.
+     */
+    function initiateEnableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
+        LibOrganizationRecovery.initiateEnableTransactionAndERC1271Recovery();
+    }
+
+    /**
+     * @notice Finalizes enabling transaction and ERC1271 recovery (after timelock)
+     * @dev Can only be called by the transaction recovery address after timelock expires.
+     */
+    function finalizeEnableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
+        LibOrganizationRecovery.finalizeEnableTransactionAndERC1271Recovery();
+    }
+
+    /**
+     * @notice Cancels a pending transaction and ERC1271 recovery enable
+     * @dev Can only be called by the transaction recovery address.
+     */
+    function cancelEnableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
+        LibOrganizationRecovery.cancelEnableTransactionAndERC1271Recovery();
+    }
+
+    /**
+     * @notice Immediately disables transaction and ERC1271 recovery
+     * @dev Can only be called by the transaction recovery address. No timelock required.
+     */
+    function disableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
+        LibOrganizationRecovery.disableTransactionAndERC1271Recovery();
+    }
+
+    /**
+     * @notice Initiates enabling guardian recovery (starts timelock)
+     * @dev Can only be called by the guardian recovery address.
+     */
+    function initiateEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.initiateEnableGuardianRecovery();
+    }
+
+    /**
+     * @notice Finalizes enabling guardian recovery (after timelock)
+     * @dev Can only be called by the guardian recovery address after timelock expires.
+     */
+    function finalizeEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.finalizeEnableGuardianRecovery();
+    }
+
+    /**
+     * @notice Cancels a pending guardian recovery enable
+     * @dev Can only be called by the guardian recovery address.
+     */
+    function cancelEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.cancelEnableGuardianRecovery();
+    }
+
+    /**
+     * @notice Immediately disables guardian recovery
+     * @dev Can only be called by the guardian recovery address. No timelock required.
+     */
+    function disableGuardianRecovery() external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.disableGuardianRecovery();
+    }
+
+    /**
+     * @notice Executes an account transaction via recovery (bypassing guardian and policy checks)
+     * @dev Can only be called by the transaction recovery address.
+     *      Recovery must be both supported AND enabled.
+     * @param account The account to execute the transaction from
+     * @param to The destination address
+     * @param value The ETH value to send
+     * @param data The transaction calldata
+     */
+    function executeRecoveryAccountTransaction(address account, address to, uint256 value, bytes calldata data)
+        external
+        override
+        onlyTxRecoveryAddress
+    {
+        // Validate recovery is allowed
+        LibOrganizationRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
+
+        // Verify the account is deployed by this organization
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
+
+        // Emit event before external call (CEI pattern)
+        emit RecoveryAccountTransactionExecuted(account, to, value, data);
+
+        // Execute the transaction on the account (using nonce=0 and policyId=0 for recovery)
+        IAccount(payable(account)).executeTransaction({to: to, value: value, data: data, nonce: 0, policyId: 0});
+    }
+
+    /**
+     * @notice Initiates a recovery guardian update (starts timelock)
+     * @dev Can only be called by the guardian recovery address.
+     *      Guardian recovery must be enabled.
+     * @param newGuardian The proposed new guardian address
+     */
+    function initiateRecoveryGuardianUpdate(address newGuardian) external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.initiateRecoveryGuardianUpdate(newGuardian);
+    }
+
+    /**
+     * @notice Finalizes a recovery guardian update (after timelock, ready for new guardian to accept)
+     * @dev Can only be called by the guardian recovery address after timelock expires.
+     */
+    function finalizeRecoveryGuardianUpdate() external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.finalizeRecoveryGuardianUpdate();
+    }
+
+    /**
+     * @notice Cancels a pending recovery guardian update
+     * @dev Can only be called by the guardian recovery address.
+     */
+    function cancelRecoveryGuardianUpdate() external override onlyGuardianRecoveryAddress {
+        LibOrganizationRecovery.cancelRecoveryGuardianUpdate();
+    }
+
+    /**
      * @notice Returns the address that deployed this organization
      * @return The deployer address
      */
@@ -507,6 +702,102 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      */
     function guardian() external view override returns (address) {
         return LibOrganizationGuardian.getGuardian();
+    }
+
+    /**
+     * @notice Returns the pending guardian address
+     * @return The address of the pending guardian (zero if no pending update)
+     */
+    function pendingGuardian() external view override returns (address) {
+        return LibOrganizationGuardian.getPendingGuardian();
+    }
+
+    /**
+     * @notice Returns the timestamp when the pending guardian update can be finalized
+     * @return The timestamp (0 if no pending update)
+     */
+    function pendingGuardianUpdateTimestamp() external view override returns (uint256) {
+        return LibOrganizationGuardian.getPendingGuardianUpdateTimestamp();
+    }
+
+    /**
+     * @notice Returns whether the guardian update is ready for acceptance
+     * @return True if the update has been finalized and is waiting for the new guardian to accept
+     */
+    function isGuardianUpdateReadyForAcceptance() external view override returns (bool) {
+        return LibOrganizationGuardian.getIsGuardianUpdateReadyForAcceptance();
+    }
+
+    /**
+     * @notice Returns whether the pending guardian update was initiated via recovery
+     * @return True if initiated via recovery flow
+     */
+    function isRecoveryGuardianUpdate() external view override returns (bool) {
+        return LibOrganizationGuardian.getIsRecoveryGuardianUpdate();
+    }
+
+    /**
+     * @notice Returns whether recovery is supported for transactions and ERC1271 signatures
+     * @return True if recovery is supported, false otherwise
+     */
+    function isRecoverySupportedForTransactionsAndERC1271() external view override returns (bool) {
+        return LibOrganizationRecovery.isRecoverySupportedForTransactionsAndERC1271();
+    }
+
+    /**
+     * @notice Returns whether recovery is enabled for transactions and ERC1271 signatures
+     * @return True if recovery is enabled, false otherwise
+     */
+    function isRecoveryEnabledForTransactionsAndERC1271() external view override returns (bool) {
+        return LibOrganizationRecovery.isRecoveryEnabledForTransactionsAndERC1271();
+    }
+
+    /**
+     * @notice Returns the transaction and ERC1271 recovery address
+     * @return The recovery address
+     */
+    function transactionAndERC1271RecoveryAddress() external view override returns (address) {
+        return LibOrganizationRecovery.getTransactionAndERC1271RecoveryAddress();
+    }
+
+    /**
+     * @notice Returns whether recovery is enabled for guardian updates
+     * @return True if recovery is enabled, false otherwise
+     */
+    function isRecoveryEnabledForGuardianUpdate() external view override returns (bool) {
+        return LibOrganizationRecovery.isRecoveryEnabledForGuardianUpdate();
+    }
+
+    /**
+     * @notice Returns the guardian recovery address
+     * @return The recovery address
+     */
+    function guardianRecoveryAddress() external view override returns (address) {
+        return LibOrganizationRecovery.getGuardianRecoveryAddress();
+    }
+
+    /**
+     * @notice Returns the recovery timelock duration in seconds
+     * @return The timelock duration
+     */
+    function recoveryTimelockDuration() external view override returns (uint256) {
+        return LibOrganizationRecovery.getRecoveryTimelockDuration();
+    }
+
+    /**
+     * @notice Returns the timestamp when pending tx recovery enable can be finalized
+     * @return The timestamp (0 if no pending request)
+     */
+    function pendingTxRecoveryEnableTimestamp() external view override returns (uint256) {
+        return LibOrganizationRecovery.getPendingTxRecoveryEnableTimestamp();
+    }
+
+    /**
+     * @notice Returns the timestamp when pending guardian recovery enable can be finalized
+     * @return The timestamp (0 if no pending request)
+     */
+    function pendingGuardianRecoveryEnableTimestamp() external view override returns (uint256) {
+        return LibOrganizationRecovery.getPendingGuardianRecoveryEnableTimestamp();
     }
 
     /**

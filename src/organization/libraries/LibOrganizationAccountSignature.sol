@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
+import {SignatureChecker} from "libraries/SignatureChecker.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationRecovery} from "organization/libraries/LibOrganizationRecovery.sol";
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
-
-import {SignatureChecker} from "libraries/SignatureChecker.sol";
-
-import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title Lib Organization Account Signature
@@ -20,12 +20,13 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
  *      This library enables smart accounts to sign messages in a policy-controlled manner.
  *      When an external contract calls isValidSignature() on an Account, the Account
  *      delegates to the Organization, which uses this library to validate that:
- *      1. The signature request hasn't expired
- *      2. The guardian has approved the signature request
- *      3. A valid policy exists for signature operations
- *      4. The policy applies to the requesting account
- *      5. The initiator is authorized by the policy
- *      6. Required approvals have been collected (for manual approval policies)
+ *      1. (Recovery path) If recovery is supported AND enabled, check if signature is from recovery address
+ *      2. The signature request hasn't expired
+ *      3. The guardian has approved the signature request
+ *      4. A valid policy exists for signature operations
+ *      5. The policy applies to the requesting account
+ *      6. The initiator is authorized by the policy
+ *      7. Required approvals have been collected (for manual approval policies)
  *
  *      Policy existence is verified via merkle proof. Policy data is provided in calldata.
  * @author Den Technologies Inc
@@ -40,7 +41,8 @@ library LibOrganizationAccountSignature {
 
     /**
      * @dev Validates an ERC-1271 signature for a given account.
-     *      The signature parameter is ABI-encoded and contains:
+     *      First checks for recovery signatures (if recovery is supported AND enabled).
+     *      For normal signatures, the signature parameter is ABI-encoded and contains:
      *      - policyId: ID of the policy authorizing this signature
      *      - expirationTimestamp: When the signature request expires
      *      - approverSignatures: Concatenated signatures (initiator + reviewers)
@@ -48,7 +50,8 @@ library LibOrganizationAccountSignature {
      *      - proofs: Merkle proofs and policy data for validation
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
-     * @param signature ABI-encoded signature data containing policy info and proofs
+     * @param signature ABI-encoded signature data containing policy info and proofs,
+     *                  or a raw recovery signature if using recovery mode
      * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
      */
     function isValidSignature(address account, bytes32 hash, bytes memory signature)
@@ -56,6 +59,19 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4 magicValue)
     {
+        // Check for recovery signature first - must be BOTH supported AND enabled
+        // Recovery signatures bypass all guardian and policy checks
+        if (
+            LibOrganizationRecovery.isRecoverySupportedForTransactionsAndERC1271()
+                && LibOrganizationRecovery.isRecoveryEnabledForTransactionsAndERC1271()
+        ) {
+            if (LibOrganizationRecovery.isValidRecoverySignature(hash, signature)) {
+                return ERC1271_MAGIC_VALUE;
+            }
+            // If recovery signature check fails, fall through to normal validation
+        }
+
+        // Normal signature validation path
         // Decode the packed signature data
         (
             uint256 policyId,

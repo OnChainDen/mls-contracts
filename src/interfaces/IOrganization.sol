@@ -12,6 +12,7 @@ import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardi
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
+import {IOrganizationRecovery} from "interfaces/organization/IOrganizationRecovery.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 // solhint-disable-next-line no-unused-import
@@ -37,7 +38,8 @@ interface IOrganization is
     IOrganizationAccountTransaction,
     IOrganizationAccountSignature,
     IOrganizationSignatures,
-    IOrganizationInitialization
+    IOrganizationInitialization,
+    IOrganizationRecovery
 {
     // ═══════════════════════════════════════════════════════════════════════════
     // Errors (OrganizationImplementation-specific errors that don't belong to modules)

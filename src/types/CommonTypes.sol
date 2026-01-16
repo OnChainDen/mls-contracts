@@ -48,6 +48,11 @@ enum OperationType {
  * @param groupsRoot The initial Merkle root for all groups
  * @param membersIpfsCid The IPFS CID where full members data is stored
  * @param groupsIpfsCid The IPFS CID where full groups data is stored
+ * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
+ * @param transactionAndERC1271RecoveryAddress The privileged address for tx/signature recovery (must be set if
+ * supported)
+ * @param guardianRecoveryAddress The privileged address for guardian recovery (must always be set)
+ * @param recoveryTimelockDuration The duration in seconds for recovery timelocks
  */
 struct InitializationParams {
     bytes32 adminsRoot;
@@ -61,4 +66,9 @@ struct InitializationParams {
     bytes32 groupsRoot;
     string membersIpfsCid;
     string groupsIpfsCid;
+    // Recovery configuration
+    bool isRecoverySupportedForTransactionsAndERC1271;
+    address transactionAndERC1271RecoveryAddress;
+    address guardianRecoveryAddress;
+    uint256 recoveryTimelockDuration;
 }

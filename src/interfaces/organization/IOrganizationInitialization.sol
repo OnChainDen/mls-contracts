@@ -25,6 +25,10 @@ interface IOrganizationInitialization {
      * @param groupsRoot The initial groups Merkle root
      * @param membersIpfsCid The IPFS CID for members data
      * @param groupsIpfsCid The IPFS CID for groups data
+     * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
+     * @param transactionAndERC1271RecoveryAddress The tx/signature recovery address
+     * @param guardianRecoveryAddress The guardian recovery address
+     * @param recoveryTimelockDuration The recovery timelock duration in seconds
      */
     event OrganizationInitialized(
         bytes32 adminsRoot,
@@ -35,7 +39,11 @@ interface IOrganizationInitialization {
         bytes32 membersRoot,
         bytes32 groupsRoot,
         string membersIpfsCid,
-        string groupsIpfsCid
+        string groupsIpfsCid,
+        bool isRecoverySupportedForTransactionsAndERC1271,
+        address transactionAndERC1271RecoveryAddress,
+        address guardianRecoveryAddress,
+        uint256 recoveryTimelockDuration
     );
 
     // ═══════════════════════════════════════════════════════════════════════════
