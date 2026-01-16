@@ -142,8 +142,11 @@ library LibOrganizationGuardianRecovery {
 
         // Case: Caller is not the pending guardian
         if (msg.sender != pendingGuardianAddr) {
-            // solhint-disable-next-line max-line-length
-            revert IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance(msg.sender, pendingGuardianAddr);
+            // forgefmt: skip-next-item
+            revert IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance(
+                msg.sender,
+                pendingGuardianAddr
+            );
         }
 
         // Get current guardian for event
