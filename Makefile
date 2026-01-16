@@ -46,6 +46,10 @@ lint:
 analyze:
 	slither .
 
+# Sizes: Checks the sizes of the contracts
+sizes:
+	forge build --sizes
+
 # Check: The "CI Mode" - Runs everything
 # This is what you run before pushing code.
-check: format lint analyze test
+check: format lint analyze sizes test 
