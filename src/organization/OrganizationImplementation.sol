@@ -21,11 +21,12 @@ import {LibOrganizationAccountTransaction} from "organization/libraries/LibOrgan
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
+import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationRecovery} from "organization/libraries/LibOrganizationRecovery.sol";
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
@@ -59,7 +60,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Modifier that enforces only the transaction recovery address can call the function
      */
     modifier onlyTxRecoveryAddress() {
-        LibOrganizationRecovery.enforceOnlyTxRecoveryAddress();
+        LibOrganizationTxRecovery.enforceOnlyTxRecoveryAddress();
         _;
     }
 
@@ -67,7 +68,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Modifier that enforces only the guardian recovery address can call the function
      */
     modifier onlyGuardianRecoveryAddress() {
-        LibOrganizationRecovery.enforceOnlyGuardianRecoveryAddress();
+        LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress();
         _;
     }
 
@@ -560,7 +561,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the transaction recovery address.
      */
     function initiateEnableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
-        LibOrganizationRecovery.initiateEnableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.initiateEnableTxRecovery();
     }
 
     /**
@@ -568,7 +569,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the transaction recovery address after timelock expires.
      */
     function finalizeEnableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
-        LibOrganizationRecovery.finalizeEnableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.finalizeEnableTxRecovery();
     }
 
     /**
@@ -576,7 +577,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the transaction recovery address.
      */
     function cancelEnableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
-        LibOrganizationRecovery.cancelEnableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.cancelEnableTxRecovery();
     }
 
     /**
@@ -584,7 +585,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the transaction recovery address. No timelock required.
      */
     function disableTransactionAndERC1271Recovery() external override onlyTxRecoveryAddress {
-        LibOrganizationRecovery.disableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.disableTxRecovery();
     }
 
     /**
@@ -592,7 +593,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the guardian recovery address.
      */
     function initiateEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.initiateEnableGuardianRecovery();
+        LibOrganizationGuardianRecovery.initiateEnableGuardianRecovery();
     }
 
     /**
@@ -600,7 +601,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the guardian recovery address after timelock expires.
      */
     function finalizeEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.finalizeEnableGuardianRecovery();
+        LibOrganizationGuardianRecovery.finalizeEnableGuardianRecovery();
     }
 
     /**
@@ -608,7 +609,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the guardian recovery address.
      */
     function cancelEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.cancelEnableGuardianRecovery();
+        LibOrganizationGuardianRecovery.cancelEnableGuardianRecovery();
     }
 
     /**
@@ -616,7 +617,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the guardian recovery address. No timelock required.
      */
     function disableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.disableGuardianRecovery();
+        LibOrganizationGuardianRecovery.disableGuardianRecovery();
     }
 
     /**
@@ -634,7 +635,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
         onlyTxRecoveryAddress
     {
         // Validate recovery is allowed
-        LibOrganizationRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
+        LibOrganizationTxRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
 
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
@@ -653,7 +654,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @param newGuardian The proposed new guardian address
      */
     function initiateRecoveryGuardianUpdate(address newGuardian) external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.initiateRecoveryGuardianUpdate(newGuardian);
+        LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate(newGuardian);
     }
 
     /**
@@ -661,7 +662,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the guardian recovery address after timelock expires.
      */
     function finalizeRecoveryGuardianUpdate() external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.finalizeRecoveryGuardianUpdate();
+        LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate();
     }
 
     /**
@@ -669,7 +670,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @dev Can only be called by the guardian recovery address.
      */
     function cancelRecoveryGuardianUpdate() external override onlyGuardianRecoveryAddress {
-        LibOrganizationRecovery.cancelRecoveryGuardianUpdate();
+        LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate();
     }
 
     /**
@@ -741,7 +742,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return True if recovery is supported, false otherwise
      */
     function isRecoverySupportedForTransactionsAndERC1271() external view override returns (bool) {
-        return LibOrganizationRecovery.isRecoverySupportedForTransactionsAndERC1271();
+        return LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271();
     }
 
     /**
@@ -749,7 +750,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return True if recovery is enabled, false otherwise
      */
     function isRecoveryEnabledForTransactionsAndERC1271() external view override returns (bool) {
-        return LibOrganizationRecovery.isRecoveryEnabledForTransactionsAndERC1271();
+        return LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271();
     }
 
     /**
@@ -757,7 +758,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return The recovery address
      */
     function transactionAndERC1271RecoveryAddress() external view override returns (address) {
-        return LibOrganizationRecovery.getTransactionAndERC1271RecoveryAddress();
+        return LibOrganizationTxRecovery.getTxRecoveryAddress();
     }
 
     /**
@@ -765,7 +766,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return True if recovery is enabled, false otherwise
      */
     function isRecoveryEnabledForGuardianUpdate() external view override returns (bool) {
-        return LibOrganizationRecovery.isRecoveryEnabledForGuardianUpdate();
+        return LibOrganizationGuardianRecovery.isRecoveryEnabledForGuardianUpdate();
     }
 
     /**
@@ -773,7 +774,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return The recovery address
      */
     function guardianRecoveryAddress() external view override returns (address) {
-        return LibOrganizationRecovery.getGuardianRecoveryAddress();
+        return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
     }
 
     /**
@@ -781,7 +782,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return The timelock duration
      */
     function recoveryTimelockDuration() external view override returns (uint256) {
-        return LibOrganizationRecovery.getRecoveryTimelockDuration();
+        return LibOrganizationGuardianRecovery.getRecoveryTimelockDuration();
     }
 
     /**
@@ -789,7 +790,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return The timestamp (0 if no pending request)
      */
     function pendingTxRecoveryEnableTimestamp() external view override returns (uint256) {
-        return LibOrganizationRecovery.getPendingTxRecoveryEnableTimestamp();
+        return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
     }
 
     /**
@@ -797,7 +798,7 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @return The timestamp (0 if no pending request)
      */
     function pendingGuardianRecoveryEnableTimestamp() external view override returns (uint256) {
-        return LibOrganizationRecovery.getPendingGuardianRecoveryEnableTimestamp();
+        return LibOrganizationGuardianRecovery.getPendingGuardianRecoveryEnableTimestamp();
     }
 
     /**

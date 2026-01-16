@@ -5,9 +5,11 @@ import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {Test} from "forge-std/Test.sol";
 
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
-import {IOrganizationRecovery} from "interfaces/organization/IOrganizationRecovery.sol";
+import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
+import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
-import {LibOrganizationRecovery} from "organization/libraries/LibOrganizationRecovery.sol";
+import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 
@@ -17,77 +19,80 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
  */
 contract RecoveryTestHarness {
     // ================================
-    // Recovery Library Functions
+    // Guardian Recovery Library Functions
     // ================================
 
-    function initializeRecovery(
+    function initializeGuardianRecovery(address guardianRecoveryAddress, uint256 recoveryTimelockDuration) external {
+        LibOrganizationGuardianRecovery.initializeGuardianRecovery(guardianRecoveryAddress, recoveryTimelockDuration);
+    }
+
+    function initiateEnableGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.initiateEnableGuardianRecovery();
+    }
+
+    function finalizeEnableGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.finalizeEnableGuardianRecovery();
+    }
+
+    function cancelEnableGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.cancelEnableGuardianRecovery();
+    }
+
+    function disableGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.disableGuardianRecovery();
+    }
+
+    function initiateRecoveryGuardianUpdate(address newGuardian) external {
+        LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate(newGuardian);
+    }
+
+    function finalizeRecoveryGuardianUpdate() external {
+        LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate();
+    }
+
+    function cancelRecoveryGuardianUpdate() external {
+        LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate();
+    }
+
+    function enforceOnlyGuardianRecoveryAddress() external view {
+        LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress();
+    }
+
+    // ================================
+    // Transaction Recovery Library Functions
+    // ================================
+
+    function initializeTxRecovery(
         bool isRecoverySupportedForTransactionsAndERC1271,
-        address transactionAndERC1271RecoveryAddress,
-        address guardianRecoveryAddress,
-        uint256 recoveryTimelockDuration
+        address transactionAndERC1271RecoveryAddress
     ) external {
-        LibOrganizationRecovery.initializeRecovery(
-            isRecoverySupportedForTransactionsAndERC1271,
-            transactionAndERC1271RecoveryAddress,
-            guardianRecoveryAddress,
-            recoveryTimelockDuration
+        LibOrganizationTxRecovery.initializeTxRecovery(
+            isRecoverySupportedForTransactionsAndERC1271, transactionAndERC1271RecoveryAddress
         );
     }
 
     function initiateEnableTransactionAndERC1271Recovery() external {
-        LibOrganizationRecovery.initiateEnableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.initiateEnableTxRecovery();
     }
 
     function finalizeEnableTransactionAndERC1271Recovery() external {
-        LibOrganizationRecovery.finalizeEnableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.finalizeEnableTxRecovery();
     }
 
     function cancelEnableTransactionAndERC1271Recovery() external {
-        LibOrganizationRecovery.cancelEnableTransactionAndERC1271Recovery();
+        LibOrganizationTxRecovery.cancelEnableTxRecovery();
     }
 
     function disableTransactionAndERC1271Recovery() external {
-        LibOrganizationRecovery.disableTransactionAndERC1271Recovery();
-    }
-
-    function initiateEnableGuardianRecovery() external {
-        LibOrganizationRecovery.initiateEnableGuardianRecovery();
-    }
-
-    function finalizeEnableGuardianRecovery() external {
-        LibOrganizationRecovery.finalizeEnableGuardianRecovery();
-    }
-
-    function cancelEnableGuardianRecovery() external {
-        LibOrganizationRecovery.cancelEnableGuardianRecovery();
-    }
-
-    function disableGuardianRecovery() external {
-        LibOrganizationRecovery.disableGuardianRecovery();
-    }
-
-    function initiateRecoveryGuardianUpdate(address newGuardian) external {
-        LibOrganizationRecovery.initiateRecoveryGuardianUpdate(newGuardian);
-    }
-
-    function finalizeRecoveryGuardianUpdate() external {
-        LibOrganizationRecovery.finalizeRecoveryGuardianUpdate();
-    }
-
-    function cancelRecoveryGuardianUpdate() external {
-        LibOrganizationRecovery.cancelRecoveryGuardianUpdate();
+        LibOrganizationTxRecovery.disableTxRecovery();
     }
 
     function validateRecoveryAccountTransactionAllowedOrRevert() external view {
-        LibOrganizationRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
+        LibOrganizationTxRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 
     function enforceOnlyTxRecoveryAddress() external view {
-        LibOrganizationRecovery.enforceOnlyTxRecoveryAddress();
-    }
-
-    function enforceOnlyGuardianRecoveryAddress() external view {
-        LibOrganizationRecovery.enforceOnlyGuardianRecoveryAddress();
+        LibOrganizationTxRecovery.enforceOnlyTxRecoveryAddress();
     }
 
     // ================================
@@ -115,35 +120,35 @@ contract RecoveryTestHarness {
     // ================================
 
     function isRecoverySupportedForTransactionsAndERC1271() external view returns (bool) {
-        return LibOrganizationRecovery.isRecoverySupportedForTransactionsAndERC1271();
+        return LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271();
     }
 
     function isRecoveryEnabledForTransactionsAndERC1271() external view returns (bool) {
-        return LibOrganizationRecovery.isRecoveryEnabledForTransactionsAndERC1271();
+        return LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271();
     }
 
     function getTransactionAndERC1271RecoveryAddress() external view returns (address) {
-        return LibOrganizationRecovery.getTransactionAndERC1271RecoveryAddress();
+        return LibOrganizationTxRecovery.getTxRecoveryAddress();
     }
 
     function isRecoveryEnabledForGuardianUpdate() external view returns (bool) {
-        return LibOrganizationRecovery.isRecoveryEnabledForGuardianUpdate();
+        return LibOrganizationGuardianRecovery.isRecoveryEnabledForGuardianUpdate();
     }
 
     function getGuardianRecoveryAddress() external view returns (address) {
-        return LibOrganizationRecovery.getGuardianRecoveryAddress();
+        return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
     }
 
     function getRecoveryTimelockDuration() external view returns (uint256) {
-        return LibOrganizationRecovery.getRecoveryTimelockDuration();
+        return LibOrganizationGuardianRecovery.getRecoveryTimelockDuration();
     }
 
     function getPendingTxRecoveryEnableTimestamp() external view returns (uint256) {
-        return LibOrganizationRecovery.getPendingTxRecoveryEnableTimestamp();
+        return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
     }
 
     function getPendingGuardianRecoveryEnableTimestamp() external view returns (uint256) {
-        return LibOrganizationRecovery.getPendingGuardianRecoveryEnableTimestamp();
+        return LibOrganizationGuardianRecovery.getPendingGuardianRecoveryEnableTimestamp();
     }
 
     function getGuardian() external view returns (address) {
@@ -213,12 +218,15 @@ contract LibOrganizationRecoveryTest is Test {
         // Initialize guardian in storage
         harness.setGuardian(GUARDIAN);
 
-        // Initialize recovery configuration
-        harness.initializeRecovery({
+        // Initialize guardian recovery configuration
+        harness.initializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, recoveryTimelockDuration: TIMELOCK_DURATION
+        });
+
+        // Initialize tx recovery configuration
+        harness.initializeTxRecovery({
             isRecoverySupportedForTransactionsAndERC1271: true,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
-            recoveryTimelockDuration: TIMELOCK_DURATION
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS
         });
     }
 
@@ -261,52 +269,41 @@ contract LibOrganizationRecoveryTest is Test {
         assertEq(harness.getRecoveryTimelockDuration(), TIMELOCK_DURATION, "recoveryTimelockDuration not set");
     }
 
-    function test_initializeRecovery_revertsOnZeroTimelockDuration() public {
+    function test_initializeGuardianRecovery_revertsOnZeroTimelockDuration() public {
         // Reset storage
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationRecovery.InvalidRecoveryTimelockDuration.selector);
-        harness.initializeRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: true,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
-            recoveryTimelockDuration: 0
+        vm.expectRevert(IOrganizationGuardianRecovery.InvalidRecoveryTimelockDuration.selector);
+        harness.initializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, recoveryTimelockDuration: 0
         });
     }
 
-    function test_initializeRecovery_revertsOnZeroGuardianRecoveryAddress() public {
+    function test_initializeGuardianRecovery_revertsOnZeroGuardianRecoveryAddress() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationRecovery.InvalidGuardianRecoveryAddress.selector);
-        harness.initializeRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: true,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            guardianRecoveryAddress: address(0),
-            recoveryTimelockDuration: TIMELOCK_DURATION
+        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
+        harness.initializeGuardianRecovery({
+            guardianRecoveryAddress: address(0), recoveryTimelockDuration: TIMELOCK_DURATION
         });
     }
 
-    function test_initializeRecovery_revertsOnZeroTxRecoveryAddressWhenSupported() public {
+    function test_initializeTxRecovery_revertsOnZeroTxRecoveryAddressWhenSupported() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationRecovery.InvalidTransactionAndERC1271RecoveryAddress.selector);
-        harness.initializeRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: true,
-            transactionAndERC1271RecoveryAddress: address(0),
-            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
-            recoveryTimelockDuration: TIMELOCK_DURATION
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        harness.initializeTxRecovery({
+            isRecoverySupportedForTransactionsAndERC1271: true, transactionAndERC1271RecoveryAddress: address(0)
         });
     }
 
-    function test_initializeRecovery_revertsOnNonZeroTxRecoveryAddressWhenNotSupported() public {
+    function test_initializeTxRecovery_revertsOnNonZeroTxRecoveryAddressWhenNotSupported() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationRecovery.InvalidTransactionAndERC1271RecoveryAddress.selector);
-        harness.initializeRecovery({
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        harness.initializeTxRecovery({
             isRecoverySupportedForTransactionsAndERC1271: false,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
-            recoveryTimelockDuration: TIMELOCK_DURATION
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS
         });
     }
 
@@ -327,7 +324,7 @@ contract LibOrganizationRecoveryTest is Test {
         uint256 expectedCanFinalizeAt = block.timestamp + TIMELOCK_DURATION;
 
         vm.expectEmit(true, true, true, true);
-        emit IOrganizationRecovery.TransactionAndERC1271RecoveryEnableInitiated(expectedCanFinalizeAt);
+        emit IOrganizationTxRecovery.TxRecoveryEnableInitiated(expectedCanFinalizeAt);
 
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
@@ -336,14 +333,14 @@ contract LibOrganizationRecoveryTest is Test {
         // Set support to false
         harness.setRecoverySupportedForTransactionsAndERC1271(false);
 
-        vm.expectRevert(IOrganizationRecovery.RecoveryNotSupportedForTransactionsAndERC1271.selector);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotSupported.selector);
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
     function test_initiateEnableTxRecovery_revertsIfAlreadyPending() public {
         harness.initiateEnableTransactionAndERC1271Recovery();
 
-        vm.expectRevert(IOrganizationRecovery.RecoveryEnableAlreadyPending.selector);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending.selector);
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
@@ -360,7 +357,7 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_finalizeEnableTxRecovery_revertsIfNoPending() public {
-        vm.expectRevert(IOrganizationRecovery.NoRecoveryEnablePending.selector);
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryEnablePending.selector);
         harness.finalizeEnableTransactionAndERC1271Recovery();
     }
 
@@ -372,7 +369,7 @@ contract LibOrganizationRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationRecovery.RecoveryEnableTimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationTxRecovery.TxRecoveryTimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeEnableTransactionAndERC1271Recovery();
@@ -387,7 +384,7 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_cancelEnableTxRecovery_revertsIfNoPending() public {
-        vm.expectRevert(IOrganizationRecovery.NoRecoveryEnablePending.selector);
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryEnablePending.selector);
         harness.cancelEnableTransactionAndERC1271Recovery();
     }
 
@@ -422,7 +419,7 @@ contract LibOrganizationRecoveryTest is Test {
     function test_initiateEnableGuardianRecovery_revertsIfAlreadyPending() public {
         harness.initiateEnableGuardianRecovery();
 
-        vm.expectRevert(IOrganizationRecovery.RecoveryEnableAlreadyPending.selector);
+        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryEnableAlreadyPending.selector);
         harness.initiateEnableGuardianRecovery();
     }
 
@@ -438,7 +435,7 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_finalizeEnableGuardianRecovery_revertsIfNoPending() public {
-        vm.expectRevert(IOrganizationRecovery.NoRecoveryEnablePending.selector);
+        vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryEnablePending.selector);
         harness.finalizeEnableGuardianRecovery();
     }
 
@@ -449,7 +446,9 @@ contract LibOrganizationRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationRecovery.RecoveryEnableTimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired.selector,
+                canFinalizeAt,
+                block.timestamp
             )
         );
         harness.finalizeEnableGuardianRecovery();
@@ -492,7 +491,7 @@ contract LibOrganizationRecoveryTest is Test {
 
     function test_initiateRecoveryGuardianUpdate_revertsIfNotEnabled() public {
         // Guardian recovery is not enabled
-        vm.expectRevert(IOrganizationRecovery.RecoveryNotEnabledForGuardianUpdate.selector);
+        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryNotEnabled.selector);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
     }
 
@@ -500,7 +499,7 @@ contract LibOrganizationRecoveryTest is Test {
         _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
-        vm.expectRevert(IOrganizationRecovery.RecoveryEnableAlreadyPending.selector);
+        vm.expectRevert(IOrganizationGuardian.GuardianUpdateAlreadyPending.selector);
         harness.initiateRecoveryGuardianUpdate(address(0x999));
     }
 
@@ -521,7 +520,7 @@ contract LibOrganizationRecoveryTest is Test {
 
         vm.warp(block.timestamp + TIMELOCK_DURATION);
 
-        vm.expectRevert(IOrganizationRecovery.NotARecoveryGuardianUpdate.selector);
+        vm.expectRevert(IOrganizationGuardianRecovery.NotARecoveryGuardianUpdate.selector);
         harness.finalizeRecoveryGuardianUpdate();
     }
 
@@ -538,7 +537,7 @@ contract LibOrganizationRecoveryTest is Test {
         // Initiate normal guardian update (not via recovery)
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
 
-        vm.expectRevert(IOrganizationRecovery.CannotCancelNonRecoveryGuardianUpdate.selector);
+        vm.expectRevert(IOrganizationGuardianRecovery.CannotCancelNonRecoveryGuardianUpdate.selector);
         harness.cancelRecoveryGuardianUpdate();
     }
 
@@ -679,13 +678,13 @@ contract LibOrganizationRecoveryTest is Test {
     function test_validateRecoveryAccountTransactionAllowed_revertsIfNotSupported() public {
         harness.setRecoverySupportedForTransactionsAndERC1271(false);
 
-        vm.expectRevert(IOrganizationRecovery.RecoveryNotSupportedForTransactionsAndERC1271.selector);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotSupported.selector);
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 
     function test_validateRecoveryAccountTransactionAllowed_revertsIfNotEnabled() public {
         // Recovery is supported but not enabled
-        vm.expectRevert(IOrganizationRecovery.RecoveryNotEnabledForTransactionsAndERC1271.selector);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 

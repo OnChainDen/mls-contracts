@@ -3,7 +3,8 @@ pragma solidity 0.8.33;
 
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationRecovery} from "organization/libraries/LibOrganizationRecovery.sol";
+import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
     LibOrganizationDeployerAddressStorage
@@ -73,12 +74,16 @@ library LibOrganizationInitialization {
         // Set guardian
         LibOrganizationGuardianStorage.layout().guardian = params.guardian;
 
-        // Initialize recovery configuration
-        LibOrganizationRecovery.initializeRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
-            transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
+        // Initialize guardian recovery configuration (sets guardianRecoveryAddress and timelock duration)
+        LibOrganizationGuardianRecovery.initializeGuardianRecovery({
             guardianRecoveryAddress: params.guardianRecoveryAddress,
             recoveryTimelockDuration: params.recoveryTimelockDuration
+        });
+
+        // Initialize transaction recovery configuration (sets tx recovery support and address)
+        LibOrganizationTxRecovery.initializeTxRecovery({
+            isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
+            transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress
         });
 
         emit IOrganizationInitialization.OrganizationInitialized({

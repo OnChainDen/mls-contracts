@@ -10,8 +10,8 @@ import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationRecovery} from "organization/libraries/LibOrganizationRecovery.sol";
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
 /**
@@ -62,10 +62,10 @@ library LibOrganizationAccountSignature {
         // Check for recovery signature first - must be BOTH supported AND enabled
         // Recovery signatures bypass all guardian and policy checks
         if (
-            LibOrganizationRecovery.isRecoverySupportedForTransactionsAndERC1271()
-                && LibOrganizationRecovery.isRecoveryEnabledForTransactionsAndERC1271()
+            LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271()
+                && LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271()
         ) {
-            if (LibOrganizationRecovery.isValidRecoverySignature(hash, signature)) {
+            if (LibOrganizationTxRecovery.isValidRecoverySignature(hash, signature)) {
                 return ERC1271_MAGIC_VALUE;
             }
             // If recovery signature check fails, fall through to normal validation
