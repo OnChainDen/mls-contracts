@@ -7,6 +7,9 @@ pragma solidity 0.8.33;
  * @dev Maps to LibOrganizationGuardianRecovery library functionality.
  *      Guardian recovery allows users to update the guardian address when the
  *      primary guardian is unavailable.
+ *
+ *      The recovery flow uses SEPARATE storage from the normal guardian update flow.
+ *      Both flows can run in parallel and are NOT mutually exclusive.
  * @author Den Technologies Inc
  */
 interface IOrganizationGuardianRecovery {
@@ -52,6 +55,13 @@ interface IOrganizationGuardianRecovery {
      * @param cancelledProposedGuardian The guardian address that was proposed but cancelled
      */
     event RecoveryGuardianUpdateCancelled(address indexed cancelledProposedGuardian);
+
+    /**
+     * @notice Emitted when a new guardian accepts and the recovery update is completed
+     * @param previousGuardian The previous guardian address
+     * @param newGuardian The new guardian address
+     */
+    event RecoveryGuardianUpdateAccepted(address indexed previousGuardian, address indexed newGuardian);
 
     /**
      * @notice Thrown when the recovery timelock duration is invalid (zero)
@@ -103,14 +113,21 @@ interface IOrganizationGuardianRecovery {
     error NoPendingRecoveryGuardianUpdate();
 
     /**
-     * @notice Thrown when trying to finalize a non-recovery guardian update via recovery flow
+     * @notice Thrown when trying to initiate a recovery guardian update while one is already pending
      */
-    error NotARecoveryGuardianUpdate();
+    error RecoveryGuardianUpdateAlreadyPending();
 
     /**
-     * @notice Thrown when trying to cancel a non-recovery guardian update via recovery flow
+     * @notice Thrown when trying to accept a recovery guardian update but it's not ready for acceptance
      */
-    error CannotCancelNonRecoveryGuardianUpdate();
+    error RecoveryGuardianUpdateNotReadyForAcceptance();
+
+    /**
+     * @notice Thrown when a non-pending-guardian tries to accept the guardian role via recovery
+     * @param caller The address that attempted to accept
+     * @param pendingGuardian The address that should accept
+     */
+    error UnauthorizedRecoveryGuardianAcceptance(address caller, address pendingGuardian);
 
     /**
      * @notice Initiates enabling guardian recovery (starts timelock)
@@ -157,6 +174,12 @@ interface IOrganizationGuardianRecovery {
     function cancelRecoveryGuardianUpdate() external;
 
     /**
+     * @notice Accepts the guardian role via recovery (completes the recovery update)
+     * @dev Can only be called by the recovery pending guardian after the update has been finalized.
+     */
+    function acceptGuardianRecovery() external;
+
+    /**
      * @notice Returns whether recovery is enabled for guardian updates
      * @return True if recovery is enabled, false otherwise
      */
@@ -179,4 +202,22 @@ interface IOrganizationGuardianRecovery {
      * @return The timestamp (0 if no pending request)
      */
     function pendingGuardianRecoveryEnableTimestamp() external view returns (uint256);
+
+    /**
+     * @notice Returns the recovery pending guardian address
+     * @return The pending guardian address (zero if no pending recovery update)
+     */
+    function recoveryPendingGuardian() external view returns (address);
+
+    /**
+     * @notice Returns the recovery pending guardian timestamp
+     * @return The timestamp when the recovery update can be finalized (0 if no pending)
+     */
+    function recoveryPendingGuardianTimestamp() external view returns (uint256);
+
+    /**
+     * @notice Returns whether the recovery guardian update is ready for acceptance
+     * @return True if the recovery update has been finalized and is waiting for the new guardian to accept
+     */
+    function isRecoveryGuardianUpdateReadyForAcceptance() external view returns (bool);
 }

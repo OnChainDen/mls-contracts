@@ -9,16 +9,16 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
  * @title Lib Organization Guardian
  * @dev Library for guardian-related operations for Organization contracts.
  *      Guardian updates follow a timelocked 3-step flow: initiate → finalize → accept.
- *      This library should ONLY be used by Organization contracts.
+ *      This library handles the NORMAL guardian update flow only.
  *
- *      Note: Recovery guardian update functions (initiateRecoveryGuardianUpdate, etc.)
- *      are in LibOrganizationRecovery to keep all recovery logic in one place for auditing.
+ *      Recovery guardian update functions are in LibOrganizationGuardianRecovery with
+ *      completely separate state. The two flows are NOT mutually exclusive.
  * @author Den Technologies Inc
  */
 library LibOrganizationGuardian {
     /**
      * @dev Initiates a guardian update (starts timelock).
-     *      Sets pendingGuardian, pendingGuardianUpdateTimestamp, and marks as non-recovery.
+     *      Sets pendingGuardian and pendingGuardianUpdateTimestamp.
      * @param newGuardian The proposed new guardian address
      */
     function initiateGuardianUpdate(address newGuardian) internal {
@@ -29,19 +29,18 @@ library LibOrganizationGuardian {
 
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
 
-        // Case: Already a pending guardian update
+        // Case: Already a pending guardian update in normal flow
         if (guardianLayout.pendingGuardian != address(0)) {
             revert IOrganizationGuardian.GuardianUpdateAlreadyPending();
         }
 
-        // Get timelock duration from recovery storage
+        // Get timelock duration from recovery storage (shared config)
         uint256 timelockDuration = LibOrganizationRecoveryStorage.layout().recoveryTimelockDuration;
         uint256 canFinalizeAt = block.timestamp + timelockDuration;
 
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
         guardianLayout.pendingGuardianUpdateTimestamp = canFinalizeAt;
-        guardianLayout.isRecoveryGuardianUpdate = false;
         guardianLayout.isGuardianUpdateReadyForAcceptance = false;
 
         emit IOrganizationGuardian.GuardianUpdateInitiated(guardianLayout.guardian, newGuardian, canFinalizeAt);
@@ -49,7 +48,6 @@ library LibOrganizationGuardian {
 
     /**
      * @dev Finalizes a guardian update (after timelock, ready for new guardian to accept).
-     *      Can only finalize non-recovery guardian updates (recovery uses finalizeRecoveryGuardianUpdate).
      */
     function finalizeGuardianUpdate() internal {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
@@ -57,11 +55,6 @@ library LibOrganizationGuardian {
         // Case: No pending guardian update
         if (guardianLayout.pendingGuardian == address(0)) {
             revert IOrganizationGuardian.NoPendingGuardianUpdate();
-        }
-
-        // Case: This is a recovery guardian update (must use recovery flow)
-        if (guardianLayout.isRecoveryGuardianUpdate) {
-            revert IOrganizationGuardian.CannotFinalizeRecoveryGuardianUpdate();
         }
 
         uint256 canFinalizeAt = guardianLayout.pendingGuardianUpdateTimestamp;
@@ -78,8 +71,7 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @dev Cancels a pending guardian update.
-     *      Can only cancel non-recovery guardian updates (recovery uses cancelRecoveryGuardianUpdate).
+     * @dev Cancels a pending guardian update (normal flow).
      */
     function cancelGuardianUpdate() internal {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
@@ -89,27 +81,20 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.NoPendingGuardianUpdate();
         }
 
-        // Case: This is a recovery guardian update (must use recovery flow)
-        if (guardianLayout.isRecoveryGuardianUpdate) {
-            revert IOrganizationGuardian.CannotCancelRecoveryGuardianUpdate();
-        }
-
         address cancelledGuardian = guardianLayout.pendingGuardian;
         address currentGuardian = guardianLayout.guardian;
 
         // Clear all pending state
         guardianLayout.pendingGuardian = address(0);
         guardianLayout.pendingGuardianUpdateTimestamp = 0;
-        guardianLayout.isRecoveryGuardianUpdate = false;
         guardianLayout.isGuardianUpdateReadyForAcceptance = false;
 
         emit IOrganizationGuardian.GuardianUpdateCancelled(currentGuardian, cancelledGuardian);
     }
 
     /**
-     * @dev Accepts the guardian role (completes the update).
+     * @dev Accepts the guardian role (completes the normal flow update).
      *      Can only be called by the pending guardian after the update has been finalized.
-     *      Works for both normal and recovery guardian updates.
      */
     function acceptGuardian() internal {
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
@@ -139,7 +124,6 @@ library LibOrganizationGuardian {
         // Clear all pending state
         guardianLayout.pendingGuardian = address(0);
         guardianLayout.pendingGuardianUpdateTimestamp = 0;
-        guardianLayout.isRecoveryGuardianUpdate = false;
         guardianLayout.isGuardianUpdateReadyForAcceptance = false;
 
         emit IOrganizationGuardian.GuardianUpdateAccepted(previousGuardian, pendingGuardianAddr);
@@ -165,7 +149,7 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @dev Gets the pending guardian address.
+     * @dev Gets the pending guardian address (normal flow).
      * @return The pending guardian address (zero if no pending update)
      */
     function getPendingGuardian() internal view returns (address) {
@@ -173,7 +157,7 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @dev Gets the pending guardian update timestamp.
+     * @dev Gets the pending guardian update timestamp (normal flow).
      * @return The timestamp when the update can be finalized (0 if no pending update)
      */
     function getPendingGuardianUpdateTimestamp() internal view returns (uint256) {
@@ -181,18 +165,10 @@ library LibOrganizationGuardian {
     }
 
     /**
-     * @dev Checks if the guardian update is ready for acceptance.
+     * @dev Checks if the guardian update is ready for acceptance (normal flow).
      * @return True if the update has been finalized and is waiting for the new guardian to accept
      */
     function getIsGuardianUpdateReadyForAcceptance() internal view returns (bool) {
         return LibOrganizationGuardianStorage.layout().isGuardianUpdateReadyForAcceptance;
-    }
-
-    /**
-     * @dev Checks if the pending guardian update was initiated via recovery.
-     * @return True if initiated via recovery flow
-     */
-    function getIsRecoveryGuardianUpdate() internal view returns (bool) {
-        return LibOrganizationGuardianStorage.layout().isRecoveryGuardianUpdate;
     }
 }

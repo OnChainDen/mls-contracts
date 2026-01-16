@@ -674,6 +674,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
+     * @notice Accepts the guardian role via recovery (completes the recovery update)
+     * @dev Can only be called by the recovery pending guardian after the update has been finalized.
+     */
+    function acceptGuardianRecovery() external override {
+        LibOrganizationGuardianRecovery.acceptGuardianRecovery();
+    }
+
+    /**
      * @notice Returns the address that deployed this organization
      * @return The deployer address
      */
@@ -722,19 +730,11 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
-     * @notice Returns whether the guardian update is ready for acceptance
+     * @notice Returns whether the guardian update is ready for acceptance (normal flow)
      * @return True if the update has been finalized and is waiting for the new guardian to accept
      */
     function isGuardianUpdateReadyForAcceptance() external view override returns (bool) {
         return LibOrganizationGuardian.getIsGuardianUpdateReadyForAcceptance();
-    }
-
-    /**
-     * @notice Returns whether the pending guardian update was initiated via recovery
-     * @return True if initiated via recovery flow
-     */
-    function isRecoveryGuardianUpdate() external view override returns (bool) {
-        return LibOrganizationGuardian.getIsRecoveryGuardianUpdate();
     }
 
     /**
@@ -799,6 +799,30 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      */
     function pendingGuardianRecoveryEnableTimestamp() external view override returns (uint256) {
         return LibOrganizationGuardianRecovery.getPendingGuardianRecoveryEnableTimestamp();
+    }
+
+    /**
+     * @notice Returns the recovery pending guardian address
+     * @return The pending guardian address (zero if no pending recovery update)
+     */
+    function recoveryPendingGuardian() external view override returns (address) {
+        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardian();
+    }
+
+    /**
+     * @notice Returns the recovery pending guardian timestamp
+     * @return The timestamp when the recovery update can be finalized (0 if no pending)
+     */
+    function recoveryPendingGuardianTimestamp() external view override returns (uint256) {
+        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardianTimestamp();
+    }
+
+    /**
+     * @notice Returns whether the recovery guardian update is ready for acceptance
+     * @return True if the recovery update has been finalized and is waiting for the new guardian to accept
+     */
+    function isRecoveryGuardianUpdateReadyForAcceptance() external view override returns (bool) {
+        return LibOrganizationGuardianRecovery.getIsRecoveryGuardianUpdateReadyForAcceptance();
     }
 
     /**

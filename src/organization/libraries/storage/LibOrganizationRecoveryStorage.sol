@@ -24,6 +24,10 @@ library LibOrganizationRecoveryStorage {
      * pending)
      * @param pendingGuardianRecoveryEnableTimestamp Timestamp when pending guardian recovery enable can be finalized (0
      * = no pending)
+     * @param recoveryPendingGuardian The proposed new guardian address for recovery flow (0 = no pending)
+     * @param recoveryPendingGuardianTimestamp When the recovery flow pending update timelock expires (0 = no pending)
+     * @param isRecoveryGuardianUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept
+     * (recovery flow)
      */
     struct Layout {
         // Core config (set at init, immutable after)
@@ -34,9 +38,13 @@ library LibOrganizationRecoveryStorage {
         // Recovery enabled states (toggleable via timelocked functions)
         bool isRecoveryEnabledForTransactionsAndERC1271;
         bool isRecoveryEnabledForGuardianUpdate;
-        // Pending timelock timestamps (0 = no pending request)
+        // Pending timelock timestamps for enabling recovery (0 = no pending request)
         uint256 pendingTxRecoveryEnableTimestamp;
         uint256 pendingGuardianRecoveryEnableTimestamp;
+        // Recovery guardian update state (separate from normal flow)
+        address recoveryPendingGuardian;
+        uint256 recoveryPendingGuardianTimestamp;
+        bool isRecoveryGuardianUpdateReadyForAcceptance;
     }
 
     /// @dev Storage location for RecoveryStorage, following ERC-7201 namespaced storage pattern.

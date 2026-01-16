@@ -5,9 +5,11 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
 
 /**
  * @title IOrganizationGuardian
- * @notice Interface for guardian-related operations in Organization contracts
+ * @notice Interface for guardian-related operations in Organization contracts (normal flow)
  * @dev Maps to LibOrganizationGuardian library functionality.
- *      Guardian updates follow a timelocked 3-step flow: initiate → finalize → accept
+ *      Guardian updates follow a timelocked 3-step flow: initiate → finalize → accept.
+ *      This interface handles the NORMAL guardian update flow only.
+ *      Recovery guardian updates use IOrganizationGuardianRecovery with separate state.
  * @author Den Technologies Inc
  */
 interface IOrganizationGuardian {
@@ -83,16 +85,6 @@ interface IOrganizationGuardian {
     error GuardianUpdateAlreadyPending();
 
     /**
-     * @notice Thrown when trying to finalize a recovery guardian update via the normal flow
-     */
-    error CannotFinalizeRecoveryGuardianUpdate();
-
-    /**
-     * @notice Thrown when trying to cancel a recovery guardian update via the normal flow
-     */
-    error CannotCancelRecoveryGuardianUpdate();
-
-    /**
      * @notice Initiates a guardian update (starts timelock)
      * @dev Can only be called by the current guardian with admin authorization.
      * @param newGuardian The proposed new guardian address
@@ -115,7 +107,7 @@ interface IOrganizationGuardian {
     function cancelGuardianUpdate(AdminAuthParams calldata authParams) external;
 
     /**
-     * @notice Accepts the guardian role (completes the update)
+     * @notice Accepts the guardian role (completes the normal flow update)
      * @dev Can only be called by the pending guardian after the update has been finalized.
      */
     function acceptGuardian() external;
@@ -127,26 +119,20 @@ interface IOrganizationGuardian {
     function guardian() external view returns (address);
 
     /**
-     * @notice Returns the pending guardian address
+     * @notice Returns the pending guardian address (normal flow)
      * @return The address of the pending guardian (zero if no pending update)
      */
     function pendingGuardian() external view returns (address);
 
     /**
-     * @notice Returns the timestamp when the pending guardian update can be finalized
+     * @notice Returns the timestamp when the pending guardian update can be finalized (normal flow)
      * @return The timestamp (0 if no pending update)
      */
     function pendingGuardianUpdateTimestamp() external view returns (uint256);
 
     /**
-     * @notice Returns whether the guardian update is ready for acceptance
+     * @notice Returns whether the guardian update is ready for acceptance (normal flow)
      * @return True if the update has been finalized and is waiting for the new guardian to accept
      */
     function isGuardianUpdateReadyForAcceptance() external view returns (bool);
-
-    /**
-     * @notice Returns whether the pending guardian update was initiated via recovery
-     * @return True if initiated via recovery flow
-     */
-    function isRecoveryGuardianUpdate() external view returns (bool);
 }
