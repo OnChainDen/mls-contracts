@@ -26,22 +26,6 @@ contract RecoveryTestHarness {
         LibOrganizationGuardianRecovery.initializeGuardianRecovery(guardianRecoveryAddress, recoveryTimelockDuration);
     }
 
-    function initiateEnableGuardianRecovery() external {
-        LibOrganizationGuardianRecovery.initiateEnableGuardianRecovery();
-    }
-
-    function finalizeEnableGuardianRecovery() external {
-        LibOrganizationGuardianRecovery.finalizeEnableGuardianRecovery();
-    }
-
-    function cancelEnableGuardianRecovery() external {
-        LibOrganizationGuardianRecovery.cancelEnableGuardianRecovery();
-    }
-
-    function disableGuardianRecovery() external {
-        LibOrganizationGuardianRecovery.disableGuardianRecovery();
-    }
-
     function initiateRecoveryGuardianUpdate(address newGuardian) external {
         LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate(newGuardian);
     }
@@ -135,10 +119,6 @@ contract RecoveryTestHarness {
         return LibOrganizationTxRecovery.getTxRecoveryAddress();
     }
 
-    function isRecoveryEnabledForGuardianUpdate() external view returns (bool) {
-        return LibOrganizationGuardianRecovery.isRecoveryEnabledForGuardianUpdate();
-    }
-
     function getGuardianRecoveryAddress() external view returns (address) {
         return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
     }
@@ -149,10 +129,6 @@ contract RecoveryTestHarness {
 
     function getPendingTxRecoveryEnableTimestamp() external view returns (uint256) {
         return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
-    }
-
-    function getPendingGuardianRecoveryEnableTimestamp() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getPendingGuardianRecoveryEnableTimestamp();
     }
 
     // Normal flow guardian state
@@ -204,9 +180,7 @@ contract RecoveryTestHarness {
         layout.guardianRecoveryAddress = address(0);
         layout.recoveryTimelockDuration = 0;
         layout.isRecoveryEnabledForTransactionsAndERC1271 = false;
-        layout.isRecoveryEnabledForGuardianUpdate = false;
         layout.pendingTxRecoveryEnableTimestamp = 0;
-        layout.pendingGuardianRecoveryEnableTimestamp = 0;
         layout.recoveryPendingGuardian = address(0);
         layout.recoveryPendingGuardianTimestamp = 0;
         layout.isRecoveryGuardianUpdateReadyForAcceptance = false;
@@ -216,7 +190,7 @@ contract RecoveryTestHarness {
 /**
  * @title Lib Organization Recovery Test
  * @notice Tests for disaster recovery functionality
- * @dev Tests initialization, timelocked enable flows, and access control.
+ * @dev Tests initialization, timelocked flows, and access control.
  *      Normal and recovery guardian update flows use SEPARATE storage and are NOT mutually exclusive.
  * @author Den Technologies Inc
  */
@@ -412,93 +386,16 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     // ================================
-    // Guardian Recovery Enable Flow Tests (Timelocked)
-    // ================================
-
-    function test_initiateEnableGuardianRecovery_setsPendingTimestamp() public {
-        harness.initiateEnableGuardianRecovery();
-
-        uint256 expectedCanFinalizeAt = block.timestamp + TIMELOCK_DURATION;
-        assertEq(
-            harness.getPendingGuardianRecoveryEnableTimestamp(),
-            expectedCanFinalizeAt,
-            "Pending timestamp not set correctly"
-        );
-    }
-
-    function test_initiateEnableGuardianRecovery_revertsIfAlreadyPending() public {
-        harness.initiateEnableGuardianRecovery();
-
-        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryEnableAlreadyPending.selector);
-        harness.initiateEnableGuardianRecovery();
-    }
-
-    function test_finalizeEnableGuardianRecovery_enablesRecovery() public {
-        harness.initiateEnableGuardianRecovery();
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
-        harness.finalizeEnableGuardianRecovery();
-
-        assertTrue(harness.isRecoveryEnabledForGuardianUpdate(), "Recovery not enabled after finalize");
-        assertEq(harness.getPendingGuardianRecoveryEnableTimestamp(), 0, "Pending timestamp not cleared");
-    }
-
-    function test_finalizeEnableGuardianRecovery_revertsIfNoPending() public {
-        vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryEnablePending.selector);
-        harness.finalizeEnableGuardianRecovery();
-    }
-
-    function test_finalizeEnableGuardianRecovery_revertsIfTimelockNotExpired() public {
-        harness.initiateEnableGuardianRecovery();
-
-        uint256 canFinalizeAt = harness.getPendingGuardianRecoveryEnableTimestamp();
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired.selector,
-                canFinalizeAt,
-                block.timestamp
-            )
-        );
-        harness.finalizeEnableGuardianRecovery();
-    }
-
-    function test_cancelEnableGuardianRecovery_clearsPendingState() public {
-        harness.initiateEnableGuardianRecovery();
-        harness.cancelEnableGuardianRecovery();
-
-        assertEq(harness.getPendingGuardianRecoveryEnableTimestamp(), 0, "Pending timestamp not cleared");
-    }
-
-    function test_disableGuardianRecovery_disablesImmediately() public {
-        harness.initiateEnableGuardianRecovery();
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
-        harness.finalizeEnableGuardianRecovery();
-        assertTrue(harness.isRecoveryEnabledForGuardianUpdate(), "Recovery should be enabled");
-
-        harness.disableGuardianRecovery();
-
-        assertFalse(harness.isRecoveryEnabledForGuardianUpdate(), "Recovery should be disabled");
-    }
-
-    // ================================
-    // Recovery Guardian Update Flow Tests (Separate Storage)
+    // Recovery Guardian Update Flow Tests (Single Timelock)
     // ================================
 
     function test_initiateRecoveryGuardianUpdate_setsPendingGuardian() public {
-        _enableGuardianRecovery();
-
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
         assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN, "Recovery pending guardian not set");
     }
 
-    function test_initiateRecoveryGuardianUpdate_revertsIfNotEnabled() public {
-        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryNotEnabled.selector);
-        harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
-    }
-
     function test_initiateRecoveryGuardianUpdate_revertsIfAlreadyPending() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
         vm.expectRevert(IOrganizationGuardianRecovery.RecoveryGuardianUpdateAlreadyPending.selector);
@@ -506,14 +403,11 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_initiateRecoveryGuardianUpdate_revertsOnZeroAddress() public {
-        _enableGuardianRecovery();
-
         vm.expectRevert(IOrganizationGuardianRecovery.InvalidNewGuardianAddress.selector);
         harness.initiateRecoveryGuardianUpdate(address(0));
     }
 
     function test_finalizeRecoveryGuardianUpdate_setsReadyForAcceptance() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
         vm.warp(block.timestamp + TIMELOCK_DURATION);
 
@@ -528,7 +422,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_finalizeRecoveryGuardianUpdate_revertsIfTimelockNotExpired() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
         uint256 canFinalizeAt = harness.getRecoveryPendingGuardianTimestamp();
@@ -544,7 +437,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_cancelRecoveryGuardianUpdate_clearsPendingState() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
         harness.cancelRecoveryGuardianUpdate();
@@ -558,7 +450,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_acceptGuardianRecovery_updatesGuardian() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeRecoveryGuardianUpdate();
@@ -571,7 +462,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_acceptGuardianRecovery_revertsIfNotPendingGuardian() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeRecoveryGuardianUpdate();
@@ -588,7 +478,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_acceptGuardianRecovery_revertsIfNotReadyForAcceptance() public {
-        _enableGuardianRecovery();
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
         vm.prank(NEW_GUARDIAN);
@@ -705,8 +594,6 @@ contract LibOrganizationRecoveryTest is Test {
     // ================================
 
     function test_bothFlowsCanRunInParallel() public {
-        _enableGuardianRecovery();
-
         // Initiate both flows with different new guardians
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
@@ -717,8 +604,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_recoveryFlowCanCompleteWhileNormalFlowPending() public {
-        _enableGuardianRecovery();
-
         // Start both flows
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
@@ -737,8 +622,6 @@ contract LibOrganizationRecoveryTest is Test {
     }
 
     function test_normalFlowCanCompleteWhileRecoveryFlowPending() public {
-        _enableGuardianRecovery();
-
         // Start both flows
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
@@ -778,15 +661,5 @@ contract LibOrganizationRecoveryTest is Test {
     function test_validateRecoveryAccountTransactionAllowed_revertsIfNotEnabled() public {
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
-    }
-
-    // ================================
-    // Helper Functions
-    // ================================
-
-    function _enableGuardianRecovery() internal {
-        harness.initiateEnableGuardianRecovery();
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
-        harness.finalizeEnableGuardianRecovery();
     }
 }

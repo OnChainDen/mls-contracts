@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 /**
  * @title Organization Recovery Storage
  * @dev ERC-7201 namespaced storage for disaster recovery functionality.
- *      Stores recovery configuration (set at init) and recovery enabled states (toggleable).
+ *      Stores recovery configuration (set at init) and recovery state.
  * @author Den Technologies Inc
  */
 library LibOrganizationRecoveryStorage {
@@ -19,11 +19,8 @@ library LibOrganizationRecoveryStorage {
      * @param recoveryTimelockDuration The duration in seconds for recovery timelocks
      * @param isRecoveryEnabledForTransactionsAndERC1271 Whether recovery is currently enabled for transactions and
      * ERC1271
-     * @param isRecoveryEnabledForGuardianUpdate Whether recovery is currently enabled for guardian updates
      * @param pendingTxRecoveryEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no
      * pending)
-     * @param pendingGuardianRecoveryEnableTimestamp Timestamp when pending guardian recovery enable can be finalized (0
-     * = no pending)
      * @param recoveryPendingGuardian The proposed new guardian address for recovery flow (0 = no pending)
      * @param recoveryPendingGuardianTimestamp When the recovery flow pending update timelock expires (0 = no pending)
      * @param isRecoveryGuardianUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept
@@ -35,12 +32,10 @@ library LibOrganizationRecoveryStorage {
         address transactionAndERC1271RecoveryAddress;
         address guardianRecoveryAddress;
         uint256 recoveryTimelockDuration;
-        // Recovery enabled states (toggleable via timelocked functions)
+        // Transaction/ERC1271 recovery enabled state (toggleable via timelocked functions)
         bool isRecoveryEnabledForTransactionsAndERC1271;
-        bool isRecoveryEnabledForGuardianUpdate;
-        // Pending timelock timestamps for enabling recovery (0 = no pending request)
+        // Pending timelock timestamp for enabling tx recovery (0 = no pending request)
         uint256 pendingTxRecoveryEnableTimestamp;
-        uint256 pendingGuardianRecoveryEnableTimestamp;
         // Recovery guardian update state (separate from normal flow)
         address recoveryPendingGuardian;
         uint256 recoveryPendingGuardianTimestamp;

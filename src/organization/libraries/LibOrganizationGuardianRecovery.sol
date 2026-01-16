@@ -8,12 +8,13 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
 /**
  * @title Lib Organization Guardian Recovery
  * @dev Library for guardian recovery operations for Organization contracts.
- *      This library handles guardian-specific recovery functionality including:
- *      - Enabling/disabling guardian recovery (with timelocks)
- *      - Recovery guardian updates (bypassing normal admin flow)
+ *      This library handles guardian-specific recovery functionality:
+ *      - Recovery guardian updates (bypassing normal admin flow, with timelock)
  *
  *      The recovery flow uses SEPARATE storage from the normal guardian update flow.
  *      Both flows can run in parallel and are NOT mutually exclusive.
+ *
+ *      The flow is: initiate (starts timelock) → finalize (after timelock) → accept (new guardian confirms)
  *
  *      Separated from transaction recovery for cleaner code organization and easier auditing.
  * @author Den Technologies Inc
@@ -43,92 +44,12 @@ library LibOrganizationGuardianRecovery {
     }
 
     /**
-     * @dev Initiates enabling guardian recovery (starts timelock).
-     *      Reverts if a request is already pending.
-     */
-    function initiateEnableGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-
-        // Case: Already pending
-        if (recoveryLayout.pendingGuardianRecoveryEnableTimestamp != 0) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryEnableAlreadyPending();
-        }
-
-        uint256 canFinalizeAt = block.timestamp + recoveryLayout.recoveryTimelockDuration;
-        recoveryLayout.pendingGuardianRecoveryEnableTimestamp = canFinalizeAt;
-
-        emit IOrganizationGuardianRecovery.GuardianRecoveryEnableInitiated(canFinalizeAt);
-    }
-
-    /**
-     * @dev Finalizes enabling guardian recovery (after timelock).
-     *      Reverts if no request is pending or timelock has not expired.
-     */
-    function finalizeEnableGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-
-        uint256 canFinalizeAt = recoveryLayout.pendingGuardianRecoveryEnableTimestamp;
-
-        // Case: No pending request
-        if (canFinalizeAt == 0) {
-            revert IOrganizationGuardianRecovery.NoGuardianRecoveryEnablePending();
-        }
-
-        // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAt) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired(canFinalizeAt, block.timestamp);
-        }
-
-        // Enable recovery and clear pending state
-        recoveryLayout.isRecoveryEnabledForGuardianUpdate = true;
-        recoveryLayout.pendingGuardianRecoveryEnableTimestamp = 0;
-
-        emit IOrganizationGuardianRecovery.GuardianRecoveryEnableFinalized();
-    }
-
-    /**
-     * @dev Cancels a pending guardian recovery enable request.
-     *      Reverts if no request is pending.
-     */
-    function cancelEnableGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-
-        // Case: No pending request
-        if (recoveryLayout.pendingGuardianRecoveryEnableTimestamp == 0) {
-            revert IOrganizationGuardianRecovery.NoGuardianRecoveryEnablePending();
-        }
-
-        recoveryLayout.pendingGuardianRecoveryEnableTimestamp = 0;
-
-        emit IOrganizationGuardianRecovery.GuardianRecoveryEnableCancelled();
-    }
-
-    /**
-     * @dev Immediately disables guardian recovery (no timelock).
-     *      Also clears any pending enable request.
-     */
-    function disableGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-
-        recoveryLayout.isRecoveryEnabledForGuardianUpdate = false;
-        recoveryLayout.pendingGuardianRecoveryEnableTimestamp = 0;
-
-        emit IOrganizationGuardianRecovery.GuardianRecoveryDisabled();
-    }
-
-    /**
      * @dev Initiates a recovery guardian update (starts timelock).
      *      Uses recovery storage for pending state (separate from normal flow).
-     *      Reverts if guardian recovery is not enabled.
      * @param newGuardian The proposed new guardian address
      */
     function initiateRecoveryGuardianUpdate(address newGuardian) internal {
         LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
-
-        // Case: Guardian recovery not enabled
-        if (!recoveryLayout.isRecoveryEnabledForGuardianUpdate) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryNotEnabled();
-        }
 
         // Case: Already a pending recovery guardian update
         if (recoveryLayout.recoveryPendingGuardian != address(0)) {
@@ -254,14 +175,6 @@ library LibOrganizationGuardianRecovery {
     }
 
     /**
-     * @dev Returns whether recovery is enabled for guardian updates.
-     * @return True if enabled
-     */
-    function isRecoveryEnabledForGuardianUpdate() internal view returns (bool) {
-        return LibOrganizationRecoveryStorage.layout().isRecoveryEnabledForGuardianUpdate;
-    }
-
-    /**
      * @dev Returns the guardian recovery address.
      * @return The recovery address
      */
@@ -275,14 +188,6 @@ library LibOrganizationGuardianRecovery {
      */
     function getRecoveryTimelockDuration() internal view returns (uint256) {
         return LibOrganizationRecoveryStorage.layout().recoveryTimelockDuration;
-    }
-
-    /**
-     * @dev Returns the pending guardian recovery enable timestamp.
-     * @return The timestamp (0 if no pending request)
-     */
-    function getPendingGuardianRecoveryEnableTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().pendingGuardianRecoveryEnableTimestamp;
     }
 
     /**

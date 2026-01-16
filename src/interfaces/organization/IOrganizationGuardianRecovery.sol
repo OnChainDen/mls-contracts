@@ -10,30 +10,11 @@ pragma solidity 0.8.33;
  *
  *      The recovery flow uses SEPARATE storage from the normal guardian update flow.
  *      Both flows can run in parallel and are NOT mutually exclusive.
+ *
+ *      The flow is: initiate (starts timelock) → finalize (after timelock) → accept (new guardian confirms)
  * @author Den Technologies Inc
  */
 interface IOrganizationGuardianRecovery {
-    /**
-     * @notice Emitted when guardian recovery enable is initiated (timelock started)
-     * @param canFinalizeAt The timestamp when the enable can be finalized
-     */
-    event GuardianRecoveryEnableInitiated(uint256 canFinalizeAt);
-
-    /**
-     * @notice Emitted when guardian recovery is enabled (timelock completed)
-     */
-    event GuardianRecoveryEnableFinalized();
-
-    /**
-     * @notice Emitted when a pending guardian recovery enable is cancelled
-     */
-    event GuardianRecoveryEnableCancelled();
-
-    /**
-     * @notice Emitted when guardian recovery is disabled
-     */
-    event GuardianRecoveryDisabled();
-
     /**
      * @notice Emitted when a recovery guardian update is initiated (timelock started)
      * @param currentGuardian The current guardian address
@@ -86,26 +67,11 @@ interface IOrganizationGuardianRecovery {
     error UnauthorizedGuardianRecoveryAddress(address caller, address expected);
 
     /**
-     * @notice Thrown when trying to finalize or cancel a guardian recovery enable but none is pending
-     */
-    error NoGuardianRecoveryEnablePending();
-
-    /**
-     * @notice Thrown when trying to finalize a guardian recovery enable before the timelock expires
+     * @notice Thrown when trying to finalize a recovery guardian update before the timelock expires
      * @param canFinalizeAt The timestamp when finalization becomes possible
      * @param currentTime The current block timestamp
      */
     error GuardianRecoveryTimelockNotExpired(uint256 canFinalizeAt, uint256 currentTime);
-
-    /**
-     * @notice Thrown when trying to initiate a guardian recovery enable while one is already pending
-     */
-    error GuardianRecoveryEnableAlreadyPending();
-
-    /**
-     * @notice Thrown when guardian recovery is not enabled
-     */
-    error GuardianRecoveryNotEnabled();
 
     /**
      * @notice Thrown when there's no pending recovery guardian update
@@ -130,33 +96,8 @@ interface IOrganizationGuardianRecovery {
     error UnauthorizedRecoveryGuardianAcceptance(address caller, address pendingGuardian);
 
     /**
-     * @notice Initiates enabling guardian recovery (starts timelock)
-     * @dev Can only be called by the guardian recovery address.
-     */
-    function initiateEnableGuardianRecovery() external;
-
-    /**
-     * @notice Finalizes enabling guardian recovery (after timelock)
-     * @dev Can only be called by the guardian recovery address after timelock expires.
-     */
-    function finalizeEnableGuardianRecovery() external;
-
-    /**
-     * @notice Cancels a pending guardian recovery enable
-     * @dev Can only be called by the guardian recovery address.
-     */
-    function cancelEnableGuardianRecovery() external;
-
-    /**
-     * @notice Immediately disables guardian recovery
-     * @dev Can only be called by the guardian recovery address. No timelock required.
-     */
-    function disableGuardianRecovery() external;
-
-    /**
      * @notice Initiates a recovery guardian update (starts timelock)
      * @dev Can only be called by the guardian recovery address.
-     *      Guardian recovery must be enabled.
      * @param newGuardian The proposed new guardian address
      */
     function initiateRecoveryGuardianUpdate(address newGuardian) external;
@@ -180,12 +121,6 @@ interface IOrganizationGuardianRecovery {
     function acceptGuardianRecovery() external;
 
     /**
-     * @notice Returns whether recovery is enabled for guardian updates
-     * @return True if recovery is enabled, false otherwise
-     */
-    function isRecoveryEnabledForGuardianUpdate() external view returns (bool);
-
-    /**
      * @notice Returns the guardian recovery address
      * @return The recovery address
      */
@@ -196,12 +131,6 @@ interface IOrganizationGuardianRecovery {
      * @return The timelock duration
      */
     function recoveryTimelockDuration() external view returns (uint256);
-
-    /**
-     * @notice Returns the timestamp when pending guardian recovery enable can be finalized
-     * @return The timestamp (0 if no pending request)
-     */
-    function pendingGuardianRecoveryEnableTimestamp() external view returns (uint256);
 
     /**
      * @notice Returns the recovery pending guardian address

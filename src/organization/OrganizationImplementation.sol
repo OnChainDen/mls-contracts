@@ -589,38 +589,6 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
-     * @notice Initiates enabling guardian recovery (starts timelock)
-     * @dev Can only be called by the guardian recovery address.
-     */
-    function initiateEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationGuardianRecovery.initiateEnableGuardianRecovery();
-    }
-
-    /**
-     * @notice Finalizes enabling guardian recovery (after timelock)
-     * @dev Can only be called by the guardian recovery address after timelock expires.
-     */
-    function finalizeEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationGuardianRecovery.finalizeEnableGuardianRecovery();
-    }
-
-    /**
-     * @notice Cancels a pending guardian recovery enable
-     * @dev Can only be called by the guardian recovery address.
-     */
-    function cancelEnableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationGuardianRecovery.cancelEnableGuardianRecovery();
-    }
-
-    /**
-     * @notice Immediately disables guardian recovery
-     * @dev Can only be called by the guardian recovery address. No timelock required.
-     */
-    function disableGuardianRecovery() external override onlyGuardianRecoveryAddress {
-        LibOrganizationGuardianRecovery.disableGuardianRecovery();
-    }
-
-    /**
      * @notice Executes an account transaction via recovery (bypassing guardian and policy checks)
      * @dev Can only be called by the transaction recovery address.
      *      Recovery must be both supported AND enabled.
@@ -650,7 +618,6 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     /**
      * @notice Initiates a recovery guardian update (starts timelock)
      * @dev Can only be called by the guardian recovery address.
-     *      Guardian recovery must be enabled.
      * @param newGuardian The proposed new guardian address
      */
     function initiateRecoveryGuardianUpdate(address newGuardian) external override onlyGuardianRecoveryAddress {
@@ -762,14 +729,6 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
-     * @notice Returns whether recovery is enabled for guardian updates
-     * @return True if recovery is enabled, false otherwise
-     */
-    function isRecoveryEnabledForGuardianUpdate() external view override returns (bool) {
-        return LibOrganizationGuardianRecovery.isRecoveryEnabledForGuardianUpdate();
-    }
-
-    /**
      * @notice Returns the guardian recovery address
      * @return The recovery address
      */
@@ -791,14 +750,6 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      */
     function pendingTxRecoveryEnableTimestamp() external view override returns (uint256) {
         return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
-    }
-
-    /**
-     * @notice Returns the timestamp when pending guardian recovery enable can be finalized
-     * @return The timestamp (0 if no pending request)
-     */
-    function pendingGuardianRecoveryEnableTimestamp() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getPendingGuardianRecoveryEnableTimestamp();
     }
 
     /**
