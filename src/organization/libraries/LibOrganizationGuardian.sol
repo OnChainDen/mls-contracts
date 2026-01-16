@@ -19,19 +19,19 @@ library LibOrganizationGuardian {
      * @dev Initializes the guardian configuration during organization initialization.
      *      This should be called from LibOrganizationInitialization.initialize().
      * @param guardian The initial guardian address (must be non-zero)
-     * @param guardianTimelockDuration The timelock duration in seconds (must be > 0)
+     * @param guardianTimelockDurationSeconds The timelock duration in seconds (must be > 0)
      */
-    function initializeGuardian(address guardian, uint256 guardianTimelockDuration) internal {
+    function initializeGuardian(address guardian, uint256 guardianTimelockDurationSeconds) internal {
         if (guardian == address(0)) {
             revert IOrganizationGuardian.InvalidGuardianAddress();
         }
-        if (guardianTimelockDuration == 0) {
-            revert IOrganizationGuardian.InvalidGuardianTimelockDuration();
+        if (guardianTimelockDurationSeconds == 0) {
+            revert IOrganizationGuardian.InvalidGuardianTimelockDurationSeconds();
         }
 
         LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
         guardianLayout.guardian = guardian;
-        guardianLayout.guardianTimelockDuration = guardianTimelockDuration;
+        guardianLayout.guardianTimelockDurationSeconds = guardianTimelockDurationSeconds;
     }
 
     /**
@@ -52,14 +52,19 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.GuardianUpdateAlreadyPending();
         }
 
-        uint256 canFinalizeAtTimestamp = block.timestamp + guardianLayout.guardianTimelockDuration;
+        uint256 canFinalizeAtTimestamp = block.timestamp + guardianLayout.guardianTimelockDurationSeconds;
 
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
         guardianLayout.pendingGuardianUpdateTimestamp = canFinalizeAtTimestamp;
         guardianLayout.isGuardianUpdateReadyForAcceptance = false;
 
-        emit IOrganizationGuardian.GuardianUpdateInitiated(guardianLayout.guardian, newGuardian, canFinalizeAtTimestamp);
+        // forgefmt: disable-next-item
+        emit IOrganizationGuardian.GuardianUpdateInitiated(
+            guardianLayout.guardian, 
+            newGuardian, 
+            canFinalizeAtTimestamp
+        );
     }
 
     /**
@@ -198,7 +203,7 @@ library LibOrganizationGuardian {
      * @dev Gets the guardian timelock duration.
      * @return The timelock duration in seconds
      */
-    function getGuardianTimelockDuration() internal view returns (uint256) {
-        return LibOrganizationGuardianStorage.layout().guardianTimelockDuration;
+    function getGuardianTimelockDurationSeconds() internal view returns (uint256) {
+        return LibOrganizationGuardianStorage.layout().guardianTimelockDurationSeconds;
     }
 }

@@ -20,11 +20,12 @@ contract GuardianRecoveryTestHarness {
     // Guardian Recovery Library Functions
     // ================================
 
-    function initializeGuardianRecovery(address guardianRecoveryAddress, uint256 guardianRecoveryTimelockDuration)
-        external
-    {
+    function initializeGuardianRecovery(
+        address guardianRecoveryAddress,
+        uint256 guardianRecoveryTimelockDurationSeconds
+    ) external {
         LibOrganizationGuardianRecovery.initializeGuardianRecovery(
-            guardianRecoveryAddress, guardianRecoveryTimelockDuration
+            guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds
         );
     }
 
@@ -78,12 +79,12 @@ contract GuardianRecoveryTestHarness {
         return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
     }
 
-    function getGuardianRecoveryTimelockDuration() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDuration();
+    function getGuardianRecoveryTimelockDurationSeconds() external view returns (uint256) {
+        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDurationSeconds();
     }
 
-    function getGuardianTimelockDuration() external view returns (uint256) {
-        return LibOrganizationGuardian.getGuardianTimelockDuration();
+    function getGuardianTimelockDurationSeconds() external view returns (uint256) {
+        return LibOrganizationGuardian.getGuardianTimelockDurationSeconds();
     }
 
     // Normal flow guardian state
@@ -131,12 +132,12 @@ contract GuardianRecoveryTestHarness {
         layout.txRecovery.recoveryAddress = address(0);
         layout.txRecovery.isSupported = false;
         layout.txRecovery.isEnabled = false;
-        layout.txRecovery.timelockDuration = 0;
+        layout.txRecovery.timelockDurationSeconds = 0;
         layout.txRecovery.pendingEnableTimestamp = 0;
 
         // Reset guardian recovery state
         layout.guardianRecovery.recoveryAddress = address(0);
-        layout.guardianRecovery.timelockDuration = 0;
+        layout.guardianRecovery.timelockDurationSeconds = 0;
         layout.guardianRecovery.pendingGuardian = address(0);
         layout.guardianRecovery.pendingGuardianTimestamp = 0;
         layout.guardianRecovery.isUpdateReadyForAcceptance = false;
@@ -145,14 +146,14 @@ contract GuardianRecoveryTestHarness {
     function resetGuardianStorage() external {
         LibOrganizationGuardianStorage.Layout storage layout = LibOrganizationGuardianStorage.layout();
         layout.guardian = address(0);
-        layout.guardianTimelockDuration = 0;
+        layout.guardianTimelockDurationSeconds = 0;
         layout.pendingGuardian = address(0);
         layout.pendingGuardianUpdateTimestamp = 0;
         layout.isGuardianUpdateReadyForAcceptance = false;
     }
 
-    function initializeGuardian(address guardian, uint256 guardianTimelockDuration) external {
-        LibOrganizationGuardian.initializeGuardian(guardian, guardianTimelockDuration);
+    function initializeGuardian(address guardian, uint256 guardianTimelockDurationSeconds) external {
+        LibOrganizationGuardian.initializeGuardian(guardian, guardianTimelockDurationSeconds);
     }
 }
 
@@ -177,11 +178,12 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness = new GuardianRecoveryTestHarness();
 
         // Initialize guardian configuration (sets guardian and timelock duration)
-        harness.initializeGuardian({guardian: GUARDIAN, guardianTimelockDuration: TIMELOCK_DURATION});
+        harness.initializeGuardian({guardian: GUARDIAN, guardianTimelockDurationSeconds: TIMELOCK_DURATION});
 
         // Initialize guardian recovery configuration
         harness.initializeGuardianRecovery({
-            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDuration: TIMELOCK_DURATION
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
@@ -212,17 +214,21 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_initializeGuardianRecovery_setsCorrectValues() public view {
         assertEq(harness.getGuardianRecoveryAddress(), GUARDIAN_RECOVERY_ADDRESS, "guardianRecoveryAddress not set");
         assertEq(
-            harness.getGuardianRecoveryTimelockDuration(), TIMELOCK_DURATION, "guardianRecoveryTimelockDuration not set"
+            harness.getGuardianRecoveryTimelockDurationSeconds(),
+            TIMELOCK_DURATION,
+            "guardianRecoveryTimelockDurationSeconds not set"
         );
-        assertEq(harness.getGuardianTimelockDuration(), TIMELOCK_DURATION, "guardianTimelockDuration not set");
+        assertEq(
+            harness.getGuardianTimelockDurationSeconds(), TIMELOCK_DURATION, "guardianTimelockDurationSeconds not set"
+        );
     }
 
-    function test_initializeGuardianRecovery_revertsOnZeroTimelockDuration() public {
+    function test_initializeGuardianRecovery_revertsOnZeroTimelockDurationSeconds() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDuration.selector);
+        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds.selector);
         harness.initializeGuardianRecovery({
-            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDuration: 0
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });
     }
 
@@ -231,7 +237,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
         harness.initializeGuardianRecovery({
-            guardianRecoveryAddress: address(0), guardianRecoveryTimelockDuration: TIMELOCK_DURATION
+            guardianRecoveryAddress: address(0), guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 

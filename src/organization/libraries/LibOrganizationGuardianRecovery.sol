@@ -24,14 +24,15 @@ library LibOrganizationGuardianRecovery {
      * @dev Initializes the guardian recovery configuration during organization initialization.
      *      This should be called from LibOrganizationInitialization.initialize().
      * @param guardianRecoveryAddress The guardian recovery address (must always be non-zero)
-     * @param guardianRecoveryTimelockDuration The timelock duration in seconds (must be > 0)
+     * @param guardianRecoveryTimelockDurationSeconds The timelock duration in seconds (must be > 0)
      */
-    function initializeGuardianRecovery(address guardianRecoveryAddress, uint256 guardianRecoveryTimelockDuration)
-        internal
-    {
+    function initializeGuardianRecovery(
+        address guardianRecoveryAddress,
+        uint256 guardianRecoveryTimelockDurationSeconds
+    ) internal {
         // Validate timelock duration
-        if (guardianRecoveryTimelockDuration == 0) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDuration();
+        if (guardianRecoveryTimelockDurationSeconds == 0) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
         }
 
         // Validate guardian recovery address (always required)
@@ -43,7 +44,7 @@ library LibOrganizationGuardianRecovery {
         LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         guardianRecovery.recoveryAddress = guardianRecoveryAddress;
-        guardianRecovery.timelockDuration = guardianRecoveryTimelockDuration;
+        guardianRecovery.timelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;
     }
 
     /**
@@ -65,7 +66,7 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidNewGuardianAddress();
         }
 
-        uint256 canFinalizeAtTimestamp = block.timestamp + guardianRecovery.timelockDuration;
+        uint256 canFinalizeAtTimestamp = block.timestamp + guardianRecovery.timelockDurationSeconds;
 
         // Set pending state in recovery storage
         guardianRecovery.pendingGuardian = newGuardian;
@@ -75,7 +76,9 @@ library LibOrganizationGuardianRecovery {
         // Get current guardian for event
         address currentGuardian = LibOrganizationGuardianStorage.layout().guardian;
 
-        emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateInitiated(currentGuardian, newGuardian, canFinalizeAtTimestamp);
+        emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateInitiated(
+            currentGuardian, newGuardian, canFinalizeAtTimestamp
+        );
     }
 
     /**
@@ -95,7 +98,9 @@ library LibOrganizationGuardianRecovery {
 
         // Case: Timelock not expired
         if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
+            revert IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired(
+                canFinalizeAtTimestamp, block.timestamp
+            );
         }
 
         // Mark as ready for acceptance (new guardian must call acceptGuardianRecovery)
@@ -198,8 +203,8 @@ library LibOrganizationGuardianRecovery {
      * @dev Returns the guardian recovery timelock duration in seconds.
      * @return The duration
      */
-    function getGuardianRecoveryTimelockDuration() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.timelockDuration;
+    function getGuardianRecoveryTimelockDurationSeconds() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.timelockDurationSeconds;
     }
 
     /**

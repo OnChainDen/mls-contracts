@@ -21,16 +21,16 @@ interface IOrganizationInitialization {
      * @param votingThreshold The voting threshold for admin operations
      * @param adminAddresses The admin addresses (in ascending order)
      * @param guardian The guardian address set during initialization
-     * @param guardianTimelockDuration The guardian update timelock duration in seconds
+     * @param guardianTimelockDurationSeconds The guardian update timelock duration in seconds
      * @param membersRoot The initial members Merkle root
      * @param groupsRoot The initial groups Merkle root
      * @param membersIpfsCid The IPFS CID for members data
      * @param groupsIpfsCid The IPFS CID for groups data
      * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
      * @param transactionAndERC1271RecoveryAddress The tx/signature recovery address
-     * @param txRecoveryTimelockDuration The tx/ERC1271 recovery timelock duration in seconds
+     * @param txRecoveryTimelockDurationSeconds The tx/ERC1271 recovery timelock duration in seconds
      * @param guardianRecoveryAddress The guardian recovery address
-     * @param guardianRecoveryTimelockDuration The guardian recovery timelock duration in seconds
+     * @param guardianRecoveryTimelockDurationSeconds The guardian recovery timelock duration in seconds
      */
     event OrganizationInitialized(
         bytes32 adminsRoot,
@@ -38,16 +38,16 @@ interface IOrganizationInitialization {
         uint256 votingThreshold,
         address[] adminAddresses,
         address guardian,
-        uint256 guardianTimelockDuration,
+        uint256 guardianTimelockDurationSeconds,
         bytes32 membersRoot,
         bytes32 groupsRoot,
         string membersIpfsCid,
         string groupsIpfsCid,
         bool isRecoverySupportedForTransactionsAndERC1271,
         address transactionAndERC1271RecoveryAddress,
-        uint256 txRecoveryTimelockDuration,
+        uint256 txRecoveryTimelockDurationSeconds,
         address guardianRecoveryAddress,
-        uint256 guardianRecoveryTimelockDuration
+        uint256 guardianRecoveryTimelockDurationSeconds
     );
 
     // ═══════════════════════════════════════════════════════════════════════════

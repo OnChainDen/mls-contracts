@@ -22,12 +22,12 @@ library LibOrganizationTxRecovery {
      *      This should be called from LibOrganizationInitialization.initialize().
      * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
      * @param transactionAndERC1271RecoveryAddress The tx recovery address (must be non-zero if supported)
-     * @param txRecoveryTimelockDuration The timelock duration in seconds (must be > 0 if supported)
+     * @param txRecoveryTimelockDurationSeconds The timelock duration in seconds (must be > 0 if supported)
      */
     function initializeTxRecovery(
         bool isRecoverySupportedForTransactionsAndERC1271,
         address transactionAndERC1271RecoveryAddress,
-        uint256 txRecoveryTimelockDuration
+        uint256 txRecoveryTimelockDurationSeconds
     ) internal {
         // Validate tx recovery address based on support flag
         if (isRecoverySupportedForTransactionsAndERC1271) {
@@ -36,8 +36,8 @@ library LibOrganizationTxRecovery {
                 revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
             }
             // Case: Recovery is supported, timelock duration must be > 0
-            if (txRecoveryTimelockDuration == 0) {
-                revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDuration();
+            if (txRecoveryTimelockDurationSeconds == 0) {
+                revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
             }
         } else {
             // Case: Recovery is not supported, address must be zero
@@ -51,7 +51,7 @@ library LibOrganizationTxRecovery {
 
         txRecovery.isSupported = isRecoverySupportedForTransactionsAndERC1271;
         txRecovery.recoveryAddress = transactionAndERC1271RecoveryAddress;
-        txRecovery.timelockDuration = txRecoveryTimelockDuration;
+        txRecovery.timelockDurationSeconds = txRecoveryTimelockDurationSeconds;
     }
 
     /**
@@ -77,7 +77,7 @@ library LibOrganizationTxRecovery {
             revert IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending();
         }
 
-        uint256 canFinalizeAtTimestamp = block.timestamp + txRecovery.timelockDuration;
+        uint256 canFinalizeAtTimestamp = block.timestamp + txRecovery.timelockDurationSeconds;
         txRecovery.pendingEnableTimestamp = canFinalizeAtTimestamp;
 
         emit IOrganizationTxRecovery.TxRecoveryEnableInitiated(canFinalizeAtTimestamp);
@@ -230,7 +230,7 @@ library LibOrganizationTxRecovery {
      * @dev Returns the tx recovery timelock duration in seconds.
      * @return The duration
      */
-    function getTxRecoveryTimelockDuration() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.timelockDuration;
+    function getTxRecoveryTimelockDurationSeconds() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery.timelockDurationSeconds;
     }
 }

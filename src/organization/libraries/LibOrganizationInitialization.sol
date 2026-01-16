@@ -73,20 +73,20 @@ library LibOrganizationInitialization {
 
         // Initialize guardian configuration (sets guardian address and timelock duration)
         LibOrganizationGuardian.initializeGuardian({
-            guardian: params.guardian, guardianTimelockDuration: params.guardianTimelockDuration
+            guardian: params.guardian, guardianTimelockDurationSeconds: params.guardianTimelockDurationSeconds
         });
 
         // Initialize guardian recovery configuration (sets guardianRecoveryAddress and timelock duration)
         LibOrganizationGuardianRecovery.initializeGuardianRecovery({
             guardianRecoveryAddress: params.guardianRecoveryAddress,
-            guardianRecoveryTimelockDuration: params.guardianRecoveryTimelockDuration
+            guardianRecoveryTimelockDurationSeconds: params.guardianRecoveryTimelockDurationSeconds
         });
 
         // Initialize transaction recovery configuration (sets tx recovery support, address, and timelock duration)
         LibOrganizationTxRecovery.initializeTxRecovery({
             isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
             transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
-            txRecoveryTimelockDuration: params.txRecoveryTimelockDuration
+            txRecoveryTimelockDurationSeconds: params.txRecoveryTimelockDurationSeconds
         });
 
         emit IOrganizationInitialization.OrganizationInitialized({
@@ -95,16 +95,16 @@ library LibOrganizationInitialization {
             votingThreshold: params.votingThreshold,
             adminAddresses: params.adminAddresses,
             guardian: params.guardian,
-            guardianTimelockDuration: params.guardianTimelockDuration,
+            guardianTimelockDurationSeconds: params.guardianTimelockDurationSeconds,
             membersRoot: params.membersRoot,
             groupsRoot: params.groupsRoot,
             membersIpfsCid: params.membersIpfsCid,
             groupsIpfsCid: params.groupsIpfsCid,
             isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
             transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
-            txRecoveryTimelockDuration: params.txRecoveryTimelockDuration,
+            txRecoveryTimelockDurationSeconds: params.txRecoveryTimelockDurationSeconds,
             guardianRecoveryAddress: params.guardianRecoveryAddress,
-            guardianRecoveryTimelockDuration: params.guardianRecoveryTimelockDuration
+            guardianRecoveryTimelockDurationSeconds: params.guardianRecoveryTimelockDurationSeconds
         });
     }
 

@@ -726,8 +726,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Returns the guardian timelock duration in seconds
      * @return The timelock duration
      */
-    function guardianTimelockDuration() external view override returns (uint256) {
-        return LibOrganizationGuardian.getGuardianTimelockDuration();
+    function guardianTimelockDurationSeconds() external view override returns (uint256) {
+        return LibOrganizationGuardian.getGuardianTimelockDurationSeconds();
     }
 
     /**
@@ -766,8 +766,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Returns the guardian recovery timelock duration in seconds
      * @return The timelock duration
      */
-    function guardianRecoveryTimelockDuration() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDuration();
+    function guardianRecoveryTimelockDurationSeconds() external view override returns (uint256) {
+        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDurationSeconds();
     }
 
     /**
@@ -782,8 +782,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @notice Returns the tx recovery timelock duration in seconds
      * @return The timelock duration
      */
-    function txRecoveryTimelockDuration() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getTxRecoveryTimelockDuration();
+    function txRecoveryTimelockDurationSeconds() external view override returns (uint256) {
+        return LibOrganizationTxRecovery.getTxRecoveryTimelockDurationSeconds();
     }
 
     /**

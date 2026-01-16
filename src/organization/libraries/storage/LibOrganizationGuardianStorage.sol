@@ -15,14 +15,14 @@ library LibOrganizationGuardianStorage {
      * @param guardian The address of the guardian authorized to submit transactions
      * @param isGuardianUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept (normal flow)
      * @param pendingGuardian The proposed new guardian address for normal flow (0 = no pending update)
-     * @param guardianTimelockDuration The duration in seconds for normal guardian update timelocks
+     * @param guardianTimelockDurationSeconds The duration in seconds for normal guardian update timelocks
      * @param pendingGuardianUpdateTimestamp When the normal flow pending update timelock expires (0 = no pending)
      */
     struct Layout {
         address guardian;
         bool isGuardianUpdateReadyForAcceptance;
         address pendingGuardian;
-        uint256 guardianTimelockDuration;
+        uint256 guardianTimelockDurationSeconds;
         uint256 pendingGuardianUpdateTimestamp;
     }
 

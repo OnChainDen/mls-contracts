@@ -19,10 +19,10 @@ contract TxRecoveryTestHarness {
     function initializeTxRecovery(
         bool isTxRecoverySupported,
         address transactionAndERC1271RecoveryAddress,
-        uint256 txRecoveryTimelockDuration
+        uint256 txRecoveryTimelockDurationSeconds
     ) external {
         LibOrganizationTxRecovery.initializeTxRecovery(
-            isTxRecoverySupported, transactionAndERC1271RecoveryAddress, txRecoveryTimelockDuration
+            isTxRecoverySupported, transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
         );
     }
 
@@ -66,8 +66,8 @@ contract TxRecoveryTestHarness {
         return LibOrganizationTxRecovery.getTxRecoveryAddress();
     }
 
-    function getTxRecoveryTimelockDuration() external view returns (uint256) {
-        return LibOrganizationTxRecovery.getTxRecoveryTimelockDuration();
+    function getTxRecoveryTimelockDurationSeconds() external view returns (uint256) {
+        return LibOrganizationTxRecovery.getTxRecoveryTimelockDurationSeconds();
     }
 
     function getPendingTxRecoveryEnableTimestamp() external view returns (uint256) {
@@ -89,12 +89,12 @@ contract TxRecoveryTestHarness {
         layout.txRecovery.recoveryAddress = address(0);
         layout.txRecovery.isSupported = false;
         layout.txRecovery.isEnabled = false;
-        layout.txRecovery.timelockDuration = 0;
+        layout.txRecovery.timelockDurationSeconds = 0;
         layout.txRecovery.pendingEnableTimestamp = 0;
 
         // Reset guardian recovery state
         layout.guardianRecovery.recoveryAddress = address(0);
-        layout.guardianRecovery.timelockDuration = 0;
+        layout.guardianRecovery.timelockDurationSeconds = 0;
         layout.guardianRecovery.pendingGuardian = address(0);
         layout.guardianRecovery.pendingGuardianTimestamp = 0;
         layout.guardianRecovery.isUpdateReadyForAcceptance = false;
@@ -121,7 +121,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initializeTxRecovery({
             isTxRecoverySupported: true,
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            txRecoveryTimelockDuration: TIMELOCK_DURATION
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
@@ -140,7 +140,11 @@ contract LibOrganizationTxRecoveryTest is Test {
             TX_RECOVERY_ADDRESS,
             "transactionAndERC1271RecoveryAddress not set"
         );
-        assertEq(harness.getTxRecoveryTimelockDuration(), TIMELOCK_DURATION, "txRecoveryTimelockDuration not set");
+        assertEq(
+            harness.getTxRecoveryTimelockDurationSeconds(),
+            TIMELOCK_DURATION,
+            "txRecoveryTimelockDurationSeconds not set"
+        );
     }
 
     function test_initializeTxRecovery_revertsOnZeroTxRecoveryAddressWhenSupported() public {
@@ -150,7 +154,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initializeTxRecovery({
             isTxRecoverySupported: true,
             transactionAndERC1271RecoveryAddress: address(0),
-            txRecoveryTimelockDuration: TIMELOCK_DURATION
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
@@ -161,7 +165,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initializeTxRecovery({
             isTxRecoverySupported: false,
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            txRecoveryTimelockDuration: 0
+            txRecoveryTimelockDurationSeconds: 0
         });
     }
 

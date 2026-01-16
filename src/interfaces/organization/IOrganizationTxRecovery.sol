@@ -89,7 +89,7 @@ interface IOrganizationTxRecovery {
     /**
      * @notice Thrown when the tx recovery timelock duration is invalid (zero)
      */
-    error InvalidTxRecoveryTimelockDuration();
+    error InvalidTxRecoveryTimelockDurationSeconds();
 
     /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
@@ -163,5 +163,5 @@ interface IOrganizationTxRecovery {
      * @notice Returns the tx recovery timelock duration in seconds
      * @return The timelock duration
      */
-    function txRecoveryTimelockDuration() external view returns (uint256);
+    function txRecoveryTimelockDurationSeconds() external view returns (uint256);
 }

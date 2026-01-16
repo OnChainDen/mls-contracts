@@ -44,7 +44,7 @@ enum OperationType {
  * @param adminInAdminTreeProofs Merkle proofs that each admin address is in adminsRoot
  * @param adminInMembersTreeProofs Merkle proofs that each admin address is in membersRoot
  * @param guardian Guardian address for the organization
- * @param guardianTimelockDuration The duration in seconds for normal guardian update timelocks
+ * @param guardianTimelockDurationSeconds The duration in seconds for normal guardian update timelocks
  * @param membersRoot The initial Merkle root for all members
  * @param groupsRoot The initial Merkle root for all groups
  * @param membersIpfsCid The IPFS CID where full members data is stored
@@ -52,9 +52,9 @@ enum OperationType {
  * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
  * @param transactionAndERC1271RecoveryAddress The privileged address for tx/signature recovery (must be set if
  * supported)
- * @param txRecoveryTimelockDuration The duration in seconds for tx/ERC1271 recovery enable timelocks
+ * @param txRecoveryTimelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
  * @param guardianRecoveryAddress The privileged address for guardian recovery (must always be set)
- * @param guardianRecoveryTimelockDuration The duration in seconds for guardian recovery timelocks
+ * @param guardianRecoveryTimelockDurationSeconds The duration in seconds for guardian recovery timelocks
  */
 struct InitializationParams {
     bytes32 adminsRoot;
@@ -64,7 +64,7 @@ struct InitializationParams {
     bytes32[][] adminInAdminTreeProofs;
     bytes32[][] adminInMembersTreeProofs;
     address guardian;
-    uint256 guardianTimelockDuration;
+    uint256 guardianTimelockDurationSeconds;
     bytes32 membersRoot;
     bytes32 groupsRoot;
     string membersIpfsCid;
@@ -72,7 +72,7 @@ struct InitializationParams {
     // Recovery configuration
     bool isRecoverySupportedForTransactionsAndERC1271;
     address transactionAndERC1271RecoveryAddress;
-    uint256 txRecoveryTimelockDuration;
+    uint256 txRecoveryTimelockDurationSeconds;
     address guardianRecoveryAddress;
-    uint256 guardianRecoveryTimelockDuration;
+    uint256 guardianRecoveryTimelockDurationSeconds;
 }

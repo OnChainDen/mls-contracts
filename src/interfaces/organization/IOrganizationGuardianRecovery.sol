@@ -48,7 +48,7 @@ interface IOrganizationGuardianRecovery {
     /**
      * @notice Thrown when the guardian recovery timelock duration is invalid (zero)
      */
-    error InvalidGuardianRecoveryTimelockDuration();
+    error InvalidGuardianRecoveryTimelockDurationSeconds();
 
     /**
      * @notice Thrown when the guardian recovery address is invalid (zero)
@@ -131,7 +131,7 @@ interface IOrganizationGuardianRecovery {
      * @notice Returns the guardian recovery timelock duration in seconds
      * @return The timelock duration
      */
-    function guardianRecoveryTimelockDuration() external view returns (uint256);
+    function guardianRecoveryTimelockDurationSeconds() external view returns (uint256);
 
     /**
      * @notice Returns the recovery pending guardian address

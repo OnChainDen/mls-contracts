@@ -52,7 +52,7 @@ interface IOrganizationGuardian {
     /**
      * @notice Thrown when the guardian timelock duration is invalid (zero)
      */
-    error InvalidGuardianTimelockDuration();
+    error InvalidGuardianTimelockDurationSeconds();
 
     /**
      * @notice Thrown when a function is called by an unauthorized address (not the guardian)
@@ -146,5 +146,5 @@ interface IOrganizationGuardian {
      * @notice Returns the guardian timelock duration in seconds
      * @return The timelock duration
      */
-    function guardianTimelockDuration() external view returns (uint256);
+    function guardianTimelockDurationSeconds() external view returns (uint256);
 }

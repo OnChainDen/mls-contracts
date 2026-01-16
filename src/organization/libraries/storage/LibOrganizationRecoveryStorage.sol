@@ -17,14 +17,14 @@ library LibOrganizationRecoveryStorage {
      * @param isSupported Whether recovery is supported for account transactions and ERC1271 signatures (immutable after
      * init)
      * @param isEnabled Whether recovery is currently enabled for transactions and ERC1271
-     * @param timelockDuration The duration in seconds for tx/ERC1271 recovery enable timelocks
+     * @param timelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
      * @param pendingEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no pending)
      */
     struct TxRecoveryState {
         address recoveryAddress;
         bool isSupported;
         bool isEnabled;
-        uint256 timelockDuration;
+        uint256 timelockDurationSeconds;
         uint256 pendingEnableTimestamp;
     }
 
@@ -34,14 +34,14 @@ library LibOrganizationRecoveryStorage {
      * @param recoveryAddress The privileged address that can update the guardian via recovery
      * @param isUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept (recovery flow)
      * @param pendingGuardian The proposed new guardian address for recovery flow (0 = no pending)
-     * @param timelockDuration The duration in seconds for guardian recovery timelocks
+     * @param timelockDurationSeconds The duration in seconds for guardian recovery timelocks
      * @param pendingGuardianTimestamp When the recovery flow pending update timelock expires (0 = no pending)
      */
     struct GuardianRecoveryState {
         address recoveryAddress;
         bool isUpdateReadyForAcceptance;
         address pendingGuardian;
-        uint256 timelockDuration;
+        uint256 timelockDurationSeconds;
         uint256 pendingGuardianTimestamp;
     }
 
