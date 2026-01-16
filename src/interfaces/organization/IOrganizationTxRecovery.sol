@@ -80,6 +80,11 @@ interface IOrganizationTxRecovery {
     error TxRecoveryEnableAlreadyPending();
 
     /**
+     * @notice Thrown when trying to initiate a tx recovery enable while recovery is already enabled
+     */
+    error TxRecoveryAlreadyEnabled();
+
+    /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the transaction recovery address.
      *      Recovery must be supported for this to work.

@@ -335,6 +335,18 @@ contract LibOrganizationRecoveryTest is Test {
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
+    function test_initiateEnableTxRecovery_revertsIfAlreadyEnabled() public {
+        // First enable recovery
+        harness.initiateEnableTransactionAndERC1271Recovery();
+        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+        assertTrue(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery should be enabled");
+
+        // Try to initiate again - should revert
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryAlreadyEnabled.selector);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+    }
+
     function test_finalizeEnableTxRecovery_enablesRecovery() public {
         harness.initiateEnableTransactionAndERC1271Recovery();
         vm.warp(block.timestamp + TIMELOCK_DURATION);

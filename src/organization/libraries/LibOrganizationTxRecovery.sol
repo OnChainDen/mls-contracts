@@ -58,6 +58,11 @@ library LibOrganizationTxRecovery {
             revert IOrganizationTxRecovery.TxRecoveryNotSupported();
         }
 
+        // Case: Already enabled
+        if (recoveryLayout.isRecoveryEnabledForTransactionsAndERC1271) {
+            revert IOrganizationTxRecovery.TxRecoveryAlreadyEnabled();
+        }
+
         // Case: Already pending
         if (recoveryLayout.pendingTxRecoveryEnableTimestamp != 0) {
             revert IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending();
