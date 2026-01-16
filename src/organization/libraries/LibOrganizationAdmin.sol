@@ -44,7 +44,7 @@ library LibOrganizationAdmin {
         uint256 newVotingThreshold,
         AllAdminsInOrgProofs memory newAdminsInOrgProofs,
         bytes32 currentMembersRoot
-    ) internal {
+    ) public {
         // Validate admin configuration (root, count, threshold)
         validateAdminConfigurationOrRevert(newAdminsRoot, newAdminCount, newVotingThreshold);
 
@@ -88,7 +88,7 @@ library LibOrganizationAdmin {
         bytes memory operationData,
         bool isApproval,
         AdminAuthParams memory authParams
-    ) internal {
+    ) public {
         // Check if the operation has expired
         if (block.timestamp > authParams.expirationTimestamp) {
             revert IOrganizationAdmin.AdminOperationExpired(authParams.expirationTimestamp, block.timestamp);
@@ -130,7 +130,7 @@ library LibOrganizationAdmin {
      * @dev Gets the current admin permission configuration
      * @return The current admin permission configuration
      */
-    function getAdminConfig() internal view returns (AdminConfig memory) {
+    function getAdminConfig() public view returns (AdminConfig memory) {
         return LibOrganizationAdminStorage.layout().adminConfig;
     }
 
@@ -148,7 +148,7 @@ library LibOrganizationAdmin {
         bytes32 adminsRoot,
         bytes32 membersRoot,
         uint256 expectedAdminCount
-    ) internal pure {
+    ) public pure {
         // Case: Admin addresses array does not match expected count
         if (allAdminsInOrgProofs.adminAddresses.length != expectedAdminCount) {
             // forgefmt: disable-next-item
@@ -192,7 +192,7 @@ library LibOrganizationAdmin {
      * @param votingThreshold The voting threshold for admin operations
      */
     function validateAdminConfigurationOrRevert(bytes32 adminsRoot, uint256 adminCount, uint256 votingThreshold)
-        internal
+        public
         pure
     {
         if (adminsRoot == bytes32(0) || adminCount == 0 || votingThreshold == 0 || votingThreshold > adminCount) {

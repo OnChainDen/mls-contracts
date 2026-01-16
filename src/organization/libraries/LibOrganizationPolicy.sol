@@ -33,7 +33,7 @@ library LibOrganizationPolicy {
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored
      */
-    function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) internal {
+    function setPolicies(bytes32 newPoliciesRoot, string calldata ipfsCid) public {
         LibOrganizationPolicyStorage.layout().policiesRoot = newPoliciesRoot;
         emit IOrganizationPolicy.PoliciesUpdated(newPoliciesRoot, ipfsCid);
     }
@@ -56,7 +56,7 @@ library LibOrganizationPolicy {
         address destination,
         address initiator,
         uint256 usageAmount
-    ) internal returns (bool withinLimit) {
+    ) public returns (bool withinLimit) {
         return LibPolicyTimeBasedLimits.checkAndUpdateTimeBasedLimit({
             policyId: policyId,
             policy: policy,
@@ -75,7 +75,7 @@ library LibOrganizationPolicy {
      * @return True if the policy is in the tree, false otherwise
      */
     function isPolicyInOrg(uint256 policyId, Policy memory policy, bytes32[] memory proof)
-        internal
+        public
         view
         returns (bool)
     {
@@ -109,7 +109,7 @@ library LibOrganizationPolicy {
         bytes calldata data,
         address initiator,
         ValidationProofs calldata proofs
-    ) internal view returns (bool) {
+    ) public view returns (bool) {
         // Case: The policy does not exist in the organization
         if (!isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) return false;
 
@@ -179,7 +179,7 @@ library LibOrganizationPolicy {
         bytes memory signatures,
         bytes32 messageHash,
         ApproverProofs memory approverProofs
-    ) internal view returns (uint8) {
+    ) public view returns (uint8) {
         return LibPolicyApproval.getValidApprovals({
             policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
         });
@@ -191,7 +191,7 @@ library LibOrganizationPolicy {
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
-    function computeTimeWindow(Policy memory policy) internal view returns (uint256) {
+    function computeTimeWindow(Policy memory policy) public view returns (uint256) {
         return LibPolicyTimeBasedLimits.computeTimeWindow(policy);
     }
 
@@ -211,7 +211,7 @@ library LibOrganizationPolicy {
         address account,
         address destination,
         address initiator
-    ) internal view returns (uint256) {
+    ) public view returns (uint256) {
         return LibPolicyTimeBasedLimits.getCurrentUsage({
             policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
@@ -229,7 +229,7 @@ library LibOrganizationPolicy {
         Policy memory policy,
         address initiatorAddress,
         InitiatorProofs memory initiatorProofs
-    ) internal view returns (bool) {
+    ) public view returns (bool) {
         return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorProofs);
     }
 
@@ -246,7 +246,7 @@ library LibOrganizationPolicy {
         Policy memory policy,
         address sourceAccount,
         bytes32[] memory sourceAccountProof
-    ) internal pure returns (bool) {
+    ) public pure returns (bool) {
         // Case: The policy matches transactions sent from any account
         if (policy.config.anySourceAccount) return true;
 
@@ -262,7 +262,7 @@ library LibOrganizationPolicy {
      * @param policy The policy to check
      * @return The number of required approvals
      */
-    function getRequiredApprovals(Policy memory policy) internal pure returns (uint256) {
+    function getRequiredApprovals(Policy memory policy) public pure returns (uint256) {
         return LibPolicyApproval.getRequiredApprovals(policy);
     }
 
@@ -274,7 +274,7 @@ library LibOrganizationPolicy {
      * @param value The transaction value in wei
      * @return The actual destination address
      */
-    function getActualDestination(address to, bytes calldata data, uint256 value) internal pure returns (address) {
+    function getActualDestination(address to, bytes calldata data, uint256 value) public pure returns (address) {
         return LibPolicyDestination.getActualDestination(to, data, value);
     }
 
@@ -294,7 +294,7 @@ library LibOrganizationPolicy {
         address account,
         address destination,
         address initiator
-    ) internal pure returns (bytes32) {
+    ) public pure returns (bytes32) {
         return LibPolicyTimeBasedLimits.computeUsageKey({
             policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
