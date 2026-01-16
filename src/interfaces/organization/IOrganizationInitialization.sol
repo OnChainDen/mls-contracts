@@ -21,14 +21,16 @@ interface IOrganizationInitialization {
      * @param votingThreshold The voting threshold for admin operations
      * @param adminAddresses The admin addresses (in ascending order)
      * @param guardian The guardian address set during initialization
+     * @param guardianTimelockDuration The guardian update timelock duration in seconds
      * @param membersRoot The initial members Merkle root
      * @param groupsRoot The initial groups Merkle root
      * @param membersIpfsCid The IPFS CID for members data
      * @param groupsIpfsCid The IPFS CID for groups data
      * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
      * @param transactionAndERC1271RecoveryAddress The tx/signature recovery address
+     * @param txRecoveryTimelockDuration The tx/ERC1271 recovery timelock duration in seconds
      * @param guardianRecoveryAddress The guardian recovery address
-     * @param recoveryTimelockDuration The recovery timelock duration in seconds
+     * @param guardianRecoveryTimelockDuration The guardian recovery timelock duration in seconds
      */
     event OrganizationInitialized(
         bytes32 adminsRoot,
@@ -36,14 +38,16 @@ interface IOrganizationInitialization {
         uint256 votingThreshold,
         address[] adminAddresses,
         address guardian,
+        uint256 guardianTimelockDuration,
         bytes32 membersRoot,
         bytes32 groupsRoot,
         string membersIpfsCid,
         string groupsIpfsCid,
         bool isRecoverySupportedForTransactionsAndERC1271,
         address transactionAndERC1271RecoveryAddress,
+        uint256 txRecoveryTimelockDuration,
         address guardianRecoveryAddress,
-        uint256 recoveryTimelockDuration
+        uint256 guardianRecoveryTimelockDuration
     );
 
     // ═══════════════════════════════════════════════════════════════════════════

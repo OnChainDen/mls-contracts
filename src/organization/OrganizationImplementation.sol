@@ -723,6 +723,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
+     * @notice Returns the guardian timelock duration in seconds
+     * @return The timelock duration
+     */
+    function guardianTimelockDuration() external view override returns (uint256) {
+        return LibOrganizationGuardian.getGuardianTimelockDuration();
+    }
+
+    /**
      * @notice Returns whether recovery is supported for transactions and ERC1271 signatures
      * @return True if recovery is supported, false otherwise
      */
@@ -755,11 +763,11 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
     }
 
     /**
-     * @notice Returns the recovery timelock duration in seconds
+     * @notice Returns the guardian recovery timelock duration in seconds
      * @return The timelock duration
      */
-    function recoveryTimelockDuration() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getRecoveryTimelockDuration();
+    function guardianRecoveryTimelockDuration() external view override returns (uint256) {
+        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDuration();
     }
 
     /**
@@ -768,6 +776,14 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      */
     function pendingTxRecoveryEnableTimestamp() external view override returns (uint256) {
         return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
+    }
+
+    /**
+     * @notice Returns the tx recovery timelock duration in seconds
+     * @return The timelock duration
+     */
+    function txRecoveryTimelockDuration() external view override returns (uint256) {
+        return LibOrganizationTxRecovery.getTxRecoveryTimelockDuration();
     }
 
     /**

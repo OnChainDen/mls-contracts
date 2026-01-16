@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
@@ -10,7 +11,6 @@ import {
     LibOrganizationDeployerAddressStorage
 } from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
 import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
-import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
 import {AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
 import {InitializationParams} from "types/CommonTypes.sol";
@@ -71,19 +71,22 @@ library LibOrganizationInitialization {
             adminsRoot: params.adminsRoot, adminCount: params.adminCount, votingThreshold: params.votingThreshold
         });
 
-        // Set guardian
-        LibOrganizationGuardianStorage.layout().guardian = params.guardian;
+        // Initialize guardian configuration (sets guardian address and timelock duration)
+        LibOrganizationGuardian.initializeGuardian({
+            guardian: params.guardian, guardianTimelockDuration: params.guardianTimelockDuration
+        });
 
         // Initialize guardian recovery configuration (sets guardianRecoveryAddress and timelock duration)
         LibOrganizationGuardianRecovery.initializeGuardianRecovery({
             guardianRecoveryAddress: params.guardianRecoveryAddress,
-            recoveryTimelockDuration: params.recoveryTimelockDuration
+            guardianRecoveryTimelockDuration: params.guardianRecoveryTimelockDuration
         });
 
-        // Initialize transaction recovery configuration (sets tx recovery support and address)
+        // Initialize transaction recovery configuration (sets tx recovery support, address, and timelock duration)
         LibOrganizationTxRecovery.initializeTxRecovery({
             isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
-            transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress
+            transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
+            txRecoveryTimelockDuration: params.txRecoveryTimelockDuration
         });
 
         emit IOrganizationInitialization.OrganizationInitialized({
@@ -92,14 +95,16 @@ library LibOrganizationInitialization {
             votingThreshold: params.votingThreshold,
             adminAddresses: params.adminAddresses,
             guardian: params.guardian,
+            guardianTimelockDuration: params.guardianTimelockDuration,
             membersRoot: params.membersRoot,
             groupsRoot: params.groupsRoot,
             membersIpfsCid: params.membersIpfsCid,
             groupsIpfsCid: params.groupsIpfsCid,
             isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
             transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
+            txRecoveryTimelockDuration: params.txRecoveryTimelockDuration,
             guardianRecoveryAddress: params.guardianRecoveryAddress,
-            recoveryTimelockDuration: params.recoveryTimelockDuration
+            guardianRecoveryTimelockDuration: params.guardianRecoveryTimelockDuration
         });
     }
 

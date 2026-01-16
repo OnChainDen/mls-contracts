@@ -87,6 +87,11 @@ interface IOrganizationTxRecovery {
     error TxRecoveryAlreadyEnabled();
 
     /**
+     * @notice Thrown when the tx recovery timelock duration is invalid (zero)
+     */
+    error InvalidTxRecoveryTimelockDuration();
+
+    /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the transaction recovery address.
      *      Recovery must be supported for this to work.
@@ -153,4 +158,10 @@ interface IOrganizationTxRecovery {
      * @return The timestamp (0 if no pending request)
      */
     function pendingTxRecoveryEnableTimestamp() external view returns (uint256);
+
+    /**
+     * @notice Returns the tx recovery timelock duration in seconds
+     * @return The timelock duration
+     */
+    function txRecoveryTimelockDuration() external view returns (uint256);
 }

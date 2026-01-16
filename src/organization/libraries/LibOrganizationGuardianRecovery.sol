@@ -24,12 +24,14 @@ library LibOrganizationGuardianRecovery {
      * @dev Initializes the guardian recovery configuration during organization initialization.
      *      This should be called from LibOrganizationInitialization.initialize().
      * @param guardianRecoveryAddress The guardian recovery address (must always be non-zero)
-     * @param recoveryTimelockDuration The timelock duration in seconds (must be > 0)
+     * @param guardianRecoveryTimelockDuration The timelock duration in seconds (must be > 0)
      */
-    function initializeGuardianRecovery(address guardianRecoveryAddress, uint256 recoveryTimelockDuration) internal {
+    function initializeGuardianRecovery(address guardianRecoveryAddress, uint256 guardianRecoveryTimelockDuration)
+        internal
+    {
         // Validate timelock duration
-        if (recoveryTimelockDuration == 0) {
-            revert IOrganizationGuardianRecovery.InvalidRecoveryTimelockDuration();
+        if (guardianRecoveryTimelockDuration == 0) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDuration();
         }
 
         // Validate guardian recovery address (always required)
@@ -40,7 +42,7 @@ library LibOrganizationGuardianRecovery {
         LibOrganizationRecoveryStorage.Layout storage recoveryLayout = LibOrganizationRecoveryStorage.layout();
 
         recoveryLayout.guardianRecoveryAddress = guardianRecoveryAddress;
-        recoveryLayout.recoveryTimelockDuration = recoveryTimelockDuration;
+        recoveryLayout.guardianRecoveryTimelockDuration = guardianRecoveryTimelockDuration;
     }
 
     /**
@@ -61,7 +63,7 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidNewGuardianAddress();
         }
 
-        uint256 canFinalizeAt = block.timestamp + recoveryLayout.recoveryTimelockDuration;
+        uint256 canFinalizeAt = block.timestamp + recoveryLayout.guardianRecoveryTimelockDuration;
 
         // Set pending state in recovery storage
         recoveryLayout.recoveryPendingGuardian = newGuardian;
@@ -189,11 +191,11 @@ library LibOrganizationGuardianRecovery {
     }
 
     /**
-     * @dev Returns the recovery timelock duration in seconds.
+     * @dev Returns the guardian recovery timelock duration in seconds.
      * @return The duration
      */
-    function getRecoveryTimelockDuration() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().recoveryTimelockDuration;
+    function getGuardianRecoveryTimelockDuration() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecoveryTimelockDuration;
     }
 
     /**

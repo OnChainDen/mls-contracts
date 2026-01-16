@@ -10,7 +10,7 @@ pragma solidity 0.8.33;
 library LibOrganizationRecoveryStorage {
     /**
      * @dev Storage layout for recovery functionality.
-     *      Struct is ordered for optimal storage packing (6 slots instead of 8).
+     *      Struct is ordered for optimal storage packing (7 slots).
      * @custom:storage-location erc7201:den.mls-wallet.organization.recovery
      * @param transactionAndERC1271RecoveryAddress The privileged address that can execute recovery transactions and
      * sign via recovery
@@ -19,9 +19,10 @@ library LibOrganizationRecoveryStorage {
      * @param isRecoveryEnabledForTransactionsAndERC1271 Whether recovery is currently enabled for transactions and
      * ERC1271
      * @param guardianRecoveryAddress The privileged address that can update the guardian via recovery
-     * @param recoveryTimelockDuration The duration in seconds for recovery timelocks
+     * @param txRecoveryTimelockDuration The duration in seconds for tx/ERC1271 recovery enable timelocks
      * @param pendingTxRecoveryEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no
      * pending)
+     * @param guardianRecoveryTimelockDuration The duration in seconds for guardian recovery timelocks
      * @param recoveryPendingGuardian The proposed new guardian address for recovery flow (0 = no pending)
      * @param isRecoveryGuardianUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept
      * (recovery flow)
@@ -32,8 +33,9 @@ library LibOrganizationRecoveryStorage {
         bool isRecoverySupportedForTransactionsAndERC1271;
         bool isRecoveryEnabledForTransactionsAndERC1271;
         address guardianRecoveryAddress;
-        uint256 recoveryTimelockDuration;
+        uint256 txRecoveryTimelockDuration;
         uint256 pendingTxRecoveryEnableTimestamp;
+        uint256 guardianRecoveryTimelockDuration;
         address recoveryPendingGuardian;
         bool isRecoveryGuardianUpdateReadyForAcceptance;
         uint256 recoveryPendingGuardianTimestamp;
