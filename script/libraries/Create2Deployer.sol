@@ -21,25 +21,21 @@ library Create2Deployer {
     /// @dev Error thrown when deployed address doesn't match predicted
     error AddressMismatch(address predicted, address actual);
 
-    /**
-     * @notice Computes the CREATE2 address for a contract deployment
-     * @param factory The CREATE2 factory address
-     * @param salt The deployment salt
-     * @param initCode The contract creation bytecode (including constructor args)
-     * @return The predicted deployment address
-     */
+    /// @dev Computes the CREATE2 address for a contract deployment
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode (including constructor args)
+    /// @return The predicted deployment address
     function computeAddress(address factory, bytes32 salt, bytes memory initCode) internal pure returns (address) {
         return Create2.computeAddress(salt, keccak256(initCode), factory);
     }
 
-    /**
-     * @notice Checks if a contract is already deployed at the predicted address
-     * @param factory The CREATE2 factory address
-     * @param salt The deployment salt
-     * @param initCode The contract creation bytecode
-     * @return isDeployedAtAddress True if contract exists at the predicted address
-     * @return predicted The predicted address
-     */
+    /// @dev Checks if a contract is already deployed at the predicted address
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode
+    /// @return isDeployedAtAddress True if contract exists at the predicted address
+    /// @return predicted The predicted address
     function isDeployed(address factory, bytes32 salt, bytes memory initCode)
         internal
         view
@@ -49,16 +45,14 @@ library Create2Deployer {
         isDeployedAtAddress = predicted.code.length > 0;
     }
 
-    /**
-     * @notice Deploys a contract using CREATE2 if not already deployed
-     * @dev Handles differences between Arachnid and Safe Singleton Factory parameter ordering
-     * @param factory The CREATE2 factory address
-     * @param salt The deployment salt
-     * @param initCode The contract creation bytecode
-     * @param name Human-readable name for logging
-     * @return deployedAtAddress The address of the deployed (or existing) contract
-     * @return wasDeployed True if newly deployed, false if already existed
-     */
+    /// @dev Deploys a contract using CREATE2 if not already deployed
+    ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode
+    /// @param name Human-readable name for logging
+    /// @return deployedAtAddress The address of the deployed (or existing) contract
+    /// @return wasDeployed True if newly deployed, false if already existed
     function deployIfNotExists(address factory, bytes32 salt, bytes memory initCode, string memory name)
         internal
         returns (address deployedAtAddress, bool wasDeployed)
@@ -87,14 +81,12 @@ library Create2Deployer {
         return (deployedAtAddress, true);
     }
 
-    /**
-     * @notice Deploys using the appropriate factory interface
-     * @dev Detects factory type and uses correct parameter ordering
-     * @param factory The CREATE2 factory address
-     * @param salt The deployment salt
-     * @param initCode The contract creation bytecode
-     * @return deployedAtAddress The deployed contract address
-     */
+    /// @dev Deploys using the appropriate factory interface based on factory address
+    ///      Detects factory type and uses correct parameter ordering
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode
+    /// @return deployedAtAddress The deployed contract address
     function _deploy(address factory, bytes32 salt, bytes memory initCode) private returns (address deployedAtAddress) {
         // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
         if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
@@ -105,14 +97,12 @@ library Create2Deployer {
         }
     }
 
-    /**
-     * @notice Batch deploys multiple contracts
-     * @param factory The CREATE2 factory address
-     * @param salts Array of deployment salts
-     * @param initCodes Array of contract creation bytecodes
-     * @param names Array of human-readable names for logging
-     * @return addresses Array of deployed addresses
-     */
+    /// @dev Batch deploys multiple contracts via CREATE2
+    /// @param factory The CREATE2 factory address
+    /// @param salts Array of deployment salts
+    /// @param initCodes Array of contract creation bytecodes
+    /// @param names Array of human-readable names for logging
+    /// @return addresses Array of deployed addresses
     function batchDeploy(address factory, bytes32[] memory salts, bytes[] memory initCodes, string[] memory names)
         internal
         returns (address[] memory addresses)
@@ -125,21 +115,17 @@ library Create2Deployer {
         }
     }
 
-    /**
-     * @notice Verifies that a factory is available (has code)
-     * @param factory The factory address to check
-     * @return available True if factory has code deployed
-     */
+    /// @dev Verifies that a factory is available (has code deployed)
+    /// @param factory The factory address to check
+    /// @return available True if factory has code deployed
     function isFactoryAvailable(address factory) internal view returns (bool available) {
         return factory.code.length > 0;
     }
 
-    /**
-     * @notice Gets the best available CREATE2 factory
-     * @dev Prefers Arachnid factory, falls back to Safe Singleton Factory
-     * @return factory The available factory address
-     * @return factoryName Human-readable factory name
-     */
+    /// @dev Gets the best available CREATE2 factory
+    ///      Prefers Arachnid factory, falls back to Safe Singleton Factory
+    /// @return factory The available factory address (address(0) if none)
+    /// @return factoryName Human-readable factory name
     function getAvailableFactory() internal view returns (address factory, string memory factoryName) {
         // Prefer Arachnid as it's more widely deployed
         if (isFactoryAvailable(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
@@ -154,11 +140,9 @@ library Create2Deployer {
         return (address(0), "None");
     }
 
-    /**
-     * @notice Logs deployment summary header
-     * @param factory The factory being used
-     * @param chainId The chain ID
-     */
+    /// @dev Logs deployment summary header with factory and chain info
+    /// @param factory The factory being used
+    /// @param chainId The chain ID
     function logDeploymentHeader(address factory, uint256 chainId) internal pure {
         console.log("");
         console.log("================================================================================");
@@ -179,10 +163,8 @@ library Create2Deployer {
         console.log("");
     }
 
-    /**
-     * @notice Logs a section header for organized output
-     * @param sectionName The name of the deployment section
-     */
+    /// @dev Logs a section header for organized console output
+    /// @param sectionName The name of the deployment section
     function logSection(string memory sectionName) internal pure {
         console.log("");
         console.log("--------------------------------------------------------------------------------");
@@ -190,9 +172,7 @@ library Create2Deployer {
         console.log("--------------------------------------------------------------------------------");
     }
 
-    /**
-     * @notice Logs deployment completion summary
-     */
+    /// @dev Logs deployment completion summary
     function logDeploymentComplete() internal pure {
         console.log("");
         console.log("================================================================================");

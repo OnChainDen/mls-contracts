@@ -54,32 +54,52 @@ import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
-    // ============================================================
-    // Deployed Contract Addresses (populated during deployment)
-    // ============================================================
-
-    // Safe Infrastructure
+    /// @notice Address of the deployed Safe Singleton (master copy)
     address public safeSingleton;
+
+    /// @notice Address of the deployed SafeProxyFactory
     address public safeProxyFactory;
+
+    /// @notice Address of the deployed CompatibilityFallbackHandler
     address public compatibilityFallbackHandler;
+
+    /// @notice Address of the deployed MultiSend library
     address public multiSend;
+
+    /// @notice Address of the deployed MultiSendCallOnly library
     address public multiSendCallOnly;
+
+    /// @notice Address of the deployed CreateCall library
     address public createCall;
+
+    /// @notice Address of the deployed SimulateTxAccessor
     address public simulateTxAccessor;
 
-    // Safe Multisigs
+    /// @notice Address of the deployed Guardian Safe multisig
     address public guardianSafe;
+
+    /// @notice Address of the deployed Deployer Safe multisig
     address public deployerSafe;
 
-    // Platform Contracts
+    /// @notice Address of the deployed OrganizationImplementation contract
     address public organizationImplementation;
+
+    /// @notice Address of the deployed AccountImplementation contract
     address public accountImplementation;
+
+    /// @notice Address of the deployed ImplementationWhitelistImplementation contract
     address public whitelistImplementation;
+
+    /// @notice Address of the deployed OrganizationFactory contract
     address public organizationFactory;
+
+    /// @notice Address of the deployed ImplementationWhitelistFactory contract
     address public whitelistFactory;
+
+    /// @notice Address of the deployed ImplementationWhitelistProxy contract
     address public whitelistProxy;
 
-    // CREATE2 Factory being used
+    /// @notice Address of the CREATE2 factory being used for deployments
     address public create2Factory;
 
     /**
@@ -133,10 +153,9 @@ contract DeployContracts is Script {
         _logDeployedAddresses();
     }
 
-    // ============================================================
-    // Step 1: Safe Infrastructure
-    // ============================================================
-
+    /// @dev Deploys all Safe infrastructure contracts via CREATE2
+    ///      Includes: Safe singleton, proxy factory, fallback handler, MultiSend libraries,
+    ///      CreateCall, and SimulateTxAccessor
     function _deploySafeInfrastructure() internal {
         Create2Deployer.logSection("Safe Infrastructure");
 
@@ -188,10 +207,11 @@ contract DeployContracts is Script {
         );
     }
 
-    // ============================================================
-    // Step 2: Safe Multisigs
-    // ============================================================
-
+    /// @dev Deploys Guardian and Deployer Safe multisig wallets
+    /// @param guardianSafeOwners Array of owner addresses for the Guardian Safe
+    /// @param guardianSafeThreshold Required signatures threshold for Guardian Safe
+    /// @param deployerSafeOwners Array of owner addresses for the Deployer Safe
+    /// @param deployerSafeThreshold Required signatures threshold for Deployer Safe
     function _deploySafeMultisigs(
         address[] memory guardianSafeOwners,
         uint256 guardianSafeThreshold,
@@ -211,6 +231,12 @@ contract DeployContracts is Script {
         );
     }
 
+    /// @dev Deploys a Safe multisig wallet using SafeProxyFactory
+    /// @param owners Array of owner addresses for the Safe
+    /// @param threshold Required number of signatures for transactions
+    /// @param salt Salt used for deterministic address computation
+    /// @param name Human-readable name for logging purposes
+    /// @return safe Address of the deployed Safe proxy
     function _deploySafeMultisig(address[] memory owners, uint256 threshold, bytes32 salt, string memory name)
         internal
         returns (address safe)
@@ -250,6 +276,10 @@ contract DeployContracts is Script {
         require(deployedAtAddress == safe, "Safe deployed at unexpected address");
     }
 
+    /// @dev Computes the deterministic address of a Safe proxy before deployment
+    /// @param initializer Encoded Safe.setup() call data
+    /// @param saltNonce Nonce used for salt computation
+    /// @return The predicted Safe proxy address
     function _computeSafeProxyAddress(bytes memory initializer, uint256 saltNonce) internal view returns (address) {
         // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
         bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
@@ -261,10 +291,8 @@ contract DeployContracts is Script {
         return Create2.computeAddress(salt, initCodeHash, safeProxyFactory);
     }
 
-    // ============================================================
-    // Step 3: Verify Library Addresses
-    // ============================================================
-
+    /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
+    ///      Logs warnings if any libraries are missing and need to be deployed first
     function _verifyLibraryAddresses() internal view {
         Create2Deployer.logSection("Verify Library Addresses");
 
@@ -322,10 +350,8 @@ contract DeployContracts is Script {
         }
     }
 
-    // ============================================================
-    // Step 4: Implementation Contracts
-    // ============================================================
-
+    /// @dev Deploys all implementation contracts via CREATE2
+    ///      Includes: OrganizationImplementation, AccountImplementation, ImplementationWhitelistImplementation
     function _deployImplementationContracts() internal {
         Create2Deployer.logSection("Implementation Contracts");
 
@@ -355,10 +381,9 @@ contract DeployContracts is Script {
         );
     }
 
-    // ============================================================
-    // Step 5: Factory Contracts
-    // ============================================================
-
+    /// @dev Deploys factory contracts via CREATE2
+    ///      Includes: OrganizationFactory, ImplementationWhitelistFactory
+    ///      Both factories are initialized with deployerSafe as the authorized deployer
     function _deployFactoryContracts() internal {
         Create2Deployer.logSection("Factory Contracts");
 
@@ -379,10 +404,8 @@ contract DeployContracts is Script {
         );
     }
 
-    // ============================================================
-    // Step 6: Deploy ImplementationWhitelistProxy
-    // ============================================================
-
+    /// @dev Deploys the ImplementationWhitelistProxy via ImplementationWhitelistFactory
+    ///      This proxy serves as the canonical whitelist for approved implementations
     function _deployWhitelistProxy() internal {
         Create2Deployer.logSection("ImplementationWhitelistProxy");
 
@@ -417,10 +440,8 @@ contract DeployContracts is Script {
         }
     }
 
-    // ============================================================
-    // Step 7: Whitelist Implementations
-    // ============================================================
-
+    /// @dev Whitelists the deployed implementation contracts in the ImplementationWhitelistProxy
+    ///      Registers OrganizationImplementation and AccountImplementation as approved implementations
     function _whitelistImplementations() internal {
         Create2Deployer.logSection("Whitelist Implementations");
 
@@ -468,10 +489,8 @@ contract DeployContracts is Script {
         }
     }
 
-    // ============================================================
-    // Helper Functions
-    // ============================================================
-
+    /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
+    /// @return factory Address of the available CREATE2 factory
     function _getCreate2Factory() internal view returns (address factory) {
         // First, check if explicitly provided
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
@@ -488,6 +507,10 @@ contract DeployContracts is Script {
         }
     }
 
+    /// @dev Retrieves Guardian Safe configuration from environment variables
+    ///      Falls back to deployer as single owner if not configured
+    /// @return owners Array of owner addresses for the Guardian Safe
+    /// @return threshold Required number of signatures
     function _getGuardianSafeConfig() internal view returns (address[] memory owners, uint256 threshold) {
         // Try to get from environment
         try vm.envString("GUARDIAN_SAFE_OWNERS") returns (string memory ownersStr) {
@@ -502,6 +525,10 @@ contract DeployContracts is Script {
         }
     }
 
+    /// @dev Retrieves Deployer Safe configuration from environment variables
+    ///      Falls back to deployer as single owner if not configured
+    /// @return owners Array of owner addresses for the Deployer Safe
+    /// @return threshold Required number of signatures
     function _getDeployerSafeConfig() internal view returns (address[] memory owners, uint256 threshold) {
         // Try to get from environment
         try vm.envString("DEPLOYER_SAFE_OWNERS") returns (string memory ownersStr) {
@@ -516,12 +543,17 @@ contract DeployContracts is Script {
         }
     }
 
+    /// @dev Parses a comma-separated string of addresses into an array
+    ///      Note: Simplified implementation - returns empty array
+    ///      In production, use a proper string parsing library
+    /// @return Empty address array (placeholder implementation)
     function _parseAddressArray(string memory) internal pure returns (address[] memory) {
         // Simplified: return empty array, actual parsing would split by comma
         // In production, use a proper string parsing library
         return new address[](0);
     }
 
+    /// @dev Logs all deployed contract addresses in a formatted summary
     function _logDeployedAddresses() internal view {
         console.log("");
         console.log("================================================================================");

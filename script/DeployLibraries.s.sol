@@ -28,13 +28,19 @@ import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
  * @author Den Technologies Inc
  */
 contract DeployLibraries is Script {
-    // Platform Libraries (populated during deployment)
+    /// @notice Address of the deployed LibOrganizationPolicy library
     address public libOrganizationPolicy;
+
+    /// @notice Address of the deployed LibOrganizationAdmin library
     address public libOrganizationAdmin;
+
+    /// @notice Address of the deployed LibOrganizationInitialization library
     address public libOrganizationInitialization;
+
+    /// @notice Address of the deployed LibOrganizationAccountSignature library
     address public libOrganizationAccountSignature;
 
-    // CREATE2 Factory being used
+    /// @notice Address of the CREATE2 factory being used for deployments
     address public create2Factory;
 
     /**
@@ -99,10 +105,9 @@ contract DeployLibraries is Script {
         _printLibrariesCommandWithAddresses(libPolicy, libAdmin, libInit, libAccSig);
     }
 
-    // ============================================================
-    // Internal Functions
-    // ============================================================
-
+    /// @dev Deploys all platform libraries via CREATE2 for deterministic addresses
+    ///      Libraries deployed: LibOrganizationPolicy, LibOrganizationAdmin,
+    ///      LibOrganizationInitialization, LibOrganizationAccountSignature
     function _deployPlatformLibraries() internal {
         Create2Deployer.logSection("Platform Libraries (CREATE2)");
 
@@ -139,6 +144,8 @@ contract DeployLibraries is Script {
         );
     }
 
+    /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
+    /// @return factory Address of the available CREATE2 factory
     function _getCreate2Factory() internal view returns (address factory) {
         // First, check if explicitly provided
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
@@ -155,6 +162,7 @@ contract DeployLibraries is Script {
         }
     }
 
+    /// @dev Logs all deployed library addresses in a formatted summary
     function _logDeployedAddresses() internal view {
         console.log("");
         console.log("================================================================================");
@@ -169,12 +177,18 @@ contract DeployLibraries is Script {
         console.log("================================================================================");
     }
 
+    /// @dev Prints the forge --libraries command using deployed addresses
     function _printLibrariesCommand() internal view {
         _printLibrariesCommandWithAddresses(
             libOrganizationPolicy, libOrganizationAdmin, libOrganizationInitialization, libOrganizationAccountSignature
         );
     }
 
+    /// @dev Prints the forge --libraries command with specified addresses
+    /// @param libPolicy Address of the LibOrganizationPolicy library
+    /// @param libAdmin Address of the LibOrganizationAdmin library
+    /// @param libInit Address of the LibOrganizationInitialization library
+    /// @param libAccSig Address of the LibOrganizationAccountSignature library
     function _printLibrariesCommandWithAddresses(
         address libPolicy,
         address libAdmin,

@@ -21,10 +21,10 @@ import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
  * @author Den Technologies Inc
  */
 contract DeploySafeSingletonFactory is Script {
-    /// @dev The expected factory address after deployment
+    /// @dev Expected factory address after deployment (deterministic via nonce-0 CREATE)
     address internal constant EXPECTED_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
 
-    /// @dev The deployer address that must have nonce 0
+    /// @dev Deployer address that must have nonce 0 for deterministic deployment
     address internal constant EXPECTED_DEPLOYER = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
 
     /// @dev Gas price for the deployment transaction (125 gwei - works on most chains)
@@ -33,7 +33,7 @@ contract DeploySafeSingletonFactory is Script {
     /// @dev Gas limit for the deployment transaction
     uint256 internal constant DEPLOYMENT_GAS_LIMIT = 101_616;
 
-    /// @dev Required ETH balance for the deployer (gas price * gas limit + buffer)
+    /// @dev Required ETH balance for the deployer (gas price * gas limit * 2 for buffer)
     uint256 internal constant REQUIRED_ETH_BALANCE = DEPLOYMENT_GAS_PRICE * DEPLOYMENT_GAS_LIMIT * 2;
 
     // solhint-disable-next-line max-line-length
@@ -122,10 +122,9 @@ contract DeploySafeSingletonFactory is Script {
         console.log("");
     }
 
-    /**
-     * @notice Runs all safety checks before deployment
-     * @return passed True if all checks pass
-     */
+    /// @dev Runs all safety checks before deployment
+    ///      Checks: factory not deployed, deployer key valid, nonce is 0, sufficient ETH
+    /// @return passed True if all critical checks pass
     function _runSafetyChecks() internal view returns (bool passed) {
         console.log("  Running safety checks...");
         console.log("");
@@ -184,10 +183,8 @@ contract DeploySafeSingletonFactory is Script {
         return allPassed;
     }
 
-    /**
-     * @notice Deploys the Safe Singleton Factory
-     * @dev Uses the factory bytecode directly since Foundry handles broadcasting
-     */
+    /// @dev Deploys the Safe Singleton Factory using inline assembly
+    ///      Uses CREATE opcode from nonce 0 to achieve deterministic address
     function _deployFactory() internal {
         // Safe Singleton Factory bytecode (minimal CREATE2 factory)
         // This is the init code that produces a contract at the expected address
@@ -211,10 +208,9 @@ contract DeploySafeSingletonFactory is Script {
         }
     }
 
-    /**
-     * @notice Helper to fund the deployer address
-     * @dev Can be called separately to fund the deployer before running the main script
-     */
+    /// @notice Funds the Safe Singleton Factory deployer address with ETH
+    /// @dev Can be called separately to fund the deployer before running the main script.
+    ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
     function fundDeployer() external {
         uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
 

@@ -114,15 +114,9 @@ library DeploymentConfig {
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
 
-    // ============================================================
-    // Helper Functions
-    // ============================================================
-
-    /**
-     * @dev Returns the appropriate CREATE2 factory address based on availability
-     * @param preferSafe If true, prefer Safe Singleton Factory; otherwise prefer Arachnid
-     * @return factory The factory address to use
-     */
+    /// @dev Returns the appropriate CREATE2 factory address based on preference
+    /// @param preferSafe If true, returns Safe Singleton Factory; otherwise returns Arachnid
+    /// @return factory The factory address to use
     function getCreate2Factory(bool preferSafe) internal pure returns (address factory) {
         return preferSafe ? SAFE_SINGLETON_FACTORY : ARACHNID_CREATE2_FACTORY;
     }
