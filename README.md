@@ -1064,12 +1064,10 @@ After deployment, verify:
 script/
 ├── DeployPlatform.s.sol              # Main deployment script (Solidity)
 ├── DeploySafeSingletonFactory.s.sol  # Safe Singleton Factory deployment (Solidity)
-├── DeployContracts.s.sol             # DEPRECATED - use DeployPlatform.s.sol
 ├── config/
 │   └── DeploymentConfig.sol          # Deterministic salts and addresses
 ├── interfaces/
-│   ├── ICreate2Factory.sol           # CREATE2 factory interfaces
-│   └── ISafe.sol                     # Safe contract interfaces
+│   └── ICreate2Factory.sol           # CREATE2 factory interfaces
 ├── libraries/
 │   └── Create2Deployer.sol           # Deployment helper library
 └── sh/

@@ -26,9 +26,12 @@ import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 
+// OpenZeppelin utilities
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+
 // Script utilities
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
-import {ISafe, ISafeProxyFactory} from "script/interfaces/ISafe.sol";
+import {ISafe} from "@safe/interfaces/ISafe.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
@@ -310,26 +313,39 @@ contract DeployPlatform is Script {
             )
         );
 
-        // Compute the expected address
-        // Note: SafeProxyFactory uses a different CREATE2 formula
-        // We use createProxyWithNonce which uses the saltNonce directly
         uint256 saltNonce = uint256(salt);
 
-        // Check if already deployed by trying to compute the address
-        // SafeProxyFactory doesn't have a pure address computation, so we attempt deployment
-        try ISafeProxyFactory(safeProxyFactory).createProxyWithNonce(safeSingleton, initializer, saltNonce) returns (
-            address deployed
-        ) {
-            safe = deployed;
-            console.log(unicode"  ✅ DEPLOYED: %s at %s", name, safe);
-        } catch {
-            // If it fails, the Safe might already exist
-            // Try to calculate what the address would be
-            safe = ISafeProxyFactory(safeProxyFactory).calculateCreateProxyWithNonceAddress(
-                safeSingleton, initializer, saltNonce
-            );
-            console.log(unicode"  ⏭️  SKIPPED: %s (likely already deployed at %s)", name, safe);
+        // Compute expected address using SafeProxyFactory's CREATE2 formula
+        safe = _computeSafeProxyAddress(initializer, saltNonce);
+
+        // Check if already deployed
+        if (safe.code.length > 0) {
+            console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, safe);
+            return safe;
         }
+
+        // Deploy the Safe
+        address deployed =
+            address(SafeProxyFactory(safeProxyFactory).createProxyWithNonce(safeSingleton, initializer, saltNonce));
+        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployed);
+
+        // Verify deployment matches expected address
+        require(deployed == safe, "Safe deployed at unexpected address");
+    }
+
+    /**
+     * @dev Computes the CREATE2 address for a Safe proxy deployed via SafeProxyFactory
+     *      SafeProxyFactory uses: salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
+     */
+    function _computeSafeProxyAddress(bytes memory initializer, uint256 saltNonce) internal view returns (address) {
+        // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
+        bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
+
+        // Get the init code hash from the factory (includes singleton address)
+        bytes32 initCodeHash = SafeProxyFactory(safeProxyFactory).proxyCreationCodehash(safeSingleton);
+
+        // Use OpenZeppelin's Create2 utility for address computation
+        return Create2.computeAddress(salt, initCodeHash, safeProxyFactory);
     }
 
     // ============================================================
