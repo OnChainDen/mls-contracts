@@ -240,51 +240,50 @@ build_forge_flags() {
 deploy_libraries() {
     log_section "Phase 1: Deploying Platform Libraries"
     
-    log_info "Deploying libraries via CREATE2 for deterministic addresses..."
+    log_info "Running DeployLibraries.s.sol..."
     
     local forge_flags
     forge_flags=$(build_forge_flags)
     
-    # Run the library deployment
+    # Run the library deployment script
     # shellcheck disable=SC2086
-    forge script script/DeployPlatform.s.sol:DeployPlatform \
-        --sig "deployLibraries()" \
+    forge script script/DeployLibraries.s.sol:DeployLibraries \
         ${forge_flags}
     
     log_success "Library deployment complete"
 }
 
 # ------------------------------------------------------------------------------
-# PHASE 2: DEPLOY PLATFORM WITH LIBRARY LINKING
+# PHASE 2: DEPLOY CONTRACTS WITH LIBRARY LINKING
 # ------------------------------------------------------------------------------
-deploy_platform() {
+deploy_contracts() {
     local lib_policy_addr="$1"
     local lib_admin_addr="$2"
     local lib_init_addr="$3"
     local lib_acc_sig_addr="$4"
     
-    log_section "Phase 2: Deploying Platform with Library Linking"
+    log_section "Phase 2: Deploying Contracts with Library Linking"
     
     log_info "Library addresses for linking:"
-    log_info "  LibOrganizationPolicy:          ${lib_policy_addr}"
-    log_info "  LibOrganizationAdmin:           ${lib_admin_addr}"
-    log_info "  LibOrganizationInitialization:  ${lib_init_addr}"
+    log_info "  LibOrganizationPolicy:           ${lib_policy_addr}"
+    log_info "  LibOrganizationAdmin:            ${lib_admin_addr}"
+    log_info "  LibOrganizationInitialization:   ${lib_init_addr}"
     log_info "  LibOrganizationAccountSignature: ${lib_acc_sig_addr}"
     echo ""
     
     local forge_flags
     forge_flags=$(build_forge_flags)
     
-    # Run the full deployment with library linking
+    # Run the contracts deployment script with library linking
     # shellcheck disable=SC2086
-    forge script script/DeployPlatform.s.sol:DeployPlatform \
+    forge script script/DeployContracts.s.sol:DeployContracts \
         ${forge_flags} \
         --libraries "${LIB_POLICY_PATH}:${lib_policy_addr}" \
         --libraries "${LIB_ADMIN_PATH}:${lib_admin_addr}" \
         --libraries "${LIB_INIT_PATH}:${lib_init_addr}" \
         --libraries "${LIB_ACC_SIG_PATH}:${lib_acc_sig_addr}"
     
-    log_success "Platform deployment complete"
+    log_success "Contract deployment complete"
 }
 
 # ------------------------------------------------------------------------------
@@ -310,7 +309,7 @@ main() {
     # Step 4: Extract library addresses from broadcast JSON
     log_section "Extracting Library Addresses from Broadcast"
     
-    local broadcast_file="${BROADCAST_DIR}/DeployPlatform.s.sol/${chain_id}/run-latest.json"
+    local broadcast_file="${BROADCAST_DIR}/DeployLibraries.s.sol/${chain_id}/run-latest.json"
     
     if [[ ! -f "${broadcast_file}" ]]; then
         log_error "Broadcast file not found: ${broadcast_file}"
@@ -328,8 +327,8 @@ main() {
     
     log_success "Extracted all library addresses"
     
-    # Step 5: Deploy platform with library linking (Phase 2)
-    deploy_platform "${lib_policy_addr}" "${lib_admin_addr}" "${lib_init_addr}" "${lib_acc_sig_addr}"
+    # Step 5: Deploy contracts with library linking (Phase 2)
+    deploy_contracts "${lib_policy_addr}" "${lib_admin_addr}" "${lib_init_addr}" "${lib_acc_sig_addr}"
     
     # Step 6: Summary
     log_section "Deployment Complete"
@@ -337,13 +336,14 @@ main() {
     log_success "All contracts deployed successfully!"
     log_info ""
     log_info "Deployed library addresses (save these for verification):"
-    log_info "  LibOrganizationPolicy:          ${lib_policy_addr}"
-    log_info "  LibOrganizationAdmin:           ${lib_admin_addr}"
-    log_info "  LibOrganizationInitialization:  ${lib_init_addr}"
+    log_info "  LibOrganizationPolicy:           ${lib_policy_addr}"
+    log_info "  LibOrganizationAdmin:            ${lib_admin_addr}"
+    log_info "  LibOrganizationInitialization:   ${lib_init_addr}"
     log_info "  LibOrganizationAccountSignature: ${lib_acc_sig_addr}"
     log_info ""
     log_info "Full deployment artifacts available at:"
-    log_info "  ${BROADCAST_DIR}/DeployPlatform.s.sol/${chain_id}/"
+    log_info "  ${BROADCAST_DIR}/DeployLibraries.s.sol/${chain_id}/"
+    log_info "  ${BROADCAST_DIR}/DeployContracts.s.sol/${chain_id}/"
     log_info ""
     log_info "Finished at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 }

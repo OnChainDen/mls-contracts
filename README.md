@@ -786,11 +786,12 @@ Before deploying, ensure you have:
 
 ### Deployment Scripts
 
-The deployment system consists of two main scripts:
+The deployment system consists of three scripts:
 
 | Script | Purpose |
 |--------|---------|
-| `DeployPlatform.s.sol` | Main deployment script - deploys all platform contracts |
+| `DeployLibraries.s.sol` | Phase 1: Deploys platform libraries via CREATE2 |
+| `DeployContracts.s.sol` | Phase 2: Deploys all other contracts (with library linking) |
 | `DeploySafeSingletonFactory.s.sol` | Deploys Safe Singleton Factory on chains where no CREATE2 factory exists |
 
 ### What Gets Deployed
@@ -866,25 +867,24 @@ The deployment script deploys contracts in the following order:
 
 For fully deterministic deployment across all chains:
 
-1. **Phase 1: Deploy libraries and get their deterministic addresses**
+1. **Phase 1: Deploy libraries (DeployLibraries.s.sol)**
    ```bash
    # Option A: Compute addresses without deploying
-   forge script script/DeployPlatform.s.sol:DeployPlatform \
-     --sig "computeLibraryAddresses()" \
+   forge script script/DeployLibraries.s.sol:DeployLibraries \
+     --sig "computeAddresses()" \
      --rpc-url $RPC_URL
    
-   # Option B: Deploy libraries only
-   forge script script/DeployPlatform.s.sol:DeployPlatform \
-     --sig "deployLibraries()" \
+   # Option B: Deploy libraries
+   forge script script/DeployLibraries.s.sol:DeployLibraries \
      --rpc-url $RPC_URL \
      --broadcast
    ```
 
-2. **Phase 2: Deploy everything with library linking**
+2. **Phase 2: Deploy contracts with library linking (DeployContracts.s.sol)**
    
-   The script outputs the required `--libraries` flags. Use them:
+   The DeployLibraries script outputs the required `--libraries` flags. Use them:
    ```bash
-   forge script script/DeployPlatform.s.sol:DeployPlatform \
+   forge script script/DeployContracts.s.sol:DeployContracts \
      --rpc-url $RPC_URL \
      --broadcast \
      --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x... \
@@ -948,20 +948,19 @@ For more control, or on chains where the Arachnid factory is already deployed:
 export PRIVATE_KEY=<your-deployer-key>
 export RPC_URL=<chain-rpc-url>
 
-# 2. Compute deterministic library addresses
-forge script script/DeployPlatform.s.sol:DeployPlatform \
-  --sig "computeLibraryAddresses()" \
+# 2. Compute deterministic library addresses (optional preview)
+forge script script/DeployLibraries.s.sol:DeployLibraries \
+  --sig "computeAddresses()" \
   --rpc-url $RPC_URL
 
-# 3. Deploy libraries first (save the --libraries output!)
-forge script script/DeployPlatform.s.sol:DeployPlatform \
-  --sig "deployLibraries()" \
+# 3. Deploy libraries (save the --libraries output!)
+forge script script/DeployLibraries.s.sol:DeployLibraries \
   --rpc-url $RPC_URL \
   --broadcast \
   -vvvv
 
-# 4. Run full deployment WITH library linking (use addresses from step 3)
-forge script script/DeployPlatform.s.sol:DeployPlatform \
+# 4. Deploy contracts WITH library linking (use addresses from step 3)
+forge script script/DeployContracts.s.sol:DeployContracts \
   --rpc-url $RPC_URL \
   --broadcast \
   --verify \
@@ -995,23 +994,16 @@ CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:Dep
   --broadcast \
   -vvvv
 
-# Step 4: Compute library addresses using Safe Singleton Factory
+# Step 4: Deploy libraries using Safe Singleton Factory
 CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
-forge script script/DeployPlatform.s.sol:DeployPlatform \
-  --sig "computeLibraryAddresses()" \
-  --rpc-url $RPC_URL
-
-# Step 5: Deploy libraries
-CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
-forge script script/DeployPlatform.s.sol:DeployPlatform \
-  --sig "deployLibraries()" \
+forge script script/DeployLibraries.s.sol:DeployLibraries \
   --rpc-url $RPC_URL \
   --broadcast \
   -vvvv
 
-# Step 6: Deploy platform WITH library linking (use addresses from step 5)
+# Step 5: Deploy contracts WITH library linking (use addresses from step 4)
 CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
-forge script script/DeployPlatform.s.sol:DeployPlatform \
+forge script script/DeployContracts.s.sol:DeployContracts \
   --rpc-url $RPC_URL \
   --broadcast \
   --verify \
@@ -1062,7 +1054,8 @@ After deployment, verify:
 
 ```
 script/
-├── DeployPlatform.s.sol              # Main deployment script (Solidity)
+├── DeployLibraries.s.sol             # Phase 1: Deploy platform libraries (Solidity)
+├── DeployContracts.s.sol             # Phase 2: Deploy all contracts (Solidity)
 ├── DeploySafeSingletonFactory.s.sol  # Safe Singleton Factory deployment (Solidity)
 ├── config/
 │   └── DeploymentConfig.sol          # Deterministic salts and addresses
@@ -1073,6 +1066,14 @@ script/
 └── sh/
     └── deploy_all.sh                 # One-command deployment script (Bash)
 ```
+
+**Script Details:**
+
+| Script | Phase | Description |
+|--------|-------|-------------|
+| `DeployLibraries.s.sol` | 1 | Deploys 4 platform libraries via CREATE2. Outputs `--libraries` flags for Phase 2. |
+| `DeployContracts.s.sol` | 2 | Deploys Safe infrastructure, multisigs, implementations, factories, and proxies. Must be run with `--libraries` flags. |
+| `deploy_all.sh` | 1 & 2 | Runs both phases automatically, extracting library addresses from broadcast JSON. |
 
 **Shell Script Details (`script/sh/deploy_all.sh`):**
 - Uses `set -euo pipefail` for strict error handling (audit-friendly)

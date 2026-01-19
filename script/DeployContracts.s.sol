@@ -20,7 +20,7 @@ import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
-// Platform libraries (for bytecode access)
+// Platform libraries (for bytecode access - used for verification)
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
@@ -35,25 +35,17 @@ import {ISafe} from "@safe/interfaces/ISafe.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
- * @title DeployPlatform
- * @notice Main deployment script for the Den Onchain Custody platform
- * @dev Deploys all contracts deterministically using CREATE2, supporting both
- *      Arachnid and Safe Singleton Factory. Contracts are deployed in dependency order.
+ * @title DeployContracts
+ * @notice Deploys all platform contracts (Safe infrastructure, implementations, factories, proxies)
+ * @dev This script must be run AFTER DeployLibraries.s.sol with the --libraries flags.
  *
- *      IMPORTANT: For fully deterministic deployment, this script requires TWO runs:
- *
- *      Run 1 - Deploy Libraries:
- *        forge script script/DeployPlatform.s.sol:DeployPlatform --sig "deployLibraries()" ...
- *
- *      Run 2 - Deploy Everything (with library linking):
- *        forge script script/DeployPlatform.s.sol:DeployPlatform --libraries <lib-flags> ...
- *
- *      The script will output the required --libraries flag after deploying libraries.
+ *      IMPORTANT: For deterministic deployment, run with --libraries flags pointing to
+ *      the library addresses output by DeployLibraries.s.sol.
  *
  *      Deployment Order:
  *      1. Safe Infrastructure (Safe singleton, proxy factory, handlers, libraries)
  *      2. Safe Multisigs (Guardian Safe, Deployer Safe)
- *      3. Platform Libraries (LibOrganizationPolicy, Admin, Init, AccountSignature)
+ *      3. Verify Platform Libraries (ensure they're at expected addresses)
  *      4. Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
  *      5. Factory Contracts (OrganizationFactory, WhitelistFactory)
  *      6. ImplementationWhitelistProxy (via factory)
@@ -61,7 +53,7 @@ import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeployPlatform is Script {
+contract DeployContracts is Script {
     // ============================================================
     // Deployed Contract Addresses (populated during deployment)
     // ============================================================
@@ -79,12 +71,6 @@ contract DeployPlatform is Script {
     address public guardianSafe;
     address public deployerSafe;
 
-    // Platform Libraries
-    address public libOrganizationPolicy;
-    address public libOrganizationAdmin;
-    address public libOrganizationInitialization;
-    address public libOrganizationAccountSignature;
-
     // Platform Contracts
     address public organizationImplementation;
     address public accountImplementation;
@@ -97,71 +83,8 @@ contract DeployPlatform is Script {
     address public create2Factory;
 
     /**
-     * @notice Deploy only the platform libraries via CREATE2
-     * @dev Run this first, then use the output to run the full deployment with --libraries flag
-     */
-    function deployLibraries() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
-
-        create2Factory = _getCreate2Factory();
-
-        Create2Deployer.logDeploymentHeader(create2Factory, block.chainid);
-        console.log("  Deployer EOA: %s", deployerAddress);
-        console.log("  Mode: Library Deployment Only");
-        console.log("");
-
-        vm.startBroadcast(deployerPrivateKey);
-
-        _deployPlatformLibraries();
-
-        vm.stopBroadcast();
-
-        // Output the --libraries command
-        _printLibrariesCommand();
-    }
-
-    /**
-     * @notice Compute and print library addresses without deploying
-     * @dev Use this to get the --libraries flag before any deployment
-     */
-    function computeLibraryAddresses() external view {
-        address factory = _getCreate2Factory();
-
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Computed Deterministic Library Addresses");
-        console.log("================================================================================");
-        console.log("  CREATE2 Factory: %s", factory);
-        console.log("  Chain ID: %s", block.chainid);
-        console.log("");
-
-        address libPolicy = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        address libAdmin = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        address libInit = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        address libAccSig = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
-        );
-
-        console.log("  LibOrganizationPolicy:          %s", libPolicy);
-        console.log("  LibOrganizationAdmin:           %s", libAdmin);
-        console.log("  LibOrganizationInitialization:  %s", libInit);
-        console.log("  LibOrganizationAccountSignature: %s", libAccSig);
-        console.log("");
-
-        _printLibrariesCommandWithAddresses(libPolicy, libAdmin, libInit, libAccSig);
-    }
-
-    /**
      * @notice Main entry point for the deployment script
-     * @dev IMPORTANT: For deterministic deployment, run deployLibraries() first,
-     *      then run this with the --libraries flag output from that command.
+     * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
      */
     function run() external {
         // Get configuration from environment
@@ -188,10 +111,7 @@ contract DeployPlatform is Script {
         // Step 2: Deploy Safe Multisigs
         _deploySafeMultisigs(guardianSafeOwners, guardianSafeThreshold, deployerSafeOwners, deployerSafeThreshold);
 
-        // Step 3: Deploy Platform Libraries via CREATE2
-        _deployPlatformLibraries();
-
-        // Verify libraries are at expected addresses (critical for determinism)
+        // Step 3: Verify libraries are at expected addresses (critical for determinism)
         _verifyLibraryAddresses();
 
         // Step 4: Deploy Implementation Contracts
@@ -211,9 +131,6 @@ contract DeployPlatform is Script {
         // Log completion
         Create2Deployer.logDeploymentComplete();
         _logDeployedAddresses();
-
-        // Print the --libraries command for reference
-        _printLibrariesCommand();
     }
 
     // ============================================================
@@ -333,10 +250,6 @@ contract DeployPlatform is Script {
         require(deployedAtAddress == safe, "Safe deployed at unexpected address");
     }
 
-    /**
-     * @dev Computes the CREATE2 address for a Safe proxy deployed via SafeProxyFactory
-     *      SafeProxyFactory uses: salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-     */
     function _computeSafeProxyAddress(bytes memory initializer, uint256 saltNonce) internal view returns (address) {
         // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
         bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
@@ -349,52 +262,11 @@ contract DeployPlatform is Script {
     }
 
     // ============================================================
-    // Step 3: Platform Libraries (via CREATE2)
+    // Step 3: Verify Library Addresses
     // ============================================================
 
-    function _deployPlatformLibraries() internal {
-        Create2Deployer.logSection("Platform Libraries (CREATE2)");
-
-        // Deploy LibOrganizationPolicy
-        (libOrganizationPolicy,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
-            DeploymentConfig.LIB_ORG_POLICY_SALT,
-            type(LibOrganizationPolicy).creationCode,
-            "LibOrganizationPolicy"
-        );
-
-        // Deploy LibOrganizationAdmin
-        (libOrganizationAdmin,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
-            DeploymentConfig.LIB_ORG_ADMIN_SALT,
-            type(LibOrganizationAdmin).creationCode,
-            "LibOrganizationAdmin"
-        );
-
-        // Deploy LibOrganizationInitialization
-        (libOrganizationInitialization,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
-            DeploymentConfig.LIB_ORG_INIT_SALT,
-            type(LibOrganizationInitialization).creationCode,
-            "LibOrganizationInitialization"
-        );
-
-        // Deploy LibOrganizationAccountSignature
-        (libOrganizationAccountSignature,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode,
-            "LibOrganizationAccountSignature"
-        );
-    }
-
-    /**
-     * @dev Verifies that libraries are deployed at the expected CREATE2 addresses
-     *      This is critical - if they don't match, OrganizationImplementation won't work
-     */
     function _verifyLibraryAddresses() internal view {
-        console.log("");
-        console.log("  Verifying library addresses match CREATE2 expectations...");
+        Create2Deployer.logSection("Verify Library Addresses");
 
         address expectedPolicy = Create2Deployer.computeAddress(
             create2Factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
@@ -409,37 +281,43 @@ contract DeployPlatform is Script {
             create2Factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
         );
 
-        bool allMatch = true;
+        bool allDeployed = true;
 
-        if (libOrganizationPolicy != expectedPolicy) {
-            console.log(unicode"  ❌ LibOrganizationPolicy mismatch!");
-            console.log("     Expected: %s", expectedPolicy);
-            console.log("     Got: %s", libOrganizationPolicy);
-            allMatch = false;
-        }
-
-        if (libOrganizationAdmin != expectedAdmin) {
-            console.log(unicode"  ❌ LibOrganizationAdmin mismatch!");
-            allMatch = false;
-        }
-
-        if (libOrganizationInitialization != expectedInit) {
-            console.log(unicode"  ❌ LibOrganizationInitialization mismatch!");
-            allMatch = false;
-        }
-
-        if (libOrganizationAccountSignature != expectedAccSig) {
-            console.log(unicode"  ❌ LibOrganizationAccountSignature mismatch!");
-            allMatch = false;
-        }
-
-        if (allMatch) {
-            console.log(unicode"  ✅ All library addresses match expected CREATE2 addresses");
+        // Check if libraries are deployed at expected addresses
+        if (expectedPolicy.code.length == 0) {
+            console.log(unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPolicy);
+            allDeployed = false;
         } else {
+            console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPolicy);
+        }
+
+        if (expectedAdmin.code.length == 0) {
+            console.log(unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdmin);
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdmin);
+        }
+
+        if (expectedInit.code.length == 0) {
+            console.log(unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s", expectedInit);
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInit);
+        }
+
+        if (expectedAccSig.code.length == 0) {
+            console.log(
+                unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s", expectedAccSig
+            );
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationAccountSignature at %s", expectedAccSig);
+        }
+
+        if (!allDeployed) {
             console.log("");
-            console.log(unicode"  ⚠️  WARNING: Library addresses don't match expected CREATE2 addresses!");
-            console.log("     This may indicate the script was run without --libraries flag.");
-            console.log("     OrganizationImplementation may not be deterministic across chains.");
+            console.log(unicode"  ⚠️  WARNING: Some libraries are not deployed!");
+            console.log("     Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
             console.log("");
         }
     }
@@ -460,8 +338,7 @@ contract DeployPlatform is Script {
         );
 
         // Deploy OrganizationImplementation
-        // IMPORTANT: For deterministic deployment, this script must be run with --libraries flag
-        // pointing to the CREATE2-deployed library addresses
+        // IMPORTANT: This script must be run with --libraries flag for deterministic deployment
         (organizationImplementation,) = Create2Deployer.deployIfNotExists(
             create2Factory,
             DeploymentConfig.ORG_IMPL_SALT,
@@ -522,15 +399,11 @@ contract DeployPlatform is Script {
         }
 
         // Note: This call must come from the deployerSafe
-        // For the initial deployment, we need the deployer EOA to be the DEPLOYER_ADDRESS
-        // OR we need to execute this via the Safe
-        // For simplicity in scripts, we check if msg.sender is the deployer
         console.log("  Note: WhitelistProxy deployment requires deployerSafe to call the factory");
         console.log("  For initial deployment, configure ImplementationWhitelistFactory with EOA deployer");
         console.log("  Or execute this step via the Deployer Safe multisig");
 
         // If deployer matches factory's DEPLOYER_ADDRESS, deploy directly
-        // Otherwise, this step needs to be done via Safe transaction
         try ImplementationWhitelistFactory(whitelistFactory).deployImplementationWhitelist(
             DeploymentConfig.WHITELIST_PROXY_SALT,
             whitelistImplementation,
@@ -649,36 +522,6 @@ contract DeployPlatform is Script {
         return new address[](0);
     }
 
-    function _printLibrariesCommand() internal view {
-        _printLibrariesCommandWithAddresses(
-            libOrganizationPolicy, libOrganizationAdmin, libOrganizationInitialization, libOrganizationAccountSignature
-        );
-    }
-
-    function _printLibrariesCommandWithAddresses(
-        address libPolicy,
-        address libAdmin,
-        address libInit,
-        address libAccSig
-    ) internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  IMPORTANT: For deterministic OrganizationImplementation deployment,");
-        console.log("  run the full deployment with the following --libraries flags:");
-        console.log("================================================================================");
-        console.log("");
-        console.log("  forge script script/DeployPlatform.s.sol:DeployPlatform \\");
-        console.log("    --rpc-url $RPC_URL \\");
-        console.log("    --broadcast \\");
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_POLICY_PATH, libPolicy);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ADMIN_PATH, libAdmin);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_INIT_PATH, libInit);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH, libAccSig);
-        console.log("    -vvvv");
-        console.log("");
-        console.log("================================================================================");
-    }
-
     function _logDeployedAddresses() internal view {
         console.log("");
         console.log("================================================================================");
@@ -697,12 +540,6 @@ contract DeployPlatform is Script {
         console.log("  Safe Multisigs:");
         console.log("    Guardian Safe:               %s", guardianSafe);
         console.log("    Deployer Safe:               %s", deployerSafe);
-        console.log("");
-        console.log("  Platform Libraries:");
-        console.log("    LibOrganizationPolicy:       %s", libOrganizationPolicy);
-        console.log("    LibOrganizationAdmin:        %s", libOrganizationAdmin);
-        console.log("    LibOrganizationInit:         %s", libOrganizationInitialization);
-        console.log("    LibOrganizationAccSig:       %s", libOrganizationAccountSignature);
         console.log("");
         console.log("  Platform Implementations:");
         console.log("    OrganizationImplementation:  %s", organizationImplementation);
