@@ -127,26 +127,4 @@ library DeploymentConfig {
         return preferSafe ? SAFE_SINGLETON_FACTORY : ARACHNID_CREATE2_FACTORY;
     }
 
-    /**
-     * @dev Computes a CREATE2 address
-     * @param factory The CREATE2 factory address
-     * @param salt The deployment salt
-     * @param initCodeHash The keccak256 hash of the init code
-     * @return predicted The predicted deployment address
-     */
-    function computeCreate2Address(address factory, bytes32 salt, bytes32 initCodeHash)
-        internal
-        pure
-        returns (address predicted)
-    {
-        /// @solidity memory-safe-assembly
-        assembly {
-            let ptr := mload(0x40)
-            mstore(ptr, 0xff00000000000000000000000000000000000000000000000000000000000000)
-            mstore(add(ptr, 1), shl(96, factory))
-            mstore(add(ptr, 21), salt)
-            mstore(add(ptr, 53), initCodeHash)
-            predicted := keccak256(ptr, 85)
-        }
-    }
 }

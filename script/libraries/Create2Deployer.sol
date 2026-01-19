@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {console} from "forge-std/console.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -25,15 +26,10 @@ library Create2Deployer {
      * @param factory The CREATE2 factory address
      * @param salt The deployment salt
      * @param initCode The contract creation bytecode (including constructor args)
-     * @return predicted The predicted deployment address
+     * @return The predicted deployment address
      */
-    function computeAddress(address factory, bytes32 salt, bytes memory initCode)
-        internal
-        pure
-        returns (address predicted)
-    {
-        bytes32 initCodeHash = keccak256(initCode);
-        return DeploymentConfig.computeCreate2Address(factory, salt, initCodeHash);
+    function computeAddress(address factory, bytes32 salt, bytes memory initCode) internal pure returns (address) {
+        return Create2.computeAddress(salt, keccak256(initCode), factory);
     }
 
     /**
@@ -117,12 +113,10 @@ library Create2Deployer {
      * @param names Array of human-readable names for logging
      * @return addresses Array of deployed addresses
      */
-    function batchDeploy(
-        address factory,
-        bytes32[] memory salts,
-        bytes[] memory initCodes,
-        string[] memory names
-    ) internal returns (address[] memory addresses) {
+    function batchDeploy(address factory, bytes32[] memory salts, bytes[] memory initCodes, string[] memory names)
+        internal
+        returns (address[] memory addresses)
+    {
         require(salts.length == initCodes.length && initCodes.length == names.length, "Array length mismatch");
 
         addresses = new address[](salts.length);
