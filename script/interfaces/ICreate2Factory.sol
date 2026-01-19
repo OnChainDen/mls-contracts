@@ -19,7 +19,6 @@ interface ICreate2Factory {
     function deploy(bytes32 salt, bytes memory initCode) external returns (address deployed);
 }
 
-
 /**
  * @title ISafeSingletonFactory
  * @notice Interface for Safe Singleton Factory which has different parameter ordering

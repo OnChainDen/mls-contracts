@@ -149,7 +149,7 @@ contract DeployLibraries is Script {
     function _getCreate2Factory() internal view returns (address factory) {
         // First, check if explicitly provided
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            if (provided != address(0) && provided.code.length > 0) {
+            if (provided != address(0) && Create2Deployer.isContractDeployedAtAddress(provided)) {
                 return provided;
             }
         } catch {}

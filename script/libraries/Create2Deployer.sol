@@ -42,7 +42,7 @@ library Create2Deployer {
         returns (bool isDeployedAtAddress, address predicted)
     {
         predicted = computeAddress(factory, salt, initCode);
-        isDeployedAtAddress = predicted.code.length > 0;
+        isDeployedAtAddress = isContractDeployedAtAddress(predicted);
     }
 
     /// @dev Deploys a contract using CREATE2 if not already deployed
@@ -60,7 +60,7 @@ library Create2Deployer {
         address predicted = computeAddress(factory, salt, initCode);
 
         // Check if already deployed
-        if (predicted.code.length > 0) {
+        if (isContractDeployedAtAddress(predicted)) {
             console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, predicted);
             return (predicted, false);
         }
@@ -115,11 +115,11 @@ library Create2Deployer {
         }
     }
 
-    /// @dev Verifies that a factory is available (has code deployed)
-    /// @param factory The factory address to check
-    /// @return available True if factory has code deployed
-    function isFactoryAvailable(address factory) internal view returns (bool available) {
-        return factory.code.length > 0;
+    /// @dev Checks if a contract is deployed at the given address
+    /// @param contractAddress The address to check
+    /// @return deployed True if there is code at the address
+    function isContractDeployedAtAddress(address contractAddress) internal view returns (bool deployed) {
+        return contractAddress.code.length > 0;
     }
 
     /// @dev Gets the best available CREATE2 factory
@@ -128,11 +128,11 @@ library Create2Deployer {
     /// @return factoryName Human-readable factory name
     function getAvailableFactory() internal view returns (address factory, string memory factoryName) {
         // Prefer Arachnid as it's more widely deployed
-        if (isFactoryAvailable(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
+        if (isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
             return (DeploymentConfig.ARACHNID_CREATE2_FACTORY, "Arachnid");
         }
 
-        if (isFactoryAvailable(DeploymentConfig.SAFE_SINGLETON_FACTORY)) {
+        if (isContractDeployedAtAddress(DeploymentConfig.SAFE_SINGLETON_FACTORY)) {
             return (DeploymentConfig.SAFE_SINGLETON_FACTORY, "Safe Singleton Factory");
         }
 

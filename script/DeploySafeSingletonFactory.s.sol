@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
+import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 
 /**
@@ -40,7 +41,7 @@ contract DeploySafeSingletonFactory is Script {
     /// @dev Pre-signed raw transaction for deploying Safe Singleton Factory (from @safe-global/safe-singleton-factory)
     bytes internal constant DEPLOYMENT_TX =
     // solhint-disable-next-line max-line-length
-        hex"f8a780851d1a94a20083018cf08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3820a2ca0a5a32f19deecd09cd0c0d9f55650089385545a0749c12b5d9131ad7ad63bc748a050db15972c02b6e44c171cad539b11feaa4c70c1c034fac02cc4971c8f557d80";
+    hex"f8a780851d1a94a20083018cf08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3820a2ca0a5a32f19deecd09cd0c0d9f55650089385545a0749c12b5d9131ad7ad63bc748a050db15972c02b6e44c171cad539b11feaa4c70c1c034fac02cc4971c8f557d80";
 
     /**
      * @notice Main entry point for the deployment script
@@ -111,7 +112,7 @@ contract DeploySafeSingletonFactory is Script {
         vm.stopBroadcast();
 
         // Verify deployment
-        if (EXPECTED_FACTORY_ADDRESS.code.length == 0) {
+        if (!Create2Deployer.isContractDeployedAtAddress(EXPECTED_FACTORY_ADDRESS)) {
             console.log(unicode"  ❌ ERROR: Factory deployment failed!");
             revert("Factory deployment failed");
         }
@@ -133,7 +134,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 1: Factory not already deployed
         console.log("  [1/4] Checking if factory already deployed...");
-        if (EXPECTED_FACTORY_ADDRESS.code.length > 0) {
+        if (Create2Deployer.isContractDeployedAtAddress(EXPECTED_FACTORY_ADDRESS)) {
             console.log(unicode"       ❌ FAIL: Factory already deployed at %s", EXPECTED_FACTORY_ADDRESS);
             allPassed = false;
         } else {

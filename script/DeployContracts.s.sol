@@ -4,18 +4,20 @@ pragma solidity 0.8.33;
 import {Script, console} from "forge-std/Script.sol";
 
 // Safe contracts
+import {Safe} from "@safe/Safe.sol";
+import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
 import {CreateCall} from "@safe/libraries/CreateCall.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
-import {Safe} from "@safe/Safe.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
-import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 
 // Platform contracts
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {ImplementationWhitelistFactory} from "implementation-whitelist/ImplementationWhitelistFactory.sol";
-import {ImplementationWhitelistImplementation} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 import {ContractType} from "types/CommonTypes.sol";
@@ -30,8 +32,8 @@ import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolic
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 // Script utilities
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {ISafe} from "@safe/interfaces/ISafe.sol";
+import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
@@ -262,7 +264,7 @@ contract DeployContracts is Script {
         safe = _computeSafeProxyAddress(initializer, saltNonce);
 
         // Check if already deployed
-        if (safe.code.length > 0) {
+        if (Create2Deployer.isContractDeployedAtAddress(safe)) {
             console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, safe);
             return safe;
         }
@@ -306,34 +308,36 @@ contract DeployContracts is Script {
             create2Factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
         address expectedAccSig = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
+            create2Factory,
+            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            type(LibOrganizationAccountSignature).creationCode
         );
 
         bool allDeployed = true;
 
         // Check if libraries are deployed at expected addresses
-        if (expectedPolicy.code.length == 0) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedPolicy)) {
             console.log(unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPolicy);
             allDeployed = false;
         } else {
             console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPolicy);
         }
 
-        if (expectedAdmin.code.length == 0) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedAdmin)) {
             console.log(unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdmin);
             allDeployed = false;
         } else {
             console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdmin);
         }
 
-        if (expectedInit.code.length == 0) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedInit)) {
             console.log(unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s", expectedInit);
             allDeployed = false;
         } else {
             console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInit);
         }
 
-        if (expectedAccSig.code.length == 0) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSig)) {
             console.log(
                 unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s", expectedAccSig
             );
@@ -410,12 +414,11 @@ contract DeployContracts is Script {
         Create2Deployer.logSection("ImplementationWhitelistProxy");
 
         // Compute expected address
-        address expectedProxy = ImplementationWhitelistFactory(whitelistFactory).computeImplementationWhitelistAddress(
-            DeploymentConfig.WHITELIST_PROXY_SALT, whitelistImplementation
-        );
+        address expectedProxy = ImplementationWhitelistFactory(whitelistFactory)
+            .computeImplementationWhitelistAddress(DeploymentConfig.WHITELIST_PROXY_SALT, whitelistImplementation);
 
         // Check if already deployed
-        if (expectedProxy.code.length > 0) {
+        if (Create2Deployer.isContractDeployedAtAddress(expectedProxy)) {
             whitelistProxy = expectedProxy;
             console.log(unicode"  ⏭️  SKIPPED: ImplementationWhitelistProxy (already at %s)", whitelistProxy);
             return;
@@ -427,11 +430,14 @@ contract DeployContracts is Script {
         console.log("  Or execute this step via the Deployer Safe multisig");
 
         // If deployer matches factory's DEPLOYER_ADDRESS, deploy directly
-        try ImplementationWhitelistFactory(whitelistFactory).deployImplementationWhitelist(
-            DeploymentConfig.WHITELIST_PROXY_SALT,
-            whitelistImplementation,
-            deployerSafe // Owner of the whitelist
-        ) returns (address deployedAtAddress) {
+        try ImplementationWhitelistFactory(whitelistFactory)
+            .deployImplementationWhitelist(
+                DeploymentConfig.WHITELIST_PROXY_SALT,
+                whitelistImplementation,
+                deployerSafe // Owner of the whitelist
+            ) returns (
+            address deployedAtAddress
+        ) {
             whitelistProxy = deployedAtAddress;
             console.log(unicode"  ✅ DEPLOYED: ImplementationWhitelistProxy at %s", whitelistProxy);
         } catch {
@@ -445,7 +451,7 @@ contract DeployContracts is Script {
     function _whitelistImplementations() internal {
         Create2Deployer.logSection("Whitelist Implementations");
 
-        if (whitelistProxy == address(0) || whitelistProxy.code.length == 0) {
+        if (whitelistProxy == address(0) || !Create2Deployer.isContractDeployedAtAddress(whitelistProxy)) {
             console.log("  Skipping: WhitelistProxy not deployed yet");
             return;
         }
@@ -494,7 +500,7 @@ contract DeployContracts is Script {
     function _getCreate2Factory() internal view returns (address factory) {
         // First, check if explicitly provided
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            if (provided != address(0) && provided.code.length > 0) {
+            if (provided != address(0) && Create2Deployer.isContractDeployedAtAddress(provided)) {
                 return provided;
             }
         } catch {}

@@ -78,7 +78,8 @@ library DeploymentConfig {
     /// @dev Library paths for foundry --libraries flag
     string internal constant LIB_ORG_POLICY_PATH =
         "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy";
-    string internal constant LIB_ORG_ADMIN_PATH = "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin";
+    string internal constant LIB_ORG_ADMIN_PATH =
+        "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin";
     string internal constant LIB_ORG_INIT_PATH =
         "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization";
     string internal constant LIB_ORG_ACCOUNT_SIG_PATH =
@@ -120,5 +121,4 @@ library DeploymentConfig {
     function getCreate2Factory(bool preferSafe) internal pure returns (address factory) {
         return preferSafe ? SAFE_SINGLETON_FACTORY : ARACHNID_CREATE2_FACTORY;
     }
-
 }
