@@ -146,7 +146,7 @@ library Create2Deployer {
     function logDeploymentHeader(address factory, uint256 chainId) internal pure {
         console.log("");
         console.log("================================================================================");
-        console.log("  Den Onchain Custody - Contract Deployment");
+        console.log("  Den Multi-layer Security (MLS) Wallet - Contract Deployment");
         console.log("================================================================================");
         console.log("  Chain ID: %s", chainId);
         console.log("  CREATE2 Factory: %s", factory);

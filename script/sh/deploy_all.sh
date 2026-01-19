@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# deploy_all.sh - Deploy the Den Onchain Custody Platform
+# deploy_all.sh - Deploy the Den Multi-layer Security (MLS) Wallet Platform
 # ==============================================================================
 #
 # This script deploys all platform contracts deterministically using CREATE2.
@@ -290,7 +290,7 @@ deploy_contracts() {
 # MAIN EXECUTION
 # ------------------------------------------------------------------------------
 main() {
-    log_section "Den Onchain Custody Platform Deployment"
+    log_section "Den Multi-layer Security (MLS) Wallet Platform Deployment"
     
     log_info "Project root: ${PROJECT_ROOT}"
     log_info "Script started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
