@@ -4,6 +4,7 @@
     "solc-version",
     "unused-return"
   ],
-  "filter_paths": "(test|script|lib)",
-  "exclude_dependencies": true
+  "filter_paths": "(test|lib)",
+  "exclude_dependencies": true,
+  "foundry_compile_all": true
 }

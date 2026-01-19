@@ -1,0 +1,51 @@
+{
+  "extends": ["solhint:recommended"],
+  "plugins": [],
+  "rules": {
+    "code-complexity": ["warn", 10],
+    "explicit-types": ["error", "explicit"],
+    "max-line-length": ["warn", 120],
+    "no-console": "off",
+    "one-contract-per-file": "error",
+    "reason-string": ["warn", {
+      "maxLength": 64
+    }],
+    "use-natspec": "off",
+    "constructor-syntax": "error",
+    "no-global-import": "error",
+    "imports-on-top": "error",
+    "import-path-check": "off",
+    "func-param-name-mixedcase": "error",
+    "immutable-vars-naming": ["error", {
+      "immutablesAsConstants": true
+    }],
+    "private-vars-leading-underscore": ["error", {
+      "strict": false
+    }],
+    "use-forbidden-name": "warn",
+    "ordering": "error",
+    "visibility-modifier-order": "error",
+    "quotes": ["error", "double"],
+    "func-named-parameters": ["warn", 4],
+    "named-parameters-mapping": "warn",
+    "foundry-test-function-naming": "off",
+    "gas-calldata-parameters": "warn",
+    "gas-custom-errors": "error",
+    "gas-small-strings": "off",
+    "gas-strict-inequalities": "off",
+    "compiler-version": ["error", "^0.8.24"],
+    "func-visibility": ["error", {
+      "ignoreConstructors": true
+    }],
+    "avoid-low-level-calls": "warn",
+    "avoid-sha3": "error",
+    "avoid-suicide": "error",
+    "check-send-result": "error",
+    "not-rely-on-time": "off",
+    "multiple-sends": "warn",
+    "no-inline-assembly": "off",
+    "payable-fallback": "off",
+    "function-max-lines": "off",
+    "no-complex-fallback": "off"
+  }
+}

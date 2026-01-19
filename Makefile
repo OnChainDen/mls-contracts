@@ -41,8 +41,12 @@ lint:
 	forge fmt --check
 	forge lint
 	npx solhint 'src/**/*.sol'
+	npx solhint 'script/**/*.sol' --config .solhint.script.json
 
 # Analyze: Static Analysis (Slither)
+# 1. Build to 'slither_out' to avoid conflicts
+# 2. Point Slither to the JSON artifact
+# 3. CRITICAL: Use --compile-force-framework solc to bypass Foundry auto-detection bugs
 analyze:
 	slither .
 
