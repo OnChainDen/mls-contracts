@@ -3,15 +3,19 @@ pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
  * @title DeploySafeSingletonFactory
  * @notice Script to deploy the Safe Singleton Factory on chains where it doesn't exist
  * @dev CRITICAL: This script uses a special deployer key that MUST maintain nonce = 0.
- *      The Safe Singleton Factory is deployed deterministically using a pre-signed transaction.
  *      If the nonce is burned, the factory cannot be deployed at the expected address.
+ *
+ *      The Safe Singleton Factory is normally deployed via pre-signed raw transactions
+ *      (see https://github.com/safe-global/safe-singleton-factory). This script instead
+ *      deploys the bytecode directly for Foundry compatibility and multi-chain support,
+ *      since pre-signed transactions are chain-specific (signature includes chainId).
  *
  *      SAFETY CHECKS:
  *      1. Verifies deployer nonce is exactly 0
@@ -36,12 +40,6 @@ contract DeploySafeSingletonFactory is Script {
 
     /// @dev Required ETH balance for the deployer (gas price * gas limit * 2 for buffer)
     uint256 internal constant REQUIRED_ETH_BALANCE = DEPLOYMENT_GAS_PRICE * DEPLOYMENT_GAS_LIMIT * 2;
-
-    // solhint-disable-next-line max-line-length
-    /// @dev Pre-signed raw transaction for deploying Safe Singleton Factory (from @safe-global/safe-singleton-factory)
-    bytes internal constant DEPLOYMENT_TX =
-    // solhint-disable-next-line max-line-length
-    hex"f8a780851d1a94a20083018cf08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3820a2ca0a5a32f19deecd09cd0c0d9f55650089385545a0749c12b5d9131ad7ad63bc748a050db15972c02b6e44c171cad539b11feaa4c70c1c034fac02cc4971c8f557d80";
 
     /**
      * @notice Main entry point for the deployment script
@@ -101,12 +99,8 @@ contract DeploySafeSingletonFactory is Script {
             revert("Deployer address mismatch");
         }
 
-        // Broadcast the pre-signed transaction
         vm.startBroadcast(deployerPrivateKey);
 
-        // Note: The actual deployment uses the pre-signed raw transaction
-        // This is handled by sending the raw transaction bytes directly
-        // For Foundry, we deploy the factory bytecode directly
         _deployFactory();
 
         vm.stopBroadcast();
