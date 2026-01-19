@@ -16,6 +16,7 @@ import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOr
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
 import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
+import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
@@ -116,6 +117,14 @@ contract ERC7201StorageSlotsTest is Test {
         );
     }
 
+    function test_organizationRecoveryStorage_slotIsCorrect() public pure {
+        assertEq(
+            LibOrganizationRecoveryStorage.STORAGE_LOCATION,
+            SlotDerivation.erc7201Slot("den.mls-wallet.organization.recovery"),
+            "LibOrganizationRecoveryStorage slot mismatch. Verify with: cast index-erc7201 'den.mls-wallet.organization.recovery'"
+        );
+    }
+
     // ============================================================
     // Implementation Whitelist Storage Slot Tests
     // ============================================================
@@ -145,7 +154,7 @@ contract ERC7201StorageSlotsTest is Test {
      * @dev Collisions would cause storage corruption between different libraries
      */
     function test_allStorageSlots_areUnique() public pure {
-        bytes32[] memory slots = new bytes32[](11);
+        bytes32[] memory slots = new bytes32[](12);
 
         // Organization storage slots
         slots[0] = LibOrganizationAdminStorage.STORAGE_LOCATION;
@@ -157,10 +166,11 @@ contract ERC7201StorageSlotsTest is Test {
         slots[6] = LibOrganizationPolicyStorage.STORAGE_LOCATION;
         slots[7] = LibOrganizationSignaturesStorage.STORAGE_LOCATION;
         slots[8] = LibOrganizationUpgradeStorage.STORAGE_LOCATION;
+        slots[9] = LibOrganizationRecoveryStorage.STORAGE_LOCATION;
 
         // Implementation whitelist storage slots
-        slots[9] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
-        slots[10] = LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION;
+        slots[10] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
+        slots[11] = LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION;
 
         // Check all pairs for uniqueness
         for (uint256 i = 0; i < slots.length; i++) {
@@ -184,7 +194,7 @@ contract ERC7201StorageSlotsTest is Test {
      * @dev ERC-7201 requires the last byte to be 0x00 to ensure struct alignment
      */
     function test_allStorageSlots_endWithZeroByte() public pure {
-        bytes32[] memory slots = new bytes32[](11);
+        bytes32[] memory slots = new bytes32[](12);
 
         slots[0] = LibOrganizationAdminStorage.STORAGE_LOCATION;
         slots[1] = LibOrganizationAccountFactoryStorage.STORAGE_LOCATION;
@@ -195,8 +205,9 @@ contract ERC7201StorageSlotsTest is Test {
         slots[6] = LibOrganizationPolicyStorage.STORAGE_LOCATION;
         slots[7] = LibOrganizationSignaturesStorage.STORAGE_LOCATION;
         slots[8] = LibOrganizationUpgradeStorage.STORAGE_LOCATION;
-        slots[9] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
-        slots[10] = LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION;
+        slots[9] = LibOrganizationRecoveryStorage.STORAGE_LOCATION;
+        slots[10] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
+        slots[11] = LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION;
 
         for (uint256 i = 0; i < slots.length; i++) {
             // Check that the last byte is 0x00

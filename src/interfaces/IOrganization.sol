@@ -9,10 +9,12 @@ import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganiza
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
+import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 // solhint-disable-next-line no-unused-import
 import {InitializationParams, OperationType} from "types/CommonTypes.sol";
@@ -37,7 +39,9 @@ interface IOrganization is
     IOrganizationAccountTransaction,
     IOrganizationAccountSignature,
     IOrganizationSignatures,
-    IOrganizationInitialization
+    IOrganizationInitialization,
+    IOrganizationGuardianRecovery,
+    IOrganizationTxRecovery
 {
     // ═══════════════════════════════════════════════════════════════════════════
     // Errors (OrganizationImplementation-specific errors that don't belong to modules)
