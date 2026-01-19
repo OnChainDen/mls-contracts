@@ -747,6 +747,342 @@ src/account
     └── INativeTokenReceivedEventEmitter.sol
 ```
 
+## Deployment
+
+This section covers how to deploy the Onchain Custody platform contracts to a new chain.
+
+### Overview
+
+All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. This is critical for cross-chain operations and user experience.
+
+The deployment supports two CREATE2 factory options:
+1. **Arachnid Deterministic Deployment Proxy** (`0x4e59b44847b379578588920cA78FbF26c0B4956C`) - Available on most EVM chains
+2. **Safe Singleton Factory** (`0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7`) - Fallback for chains without Arachnid
+
+### Prerequisites
+
+Before deploying, ensure you have:
+
+1. **Environment Variables**
+   ```bash
+   # Required for all deployments
+   PRIVATE_KEY=<deployer-eoa-private-key>
+   
+   # Optional: Override auto-detected factory
+   CREATE2_FACTORY_ADDRESS=<factory-address>
+   
+   # Safe multisig configuration (optional, defaults to deployer as single owner)
+   GUARDIAN_SAFE_OWNERS=<comma-separated-addresses>
+   GUARDIAN_SAFE_THRESHOLD=<number>
+   DEPLOYER_SAFE_OWNERS=<comma-separated-addresses>
+   DEPLOYER_SAFE_THRESHOLD=<number>
+   
+   # Only for deploying Safe Singleton Factory (Script #2)
+   SAFE_FACTORY_DEPLOYER_PRIVATE_KEY=<nonce-0-deployer-key>
+   ```
+
+2. **RPC endpoint** for the target chain
+3. **Sufficient ETH** in the deployer account for gas
+
+### Deployment Scripts
+
+The deployment system consists of two main scripts:
+
+| Script | Purpose |
+|--------|---------|
+| `DeployPlatform.s.sol` | Main deployment script - deploys all platform contracts |
+| `DeploySafeSingletonFactory.s.sol` | Deploys Safe Singleton Factory on chains where no CREATE2 factory exists |
+
+### What Gets Deployed
+
+The deployment script deploys contracts in the following order:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    1. Safe Infrastructure                        │
+│  - Safe Singleton (master copy)                                  │
+│  - SafeProxyFactory                                              │
+│  - CompatibilityFallbackHandler                                  │
+│  - MultiSend / MultiSendCallOnly                                 │
+│  - CreateCall                                                    │
+│  - SimulateTxAccessor                                            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    2. Safe Multisigs                             │
+│  - Guardian Safe (for Organization guardian role)                │
+│  - Deployer Safe (for factory deployer role)                     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                3. Platform Libraries (via CREATE2)               │
+│  - LibOrganizationPolicy                                         │
+│  - LibOrganizationAdmin                                          │
+│  - LibOrganizationInitialization                                 │
+│  - LibOrganizationAccountSignature                               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                4. Implementation Contracts                       │
+│  - ImplementationWhitelistImplementation                         │
+│  - OrganizationImplementation (linked to libraries above)        │
+│  - AccountImplementation                                         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                   5. Factory Contracts                           │
+│  - ImplementationWhitelistFactory                                │
+│  - OrganizationFactory                                           │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                6. ImplementationWhitelistProxy                   │
+│  - Deployed via ImplementationWhitelistFactory                   │
+│  - Initialized with Deployer Safe as owner                       │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                7. Whitelist Implementations                      │
+│  - Whitelist OrganizationImplementation                          │
+│  - Whitelist AccountImplementation                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Library Linking
+
+`OrganizationImplementation` uses external libraries with `public` functions, which Solidity compiles as separate contracts that are called via `DELEGATECALL`. These libraries must be deployed via CREATE2 for deterministic addresses:
+
+- `LibOrganizationPolicy`
+- `LibOrganizationAdmin`
+- `LibOrganizationInitialization`
+- `LibOrganizationAccountSignature`
+
+**Why this matters:**
+- Without explicit library linking, Foundry auto-deploys libraries using regular `CREATE` (nonce-dependent)
+- This would result in **different library addresses on different chains**
+- Since `OrganizationImplementation` bytecode includes library addresses, it would also differ across chains
+
+**Two-Phase Deployment Process:**
+
+For fully deterministic deployment across all chains:
+
+1. **Phase 1: Deploy libraries and get their deterministic addresses**
+   ```bash
+   # Option A: Compute addresses without deploying
+   forge script script/DeployPlatform.s.sol:DeployPlatform \
+     --sig "computeLibraryAddresses()" \
+     --rpc-url $RPC_URL
+   
+   # Option B: Deploy libraries only
+   forge script script/DeployPlatform.s.sol:DeployPlatform \
+     --sig "deployLibraries()" \
+     --rpc-url $RPC_URL \
+     --broadcast
+   ```
+
+2. **Phase 2: Deploy everything with library linking**
+   
+   The script outputs the required `--libraries` flags. Use them:
+   ```bash
+   forge script script/DeployPlatform.s.sol:DeployPlatform \
+     --rpc-url $RPC_URL \
+     --broadcast \
+     --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x... \
+     --libraries src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x... \
+     --libraries src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x... \
+     --libraries src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x...
+   ```
+
+**Important:** The `--libraries` flag ensures the `OrganizationImplementation` bytecode references the CREATE2-deployed library addresses, making the implementation bytecode identical across all chains.
+
+### Deterministic Addresses
+
+All contracts use pre-defined salts following the ERC-7201 naming convention for consistency:
+
+| Contract Type | Salt Pattern | Example |
+|--------------|--------------|---------|
+| External deps | `den.external.*` | `den.external.safe.singleton.v1` |
+| Organization libs | `den.mls-wallet.organization.lib.*` | `den.mls-wallet.organization.lib.policy.v1` |
+| Implementations | `den.mls-wallet.<domain>.implementation` | `den.mls-wallet.organization.implementation.v1` |
+| Factories | `den.mls-wallet.<domain>.factory` | `den.mls-wallet.organization.factory.v1` |
+| Proxies | `den.mls-wallet.<domain>.proxy` | `den.mls-wallet.whitelist.proxy.v1` |
+
+Salts are defined in `script/config/DeploymentConfig.sol`.
+
+### Step-by-Step Deployment Guide
+
+#### Quick Start: One-Command Deployment
+
+For convenience, use the Makefile commands that handle the two-phase deployment automatically:
+
+```bash
+# Set required environment variables
+export PRIVATE_KEY=<your-deployer-key>
+export RPC_URL=<chain-rpc-url>
+
+# Dry run first (simulates without broadcasting)
+make deploy-dry-run
+
+# If dry run succeeds, deploy for real
+make deploy-all
+
+# With contract verification
+VERIFY=true ETHERSCAN_API_KEY=<api-key> make deploy-all
+```
+
+This runs `script/sh/deploy_all.sh`, which:
+1. Deploys libraries via CREATE2
+2. Extracts library addresses from Foundry's broadcast JSON (reliable, not grep-based)
+3. Deploys all remaining contracts with proper library linking
+
+**Prerequisites:** The script requires `jq` for JSON parsing. Install via `brew install jq` (macOS) or `apt install jq` (Linux).
+
+---
+
+#### Manual Deployment: Standard (Arachnid Factory Available)
+
+For more control, or on chains where the Arachnid factory is already deployed:
+
+```bash
+# 1. Set environment variables
+export PRIVATE_KEY=<your-deployer-key>
+export RPC_URL=<chain-rpc-url>
+
+# 2. Compute deterministic library addresses
+forge script script/DeployPlatform.s.sol:DeployPlatform \
+  --sig "computeLibraryAddresses()" \
+  --rpc-url $RPC_URL
+
+# 3. Deploy libraries first (save the --libraries output!)
+forge script script/DeployPlatform.s.sol:DeployPlatform \
+  --sig "deployLibraries()" \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  -vvvv
+
+# 4. Run full deployment WITH library linking (use addresses from step 3)
+forge script script/DeployPlatform.s.sol:DeployPlatform \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  --verify \
+  --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:<ADDR> \
+  -vvvv
+```
+
+> **Note:** Replace `<ADDR>` placeholders with the actual library addresses output from step 3.
+
+#### Manual Deployment: New Chain (No CREATE2 Factory)
+
+For chains without an existing CREATE2 factory:
+
+```bash
+# Step 1: Fund the Safe Singleton Factory deployer
+# The deployer address is: 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
+# Send ~0.015 ETH to cover deployment gas
+
+# Step 2: Deploy Safe Singleton Factory (DRY RUN FIRST!)
+export SAFE_FACTORY_DEPLOYER_PRIVATE_KEY=<nonce-0-key>
+forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+  --rpc-url $RPC_URL \
+  -vvvv
+
+# Step 3: If checks pass, deploy with confirmation
+CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  -vvvv
+
+# Step 4: Compute library addresses using Safe Singleton Factory
+CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
+forge script script/DeployPlatform.s.sol:DeployPlatform \
+  --sig "computeLibraryAddresses()" \
+  --rpc-url $RPC_URL
+
+# Step 5: Deploy libraries
+CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
+forge script script/DeployPlatform.s.sol:DeployPlatform \
+  --sig "deployLibraries()" \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  -vvvv
+
+# Step 6: Deploy platform WITH library linking (use addresses from step 5)
+CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
+forge script script/DeployPlatform.s.sol:DeployPlatform \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  --verify \
+  --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:<ADDR> \
+  -vvvv
+```
+
+> **CRITICAL: Nonce Protection**
+> 
+> The Safe Singleton Factory must be deployed from address `0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37` with nonce 0. If the nonce is "burned" (any transaction sent from this address), the factory cannot be deployed at its deterministic address on that chain. The deployment script includes multiple safety checks to prevent accidental nonce burning.
+
+### Post-Deployment Verification
+
+After deployment, verify:
+
+1. **Contract deployment:**
+   ```bash
+   cast code <contract-address> --rpc-url $RPC_URL
+   ```
+
+2. **Implementation whitelist status:**
+   ```bash
+   cast call <whitelist-proxy> "isImplementationWhitelisted(uint8,address)" 0 <org-impl> --rpc-url $RPC_URL
+   cast call <whitelist-proxy> "isImplementationWhitelisted(uint8,address)" 1 <account-impl> --rpc-url $RPC_URL
+   ```
+
+3. **Safe multisig configuration:**
+   ```bash
+   cast call <guardian-safe> "getOwners()" --rpc-url $RPC_URL
+   cast call <guardian-safe> "getThreshold()" --rpc-url $RPC_URL
+   ```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "No CREATE2 factory available" | Deploy Safe Singleton Factory first using `DeploySafeSingletonFactory.s.sol` |
+| "Deployer nonce is not 0" | The nonce has been burned. You cannot deploy Safe Singleton Factory at the deterministic address on this chain. Use a different chain or accept a non-deterministic factory address. |
+| "Already deployed" messages | This is normal! The script skips contracts that already exist at their deterministic addresses. |
+| Library address mismatch warning | You ran the script without `--libraries` flag. Re-run with the correct library addresses for deterministic deployment. |
+| OrganizationImplementation has different bytecode across chains | Libraries were not deployed via CREATE2 or `--libraries` flag was not used. Deploy libraries first, then re-deploy with proper linking. |
+| Whitelist authorization failure | Whitelisting must be done by the whitelist owner (Deployer Safe). Execute via Safe multisig. |
+
+### Script Files
+
+```
+script/
+├── DeployPlatform.s.sol              # Main deployment script (Solidity)
+├── DeploySafeSingletonFactory.s.sol  # Safe Singleton Factory deployment (Solidity)
+├── DeployContracts.s.sol             # DEPRECATED - use DeployPlatform.s.sol
+├── config/
+│   └── DeploymentConfig.sol          # Deterministic salts and addresses
+├── interfaces/
+│   ├── ICreate2Factory.sol           # CREATE2 factory interfaces
+│   └── ISafe.sol                     # Safe contract interfaces
+├── libraries/
+│   └── Create2Deployer.sol           # Deployment helper library
+└── sh/
+    └── deploy_all.sh                 # One-command deployment script (Bash)
+```
+
+**Shell Script Details (`script/sh/deploy_all.sh`):**
+- Uses `set -euo pipefail` for strict error handling (audit-friendly)
+- Reads deployed addresses from Foundry's `broadcast/` JSON files (not grep-based)
+- Requires `jq` for reliable JSON parsing
+- Supports `DRY_RUN=true` for simulation without broadcasting
+- Supports `VERIFY=true` for contract verification
+
 ## Questions blocking further development
 *Below are questions which are currently blocking further development of the Onchain Custody smart contracts. We are seeking external expert opinion to answer these questions.*
 

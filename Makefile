@@ -1,5 +1,5 @@
 # ALWAYS list your targets here to prevent file conflicts
-.PHONY: all build clean test format lint analyze check install update
+.PHONY: all build clean test format lint analyze check install update sizes deploy-all deploy-dry-run
 
 # "make" (all)
 # Cleans artifacts, removes old submodules, installs deps, updates them, and builds
@@ -52,4 +52,26 @@ sizes:
 
 # Check: The "CI Mode" - Runs everything
 # This is what you run before pushing code.
-check: format lint analyze sizes test 
+check: format lint analyze sizes test
+
+# ==============================================================================
+# Deployment Commands
+# ==============================================================================
+
+# Deploy All: Deploys the entire platform to a chain
+# Requires: PRIVATE_KEY and RPC_URL environment variables
+# Optional: VERIFY=true ETHERSCAN_API_KEY=<key> for contract verification
+#
+# Example:
+#   PRIVATE_KEY=<key> RPC_URL=<url> make deploy-all
+#   PRIVATE_KEY=<key> RPC_URL=<url> VERIFY=true ETHERSCAN_API_KEY=<api> make deploy-all
+deploy-all:
+	@./script/sh/deploy_all.sh
+
+# Deploy Dry Run: Simulates deployment without broadcasting transactions
+# Use this to verify everything works before actual deployment
+#
+# Example:
+#   PRIVATE_KEY=<key> RPC_URL=<url> make deploy-dry-run
+deploy-dry-run:
+	@DRY_RUN=true ./script/sh/deploy_all.sh

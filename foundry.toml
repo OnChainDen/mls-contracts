@@ -14,12 +14,14 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "@safe/=lib/safe-smart-account/contracts/",
     "forge-std/=lib/forge-std/src/",
     "account/=src/account/",
     "implementation-whitelist/=src/implementation-whitelist/",
     "interfaces/=src/interfaces/",
     "libraries/=src/libraries/",
     "organization/=src/organization/",
+    "script/=script/",
     "types/=src/types/"
 ]
 
