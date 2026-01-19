@@ -37,16 +37,16 @@ library Create2Deployer {
      * @param factory The CREATE2 factory address
      * @param salt The deployment salt
      * @param initCode The contract creation bytecode
-     * @return deployed True if contract exists at the predicted address
+     * @return isDeployedAtAddress True if contract exists at the predicted address
      * @return predicted The predicted address
      */
     function isDeployed(address factory, bytes32 salt, bytes memory initCode)
         internal
         view
-        returns (bool deployed, address predicted)
+        returns (bool isDeployedAtAddress, address predicted)
     {
         predicted = computeAddress(factory, salt, initCode);
-        deployed = predicted.code.length > 0;
+        isDeployedAtAddress = predicted.code.length > 0;
     }
 
     /**
@@ -56,12 +56,12 @@ library Create2Deployer {
      * @param salt The deployment salt
      * @param initCode The contract creation bytecode
      * @param name Human-readable name for logging
-     * @return deployed The address of the deployed (or existing) contract
+     * @return deployedAtAddress The address of the deployed (or existing) contract
      * @return wasDeployed True if newly deployed, false if already existed
      */
     function deployIfNotExists(address factory, bytes32 salt, bytes memory initCode, string memory name)
         internal
-        returns (address deployed, bool wasDeployed)
+        returns (address deployedAtAddress, bool wasDeployed)
     {
         address predicted = computeAddress(factory, salt, initCode);
 
@@ -72,19 +72,19 @@ library Create2Deployer {
         }
 
         // Deploy using appropriate factory interface
-        deployed = _deploy(factory, salt, initCode);
+        deployedAtAddress = _deploy(factory, salt, initCode);
 
         // Verify deployment
-        if (deployed == address(0)) {
+        if (deployedAtAddress == address(0)) {
             revert DeploymentFailed(name, salt);
         }
 
-        if (deployed != predicted) {
-            revert AddressMismatch(predicted, deployed);
+        if (deployedAtAddress != predicted) {
+            revert AddressMismatch(predicted, deployedAtAddress);
         }
 
-        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployed);
-        return (deployed, true);
+        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAtAddress);
+        return (deployedAtAddress, true);
     }
 
     /**
@@ -93,15 +93,15 @@ library Create2Deployer {
      * @param factory The CREATE2 factory address
      * @param salt The deployment salt
      * @param initCode The contract creation bytecode
-     * @return deployed The deployed contract address
+     * @return deployedAtAddress The deployed contract address
      */
-    function _deploy(address factory, bytes32 salt, bytes memory initCode) private returns (address deployed) {
+    function _deploy(address factory, bytes32 salt, bytes memory initCode) private returns (address deployedAtAddress) {
         // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
         if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
-            deployed = address(ISafeSingletonFactory(factory).deploy(initCode, salt));
+            deployedAtAddress = address(ISafeSingletonFactory(factory).deploy(initCode, salt));
         } else {
             // Arachnid and similar: deploy(bytes32, bytes)
-            deployed = ICreate2Factory(factory).deploy(salt, initCode);
+            deployedAtAddress = ICreate2Factory(factory).deploy(salt, initCode);
         }
     }
 

@@ -90,13 +90,13 @@ contract DeploySafeSingletonFactory is Script {
 
         // Get the deployer private key
         uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        address deployerAddress = vm.addr(deployerPrivateKey);
 
         // Final verification that deployer matches expected
-        if (deployer != EXPECTED_DEPLOYER) {
+        if (deployerAddress != EXPECTED_DEPLOYER) {
             console.log(unicode"  ❌ ERROR: Deployer address mismatch!");
             console.log("     Expected: %s", EXPECTED_DEPLOYER);
-            console.log("     Got: %s", deployer);
+            console.log("     Got: %s", deployerAddress);
             revert("Deployer address mismatch");
         }
 
@@ -144,13 +144,13 @@ contract DeploySafeSingletonFactory is Script {
         // Check 2: Deployer private key provided
         console.log("  [2/4] Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
-            address deployer = vm.addr(pk);
-            if (deployer == EXPECTED_DEPLOYER) {
+            address deployerAddress = vm.addr(pk);
+            if (deployerAddress == EXPECTED_DEPLOYER) {
                 console.log(unicode"       ✅ PASS: Deployer key matches expected address");
             } else {
                 console.log(unicode"       ❌ FAIL: Deployer address mismatch");
                 console.log("              Expected: %s", EXPECTED_DEPLOYER);
-                console.log("              Got: %s", deployer);
+                console.log("              Got: %s", deployerAddress);
                 allPassed = false;
             }
         } catch {
@@ -194,18 +194,18 @@ contract DeploySafeSingletonFactory is Script {
         bytes memory factoryBytecode =
             hex"604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3";
 
-        address deployed;
+        address deployedAtAddress;
         assembly {
-            deployed := create(0, add(factoryBytecode, 0x20), mload(factoryBytecode))
+            deployedAtAddress := create(0, add(factoryBytecode, 0x20), mload(factoryBytecode))
         }
 
-        if (deployed == address(0)) {
+        if (deployedAtAddress == address(0)) {
             revert("Factory deployment failed in assembly");
         }
 
         // The address should match due to CREATE from nonce 0
-        if (deployed != EXPECTED_FACTORY_ADDRESS) {
-            console.log("  Deployed at: %s", deployed);
+        if (deployedAtAddress != EXPECTED_FACTORY_ADDRESS) {
+            console.log("  Deployed at: %s", deployedAtAddress);
             console.log("  Expected: %s", EXPECTED_FACTORY_ADDRESS);
             revert("Deployed address mismatch");
         }

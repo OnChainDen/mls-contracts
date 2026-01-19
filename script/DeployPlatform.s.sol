@@ -102,12 +102,12 @@ contract DeployPlatform is Script {
      */
     function deployLibraries() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        address deployerAddress = vm.addr(deployerPrivateKey);
 
         create2Factory = _getCreate2Factory();
 
         Create2Deployer.logDeploymentHeader(create2Factory, block.chainid);
-        console.log("  Deployer EOA: %s", deployer);
+        console.log("  Deployer EOA: %s", deployerAddress);
         console.log("  Mode: Library Deployment Only");
         console.log("");
 
@@ -166,18 +166,18 @@ contract DeployPlatform is Script {
     function run() external {
         // Get configuration from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        address deployerAddress = vm.addr(deployerPrivateKey);
 
         // Get CREATE2 factory (from env or auto-detect)
         create2Factory = _getCreate2Factory();
 
         // Get Safe multisig configuration
-        (address[] memory guardianOwners, uint256 guardianThreshold) = _getGuardianSafeConfig();
-        (address[] memory deployerOwners, uint256 deployerThreshold) = _getDeployerSafeConfig();
+        (address[] memory guardianSafeOwners, uint256 guardianSafeThreshold) = _getGuardianSafeConfig();
+        (address[] memory deployerSafeOwners, uint256 deployerSafeThreshold) = _getDeployerSafeConfig();
 
         // Log deployment header
         Create2Deployer.logDeploymentHeader(create2Factory, block.chainid);
-        console.log("  Deployer EOA: %s", deployer);
+        console.log("  Deployer EOA: %s", deployerAddress);
         console.log("");
 
         vm.startBroadcast(deployerPrivateKey);
@@ -186,7 +186,7 @@ contract DeployPlatform is Script {
         _deploySafeInfrastructure();
 
         // Step 2: Deploy Safe Multisigs
-        _deploySafeMultisigs(guardianOwners, guardianThreshold, deployerOwners, deployerThreshold);
+        _deploySafeMultisigs(guardianSafeOwners, guardianSafeThreshold, deployerSafeOwners, deployerSafeThreshold);
 
         // Step 3: Deploy Platform Libraries via CREATE2
         _deployPlatformLibraries();
@@ -276,21 +276,21 @@ contract DeployPlatform is Script {
     // ============================================================
 
     function _deploySafeMultisigs(
-        address[] memory guardianOwners,
-        uint256 guardianThreshold,
-        address[] memory deployerOwners,
-        uint256 deployerThreshold
+        address[] memory guardianSafeOwners,
+        uint256 guardianSafeThreshold,
+        address[] memory deployerSafeOwners,
+        uint256 deployerSafeThreshold
     ) internal {
         Create2Deployer.logSection("Safe Multisigs");
 
         // Deploy Guardian Safe
         guardianSafe = _deploySafeMultisig(
-            guardianOwners, guardianThreshold, DeploymentConfig.GUARDIAN_SAFE_SALT, "Guardian Safe"
+            guardianSafeOwners, guardianSafeThreshold, DeploymentConfig.GUARDIAN_SAFE_SALT, "Guardian Safe"
         );
 
         // Deploy Deployer Safe
         deployerSafe = _deploySafeMultisig(
-            deployerOwners, deployerThreshold, DeploymentConfig.DEPLOYER_SAFE_SALT, "Deployer Safe"
+            deployerSafeOwners, deployerSafeThreshold, DeploymentConfig.DEPLOYER_SAFE_SALT, "Deployer Safe"
         );
     }
 
@@ -325,12 +325,12 @@ contract DeployPlatform is Script {
         }
 
         // Deploy the Safe
-        address deployed =
+        address deployedAtAddress =
             address(SafeProxyFactory(safeProxyFactory).createProxyWithNonce(safeSingleton, initializer, saltNonce));
-        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployed);
+        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAtAddress);
 
         // Verify deployment matches expected address
-        require(deployed == safe, "Safe deployed at unexpected address");
+        require(deployedAtAddress == safe, "Safe deployed at unexpected address");
     }
 
     /**
@@ -535,8 +535,8 @@ contract DeployPlatform is Script {
             DeploymentConfig.WHITELIST_PROXY_SALT,
             whitelistImplementation,
             deployerSafe // Owner of the whitelist
-        ) returns (address deployed) {
-            whitelistProxy = deployed;
+        ) returns (address deployedAtAddress) {
+            whitelistProxy = deployedAtAddress;
             console.log(unicode"  ✅ DEPLOYED: ImplementationWhitelistProxy at %s", whitelistProxy);
         } catch {
             console.log(unicode"  ⚠️  SKIPPED: Deployment requires authorization from deployerSafe");
