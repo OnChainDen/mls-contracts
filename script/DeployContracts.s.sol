@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Script, console} from "forge-std/Script.sol";
-
-// Safe contracts
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Safe} from "@safe/Safe.sol";
 import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
+import {ISafe} from "@safe/interfaces/ISafe.sol";
 import {CreateCall} from "@safe/libraries/CreateCall.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
+import {Script, console} from "forge-std/Script.sol";
 
-// Platform contracts
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {ImplementationWhitelistFactory} from "implementation-whitelist/ImplementationWhitelistFactory.sol";
 import {
@@ -20,21 +19,13 @@ import {
 } from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
-import {ContractType} from "types/CommonTypes.sol";
-
-// Platform libraries (for bytecode access - used for verification)
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-
-// OpenZeppelin utilities
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-
-// Script utilities
-import {ISafe} from "@safe/interfaces/ISafe.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title DeployContracts
@@ -509,7 +500,7 @@ contract DeployContracts is Script {
         (factory,) = Create2Deployer.getAvailableFactory();
 
         if (factory == address(0)) {
-            revert("No CREATE2 factory available. Deploy Safe Singleton Factory first.");
+            revert("No CREATE2 factory available");
         }
     }
 

@@ -3,13 +3,10 @@ pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
-// Platform libraries (for bytecode access)
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-
-// Script utilities
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
@@ -158,7 +155,7 @@ contract DeployLibraries is Script {
         (factory,) = Create2Deployer.getAvailableFactory();
 
         if (factory == address(0)) {
-            revert("No CREATE2 factory available. Deploy Safe Singleton Factory first.");
+            revert("No CREATE2 factory available");
         }
     }
 

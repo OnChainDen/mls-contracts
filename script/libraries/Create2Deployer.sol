@@ -21,10 +21,6 @@ library Create2Deployer {
     /// @dev Error thrown when deployed address doesn't match predicted
     error AddressMismatch(address predicted, address actual);
 
-    // ============================================================
-    // INTERNAL STATE-CHANGING FUNCTIONS
-    // ============================================================
-
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
     /// @param factory The CREATE2 factory address
@@ -79,10 +75,6 @@ library Create2Deployer {
         }
     }
 
-    // ============================================================
-    // INTERNAL VIEW FUNCTIONS
-    // ============================================================
-
     /// @dev Checks if a contract is already deployed at the predicted address
     /// @param factory The CREATE2 factory address
     /// @param salt The deployment salt
@@ -122,10 +114,6 @@ library Create2Deployer {
         // No factory available
         return (address(0), "None");
     }
-
-    // ============================================================
-    // INTERNAL PURE FUNCTIONS
-    // ============================================================
 
     /// @dev Computes the CREATE2 address for a contract deployment
     /// @param factory The CREATE2 factory address
@@ -176,10 +164,6 @@ library Create2Deployer {
         console.log("================================================================================");
         console.log("");
     }
-
-    // ============================================================
-    // PRIVATE FUNCTIONS
-    // ============================================================
 
     /// @dev Deploys using the appropriate factory interface based on factory address
     ///      Detects factory type and uses correct parameter ordering

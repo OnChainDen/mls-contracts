@@ -17,10 +17,6 @@ library DeploymentConfig {
     /// @dev Safe Singleton Factory deployer address (for nonce-0 deployment)
     address internal constant SAFE_FACTORY_DEPLOYER = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
 
-    // ============================================================
-    // External Dependencies (Safe contracts) - "den.external.*" namespace
-    // ============================================================
-
     /// @dev Salt for Safe Singleton (master copy) deployment
     bytes32 internal constant SAFE_SINGLETON_SALT = keccak256("den.external.safe.singleton.v1");
 
@@ -42,21 +38,11 @@ library DeploymentConfig {
     /// @dev Salt for Safe SimulateTxAccessor deployment
     bytes32 internal constant SAFE_SIMULATE_TX_ACCESSOR_SALT = keccak256("den.external.safe.simulate-tx-accessor.v1");
 
-    // ============================================================
-    // Safe Multisigs for Privileged Roles - "den.mls-wallet.safe.*" namespace
-    // ============================================================
-
     /// @dev Salt for Guardian Safe (used as Organization guardian)
     bytes32 internal constant GUARDIAN_SAFE_SALT = keccak256("den.mls-wallet.safe.guardian.v1");
 
     /// @dev Salt for Deployer Safe (used as factory deployer)
     bytes32 internal constant DEPLOYER_SAFE_SALT = keccak256("den.mls-wallet.safe.deployer.v1");
-
-    // ============================================================
-    // Organization Libraries - "den.mls-wallet.organization.lib.*" namespace
-    // These are libraries with public functions that get compiled as separate
-    // contracts and must be deployed via CREATE2 for deterministic addresses.
-    // ============================================================
 
     /// @dev Salt for LibOrganizationPolicy library deployment
     bytes32 internal constant LIB_ORG_POLICY_SALT = keccak256("den.mls-wallet.organization.lib.policy.v1");
@@ -71,23 +57,21 @@ library DeploymentConfig {
     bytes32 internal constant LIB_ORG_ACCOUNT_SIG_SALT =
         keccak256("den.mls-wallet.organization.lib.account-signature.v1");
 
-    // ============================================================
-    // Library File Paths (for --libraries flag generation)
-    // ============================================================
-
-    /// @dev Library paths for foundry --libraries flag
+    /// @dev Library path for LibOrganizationPolicy (for foundry --libraries flag)
     string internal constant LIB_ORG_POLICY_PATH =
         "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy";
+
+    /// @dev Library path for LibOrganizationAdmin (for foundry --libraries flag)
     string internal constant LIB_ORG_ADMIN_PATH =
         "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin";
+
+    /// @dev Library path for LibOrganizationInitialization (for foundry --libraries flag)
     string internal constant LIB_ORG_INIT_PATH =
         "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization";
+
+    /// @dev Library path for LibOrganizationAccountSignature (for foundry --libraries flag)
     string internal constant LIB_ORG_ACCOUNT_SIG_PATH =
         "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature";
-
-    // ============================================================
-    // Implementation Contracts - "den.mls-wallet.<domain>.implementation" namespace
-    // ============================================================
 
     /// @dev Salt for OrganizationImplementation deployment
     bytes32 internal constant ORG_IMPL_SALT = keccak256("den.mls-wallet.organization.implementation.v1");
@@ -98,19 +82,11 @@ library DeploymentConfig {
     /// @dev Salt for ImplementationWhitelistImplementation deployment
     bytes32 internal constant WHITELIST_IMPL_SALT = keccak256("den.mls-wallet.whitelist.implementation.v1");
 
-    // ============================================================
-    // Factory Contracts - "den.mls-wallet.<domain>.factory" namespace
-    // ============================================================
-
     /// @dev Salt for OrganizationFactory deployment
     bytes32 internal constant ORG_FACTORY_SALT = keccak256("den.mls-wallet.organization.factory.v1");
 
     /// @dev Salt for ImplementationWhitelistFactory deployment
     bytes32 internal constant WHITELIST_FACTORY_SALT = keccak256("den.mls-wallet.whitelist.factory.v1");
-
-    // ============================================================
-    // Proxy Contracts - "den.mls-wallet.<domain>.proxy" namespace
-    // ============================================================
 
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
