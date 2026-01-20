@@ -66,9 +66,6 @@ library DeploymentConfig {
     /// @dev Salt for OrganizationFactory deployment
     bytes32 internal constant ORG_FACTORY_SALT = keccak256("den.mls-wallet.organization.factory.v1");
 
-    /// @dev Salt for ImplementationWhitelistFactory deployment
-    bytes32 internal constant WHITELIST_FACTORY_SALT = keccak256("den.mls-wallet.whitelist.factory.v1");
-
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
 

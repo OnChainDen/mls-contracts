@@ -13,10 +13,10 @@ import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
-import {ImplementationWhitelistFactory} from "implementation-whitelist/ImplementationWhitelistFactory.sol";
 import {
     ImplementationWhitelistImplementation
 } from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -24,7 +24,6 @@ import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {PlatformLibraries} from "script/libraries/Types.sol";
-import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title DeployContracts
@@ -43,9 +42,8 @@ import {ContractType} from "types/CommonTypes.sol";
  *      1. Safe Infrastructure (Safe singleton, proxy factory, handlers, libraries)
  *      2. Safe Multisigs (Guardian Safe, Deployer Safe)
  *      3. Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
- *      4. Factory Contracts (OrganizationFactory, WhitelistFactory)
- *      5. ImplementationWhitelistProxy (via factory)
- *      6. Whitelist initial implementations
+ *      4. Factory Contracts (OrganizationFactory)
+ *      5. ImplementationWhitelistProxy
  *
  * @author Den Technologies Inc
  */
@@ -74,18 +72,12 @@ contract DeployContracts is Script {
         address whitelist;
     }
 
-    /// @dev Struct containing addresses for the deployed platform factory contracts
-    struct PlatformFactories {
-        address organization;
-        address whitelist;
-    }
-
     /// @dev Struct containing addresses for all deployed contracts
     struct DeployedContracts {
         SafeInfrastructure safeInfra;
         SafeMultisigs safes;
         PlatformImplementations implementations;
-        PlatformFactories factories;
+        address organizationFactoryAddress;
         address whitelistProxy;
     }
 
@@ -112,8 +104,8 @@ contract DeployContracts is Script {
         (address[] memory guardianOwners, uint256 guardianThreshold) = _getGuardianSafeConfig();
 
         // Get the Deployer Safe configuration from environment
-        // The Deployer Safe is a multisig wallet that will be the owner of the ImplementationWhitelistFactory.sol
-        // and OrganizationFactory.sol contracts.
+        // The Deployer Safe is a multisig wallet that will be the owner of the ImplementationWhitelist contract
+        // and OrganizationFactory contract.
         // The configuration is either explicitly provided in the environment, or defaults to the deployer as single
         // owner
         (address[] memory deployerOwners, uint256 deployerThreshold) = _getDeployerSafeConfig();
@@ -146,16 +138,13 @@ contract DeployContracts is Script {
         });
 
         // Deploy Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
-        PlatformImplementations memory impls = _deployImplementationContracts(factoryAddress);
+        PlatformImplementations memory implementationContracts = _deployImplementationContracts(factoryAddress);
 
-        // Deploy Factory Contracts (OrganizationFactory, WhitelistFactory)
-        PlatformFactories memory factories = _deployFactoryContracts(factoryAddress, safes.deployerSafe);
+        // Deploy Factory Contracts (OrganizationFactory)
+        address organizationFactoryAddress = _deployOrganizationFactory(factoryAddress, safes.deployerSafe);
 
-        // Deploy ImplementationWhitelistProxy via factory (depends on factories, impls, safes)
-        address whitelistProxy = _deployWhitelistProxy(factories, impls, safes.deployerSafe);
-
-        // Whitelist implementations (depends on whitelistProxy, impls)
-        _addImplementationsToWhitelist(whitelistProxy, impls);
+        // Deploy ImplementationWhitelistProxy (depends on implementationContracts, safes)
+        address whitelistProxy = _deployWhitelistProxy(factoryAddress, implementationContracts, safes.deployerSafe);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -164,8 +153,8 @@ contract DeployContracts is Script {
         DeployedContracts memory contracts = DeployedContracts({
             safeInfra: safeInfra,
             safes: safes,
-            implementations: impls,
-            factories: factories,
+            implementations: implementationContracts,
+            organizationFactoryAddress: organizationFactoryAddress,
             whitelistProxy: whitelistProxy
         });
 
@@ -326,15 +315,15 @@ contract DeployContracts is Script {
 
     /// @dev Deploys all implementation contracts via CREATE2
     /// @param factoryAddress Address of the CREATE2 factory to use for deployments
-    /// @return impls Struct containing all deployed implementation addresses
+    /// @return implementationContracts Struct containing all deployed implementation addresses
     function _deployImplementationContracts(address factoryAddress)
         internal
-        returns (PlatformImplementations memory impls)
+        returns (PlatformImplementations memory implementationContracts)
     {
         Create2Deployer.logSection("Implementation Contracts");
 
         // Deploy ImplementationWhitelistImplementation
-        (impls.whitelist,) = Create2Deployer.deployIfNotExists(
+        (implementationContracts.whitelist,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.WHITELIST_IMPL_SALT,
             type(ImplementationWhitelistImplementation).creationCode,
@@ -343,7 +332,7 @@ contract DeployContracts is Script {
 
         // Deploy OrganizationImplementation
         // IMPORTANT: This script must be run with --libraries flag for deterministic deployment
-        (impls.organization,) = Create2Deployer.deployIfNotExists(
+        (implementationContracts.organization,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.ORG_IMPL_SALT,
             type(OrganizationImplementation).creationCode,
@@ -351,7 +340,7 @@ contract DeployContracts is Script {
         );
 
         // Deploy AccountImplementation
-        (impls.account,) = Create2Deployer.deployIfNotExists(
+        (implementationContracts.account,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.ACCOUNT_IMPL_SALT,
             type(AccountImplementation).creationCode,
@@ -359,124 +348,58 @@ contract DeployContracts is Script {
         );
     }
 
-    /// @dev Deploys factory contracts via CREATE2
+    /// @dev Deploys the OrganizationFactory via CREATE2
     /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @param deployerSafe Address of the Deployer Safe to authorize as factory deployer
-    /// @return factories Struct containing deployed factory addresses
-    function _deployFactoryContracts(address factoryAddress, address deployerSafe)
+    /// @return organizationFactoryAddress Address of the deployed OrganizationFactory
+    function _deployOrganizationFactory(address factoryAddress, address deployerSafe)
         internal
-        returns (PlatformFactories memory factories)
+        returns (address organizationFactoryAddress)
     {
         Create2Deployer.logSection("Factory Contracts");
-
-        // Deploy ImplementationWhitelistFactory with deployerSafe as the deployer
-        bytes memory whitelistFactoryInitCode =
-            abi.encodePacked(type(ImplementationWhitelistFactory).creationCode, abi.encode(deployerSafe));
-
-        (factories.whitelist,) = Create2Deployer.deployIfNotExists(
-            factoryAddress, DeploymentConfig.WHITELIST_FACTORY_SALT, whitelistFactoryInitCode, "WhitelistFactory"
-        );
 
         // Deploy OrganizationFactory with deployerSafe as the deployer
         bytes memory orgFactoryInitCode =
             abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafe));
 
-        (factories.organization,) = Create2Deployer.deployIfNotExists(
+        (organizationFactoryAddress,) = Create2Deployer.deployIfNotExists(
             factoryAddress, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
         );
     }
 
-    /// @dev Deploys the ImplementationWhitelistProxy via ImplementationWhitelistFactory
-    /// @param factories Factory contract addresses
-    /// @param impls Implementation contract addresses
+    /// @dev Deploys the ImplementationWhitelistProxy via CREATE2 with atomic initialization
+    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
+    /// @param implementationContracts Implementation contract addresses
     /// @param deployerSafe Address of the Deployer Safe (owner of the whitelist)
     /// @return whitelistProxy Address of the deployed whitelist proxy
     function _deployWhitelistProxy(
-        PlatformFactories memory factories,
-        PlatformImplementations memory impls,
+        address factoryAddress,
+        PlatformImplementations memory implementationContracts,
         address deployerSafe
     ) internal returns (address whitelistProxy) {
         Create2Deployer.logSection("ImplementationWhitelistProxy");
 
-        // Compute expected address
-        address expectedProxy = ImplementationWhitelistFactory(factories.whitelist)
-            .computeImplementationWhitelistAddress(DeploymentConfig.WHITELIST_PROXY_SALT, impls.whitelist);
+        // Construct arrays of implementation addresses to whitelist
+        address[] memory organizationImplementations = new address[](1);
+        organizationImplementations[0] = implementationContracts.organization;
+        address[] memory accountImplementations = new address[](1);
+        accountImplementations[0] = implementationContracts.account;
 
-        // Check if already deployed
-        if (Create2Deployer.isContractDeployedAtAddress(expectedProxy)) {
-            Logger.logDeploymentSkippedWithReason("ImplementationWhitelistProxy already deployed");
-            return expectedProxy;
-        }
+        // Encode the initialization data for the whitelist proxy
+        bytes memory initData = abi.encodeCall(
+            ImplementationWhitelistImplementation.initialize,
+            (deployerSafe, organizationImplementations, accountImplementations)
+        );
 
-        // Note: This call must come from the deployerSafe
-        Logger.logIndented("Note: WhitelistProxy deployment requires deployerSafe to call the factory");
-        Logger.logIndented("For initial deployment, configure ImplementationWhitelistFactory with EOA deployer");
-        Logger.logIndented("Or execute this step via the Deployer Safe multisig");
+        // Construct the proxy bytecode for the whitelist proxy
+        bytes memory proxyBytecode = abi.encodePacked(
+            type(ImplementationWhitelistProxy).creationCode, abi.encode(implementationContracts.whitelist, initData)
+        );
 
-        // If deployer matches factory's DEPLOYER_ADDRESS, deploy directly
-        try ImplementationWhitelistFactory(factories.whitelist)
-            .deployImplementationWhitelist(
-                DeploymentConfig.WHITELIST_PROXY_SALT,
-                impls.whitelist,
-                deployerSafe // Owner of the whitelist
-            ) returns (
-            address deployedAtAddress
-        ) {
-            Logger.logDeployed("ImplementationWhitelistProxy", deployedAtAddress);
-            return deployedAtAddress;
-        } catch {
-            Logger.logWarn("SKIPPED: Deployment requires authorization from deployerSafe");
-            return expectedProxy;
-        }
-    }
-
-    /// @dev Whitelists the deployed implementation contracts in the ImplementationWhitelistProxy
-    /// @param whitelistProxy Address of the whitelist proxy contract
-    /// @param impls Implementation contract addresses to whitelist
-    function _addImplementationsToWhitelist(address whitelistProxy, PlatformImplementations memory impls) internal {
-        Create2Deployer.logSection("Whitelist Implementations");
-
-        if (whitelistProxy == address(0) || !Create2Deployer.isContractDeployedAtAddress(whitelistProxy)) {
-            Logger.logIndented("Skipping: WhitelistProxy not deployed yet");
-            return;
-        }
-
-        ImplementationWhitelistImplementation whitelist = ImplementationWhitelistImplementation(whitelistProxy);
-
-        // Check if already whitelisted
-        bool orgWhitelisted = whitelist.isImplementationWhitelisted(ContractType.Organization, impls.organization);
-        bool accWhitelisted = whitelist.isImplementationWhitelisted(ContractType.Account, impls.account);
-
-        if (orgWhitelisted && accWhitelisted) {
-            Logger.logDeploymentSkippedWithReason("Implementations already whitelisted");
-            return;
-        }
-
-        // Prepare arrays for whitelisting
-        address[] memory toWhitelist;
-        address[] memory empty = new address[](0);
-
-        // Whitelist Organization implementation
-        if (!orgWhitelisted) {
-            toWhitelist = new address[](1);
-            toWhitelist[0] = impls.organization;
-            try whitelist.whitelistImplementations(ContractType.Organization, toWhitelist, empty) {
-                Logger.logPass("Whitelisted OrganizationImplementation");
-            } catch {
-                Logger.logWarn("Failed to whitelist OrganizationImplementation (requires owner)");
-            }
-        }
-
-        // Whitelist Account implementation
-        if (!accWhitelisted) {
-            toWhitelist = new address[](1);
-            toWhitelist[0] = impls.account;
-            try whitelist.whitelistImplementations(ContractType.Account, toWhitelist, empty) {
-                Logger.logPass("Whitelisted AccountImplementation");
-            } catch {
-                Logger.logWarn("Failed to whitelist AccountImplementation (requires owner)");
-            }
-        }
+        // Deploy the whitelist proxy using CREATE2
+        (whitelistProxy,) = Create2Deployer.deployIfNotExists(
+            factoryAddress, DeploymentConfig.WHITELIST_PROXY_SALT, proxyBytecode, "ImplementationWhitelistProxy"
+        );
     }
 
     /// @dev Computes the deterministic address of a Safe proxy before deployment
@@ -668,8 +591,7 @@ contract DeployContracts is Script {
         Logger.logKeyAddress("  WhitelistImplementation", contracts.implementations.whitelist);
         Logger.logEmptyLine();
         Logger.logIndented("Platform Factories:");
-        Logger.logKeyAddress("  OrganizationFactory", contracts.factories.organization);
-        Logger.logKeyAddress("  WhitelistFactory", contracts.factories.whitelist);
+        Logger.logKeyAddress("  OrganizationFactory", contracts.organizationFactoryAddress);
         Logger.logEmptyLine();
         Logger.logIndented("Platform Proxies:");
         Logger.logKeyAddress("  WhitelistProxy", contracts.whitelistProxy);

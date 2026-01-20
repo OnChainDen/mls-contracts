@@ -22,9 +22,6 @@ import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibO
 
 // Implementation whitelist storage libraries
 import {
-    LibImplementationWhitelistDeployerAddressStorage
-} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistDeployerAddressStorage.sol";
-import {
     LibImplementationWhitelistStorage
 } from "implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol";
 
@@ -137,14 +134,6 @@ contract ERC7201StorageSlotsTest is Test {
         );
     }
 
-    function test_implementationWhitelistDeployerAddressStorage_slotIsCorrect() public pure {
-        assertEq(
-            LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION,
-            SlotDerivation.erc7201Slot("den.mls-wallet.implementation-whitelist.deployer"),
-            "LibImplementationWhitelistDeployerAddressStorage slot mismatch. Verify with: cast index-erc7201 'den.mls-wallet.implementation-whitelist.deployer'"
-        );
-    }
-
     // ============================================================
     // Storage Slot Uniqueness Tests
     // ============================================================
@@ -154,7 +143,7 @@ contract ERC7201StorageSlotsTest is Test {
      * @dev Collisions would cause storage corruption between different libraries
      */
     function test_allStorageSlots_areUnique() public pure {
-        bytes32[] memory slots = new bytes32[](12);
+        bytes32[] memory slots = new bytes32[](11);
 
         // Organization storage slots
         slots[0] = LibOrganizationAdminStorage.STORAGE_LOCATION;
@@ -170,7 +159,6 @@ contract ERC7201StorageSlotsTest is Test {
 
         // Implementation whitelist storage slots
         slots[10] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
-        slots[11] = LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION;
 
         // Check all pairs for uniqueness
         for (uint256 i = 0; i < slots.length; i++) {
@@ -194,7 +182,7 @@ contract ERC7201StorageSlotsTest is Test {
      * @dev ERC-7201 requires the last byte to be 0x00 to ensure struct alignment
      */
     function test_allStorageSlots_endWithZeroByte() public pure {
-        bytes32[] memory slots = new bytes32[](12);
+        bytes32[] memory slots = new bytes32[](11);
 
         slots[0] = LibOrganizationAdminStorage.STORAGE_LOCATION;
         slots[1] = LibOrganizationAccountFactoryStorage.STORAGE_LOCATION;
@@ -207,7 +195,6 @@ contract ERC7201StorageSlotsTest is Test {
         slots[8] = LibOrganizationUpgradeStorage.STORAGE_LOCATION;
         slots[9] = LibOrganizationRecoveryStorage.STORAGE_LOCATION;
         slots[10] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
-        slots[11] = LibImplementationWhitelistDeployerAddressStorage.STORAGE_LOCATION;
 
         for (uint256 i = 0; i < slots.length; i++) {
             // Check that the last byte is 0x00

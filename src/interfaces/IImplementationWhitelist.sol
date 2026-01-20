@@ -43,11 +43,6 @@ interface IImplementationWhitelist {
      */
     error ImplementationNotWhitelisted(address implementation);
 
-    /**
-     * @notice Error thrown when caller is not the authorized deployer
-     */
-    error UnauthorizedDeployer();
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════
@@ -55,8 +50,14 @@ interface IImplementationWhitelist {
     /**
      * @notice Initialize the implementation whitelist
      * @param initialOwner The initial owner address
+     * @param organizationImplementations Initial Organization implementations to whitelist
+     * @param accountImplementations Initial Account implementations to whitelist
      */
-    function initialize(address initialOwner) external;
+    function initialize(
+        address initialOwner,
+        address[] calldata organizationImplementations,
+        address[] calldata accountImplementations
+    ) external;
 
     /**
      * @notice Whitelists and/or unwhitelists implementation addresses
@@ -69,12 +70,6 @@ interface IImplementationWhitelist {
         address[] calldata toWhitelist,
         address[] calldata toUnwhitelist
     ) external;
-
-    /**
-     * @notice Returns the address that deployed this implementation whitelist proxy
-     * @return The deployer address
-     */
-    function getDeployerAddress() external view returns (address);
 
     /**
      * @notice Checks if the implementation whitelist has been initialized
