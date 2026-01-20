@@ -90,6 +90,9 @@ contract DeployContracts is Script {
     /// @dev Custom error for when a Safe is deployed at an unexpected address
     error SafeDeployedAtUnexpectedAddress(address expected, address actual);
 
+    /// @dev Custom error for when libraries are not linked via --libraries flag
+    error LibrariesNotLinked(string message);
+
     /**
      * @notice Main entry point for the deployment script
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
@@ -99,6 +102,9 @@ contract DeployContracts is Script {
         // The address of the factory is either explicitly provided in the environment, or auto-detected
         // If auto-detected, the factory is either Arachnid or Safe Singleton Factory
         address factoryAddress = Create2Deployer.getCreate2Factory(vm);
+
+        // Validate that the script was run with --libraries flag (critical for determinism)
+        _validateLibrariesLinkedOrRevert(factoryAddress);
 
         // Validate libraries are deployed at expected addresses (critical for determinism)
         _validateLibraryAddressesDeployedOrRevert(factoryAddress);
@@ -573,6 +579,83 @@ contract DeployContracts is Script {
             threshold = 1;
             Logger.logWarn("Using default Deployer Safe config (deployer as single owner)");
         }
+    }
+
+    /// @dev Validates that external libraries are properly linked via --libraries flag
+    /// @param factory Address of the CREATE2 factory used for computing expected library addresses
+    function _validateLibrariesLinkedOrRevert(address factory) internal pure {
+        // Get the creation code of OrganizationImplementation
+        // If libraries aren't linked via --libraries flag, the creation code will have
+        // placeholder bytes instead of the actual library addresses
+        bytes memory initCode = type(OrganizationImplementation).creationCode;
+
+        // Compute expected library addresses
+        address policyLib = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+        );
+        address adminLib = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+        );
+        address initLib = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+        );
+        address accSigLib = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
+        );
+
+        // Verify each library address appears in the creation code
+        // If --libraries flag wasn't used, these addresses won't be embedded in the bytecode
+        if (!_bytesContainAddress(initCode, policyLib)) {
+            revert LibrariesNotLinked("LibOrganizationPolicy not linked. Run with --libraries flag.");
+        }
+        if (!_bytesContainAddress(initCode, adminLib)) {
+            revert LibrariesNotLinked("LibOrganizationAdmin not linked. Run with --libraries flag.");
+        }
+        if (!_bytesContainAddress(initCode, initLib)) {
+            revert LibrariesNotLinked("LibOrganizationInitialization not linked. Run with --libraries flag.");
+        }
+        if (!_bytesContainAddress(initCode, accSigLib)) {
+            revert LibrariesNotLinked("LibOrganizationAccountSignature not linked. Run with --libraries flag.");
+        }
+    }
+
+    /// @dev Checks if a byte array contains a specific address (20 bytes)
+    /// @param data The byte array to search in
+    /// @param addr The address to search for
+    /// @return True if the address is found in the byte array
+    function _bytesContainAddress(bytes memory data, address addr) internal pure returns (bool) {
+        // Case: the byte array is too short to contain the address
+        if (data.length < 20) {
+            return false;
+        }
+
+        // Convert the address to a 20-byte bytes array
+        bytes20 addrBytes = bytes20(addr);
+
+        // Calculate the maximum index we need to iterate to
+        // This is 20 bytes less than the length of the byte array, because
+        // we need to leave room for the next 20 bytes of `data` to match `addrBytes`
+        uint256 maxIndex = data.length - 20;
+
+        // Iterate over each byte in `data` one by one
+        for (uint256 i = 0; i <= maxIndex; ++i) {
+            bool found = true;
+
+            // Iterate through next 20 bytes of `data` to see
+            // if each of the next 20 bytes match `addrBytes`
+            for (uint256 j = 0; j < 20 && found; ++j) {
+                if (data[i + j] != addrBytes[j]) {
+                    found = false;
+                }
+            }
+            // Case: we found the address in the byte array
+            if (found) {
+                return true;
+            }
+        }
+
+        // Case: we didn't find the address in the byte array
+        return false;
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary
