@@ -157,7 +157,7 @@ contract DeployContracts is Script {
         address whitelistProxy = _deployWhitelistProxy(factories, impls, safes.deployerSafe);
 
         // Whitelist implementations (depends on whitelistProxy, impls)
-        _whitelistImplementations(whitelistProxy, impls);
+        _addImplementationsToWhitelist(whitelistProxy, impls);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -435,7 +435,7 @@ contract DeployContracts is Script {
     /// @dev Whitelists the deployed implementation contracts in the ImplementationWhitelistProxy
     /// @param whitelistProxy Address of the whitelist proxy contract
     /// @param impls Implementation contract addresses to whitelist
-    function _whitelistImplementations(address whitelistProxy, PlatformImplementations memory impls) internal {
+    function _addImplementationsToWhitelist(address whitelistProxy, PlatformImplementations memory impls) internal {
         Create2Deployer.logSection("Whitelist Implementations");
 
         if (whitelistProxy == address(0) || !Create2Deployer.isContractDeployedAtAddress(whitelistProxy)) {
