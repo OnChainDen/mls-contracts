@@ -573,6 +573,32 @@ contract DeployContracts is Script {
         }
     }
 
+    /// @dev Parses a comma-separated string of addresses into an array
+    /// @param input Comma-separated addresses (e.g., "0x123...,0x456...")
+    /// @return Array of parsed addresses
+    function _parseAddressArray(string memory input) internal view returns (address[] memory) {
+        // Case: the input string is empty
+        // Return empty array
+        if (bytes(input).length == 0) {
+            return new address[](0);
+        }
+
+        // Split the input string into parts using the comma as the delimiter
+        string[] memory parts = vm.split(input, ",");
+
+        // Create a new array to store the parsed addresses
+        address[] memory addresses = new address[](parts.length);
+
+        // Iterate over each part and parse the address
+        for (uint256 i = 0; i < parts.length; ++i) {
+            // Parse the address from the part, trim any whitespace, and add it to the array
+            // slither-disable-next-line calls-loop
+            addresses[i] = vm.parseAddress(vm.trim(parts[i]));
+        }
+
+        return addresses;
+    }
+
     /// @dev Validates that external libraries are properly linked via --libraries flag
     /// @param factory Address of the CREATE2 factory used for computing expected library addresses
     function _validateLibrariesLinkedOrRevert(address factory) internal pure {
@@ -673,13 +699,5 @@ contract DeployContracts is Script {
         Logger.logKeyAddress("  WhitelistProxy", contracts.whitelistProxy);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
-    }
-
-    /// @dev Parses a comma-separated string of addresses into an array
-    /// @return Empty address array (placeholder implementation)
-    function _parseAddressArray(string memory) internal pure returns (address[] memory) {
-        // Simplified: return empty array, actual parsing would split by comma
-        // In production, use a proper string parsing library
-        return new address[](0);
     }
 }
