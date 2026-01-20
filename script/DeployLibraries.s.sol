@@ -9,7 +9,9 @@ import {LibOrganizationInitialization} from "organization/libraries/LibOrganizat
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
  * @title DeployLibraries
@@ -26,14 +28,6 @@ import {Logger} from "script/libraries/Logger.sol";
  * @author Den Technologies Inc
  */
 contract DeployLibraries is Script {
-    /// @dev Grouped addresses for deployed platform libraries
-    struct PlatformLibraries {
-        address policy;
-        address admin;
-        address initialization;
-        address accountSignature;
-    }
-
     /**
      * @notice Main entry point - deploys all platform libraries via CREATE2
      */
@@ -68,15 +62,16 @@ contract DeployLibraries is Script {
         Logger.logKeyUint("Chain ID", block.chainid);
         Logger.logEmptyLine();
 
-        PlatformLibraries memory libs = _computeLibraryAddresses(factoryAddress);
+        PlatformLibraries memory expectedLibAddresses =
+            LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
 
-        Logger.logKeyAddress("LibOrganizationPolicy", libs.policy);
-        Logger.logKeyAddress("LibOrganizationAdmin", libs.admin);
-        Logger.logKeyAddress("LibOrganizationInitialization", libs.initialization);
-        Logger.logKeyAddress("LibOrganizationAccountSignature", libs.accountSignature);
+        Logger.logKeyAddress("LibOrganizationPolicy", expectedLibAddresses.policy);
+        Logger.logKeyAddress("LibOrganizationAdmin", expectedLibAddresses.admin);
+        Logger.logKeyAddress("LibOrganizationInitialization", expectedLibAddresses.initialization);
+        Logger.logKeyAddress("LibOrganizationAccountSignature", expectedLibAddresses.accountSignature);
         Logger.logEmptyLine();
 
-        _printLibrariesCommand(libs);
+        _printLibrariesCommand(expectedLibAddresses);
     }
 
     /// @dev Deploys all platform libraries via CREATE2 for deterministic addresses
@@ -115,26 +110,6 @@ contract DeployLibraries is Script {
             DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
-        );
-    }
-
-    /// @dev Computes deterministic library addresses without deploying
-    /// @param factoryAddress Address of the CREATE2 factory to use for address computation
-    /// @return libs Struct containing computed library addresses
-    function _computeLibraryAddresses(address factoryAddress) internal pure returns (PlatformLibraries memory libs) {
-        libs.policy = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        libs.admin = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        libs.initialization = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        libs.accountSignature = Create2Deployer.computeAddress(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
         );
     }
 

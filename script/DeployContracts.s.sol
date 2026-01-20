@@ -19,13 +19,11 @@ import {
 } from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
-import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
-import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
-import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {PlatformLibraries} from "script/libraries/Types.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
 /**
@@ -506,49 +504,36 @@ contract DeployContracts is Script {
     function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
         Create2Deployer.logSection("Verify Library Addresses");
 
-        // Compute expected library addresses
+        // Compute expected library addresses using the shared helper
         // These addresses are dependent on which CREATE2 factory is used for deployment
-        address expectedPoliciesLibAddress = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-
-        address expectedAdminLibAddress = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        address expectedInitLibAddress = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        address expectedAccSigLibAddress = Create2Deployer.computeAddress(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
-        );
+        PlatformLibraries memory expectedLibAddresses =
+            LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
 
         bool allDeployed = true;
 
         // Check if libraries are deployed at expected addresses
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedPoliciesLibAddress)) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedLibAddresses.policy)) {
             Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationPolicy deployed at expected address");
         }
 
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedAdminLibAddress)) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedLibAddresses.admin)) {
             Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationAdmin deployed at expected address");
         }
 
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedInitLibAddress)) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedLibAddresses.initialization)) {
             Logger.logFail("LibOrganizationInitialization NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationInitialization deployed at expected address");
         }
 
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSigLibAddress)) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedLibAddresses.accountSignature)) {
             Logger.logFail("LibOrganizationAccountSignature NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
@@ -632,29 +617,27 @@ contract DeployContracts is Script {
         // placeholder bytes instead of the actual library addresses
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
-        // Compute expected library addresses
+        // Compute expected library addresses using the shared helper
         // These addresses are dependent on which CREATE2 factory is used for deployment
-        address expectedPolicyLibAddress = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        address expectedAdminLibAddress = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        address expectedInitLibAddress = Create2Deployer.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        address expectedAccSigLibAddress = Create2Deployer.computeAddress(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
-        );
+        PlatformLibraries memory expectedLibAddresses =
+            LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
 
         // Verify each library address appears in the creation code
         // If --libraries flag wasn't used, these addresses won't be embedded in the bytecode
-        require(_bytesContainAddress(initCode, expectedPolicyLibAddress), "LibOrgPolicy not linked. Use --libraries");
-        require(_bytesContainAddress(initCode, expectedAdminLibAddress), "LibOrgAdmin not linked. Use --libraries");
-        require(_bytesContainAddress(initCode, expectedInitLibAddress), "LibOrgInit not linked. Use --libraries");
-        require(_bytesContainAddress(initCode, expectedAccSigLibAddress), "LibOrgAccSig not linked. Use --libraries");
+        // forgefmt: disable-next-item
+        require(
+            _bytesContainAddress(initCode, expectedLibAddresses.policy), 
+            "LibOrgPolicy not linked. Use --libraries"
+        );
+        require(_bytesContainAddress(initCode, expectedLibAddresses.admin), "LibOrgAdmin not linked. Use --libraries");
+        require(
+            _bytesContainAddress(initCode, expectedLibAddresses.initialization),
+            "LibOrgInit not linked. Use --libraries"
+        );
+        require(
+            _bytesContainAddress(initCode, expectedLibAddresses.accountSignature),
+            "LibOrgAccSig not linked. Use --libraries"
+        );
     }
 
     /// @dev Checks if a byte array contains a specific address (20 bytes)
