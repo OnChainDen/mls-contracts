@@ -28,6 +28,7 @@ library Create2Utils {
         internal
         returns (address deployedAtAddress, bool wasDeployed)
     {
+        // Compute the predicted deployment address
         address predictedAddress = computeAddress(factoryAddress, salt, initCode);
 
         // Case: Contract already deployed

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Safe} from "@safe/Safe.sol";
@@ -13,6 +12,7 @@ import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
 import {Script} from "forge-std/Script.sol";
+import {ArrayUtils} from "script/libraries/ArrayUtils.sol";
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {
@@ -548,7 +548,7 @@ contract DeployContracts is Script {
         }
 
         address[] memory prodOwners = DeploymentConfig.getProdGuardianSafeOwners();
-        return Arrays.equal(owners, prodOwners);
+        return ArrayUtils.equal(owners, prodOwners);
     }
 
     /// @dev Checks if the provided Deployer Safe config matches production
@@ -561,7 +561,7 @@ contract DeployContracts is Script {
         }
 
         address[] memory prodOwners = DeploymentConfig.getProdDeployerSafeOwners();
-        return Arrays.equal(owners, prodOwners);
+        return ArrayUtils.equal(owners, prodOwners);
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
