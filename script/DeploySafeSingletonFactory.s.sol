@@ -3,7 +3,6 @@ pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
@@ -54,13 +53,12 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logBoxHeader("Safe Singleton Factory - Factory Deployment");
         Logger.logEmptyLine();
 
-        // Run all safety checks
-        bool allChecksPassed = _runSafetyChecks();
-
-        if (!allChecksPassed) {
-            Logger.logSafetyChecksFailed();
-            revert("Safety checks failed");
-        }
+        Logger.logSafetyChecksStart();
+        Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
+        _validateSafeFactoryNotDeployedOrRevert();
+        _validateDeployerPrivateKeyOrRevert();
+        _validateDeployerNonceZeroOrRevert();
+        _validateDeployerHasSufficientEthOrRevert();
 
         Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
@@ -78,13 +76,12 @@ contract DeploySafeSingletonFactory is Script {
             revert("Deployer address does not match expected address");
         }
 
+        // Deploy the factory
         vm.startBroadcast(deployerPrivateKey);
-
         _deployFactory();
-
         vm.stopBroadcast();
 
-        // Verify deployment
+        // Verify that the factory was deployed at the expected address
         if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             Logger.logFail("ERROR: Factory deployment failed!");
             revert("Factory deployment failed");
@@ -97,18 +94,22 @@ contract DeploySafeSingletonFactory is Script {
     /// @dev Can be called separately to fund the deployer before running the main script.
     ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
     function fundDeployer() external {
+        // Get the private key for the account that will fund the deployer
         uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
 
+        // Log the funding details
         Logger.logEmptyLine();
         Logger.logIndented("Funding Safe Singleton Factory deployer...");
         Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER_ADDRESS);
         Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
+        // Fund the deployer
         vm.startBroadcast(fundingPrivateKey);
         payable(_EXPECTED_DEPLOYER_ADDRESS).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
+        // Log the success
         Logger.logPass("Deployer funded successfully");
     }
 
@@ -139,73 +140,53 @@ contract DeploySafeSingletonFactory is Script {
         }
     }
 
-    /// @dev Runs all safety checks before deployment
-    ///      Checks: Arachnid not present, factory not deployed, deployer key valid, nonce is 0, sufficient ETH
-    /// @return passed True if all critical checks pass
-    function _runSafetyChecks() internal view returns (bool passed) {
-        Logger.logSafetyChecksStart();
-
-        bool allPassed = true;
-
-        // Check 0: Arachnid factory should NOT exist (prefer Arachnid over SafeSingleton)
-        Logger.logCheckStart("0/4", "Checking if Arachnid factory exists...");
-        if (Create2Utils.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)) {
-            Logger.logCheckFail("Arachnid factory already deployed");
-            Logger.logCheckDetail("Use Arachnid factory instead of Safe Singleton Factory.");
-            Logger.logCheckDetail("Set CREATE2_FACTORY_ADDRESS to the Arachnid factory address.");
-            allPassed = false;
-        } else {
-            Logger.logCheckPass("Arachnid factory not present (Safe Singleton Factory needed)");
+    /// @dev Validates that the Safe Singleton Factory is not already deployed
+    function _validateSafeFactoryNotDeployedOrRevert() internal view {
+        if (Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory")) {
+            Logger.logCheckFail("Safe Singleton Factory already deployed");
+            revert("Safe Singleton Factory already deployed");
         }
+    }
 
-        // Check 1: Safe Singleton Factory not already deployed
-        if (Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory", "1/4")) {
-            // Factory already deployed - not a failure, but deployment not needed
-            // However for Safe, we treat this as a failure since the factory existing means nothing to do
-            Logger.logCheckFail("Factory already deployed");
-            allPassed = false;
-        }
-
-        // Check 2: Deployer private key provided and matches expected address
-        Logger.logCheckStart("2/4", "Checking deployer private key...");
+    /// @dev Validates that the deployer private key is set and matches the expected address
+    function _validateDeployerPrivateKeyOrRevert() internal view {
+        Logger.logCheckStart("Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
             address deployerAddress = vm.addr(pk);
             if (deployerAddress == _EXPECTED_DEPLOYER_ADDRESS) {
                 Logger.logCheckPass("Deployer key matches expected address");
-            } else {
-                Logger.logCheckFail("Deployer address mismatch");
-                Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
-                Logger.logCheckDetail("Got: different address from provided key");
-                allPassed = false;
+                return;
             }
+            Logger.logCheckFail("Deployer address mismatch");
+            Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
+            Logger.logCheckDetail("Got: different address from provided key");
+            revert("Deployer address mismatch");
         } catch {
             Logger.logCheckFail("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set");
-            allPassed = false;
+            revert("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set");
         }
+    }
 
-        // Check 3: Deployer nonce is 0
-        Logger.logCheckStart("3/4", "Checking deployer nonce...");
+    /// @dev Validates that the deployer nonce is exactly 0
+    function _validateDeployerNonceZeroOrRevert() internal view {
+        Logger.logCheckStart("Checking deployer nonce...");
         uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER_ADDRESS);
         if (nonce == 0) {
             Logger.logCheckPass("Deployer nonce is 0");
-        } else {
-            Logger.logCheckFail("Deployer nonce is not 0 (expected 0)");
-            Logger.logCheckDetail("CRITICAL: Nonce has been burned! Cannot deploy factory.");
-            allPassed = false;
+            return;
         }
+        Logger.logCheckFail("Deployer nonce is not 0 (expected 0)");
+        Logger.logCheckDetail("CRITICAL: Nonce has been burned! Cannot deploy factory.");
+        revert("Deployer nonce is not 0");
+    }
 
-        // Check 4: Deployer has sufficient ETH (warning only, not a failure)
-        Logger.logCheckStart("4/4", "Checking deployer ETH balance...");
-        uint256 balance = _EXPECTED_DEPLOYER_ADDRESS.balance;
-        if (balance >= _REQUIRED_ETH_BALANCE) {
-            Logger.logCheckPass("Deployer has sufficient ETH");
-        } else {
-            Logger.logCheckWarn("Deployer may need more ETH");
-            Logger.logCheckDetail("Current balance may be insufficient.");
-            Logger.logCheckDetail("Recommended: fund deployer before proceeding.");
-            // This is a warning, not a failure
+    /// @dev Validates that the deployer has sufficient ETH balance for deployment
+    function _validateDeployerHasSufficientEthOrRevert() internal view {
+        bool hasBalance = Create2Utils.checkDeployerBalance(
+            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
+        );
+        if (!hasBalance) {
+            revert("Deployer has insufficient ETH");
         }
-
-        return allPassed;
     }
 }

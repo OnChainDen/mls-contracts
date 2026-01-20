@@ -76,13 +76,9 @@ contract DeployArachnidFactory is Script {
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
         Logger.logEmptyLine();
 
-        // Run all safety checks
-        bool allChecksPassed = _runSafetyChecks();
-
-        if (!allChecksPassed) {
-            Logger.logSafetyChecksFailed();
-            revert("Safety checks failed");
-        }
+        Logger.logSafetyChecksStart();
+        Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
+        _validateDeployerHasSufficientEthOrRevert();
 
         Logger.logSection("DEPLOYING ARACHNID FACTORY");
 
@@ -130,23 +126,13 @@ contract DeployArachnidFactory is Script {
         vm.broadcastRawTransaction(_PRESIGNED_TX);
     }
 
-    /// @dev Runs all safety checks before deployment
-    ///      Checks: factory not deployed, deployer has sufficient ETH
-    /// @return passed True if all critical checks pass
-    function _runSafetyChecks() internal view returns (bool passed) {
-        Logger.logSafetyChecksStart();
-
-        // Check 1: Factory not already deployed
-        // If already deployed, return true (success) - no deployment needed
-        if (Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Arachnid factory", "1/2")) {
-            return true;
-        }
-
-        // Check 2: Deployer has sufficient ETH
+    /// @dev Validates that the deployer has sufficient ETH balance for deployment
+    function _validateDeployerHasSufficientEthOrRevert() internal view {
         bool hasBalance = Create2Utils.checkDeployerBalance(
-            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "2/2", "DeployArachnidFactory"
+            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeployArachnidFactory"
         );
-
-        return hasBalance;
+        if (!hasBalance) {
+            revert("Deployer has insufficient ETH");
+        }
     }
 }

@@ -73,15 +73,14 @@ library Create2Utils {
     /// @dev Checks if a factory is already deployed and logs the result
     /// @param factoryAddress The factory address to check
     /// @param factoryName Human-readable name for logging
-    /// @param checkNumber The check number for logging (e.g., "1/2")
     /// @return alreadyDeployed True if factory exists at the address
-    function checkFactoryNotDeployed(address factoryAddress, string memory factoryName, string memory checkNumber)
+    function checkFactoryNotDeployed(address factoryAddress, string memory factoryName)
         internal
         view
         returns (bool alreadyDeployed)
     {
         // Log the check start
-        Logger.logCheckStart(checkNumber, string.concat("Checking if ", factoryName, " already deployed..."));
+        Logger.logCheckStart(string.concat("Checking if ", factoryName, " already deployed..."));
 
         // Case: Factory is already deployed
         if (isContractDeployedAtAddress(factoryAddress)) {
@@ -98,17 +97,15 @@ library Create2Utils {
     /// @dev Checks if an address has sufficient ETH balance and logs the result
     /// @param deployerAddress The address to check
     /// @param requiredBalance The minimum required balance in wei
-    /// @param checkNumber The check number for logging (e.g., "2/2")
     /// @param scriptName Name of the script for the fund command (e.g., "DeployArachnidFactory")
     /// @return hasSufficientBalance True if balance is sufficient
-    function checkDeployerBalance(
-        address deployerAddress,
-        uint256 requiredBalance,
-        string memory checkNumber,
-        string memory scriptName
-    ) internal view returns (bool hasSufficientBalance) {
+    function checkDeployerBalance(address deployerAddress, uint256 requiredBalance, string memory scriptName)
+        internal
+        view
+        returns (bool hasSufficientBalance)
+    {
         // Log the check start
-        Logger.logCheckStart(checkNumber, "Checking deployer ETH balance...");
+        Logger.logCheckStart("Checking deployer ETH balance...");
 
         // Get the deployer's balance
         uint256 balance = deployerAddress.balance;
@@ -128,6 +125,22 @@ library Create2Utils {
         Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
         Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
         return false;
+    }
+
+    /// @dev Validates that the Arachnid factory is NOT deployed, reverts if it is
+    function validateArachnidFactoryNotDeployedOrRevert() internal view {
+        Logger.logCheckStart("Checking if Arachnid factory already deployed...");
+        if (isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)) {
+            Logger.logCheckFail("Arachnid factory already deployed");
+            Logger.logCheckDetail(
+                string.concat(
+                    "Factory address: ", Strings.toHexString(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)
+                )
+            );
+            Logger.logCheckDetail("Set CREATE2_FACTORY_ADDRESS to use it.");
+            revert("Arachnid factory already deployed");
+        }
+        Logger.logCheckPass("Arachnid factory not deployed");
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment

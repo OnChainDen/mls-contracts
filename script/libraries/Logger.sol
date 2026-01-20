@@ -71,10 +71,9 @@ library Logger {
     // =========================================================================
 
     /// @dev Logs the start of a safety check
-    /// @param checkNumber The check number (e.g., "1/4", "2/4")
     /// @param description What is being checked
-    function logCheckStart(string memory checkNumber, string memory description) internal pure {
-        console.log("  [%s] %s", checkNumber, description);
+    function logCheckStart(string memory description) internal pure {
+        console.log("  %s", description);
     }
 
     /// @dev Logs a passed check result (7-space indent for alignment)
