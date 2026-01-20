@@ -79,15 +79,19 @@ library Create2Utils {
         view
         returns (bool alreadyDeployed)
     {
+        // Log the check start
         Logger.logCheckStart(checkNumber, string.concat("Checking if ", factoryName, " already deployed..."));
+
+        // Case: Factory is already deployed
         if (isContractDeployedAtAddress(factoryAddress)) {
             Logger.logCheckInfo(string.concat("Factory already deployed at ", _addressToString(factoryAddress)));
             Logger.logCheckDetail("No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
             return true;
-        } else {
-            Logger.logCheckPass("Factory not yet deployed");
-            return false;
         }
+
+        // Case: Factory is not deployed
+        Logger.logCheckPass("Factory not yet deployed");
+        return false;
     }
 
     /// @dev Checks if an address has sufficient ETH balance and logs the result
@@ -102,21 +106,27 @@ library Create2Utils {
         string memory checkNumber,
         string memory scriptName
     ) internal view returns (bool hasSufficientBalance) {
+        // Log the check start
         Logger.logCheckStart(checkNumber, "Checking deployer ETH balance...");
+
+        // Get the deployer's balance
         uint256 balance = deployerAddress.balance;
+
+        // Case: Deployer has sufficient balance
         if (balance >= requiredBalance) {
             Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", _uintToString(balance), " wei)"));
             return true;
-        } else {
-            Logger.logCheckFail("Deployer needs more ETH");
-            Logger.logCheckDetail(string.concat("Current: ", _uintToString(balance), " wei"));
-            Logger.logCheckDetail(string.concat("Required: ", _uintToString(requiredBalance), " wei"));
-            Logger.logEmptyLine();
-            Logger.logCheckDetail("Fund the deployer by running:");
-            Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
-            Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
-            return false;
         }
+
+        // Case: Deployer does not have sufficient balance
+        Logger.logCheckFail("Deployer needs more ETH");
+        Logger.logCheckDetail(string.concat("Current: ", _uintToString(balance), " wei"));
+        Logger.logCheckDetail(string.concat("Required: ", _uintToString(requiredBalance), " wei"));
+        Logger.logEmptyLine();
+        Logger.logCheckDetail("Fund the deployer by running:");
+        Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
+        Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
+        return false;
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment
@@ -150,40 +160,6 @@ library Create2Utils {
 
         Logger.logBoxFooter();
         Logger.logEmptyLine();
-    }
-
-    /// @dev Logs a section header for organized console output
-    /// @param sectionName The name of the deployment section
-    function logSection(string memory sectionName) internal pure {
-        Logger.logSection(sectionName);
-    }
-
-    /// @dev Logs deployment completion summary
-    function logDeploymentComplete() internal pure {
-        Logger.logDeploymentComplete();
-    }
-
-    // =========================================================================
-    // Factory Deployment Helpers
-    // =========================================================================
-
-    /// @dev Logs a factory deployment script header
-    /// @param factoryName Human-readable name of the factory being deployed
-    function logFactoryDeploymentHeader(string memory factoryName) internal pure {
-        Logger.logBoxHeader(string.concat(factoryName, " - Factory Deployment"));
-        Logger.logEmptyLine();
-    }
-
-    /// @dev Logs a successful factory deployment with next steps
-    /// @param factoryName Human-readable name of the deployed factory
-    /// @param factoryAddress Address where the factory was deployed
-    function logFactoryDeploymentSuccess(string memory factoryName, address factoryAddress) internal pure {
-        Logger.logDeploymentSuccess(factoryName, factoryAddress, "CREATE2_FACTORY_ADDRESS");
-    }
-
-    /// @dev Logs safety checks failed message
-    function logSafetyChecksFailed() internal pure {
-        Logger.logSafetyChecksFailed();
     }
 
     /// @dev Deploys using the appropriate factory interface based on factory address

@@ -51,17 +51,18 @@ contract DeploySafeSingletonFactory is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeSingletonFactory");
 
-        Create2Utils.logFactoryDeploymentHeader("Safe Singleton Factory");
+        Logger.logBoxHeader("Safe Singleton Factory - Factory Deployment");
+        Logger.logEmptyLine();
 
         // Run all safety checks
         bool allChecksPassed = _runSafetyChecks();
 
         if (!allChecksPassed) {
-            Create2Utils.logSafetyChecksFailed();
+            Logger.logSafetyChecksFailed();
             revert("Safety checks failed");
         }
 
-        Create2Utils.logSection("DEPLOYING SAFE SINGLETON FACTORY");
+        Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
         // Get the deployer private key
         uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
@@ -89,7 +90,7 @@ contract DeploySafeSingletonFactory is Script {
             revert("Factory deployment failed");
         }
 
-        Create2Utils.logFactoryDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS);
+        Logger.logDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS, "CREATE2_FACTORY_ADDRESS");
     }
 
     /// @notice Funds the Safe Singleton Factory deployer address with ETH

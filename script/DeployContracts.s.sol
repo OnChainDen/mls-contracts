@@ -168,7 +168,7 @@ contract DeployContracts is Script {
         });
 
         // Log deployment completion and print deployed addresses
-        Create2Utils.logDeploymentComplete();
+        Logger.logDeploymentComplete();
         _logDeployedAddresses(contracts);
     }
 
@@ -178,7 +178,7 @@ contract DeployContracts is Script {
     /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return safeInfra Struct containing all deployed Safe infrastructure addresses
     function _deploySafeInfrastructure(address factoryAddress) internal returns (SafeInfrastructure memory safeInfra) {
-        Create2Utils.logSection("Safe Infrastructure");
+        Logger.logSection("Safe Infrastructure");
 
         // Deploy Safe Singleton (master copy) if not already deployed
         (safeInfra.singletonAddress,) = Create2Utils.deployIfNotExists(
@@ -242,7 +242,7 @@ contract DeployContracts is Script {
         address[] memory deployerOwnerAddresses,
         uint256 deployerThreshold
     ) internal returns (SafeMultisigs memory safes) {
-        Create2Utils.logSection("Safe Multisigs");
+        Logger.logSection("Safe Multisigs");
 
         // Deploy Guardian Safe
         safes.guardianSafeAddress = _deploySafeMultisig({
@@ -330,7 +330,7 @@ contract DeployContracts is Script {
         internal
         returns (PlatformImplementations memory implementationContracts)
     {
-        Create2Utils.logSection("Implementation Contracts");
+        Logger.logSection("Implementation Contracts");
 
         // Deploy ImplementationWhitelistImplementation
         (implementationContracts.whitelistAddress,) = Create2Utils.deployIfNotExists(
@@ -366,7 +366,7 @@ contract DeployContracts is Script {
         internal
         returns (address organizationFactoryAddress)
     {
-        Create2Utils.logSection("Factory Contracts");
+        Logger.logSection("Factory Contracts");
 
         // Deploy OrganizationFactory with deployerSafeAddress as the deployer
         bytes memory orgFactoryInitCode =
@@ -387,7 +387,7 @@ contract DeployContracts is Script {
         PlatformImplementations memory implementationContracts,
         address deployerSafeAddress
     ) internal returns (address whitelistProxyAddress) {
-        Create2Utils.logSection("ImplementationWhitelistProxy");
+        Logger.logSection("ImplementationWhitelistProxy");
 
         // Construct arrays of implementation addresses to whitelist
         address[] memory organizationImplementationAddresses = new address[](1);
@@ -475,7 +475,7 @@ contract DeployContracts is Script {
     /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
     /// @param factoryAddress Address of the CREATE2 factory used for address computation
     function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
-        Create2Utils.logSection("Verify Library Addresses");
+        Logger.logSection("Verify Library Addresses");
 
         // Compute expected library addresses using the shared helper
         // These addresses are dependent on which CREATE2 factory is used for deployment

@@ -61,7 +61,7 @@ contract DeployLibraries is Script {
         // Stop broadcasting transactions
         vm.stopBroadcast();
 
-        Create2Utils.logDeploymentComplete();
+        Logger.logDeploymentComplete();
         _logDeployedAddresses(libs);
         _printLibrariesCommand(libs);
     }
@@ -101,7 +101,7 @@ contract DeployLibraries is Script {
     /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return libs Struct containing all deployed library addresses
     function _deployPlatformLibraries(address factoryAddress) internal returns (PlatformLibraries memory libs) {
-        Create2Utils.logSection("Platform Libraries (CREATE2)");
+        Logger.logSection("Platform Libraries (CREATE2)");
 
         // Deploy LibOrganizationPolicy
         (libs.policyAddress,) = Create2Utils.deployIfNotExists(

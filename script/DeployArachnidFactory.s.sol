@@ -73,17 +73,18 @@ contract DeployArachnidFactory is Script {
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
 
         // Log the deployment header
-        Create2Utils.logFactoryDeploymentHeader("Arachnid Deterministic Deployment Proxy");
+        Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
+        Logger.logEmptyLine();
 
         // Run all safety checks
         bool allChecksPassed = _runSafetyChecks();
 
         if (!allChecksPassed) {
-            Create2Utils.logSafetyChecksFailed();
+            Logger.logSafetyChecksFailed();
             revert("Safety checks failed");
         }
 
-        Create2Utils.logSection("DEPLOYING ARACHNID FACTORY");
+        Logger.logSection("DEPLOYING ARACHNID FACTORY");
 
         // Broadcast the pre-signed transaction
         _broadcastPresignedTransaction();
@@ -96,7 +97,7 @@ contract DeployArachnidFactory is Script {
             revert("Factory deployment failed");
         }
 
-        Create2Utils.logFactoryDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS);
+        Logger.logDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS, "CREATE2_FACTORY_ADDRESS");
     }
 
     /// @notice Funds the Arachnid factory deployer address with ETH
