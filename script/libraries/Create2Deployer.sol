@@ -63,14 +63,9 @@ library Create2Deployer {
     /// @param vm The Forge Vm interface for accessing environment variables
     /// @return factoryAddress Address of the CREATE2 factory
     function getCreate2Factory(Vm vm) internal view returns (address factoryAddress) {
-        // Require explicit factory address from environment variable
-        try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address providedAddress) {
-            require(providedAddress != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
-            require(isContractDeployedAtAddress(providedAddress), "CREATE2 factory not deployed at provided address");
-            return providedAddress;
-        } catch {
-            revert("CREATE2_FACTORY_ADDRESS environment variable not set");
-        }
+        factoryAddress = vm.envAddress("CREATE2_FACTORY_ADDRESS");
+        require(factoryAddress != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
+        require(isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address");
     }
 
     /// @dev Checks if a factory is already deployed and logs the result
