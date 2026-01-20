@@ -178,13 +178,6 @@ library Create2Deployer {
         Logger.logEmptyLine();
     }
 
-    /// @dev Logs the dry run mode message with script-specific instructions
-    /// @param scriptName Name of the script for the CONFIRM_DEPLOYMENT command
-    /// @param additionalNotes Optional additional notes to display (can be empty string)
-    function logDryRunMode(string memory scriptName, string memory additionalNotes) internal pure {
-        Logger.logDryRunMode(scriptName, additionalNotes);
-    }
-
     /// @dev Logs a successful factory deployment with next steps
     /// @param factoryName Human-readable name of the deployed factory
     /// @param factoryAddress Address where the factory was deployed

@@ -183,25 +183,6 @@ library Logger {
         console.log("");
     }
 
-    /// @dev Logs dry run mode instructions
-    /// @param scriptName Name of the script for the command example
-    /// @param notes Additional notes to display (can be empty)
-    function logDryRunMode(string memory scriptName, string memory notes) internal pure {
-        console.log("");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("  DRY RUN MODE");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("");
-        console.log("  All safety checks passed. To deploy, run with:");
-        console.log("");
-        console.log("    CONFIRM_DEPLOYMENT=true forge script %s ...", scriptName);
-        console.log("");
-        if (bytes(notes).length > 0) {
-            console.log("  %s", notes);
-            console.log("");
-        }
-    }
-
     /// @dev Logs successful deployment with environment variable instruction
     /// @param name Human-readable name of what was deployed
     /// @param deployedAddress Address where it was deployed

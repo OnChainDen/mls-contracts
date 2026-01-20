@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
 /**
  * @title DeployArachnidFactory
@@ -21,8 +22,8 @@ import {Logger} from "script/libraries/Logger.sol";
  *      SAFETY CHECKS:
  *      1. Verifies factory is not already deployed
  *      2. Verifies deployer address has sufficient ETH
- *      3. Requires explicit CONFIRM_DEPLOYMENT=true environment variable
- *      4. Runs in dry-run mode by default
+ *      3. Requires interactive confirmation when broadcasting
+ *      4. Logs dry-run mode when not broadcasting
  *
  *      Reference: https://github.com/Arachnid/deterministic-deployment-proxy
  *
@@ -68,10 +69,11 @@ contract DeployArachnidFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
-        Create2Deployer.logFactoryDeploymentHeader("Arachnid Deterministic Deployment Proxy");
+        // Prompt for confirmation when running with --broadcast
+        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
 
-        // Check if deployment is confirmed
-        bool confirmDeployment = vm.envOr("CONFIRM_DEPLOYMENT", false);
+        // Log the deployment header
+        Create2Deployer.logFactoryDeploymentHeader("Arachnid Deterministic Deployment Proxy");
 
         // Run all safety checks
         bool allChecksPassed = _runSafetyChecks();
@@ -79,15 +81,6 @@ contract DeployArachnidFactory is Script {
         if (!allChecksPassed) {
             Create2Deployer.logSafetyChecksFailed();
             revert("Safety checks failed");
-        }
-
-        if (!confirmDeployment) {
-            // forgefmt: disable-next-item
-            Create2Deployer.logDryRunMode(
-                "DeployArachnidFactory",
-                "NOTE: This broadcasts a pre-signed transaction. Some chains that enforce EIP-155 may reject it."
-            );
-            return;
         }
 
         Create2Deployer.logSection("DEPLOYING ARACHNID FACTORY");

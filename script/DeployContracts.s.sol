@@ -25,6 +25,7 @@ import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
@@ -88,6 +89,9 @@ contract DeployContracts is Script {
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
      */
     function run() external {
+        // Prompt for confirmation when running with --broadcast
+        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployContracts");
+
         // Get the CREATE2 factory that will be used for deployments
         // The address of the factory is explicitly provided in the environment
         address factoryAddress = Create2Deployer.getCreate2Factory(vm);

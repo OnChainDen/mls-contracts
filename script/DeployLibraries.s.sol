@@ -12,6 +12,7 @@ import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
@@ -33,6 +34,9 @@ contract DeployLibraries is Script {
      * @notice Main entry point - deploys all platform libraries via CREATE2
      */
     function run() external {
+        // Prompt for confirmation when running with --broadcast
+        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries");
+
         // Get the deployer private key/address from the environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);

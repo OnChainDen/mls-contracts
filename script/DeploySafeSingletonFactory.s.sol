@@ -6,6 +6,7 @@ import {Script} from "forge-std/Script.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
 /**
  * @title DeploySafeSingletonFactory
@@ -21,8 +22,8 @@ import {Logger} from "script/libraries/Logger.sol";
  *      SAFETY CHECKS:
  *      1. Verifies deployer nonce is exactly 0
  *      2. Verifies factory is not already deployed
- *      3. Requires explicit CONFIRM_DEPLOYMENT=true environment variable
- *      4. Runs in dry-run mode by default
+ *      3. Requires interactive confirmation when broadcasting
+ *      4. Logs dry-run mode when not broadcasting
  *
  * @author Den Technologies Inc
  */
@@ -47,10 +48,10 @@ contract DeploySafeSingletonFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
-        Create2Deployer.logFactoryDeploymentHeader("Safe Singleton Factory");
+        // Prompt for confirmation when running with --broadcast
+        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeSingletonFactory");
 
-        // Check if deployment is confirmed
-        bool confirmDeployment = vm.envOr("CONFIRM_DEPLOYMENT", false);
+        Create2Deployer.logFactoryDeploymentHeader("Safe Singleton Factory");
 
         // Run all safety checks
         bool allChecksPassed = _runSafetyChecks();
@@ -58,15 +59,6 @@ contract DeploySafeSingletonFactory is Script {
         if (!allChecksPassed) {
             Create2Deployer.logSafetyChecksFailed();
             revert("Safety checks failed");
-        }
-
-        if (!confirmDeployment) {
-            // forgefmt: disable-next-item
-            Create2Deployer.logDryRunMode(
-                "DeploySafeSingletonFactory",
-                "WARNING: This will use nonce 0 of the deployer account. Make sure this is the correct chain."
-            );
-            return;
         }
 
         Create2Deployer.logSection("DEPLOYING SAFE SINGLETON FACTORY");
