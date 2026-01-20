@@ -57,7 +57,9 @@ contract DeploySafeSingletonFactory is Script {
         _validateSafeFactoryNotDeployedOrRevert();
         _validateDeployerPrivateKeyOrRevert();
         _validateDeployerNonceZeroOrRevert();
-        _validateDeployerHasSufficientEthOrRevert();
+        Create2Utils.validateDeployerHasSufficientEthOrRevert(
+            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
+        );
 
         Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
@@ -177,15 +179,5 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logCheckFail("Deployer nonce is not 0 (expected 0)");
         Logger.logCheckDetail("CRITICAL: Nonce has been burned! Cannot deploy factory.");
         revert("Deployer nonce is not 0");
-    }
-
-    /// @dev Validates that the deployer has sufficient ETH balance for deployment
-    function _validateDeployerHasSufficientEthOrRevert() internal view {
-        bool hasBalance = Create2Utils.checkDeployerBalance(
-            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
-        );
-        if (!hasBalance) {
-            revert("Deployer has insufficient ETH");
-        }
     }
 }

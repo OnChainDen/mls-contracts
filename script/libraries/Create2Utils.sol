@@ -94,16 +94,15 @@ library Create2Utils {
         return false;
     }
 
-    /// @dev Checks if an address has sufficient ETH balance and logs the result
+    /// @dev Validates that the deployer has sufficient ETH balance for deployment, reverts if not
     /// @param deployerAddress The address to check
     /// @param requiredBalance The minimum required balance in wei
     /// @param scriptName Name of the script for the fund command (e.g., "DeployArachnidFactory")
-    /// @return hasSufficientBalance True if balance is sufficient
-    function checkDeployerBalance(address deployerAddress, uint256 requiredBalance, string memory scriptName)
-        internal
-        view
-        returns (bool hasSufficientBalance)
-    {
+    function validateDeployerHasSufficientEthOrRevert(
+        address deployerAddress,
+        uint256 requiredBalance,
+        string memory scriptName
+    ) internal view {
         // Log the check start
         Logger.logCheckStart("Checking deployer ETH balance...");
 
@@ -113,7 +112,7 @@ library Create2Utils {
         // Case: Deployer has sufficient balance
         if (balance >= requiredBalance) {
             Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", Strings.toString(balance), " wei)"));
-            return true;
+            return;
         }
 
         // Case: Deployer does not have sufficient balance
@@ -124,7 +123,7 @@ library Create2Utils {
         Logger.logCheckDetail("Fund the deployer by running:");
         Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
         Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
-        return false;
+        revert("Deployer has insufficient ETH");
     }
 
     /// @dev Validates that the Arachnid factory is NOT deployed, reverts if it is

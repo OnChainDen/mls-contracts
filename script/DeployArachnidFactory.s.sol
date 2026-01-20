@@ -76,9 +76,15 @@ contract DeployArachnidFactory is Script {
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
         Logger.logEmptyLine();
 
+        // Validate that the Arachnid factory is not already deployed
         Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
-        _validateDeployerHasSufficientEthOrRevert();
 
+        // Validate that the deployer has sufficient ETH balance
+        Create2Utils.validateDeployerHasSufficientEthOrRevert(
+            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeployArachnidFactory"
+        );
+
+        // Log section header
         Logger.logSection("DEPLOYING ARACHNID FACTORY");
 
         // Broadcast the pre-signed transaction
@@ -123,15 +129,5 @@ contract DeployArachnidFactory is Script {
 
         // Use Foundry's vm.broadcastRawTransaction to broadcast the pre-signed tx
         vm.broadcastRawTransaction(_PRESIGNED_TX);
-    }
-
-    /// @dev Validates that the deployer has sufficient ETH balance for deployment
-    function _validateDeployerHasSufficientEthOrRevert() internal view {
-        bool hasBalance = Create2Utils.checkDeployerBalance(
-            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeployArachnidFactory"
-        );
-        if (!hasBalance) {
-            revert("Deployer has insufficient ETH");
-        }
     }
 }
