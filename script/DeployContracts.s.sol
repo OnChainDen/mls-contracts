@@ -47,153 +47,156 @@ import {ContractType} from "types/CommonTypes.sol";
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
-    /// @notice Address of the deployed Safe Singleton (master copy)
-    address public safeSingleton;
+    /// @dev Grouped addresses for Safe infrastructure contracts
+    struct SafeInfrastructure {
+        address singleton;
+        address proxyFactory;
+        address fallbackHandler;
+        address multiSend;
+        address multiSendCallOnly;
+        address createCall;
+        address simulateTxAccessor;
+    }
 
-    /// @notice Address of the deployed SafeProxyFactory
-    address public safeProxyFactory;
+    /// @dev Grouped addresses for Safe multisig wallets
+    struct SafeMultisigs {
+        address guardianSafe;
+        address deployerSafe;
+    }
 
-    /// @notice Address of the deployed CompatibilityFallbackHandler
-    address public compatibilityFallbackHandler;
+    /// @dev Grouped addresses for platform implementation contracts
+    struct PlatformImplementations {
+        address organization;
+        address account;
+        address whitelist;
+    }
 
-    /// @notice Address of the deployed MultiSend library
-    address public multiSend;
+    /// @dev Grouped addresses for platform factory contracts
+    struct PlatformFactories {
+        address organization;
+        address whitelist;
+    }
 
-    /// @notice Address of the deployed MultiSendCallOnly library
-    address public multiSendCallOnly;
+    /// @dev Complete set of all deployed contract addresses
+    struct DeployedContracts {
+        SafeInfrastructure safeInfra;
+        SafeMultisigs safes;
+        PlatformImplementations implementations;
+        PlatformFactories factories;
+        address whitelistProxy;
+    }
 
-    /// @notice Address of the deployed CreateCall library
-    address public createCall;
+    /// @dev Custom error for when no CREATE2 factory is available
+    error NoCreate2FactoryAvailable();
 
-    /// @notice Address of the deployed SimulateTxAccessor
-    address public simulateTxAccessor;
-
-    /// @notice Address of the deployed Guardian Safe multisig
-    address public guardianSafe;
-
-    /// @notice Address of the deployed Deployer Safe multisig
-    address public deployerSafe;
-
-    /// @notice Address of the deployed OrganizationImplementation contract
-    address public organizationImplementation;
-
-    /// @notice Address of the deployed AccountImplementation contract
-    address public accountImplementation;
-
-    /// @notice Address of the deployed ImplementationWhitelistImplementation contract
-    address public whitelistImplementation;
-
-    /// @notice Address of the deployed OrganizationFactory contract
-    address public organizationFactory;
-
-    /// @notice Address of the deployed ImplementationWhitelistFactory contract
-    address public whitelistFactory;
-
-    /// @notice Address of the deployed ImplementationWhitelistProxy contract
-    address public whitelistProxy;
-
-    /// @notice Address of the CREATE2 factory being used for deployments
-    address public create2Factory;
+    /// @dev Custom error for when a Safe is deployed at an unexpected address
+    error SafeDeployedAtUnexpectedAddress(address expected, address actual);
 
     /**
      * @notice Main entry point for the deployment script
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
      */
     function run() external {
-        // Get configuration from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
+        address factory = _getCreate2Factory();
 
-        // Get CREATE2 factory (from env or auto-detect)
-        create2Factory = _getCreate2Factory();
+        (address[] memory guardianOwners, uint256 guardianThreshold) = _getGuardianSafeConfig();
+        (address[] memory deployerOwners, uint256 deployerThreshold) = _getDeployerSafeConfig();
 
-        // Get Safe multisig configuration
-        (address[] memory guardianSafeOwners, uint256 guardianSafeThreshold) = _getGuardianSafeConfig();
-        (address[] memory deployerSafeOwners, uint256 deployerSafeThreshold) = _getDeployerSafeConfig();
-
-        // Log deployment header
-        Create2Deployer.logDeploymentHeader(create2Factory, block.chainid);
+        Create2Deployer.logDeploymentHeader(factory, block.chainid);
         console.log("  Deployer EOA: %s", deployerAddress);
         console.log("");
 
         vm.startBroadcast(deployerPrivateKey);
 
         // Step 1: Deploy Safe Infrastructure
-        _deploySafeInfrastructure();
+        SafeInfrastructure memory safeInfra = _deploySafeInfrastructure(factory);
 
-        // Step 2: Deploy Safe Multisigs
-        _deploySafeMultisigs(guardianSafeOwners, guardianSafeThreshold, deployerSafeOwners, deployerSafeThreshold);
+        // Step 2: Deploy Safe Multisigs (depends on safeInfra)
+        SafeMultisigs memory safes = _deploySafeMultisigs({
+            safeInfra: safeInfra,
+            guardianOwners: guardianOwners,
+            guardianThreshold: guardianThreshold,
+            deployerOwners: deployerOwners,
+            deployerThreshold: deployerThreshold
+        });
 
         // Step 3: Verify libraries are at expected addresses (critical for determinism)
-        _verifyLibraryAddresses();
+        _verifyLibraryAddresses(factory);
 
         // Step 4: Deploy Implementation Contracts
-        _deployImplementationContracts();
+        PlatformImplementations memory impls = _deployImplementationContracts(factory);
 
-        // Step 5: Deploy Factory Contracts
-        _deployFactoryContracts();
+        // Step 5: Deploy Factory Contracts (depends on safes.deployerSafe)
+        PlatformFactories memory factories = _deployFactoryContracts(factory, safes.deployerSafe);
 
-        // Step 6: Deploy ImplementationWhitelistProxy via factory
-        _deployWhitelistProxy();
+        // Step 6: Deploy ImplementationWhitelistProxy via factory (depends on factories, impls, safes)
+        address whitelistProxy = _deployWhitelistProxy(factories, impls, safes.deployerSafe);
 
-        // Step 7: Whitelist implementations
-        _whitelistImplementations();
+        // Step 7: Whitelist implementations (depends on whitelistProxy, impls)
+        _whitelistImplementations(whitelistProxy, impls);
 
         vm.stopBroadcast();
 
-        // Log completion
+        // Build the complete deployed contracts struct for logging
+        DeployedContracts memory contracts = DeployedContracts({
+            safeInfra: safeInfra,
+            safes: safes,
+            implementations: impls,
+            factories: factories,
+            whitelistProxy: whitelistProxy
+        });
+
         Create2Deployer.logDeploymentComplete();
-        _logDeployedAddresses();
+        _logDeployedAddresses(contracts);
     }
 
     /// @dev Deploys all Safe infrastructure contracts via CREATE2
-    ///      Includes: Safe singleton, proxy factory, fallback handler, MultiSend libraries,
-    ///      CreateCall, and SimulateTxAccessor
-    function _deploySafeInfrastructure() internal {
+    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @return safeInfra Struct containing all deployed Safe infrastructure addresses
+    function _deploySafeInfrastructure(address factory) internal returns (SafeInfrastructure memory safeInfra) {
         Create2Deployer.logSection("Safe Infrastructure");
 
         // Deploy Safe Singleton (master copy)
-        (safeSingleton,) = Create2Deployer.deployIfNotExists(
-            create2Factory, DeploymentConfig.SAFE_SINGLETON_SALT, type(Safe).creationCode, "Safe Singleton"
+        (safeInfra.singleton,) = Create2Deployer.deployIfNotExists(
+            factory, DeploymentConfig.SAFE_SINGLETON_SALT, type(Safe).creationCode, "Safe Singleton"
         );
 
         // Deploy Safe Proxy Factory
-        (safeProxyFactory,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
-            DeploymentConfig.SAFE_PROXY_FACTORY_SALT,
-            type(SafeProxyFactory).creationCode,
-            "SafeProxyFactory"
+        (safeInfra.proxyFactory,) = Create2Deployer.deployIfNotExists(
+            factory, DeploymentConfig.SAFE_PROXY_FACTORY_SALT, type(SafeProxyFactory).creationCode, "SafeProxyFactory"
         );
 
         // Deploy Compatibility Fallback Handler
-        (compatibilityFallbackHandler,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (safeInfra.fallbackHandler,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.SAFE_FALLBACK_HANDLER_SALT,
             type(CompatibilityFallbackHandler).creationCode,
             "CompatibilityFallbackHandler"
         );
 
         // Deploy MultiSend
-        (multiSend,) = Create2Deployer.deployIfNotExists(
-            create2Factory, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
+        (safeInfra.multiSend,) = Create2Deployer.deployIfNotExists(
+            factory, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
         );
 
         // Deploy MultiSendCallOnly
-        (multiSendCallOnly,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (safeInfra.multiSendCallOnly,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.SAFE_MULTISEND_CALL_ONLY_SALT,
             type(MultiSendCallOnly).creationCode,
             "MultiSendCallOnly"
         );
 
         // Deploy CreateCall
-        (createCall,) = Create2Deployer.deployIfNotExists(
-            create2Factory, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
+        (safeInfra.createCall,) = Create2Deployer.deployIfNotExists(
+            factory, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
         );
 
         // Deploy SimulateTxAccessor
-        (simulateTxAccessor,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (safeInfra.simulateTxAccessor,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.SAFE_SIMULATE_TX_ACCESSOR_SALT,
             type(SimulateTxAccessor).creationCode,
             "SimulateTxAccessor"
@@ -201,39 +204,54 @@ contract DeployContracts is Script {
     }
 
     /// @dev Deploys Guardian and Deployer Safe multisig wallets
-    /// @param guardianSafeOwners Array of owner addresses for the Guardian Safe
-    /// @param guardianSafeThreshold Required signatures threshold for Guardian Safe
-    /// @param deployerSafeOwners Array of owner addresses for the Deployer Safe
-    /// @param deployerSafeThreshold Required signatures threshold for Deployer Safe
+    /// @param safeInfra Safe infrastructure addresses needed for Safe deployment
+    /// @param guardianOwners Array of owner addresses for the Guardian Safe
+    /// @param guardianThreshold Required signatures threshold for Guardian Safe
+    /// @param deployerOwners Array of owner addresses for the Deployer Safe
+    /// @param deployerThreshold Required signatures threshold for Deployer Safe
+    /// @return safes Struct containing deployed Guardian and Deployer Safe addresses
     function _deploySafeMultisigs(
-        address[] memory guardianSafeOwners,
-        uint256 guardianSafeThreshold,
-        address[] memory deployerSafeOwners,
-        uint256 deployerSafeThreshold
-    ) internal {
+        SafeInfrastructure memory safeInfra,
+        address[] memory guardianOwners,
+        uint256 guardianThreshold,
+        address[] memory deployerOwners,
+        uint256 deployerThreshold
+    ) internal returns (SafeMultisigs memory safes) {
         Create2Deployer.logSection("Safe Multisigs");
 
         // Deploy Guardian Safe
-        guardianSafe = _deploySafeMultisig(
-            guardianSafeOwners, guardianSafeThreshold, DeploymentConfig.GUARDIAN_SAFE_SALT, "Guardian Safe"
-        );
+        safes.guardianSafe = _deploySafeMultisig({
+            safeInfra: safeInfra,
+            owners: guardianOwners,
+            threshold: guardianThreshold,
+            salt: DeploymentConfig.GUARDIAN_SAFE_SALT,
+            name: "Guardian Safe"
+        });
 
         // Deploy Deployer Safe
-        deployerSafe = _deploySafeMultisig(
-            deployerSafeOwners, deployerSafeThreshold, DeploymentConfig.DEPLOYER_SAFE_SALT, "Deployer Safe"
-        );
+        safes.deployerSafe = _deploySafeMultisig({
+            safeInfra: safeInfra,
+            owners: deployerOwners,
+            threshold: deployerThreshold,
+            salt: DeploymentConfig.DEPLOYER_SAFE_SALT,
+            name: "Deployer Safe"
+        });
     }
 
     /// @dev Deploys a Safe multisig wallet using SafeProxyFactory
+    /// @param safeInfra Safe infrastructure addresses needed for Safe deployment
     /// @param owners Array of owner addresses for the Safe
     /// @param threshold Required number of signatures for transactions
     /// @param salt Salt used for deterministic address computation
     /// @param name Human-readable name for logging purposes
     /// @return safe Address of the deployed Safe proxy
-    function _deploySafeMultisig(address[] memory owners, uint256 threshold, bytes32 salt, string memory name)
-        internal
-        returns (address safe)
-    {
+    function _deploySafeMultisig(
+        SafeInfrastructure memory safeInfra,
+        address[] memory owners,
+        uint256 threshold,
+        bytes32 salt,
+        string memory name
+    ) internal returns (address safe) {
         // Encode the initializer for Safe.setup()
         bytes memory initializer = abi.encodeCall(
             ISafe.setup,
@@ -242,7 +260,7 @@ contract DeployContracts is Script {
                 threshold,
                 address(0), // to - no delegate call
                 "", // data - no delegate call data
-                compatibilityFallbackHandler,
+                safeInfra.fallbackHandler,
                 address(0), // paymentToken - ETH
                 0, // payment - no payment
                 payable(address(0)) // paymentReceiver
@@ -252,7 +270,7 @@ contract DeployContracts is Script {
         uint256 saltNonce = uint256(salt);
 
         // Compute expected address using SafeProxyFactory's CREATE2 formula
-        safe = _computeSafeProxyAddress(initializer, saltNonce);
+        safe = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
 
         // Check if already deployed
         if (Create2Deployer.isContractDeployedAtAddress(safe)) {
@@ -261,22 +279,26 @@ contract DeployContracts is Script {
         }
 
         // Deploy the Safe
-        address deployedAtAddress =
-            address(SafeProxyFactory(safeProxyFactory).createProxyWithNonce(safeSingleton, initializer, saltNonce));
+        address deployedAtAddress = address(
+            SafeProxyFactory(safeInfra.proxyFactory).createProxyWithNonce(safeInfra.singleton, initializer, saltNonce)
+        );
         console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAtAddress);
 
         // Verify deployment matches expected address
-        require(deployedAtAddress == safe, "Safe deployed at unexpected address");
+        if (deployedAtAddress != safe) {
+            revert SafeDeployedAtUnexpectedAddress(safe, deployedAtAddress);
+        }
     }
 
     /// @dev Deploys all implementation contracts via CREATE2
-    ///      Includes: OrganizationImplementation, AccountImplementation, ImplementationWhitelistImplementation
-    function _deployImplementationContracts() internal {
+    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @return impls Struct containing all deployed implementation addresses
+    function _deployImplementationContracts(address factory) internal returns (PlatformImplementations memory impls) {
         Create2Deployer.logSection("Implementation Contracts");
 
         // Deploy ImplementationWhitelistImplementation
-        (whitelistImplementation,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (impls.whitelist,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.WHITELIST_IMPL_SALT,
             type(ImplementationWhitelistImplementation).creationCode,
             "ImplementationWhitelistImplementation"
@@ -284,16 +306,16 @@ contract DeployContracts is Script {
 
         // Deploy OrganizationImplementation
         // IMPORTANT: This script must be run with --libraries flag for deterministic deployment
-        (organizationImplementation,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (impls.organization,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.ORG_IMPL_SALT,
             type(OrganizationImplementation).creationCode,
             "OrganizationImplementation"
         );
 
         // Deploy AccountImplementation
-        (accountImplementation,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (impls.account,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.ACCOUNT_IMPL_SALT,
             type(AccountImplementation).creationCode,
             "AccountImplementation"
@@ -301,42 +323,52 @@ contract DeployContracts is Script {
     }
 
     /// @dev Deploys factory contracts via CREATE2
-    ///      Includes: OrganizationFactory, ImplementationWhitelistFactory
-    ///      Both factories are initialized with deployerSafe as the authorized deployer
-    function _deployFactoryContracts() internal {
+    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @param deployerSafe Address of the Deployer Safe to authorize as factory deployer
+    /// @return factories Struct containing deployed factory addresses
+    function _deployFactoryContracts(address factory, address deployerSafe)
+        internal
+        returns (PlatformFactories memory factories)
+    {
         Create2Deployer.logSection("Factory Contracts");
 
         // Deploy ImplementationWhitelistFactory with deployerSafe as the deployer
         bytes memory whitelistFactoryInitCode =
             abi.encodePacked(type(ImplementationWhitelistFactory).creationCode, abi.encode(deployerSafe));
 
-        (whitelistFactory,) = Create2Deployer.deployIfNotExists(
-            create2Factory, DeploymentConfig.WHITELIST_FACTORY_SALT, whitelistFactoryInitCode, "WhitelistFactory"
+        (factories.whitelist,) = Create2Deployer.deployIfNotExists(
+            factory, DeploymentConfig.WHITELIST_FACTORY_SALT, whitelistFactoryInitCode, "WhitelistFactory"
         );
 
         // Deploy OrganizationFactory with deployerSafe as the deployer
         bytes memory orgFactoryInitCode =
             abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafe));
 
-        (organizationFactory,) = Create2Deployer.deployIfNotExists(
-            create2Factory, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
+        (factories.organization,) = Create2Deployer.deployIfNotExists(
+            factory, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
         );
     }
 
     /// @dev Deploys the ImplementationWhitelistProxy via ImplementationWhitelistFactory
-    ///      This proxy serves as the canonical whitelist for approved implementations
-    function _deployWhitelistProxy() internal {
+    /// @param factories Factory contract addresses
+    /// @param impls Implementation contract addresses
+    /// @param deployerSafe Address of the Deployer Safe (owner of the whitelist)
+    /// @return whitelistProxy Address of the deployed whitelist proxy
+    function _deployWhitelistProxy(
+        PlatformFactories memory factories,
+        PlatformImplementations memory impls,
+        address deployerSafe
+    ) internal returns (address whitelistProxy) {
         Create2Deployer.logSection("ImplementationWhitelistProxy");
 
         // Compute expected address
-        address expectedProxy = ImplementationWhitelistFactory(whitelistFactory)
-            .computeImplementationWhitelistAddress(DeploymentConfig.WHITELIST_PROXY_SALT, whitelistImplementation);
+        address expectedProxy = ImplementationWhitelistFactory(factories.whitelist)
+            .computeImplementationWhitelistAddress(DeploymentConfig.WHITELIST_PROXY_SALT, impls.whitelist);
 
         // Check if already deployed
         if (Create2Deployer.isContractDeployedAtAddress(expectedProxy)) {
-            whitelistProxy = expectedProxy;
-            console.log(unicode"  ⏭️  SKIPPED: ImplementationWhitelistProxy (already at %s)", whitelistProxy);
-            return;
+            console.log(unicode"  ⏭️  SKIPPED: ImplementationWhitelistProxy (already at %s)", expectedProxy);
+            return expectedProxy;
         }
 
         // Note: This call must come from the deployerSafe
@@ -345,25 +377,26 @@ contract DeployContracts is Script {
         console.log("  Or execute this step via the Deployer Safe multisig");
 
         // If deployer matches factory's DEPLOYER_ADDRESS, deploy directly
-        try ImplementationWhitelistFactory(whitelistFactory)
+        try ImplementationWhitelistFactory(factories.whitelist)
             .deployImplementationWhitelist(
                 DeploymentConfig.WHITELIST_PROXY_SALT,
-                whitelistImplementation,
+                impls.whitelist,
                 deployerSafe // Owner of the whitelist
             ) returns (
             address deployedAtAddress
         ) {
-            whitelistProxy = deployedAtAddress;
-            console.log(unicode"  ✅ DEPLOYED: ImplementationWhitelistProxy at %s", whitelistProxy);
+            console.log(unicode"  ✅ DEPLOYED: ImplementationWhitelistProxy at %s", deployedAtAddress);
+            return deployedAtAddress;
         } catch {
             console.log(unicode"  ⚠️  SKIPPED: Deployment requires authorization from deployerSafe");
-            whitelistProxy = expectedProxy;
+            return expectedProxy;
         }
     }
 
     /// @dev Whitelists the deployed implementation contracts in the ImplementationWhitelistProxy
-    ///      Registers OrganizationImplementation and AccountImplementation as approved implementations
-    function _whitelistImplementations() internal {
+    /// @param whitelistProxy Address of the whitelist proxy contract
+    /// @param impls Implementation contract addresses to whitelist
+    function _whitelistImplementations(address whitelistProxy, PlatformImplementations memory impls) internal {
         Create2Deployer.logSection("Whitelist Implementations");
 
         if (whitelistProxy == address(0) || !Create2Deployer.isContractDeployedAtAddress(whitelistProxy)) {
@@ -374,9 +407,8 @@ contract DeployContracts is Script {
         ImplementationWhitelistImplementation whitelist = ImplementationWhitelistImplementation(whitelistProxy);
 
         // Check if already whitelisted
-        bool orgWhitelisted =
-            whitelist.isImplementationWhitelisted(ContractType.Organization, organizationImplementation);
-        bool accWhitelisted = whitelist.isImplementationWhitelisted(ContractType.Account, accountImplementation);
+        bool orgWhitelisted = whitelist.isImplementationWhitelisted(ContractType.Organization, impls.organization);
+        bool accWhitelisted = whitelist.isImplementationWhitelisted(ContractType.Account, impls.account);
 
         if (orgWhitelisted && accWhitelisted) {
             console.log(unicode"  ⏭️  SKIPPED: Implementations already whitelisted");
@@ -390,7 +422,7 @@ contract DeployContracts is Script {
         // Whitelist Organization implementation
         if (!orgWhitelisted) {
             toWhitelist = new address[](1);
-            toWhitelist[0] = organizationImplementation;
+            toWhitelist[0] = impls.organization;
             try whitelist.whitelistImplementations(ContractType.Organization, toWhitelist, empty) {
                 console.log(unicode"  ✅ Whitelisted OrganizationImplementation");
             } catch {
@@ -401,7 +433,7 @@ contract DeployContracts is Script {
         // Whitelist Account implementation
         if (!accWhitelisted) {
             toWhitelist = new address[](1);
-            toWhitelist[0] = accountImplementation;
+            toWhitelist[0] = impls.account;
             try whitelist.whitelistImplementations(ContractType.Account, toWhitelist, empty) {
                 console.log(unicode"  ✅ Whitelisted AccountImplementation");
             } catch {
@@ -411,38 +443,41 @@ contract DeployContracts is Script {
     }
 
     /// @dev Computes the deterministic address of a Safe proxy before deployment
+    /// @param safeInfra Safe infrastructure addresses needed for address computation
     /// @param initializer Encoded Safe.setup() call data
     /// @param saltNonce Nonce used for salt computation
     /// @return The predicted Safe proxy address
-    function _computeSafeProxyAddress(bytes memory initializer, uint256 saltNonce) internal view returns (address) {
+    function _computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
+        internal
+        view
+        returns (address)
+    {
         // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
         bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
 
         // Get the init code hash from the factory (includes singleton address)
-        bytes32 initCodeHash = SafeProxyFactory(safeProxyFactory).proxyCreationCodehash(safeSingleton);
+        bytes32 initCodeHash = SafeProxyFactory(safeInfra.proxyFactory).proxyCreationCodehash(safeInfra.singleton);
 
         // Use OpenZeppelin's Create2 utility for address computation
-        return Create2.computeAddress(salt, initCodeHash, safeProxyFactory);
+        return Create2.computeAddress(salt, initCodeHash, safeInfra.proxyFactory);
     }
 
     /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
-    ///      Logs warnings if any libraries are missing and need to be deployed first
-    function _verifyLibraryAddresses() internal view {
+    /// @param factory Address of the CREATE2 factory used for address computation
+    function _verifyLibraryAddresses(address factory) internal view {
         Create2Deployer.logSection("Verify Library Addresses");
 
         address expectedPolicy = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
         );
         address expectedAdmin = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
         address expectedInit = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
         address expectedAccSig = Create2Deployer.computeAddress(
-            create2Factory,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
+            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
         );
 
         bool allDeployed = true;
@@ -494,18 +529,20 @@ contract DeployContracts is Script {
             if (provided != address(0) && Create2Deployer.isContractDeployedAtAddress(provided)) {
                 return provided;
             }
-        } catch {}
+            // solhint-disable-next-line no-empty-blocks
+        } catch {
+            // Environment variable not set, fall through to auto-detection
+        }
 
         // Auto-detect available factory
         (factory,) = Create2Deployer.getAvailableFactory();
 
         if (factory == address(0)) {
-            revert("No CREATE2 factory available");
+            revert NoCreate2FactoryAvailable();
         }
     }
 
     /// @dev Retrieves Guardian Safe configuration from environment variables
-    ///      Falls back to deployer as single owner if not configured
     /// @return owners Array of owner addresses for the Guardian Safe
     /// @return threshold Required number of signatures
     function _getGuardianSafeConfig() internal view returns (address[] memory owners, uint256 threshold) {
@@ -523,7 +560,6 @@ contract DeployContracts is Script {
     }
 
     /// @dev Retrieves Deployer Safe configuration from environment variables
-    ///      Falls back to deployer as single owner if not configured
     /// @return owners Array of owner addresses for the Deployer Safe
     /// @return threshold Required number of signatures
     function _getDeployerSafeConfig() internal view returns (address[] memory owners, uint256 threshold) {
@@ -541,43 +577,42 @@ contract DeployContracts is Script {
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary
-    function _logDeployedAddresses() internal view {
+    /// @param contracts Complete set of deployed contract addresses
+    function _logDeployedAddresses(DeployedContracts memory contracts) internal pure {
         console.log("");
         console.log("================================================================================");
         console.log("  Deployed Contract Addresses");
         console.log("================================================================================");
         console.log("");
         console.log("  Safe Infrastructure:");
-        console.log("    Safe Singleton:              %s", safeSingleton);
-        console.log("    SafeProxyFactory:            %s", safeProxyFactory);
-        console.log("    FallbackHandler:             %s", compatibilityFallbackHandler);
-        console.log("    MultiSend:                   %s", multiSend);
-        console.log("    MultiSendCallOnly:           %s", multiSendCallOnly);
-        console.log("    CreateCall:                  %s", createCall);
-        console.log("    SimulateTxAccessor:          %s", simulateTxAccessor);
+        console.log("    Safe Singleton:              %s", contracts.safeInfra.singleton);
+        console.log("    SafeProxyFactory:            %s", contracts.safeInfra.proxyFactory);
+        console.log("    FallbackHandler:             %s", contracts.safeInfra.fallbackHandler);
+        console.log("    MultiSend:                   %s", contracts.safeInfra.multiSend);
+        console.log("    MultiSendCallOnly:           %s", contracts.safeInfra.multiSendCallOnly);
+        console.log("    CreateCall:                  %s", contracts.safeInfra.createCall);
+        console.log("    SimulateTxAccessor:          %s", contracts.safeInfra.simulateTxAccessor);
         console.log("");
         console.log("  Safe Multisigs:");
-        console.log("    Guardian Safe:               %s", guardianSafe);
-        console.log("    Deployer Safe:               %s", deployerSafe);
+        console.log("    Guardian Safe:               %s", contracts.safes.guardianSafe);
+        console.log("    Deployer Safe:               %s", contracts.safes.deployerSafe);
         console.log("");
         console.log("  Platform Implementations:");
-        console.log("    OrganizationImplementation:  %s", organizationImplementation);
-        console.log("    AccountImplementation:       %s", accountImplementation);
-        console.log("    WhitelistImplementation:     %s", whitelistImplementation);
+        console.log("    OrganizationImplementation:  %s", contracts.implementations.organization);
+        console.log("    AccountImplementation:       %s", contracts.implementations.account);
+        console.log("    WhitelistImplementation:     %s", contracts.implementations.whitelist);
         console.log("");
         console.log("  Platform Factories:");
-        console.log("    OrganizationFactory:         %s", organizationFactory);
-        console.log("    WhitelistFactory:            %s", whitelistFactory);
+        console.log("    OrganizationFactory:         %s", contracts.factories.organization);
+        console.log("    WhitelistFactory:            %s", contracts.factories.whitelist);
         console.log("");
         console.log("  Platform Proxies:");
-        console.log("    WhitelistProxy:              %s", whitelistProxy);
+        console.log("    WhitelistProxy:              %s", contracts.whitelistProxy);
         console.log("");
         console.log("================================================================================");
     }
 
     /// @dev Parses a comma-separated string of addresses into an array
-    ///      Note: Simplified implementation - returns empty array
-    ///      In production, use a proper string parsing library
     /// @return Empty address array (placeholder implementation)
     function _parseAddressArray(string memory) internal pure returns (address[] memory) {
         // Simplified: return empty array, actual parsing would split by comma
