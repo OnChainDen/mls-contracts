@@ -54,22 +54,6 @@ library DeploymentConfig {
     bytes32 internal constant LIB_ORG_ACCOUNT_SIG_SALT =
         keccak256("den.mls-wallet.organization.lib.account-signature.v1");
 
-    /// @dev Library path for LibOrganizationPolicy (for foundry --libraries flag)
-    string internal constant LIB_ORG_POLICY_PATH =
-        "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy";
-
-    /// @dev Library path for LibOrganizationAdmin (for foundry --libraries flag)
-    string internal constant LIB_ORG_ADMIN_PATH =
-        "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin";
-
-    /// @dev Library path for LibOrganizationInitialization (for foundry --libraries flag)
-    string internal constant LIB_ORG_INIT_PATH =
-        "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization";
-
-    /// @dev Library path for LibOrganizationAccountSignature (for foundry --libraries flag)
-    string internal constant LIB_ORG_ACCOUNT_SIG_PATH =
-        "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature";
-
     /// @dev Salt for OrganizationImplementation deployment
     bytes32 internal constant ORG_IMPL_SALT = keccak256("den.mls-wallet.organization.implementation.v1");
 
@@ -87,4 +71,24 @@ library DeploymentConfig {
 
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
+
+    /// @dev Library path for LibOrganizationPolicy (used when deploying libraries to print the
+    ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
+    string internal constant LIB_ORG_POLICY_PATH =
+        "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy";
+
+    /// @dev Library path for LibOrganizationAdmin (used when deploying libraries to print the
+    ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
+    string internal constant LIB_ORG_ADMIN_PATH =
+        "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin";
+
+    /// @dev Library path for LibOrganizationInitialization (used when deploying libraries to print the
+    ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
+    string internal constant LIB_ORG_INIT_PATH =
+        "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization";
+
+    /// @dev Library path for LibOrganizationAccountSignature (used when deploying libraries to print the
+    ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
+    string internal constant LIB_ORG_ACCOUNT_SIG_PATH =
+        "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature";
 }
