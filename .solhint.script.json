@@ -33,7 +33,7 @@
     "gas-custom-errors": "off",
     "gas-small-strings": "off",
     "gas-strict-inequalities": "off",
-    "compiler-version": ["error", "^0.8.24"],
+    "compiler-version": ["error", "0.8.33"],
     "func-visibility": ["error", {
       "ignoreConstructors": true
     }],
