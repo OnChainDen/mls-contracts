@@ -1,0 +1,15 @@
+{
+  "detectors_to_exclude": [
+    "reentrancy-eth",
+    "reentrancy-no-eth",
+    "reentrancy-benign",
+    "reentrancy-events",
+    "reentrancy-unlimited-gas",
+    "naming-convention",
+    "solc-version",
+    "unused-return",
+    "too-many-digits"
+  ],
+  "filter_paths": "(test|lib)",
+  "exclude_dependencies": true
+}

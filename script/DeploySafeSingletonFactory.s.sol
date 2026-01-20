@@ -3,7 +3,6 @@ pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
@@ -27,19 +26,19 @@ import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
  */
 contract DeploySafeSingletonFactory is Script {
     /// @dev Expected factory address after deployment (deterministic via nonce-0 CREATE)
-    address internal constant EXPECTED_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
+    address internal constant _EXPECTED_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
 
     /// @dev Deployer address that must have nonce 0 for deterministic deployment
-    address internal constant EXPECTED_DEPLOYER = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
+    address internal constant _EXPECTED_DEPLOYER = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
 
     /// @dev Gas price for the deployment transaction (125 gwei - works on most chains)
-    uint256 internal constant DEPLOYMENT_GAS_PRICE = 125_000_000_000;
+    uint256 internal constant _DEPLOYMENT_GAS_PRICE = 125_000_000_000;
 
     /// @dev Gas limit for the deployment transaction
-    uint256 internal constant DEPLOYMENT_GAS_LIMIT = 101_616;
+    uint256 internal constant _DEPLOYMENT_GAS_LIMIT = 101_616;
 
     /// @dev Required ETH balance for the deployer (gas price * gas limit * 2 for buffer)
-    uint256 internal constant REQUIRED_ETH_BALANCE = DEPLOYMENT_GAS_PRICE * DEPLOYMENT_GAS_LIMIT * 2;
+    uint256 internal constant _REQUIRED_ETH_BALANCE = _DEPLOYMENT_GAS_PRICE * _DEPLOYMENT_GAS_LIMIT * 2;
 
     /**
      * @notice Main entry point for the deployment script
@@ -92,9 +91,9 @@ contract DeploySafeSingletonFactory is Script {
         address deployerAddress = vm.addr(deployerPrivateKey);
 
         // Final verification that deployer matches expected
-        if (deployerAddress != EXPECTED_DEPLOYER) {
+        if (deployerAddress != _EXPECTED_DEPLOYER) {
             console.log(unicode"  ❌ ERROR: Deployer address mismatch!");
-            console.log("     Expected: %s", EXPECTED_DEPLOYER);
+            console.log("     Expected: %s", _EXPECTED_DEPLOYER);
             console.log("     Got: %s", deployerAddress);
             revert("Deployer address mismatch");
         }
@@ -106,15 +105,61 @@ contract DeploySafeSingletonFactory is Script {
         vm.stopBroadcast();
 
         // Verify deployment
-        if (!Create2Deployer.isContractDeployedAtAddress(EXPECTED_FACTORY_ADDRESS)) {
+        if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             console.log(unicode"  ❌ ERROR: Factory deployment failed!");
             revert("Factory deployment failed");
         }
 
         console.log("");
         console.log(unicode"  ✅ Safe Singleton Factory deployed successfully!");
-        console.log("     Address: %s", EXPECTED_FACTORY_ADDRESS);
+        console.log("     Address: %s", _EXPECTED_FACTORY_ADDRESS);
         console.log("");
+    }
+
+    /// @notice Funds the Safe Singleton Factory deployer address with ETH
+    /// @dev Can be called separately to fund the deployer before running the main script.
+    ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
+    function fundDeployer() external {
+        uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
+
+        console.log("");
+        console.log("  Funding Safe Singleton Factory deployer...");
+        console.log("  Target: %s", _EXPECTED_DEPLOYER);
+        console.log("  Amount: %s wei", _REQUIRED_ETH_BALANCE);
+        console.log("");
+
+        vm.startBroadcast(fundingPrivateKey);
+        payable(_EXPECTED_DEPLOYER).transfer(_REQUIRED_ETH_BALANCE);
+        vm.stopBroadcast();
+
+        console.log(unicode"  ✅ Deployer funded successfully");
+    }
+
+    /// @dev Deploys the Safe Singleton Factory using inline assembly
+    ///      Uses CREATE opcode from nonce 0 to achieve deterministic address
+    function _deployFactory() internal {
+        // Safe Singleton Factory bytecode (minimal CREATE2 factory)
+        // This is the init code that produces a contract at the expected address
+        bytes memory factoryBytecode =
+            hex"604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3";
+
+        address deployedAtAddress;
+
+        // slither-disable-next-line assembly
+        assembly {
+            deployedAtAddress := create(0, add(factoryBytecode, 0x20), mload(factoryBytecode))
+        }
+
+        if (deployedAtAddress == address(0)) {
+            revert("Factory deployment failed in assembly");
+        }
+
+        // The address should match due to CREATE from nonce 0
+        if (deployedAtAddress != _EXPECTED_FACTORY_ADDRESS) {
+            console.log("  Deployed at: %s", deployedAtAddress);
+            console.log("  Expected: %s", _EXPECTED_FACTORY_ADDRESS);
+            revert("Deployed address mismatch");
+        }
     }
 
     /// @dev Runs all safety checks before deployment
@@ -128,8 +173,8 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 1: Factory not already deployed
         console.log("  [1/4] Checking if factory already deployed...");
-        if (Create2Deployer.isContractDeployedAtAddress(EXPECTED_FACTORY_ADDRESS)) {
-            console.log(unicode"       ❌ FAIL: Factory already deployed at %s", EXPECTED_FACTORY_ADDRESS);
+        if (Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
+            console.log(unicode"       ❌ FAIL: Factory already deployed at %s", _EXPECTED_FACTORY_ADDRESS);
             allPassed = false;
         } else {
             console.log(unicode"       ✅ PASS: Factory not yet deployed");
@@ -139,11 +184,11 @@ contract DeploySafeSingletonFactory is Script {
         console.log("  [2/4] Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
             address deployerAddress = vm.addr(pk);
-            if (deployerAddress == EXPECTED_DEPLOYER) {
+            if (deployerAddress == _EXPECTED_DEPLOYER) {
                 console.log(unicode"       ✅ PASS: Deployer key matches expected address");
             } else {
                 console.log(unicode"       ❌ FAIL: Deployer address mismatch");
-                console.log("              Expected: %s", EXPECTED_DEPLOYER);
+                console.log("              Expected: %s", _EXPECTED_DEPLOYER);
                 console.log("              Got: %s", deployerAddress);
                 allPassed = false;
             }
@@ -154,7 +199,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 3: Deployer nonce is 0
         console.log("  [3/4] Checking deployer nonce...");
-        uint256 nonce = vm.getNonce(EXPECTED_DEPLOYER);
+        uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER);
         if (nonce == 0) {
             console.log(unicode"       ✅ PASS: Deployer nonce is 0");
         } else {
@@ -165,60 +210,16 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 4: Deployer has sufficient ETH
         console.log("  [4/4] Checking deployer ETH balance...");
-        uint256 balance = EXPECTED_DEPLOYER.balance;
-        if (balance >= REQUIRED_ETH_BALANCE) {
+        uint256 balance = _EXPECTED_DEPLOYER.balance;
+        if (balance >= _REQUIRED_ETH_BALANCE) {
             console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);
         } else {
             console.log(unicode"       ⚠️  WARN: Deployer may need more ETH");
             console.log("              Current: %s wei", balance);
-            console.log("              Recommended: %s wei", REQUIRED_ETH_BALANCE);
+            console.log("              Recommended: %s wei", _REQUIRED_ETH_BALANCE);
             // This is a warning, not a failure
         }
 
         return allPassed;
-    }
-
-    /// @dev Deploys the Safe Singleton Factory using inline assembly
-    ///      Uses CREATE opcode from nonce 0 to achieve deterministic address
-    function _deployFactory() internal {
-        // Safe Singleton Factory bytecode (minimal CREATE2 factory)
-        // This is the init code that produces a contract at the expected address
-        bytes memory factoryBytecode =
-            hex"604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3";
-
-        address deployedAtAddress;
-        assembly {
-            deployedAtAddress := create(0, add(factoryBytecode, 0x20), mload(factoryBytecode))
-        }
-
-        if (deployedAtAddress == address(0)) {
-            revert("Factory deployment failed in assembly");
-        }
-
-        // The address should match due to CREATE from nonce 0
-        if (deployedAtAddress != EXPECTED_FACTORY_ADDRESS) {
-            console.log("  Deployed at: %s", deployedAtAddress);
-            console.log("  Expected: %s", EXPECTED_FACTORY_ADDRESS);
-            revert("Deployed address mismatch");
-        }
-    }
-
-    /// @notice Funds the Safe Singleton Factory deployer address with ETH
-    /// @dev Can be called separately to fund the deployer before running the main script.
-    ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
-    function fundDeployer() external {
-        uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
-
-        console.log("");
-        console.log("  Funding Safe Singleton Factory deployer...");
-        console.log("  Target: %s", EXPECTED_DEPLOYER);
-        console.log("  Amount: %s wei", REQUIRED_ETH_BALANCE);
-        console.log("");
-
-        vm.startBroadcast(fundingPrivateKey);
-        payable(EXPECTED_DEPLOYER).transfer(REQUIRED_ETH_BALANCE);
-        vm.stopBroadcast();
-
-        console.log(unicode"  ✅ Deployer funded successfully");
     }
 }

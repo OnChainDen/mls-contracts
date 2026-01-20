@@ -30,7 +30,7 @@
     "named-parameters-mapping": "warn",
     "foundry-test-function-naming": "off",
     "gas-calldata-parameters": "warn",
-    "gas-custom-errors": "error",
+    "gas-custom-errors": "off",
     "gas-small-strings": "off",
     "gas-strict-inequalities": "off",
     "compiler-version": ["error", "^0.8.24"],

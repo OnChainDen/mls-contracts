@@ -278,82 +278,6 @@ contract DeployContracts is Script {
         require(deployedAtAddress == safe, "Safe deployed at unexpected address");
     }
 
-    /// @dev Computes the deterministic address of a Safe proxy before deployment
-    /// @param initializer Encoded Safe.setup() call data
-    /// @param saltNonce Nonce used for salt computation
-    /// @return The predicted Safe proxy address
-    function _computeSafeProxyAddress(bytes memory initializer, uint256 saltNonce) internal view returns (address) {
-        // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-        bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
-
-        // Get the init code hash from the factory (includes singleton address)
-        bytes32 initCodeHash = SafeProxyFactory(safeProxyFactory).proxyCreationCodehash(safeSingleton);
-
-        // Use OpenZeppelin's Create2 utility for address computation
-        return Create2.computeAddress(salt, initCodeHash, safeProxyFactory);
-    }
-
-    /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
-    ///      Logs warnings if any libraries are missing and need to be deployed first
-    function _verifyLibraryAddresses() internal view {
-        Create2Deployer.logSection("Verify Library Addresses");
-
-        address expectedPolicy = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        address expectedAdmin = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        address expectedInit = Create2Deployer.computeAddress(
-            create2Factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        address expectedAccSig = Create2Deployer.computeAddress(
-            create2Factory,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
-        );
-
-        bool allDeployed = true;
-
-        // Check if libraries are deployed at expected addresses
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedPolicy)) {
-            console.log(unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPolicy);
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPolicy);
-        }
-
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedAdmin)) {
-            console.log(unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdmin);
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdmin);
-        }
-
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedInit)) {
-            console.log(unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s", expectedInit);
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInit);
-        }
-
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSig)) {
-            console.log(
-                unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s", expectedAccSig
-            );
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationAccountSignature at %s", expectedAccSig);
-        }
-
-        if (!allDeployed) {
-            console.log("");
-            console.log(unicode"  ⚠️  WARNING: Some libraries are not deployed!");
-            console.log("     Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
-            console.log("");
-        }
-    }
-
     /// @dev Deploys all implementation contracts via CREATE2
     ///      Includes: OrganizationImplementation, AccountImplementation, ImplementationWhitelistImplementation
     function _deployImplementationContracts() internal {
@@ -495,6 +419,82 @@ contract DeployContracts is Script {
         }
     }
 
+    /// @dev Computes the deterministic address of a Safe proxy before deployment
+    /// @param initializer Encoded Safe.setup() call data
+    /// @param saltNonce Nonce used for salt computation
+    /// @return The predicted Safe proxy address
+    function _computeSafeProxyAddress(bytes memory initializer, uint256 saltNonce) internal view returns (address) {
+        // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
+        bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
+
+        // Get the init code hash from the factory (includes singleton address)
+        bytes32 initCodeHash = SafeProxyFactory(safeProxyFactory).proxyCreationCodehash(safeSingleton);
+
+        // Use OpenZeppelin's Create2 utility for address computation
+        return Create2.computeAddress(salt, initCodeHash, safeProxyFactory);
+    }
+
+    /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
+    ///      Logs warnings if any libraries are missing and need to be deployed first
+    function _verifyLibraryAddresses() internal view {
+        Create2Deployer.logSection("Verify Library Addresses");
+
+        address expectedPolicy = Create2Deployer.computeAddress(
+            create2Factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+        );
+        address expectedAdmin = Create2Deployer.computeAddress(
+            create2Factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+        );
+        address expectedInit = Create2Deployer.computeAddress(
+            create2Factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+        );
+        address expectedAccSig = Create2Deployer.computeAddress(
+            create2Factory,
+            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            type(LibOrganizationAccountSignature).creationCode
+        );
+
+        bool allDeployed = true;
+
+        // Check if libraries are deployed at expected addresses
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedPolicy)) {
+            console.log(unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPolicy);
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPolicy);
+        }
+
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedAdmin)) {
+            console.log(unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdmin);
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdmin);
+        }
+
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedInit)) {
+            console.log(unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s", expectedInit);
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInit);
+        }
+
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSig)) {
+            console.log(
+                unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s", expectedAccSig
+            );
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationAccountSignature at %s", expectedAccSig);
+        }
+
+        if (!allDeployed) {
+            console.log("");
+            console.log(unicode"  ⚠️  WARNING: Some libraries are not deployed!");
+            console.log("     Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
+            console.log("");
+        }
+    }
+
     /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
     /// @return factory Address of the available CREATE2 factory
     function _getCreate2Factory() internal view returns (address factory) {
@@ -549,16 +549,6 @@ contract DeployContracts is Script {
         }
     }
 
-    /// @dev Parses a comma-separated string of addresses into an array
-    ///      Note: Simplified implementation - returns empty array
-    ///      In production, use a proper string parsing library
-    /// @return Empty address array (placeholder implementation)
-    function _parseAddressArray(string memory) internal pure returns (address[] memory) {
-        // Simplified: return empty array, actual parsing would split by comma
-        // In production, use a proper string parsing library
-        return new address[](0);
-    }
-
     /// @dev Logs all deployed contract addresses in a formatted summary
     function _logDeployedAddresses() internal view {
         console.log("");
@@ -592,5 +582,15 @@ contract DeployContracts is Script {
         console.log("    WhitelistProxy:              %s", whitelistProxy);
         console.log("");
         console.log("================================================================================");
+    }
+
+    /// @dev Parses a comma-separated string of addresses into an array
+    ///      Note: Simplified implementation - returns empty array
+    ///      In production, use a proper string parsing library
+    /// @return Empty address array (placeholder implementation)
+    function _parseAddressArray(string memory) internal pure returns (address[] memory) {
+        // Simplified: return empty array, actual parsing would split by comma
+        // In production, use a proper string parsing library
+        return new address[](0);
     }
 }

@@ -21,29 +21,9 @@ library Create2Deployer {
     /// @dev Error thrown when deployed address doesn't match predicted
     error AddressMismatch(address predicted, address actual);
 
-    /// @dev Computes the CREATE2 address for a contract deployment
-    /// @param factory The CREATE2 factory address
-    /// @param salt The deployment salt
-    /// @param initCode The contract creation bytecode (including constructor args)
-    /// @return The predicted deployment address
-    function computeAddress(address factory, bytes32 salt, bytes memory initCode) internal pure returns (address) {
-        return Create2.computeAddress(salt, keccak256(initCode), factory);
-    }
-
-    /// @dev Checks if a contract is already deployed at the predicted address
-    /// @param factory The CREATE2 factory address
-    /// @param salt The deployment salt
-    /// @param initCode The contract creation bytecode
-    /// @return isDeployedAtAddress True if contract exists at the predicted address
-    /// @return predicted The predicted address
-    function isDeployed(address factory, bytes32 salt, bytes memory initCode)
-        internal
-        view
-        returns (bool isDeployedAtAddress, address predicted)
-    {
-        predicted = computeAddress(factory, salt, initCode);
-        isDeployedAtAddress = isContractDeployedAtAddress(predicted);
-    }
+    // ============================================================
+    // INTERNAL STATE-CHANGING FUNCTIONS
+    // ============================================================
 
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
@@ -81,22 +61,6 @@ library Create2Deployer {
         return (deployedAtAddress, true);
     }
 
-    /// @dev Deploys using the appropriate factory interface based on factory address
-    ///      Detects factory type and uses correct parameter ordering
-    /// @param factory The CREATE2 factory address
-    /// @param salt The deployment salt
-    /// @param initCode The contract creation bytecode
-    /// @return deployedAtAddress The deployed contract address
-    function _deploy(address factory, bytes32 salt, bytes memory initCode) private returns (address deployedAtAddress) {
-        // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
-        if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
-            deployedAtAddress = address(ISafeSingletonFactory(factory).deploy(initCode, salt));
-        } else {
-            // Arachnid and similar: deploy(bytes32, bytes)
-            deployedAtAddress = ICreate2Factory(factory).deploy(salt, initCode);
-        }
-    }
-
     /// @dev Batch deploys multiple contracts via CREATE2
     /// @param factory The CREATE2 factory address
     /// @param salts Array of deployment salts
@@ -113,6 +77,25 @@ library Create2Deployer {
         for (uint256 i = 0; i < salts.length; ++i) {
             (addresses[i],) = deployIfNotExists(factory, salts[i], initCodes[i], names[i]);
         }
+    }
+
+    // ============================================================
+    // INTERNAL VIEW FUNCTIONS
+    // ============================================================
+
+    /// @dev Checks if a contract is already deployed at the predicted address
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode
+    /// @return isDeployedAtAddress True if contract exists at the predicted address
+    /// @return predicted The predicted address
+    function isDeployed(address factory, bytes32 salt, bytes memory initCode)
+        internal
+        view
+        returns (bool isDeployedAtAddress, address predicted)
+    {
+        predicted = computeAddress(factory, salt, initCode);
+        isDeployedAtAddress = isContractDeployedAtAddress(predicted);
     }
 
     /// @dev Checks if a contract is deployed at the given address
@@ -138,6 +121,19 @@ library Create2Deployer {
 
         // No factory available
         return (address(0), "None");
+    }
+
+    // ============================================================
+    // INTERNAL PURE FUNCTIONS
+    // ============================================================
+
+    /// @dev Computes the CREATE2 address for a contract deployment
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode (including constructor args)
+    /// @return The predicted deployment address
+    function computeAddress(address factory, bytes32 salt, bytes memory initCode) internal pure returns (address) {
+        return Create2.computeAddress(salt, keccak256(initCode), factory);
     }
 
     /// @dev Logs deployment summary header with factory and chain info
@@ -179,5 +175,25 @@ library Create2Deployer {
         console.log(unicode"  ✅ Deployment Complete!");
         console.log("================================================================================");
         console.log("");
+    }
+
+    // ============================================================
+    // PRIVATE FUNCTIONS
+    // ============================================================
+
+    /// @dev Deploys using the appropriate factory interface based on factory address
+    ///      Detects factory type and uses correct parameter ordering
+    /// @param factory The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode
+    /// @return deployedAtAddress The deployed contract address
+    function _deploy(address factory, bytes32 salt, bytes memory initCode) private returns (address deployedAtAddress) {
+        // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
+        if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
+            deployedAtAddress = address(ISafeSingletonFactory(factory).deploy(initCode, salt));
+        } else {
+            // Arachnid and similar: deploy(bytes32, bytes)
+            deployedAtAddress = ICreate2Factory(factory).deploy(salt, initCode);
+        }
     }
 }
