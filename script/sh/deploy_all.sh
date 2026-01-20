@@ -57,8 +57,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 BROADCAST_DIR="${PROJECT_ROOT}/broadcast"
 
 # Factory addresses (must match DeploymentConfig.sol)
-ARACHNID_FACTORY="0x4e59b44847b379578588920cA78FbF26c0B4956C"
-SAFE_SINGLETON_FACTORY="0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
+ARACHNID_FACTORY_ADDRESS="0x4e59b44847b379578588920cA78FbF26c0B4956C"
+SAFE_SINGLETON_FACTORY_ADDRESS="0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
 
 # Library paths (must match DeploymentConfig.sol)
 LIB_POLICY_PATH="src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy"
@@ -283,18 +283,18 @@ ensure_create2_factory() {
     fi
     
     # Check if Arachnid factory already exists
-    log_info "Checking for Arachnid factory at ${ARACHNID_FACTORY}..."
-    if is_contract_deployed "${ARACHNID_FACTORY}"; then
+    log_info "Checking for Arachnid factory at ${ARACHNID_FACTORY_ADDRESS}..."
+    if is_contract_deployed "${ARACHNID_FACTORY_ADDRESS}"; then
         log_success "Arachnid factory already deployed"
-        export CREATE2_FACTORY_ADDRESS="${ARACHNID_FACTORY}"
+        export CREATE2_FACTORY_ADDRESS="${ARACHNID_FACTORY_ADDRESS}"
         return 0
     fi
     
     # Check if Safe Singleton factory already exists
-    log_info "Checking for Safe Singleton factory at ${SAFE_SINGLETON_FACTORY}..."
-    if is_contract_deployed "${SAFE_SINGLETON_FACTORY}"; then
+    log_info "Checking for Safe Singleton factory at ${SAFE_SINGLETON_FACTORY_ADDRESS}..."
+    if is_contract_deployed "${SAFE_SINGLETON_FACTORY_ADDRESS}"; then
         log_success "Safe Singleton factory already deployed"
-        export CREATE2_FACTORY_ADDRESS="${SAFE_SINGLETON_FACTORY}"
+        export CREATE2_FACTORY_ADDRESS="${SAFE_SINGLETON_FACTORY_ADDRESS}"
         return 0
     fi
     
@@ -311,7 +311,7 @@ ensure_create2_factory() {
     # Try to deploy Arachnid factory first
     log_info "Attempting to deploy Arachnid factory..."
     if deploy_arachnid_factory; then
-        export CREATE2_FACTORY_ADDRESS="${ARACHNID_FACTORY}"
+        export CREATE2_FACTORY_ADDRESS="${ARACHNID_FACTORY_ADDRESS}"
         return 0
     fi
     
@@ -320,7 +320,7 @@ ensure_create2_factory() {
     log_info "Attempting to deploy Safe Singleton factory..."
     
     if deploy_safe_singleton_factory; then
-        export CREATE2_FACTORY_ADDRESS="${SAFE_SINGLETON_FACTORY}"
+        export CREATE2_FACTORY_ADDRESS="${SAFE_SINGLETON_FACTORY_ADDRESS}"
         return 0
     fi
     
@@ -343,8 +343,8 @@ deploy_arachnid_factory() {
         -vvvv 2>&1; then
         
         # Verify deployment
-        if is_contract_deployed "${ARACHNID_FACTORY}"; then
-            log_success "Arachnid factory deployed at ${ARACHNID_FACTORY}"
+        if is_contract_deployed "${ARACHNID_FACTORY_ADDRESS}"; then
+            log_success "Arachnid factory deployed at ${ARACHNID_FACTORY_ADDRESS}"
             return 0
         fi
     fi
@@ -373,8 +373,8 @@ deploy_safe_singleton_factory() {
         -vvvv 2>&1; then
         
         # Verify deployment
-        if is_contract_deployed "${SAFE_SINGLETON_FACTORY}"; then
-            log_success "Safe Singleton factory deployed at ${SAFE_SINGLETON_FACTORY}"
+        if is_contract_deployed "${SAFE_SINGLETON_FACTORY_ADDRESS}"; then
+            log_success "Safe Singleton factory deployed at ${SAFE_SINGLETON_FACTORY_ADDRESS}"
             return 0
         fi
     fi

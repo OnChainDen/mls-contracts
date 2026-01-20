@@ -33,7 +33,7 @@ contract DeployArachnidFactory is Script {
     address internal constant _EXPECTED_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     /// @dev Deployer address that will deploy the factory (derived from pre-signed tx)
-    address internal constant _EXPECTED_DEPLOYER = 0x3fAB184622Dc19b6109349B94811493BF2a45362;
+    address internal constant _EXPECTED_DEPLOYER_ADDRESS = 0x3fAB184622Dc19b6109349B94811493BF2a45362;
 
     /// @dev Gas price used in the pre-signed transaction (100 gwei)
     uint256 internal constant _DEPLOYMENT_GAS_PRICE = 100_000_000_000;
@@ -114,12 +114,12 @@ contract DeployArachnidFactory is Script {
 
         Logger.logEmptyLine();
         Logger.logIndented("Funding Arachnid factory deployer...");
-        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER);
+        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER_ADDRESS);
         Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
         vm.startBroadcast(fundingPrivateKey);
-        payable(_EXPECTED_DEPLOYER).transfer(_REQUIRED_ETH_BALANCE);
+        payable(_EXPECTED_DEPLOYER_ADDRESS).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
         Logger.logPass("Deployer funded successfully");
@@ -128,7 +128,7 @@ contract DeployArachnidFactory is Script {
     /// @dev Broadcasts the pre-signed transaction to deploy the factory
     function _broadcastPresignedTransaction() internal {
         Logger.logIndented("Broadcasting pre-signed transaction...");
-        Logger.logKeyAddress("Deployer", _EXPECTED_DEPLOYER);
+        Logger.logKeyAddress("Deployer", _EXPECTED_DEPLOYER_ADDRESS);
         Logger.logKeyAddress("Expected factory address", _EXPECTED_FACTORY_ADDRESS);
         Logger.logEmptyLine();
 
@@ -150,7 +150,7 @@ contract DeployArachnidFactory is Script {
 
         // Check 2: Deployer has sufficient ETH
         bool hasBalance = Create2Deployer.checkDeployerBalance(
-            _EXPECTED_DEPLOYER, _REQUIRED_ETH_BALANCE, "2/2", "DeployArachnidFactory"
+            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "2/2", "DeployArachnidFactory"
         );
 
         return hasBalance;

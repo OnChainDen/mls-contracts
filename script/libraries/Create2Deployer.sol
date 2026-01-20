@@ -28,13 +28,13 @@ library Create2Deployer {
         internal
         returns (address deployedAtAddress, bool wasDeployed)
     {
-        address predicted = computeAddress(factoryAddress, salt, initCode);
+        address predictedAddress = computeAddress(factoryAddress, salt, initCode);
 
         // Case: Contract already deployed
         // Log message and skip deployment
-        if (isContractDeployedAtAddress(predicted)) {
-            Logger.logDeploymentSkipped(name, predicted);
-            return (predicted, false);
+        if (isContractDeployedAtAddress(predictedAddress)) {
+            Logger.logDeploymentSkipped(name, predictedAddress);
+            return (predictedAddress, false);
         }
 
         // Deploy using appropriate factory interface
@@ -44,7 +44,7 @@ library Create2Deployer {
         require(deployedAtAddress != address(0), string.concat("Deployment failed: ", name));
 
         // Case: Deployment address mismatch
-        require(deployedAtAddress == predicted, "Deployed address does not match predicted address");
+        require(deployedAtAddress == predictedAddress, "Deployed address does not match predicted address");
 
         // Log success
         Logger.logDeployed(name, deployedAtAddress);
@@ -64,10 +64,10 @@ library Create2Deployer {
     /// @return factoryAddress Address of the CREATE2 factory
     function getCreate2Factory(Vm vm) internal view returns (address factoryAddress) {
         // Require explicit factory address from environment variable
-        try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            require(provided != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
-            require(isContractDeployedAtAddress(provided), "CREATE2 factory not deployed at provided address");
-            return provided;
+        try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address providedAddress) {
+            require(providedAddress != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
+            require(isContractDeployedAtAddress(providedAddress), "CREATE2 factory not deployed at provided address");
+            return providedAddress;
         } catch {
             revert("CREATE2_FACTORY_ADDRESS environment variable not set");
         }
@@ -95,19 +95,19 @@ library Create2Deployer {
     }
 
     /// @dev Checks if an address has sufficient ETH balance and logs the result
-    /// @param deployer The address to check
+    /// @param deployerAddress The address to check
     /// @param requiredBalance The minimum required balance in wei
     /// @param checkNumber The check number for logging (e.g., "2/2")
     /// @param scriptName Name of the script for the fund command (e.g., "DeployArachnidFactory")
     /// @return hasSufficientBalance True if balance is sufficient
     function checkDeployerBalance(
-        address deployer,
+        address deployerAddress,
         uint256 requiredBalance,
         string memory checkNumber,
         string memory scriptName
     ) internal view returns (bool hasSufficientBalance) {
         Logger.logCheckStart(checkNumber, "Checking deployer ETH balance...");
-        uint256 balance = deployer.balance;
+        uint256 balance = deployerAddress.balance;
         if (balance >= requiredBalance) {
             Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", _uintToString(balance), " wei)"));
             return true;
@@ -144,9 +144,9 @@ library Create2Deployer {
         Logger.logKeyUint("Chain ID", chainId);
         Logger.logKeyAddress("CREATE2 Factory", factoryAddress);
 
-        if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY) {
+        if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
             Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
-        } else if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
+        } else if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS) {
             Logger.logKeyValue("Factory Type", "Safe Singleton Factory");
         } else {
             Logger.logKeyValue("Factory Type", "Custom");
@@ -208,7 +208,7 @@ library Create2Deployer {
         returns (address deployedAtAddress)
     {
         // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
-        if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
+        if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS) {
             deployedAtAddress = address(ISafeSingletonFactory(factoryAddress).deploy(initCode, salt));
         } else {
             // Arachnid and similar: deploy(bytes32, bytes)
@@ -217,16 +217,16 @@ library Create2Deployer {
     }
 
     /// @dev Converts an address to a string for logging
-    /// @param addr The address to convert
+    /// @param targetAddress The address to convert
     /// @return The address as a hex string
-    function _addressToString(address addr) private pure returns (string memory) {
+    function _addressToString(address targetAddress) private pure returns (string memory) {
         bytes memory alphabet = "0123456789abcdef";
         bytes memory str = new bytes(42);
         str[0] = "0";
         str[1] = "x";
         for (uint256 i = 0; i < 20; ++i) {
-            str[2 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)) >> 4)];
-            str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i))) & 0x0f];
+            str[2 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i)) >> 4)];
+            str[3 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i))) & 0x0f];
         }
         return string(str);
     }

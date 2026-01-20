@@ -48,16 +48,16 @@ library Logger {
 
     /// @dev Logs a successful deployment
     /// @param name Human-readable name of the deployed contract
-    /// @param addr Address where the contract was deployed
-    function logDeployed(string memory name, address addr) internal pure {
-        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, addr);
+    /// @param deployedAddress Address where the contract was deployed
+    function logDeployed(string memory name, address deployedAddress) internal pure {
+        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAddress);
     }
 
     /// @dev Logs a skipped deployment (already deployed)
     /// @param name Human-readable name of the contract
-    /// @param addr Address where the contract already exists
-    function logDeploymentSkipped(string memory name, address addr) internal pure {
-        console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, addr);
+    /// @param existingAddress Address where the contract already exists
+    function logDeploymentSkipped(string memory name, address existingAddress) internal pure {
+        console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, existingAddress);
     }
 
     /// @dev Logs a skipped deployment with a custom reason
@@ -154,9 +154,9 @@ library Logger {
 
     /// @dev Logs a key-value pair with an address value
     /// @param key The label/key
-    /// @param value The address value
-    function logKeyAddress(string memory key, address value) internal pure {
-        console.log("  %s: %s", key, value);
+    /// @param valueAddress The address value
+    function logKeyAddress(string memory key, address valueAddress) internal pure {
+        console.log("  %s: %s", key, valueAddress);
     }
 
     /// @dev Logs a key-value pair with a uint256 value
@@ -204,15 +204,15 @@ library Logger {
 
     /// @dev Logs successful deployment with environment variable instruction
     /// @param name Human-readable name of what was deployed
-    /// @param addr Address where it was deployed
+    /// @param deployedAddress Address where it was deployed
     /// @param envVarName Name of the environment variable to set
-    function logDeploymentSuccess(string memory name, address addr, string memory envVarName) internal pure {
+    function logDeploymentSuccess(string memory name, address deployedAddress, string memory envVarName) internal pure {
         console.log("");
         console.log(unicode"  ✅ %s deployed successfully!", name);
-        console.log("     Address: %s", addr);
+        console.log("     Address: %s", deployedAddress);
         console.log("");
         console.log("  Next step: Set the factory address in your environment:");
-        console.log("    export %s=%s", envVarName, addr);
+        console.log("    export %s=%s", envVarName, deployedAddress);
         console.log("");
     }
 

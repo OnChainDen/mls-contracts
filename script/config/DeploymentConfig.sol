@@ -9,10 +9,10 @@ pragma solidity 0.8.33;
  */
 library DeploymentConfig {
     /// @dev Arachnid Deterministic Deployment Proxy address (deployed on most EVM chains)
-    address internal constant ARACHNID_CREATE2_FACTORY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+    address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     /// @dev Safe Singleton Factory address (deterministic across all chains where deployed)
-    address internal constant SAFE_SINGLETON_FACTORY = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
+    address internal constant SAFE_SINGLETON_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
 
     /// @dev Salt for Safe Singleton (master copy) deployment
     bytes32 internal constant SAFE_SINGLETON_SALT = keccak256("den.external.safe.singleton.v1");

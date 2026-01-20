@@ -31,7 +31,7 @@ contract DeploySafeSingletonFactory is Script {
     address internal constant _EXPECTED_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
 
     /// @dev Deployer address that must have nonce 0 for deterministic deployment
-    address internal constant _EXPECTED_DEPLOYER = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
+    address internal constant _EXPECTED_DEPLOYER_ADDRESS = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
 
     /// @dev Gas price for the deployment transaction (125 gwei - works on most chains)
     uint256 internal constant _DEPLOYMENT_GAS_PRICE = 125_000_000_000;
@@ -76,10 +76,10 @@ contract DeploySafeSingletonFactory is Script {
         address deployerAddress = vm.addr(deployerPrivateKey);
 
         // Final verification that deployer matches expected
-        if (deployerAddress != _EXPECTED_DEPLOYER) {
+        if (deployerAddress != _EXPECTED_DEPLOYER_ADDRESS) {
             Logger.logFail("ERROR: Deployer address mismatch!");
             Logger.logIndented("Expected:");
-            Logger.logKeyAddress("  ", _EXPECTED_DEPLOYER);
+            Logger.logKeyAddress("  ", _EXPECTED_DEPLOYER_ADDRESS);
             Logger.logIndented("Got:");
             Logger.logKeyAddress("  ", deployerAddress);
             revert("Deployer address does not match expected address");
@@ -108,12 +108,12 @@ contract DeploySafeSingletonFactory is Script {
 
         Logger.logEmptyLine();
         Logger.logIndented("Funding Safe Singleton Factory deployer...");
-        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER);
+        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER_ADDRESS);
         Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
         vm.startBroadcast(fundingPrivateKey);
-        payable(_EXPECTED_DEPLOYER).transfer(_REQUIRED_ETH_BALANCE);
+        payable(_EXPECTED_DEPLOYER_ADDRESS).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
         Logger.logPass("Deployer funded successfully");
@@ -156,7 +156,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 0: Arachnid factory should NOT exist (prefer Arachnid over SafeSingleton)
         Logger.logCheckStart("0/4", "Checking if Arachnid factory exists...");
-        if (Create2Deployer.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
+        if (Create2Deployer.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)) {
             Logger.logCheckFail("Arachnid factory already deployed");
             Logger.logCheckDetail("Use Arachnid factory instead of Safe Singleton Factory.");
             Logger.logCheckDetail("Set CREATE2_FACTORY_ADDRESS to the Arachnid factory address.");
@@ -177,11 +177,11 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logCheckStart("2/4", "Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
             address deployerAddress = vm.addr(pk);
-            if (deployerAddress == _EXPECTED_DEPLOYER) {
+            if (deployerAddress == _EXPECTED_DEPLOYER_ADDRESS) {
                 Logger.logCheckPass("Deployer key matches expected address");
             } else {
                 Logger.logCheckFail("Deployer address mismatch");
-                Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER constant");
+                Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
                 Logger.logCheckDetail("Got: different address from provided key");
                 allPassed = false;
             }
@@ -192,7 +192,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 3: Deployer nonce is 0
         Logger.logCheckStart("3/4", "Checking deployer nonce...");
-        uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER);
+        uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER_ADDRESS);
         if (nonce == 0) {
             Logger.logCheckPass("Deployer nonce is 0");
         } else {
@@ -203,7 +203,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 4: Deployer has sufficient ETH (warning only, not a failure)
         Logger.logCheckStart("4/4", "Checking deployer ETH balance...");
-        uint256 balance = _EXPECTED_DEPLOYER.balance;
+        uint256 balance = _EXPECTED_DEPLOYER_ADDRESS.balance;
         if (balance >= _REQUIRED_ETH_BALANCE) {
             Logger.logCheckPass("Deployer has sufficient ETH");
         } else {

@@ -9,8 +9,8 @@ pragma solidity 0.8.33;
 
 /// @dev Grouped addresses for deployed/computed platform libraries
 struct PlatformLibraries {
-    address policy;
-    address admin;
-    address initialization;
-    address accountSignature;
+    address policyAddress;
+    address adminAddress;
+    address initializationAddress;
+    address accountSignatureAddress;
 }

@@ -25,16 +25,16 @@ library LinkedLibrariesUtils {
         pure
         returns (PlatformLibraries memory libs)
     {
-        libs.policy = Create2Deployer.computeAddress(
+        libs.policyAddress = Create2Deployer.computeAddress(
             factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
         );
-        libs.admin = Create2Deployer.computeAddress(
+        libs.adminAddress = Create2Deployer.computeAddress(
             factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
-        libs.initialization = Create2Deployer.computeAddress(
+        libs.initializationAddress = Create2Deployer.computeAddress(
             factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
-        libs.accountSignature = Create2Deployer.computeAddress(
+        libs.accountSignatureAddress = Create2Deployer.computeAddress(
             factoryAddress,
             DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode
@@ -43,16 +43,16 @@ library LinkedLibrariesUtils {
 
     /// @dev Checks if an address is in the creation code of a contract
     /// @param initCode The byte array to search in
-    /// @param addr The address to search for
+    /// @param targetAddress The address to search for
     /// @return True if the address is found in the creation code
-    function isAddressInInitCode(bytes memory initCode, address addr) internal pure returns (bool) {
+    function isAddressInInitCode(bytes memory initCode, address targetAddress) internal pure returns (bool) {
         // Case: the byte array is too short to contain the address
         if (initCode.length < 20) {
             return false;
         }
 
         // Convert the address to a 20-byte bytes array
-        bytes20 addrBytes = bytes20(addr);
+        bytes20 targetAddressBytes = bytes20(targetAddress);
 
         // Calculate the maximum index we need to iterate to
         // This is 20 bytes less than the length of the byte array, because each iteration of the loop
@@ -67,7 +67,7 @@ library LinkedLibrariesUtils {
             // Iterate through the next 20 bytes of `initCode` to see if each of the next 20 bytes match `addrBytes`
             for (uint256 j = 0; j < 20 && found; ++j) {
                 // Case: one of the next 20 bytes of `initCode` does not match `addrBytes`
-                if (initCode[i + j] != addrBytes[j]) {
+                if (initCode[i + j] != targetAddressBytes[j]) {
                     found = false;
                     break;
                 }

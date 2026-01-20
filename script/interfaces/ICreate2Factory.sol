@@ -14,9 +14,9 @@ interface ICreate2Factory {
      * @notice Deploys a contract using CREATE2
      * @param salt The salt for deterministic address derivation
      * @param initCode The contract creation (init) bytecode
-     * @return deployed The address of the deployed contract
+     * @return deployedAddress The address of the deployed contract
      */
-    function deploy(bytes32 salt, bytes memory initCode) external returns (address deployed);
+    function deploy(bytes32 salt, bytes memory initCode) external returns (address deployedAddress);
 }
 
 /**
@@ -31,7 +31,7 @@ interface ISafeSingletonFactory {
      * @notice Deploys a contract using CREATE2
      * @param initCode The contract creation (init) bytecode
      * @param salt The salt for deterministic address derivation
-     * @return deployed The address of the deployed contract
+     * @return deployedAddress The address of the deployed contract
      */
-    function deploy(bytes memory initCode, bytes32 salt) external returns (address payable deployed);
+    function deploy(bytes memory initCode, bytes32 salt) external returns (address payable deployedAddress);
 }

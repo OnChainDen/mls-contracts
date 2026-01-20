@@ -17,7 +17,7 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
  * @title DeployLibraries
  * @notice Deploys platform libraries via CREATE2 for deterministic addresses
  * @dev This script must be run BEFORE DeployContracts.s.sol.
- *      After running this script, use the output --libraries flags when running DeployContracts.
+ *      After running this script, use the outputted --libraries flags when running DeployContracts.
  *
  *      Usage:
  *        forge script script/DeployLibraries.s.sol:DeployLibraries \
@@ -65,10 +65,10 @@ contract DeployLibraries is Script {
         PlatformLibraries memory expectedLibAddresses =
             LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
 
-        Logger.logKeyAddress("LibOrganizationPolicy", expectedLibAddresses.policy);
-        Logger.logKeyAddress("LibOrganizationAdmin", expectedLibAddresses.admin);
-        Logger.logKeyAddress("LibOrganizationInitialization", expectedLibAddresses.initialization);
-        Logger.logKeyAddress("LibOrganizationAccountSignature", expectedLibAddresses.accountSignature);
+        Logger.logKeyAddress("LibOrganizationPolicy", expectedLibAddresses.policyAddress);
+        Logger.logKeyAddress("LibOrganizationAdmin", expectedLibAddresses.adminAddress);
+        Logger.logKeyAddress("LibOrganizationInitialization", expectedLibAddresses.initializationAddress);
+        Logger.logKeyAddress("LibOrganizationAccountSignature", expectedLibAddresses.accountSignatureAddress);
         Logger.logEmptyLine();
 
         _printLibrariesCommand(expectedLibAddresses);
@@ -81,7 +81,7 @@ contract DeployLibraries is Script {
         Create2Deployer.logSection("Platform Libraries (CREATE2)");
 
         // Deploy LibOrganizationPolicy
-        (libs.policy,) = Create2Deployer.deployIfNotExists(
+        (libs.policyAddress,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_POLICY_SALT,
             type(LibOrganizationPolicy).creationCode,
@@ -89,7 +89,7 @@ contract DeployLibraries is Script {
         );
 
         // Deploy LibOrganizationAdmin
-        (libs.admin,) = Create2Deployer.deployIfNotExists(
+        (libs.adminAddress,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_ADMIN_SALT,
             type(LibOrganizationAdmin).creationCode,
@@ -97,7 +97,7 @@ contract DeployLibraries is Script {
         );
 
         // Deploy LibOrganizationInitialization
-        (libs.initialization,) = Create2Deployer.deployIfNotExists(
+        (libs.initializationAddress,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_INIT_SALT,
             type(LibOrganizationInitialization).creationCode,
@@ -105,7 +105,7 @@ contract DeployLibraries is Script {
         );
 
         // Deploy LibOrganizationAccountSignature
-        (libs.accountSignature,) = Create2Deployer.deployIfNotExists(
+        (libs.accountSignatureAddress,) = Create2Deployer.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode,
@@ -118,10 +118,10 @@ contract DeployLibraries is Script {
     function _logDeployedAddresses(PlatformLibraries memory libs) internal pure {
         Logger.logBoxHeader("Deployed Library Addresses");
         Logger.logEmptyLine();
-        Logger.logKeyAddress("LibOrganizationPolicy", libs.policy);
-        Logger.logKeyAddress("LibOrganizationAdmin", libs.admin);
-        Logger.logKeyAddress("LibOrganizationInitialization", libs.initialization);
-        Logger.logKeyAddress("LibOrganizationAccountSignature", libs.accountSignature);
+        Logger.logKeyAddress("LibOrganizationPolicy", libs.policyAddress);
+        Logger.logKeyAddress("LibOrganizationAdmin", libs.adminAddress);
+        Logger.logKeyAddress("LibOrganizationInitialization", libs.initializationAddress);
+        Logger.logKeyAddress("LibOrganizationAccountSignature", libs.accountSignatureAddress);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
@@ -136,16 +136,24 @@ contract DeployLibraries is Script {
         Logger.logIndented("  --broadcast \\");
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat("  --libraries ", DeploymentConfig.LIB_ORG_POLICY_PATH, ":", _toHexString(libs.policy), " \\")
-        );
-        Logger.logIndented(
-            // solhint-disable-next-line func-named-parameters
-            string.concat("  --libraries ", DeploymentConfig.LIB_ORG_ADMIN_PATH, ":", _toHexString(libs.admin), " \\")
+            string.concat(
+                "  --libraries ", DeploymentConfig.LIB_ORG_POLICY_PATH, ":", _toHexString(libs.policyAddress), " \\"
+            )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
             string.concat(
-                "  --libraries ", DeploymentConfig.LIB_ORG_INIT_PATH, ":", _toHexString(libs.initialization), " \\"
+                "  --libraries ", DeploymentConfig.LIB_ORG_ADMIN_PATH, ":", _toHexString(libs.adminAddress), " \\"
+            )
+        );
+        Logger.logIndented(
+            // solhint-disable-next-line func-named-parameters
+            string.concat(
+                "  --libraries ",
+                DeploymentConfig.LIB_ORG_INIT_PATH,
+                ":",
+                _toHexString(libs.initializationAddress),
+                " \\"
             )
         );
         Logger.logIndented(
@@ -154,7 +162,7 @@ contract DeployLibraries is Script {
                 "  --libraries ",
                 DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
                 ":",
-                _toHexString(libs.accountSignature),
+                _toHexString(libs.accountSignatureAddress),
                 " \\"
             )
         );
@@ -164,16 +172,16 @@ contract DeployLibraries is Script {
     }
 
     /// @dev Converts an address to a hex string
-    /// @param addr The address to convert
+    /// @param targetAddress The address to convert
     /// @return The address as a hex string
-    function _toHexString(address addr) internal pure returns (string memory) {
+    function _toHexString(address targetAddress) internal pure returns (string memory) {
         bytes memory alphabet = "0123456789abcdef";
         bytes memory str = new bytes(42);
         str[0] = "0";
         str[1] = "x";
         for (uint256 i = 0; i < 20; ++i) {
-            str[2 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)) >> 4)];
-            str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i))) & 0x0f];
+            str[2 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i)) >> 4)];
+            str[3 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i))) & 0x0f];
         }
         return string(str);
     }
