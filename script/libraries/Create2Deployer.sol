@@ -35,7 +35,8 @@ library Create2Deployer {
     {
         address predicted = computeAddress(factory, salt, initCode);
 
-        // Check if already deployed
+        // Case: Contract already deployed
+        // Log message and skip deployment
         if (isContractDeployedAtAddress(predicted)) {
             console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, predicted);
             return (predicted, false);
@@ -44,50 +45,21 @@ library Create2Deployer {
         // Deploy using appropriate factory interface
         deployedAtAddress = _deploy(factory, salt, initCode);
 
-        // Verify deployment
+        // Case: Deployment failed
+        // Revert with error
         if (deployedAtAddress == address(0)) {
             revert DeploymentFailed(name, salt);
         }
 
+        // Case: Deployment address mismatch
+        // Revert with error
         if (deployedAtAddress != predicted) {
             revert AddressMismatch(predicted, deployedAtAddress);
         }
 
+        // Log success
         console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAtAddress);
         return (deployedAtAddress, true);
-    }
-
-    /// @dev Batch deploys multiple contracts via CREATE2
-    /// @param factory The CREATE2 factory address
-    /// @param salts Array of deployment salts
-    /// @param initCodes Array of contract creation bytecodes
-    /// @param names Array of human-readable names for logging
-    /// @return addresses Array of deployed addresses
-    function batchDeploy(address factory, bytes32[] memory salts, bytes[] memory initCodes, string[] memory names)
-        internal
-        returns (address[] memory addresses)
-    {
-        require(salts.length == initCodes.length && initCodes.length == names.length, "Array length mismatch");
-
-        addresses = new address[](salts.length);
-        for (uint256 i = 0; i < salts.length; ++i) {
-            (addresses[i],) = deployIfNotExists(factory, salts[i], initCodes[i], names[i]);
-        }
-    }
-
-    /// @dev Checks if a contract is already deployed at the predicted address
-    /// @param factory The CREATE2 factory address
-    /// @param salt The deployment salt
-    /// @param initCode The contract creation bytecode
-    /// @return isDeployedAtAddress True if contract exists at the predicted address
-    /// @return predicted The predicted address
-    function isDeployed(address factory, bytes32 salt, bytes memory initCode)
-        internal
-        view
-        returns (bool isDeployedAtAddress, address predicted)
-    {
-        predicted = computeAddress(factory, salt, initCode);
-        isDeployedAtAddress = isContractDeployedAtAddress(predicted);
     }
 
     /// @dev Checks if a contract is deployed at the given address

@@ -44,22 +44,29 @@ contract DeployLibraries is Script {
      * @notice Main entry point - deploys all platform libraries via CREATE2
      */
     function run() external {
+        // Get Deployer private key/address from environment variable
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
 
+        // Get CREATE2 factory (from env or auto-detect)
         create2Factory = _getCreate2Factory();
 
+        // Log header
         Create2Deployer.logDeploymentHeader(create2Factory, block.chainid);
         console.log("  Deployer EOA: %s", deployerAddress);
         console.log("  Mode: Library Deployment Only");
         console.log("");
 
+        // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
 
+        // Deploy libraries
         _deployPlatformLibraries();
 
+        // Stop broadcasting transactions
         vm.stopBroadcast();
 
+        // Log completion and print library addresses
         Create2Deployer.logDeploymentComplete();
         _logDeployedAddresses();
         _printLibrariesCommand();
