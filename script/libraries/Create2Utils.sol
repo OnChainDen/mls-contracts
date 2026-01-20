@@ -2,6 +2,7 @@
 pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -84,7 +85,7 @@ library Create2Utils {
 
         // Case: Factory is already deployed
         if (isContractDeployedAtAddress(factoryAddress)) {
-            Logger.logCheckInfo(string.concat("Factory already deployed at ", _addressToString(factoryAddress)));
+            Logger.logCheckInfo(string.concat("Factory already deployed at ", Strings.toHexString(factoryAddress)));
             Logger.logCheckDetail("No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
             return true;
         }
@@ -114,14 +115,14 @@ library Create2Utils {
 
         // Case: Deployer has sufficient balance
         if (balance >= requiredBalance) {
-            Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", _uintToString(balance), " wei)"));
+            Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", Strings.toString(balance), " wei)"));
             return true;
         }
 
         // Case: Deployer does not have sufficient balance
         Logger.logCheckFail("Deployer needs more ETH");
-        Logger.logCheckDetail(string.concat("Current: ", _uintToString(balance), " wei"));
-        Logger.logCheckDetail(string.concat("Required: ", _uintToString(requiredBalance), " wei"));
+        Logger.logCheckDetail(string.concat("Current: ", Strings.toString(balance), " wei"));
+        Logger.logCheckDetail(string.concat("Required: ", Strings.toString(requiredBalance), " wei"));
         Logger.logEmptyLine();
         Logger.logCheckDetail("Fund the deployer by running:");
         Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
@@ -179,42 +180,5 @@ library Create2Utils {
             // Arachnid and similar: deploy(bytes32, bytes)
             deployedAtAddress = ICreate2Factory(factoryAddress).deploy(salt, initCode);
         }
-    }
-
-    /// @dev Converts an address to a string for logging
-    /// @param targetAddress The address to convert
-    /// @return The address as a hex string
-    function _addressToString(address targetAddress) private pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(42);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < 20; ++i) {
-            str[2 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i)) >> 4)];
-            str[3 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i))) & 0x0f];
-        }
-        return string(str);
-    }
-
-    /// @dev Converts a uint256 to a string for logging
-    /// @param value The value to convert
-    /// @return The value as a decimal string
-    function _uintToString(uint256 value) private pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            ++digits;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            --digits;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
     }
 }
