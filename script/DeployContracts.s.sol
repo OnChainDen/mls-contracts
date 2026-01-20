@@ -2,6 +2,7 @@
 pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Safe} from "@safe/Safe.sol";
 import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
@@ -440,7 +441,7 @@ contract DeployContracts is Script {
             string(abi.encodePacked("Type 'yes' to confirm you want to deploy with ", mode, " configuration: "));
         string memory response = vm.prompt(prompt);
         string memory trimmedResponse = vm.trim(response);
-        if (!_isYesResponse(trimmedResponse)) {
+        if (!Strings.equal(trimmedResponse, "yes")) {
             revert("Deployment aborted: confirmation not received");
         }
     }
@@ -602,13 +603,6 @@ contract DeployContracts is Script {
         }
 
         return true;
-    }
-
-    /// @dev Checks if user confirmation input equals "yes"
-    /// @param response User input response
-    /// @return True if response equals "yes"
-    function _isYesResponse(string memory response) internal pure returns (bool) {
-        return keccak256(bytes(response)) == keccak256(bytes("yes"));
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
