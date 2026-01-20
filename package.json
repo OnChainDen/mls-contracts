@@ -24,6 +24,6 @@
   },
   "homepage": "https://github.com/OnChainDen/onchain-custody-contracts#readme",
   "devDependencies": {
-    "solhint": "^6.0.2"
+    "solhint": "^6.0.3"
   }
 }
