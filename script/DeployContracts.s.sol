@@ -521,8 +521,7 @@ contract DeployContracts is Script {
     /// @return ownerAddresses Array of owner addresses for the Guardian Safe
     /// @return threshold Required number of signatures
     function _getGuardianSafeConfig() internal view returns (address[] memory ownerAddresses, uint256 threshold) {
-        string memory ownersStr = vm.envString("GUARDIAN_SAFE_OWNERS");
-        ownerAddresses = _parseAddressArray(ownersStr);
+        ownerAddresses = vm.envAddress("GUARDIAN_SAFE_OWNERS", ",");
         threshold = vm.envUint("GUARDIAN_SAFE_THRESHOLD");
     }
 
@@ -530,35 +529,8 @@ contract DeployContracts is Script {
     /// @return ownerAddresses Array of owner addresses for the Deployer Safe
     /// @return threshold Required number of signatures
     function _getDeployerSafeConfig() internal view returns (address[] memory ownerAddresses, uint256 threshold) {
-        string memory ownersStr = vm.envString("DEPLOYER_SAFE_OWNERS");
-        ownerAddresses = _parseAddressArray(ownersStr);
+        ownerAddresses = vm.envAddress("DEPLOYER_SAFE_OWNERS", ",");
         threshold = vm.envUint("DEPLOYER_SAFE_THRESHOLD");
-    }
-
-    /// @dev Parses a comma-separated string of addresses into an array
-    /// @param input Comma-separated addresses (e.g., "0x123...,0x456...")
-    /// @return parsedAddresses Array of parsed addresses
-    function _parseAddressArray(string memory input) internal view returns (address[] memory parsedAddresses) {
-        // Case: the input string is empty
-        // Return empty array
-        if (bytes(input).length == 0) {
-            return new address[](0);
-        }
-
-        // Split the input string into parts using the comma as the delimiter
-        string[] memory parts = vm.split(input, ",");
-
-        // Create a new array to store the parsed addresses
-        parsedAddresses = new address[](parts.length);
-
-        // Iterate over each part and parse the address
-        for (uint256 i = 0; i < parts.length; ++i) {
-            // Parse the address from the part, trim any whitespace, and add it to the array
-            // slither-disable-next-line calls-loop
-            parsedAddresses[i] = vm.parseAddress(vm.trim(parts[i]));
-        }
-
-        return parsedAddresses;
     }
 
     /// @dev Checks if the provided Guardian Safe config matches production
