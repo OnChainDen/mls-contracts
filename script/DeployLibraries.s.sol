@@ -25,51 +25,37 @@ import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
  * @author Den Technologies Inc
  */
 contract DeployLibraries is Script {
-    /// @notice Address of the deployed LibOrganizationPolicy library
-    address public libOrganizationPolicy;
+    /// @dev Grouped addresses for deployed platform libraries
+    struct PlatformLibraries {
+        address policy;
+        address admin;
+        address initialization;
+        address accountSignature;
+    }
 
-    /// @notice Address of the deployed LibOrganizationAdmin library
-    address public libOrganizationAdmin;
-
-    /// @notice Address of the deployed LibOrganizationInitialization library
-    address public libOrganizationInitialization;
-
-    /// @notice Address of the deployed LibOrganizationAccountSignature library
-    address public libOrganizationAccountSignature;
-
-    /// @notice Address of the CREATE2 factory being used for deployments
-    address public create2Factory;
+    /// @dev Custom error for when no CREATE2 factory is available
+    error NoCreate2FactoryAvailable();
 
     /**
      * @notice Main entry point - deploys all platform libraries via CREATE2
      */
     function run() external {
-        // Get Deployer private key/address from environment variable
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
+        address factory = _getCreate2Factory();
 
-        // Get CREATE2 factory (from env or auto-detect)
-        create2Factory = _getCreate2Factory();
-
-        // Log header
-        Create2Deployer.logDeploymentHeader(create2Factory, block.chainid);
+        Create2Deployer.logDeploymentHeader(factory, block.chainid);
         console.log("  Deployer EOA: %s", deployerAddress);
         console.log("  Mode: Library Deployment Only");
         console.log("");
 
-        // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
-
-        // Deploy libraries
-        _deployPlatformLibraries();
-
-        // Stop broadcasting transactions
+        PlatformLibraries memory libs = _deployPlatformLibraries(factory);
         vm.stopBroadcast();
 
-        // Log completion and print library addresses
         Create2Deployer.logDeploymentComplete();
-        _logDeployedAddresses();
-        _printLibrariesCommand();
+        _logDeployedAddresses(libs);
+        _printLibrariesCommand(libs);
     }
 
     /**
@@ -87,61 +73,50 @@ contract DeployLibraries is Script {
         console.log("  Chain ID: %s", block.chainid);
         console.log("");
 
-        address libPolicy = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        address libAdmin = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        address libInit = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        address libAccSig = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
-        );
+        PlatformLibraries memory libs = _computeLibraryAddresses(factory);
 
-        console.log("  LibOrganizationPolicy:           %s", libPolicy);
-        console.log("  LibOrganizationAdmin:            %s", libAdmin);
-        console.log("  LibOrganizationInitialization:   %s", libInit);
-        console.log("  LibOrganizationAccountSignature: %s", libAccSig);
+        console.log("  LibOrganizationPolicy:           %s", libs.policy);
+        console.log("  LibOrganizationAdmin:            %s", libs.admin);
+        console.log("  LibOrganizationInitialization:   %s", libs.initialization);
+        console.log("  LibOrganizationAccountSignature: %s", libs.accountSignature);
         console.log("");
 
-        _printLibrariesCommandWithAddresses(libPolicy, libAdmin, libInit, libAccSig);
+        _printLibrariesCommand(libs);
     }
 
     /// @dev Deploys all platform libraries via CREATE2 for deterministic addresses
-    ///      Libraries deployed: LibOrganizationPolicy, LibOrganizationAdmin,
-    ///      LibOrganizationInitialization, LibOrganizationAccountSignature
-    function _deployPlatformLibraries() internal {
+    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @return libs Struct containing all deployed library addresses
+    function _deployPlatformLibraries(address factory) internal returns (PlatformLibraries memory libs) {
         Create2Deployer.logSection("Platform Libraries (CREATE2)");
 
         // Deploy LibOrganizationPolicy
-        (libOrganizationPolicy,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (libs.policy,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.LIB_ORG_POLICY_SALT,
             type(LibOrganizationPolicy).creationCode,
             "LibOrganizationPolicy"
         );
 
         // Deploy LibOrganizationAdmin
-        (libOrganizationAdmin,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (libs.admin,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.LIB_ORG_ADMIN_SALT,
             type(LibOrganizationAdmin).creationCode,
             "LibOrganizationAdmin"
         );
 
         // Deploy LibOrganizationInitialization
-        (libOrganizationInitialization,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (libs.initialization,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.LIB_ORG_INIT_SALT,
             type(LibOrganizationInitialization).creationCode,
             "LibOrganizationInitialization"
         );
 
         // Deploy LibOrganizationAccountSignature
-        (libOrganizationAccountSignature,) = Create2Deployer.deployIfNotExists(
-            create2Factory,
+        (libs.accountSignature,) = Create2Deployer.deployIfNotExists(
+            factory,
             DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
@@ -156,49 +131,56 @@ contract DeployLibraries is Script {
             if (provided != address(0) && Create2Deployer.isContractDeployedAtAddress(provided)) {
                 return provided;
             }
-        } catch {}
+            // solhint-disable-next-line no-empty-blocks
+        } catch {
+            // Environment variable not set, fall through to auto-detection
+        }
 
         // Auto-detect available factory
         (factory,) = Create2Deployer.getAvailableFactory();
 
         if (factory == address(0)) {
-            revert("No CREATE2 factory available");
+            revert NoCreate2FactoryAvailable();
         }
     }
 
+    /// @dev Computes deterministic library addresses without deploying
+    /// @param factory Address of the CREATE2 factory to use for address computation
+    /// @return libs Struct containing computed library addresses
+    function _computeLibraryAddresses(address factory) internal pure returns (PlatformLibraries memory libs) {
+        libs.policy = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+        );
+        libs.admin = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+        );
+        libs.initialization = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+        );
+        libs.accountSignature = Create2Deployer.computeAddress(
+            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
+        );
+    }
+
     /// @dev Logs all deployed library addresses in a formatted summary
-    function _logDeployedAddresses() internal view {
+    /// @param libs Struct containing deployed library addresses
+    function _logDeployedAddresses(PlatformLibraries memory libs) internal pure {
         console.log("");
         console.log("================================================================================");
         console.log("  Deployed Library Addresses");
         console.log("================================================================================");
         console.log("");
-        console.log("  LibOrganizationPolicy:           %s", libOrganizationPolicy);
-        console.log("  LibOrganizationAdmin:            %s", libOrganizationAdmin);
-        console.log("  LibOrganizationInitialization:   %s", libOrganizationInitialization);
-        console.log("  LibOrganizationAccountSignature: %s", libOrganizationAccountSignature);
+        console.log("  LibOrganizationPolicy:           %s", libs.policy);
+        console.log("  LibOrganizationAdmin:            %s", libs.admin);
+        console.log("  LibOrganizationInitialization:   %s", libs.initialization);
+        console.log("  LibOrganizationAccountSignature: %s", libs.accountSignature);
         console.log("");
         console.log("================================================================================");
     }
 
-    /// @dev Prints the forge --libraries command using deployed addresses
-    function _printLibrariesCommand() internal view {
-        _printLibrariesCommandWithAddresses(
-            libOrganizationPolicy, libOrganizationAdmin, libOrganizationInitialization, libOrganizationAccountSignature
-        );
-    }
-
-    /// @dev Prints the forge --libraries command with specified addresses
-    /// @param libPolicy Address of the LibOrganizationPolicy library
-    /// @param libAdmin Address of the LibOrganizationAdmin library
-    /// @param libInit Address of the LibOrganizationInitialization library
-    /// @param libAccSig Address of the LibOrganizationAccountSignature library
-    function _printLibrariesCommandWithAddresses(
-        address libPolicy,
-        address libAdmin,
-        address libInit,
-        address libAccSig
-    ) internal pure {
+    /// @dev Prints the forge --libraries command with library addresses
+    /// @param libs Struct containing library addresses
+    function _printLibrariesCommand(PlatformLibraries memory libs) internal pure {
         console.log("");
         console.log("================================================================================");
         console.log("  NEXT STEP: Run DeployContracts with the following --libraries flags:");
@@ -207,10 +189,10 @@ contract DeployLibraries is Script {
         console.log("  forge script script/DeployContracts.s.sol:DeployContracts \\");
         console.log("    --rpc-url $RPC_URL \\");
         console.log("    --broadcast \\");
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_POLICY_PATH, libPolicy);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ADMIN_PATH, libAdmin);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_INIT_PATH, libInit);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH, libAccSig);
+        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_POLICY_PATH, libs.policy);
+        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ADMIN_PATH, libs.admin);
+        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_INIT_PATH, libs.initialization);
+        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH, libs.accountSignature);
         console.log("    -vvvv");
         console.log("");
         console.log("================================================================================");

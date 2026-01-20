@@ -40,6 +40,18 @@ contract DeploySafeSingletonFactory is Script {
     /// @dev Required ETH balance for the deployer (gas price * gas limit * 2 for buffer)
     uint256 internal constant _REQUIRED_ETH_BALANCE = _DEPLOYMENT_GAS_PRICE * _DEPLOYMENT_GAS_LIMIT * 2;
 
+    /// @dev Custom error for when safety checks fail
+    error SafetyChecksFailed();
+
+    /// @dev Custom error for when the deployer address does not match expected
+    error DeployerAddressMismatch(address expected, address actual);
+
+    /// @dev Custom error for when factory deployment fails
+    error FactoryDeploymentFailed();
+
+    /// @dev Custom error for when deployed address does not match expected
+    error DeployedAddressMismatch(address expected, address actual);
+
     /**
      * @notice Main entry point for the deployment script
      * @dev Runs comprehensive safety checks before allowing deployment
@@ -61,7 +73,7 @@ contract DeploySafeSingletonFactory is Script {
             console.log("");
             console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
             console.log("");
-            revert("Safety checks failed");
+            revert SafetyChecksFailed();
         }
 
         if (!confirmDeployment) {
@@ -95,7 +107,7 @@ contract DeploySafeSingletonFactory is Script {
             console.log(unicode"  ❌ ERROR: Deployer address mismatch!");
             console.log("     Expected: %s", _EXPECTED_DEPLOYER);
             console.log("     Got: %s", deployerAddress);
-            revert("Deployer address mismatch");
+            revert DeployerAddressMismatch(_EXPECTED_DEPLOYER, deployerAddress);
         }
 
         vm.startBroadcast(deployerPrivateKey);
@@ -107,7 +119,7 @@ contract DeploySafeSingletonFactory is Script {
         // Verify deployment
         if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             console.log(unicode"  ❌ ERROR: Factory deployment failed!");
-            revert("Factory deployment failed");
+            revert FactoryDeploymentFailed();
         }
 
         console.log("");
@@ -153,14 +165,14 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         if (deployedAtAddress == address(0)) {
-            revert("Factory deployment failed in assembly");
+            revert FactoryDeploymentFailed();
         }
 
         // The address should match due to CREATE from nonce 0
         if (deployedAtAddress != _EXPECTED_FACTORY_ADDRESS) {
             console.log("  Deployed at: %s", deployedAtAddress);
             console.log("  Expected: %s", _EXPECTED_FACTORY_ADDRESS);
-            revert("Deployed address mismatch");
+            revert DeployedAddressMismatch(_EXPECTED_FACTORY_ADDRESS, deployedAtAddress);
         }
     }
 
