@@ -140,8 +140,9 @@ contract DeploySafeSingletonFactory is Script {
     function _deployFactory() internal {
         // Safe Singleton Factory bytecode (minimal CREATE2 factory)
         // This is the init code that produces a contract at the expected address
-        // solhint-disable-next-line max-line-length
+        // forgefmt: disable-next-item
         bytes memory factoryBytecode =
+            // solhint-disable-next-line max-line-length
             hex"604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3";
 
         address deployedAtAddress;
