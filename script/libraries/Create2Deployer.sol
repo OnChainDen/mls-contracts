@@ -2,6 +2,7 @@
 pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {console} from "forge-std/console.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -20,6 +21,9 @@ library Create2Deployer {
 
     /// @dev Error thrown when deployed address doesn't match predicted
     error AddressMismatch(address predicted, address actual);
+
+    /// @dev Error thrown when no CREATE2 factory is available
+    error NoCreate2FactoryAvailable();
 
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
@@ -69,22 +73,32 @@ library Create2Deployer {
         return contractAddress.code.length > 0;
     }
 
-    /// @dev Gets the best available CREATE2 factory
+    /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
+    ///      First checks CREATE2_FACTORY_ADDRESS env var, then falls back to auto-detection
     ///      Prefers Arachnid factory, falls back to Safe Singleton Factory
-    /// @return factory The available factory address (address(0) if none)
-    /// @return factoryName Human-readable factory name
-    function getAvailableFactory() internal view returns (address factory, string memory factoryName) {
-        // Prefer Arachnid as it's more widely deployed
+    /// @param vm The Forge Vm interface for accessing environment variables
+    /// @return factory Address of the available CREATE2 factory
+    function getCreate2Factory(Vm vm) internal view returns (address factory) {
+        // First, check if explicitly provided via environment variable
+        try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
+            if (provided != address(0) && isContractDeployedAtAddress(provided)) {
+                return provided;
+            }
+            // solhint-disable-next-line no-empty-blocks
+        } catch {
+            // Environment variable not set, fall through to auto-detection
+        }
+
+        // Auto-detect available factory (prefer Arachnid as it's more widely deployed)
         if (isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
-            return (DeploymentConfig.ARACHNID_CREATE2_FACTORY, "Arachnid");
+            return DeploymentConfig.ARACHNID_CREATE2_FACTORY;
         }
 
         if (isContractDeployedAtAddress(DeploymentConfig.SAFE_SINGLETON_FACTORY)) {
-            return (DeploymentConfig.SAFE_SINGLETON_FACTORY, "Safe Singleton Factory");
+            return DeploymentConfig.SAFE_SINGLETON_FACTORY;
         }
 
-        // No factory available
-        return (address(0), "None");
+        revert NoCreate2FactoryAvailable();
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment

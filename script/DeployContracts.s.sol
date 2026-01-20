@@ -86,9 +86,6 @@ contract DeployContracts is Script {
         address whitelistProxy;
     }
 
-    /// @dev Custom error for when no CREATE2 factory is available
-    error NoCreate2FactoryAvailable();
-
     /// @dev Custom error for when a Safe is deployed at an unexpected address
     error SafeDeployedAtUnexpectedAddress(address expected, address actual);
 
@@ -97,23 +94,41 @@ contract DeployContracts is Script {
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
      */
     function run() external {
+        // Get Deployer private key/address from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
-        address factory = _getCreate2Factory();
 
+        // Get the CREATE2 factory that will be used for deployments
+        // The address of the factory is either explicitly provided in the environment, or auto-detected
+        // If auto-detected, the factory is either Arachnid or Safe Singleton Factory
+        address factoryAddress = Create2Deployer.getCreate2Factory(vm);
+
+        // Get the Guardian Safe configuration from environment
+        // The Guardian Safe is a multisig wallet that will be used to deploy the contracts
+        // The configuration is either explicitly provided in the environment, or defaults to the deployer as single
+        // owner
         (address[] memory guardianOwners, uint256 guardianThreshold) = _getGuardianSafeConfig();
+
+        // Get the Deployer Safe configuration from environment
+        // The Deployer Safe is a multisig wallet that will be used to deploy contracts via factories, and it will
+        // be the owner of the ImplementationWhitelistFactory.sol contract
+        // The configuration is either explicitly provided in the environment, or defaults to the deployer as single
+        // owner
         (address[] memory deployerOwners, uint256 deployerThreshold) = _getDeployerSafeConfig();
 
-        Create2Deployer.logDeploymentHeader(factory, block.chainid);
+        // Log the deployment header
+        // This includes the factory type, chain ID, and deployer EOA address
+        Create2Deployer.logDeploymentHeader(factoryAddress, block.chainid);
         console.log("  Deployer EOA: %s", deployerAddress);
         console.log("");
 
+        // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
 
-        // Step 1: Deploy Safe Infrastructure
-        SafeInfrastructure memory safeInfra = _deploySafeInfrastructure(factory);
+        // Deploy Safe Infrastructure
+        SafeInfrastructure memory safeInfra = _deploySafeInfrastructure(factoryAddress);
 
-        // Step 2: Deploy Safe Multisigs (depends on safeInfra)
+        // Deploy Safe Multisigs (Deployer and Guardian Safes)
         SafeMultisigs memory safes = _deploySafeMultisigs({
             safeInfra: safeInfra,
             guardianOwners: guardianOwners,
@@ -122,21 +137,22 @@ contract DeployContracts is Script {
             deployerThreshold: deployerThreshold
         });
 
-        // Step 3: Verify libraries are at expected addresses (critical for determinism)
-        _verifyLibraryAddresses(factory);
+        // Verify libraries are at expected addresses (critical for determinism)
+        _verifyLibraryAddresses(factoryAddress);
 
-        // Step 4: Deploy Implementation Contracts
-        PlatformImplementations memory impls = _deployImplementationContracts(factory);
+        // Deploy Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
+        PlatformImplementations memory impls = _deployImplementationContracts(factoryAddress);
 
-        // Step 5: Deploy Factory Contracts (depends on safes.deployerSafe)
-        PlatformFactories memory factories = _deployFactoryContracts(factory, safes.deployerSafe);
+        // Deploy Factory Contracts (OrganizationFactory, WhitelistFactory)
+        PlatformFactories memory factories = _deployFactoryContracts(factoryAddress, safes.deployerSafe);
 
-        // Step 6: Deploy ImplementationWhitelistProxy via factory (depends on factories, impls, safes)
+        // Deploy ImplementationWhitelistProxy via factory (depends on factories, impls, safes)
         address whitelistProxy = _deployWhitelistProxy(factories, impls, safes.deployerSafe);
 
-        // Step 7: Whitelist implementations (depends on whitelistProxy, impls)
+        // Whitelist implementations (depends on whitelistProxy, impls)
         _whitelistImplementations(whitelistProxy, impls);
 
+        // Stop broadcasting transactions
         vm.stopBroadcast();
 
         // Build the complete deployed contracts struct for logging
@@ -148,6 +164,7 @@ contract DeployContracts is Script {
             whitelistProxy: whitelistProxy
         });
 
+        // Log deployment completion and print deployed addresses
         Create2Deployer.logDeploymentComplete();
         _logDeployedAddresses(contracts);
     }
@@ -467,50 +484,59 @@ contract DeployContracts is Script {
     function _verifyLibraryAddresses(address factory) internal view {
         Create2Deployer.logSection("Verify Library Addresses");
 
-        address expectedPolicy = Create2Deployer.computeAddress(
+        address expectedPoliciesLibAddress = Create2Deployer.computeAddress(
             factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
         );
-        address expectedAdmin = Create2Deployer.computeAddress(
+
+        address expectedAdminLibAddress = Create2Deployer.computeAddress(
             factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
-        address expectedInit = Create2Deployer.computeAddress(
+        address expectedInitLibAddress = Create2Deployer.computeAddress(
             factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
-        address expectedAccSig = Create2Deployer.computeAddress(
+        address expectedAccSigLibAddress = Create2Deployer.computeAddress(
             factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
         );
 
         bool allDeployed = true;
 
         // Check if libraries are deployed at expected addresses
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedPolicy)) {
-            console.log(unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPolicy);
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPolicy);
-        }
-
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedAdmin)) {
-            console.log(unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdmin);
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdmin);
-        }
-
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedInit)) {
-            console.log(unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s", expectedInit);
-            allDeployed = false;
-        } else {
-            console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInit);
-        }
-
-        if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSig)) {
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedPoliciesLibAddress)) {
             console.log(
-                unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s", expectedAccSig
+                unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPoliciesLibAddress
             );
             allDeployed = false;
         } else {
-            console.log(unicode"  ✅ LibOrganizationAccountSignature at %s", expectedAccSig);
+            console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPoliciesLibAddress);
+        }
+
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedAdminLibAddress)) {
+            console.log(
+                unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdminLibAddress
+            );
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdminLibAddress);
+        }
+
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedInitLibAddress)) {
+            console.log(
+                unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s",
+                expectedInitLibAddress
+            );
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInitLibAddress);
+        }
+
+        if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSigLibAddress)) {
+            console.log(
+                unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s",
+                expectedAccSigLibAddress
+            );
+            allDeployed = false;
+        } else {
+            console.log(unicode"  ✅ LibOrganizationAccountSignature at %s", expectedAccSigLibAddress);
         }
 
         if (!allDeployed) {
@@ -518,27 +544,6 @@ contract DeployContracts is Script {
             console.log(unicode"  ⚠️  WARNING: Some libraries are not deployed!");
             console.log("     Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
             console.log("");
-        }
-    }
-
-    /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
-    /// @return factory Address of the available CREATE2 factory
-    function _getCreate2Factory() internal view returns (address factory) {
-        // First, check if explicitly provided
-        try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            if (provided != address(0) && Create2Deployer.isContractDeployedAtAddress(provided)) {
-                return provided;
-            }
-            // solhint-disable-next-line no-empty-blocks
-        } catch {
-            // Environment variable not set, fall through to auto-detection
-        }
-
-        // Auto-detect available factory
-        (factory,) = Create2Deployer.getAvailableFactory();
-
-        if (factory == address(0)) {
-            revert NoCreate2FactoryAvailable();
         }
     }
 

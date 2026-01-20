@@ -33,16 +33,13 @@ contract DeployLibraries is Script {
         address accountSignature;
     }
 
-    /// @dev Custom error for when no CREATE2 factory is available
-    error NoCreate2FactoryAvailable();
-
     /**
      * @notice Main entry point - deploys all platform libraries via CREATE2
      */
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
-        address factory = _getCreate2Factory();
+        address factory = Create2Deployer.getCreate2Factory(vm);
 
         Create2Deployer.logDeploymentHeader(factory, block.chainid);
         console.log("  Deployer EOA: %s", deployerAddress);
@@ -63,7 +60,7 @@ contract DeployLibraries is Script {
      * @dev Use this to preview the --libraries flags before any deployment
      */
     function computeAddresses() external view {
-        address factory = _getCreate2Factory();
+        address factory = Create2Deployer.getCreate2Factory(vm);
 
         console.log("");
         console.log("================================================================================");
@@ -121,27 +118,6 @@ contract DeployLibraries is Script {
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
         );
-    }
-
-    /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
-    /// @return factory Address of the available CREATE2 factory
-    function _getCreate2Factory() internal view returns (address factory) {
-        // First, check if explicitly provided
-        try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            if (provided != address(0) && Create2Deployer.isContractDeployedAtAddress(provided)) {
-                return provided;
-            }
-            // solhint-disable-next-line no-empty-blocks
-        } catch {
-            // Environment variable not set, fall through to auto-detection
-        }
-
-        // Auto-detect available factory
-        (factory,) = Create2Deployer.getAvailableFactory();
-
-        if (factory == address(0)) {
-            revert NoCreate2FactoryAvailable();
-        }
     }
 
     /// @dev Computes deterministic library addresses without deploying
