@@ -14,9 +14,6 @@ library DeploymentConfig {
     /// @dev Safe Singleton Factory address (deterministic across all chains where deployed)
     address internal constant SAFE_SINGLETON_FACTORY = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
 
-    /// @dev Safe Singleton Factory deployer address (for nonce-0 deployment)
-    address internal constant SAFE_FACTORY_DEPLOYER = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
-
     /// @dev Salt for Safe Singleton (master copy) deployment
     bytes32 internal constant SAFE_SINGLETON_SALT = keccak256("den.external.safe.singleton.v1");
 
@@ -90,11 +87,4 @@ library DeploymentConfig {
 
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
-
-    /// @dev Returns the appropriate CREATE2 factory address based on preference
-    /// @param preferSafe If true, returns Safe Singleton Factory; otherwise returns Arachnid
-    /// @return factory The factory address to use
-    function getCreate2Factory(bool preferSafe) internal pure returns (address factory) {
-        return preferSafe ? SAFE_SINGLETON_FACTORY : ARACHNID_CREATE2_FACTORY;
-    }
 }
