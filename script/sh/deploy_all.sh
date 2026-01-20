@@ -4,7 +4,12 @@
 # ==============================================================================
 #
 # This script deploys all platform contracts deterministically using CREATE2.
-# It handles the two-phase deployment required for deterministic library linking.
+# It follows a 4-step deployment process:
+#
+#   Step 1: Deploy Arachnid Factory (if not already deployed)
+#   Step 2: Deploy Safe Singleton Factory (only if Arachnid failed/unavailable)
+#   Step 3: Deploy platform libraries via CREATE2
+#   Step 4: Deploy all contracts with library linking
 #
 # USAGE:
 #   ./script/sh/deploy_all.sh [OPTIONS]
@@ -14,17 +19,22 @@
 #   RPC_URL           - Target chain RPC endpoint
 #
 # OPTIONAL ENVIRONMENT VARIABLES:
+#   CREATE2_FACTORY_ADDRESS - Override auto-detected factory (skips steps 1-2)
 #   CHAIN_ID          - Override auto-detected chain ID (for broadcast dir lookup)
 #   ETHERSCAN_API_KEY - For contract verification
 #   VERIFY            - Set to "true" to enable contract verification
 #   DRY_RUN           - Set to "true" to simulate without broadcasting
+#   CONFIRM_DEPLOYMENT - Set to "true" to enable factory deployment
 #
 # EXAMPLES:
-#   # Standard deployment
-#   PRIVATE_KEY=$KEY RPC_URL=$RPC ./script/sh/deploy_all.sh
+#   # Standard deployment (auto-detects or deploys factory)
+#   PRIVATE_KEY=$KEY RPC_URL=$RPC CONFIRM_DEPLOYMENT=true ./script/sh/deploy_all.sh
 #
 #   # Dry run (no broadcast)
 #   PRIVATE_KEY=$KEY RPC_URL=$RPC DRY_RUN=true ./script/sh/deploy_all.sh
+#
+#   # With pre-existing factory (skips factory deployment)
+#   PRIVATE_KEY=$KEY RPC_URL=$RPC CREATE2_FACTORY_ADDRESS=0x4e59... ./script/sh/deploy_all.sh
 #
 #   # With verification
 #   PRIVATE_KEY=$KEY RPC_URL=$RPC ETHERSCAN_API_KEY=$API VERIFY=true ./script/sh/deploy_all.sh
@@ -45,6 +55,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 BROADCAST_DIR="${PROJECT_ROOT}/broadcast"
+
+# Factory addresses (must match DeploymentConfig.sol)
+ARACHNID_FACTORY="0x4e59b44847b379578588920cA78FbF26c0B4956C"
+SAFE_SINGLETON_FACTORY="0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
 
 # Library paths (must match DeploymentConfig.sol)
 LIB_POLICY_PATH="src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy"
@@ -176,6 +190,22 @@ get_chain_id() {
 }
 
 # ------------------------------------------------------------------------------
+# CONTRACT EXISTENCE CHECK
+# ------------------------------------------------------------------------------
+is_contract_deployed() {
+    local address="$1"
+    local code
+    code=$(cast code "${address}" --rpc-url "${RPC_URL}" 2>/dev/null || echo "0x")
+    
+    # Check if there's code at the address (more than just "0x")
+    if [[ "${code}" != "0x" && -n "${code}" ]]; then
+        return 0  # true - contract exists
+    else
+        return 1  # false - no contract
+    fi
+}
+
+# ------------------------------------------------------------------------------
 # BROADCAST JSON PARSING
 # ------------------------------------------------------------------------------
 # Extracts a deployed contract address from Foundry's broadcast JSON
@@ -235,18 +265,138 @@ build_forge_flags() {
 }
 
 # ------------------------------------------------------------------------------
-# PHASE 1: DEPLOY LIBRARIES
+# STEP 1: DEPLOY/DETECT CREATE2 FACTORY
+# ------------------------------------------------------------------------------
+ensure_create2_factory() {
+    log_section "Step 1: Ensuring CREATE2 Factory is Available"
+    
+    # If CREATE2_FACTORY_ADDRESS is already set, verify it exists
+    if [[ -n "${CREATE2_FACTORY_ADDRESS:-}" ]]; then
+        log_info "CREATE2_FACTORY_ADDRESS provided: ${CREATE2_FACTORY_ADDRESS}"
+        if is_contract_deployed "${CREATE2_FACTORY_ADDRESS}"; then
+            log_success "Factory verified at ${CREATE2_FACTORY_ADDRESS}"
+            return 0
+        else
+            log_error "No contract found at provided CREATE2_FACTORY_ADDRESS: ${CREATE2_FACTORY_ADDRESS}"
+            exit 1
+        fi
+    fi
+    
+    # Check if Arachnid factory already exists
+    log_info "Checking for Arachnid factory at ${ARACHNID_FACTORY}..."
+    if is_contract_deployed "${ARACHNID_FACTORY}"; then
+        log_success "Arachnid factory already deployed"
+        export CREATE2_FACTORY_ADDRESS="${ARACHNID_FACTORY}"
+        return 0
+    fi
+    
+    # Check if Safe Singleton factory already exists
+    log_info "Checking for Safe Singleton factory at ${SAFE_SINGLETON_FACTORY}..."
+    if is_contract_deployed "${SAFE_SINGLETON_FACTORY}"; then
+        log_success "Safe Singleton factory already deployed"
+        export CREATE2_FACTORY_ADDRESS="${SAFE_SINGLETON_FACTORY}"
+        return 0
+    fi
+    
+    # No factory found - need to deploy one
+    log_warn "No CREATE2 factory found on this chain"
+    
+    # Check if deployment is confirmed
+    if [[ "${CONFIRM_DEPLOYMENT:-false}" != "true" ]]; then
+        log_error "Factory deployment requires CONFIRM_DEPLOYMENT=true"
+        log_error "Re-run with: CONFIRM_DEPLOYMENT=true ./script/sh/deploy_all.sh"
+        exit 1
+    fi
+    
+    # Try to deploy Arachnid factory first
+    log_info "Attempting to deploy Arachnid factory..."
+    if deploy_arachnid_factory; then
+        export CREATE2_FACTORY_ADDRESS="${ARACHNID_FACTORY}"
+        return 0
+    fi
+    
+    # Arachnid failed (likely EIP-155 chain), try Safe Singleton
+    log_warn "Arachnid deployment failed (chain may enforce EIP-155)"
+    log_info "Attempting to deploy Safe Singleton factory..."
+    
+    if deploy_safe_singleton_factory; then
+        export CREATE2_FACTORY_ADDRESS="${SAFE_SINGLETON_FACTORY}"
+        return 0
+    fi
+    
+    log_error "Failed to deploy any CREATE2 factory"
+    log_error "You may need to manually deploy and set CREATE2_FACTORY_ADDRESS"
+    exit 1
+}
+
+# ------------------------------------------------------------------------------
+# DEPLOY ARACHNID FACTORY
+# ------------------------------------------------------------------------------
+deploy_arachnid_factory() {
+    log_info "Running DeployArachnidFactory.s.sol..."
+    
+    # Run the Arachnid factory deployment script
+    # Note: This uses a pre-signed transaction and may fail on EIP-155 chains
+    if CONFIRM_DEPLOYMENT=true forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
+        --rpc-url "${RPC_URL}" \
+        --broadcast \
+        -vvvv 2>&1; then
+        
+        # Verify deployment
+        if is_contract_deployed "${ARACHNID_FACTORY}"; then
+            log_success "Arachnid factory deployed at ${ARACHNID_FACTORY}"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# ------------------------------------------------------------------------------
+# DEPLOY SAFE SINGLETON FACTORY
+# ------------------------------------------------------------------------------
+deploy_safe_singleton_factory() {
+    # Check if SAFE_FACTORY_DEPLOYER_PRIVATE_KEY is set
+    if [[ -z "${SAFE_FACTORY_DEPLOYER_PRIVATE_KEY:-}" ]]; then
+        log_error "SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set"
+        log_error "This is required to deploy the Safe Singleton factory"
+        log_error "The deployer must have nonce 0 at address 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37"
+        return 1
+    fi
+    
+    log_info "Running DeploySafeSingletonFactory.s.sol..."
+    
+    # Run the Safe Singleton factory deployment script
+    if CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+        --rpc-url "${RPC_URL}" \
+        --broadcast \
+        -vvvv 2>&1; then
+        
+        # Verify deployment
+        if is_contract_deployed "${SAFE_SINGLETON_FACTORY}"; then
+            log_success "Safe Singleton factory deployed at ${SAFE_SINGLETON_FACTORY}"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# ------------------------------------------------------------------------------
+# STEP 3: DEPLOY LIBRARIES
 # ------------------------------------------------------------------------------
 deploy_libraries() {
-    log_section "Phase 1: Deploying Platform Libraries"
+    log_section "Step 3: Deploying Platform Libraries"
     
+    log_info "Using CREATE2 factory: ${CREATE2_FACTORY_ADDRESS}"
     log_info "Running DeployLibraries.s.sol..."
     
     local forge_flags
     forge_flags=$(build_forge_flags)
     
-    # Run the library deployment script
+    # Run the library deployment script with factory address
     # shellcheck disable=SC2086
+    CREATE2_FACTORY_ADDRESS="${CREATE2_FACTORY_ADDRESS}" \
     forge script script/DeployLibraries.s.sol:DeployLibraries \
         ${forge_flags}
     
@@ -254,7 +404,7 @@ deploy_libraries() {
 }
 
 # ------------------------------------------------------------------------------
-# PHASE 2: DEPLOY CONTRACTS WITH LIBRARY LINKING
+# STEP 4: DEPLOY CONTRACTS WITH LIBRARY LINKING
 # ------------------------------------------------------------------------------
 deploy_contracts() {
     local lib_policy_addr="$1"
@@ -262,8 +412,9 @@ deploy_contracts() {
     local lib_init_addr="$3"
     local lib_acc_sig_addr="$4"
     
-    log_section "Phase 2: Deploying Contracts with Library Linking"
+    log_section "Step 4: Deploying Contracts with Library Linking"
     
+    log_info "Using CREATE2 factory: ${CREATE2_FACTORY_ADDRESS}"
     log_info "Library addresses for linking:"
     log_info "  LibOrganizationPolicy:           ${lib_policy_addr}"
     log_info "  LibOrganizationAdmin:            ${lib_admin_addr}"
@@ -276,6 +427,7 @@ deploy_contracts() {
     
     # Run the contracts deployment script with library linking
     # shellcheck disable=SC2086
+    CREATE2_FACTORY_ADDRESS="${CREATE2_FACTORY_ADDRESS}" \
     forge script script/DeployContracts.s.sol:DeployContracts \
         ${forge_flags} \
         --libraries "${LIB_POLICY_PATH}:${lib_policy_addr}" \
@@ -295,18 +447,22 @@ main() {
     log_info "Project root: ${PROJECT_ROOT}"
     log_info "Script started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
     
-    # Step 1: Validate environment
+    # Validate environment
     validate_environment
     
-    # Step 2: Get chain ID for broadcast directory lookup
+    # Get chain ID for broadcast directory lookup
     local chain_id
     chain_id=$(get_chain_id)
     log_info "Target chain ID: ${chain_id}"
     
-    # Step 3: Deploy libraries (Phase 1)
+    # Step 1 & 2: Ensure CREATE2 factory is available
+    ensure_create2_factory
+    log_info "CREATE2_FACTORY_ADDRESS set to: ${CREATE2_FACTORY_ADDRESS}"
+    
+    # Step 3: Deploy libraries
     deploy_libraries
     
-    # Step 4: Extract library addresses from broadcast JSON
+    # Extract library addresses from broadcast JSON
     log_section "Extracting Library Addresses from Broadcast"
     
     local broadcast_file="${BROADCAST_DIR}/DeployLibraries.s.sol/${chain_id}/run-latest.json"
@@ -327,13 +483,15 @@ main() {
     
     log_success "Extracted all library addresses"
     
-    # Step 5: Deploy contracts with library linking (Phase 2)
+    # Step 4: Deploy contracts with library linking
     deploy_contracts "${lib_policy_addr}" "${lib_admin_addr}" "${lib_init_addr}" "${lib_acc_sig_addr}"
     
-    # Step 6: Summary
+    # Summary
     log_section "Deployment Complete"
     
     log_success "All contracts deployed successfully!"
+    log_info ""
+    log_info "CREATE2 Factory used: ${CREATE2_FACTORY_ADDRESS}"
     log_info ""
     log_info "Deployed library addresses (save these for verification):"
     log_info "  LibOrganizationPolicy:           ${lib_policy_addr}"

@@ -755,9 +755,16 @@ This section covers how to deploy the Multi-layer Security (MLS) Wallet platform
 
 All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. This is critical for cross-chain operations and user experience.
 
-The deployment supports two CREATE2 factory options:
-1. **Arachnid Deterministic Deployment Proxy** (`0x4e59b44847b379578588920cA78FbF26c0B4956C`) - Available on most EVM chains
-2. **Safe Singleton Factory** (`0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7`) - Fallback for chains without Arachnid
+The deployment follows a **4-step process** that requires the `CREATE2_FACTORY_ADDRESS` environment variable to be explicitly set:
+
+1. **Step 1:** Deploy Arachnid Factory (if not already deployed)
+2. **Step 2:** Deploy Safe Singleton Factory (only if Arachnid is unavailable)
+3. **Step 3:** Deploy platform libraries via CREATE2
+4. **Step 4:** Deploy all contracts with library linking
+
+Two CREATE2 factory options are supported:
+1. **Arachnid Deterministic Deployment Proxy** (`0x4e59b44847b379578588920cA78FbF26c0B4956C`) - Preferred, available on most EVM chains
+2. **Safe Singleton Factory** (`0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7`) - Fallback for chains that enforce EIP-155
 
 ### Prerequisites
 
@@ -767,9 +774,13 @@ Before deploying, ensure you have:
    ```bash
    # Required for all deployments
    PRIVATE_KEY=<deployer-eoa-private-key>
+   RPC_URL=<target-chain-rpc-endpoint>
    
-   # Optional: Override auto-detected factory
+   # Required for Steps 3-4 (must be set after factory deployment)
    CREATE2_FACTORY_ADDRESS=<factory-address>
+   
+   # Required for factory deployment (Step 1 or 2)
+   CONFIRM_DEPLOYMENT=true
    
    # Safe multisig configuration (optional, defaults to deployer as single owner)
    GUARDIAN_SAFE_OWNERS=<comma-separated-addresses>
@@ -777,7 +788,7 @@ Before deploying, ensure you have:
    DEPLOYER_SAFE_OWNERS=<comma-separated-addresses>
    DEPLOYER_SAFE_THRESHOLD=<number>
    
-   # Only for deploying Safe Singleton Factory (Script #2)
+   # Only for deploying Safe Singleton Factory (Step 2)
    SAFE_FACTORY_DEPLOYER_PRIVATE_KEY=<nonce-0-deployer-key>
    ```
 
@@ -786,13 +797,14 @@ Before deploying, ensure you have:
 
 ### Deployment Scripts
 
-The deployment system consists of three scripts:
+The deployment system consists of four scripts:
 
-| Script | Purpose |
-|--------|---------|
-| `DeployLibraries.s.sol` | Phase 1: Deploys platform libraries via CREATE2 |
-| `DeployContracts.s.sol` | Phase 2: Deploys all other contracts (with library linking) |
-| `DeploySafeSingletonFactory.s.sol` | Deploys Safe Singleton Factory on chains where no CREATE2 factory exists |
+| Script | Step | Purpose |
+|--------|------|---------|
+| `DeployArachnidFactory.s.sol` | 1 | Deploys Arachnid factory on chains where it doesn't exist |
+| `DeploySafeSingletonFactory.s.sol` | 2 | Deploys Safe Singleton Factory (only if Arachnid unavailable) |
+| `DeployLibraries.s.sol` | 3 | Deploys platform libraries via CREATE2 |
+| `DeployContracts.s.sol` | 4 | Deploys all other contracts (with library linking) |
 
 ### What Gets Deployed
 
@@ -913,110 +925,117 @@ Salts are defined in `script/config/DeploymentConfig.sol`.
 
 #### Quick Start: One-Command Deployment
 
-For convenience, use the Makefile commands that handle the two-phase deployment automatically:
+For convenience, use the shell script that handles the 4-step deployment automatically:
 
 ```bash
 # Set required environment variables
 export PRIVATE_KEY=<your-deployer-key>
 export RPC_URL=<chain-rpc-url>
+export CONFIRM_DEPLOYMENT=true  # Required for factory deployment
 
-# Dry run first (simulates without broadcasting)
-make deploy-dry-run
+# Run the full deployment
+./script/sh/deploy_all.sh
 
-# If dry run succeeds, deploy for real
-make deploy-all
-
-# With contract verification
-VERIFY=true ETHERSCAN_API_KEY=<api-key> make deploy-all
+# Or with contract verification
+VERIFY=true ETHERSCAN_API_KEY=<api-key> ./script/sh/deploy_all.sh
 ```
 
 This runs `script/sh/deploy_all.sh`, which:
-1. Deploys libraries via CREATE2
-2. Extracts library addresses from Foundry's broadcast JSON (reliable, not grep-based)
-3. Deploys all remaining contracts with proper library linking
+1. Detects or deploys a CREATE2 factory (Arachnid preferred, Safe Singleton as fallback)
+2. Sets `CREATE2_FACTORY_ADDRESS` automatically
+3. Deploys platform libraries via CREATE2
+4. Extracts library addresses from Foundry's broadcast JSON
+5. Deploys all remaining contracts with proper library linking
 
 **Prerequisites:** The script requires `jq` for JSON parsing. Install via `brew install jq` (macOS) or `apt install jq` (Linux).
 
 ---
 
-#### Manual Deployment: Standard (Arachnid Factory Available)
+#### Manual Deployment: 4-Step Process
 
-For more control, or on chains where the Arachnid factory is already deployed:
+For more control, follow the 4-step deployment process manually:
 
 ```bash
-# 1. Set environment variables
+# Set base environment variables
 export PRIVATE_KEY=<your-deployer-key>
 export RPC_URL=<chain-rpc-url>
-
-# 2. Compute deterministic library addresses (optional preview)
-forge script script/DeployLibraries.s.sol:DeployLibraries \
-  --sig "computeAddresses()" \
-  --rpc-url $RPC_URL
-
-# 3. Deploy libraries (save the --libraries output!)
-forge script script/DeployLibraries.s.sol:DeployLibraries \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  -vvvv
-
-# 4. Deploy contracts WITH library linking (use addresses from step 3)
-forge script script/DeployContracts.s.sol:DeployContracts \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  --verify \
-  --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:<ADDR> \
-  --libraries src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:<ADDR> \
-  --libraries src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:<ADDR> \
-  --libraries src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:<ADDR> \
-  -vvvv
 ```
 
-> **Note:** Replace `<ADDR>` placeholders with the actual library addresses output from step 3.
-
-#### Manual Deployment: New Chain (No CREATE2 Factory)
-
-For chains without an existing CREATE2 factory:
+**Step 1: Deploy Arachnid Factory (if not already deployed)**
 
 ```bash
-# Step 1: Fund the Safe Singleton Factory deployer
-# The deployer address is: 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
-# Send ~0.015 ETH to cover deployment gas
+# Check if Arachnid factory exists
+cast code 0x4e59b44847b379578588920cA78FbF26c0B4956C --rpc-url $RPC_URL
 
-# Step 2: Deploy Safe Singleton Factory (DRY RUN FIRST!)
+# If it returns "0x", fund the deployer and deploy:
+# Fund deployer: 0x3fab184622dc19b6109349b94811493bf2a45362 with ~0.015 ETH
+
+# Deploy (dry run first without CONFIRM_DEPLOYMENT)
+forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
+  --rpc-url $RPC_URL -vvvv
+
+# If checks pass, deploy with confirmation
+CONFIRM_DEPLOYMENT=true forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
+  --rpc-url $RPC_URL --broadcast -vvvv
+
+# Set the factory address
+export CREATE2_FACTORY_ADDRESS=0x4e59b44847b379578588920cA78FbF26c0B4956C
+```
+
+**Step 2: Deploy Safe Singleton Factory (only if Arachnid failed)**
+
+Only run this if Step 1 failed (e.g., chain enforces EIP-155):
+
+```bash
+# Fund the Safe Singleton deployer: 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
+# Send ~0.025 ETH to cover deployment gas
+
 export SAFE_FACTORY_DEPLOYER_PRIVATE_KEY=<nonce-0-key>
+
+# Deploy (dry run first)
 forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
-  --rpc-url $RPC_URL \
-  -vvvv
+  --rpc-url $RPC_URL -vvvv
 
-# Step 3: If checks pass, deploy with confirmation
+# If checks pass, deploy with confirmation
 CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  -vvvv
+  --rpc-url $RPC_URL --broadcast -vvvv
 
-# Step 4: Deploy libraries using Safe Singleton Factory
-CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
-forge script script/DeployLibraries.s.sol:DeployLibraries \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  -vvvv
-
-# Step 5: Deploy contracts WITH library linking (use addresses from step 4)
-CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
-forge script script/DeployContracts.s.sol:DeployContracts \
-  --rpc-url $RPC_URL \
-  --broadcast \
-  --verify \
-  --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:<ADDR> \
-  --libraries src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:<ADDR> \
-  --libraries src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:<ADDR> \
-  --libraries src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:<ADDR> \
-  -vvvv
+# Set the factory address
+export CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
 ```
 
 > **CRITICAL: Nonce Protection**
 > 
-> The Safe Singleton Factory must be deployed from address `0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37` with nonce 0. If the nonce is "burned" (any transaction sent from this address), the factory cannot be deployed at its deterministic address on that chain. The deployment script includes multiple safety checks to prevent accidental nonce burning.
+> The Safe Singleton Factory must be deployed from address `0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37` with nonce 0. If the nonce is "burned" (any transaction sent from this address), the factory cannot be deployed at its deterministic address on that chain.
+
+**Step 3: Deploy Platform Libraries**
+
+```bash
+# Ensure CREATE2_FACTORY_ADDRESS is set from Step 1 or 2
+echo $CREATE2_FACTORY_ADDRESS
+
+# Deploy libraries (save the --libraries output!)
+forge script script/DeployLibraries.s.sol:DeployLibraries \
+  --rpc-url $RPC_URL --broadcast -vvvv
+```
+
+**Step 4: Deploy Contracts with Library Linking**
+
+Use the library addresses output from Step 3:
+
+```bash
+forge script script/DeployContracts.s.sol:DeployContracts \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  --verify \
+  --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:<ADDR> \
+  --libraries src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:<ADDR> \
+  -vvvv
+```
+
+> **Note:** Replace `<ADDR>` placeholders with the actual library addresses output from Step 3.
 
 ### Post-Deployment Verification
 
@@ -1043,8 +1062,10 @@ After deployment, verify:
 
 | Issue | Solution |
 |-------|----------|
-| "No CREATE2 factory available" | Deploy Safe Singleton Factory first using `DeploySafeSingletonFactory.s.sol` |
-| "Deployer nonce is not 0" | The nonce has been burned. You cannot deploy Safe Singleton Factory at the deterministic address on this chain. Use a different chain or accept a non-deterministic factory address. |
+| "CREATE2_FACTORY_ADDRESS not set" | Set the `CREATE2_FACTORY_ADDRESS` environment variable to the factory address after deploying it in Step 1 or 2. |
+| "No contract at CREATE2_FACTORY_ADDRESS" | The factory hasn't been deployed yet. Run Step 1 (Arachnid) or Step 2 (Safe Singleton) first. |
+| "Arachnid factory already deployed" (in Safe Singleton script) | Use the Arachnid factory instead. Set `CREATE2_FACTORY_ADDRESS=0x4e59b44847b379578588920cA78FbF26c0B4956C`. |
+| "Deployer nonce is not 0" | The nonce has been burned. You cannot deploy Safe Singleton Factory at the deterministic address on this chain. |
 | "Already deployed" messages | This is normal! The script skips contracts that already exist at their deterministic addresses. |
 | Library address mismatch warning | You ran the script without `--libraries` flag. Re-run with the correct library addresses for deterministic deployment. |
 | OrganizationImplementation has different bytecode across chains | Libraries were not deployed via CREATE2 or `--libraries` flag was not used. Deploy libraries first, then re-deploy with proper linking. |
@@ -1054,9 +1075,10 @@ After deployment, verify:
 
 ```
 script/
-├── DeployLibraries.s.sol             # Phase 1: Deploy platform libraries (Solidity)
-├── DeployContracts.s.sol             # Phase 2: Deploy all contracts (Solidity)
-├── DeploySafeSingletonFactory.s.sol  # Safe Singleton Factory deployment (Solidity)
+├── DeployArachnidFactory.s.sol       # Step 1: Deploy Arachnid factory (Solidity)
+├── DeploySafeSingletonFactory.s.sol  # Step 2: Deploy Safe Singleton Factory (Solidity)
+├── DeployLibraries.s.sol             # Step 3: Deploy platform libraries (Solidity)
+├── DeployContracts.s.sol             # Step 4: Deploy all contracts (Solidity)
 ├── config/
 │   └── DeploymentConfig.sol          # Deterministic salts and addresses
 ├── interfaces/
@@ -1069,18 +1091,23 @@ script/
 
 **Script Details:**
 
-| Script | Phase | Description |
-|--------|-------|-------------|
-| `DeployLibraries.s.sol` | 1 | Deploys 4 platform libraries via CREATE2. Outputs `--libraries` flags for Phase 2. |
-| `DeployContracts.s.sol` | 2 | Deploys Safe infrastructure, multisigs, implementations, factories, and proxies. Must be run with `--libraries` flags. |
-| `deploy_all.sh` | 1 & 2 | Runs both phases automatically, extracting library addresses from broadcast JSON. |
+| Script | Step | Description |
+|--------|------|-------------|
+| `DeployArachnidFactory.s.sol` | 1 | Deploys Arachnid factory using pre-signed keyless transaction. Works on most chains. |
+| `DeploySafeSingletonFactory.s.sol` | 2 | Deploys Safe Singleton Factory. Only use if Arachnid deployment fails (EIP-155 chains). |
+| `DeployLibraries.s.sol` | 3 | Deploys 4 platform libraries via CREATE2. Outputs `--libraries` flags for Step 4. |
+| `DeployContracts.s.sol` | 4 | Deploys Safe infrastructure, multisigs, implementations, factories, and proxies. |
+| `deploy_all.sh` | 1-4 | Runs all steps automatically, handling factory detection/deployment and library linking. |
 
 **Shell Script Details (`script/sh/deploy_all.sh`):**
 - Uses `set -euo pipefail` for strict error handling (audit-friendly)
+- Auto-detects or deploys CREATE2 factory (Arachnid preferred, Safe Singleton fallback)
+- Exports `CREATE2_FACTORY_ADDRESS` for subsequent steps
 - Reads deployed addresses from Foundry's `broadcast/` JSON files (not grep-based)
 - Requires `jq` for reliable JSON parsing
 - Supports `DRY_RUN=true` for simulation without broadcasting
 - Supports `VERIFY=true` for contract verification
+- Requires `CONFIRM_DEPLOYMENT=true` for factory deployment
 
 ## Questions blocking further development
 *Below are questions which are currently blocking further development of the Multi-layer Security (MLS) Wallet smart contracts. We are seeking external expert opinion to answer these questions.*

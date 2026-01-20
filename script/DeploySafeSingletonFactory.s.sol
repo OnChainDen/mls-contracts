@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
+import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
@@ -126,6 +127,9 @@ contract DeploySafeSingletonFactory is Script {
         console.log(unicode"  ✅ Safe Singleton Factory deployed successfully!");
         console.log("     Address: %s", _EXPECTED_FACTORY_ADDRESS);
         console.log("");
+        console.log("  Next step: Set the factory address in your environment:");
+        console.log("    export CREATE2_FACTORY_ADDRESS=%s", _EXPECTED_FACTORY_ADDRESS);
+        console.log("");
     }
 
     /// @notice Funds the Safe Singleton Factory deployer address with ETH
@@ -177,7 +181,7 @@ contract DeploySafeSingletonFactory is Script {
     }
 
     /// @dev Runs all safety checks before deployment
-    ///      Checks: factory not deployed, deployer key valid, nonce is 0, sufficient ETH
+    ///      Checks: Arachnid not present, factory not deployed, deployer key valid, nonce is 0, sufficient ETH
     /// @return passed True if all critical checks pass
     function _runSafetyChecks() internal view returns (bool passed) {
         console.log("  Running safety checks...");
@@ -185,8 +189,22 @@ contract DeploySafeSingletonFactory is Script {
 
         bool allPassed = true;
 
-        // Check 1: Factory not already deployed
-        console.log("  [1/4] Checking if factory already deployed...");
+        // Check 0: Arachnid factory should NOT exist (prefer Arachnid over SafeSingleton)
+        console.log("  [0/5] Checking if Arachnid factory exists...");
+        if (Create2Deployer.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
+            console.log(
+                unicode"       ❌ FAIL: Arachnid factory already deployed at %s",
+                DeploymentConfig.ARACHNID_CREATE2_FACTORY
+            );
+            console.log("              Use Arachnid factory instead of Safe Singleton Factory.");
+            console.log("              Set CREATE2_FACTORY_ADDRESS=%s", DeploymentConfig.ARACHNID_CREATE2_FACTORY);
+            allPassed = false;
+        } else {
+            console.log(unicode"       ✅ PASS: Arachnid factory not present (Safe Singleton Factory needed)");
+        }
+
+        // Check 1: Safe Singleton Factory not already deployed
+        console.log("  [1/5] Checking if Safe Singleton Factory already deployed...");
         if (Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             console.log(unicode"       ❌ FAIL: Factory already deployed at %s", _EXPECTED_FACTORY_ADDRESS);
             allPassed = false;
@@ -195,7 +213,7 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         // Check 2: Deployer private key provided
-        console.log("  [2/4] Checking deployer private key...");
+        console.log("  [2/5] Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
             address deployerAddress = vm.addr(pk);
             if (deployerAddress == _EXPECTED_DEPLOYER) {
@@ -212,7 +230,7 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         // Check 3: Deployer nonce is 0
-        console.log("  [3/4] Checking deployer nonce...");
+        console.log("  [3/5] Checking deployer nonce...");
         uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER);
         if (nonce == 0) {
             console.log(unicode"       ✅ PASS: Deployer nonce is 0");
@@ -223,7 +241,7 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         // Check 4: Deployer has sufficient ETH
-        console.log("  [4/4] Checking deployer ETH balance...");
+        console.log("  [4/5] Checking deployer ETH balance...");
         uint256 balance = _EXPECTED_DEPLOYER.balance;
         if (balance >= _REQUIRED_ETH_BALANCE) {
             console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);

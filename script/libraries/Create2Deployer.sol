@@ -25,6 +25,12 @@ library Create2Deployer {
     /// @dev Error thrown when no CREATE2 factory is available
     error NoCreate2FactoryAvailable();
 
+    /// @dev Error thrown when CREATE2_FACTORY_ADDRESS env var is not set
+    error Create2FactoryEnvNotSet();
+
+    /// @dev Error thrown when factory address from env var has no code deployed
+    error Create2FactoryNotDeployed(address attempted);
+
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
     /// @param factory The CREATE2 factory address
@@ -73,32 +79,23 @@ library Create2Deployer {
         return contractAddress.code.length > 0;
     }
 
-    /// @dev Retrieves the CREATE2 factory address from environment or auto-detects one
-    ///      First checks CREATE2_FACTORY_ADDRESS env var, then falls back to auto-detection
-    ///      Prefers Arachnid factory, falls back to Safe Singleton Factory
+    /// @dev Retrieves the CREATE2 factory address from environment variable
+    ///      Requires CREATE2_FACTORY_ADDRESS to be explicitly set
     /// @param vm The Forge Vm interface for accessing environment variables
-    /// @return factory Address of the available CREATE2 factory
+    /// @return factory Address of the CREATE2 factory
     function getCreate2Factory(Vm vm) internal view returns (address factory) {
-        // First, check if explicitly provided via environment variable
+        // Require explicit factory address from environment variable
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            if (provided != address(0) && isContractDeployedAtAddress(provided)) {
-                return provided;
+            if (provided == address(0)) {
+                revert NoCreate2FactoryAvailable();
             }
-            // solhint-disable-next-line no-empty-blocks
+            if (!isContractDeployedAtAddress(provided)) {
+                revert Create2FactoryNotDeployed(provided);
+            }
+            return provided;
         } catch {
-            // Environment variable not set, fall through to auto-detection
+            revert Create2FactoryEnvNotSet();
         }
-
-        // Auto-detect available factory (prefer Arachnid as it's more widely deployed)
-        if (isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
-            return DeploymentConfig.ARACHNID_CREATE2_FACTORY;
-        }
-
-        if (isContractDeployedAtAddress(DeploymentConfig.SAFE_SINGLETON_FACTORY)) {
-            return DeploymentConfig.SAFE_SINGLETON_FACTORY;
-        }
-
-        revert NoCreate2FactoryAvailable();
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment

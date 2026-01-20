@@ -94,14 +94,13 @@ contract DeployContracts is Script {
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
      */
     function run() external {
-        // Get Deployer private key/address from environment
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
-
         // Get the CREATE2 factory that will be used for deployments
         // The address of the factory is either explicitly provided in the environment, or auto-detected
         // If auto-detected, the factory is either Arachnid or Safe Singleton Factory
         address factoryAddress = Create2Deployer.getCreate2Factory(vm);
+
+        // Validate libraries are deployed at expected addresses (critical for determinism)
+        _validateLibraryAddressesDeployedOrRevert(factoryAddress);
 
         // Get the Guardian Safe configuration from environment
         // The Guardian Safe is a multisig wallet that will be used to deploy the contracts
@@ -110,11 +109,15 @@ contract DeployContracts is Script {
         (address[] memory guardianOwners, uint256 guardianThreshold) = _getGuardianSafeConfig();
 
         // Get the Deployer Safe configuration from environment
-        // The Deployer Safe is a multisig wallet that will be used to deploy contracts via factories, and it will
-        // be the owner of the ImplementationWhitelistFactory.sol contract
+        // The Deployer Safe is a multisig wallet that will be the owner of the ImplementationWhitelistFactory.sol
+        // and OrganizationFactory.sol contracts.
         // The configuration is either explicitly provided in the environment, or defaults to the deployer as single
         // owner
         (address[] memory deployerOwners, uint256 deployerThreshold) = _getDeployerSafeConfig();
+
+        // Get Deployer private key/address from environment
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployerAddress = vm.addr(deployerPrivateKey);
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
@@ -126,9 +129,11 @@ contract DeployContracts is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy Safe Infrastructure
+        // This includes the Safe Singleton, Safe Proxy Factory, Compatibility Fallback Handler,
+        // MultiSend, MultiSendCallOnly, CreateCall, and SimulateTxAccessor contracts
         SafeInfrastructure memory safeInfra = _deploySafeInfrastructure(factoryAddress);
 
-        // Deploy Safe Multisigs (Deployer and Guardian Safes)
+        // Deploy our two Safe Multisigs (Deployer and Guardian Safes)
         SafeMultisigs memory safes = _deploySafeMultisigs({
             safeInfra: safeInfra,
             guardianOwners: guardianOwners,
@@ -136,9 +141,6 @@ contract DeployContracts is Script {
             deployerOwners: deployerOwners,
             deployerThreshold: deployerThreshold
         });
-
-        // Verify libraries are at expected addresses (critical for determinism)
-        _verifyLibraryAddresses(factoryAddress);
 
         // Deploy Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
         PlatformImplementations memory impls = _deployImplementationContracts(factoryAddress);
@@ -481,7 +483,7 @@ contract DeployContracts is Script {
 
     /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
     /// @param factory Address of the CREATE2 factory used for address computation
-    function _verifyLibraryAddresses(address factory) internal view {
+    function _validateLibraryAddressesDeployedOrRevert(address factory) internal view {
         Create2Deployer.logSection("Verify Library Addresses");
 
         address expectedPoliciesLibAddress = Create2Deployer.computeAddress(
@@ -544,6 +546,7 @@ contract DeployContracts is Script {
             console.log(unicode"  ⚠️  WARNING: Some libraries are not deployed!");
             console.log("     Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
             console.log("");
+            revert("Some libraries are not deployed!");
         }
     }
 
