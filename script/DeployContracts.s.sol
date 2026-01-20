@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Safe} from "@safe/Safe.sol";
 import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
-import {ISafe} from "@safe/interfaces/ISafe.sol";
 import {CreateCall} from "@safe/libraries/CreateCall.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
 import {Script} from "forge-std/Script.sol";
-import {ArrayUtils} from "script/libraries/ArrayUtils.sol";
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {
@@ -25,8 +21,9 @@ import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {SafeMultisigUtils} from "script/libraries/SafeMultisigUtils.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
-import {PlatformLibraries} from "script/libraries/Types.sol";
+import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeployContracts
@@ -51,17 +48,6 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
-    /// @dev Struct containing addresses for the deployed Safe infrastructure contracts
-    struct SafeInfrastructure {
-        address singletonAddress;
-        address proxyFactoryAddress;
-        address fallbackHandlerAddress;
-        address multiSendAddress;
-        address multiSendCallOnlyAddress;
-        address createCallAddress;
-        address simulateTxAccessorAddress;
-    }
-
     /// @dev Struct containing addresses for the deployed Safe multisig wallets
     struct SafeMultisigs {
         address guardianSafeAddress;
@@ -105,18 +91,24 @@ contract DeployContracts is Script {
         // Get the Guardian Safe configuration from environment
         // The Guardian Safe is a multisig wallet that will be used to deploy the contracts
         // The configuration must be explicitly provided via environment variables
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = _getGuardianSafeConfig();
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) =
+            SafeMultisigUtils.getGuardianSafeConfig(vm);
 
         // Get the Deployer Safe configuration from environment
         // The Deployer Safe is a multisig wallet that will be the owner of the ImplementationWhitelist contract
         // and OrganizationFactory contract.
         // The configuration must be explicitly provided via environment variables
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = _getDeployerSafeConfig();
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
+            SafeMultisigUtils.getDeployerSafeConfig(vm);
 
         // Validate Safe configurations and require explicit confirmation
-        _validateSafeConfigsAndConfirm(
-            guardianOwnerAddresses, guardianThreshold, deployerOwnerAddresses, deployerThreshold
-        );
+        SafeMultisigUtils.validateSafeConfigsAndConfirm({
+            vm: vm,
+            guardianOwners: guardianOwnerAddresses,
+            guardianThreshold: guardianThreshold,
+            deployerOwners: deployerOwnerAddresses,
+            deployerThreshold: deployerThreshold
+        });
 
         // Get Deployer private key/address from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -245,7 +237,7 @@ contract DeployContracts is Script {
         Logger.logSection("Safe Multisigs");
 
         // Deploy Guardian Safe
-        safes.guardianSafeAddress = _deploySafeMultisig({
+        safes.guardianSafeAddress = SafeMultisigUtils.deploySafeMultisig({
             safeInfra: safeInfra,
             ownerAddresses: guardianOwnerAddresses,
             threshold: guardianThreshold,
@@ -254,73 +246,13 @@ contract DeployContracts is Script {
         });
 
         // Deploy Deployer Safe
-        safes.deployerSafeAddress = _deploySafeMultisig({
+        safes.deployerSafeAddress = SafeMultisigUtils.deploySafeMultisig({
             safeInfra: safeInfra,
             ownerAddresses: deployerOwnerAddresses,
             threshold: deployerThreshold,
             salt: DeploymentConfig.DEPLOYER_SAFE_SALT,
             name: "Deployer Safe"
         });
-    }
-
-    /// @dev Deploys a Safe multisig wallet using SafeProxyFactory
-    /// @param safeInfra Safe infrastructure addresses needed for Safe deployment
-    /// @param ownerAddresses Array of owner addresses for the Safe
-    /// @param threshold Required number of signatures for transactions
-    /// @param salt Salt used for deterministic address computation
-    /// @param name Human-readable name for logging purposes
-    /// @return safeAddress Address of the deployed Safe proxy
-    function _deploySafeMultisig(
-        SafeInfrastructure memory safeInfra,
-        address[] memory ownerAddresses,
-        uint256 threshold,
-        bytes32 salt,
-        string memory name
-    ) internal returns (address safeAddress) {
-        // Encode the initializer for Safe.setup()
-        bytes memory initializer = abi.encodeCall(
-            ISafe.setup,
-            (
-                // owners
-                ownerAddresses,
-                // threshold
-                threshold,
-                // to - no delegate call
-                address(0),
-                // data - no delegate call data
-                "",
-                // fallbackHandler
-                safeInfra.fallbackHandlerAddress,
-                // paymentToken - ETH
-                address(0),
-                // payment - no payment
-                0,
-                // paymentReceiver
-                payable(address(0))
-            )
-        );
-
-        // Compute the salt nonce
-        uint256 saltNonce = uint256(salt);
-
-        // Compute expected address using SafeProxyFactory's CREATE2 formula
-        safeAddress = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
-
-        // Check if already deployed
-        if (Create2Utils.isContractDeployedAtAddress(safeAddress)) {
-            Logger.logDeploymentSkipped(name, safeAddress);
-            return safeAddress;
-        }
-
-        // Deploy the Safe
-        address deployedAtAddress = address(
-            SafeProxyFactory(safeInfra.proxyFactoryAddress)
-                .createProxyWithNonce(safeInfra.singletonAddress, initializer, saltNonce)
-        );
-        Logger.logDeployed(name, deployedAtAddress);
-
-        // Verify deployment matches expected address
-        require(deployedAtAddress == safeAddress, "Safe deployed at unexpected address");
     }
 
     /// @dev Deploys all implementation contracts via CREATE2
@@ -413,65 +345,6 @@ contract DeployContracts is Script {
         );
     }
 
-    /// @dev Validates Safe configurations and prompts for user confirmation
-    /// @param guardianOwners Guardian Safe owners from env
-    /// @param guardianThreshold Guardian Safe threshold from env
-    /// @param deployerOwners Deployer Safe owners from env
-    /// @param deployerThreshold Deployer Safe threshold from env
-    function _validateSafeConfigsAndConfirm(
-        address[] memory guardianOwners,
-        uint256 guardianThreshold,
-        address[] memory deployerOwners,
-        uint256 deployerThreshold
-    ) internal {
-        bool guardianIsProd = _isProductionGuardianConfig(guardianOwners, guardianThreshold);
-        bool deployerIsProd = _isProductionDeployerConfig(deployerOwners, deployerThreshold);
-
-        Logger.logWarn("Safe configuration confirmation required");
-        if (guardianIsProd) {
-            Logger.logIndented("Guardian Safe: PRODUCTION configuration");
-        } else {
-            Logger.logIndented("Guardian Safe: NON-PRODUCTION configuration");
-        }
-
-        if (deployerIsProd) {
-            Logger.logIndented("Deployer Safe: PRODUCTION configuration");
-        } else {
-            Logger.logIndented("Deployer Safe: NON-PRODUCTION configuration");
-        }
-        Logger.logEmptyLine();
-
-        string memory mode = guardianIsProd && deployerIsProd ? "PRODUCTION" : "NON-PRODUCTION";
-        string memory prompt =
-            string(abi.encodePacked("Type 'yes' to confirm you want to deploy with ", mode, " configuration: "));
-        string memory response = vm.prompt(prompt);
-        string memory trimmedResponse = vm.trim(response);
-        if (!Strings.equal(trimmedResponse, "yes")) {
-            revert("Deployment aborted: confirmation not received");
-        }
-    }
-
-    /// @dev Computes the deterministic address of a Safe proxy before deployment
-    /// @param safeInfra Safe infrastructure addresses needed for address computation
-    /// @param initializer Encoded Safe.setup() call data
-    /// @param saltNonce Nonce used for salt computation
-    /// @return The predicted Safe proxy address
-    function _computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
-        internal
-        view
-        returns (address)
-    {
-        // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-        bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
-
-        // Get the init code hash from the factory (includes singleton address)
-        bytes32 initCodeHash =
-            SafeProxyFactory(safeInfra.proxyFactoryAddress).proxyCreationCodehash(safeInfra.singletonAddress);
-
-        // Use OpenZeppelin's Create2 utility for address computation
-        return Create2.computeAddress(salt, initCodeHash, safeInfra.proxyFactoryAddress);
-    }
-
     /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
     /// @param factoryAddress Address of the CREATE2 factory used for address computation
     function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
@@ -520,48 +393,6 @@ contract DeployContracts is Script {
             Logger.logEmptyLine();
             revert("Some libraries are not deployed!");
         }
-    }
-
-    /// @dev Retrieves Guardian Safe configuration from environment variables
-    /// @return ownerAddresses Array of owner addresses for the Guardian Safe
-    /// @return threshold Required number of signatures
-    function _getGuardianSafeConfig() internal view returns (address[] memory ownerAddresses, uint256 threshold) {
-        ownerAddresses = vm.envAddress("GUARDIAN_SAFE_OWNERS", ",");
-        threshold = vm.envUint("GUARDIAN_SAFE_THRESHOLD");
-    }
-
-    /// @dev Retrieves Deployer Safe configuration from environment variables
-    /// @return ownerAddresses Array of owner addresses for the Deployer Safe
-    /// @return threshold Required number of signatures
-    function _getDeployerSafeConfig() internal view returns (address[] memory ownerAddresses, uint256 threshold) {
-        ownerAddresses = vm.envAddress("DEPLOYER_SAFE_OWNERS", ",");
-        threshold = vm.envUint("DEPLOYER_SAFE_THRESHOLD");
-    }
-
-    /// @dev Checks if the provided Guardian Safe config matches production
-    /// @param owners Guardian Safe owner addresses from environment
-    /// @param threshold Guardian Safe threshold from environment
-    /// @return True if owners and threshold match production configuration
-    function _isProductionGuardianConfig(address[] memory owners, uint256 threshold) internal pure returns (bool) {
-        if (threshold != DeploymentConfig.PROD_GUARDIAN_SAFE_THRESHOLD) {
-            return false;
-        }
-
-        address[] memory prodOwners = DeploymentConfig.getProdGuardianSafeOwners();
-        return ArrayUtils.equal(owners, prodOwners);
-    }
-
-    /// @dev Checks if the provided Deployer Safe config matches production
-    /// @param owners Deployer Safe owner addresses from environment
-    /// @param threshold Deployer Safe threshold from environment
-    /// @return True if owners and threshold match production configuration
-    function _isProductionDeployerConfig(address[] memory owners, uint256 threshold) internal pure returns (bool) {
-        if (threshold != DeploymentConfig.PROD_DEPLOYER_SAFE_THRESHOLD) {
-            return false;
-        }
-
-        address[] memory prodOwners = DeploymentConfig.getProdDeployerSafeOwners();
-        return ArrayUtils.equal(owners, prodOwners);
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag

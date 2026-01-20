@@ -14,3 +14,14 @@ struct PlatformLibraries {
     address initializationAddress;
     address accountSignatureAddress;
 }
+
+/// @dev Grouped addresses for deployed Safe infrastructure contracts
+struct SafeInfrastructure {
+    address singletonAddress;
+    address proxyFactoryAddress;
+    address fallbackHandlerAddress;
+    address multiSendAddress;
+    address multiSendCallOnlyAddress;
+    address createCallAddress;
+    address simulateTxAccessorAddress;
+}
