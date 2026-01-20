@@ -626,60 +626,22 @@ contract DeployContracts is Script {
         // If --libraries flag wasn't used, these addresses won't be embedded in the bytecode
         // forgefmt: disable-next-item
         require(
-            _bytesContainAddress(initCode, expectedLibAddresses.policy), 
+            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.policy), 
             "LibOrgPolicy not linked. Use --libraries"
         );
-        require(_bytesContainAddress(initCode, expectedLibAddresses.admin), "LibOrgAdmin not linked. Use --libraries");
+        // forgefmt: disable-next-item
         require(
-            _bytesContainAddress(initCode, expectedLibAddresses.initialization),
+            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.admin), 
+            "LibOrgAdmin not linked. Use --libraries"
+        );
+        require(
+            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.initialization),
             "LibOrgInit not linked. Use --libraries"
         );
         require(
-            _bytesContainAddress(initCode, expectedLibAddresses.accountSignature),
+            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.accountSignature),
             "LibOrgAccSig not linked. Use --libraries"
         );
-    }
-
-    /// @dev Checks if a byte array contains a specific address (20 bytes)
-    /// @param data The byte array to search in
-    /// @param addr The address to search for
-    /// @return True if the address is found in the byte array
-    function _bytesContainAddress(bytes memory data, address addr) internal pure returns (bool) {
-        // Case: the byte array is too short to contain the address
-        if (data.length < 20) {
-            return false;
-        }
-
-        // Convert the address to a 20-byte bytes array
-        bytes20 addrBytes = bytes20(addr);
-
-        // Calculate the maximum index we need to iterate to
-        // This is 20 bytes less than the length of the byte array, because each iteration of the loop
-        // will check the next 20 bytes of `data` to see if they match `addrBytes`
-        uint256 maxIndex = data.length - 20;
-
-        // Iterate over each byte in `data` one by one, checking the next 20 bytes of `data` to
-        // see if they match `addrBytes`
-        for (uint256 i = 0; i <= maxIndex; ++i) {
-            bool found = true;
-
-            // Iterate through the next 20 bytes of `data` to see if each of the next 20 bytes match `addrBytes`
-            for (uint256 j = 0; j < 20 && found; ++j) {
-                // Case: one of the next 20 bytes of `data` does not match `addrBytes`
-                if (data[i + j] != addrBytes[j]) {
-                    found = false;
-                    break;
-                }
-            }
-
-            // Case: we found the address in the byte array
-            if (found) {
-                return true;
-            }
-        }
-
-        // Case: we didn't find the address in the byte array
-        return false;
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary
