@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
@@ -32,17 +33,28 @@ contract DeployLibraries is Script {
      * @notice Main entry point - deploys all platform libraries via CREATE2
      */
     function run() external {
+        // Get the deployer private key/address from the environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
+
+        // Get the CREATE2 factory that will be used for deployments
+        // The address of the factory is explicitly provided in the environment
         address factoryAddress = Create2Deployer.getCreate2Factory(vm);
 
+        // Log the deployment header
+        // This includes the factory type, chain ID, and deployer EOA address
         Create2Deployer.logDeploymentHeader(factoryAddress, block.chainid);
         Logger.logKeyAddress("Deployer EOA", deployerAddress);
         Logger.logKeyValue("Mode", "Library Deployment Only");
         Logger.logEmptyLine();
 
+        // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
+
+        // Deploy platform libraries
         PlatformLibraries memory libs = _deployPlatformLibraries(factoryAddress);
+
+        // Stop broadcasting transactions
         vm.stopBroadcast();
 
         Create2Deployer.logDeploymentComplete();
@@ -55,22 +67,29 @@ contract DeployLibraries is Script {
      * @dev Use this to preview the --libraries flags before any deployment
      */
     function computeAddresses() external view {
+        // Get the CREATE2 factory that will be used for deployments
+        // The address of the factory is explicitly provided in the environment
         address factoryAddress = Create2Deployer.getCreate2Factory(vm);
 
+        // Log the header
+        // This includes the factory type, chain ID, and deployed library addresses
         Logger.logBoxHeader("Computed Deterministic Library Addresses");
         Logger.logKeyAddress("CREATE2 Factory", factoryAddress);
         Logger.logKeyUint("Chain ID", block.chainid);
         Logger.logEmptyLine();
 
+        // Compute the expected library addresses
         PlatformLibraries memory expectedLibAddresses =
             LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
 
+        // Log the computed library addresses
         Logger.logKeyAddress("LibOrganizationPolicy", expectedLibAddresses.policyAddress);
         Logger.logKeyAddress("LibOrganizationAdmin", expectedLibAddresses.adminAddress);
         Logger.logKeyAddress("LibOrganizationInitialization", expectedLibAddresses.initializationAddress);
         Logger.logKeyAddress("LibOrganizationAccountSignature", expectedLibAddresses.accountSignatureAddress);
         Logger.logEmptyLine();
 
+        // Print the forge --libraries command with library addresses
         _printLibrariesCommand(expectedLibAddresses);
     }
 
@@ -137,13 +156,21 @@ contract DeployLibraries is Script {
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
             string.concat(
-                "  --libraries ", DeploymentConfig.LIB_ORG_POLICY_PATH, ":", _toHexString(libs.policyAddress), " \\"
+                "  --libraries ",
+                DeploymentConfig.LIB_ORG_POLICY_PATH,
+                ":",
+                Strings.toHexString(libs.policyAddress),
+                " \\"
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
             string.concat(
-                "  --libraries ", DeploymentConfig.LIB_ORG_ADMIN_PATH, ":", _toHexString(libs.adminAddress), " \\"
+                "  --libraries ",
+                DeploymentConfig.LIB_ORG_ADMIN_PATH,
+                ":",
+                Strings.toHexString(libs.adminAddress),
+                " \\"
             )
         );
         Logger.logIndented(
@@ -152,7 +179,7 @@ contract DeployLibraries is Script {
                 "  --libraries ",
                 DeploymentConfig.LIB_ORG_INIT_PATH,
                 ":",
-                _toHexString(libs.initializationAddress),
+                Strings.toHexString(libs.initializationAddress),
                 " \\"
             )
         );
@@ -162,27 +189,12 @@ contract DeployLibraries is Script {
                 "  --libraries ",
                 DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
                 ":",
-                _toHexString(libs.accountSignatureAddress),
+                Strings.toHexString(libs.accountSignatureAddress),
                 " \\"
             )
         );
         Logger.logIndented("  -vvvv");
         Logger.logEmptyLine();
         Logger.logBoxFooter();
-    }
-
-    /// @dev Converts an address to a hex string
-    /// @param targetAddress The address to convert
-    /// @return The address as a hex string
-    function _toHexString(address targetAddress) internal pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(42);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < 20; ++i) {
-            str[2 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i)) >> 4)];
-            str[3 + i * 2] = alphabet[uint8(uint160(targetAddress) >> (8 * (19 - i))) & 0x0f];
-        }
-        return string(str);
     }
 }
