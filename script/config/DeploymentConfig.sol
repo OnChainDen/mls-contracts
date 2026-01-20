@@ -41,21 +41,6 @@ library DeploymentConfig {
     /// @dev Salt for Deployer Safe (used as factory deployer)
     bytes32 internal constant DEPLOYER_SAFE_SALT = keccak256("den.mls-wallet.safe.deployer.v1");
 
-    /// @dev Production Guardian Safe owner addresses
-    address internal constant PROD_GUARDIAN_SAFE_OWNER_1 = address(0x1111111111111111111111111111111111111111);
-    address internal constant PROD_GUARDIAN_SAFE_OWNER_2 = address(0x2222222222222222222222222222222222222222);
-
-    /// @dev Production Guardian Safe signature threshold
-    uint256 internal constant PROD_GUARDIAN_SAFE_THRESHOLD = 2;
-
-    /// @dev Production Deployer Safe owner addresses
-    address internal constant PROD_DEPLOYER_SAFE_OWNER_1 = address(0x3333333333333333333333333333333333333333);
-    address internal constant PROD_DEPLOYER_SAFE_OWNER_2 = address(0x4444444444444444444444444444444444444444);
-    address internal constant PROD_DEPLOYER_SAFE_OWNER_3 = address(0x5555555555555555555555555555555555555555);
-
-    /// @dev Production Deployer Safe signature threshold
-    uint256 internal constant PROD_DEPLOYER_SAFE_THRESHOLD = 2;
-
     /// @dev Salt for LibOrganizationPolicy library deployment
     bytes32 internal constant LIB_ORG_POLICY_SALT = keccak256("den.mls-wallet.organization.lib.policy.v1");
 
@@ -103,6 +88,21 @@ library DeploymentConfig {
     ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
     string internal constant LIB_ORG_ACCOUNT_SIG_PATH =
         "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature";
+
+    /// @dev Production Guardian Safe owner addresses
+    address internal constant PROD_GUARDIAN_SAFE_OWNER_1 = address(0x1111111111111111111111111111111111111111);
+    address internal constant PROD_GUARDIAN_SAFE_OWNER_2 = address(0x2222222222222222222222222222222222222222);
+
+    /// @dev Production Guardian Safe signature threshold
+    uint256 internal constant PROD_GUARDIAN_SAFE_THRESHOLD = 2;
+
+    /// @dev Production Deployer Safe owner addresses
+    address internal constant PROD_DEPLOYER_SAFE_OWNER_1 = address(0x3333333333333333333333333333333333333333);
+    address internal constant PROD_DEPLOYER_SAFE_OWNER_2 = address(0x4444444444444444444444444444444444444444);
+    address internal constant PROD_DEPLOYER_SAFE_OWNER_3 = address(0x5555555555555555555555555555555555555555);
+
+    /// @dev Production Deployer Safe signature threshold
+    uint256 internal constant PROD_DEPLOYER_SAFE_THRESHOLD = 2;
 
     /// @dev Returns the production Guardian Safe owner addresses
     /// @return owners Array of owner addresses
