@@ -31,24 +31,28 @@ import {ContractType} from "types/CommonTypes.sol";
 /**
  * @title DeployContracts
  * @notice Deploys all platform contracts (Safe infrastructure, implementations, factories, proxies)
- * @dev This script must be run AFTER DeployLibraries.s.sol with the --libraries flags.
+ * @dev This script must be run AFTER the DeployLibraries.s.sol script and must use the --libraries flags pointing
+ *      to the library addresses outputted by the DeployLibraries.s.sol script.
  *
- *      IMPORTANT: For deterministic deployment, run with --libraries flags pointing to
- *      the library addresses output by DeployLibraries.s.sol.
+ *      This script also requires that the CREATE2 factory is already deployed and provided via the
+ *      CREATE2_FACTORY_ADDRESS environment variable.
  *
- *      Deployment Order:
+ *      This script will revert if the libraries are not deployed at the expected addresses and if the
+ *      script is not run with the --libraries flags pointing to the library addresses outputted by the
+ *      DeployLibraries.s.sol script.
+ *
+ *      This script deploys the following contracts in the following order:
  *      1. Safe Infrastructure (Safe singleton, proxy factory, handlers, libraries)
  *      2. Safe Multisigs (Guardian Safe, Deployer Safe)
- *      3. Verify Platform Libraries (ensure they're at expected addresses)
- *      4. Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
- *      5. Factory Contracts (OrganizationFactory, WhitelistFactory)
- *      6. ImplementationWhitelistProxy (via factory)
- *      7. Whitelist initial implementations
+ *      3. Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
+ *      4. Factory Contracts (OrganizationFactory, WhitelistFactory)
+ *      5. ImplementationWhitelistProxy (via factory)
+ *      6. Whitelist initial implementations
  *
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
-    /// @dev Grouped addresses for Safe infrastructure contracts
+    /// @dev Struct containing addresses for the deployed Safe infrastructure contracts
     struct SafeInfrastructure {
         address singleton;
         address proxyFactory;
@@ -59,26 +63,26 @@ contract DeployContracts is Script {
         address simulateTxAccessor;
     }
 
-    /// @dev Grouped addresses for Safe multisig wallets
+    /// @dev Struct containing addresses for the deployed Safe multisig wallets
     struct SafeMultisigs {
         address guardianSafe;
         address deployerSafe;
     }
 
-    /// @dev Grouped addresses for platform implementation contracts
+    /// @dev Struct containing addresses for the deployed platform implementation contracts
     struct PlatformImplementations {
         address organization;
         address account;
         address whitelist;
     }
 
-    /// @dev Grouped addresses for platform factory contracts
+    /// @dev Struct containing addresses for the deployed platform factory contracts
     struct PlatformFactories {
         address organization;
         address whitelist;
     }
 
-    /// @dev Complete set of all deployed contract addresses
+    /// @dev Struct containing addresses for all deployed contracts
     struct DeployedContracts {
         SafeInfrastructure safeInfra;
         SafeMultisigs safes;
@@ -101,7 +105,7 @@ contract DeployContracts is Script {
         _validateLibrariesLinkedOrRevert(factoryAddress);
 
         // Validate libraries are deployed at expected addresses (critical for determinism)
-        _validateLibraryAddressesDeployedOrRevert(factoryAddress);
+        _validateLibrariesDeployedOrRevert(factoryAddress);
 
         // Get the Guardian Safe configuration from environment
         // The Guardian Safe is a multisig wallet that will be used to deploy the contracts
@@ -172,51 +176,56 @@ contract DeployContracts is Script {
         _logDeployedAddresses(contracts);
     }
 
-    /// @dev Deploys all Safe infrastructure contracts via CREATE2
-    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @dev Deploys all Safe infrastructure contracts via CREATE2 if not already deployed
+    ///      Note that we deploy our own Safe infrastructure contracts, rather than the ones deployed by the Safe team,
+    ///      because we need to ensure that the addresses of the deployed contracts are deterministic and consistent.
+    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return safeInfra Struct containing all deployed Safe infrastructure addresses
-    function _deploySafeInfrastructure(address factory) internal returns (SafeInfrastructure memory safeInfra) {
+    function _deploySafeInfrastructure(address factoryAddress) internal returns (SafeInfrastructure memory safeInfra) {
         Create2Deployer.logSection("Safe Infrastructure");
 
-        // Deploy Safe Singleton (master copy)
+        // Deploy Safe Singleton (master copy) if not already deployed
         (safeInfra.singleton,) = Create2Deployer.deployIfNotExists(
-            factory, DeploymentConfig.SAFE_SINGLETON_SALT, type(Safe).creationCode, "Safe Singleton"
+            factoryAddress, DeploymentConfig.SAFE_SINGLETON_SALT, type(Safe).creationCode, "Safe Singleton"
         );
 
-        // Deploy Safe Proxy Factory
+        // Deploy Safe Proxy Factory if not already deployed
         (safeInfra.proxyFactory,) = Create2Deployer.deployIfNotExists(
-            factory, DeploymentConfig.SAFE_PROXY_FACTORY_SALT, type(SafeProxyFactory).creationCode, "SafeProxyFactory"
+            factoryAddress,
+            DeploymentConfig.SAFE_PROXY_FACTORY_SALT,
+            type(SafeProxyFactory).creationCode,
+            "SafeProxyFactory"
         );
 
-        // Deploy Compatibility Fallback Handler
+        // Deploy Compatibility Fallback Handler if not already deployed
         (safeInfra.fallbackHandler,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.SAFE_FALLBACK_HANDLER_SALT,
             type(CompatibilityFallbackHandler).creationCode,
             "CompatibilityFallbackHandler"
         );
 
-        // Deploy MultiSend
+        // Deploy MultiSend if not already deployed
         (safeInfra.multiSend,) = Create2Deployer.deployIfNotExists(
-            factory, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
+            factoryAddress, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
         );
 
-        // Deploy MultiSendCallOnly
+        // Deploy MultiSendCallOnly if not already deployed
         (safeInfra.multiSendCallOnly,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.SAFE_MULTISEND_CALL_ONLY_SALT,
             type(MultiSendCallOnly).creationCode,
             "MultiSendCallOnly"
         );
 
-        // Deploy CreateCall
+        // Deploy CreateCall if not already deployed
         (safeInfra.createCall,) = Create2Deployer.deployIfNotExists(
-            factory, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
+            factoryAddress, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
         );
 
-        // Deploy SimulateTxAccessor
+        // Deploy SimulateTxAccessor if not already deployed
         (safeInfra.simulateTxAccessor,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.SAFE_SIMULATE_TX_ACCESSOR_SALT,
             type(SimulateTxAccessor).creationCode,
             "SimulateTxAccessor"
@@ -264,38 +273,47 @@ contract DeployContracts is Script {
     /// @param threshold Required number of signatures for transactions
     /// @param salt Salt used for deterministic address computation
     /// @param name Human-readable name for logging purposes
-    /// @return safe Address of the deployed Safe proxy
+    /// @return safeAddress Address of the deployed Safe proxy
     function _deploySafeMultisig(
         SafeInfrastructure memory safeInfra,
         address[] memory owners,
         uint256 threshold,
         bytes32 salt,
         string memory name
-    ) internal returns (address safe) {
+    ) internal returns (address safeAddress) {
         // Encode the initializer for Safe.setup()
         bytes memory initializer = abi.encodeCall(
             ISafe.setup,
             (
+                // owners
                 owners,
+                // threshold
                 threshold,
-                address(0), // to - no delegate call
-                "", // data - no delegate call data
+                // to - no delegate call
+                address(0),
+                // data - no delegate call data
+                "",
+                // fallbackHandler
                 safeInfra.fallbackHandler,
-                address(0), // paymentToken - ETH
-                0, // payment - no payment
-                payable(address(0)) // paymentReceiver
+                // paymentToken - ETH
+                address(0),
+                // payment - no payment
+                0,
+                // paymentReceiver
+                payable(address(0))
             )
         );
 
+        // Compute the salt nonce
         uint256 saltNonce = uint256(salt);
 
         // Compute expected address using SafeProxyFactory's CREATE2 formula
-        safe = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
+        safeAddress = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
 
         // Check if already deployed
-        if (Create2Deployer.isContractDeployedAtAddress(safe)) {
-            Logger.logDeploymentSkipped(name, safe);
-            return safe;
+        if (Create2Deployer.isContractDeployedAtAddress(safeAddress)) {
+            Logger.logDeploymentSkipped(name, safeAddress);
+            return safeAddress;
         }
 
         // Deploy the Safe
@@ -305,18 +323,21 @@ contract DeployContracts is Script {
         Logger.logDeployed(name, deployedAtAddress);
 
         // Verify deployment matches expected address
-        require(deployedAtAddress == safe, "Safe deployed at unexpected address");
+        require(deployedAtAddress == safeAddress, "Safe deployed at unexpected address");
     }
 
     /// @dev Deploys all implementation contracts via CREATE2
-    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return impls Struct containing all deployed implementation addresses
-    function _deployImplementationContracts(address factory) internal returns (PlatformImplementations memory impls) {
+    function _deployImplementationContracts(address factoryAddress)
+        internal
+        returns (PlatformImplementations memory impls)
+    {
         Create2Deployer.logSection("Implementation Contracts");
 
         // Deploy ImplementationWhitelistImplementation
         (impls.whitelist,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.WHITELIST_IMPL_SALT,
             type(ImplementationWhitelistImplementation).creationCode,
             "ImplementationWhitelistImplementation"
@@ -325,7 +346,7 @@ contract DeployContracts is Script {
         // Deploy OrganizationImplementation
         // IMPORTANT: This script must be run with --libraries flag for deterministic deployment
         (impls.organization,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.ORG_IMPL_SALT,
             type(OrganizationImplementation).creationCode,
             "OrganizationImplementation"
@@ -333,7 +354,7 @@ contract DeployContracts is Script {
 
         // Deploy AccountImplementation
         (impls.account,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.ACCOUNT_IMPL_SALT,
             type(AccountImplementation).creationCode,
             "AccountImplementation"
@@ -341,10 +362,10 @@ contract DeployContracts is Script {
     }
 
     /// @dev Deploys factory contracts via CREATE2
-    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @param deployerSafe Address of the Deployer Safe to authorize as factory deployer
     /// @return factories Struct containing deployed factory addresses
-    function _deployFactoryContracts(address factory, address deployerSafe)
+    function _deployFactoryContracts(address factoryAddress, address deployerSafe)
         internal
         returns (PlatformFactories memory factories)
     {
@@ -355,7 +376,7 @@ contract DeployContracts is Script {
             abi.encodePacked(type(ImplementationWhitelistFactory).creationCode, abi.encode(deployerSafe));
 
         (factories.whitelist,) = Create2Deployer.deployIfNotExists(
-            factory, DeploymentConfig.WHITELIST_FACTORY_SALT, whitelistFactoryInitCode, "WhitelistFactory"
+            factoryAddress, DeploymentConfig.WHITELIST_FACTORY_SALT, whitelistFactoryInitCode, "WhitelistFactory"
         );
 
         // Deploy OrganizationFactory with deployerSafe as the deployer
@@ -363,7 +384,7 @@ contract DeployContracts is Script {
             abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafe));
 
         (factories.organization,) = Create2Deployer.deployIfNotExists(
-            factory, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
+            factoryAddress, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
         );
     }
 
@@ -481,22 +502,26 @@ contract DeployContracts is Script {
     }
 
     /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
-    /// @param factory Address of the CREATE2 factory used for address computation
-    function _validateLibraryAddressesDeployedOrRevert(address factory) internal view {
+    /// @param factoryAddress Address of the CREATE2 factory used for address computation
+    function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
         Create2Deployer.logSection("Verify Library Addresses");
 
+        // Compute expected library addresses
+        // These addresses are dependent on which CREATE2 factory is used for deployment
         address expectedPoliciesLibAddress = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
         );
 
         address expectedAdminLibAddress = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
         address expectedInitLibAddress = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
         address expectedAccSigLibAddress = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
+            factoryAddress,
+            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            type(LibOrganizationAccountSignature).creationCode
         );
 
         bool allDeployed = true;
@@ -506,28 +531,28 @@ contract DeployContracts is Script {
             Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            Logger.logPass("LibOrganizationPolicy deployed");
+            Logger.logPass("LibOrganizationPolicy deployed at expected address");
         }
 
         if (!Create2Deployer.isContractDeployedAtAddress(expectedAdminLibAddress)) {
             Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            Logger.logPass("LibOrganizationAdmin deployed");
+            Logger.logPass("LibOrganizationAdmin deployed at expected address");
         }
 
         if (!Create2Deployer.isContractDeployedAtAddress(expectedInitLibAddress)) {
             Logger.logFail("LibOrganizationInitialization NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            Logger.logPass("LibOrganizationInitialization deployed");
+            Logger.logPass("LibOrganizationInitialization deployed at expected address");
         }
 
         if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSigLibAddress)) {
             Logger.logFail("LibOrganizationAccountSignature NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            Logger.logPass("LibOrganizationAccountSignature deployed");
+            Logger.logPass("LibOrganizationAccountSignature deployed at expected address");
         }
 
         if (!allDeployed) {
@@ -600,33 +625,36 @@ contract DeployContracts is Script {
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
-    /// @param factory Address of the CREATE2 factory used for computing expected library addresses
-    function _validateLibrariesLinkedOrRevert(address factory) internal pure {
+    /// @param factoryAddress Address of the CREATE2 factory used for computing expected library addresses
+    function _validateLibrariesLinkedOrRevert(address factoryAddress) internal pure {
         // Get the creation code of OrganizationImplementation
         // If libraries aren't linked via --libraries flag, the creation code will have
         // placeholder bytes instead of the actual library addresses
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
         // Compute expected library addresses
-        address policyLib = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+        // These addresses are dependent on which CREATE2 factory is used for deployment
+        address expectedPolicyLibAddress = Create2Deployer.computeAddress(
+            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
         );
-        address adminLib = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+        address expectedAdminLibAddress = Create2Deployer.computeAddress(
+            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
-        address initLib = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+        address expectedInitLibAddress = Create2Deployer.computeAddress(
+            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
-        address accSigLib = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
+        address expectedAccSigLibAddress = Create2Deployer.computeAddress(
+            factoryAddress,
+            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            type(LibOrganizationAccountSignature).creationCode
         );
 
         // Verify each library address appears in the creation code
         // If --libraries flag wasn't used, these addresses won't be embedded in the bytecode
-        require(_bytesContainAddress(initCode, policyLib), "LibOrgPolicy not linked. Use --libraries");
-        require(_bytesContainAddress(initCode, adminLib), "LibOrgAdmin not linked. Use --libraries");
-        require(_bytesContainAddress(initCode, initLib), "LibOrgInit not linked. Use --libraries");
-        require(_bytesContainAddress(initCode, accSigLib), "LibOrgAccSig not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, expectedPolicyLibAddress), "LibOrgPolicy not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, expectedAdminLibAddress), "LibOrgAdmin not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, expectedInitLibAddress), "LibOrgInit not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, expectedAccSigLibAddress), "LibOrgAccSig not linked. Use --libraries");
     }
 
     /// @dev Checks if a byte array contains a specific address (20 bytes)
@@ -643,21 +671,24 @@ contract DeployContracts is Script {
         bytes20 addrBytes = bytes20(addr);
 
         // Calculate the maximum index we need to iterate to
-        // This is 20 bytes less than the length of the byte array, because
-        // we need to leave room for the next 20 bytes of `data` to match `addrBytes`
+        // This is 20 bytes less than the length of the byte array, because each iteration of the loop
+        // will check the next 20 bytes of `data` to see if they match `addrBytes`
         uint256 maxIndex = data.length - 20;
 
-        // Iterate over each byte in `data` one by one
+        // Iterate over each byte in `data` one by one, checking the next 20 bytes of `data` to
+        // see if they match `addrBytes`
         for (uint256 i = 0; i <= maxIndex; ++i) {
             bool found = true;
 
-            // Iterate through next 20 bytes of `data` to see
-            // if each of the next 20 bytes match `addrBytes`
+            // Iterate through the next 20 bytes of `data` to see if each of the next 20 bytes match `addrBytes`
             for (uint256 j = 0; j < 20 && found; ++j) {
+                // Case: one of the next 20 bytes of `data` does not match `addrBytes`
                 if (data[i + j] != addrBytes[j]) {
                     found = false;
+                    break;
                 }
             }
+
             // Case: we found the address in the byte array
             if (found) {
                 return true;

@@ -18,17 +18,17 @@ import {Logger} from "script/libraries/Logger.sol";
 library Create2Deployer {
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
-    /// @param factory The CREATE2 factory address
+    /// @param factoryAddress The CREATE2 factory address
     /// @param salt The deployment salt
     /// @param initCode The contract creation bytecode
     /// @param name Human-readable name for logging
     /// @return deployedAtAddress The address of the deployed (or existing) contract
     /// @return wasDeployed True if newly deployed, false if already existed
-    function deployIfNotExists(address factory, bytes32 salt, bytes memory initCode, string memory name)
+    function deployIfNotExists(address factoryAddress, bytes32 salt, bytes memory initCode, string memory name)
         internal
         returns (address deployedAtAddress, bool wasDeployed)
     {
-        address predicted = computeAddress(factory, salt, initCode);
+        address predicted = computeAddress(factoryAddress, salt, initCode);
 
         // Case: Contract already deployed
         // Log message and skip deployment
@@ -38,7 +38,7 @@ library Create2Deployer {
         }
 
         // Deploy using appropriate factory interface
-        deployedAtAddress = _deploy(factory, salt, initCode);
+        deployedAtAddress = _deploy(factoryAddress, salt, initCode);
 
         // Case: Deployment failed
         require(deployedAtAddress != address(0), string.concat("Deployment failed: ", name));
@@ -61,8 +61,8 @@ library Create2Deployer {
     /// @dev Retrieves the CREATE2 factory address from environment variable
     ///      Requires CREATE2_FACTORY_ADDRESS to be explicitly set
     /// @param vm The Forge Vm interface for accessing environment variables
-    /// @return factory Address of the CREATE2 factory
-    function getCreate2Factory(Vm vm) internal view returns (address factory) {
+    /// @return factoryAddress Address of the CREATE2 factory
+    function getCreate2Factory(Vm vm) internal view returns (address factoryAddress) {
         // Require explicit factory address from environment variable
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
             require(provided != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
@@ -124,25 +124,29 @@ library Create2Deployer {
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment
-    /// @param factory The CREATE2 factory address
+    /// @param factoryAddress The CREATE2 factory address
     /// @param salt The deployment salt
     /// @param initCode The contract creation bytecode (including constructor args)
     /// @return The predicted deployment address
-    function computeAddress(address factory, bytes32 salt, bytes memory initCode) internal pure returns (address) {
-        return Create2.computeAddress(salt, keccak256(initCode), factory);
+    function computeAddress(address factoryAddress, bytes32 salt, bytes memory initCode)
+        internal
+        pure
+        returns (address)
+    {
+        return Create2.computeAddress(salt, keccak256(initCode), factoryAddress);
     }
 
     /// @dev Logs deployment summary header with factory and chain info
-    /// @param factory The factory being used
+    /// @param factoryAddress The factory being used
     /// @param chainId The chain ID
-    function logDeploymentHeader(address factory, uint256 chainId) internal pure {
+    function logDeploymentHeader(address factoryAddress, uint256 chainId) internal pure {
         Logger.logBoxHeader("Den Multi-layer Security (MLS) Wallet - Contract Deployment");
         Logger.logKeyUint("Chain ID", chainId);
-        Logger.logKeyAddress("CREATE2 Factory", factory);
+        Logger.logKeyAddress("CREATE2 Factory", factoryAddress);
 
-        if (factory == DeploymentConfig.ARACHNID_CREATE2_FACTORY) {
+        if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY) {
             Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
-        } else if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
+        } else if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
             Logger.logKeyValue("Factory Type", "Safe Singleton Factory");
         } else {
             Logger.logKeyValue("Factory Type", "Custom");
@@ -195,17 +199,20 @@ library Create2Deployer {
 
     /// @dev Deploys using the appropriate factory interface based on factory address
     ///      Detects factory type and uses correct parameter ordering
-    /// @param factory The CREATE2 factory address
+    /// @param factoryAddress The CREATE2 factory address
     /// @param salt The deployment salt
     /// @param initCode The contract creation bytecode
     /// @return deployedAtAddress The deployed contract address
-    function _deploy(address factory, bytes32 salt, bytes memory initCode) private returns (address deployedAtAddress) {
+    function _deploy(address factoryAddress, bytes32 salt, bytes memory initCode)
+        private
+        returns (address deployedAtAddress)
+    {
         // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
-        if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
-            deployedAtAddress = address(ISafeSingletonFactory(factory).deploy(initCode, salt));
+        if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
+            deployedAtAddress = address(ISafeSingletonFactory(factoryAddress).deploy(initCode, salt));
         } else {
             // Arachnid and similar: deploy(bytes32, bytes)
-            deployedAtAddress = ICreate2Factory(factory).deploy(salt, initCode);
+            deployedAtAddress = ICreate2Factory(factoryAddress).deploy(salt, initCode);
         }
     }
 

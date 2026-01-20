@@ -40,15 +40,15 @@ contract DeployLibraries is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
-        address factory = Create2Deployer.getCreate2Factory(vm);
+        address factoryAddress = Create2Deployer.getCreate2Factory(vm);
 
-        Create2Deployer.logDeploymentHeader(factory, block.chainid);
+        Create2Deployer.logDeploymentHeader(factoryAddress, block.chainid);
         Logger.logKeyAddress("Deployer EOA", deployerAddress);
         Logger.logKeyValue("Mode", "Library Deployment Only");
         Logger.logEmptyLine();
 
         vm.startBroadcast(deployerPrivateKey);
-        PlatformLibraries memory libs = _deployPlatformLibraries(factory);
+        PlatformLibraries memory libs = _deployPlatformLibraries(factoryAddress);
         vm.stopBroadcast();
 
         Create2Deployer.logDeploymentComplete();
@@ -61,14 +61,14 @@ contract DeployLibraries is Script {
      * @dev Use this to preview the --libraries flags before any deployment
      */
     function computeAddresses() external view {
-        address factory = Create2Deployer.getCreate2Factory(vm);
+        address factoryAddress = Create2Deployer.getCreate2Factory(vm);
 
         Logger.logBoxHeader("Computed Deterministic Library Addresses");
-        Logger.logKeyAddress("CREATE2 Factory", factory);
+        Logger.logKeyAddress("CREATE2 Factory", factoryAddress);
         Logger.logKeyUint("Chain ID", block.chainid);
         Logger.logEmptyLine();
 
-        PlatformLibraries memory libs = _computeLibraryAddresses(factory);
+        PlatformLibraries memory libs = _computeLibraryAddresses(factoryAddress);
 
         Logger.logKeyAddress("LibOrganizationPolicy", libs.policy);
         Logger.logKeyAddress("LibOrganizationAdmin", libs.admin);
@@ -80,14 +80,14 @@ contract DeployLibraries is Script {
     }
 
     /// @dev Deploys all platform libraries via CREATE2 for deterministic addresses
-    /// @param factory Address of the CREATE2 factory to use for deployments
+    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return libs Struct containing all deployed library addresses
-    function _deployPlatformLibraries(address factory) internal returns (PlatformLibraries memory libs) {
+    function _deployPlatformLibraries(address factoryAddress) internal returns (PlatformLibraries memory libs) {
         Create2Deployer.logSection("Platform Libraries (CREATE2)");
 
         // Deploy LibOrganizationPolicy
         (libs.policy,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.LIB_ORG_POLICY_SALT,
             type(LibOrganizationPolicy).creationCode,
             "LibOrganizationPolicy"
@@ -95,7 +95,7 @@ contract DeployLibraries is Script {
 
         // Deploy LibOrganizationAdmin
         (libs.admin,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.LIB_ORG_ADMIN_SALT,
             type(LibOrganizationAdmin).creationCode,
             "LibOrganizationAdmin"
@@ -103,7 +103,7 @@ contract DeployLibraries is Script {
 
         // Deploy LibOrganizationInitialization
         (libs.initialization,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.LIB_ORG_INIT_SALT,
             type(LibOrganizationInitialization).creationCode,
             "LibOrganizationInitialization"
@@ -111,7 +111,7 @@ contract DeployLibraries is Script {
 
         // Deploy LibOrganizationAccountSignature
         (libs.accountSignature,) = Create2Deployer.deployIfNotExists(
-            factory,
+            factoryAddress,
             DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
@@ -119,20 +119,22 @@ contract DeployLibraries is Script {
     }
 
     /// @dev Computes deterministic library addresses without deploying
-    /// @param factory Address of the CREATE2 factory to use for address computation
+    /// @param factoryAddress Address of the CREATE2 factory to use for address computation
     /// @return libs Struct containing computed library addresses
-    function _computeLibraryAddresses(address factory) internal pure returns (PlatformLibraries memory libs) {
+    function _computeLibraryAddresses(address factoryAddress) internal pure returns (PlatformLibraries memory libs) {
         libs.policy = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
         );
         libs.admin = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
         libs.initialization = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );
         libs.accountSignature = Create2Deployer.computeAddress(
-            factory, DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
+            factoryAddress,
+            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            type(LibOrganizationAccountSignature).creationCode
         );
     }
 
