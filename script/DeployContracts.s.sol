@@ -87,12 +87,6 @@ contract DeployContracts is Script {
         address whitelistProxy;
     }
 
-    /// @dev Custom error for when a Safe is deployed at an unexpected address
-    error SafeDeployedAtUnexpectedAddress(address expected, address actual);
-
-    /// @dev Custom error for when libraries are not linked via --libraries flag
-    error LibrariesNotLinked(string message);
-
     /**
      * @notice Main entry point for the deployment script
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
@@ -311,9 +305,7 @@ contract DeployContracts is Script {
         Logger.logDeployed(name, deployedAtAddress);
 
         // Verify deployment matches expected address
-        if (deployedAtAddress != safe) {
-            revert SafeDeployedAtUnexpectedAddress(safe, deployedAtAddress);
-        }
+        require(deployedAtAddress == safe, "Safe deployed at unexpected address");
     }
 
     /// @dev Deploys all implementation contracts via CREATE2
@@ -605,18 +597,10 @@ contract DeployContracts is Script {
 
         // Verify each library address appears in the creation code
         // If --libraries flag wasn't used, these addresses won't be embedded in the bytecode
-        if (!_bytesContainAddress(initCode, policyLib)) {
-            revert LibrariesNotLinked("LibOrganizationPolicy not linked. Run with --libraries flag.");
-        }
-        if (!_bytesContainAddress(initCode, adminLib)) {
-            revert LibrariesNotLinked("LibOrganizationAdmin not linked. Run with --libraries flag.");
-        }
-        if (!_bytesContainAddress(initCode, initLib)) {
-            revert LibrariesNotLinked("LibOrganizationInitialization not linked. Run with --libraries flag.");
-        }
-        if (!_bytesContainAddress(initCode, accSigLib)) {
-            revert LibrariesNotLinked("LibOrganizationAccountSignature not linked. Run with --libraries flag.");
-        }
+        require(_bytesContainAddress(initCode, policyLib), "LibOrgPolicy not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, adminLib), "LibOrgAdmin not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, initLib), "LibOrgInit not linked. Use --libraries");
+        require(_bytesContainAddress(initCode, accSigLib), "LibOrgAccSig not linked. Use --libraries");
     }
 
     /// @dev Checks if a byte array contains a specific address (20 bytes)

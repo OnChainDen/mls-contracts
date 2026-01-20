@@ -42,12 +42,6 @@ contract DeploySafeSingletonFactory is Script {
     /// @dev Required ETH balance for the deployer (gas price * gas limit * 2 for buffer)
     uint256 internal constant _REQUIRED_ETH_BALANCE = _DEPLOYMENT_GAS_PRICE * _DEPLOYMENT_GAS_LIMIT * 2;
 
-    /// @dev Custom error for when the deployer address does not match expected
-    error DeployerAddressMismatch(address expected, address actual);
-
-    /// @dev Custom error for when deployed address does not match expected
-    error DeployedAddressMismatch(address expected, address actual);
-
     /**
      * @notice Main entry point for the deployment script
      * @dev Runs comprehensive safety checks before allowing deployment
@@ -63,7 +57,7 @@ contract DeploySafeSingletonFactory is Script {
 
         if (!allChecksPassed) {
             Create2Deployer.logSafetyChecksFailed();
-            revert Create2Deployer.SafetyChecksFailed();
+            revert("Safety checks failed");
         }
 
         if (!confirmDeployment) {
@@ -88,7 +82,7 @@ contract DeploySafeSingletonFactory is Script {
             Logger.logKeyAddress("  ", _EXPECTED_DEPLOYER);
             Logger.logIndented("Got:");
             Logger.logKeyAddress("  ", deployerAddress);
-            revert DeployerAddressMismatch(_EXPECTED_DEPLOYER, deployerAddress);
+            revert("Deployer address does not match expected address");
         }
 
         vm.startBroadcast(deployerPrivateKey);
@@ -100,7 +94,7 @@ contract DeploySafeSingletonFactory is Script {
         // Verify deployment
         if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             Logger.logFail("ERROR: Factory deployment failed!");
-            revert Create2Deployer.FactoryDeploymentFailed();
+            revert("Factory deployment failed");
         }
 
         Create2Deployer.logFactoryDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS);
@@ -142,15 +136,13 @@ contract DeploySafeSingletonFactory is Script {
             deployedAtAddress := create(0, add(factoryBytecode, 0x20), mload(factoryBytecode))
         }
 
-        if (deployedAtAddress == address(0)) {
-            revert Create2Deployer.FactoryDeploymentFailed();
-        }
+        require(deployedAtAddress != address(0), "Factory deployment failed");
 
         // The address should match due to CREATE from nonce 0
         if (deployedAtAddress != _EXPECTED_FACTORY_ADDRESS) {
             Logger.logKeyAddress("Deployed at", deployedAtAddress);
             Logger.logKeyAddress("Expected", _EXPECTED_FACTORY_ADDRESS);
-            revert DeployedAddressMismatch(_EXPECTED_FACTORY_ADDRESS, deployedAtAddress);
+            revert("Deployed address does not match expected factory address");
         }
     }
 

@@ -77,7 +77,7 @@ contract DeployArachnidFactory is Script {
 
         if (!allChecksPassed) {
             Create2Deployer.logSafetyChecksFailed();
-            revert Create2Deployer.SafetyChecksFailed();
+            revert("Safety checks failed");
         }
 
         if (!confirmDeployment) {
@@ -99,7 +99,7 @@ contract DeployArachnidFactory is Script {
             Logger.logFail("ERROR: Factory deployment failed!");
             Logger.logIndented("This chain may enforce EIP-155 replay protection.");
             Logger.logIndented("Use DeploySafeSingletonFactory.s.sol instead.");
-            revert Create2Deployer.FactoryDeploymentFailed();
+            revert("Factory deployment failed");
         }
 
         Create2Deployer.logFactoryDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS);

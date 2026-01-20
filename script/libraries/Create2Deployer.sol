@@ -16,27 +16,6 @@ import {Logger} from "script/libraries/Logger.sol";
  * @author Den Technologies Inc
  */
 library Create2Deployer {
-    /// @dev Error thrown when deployment fails
-    error DeploymentFailed(string name, bytes32 salt);
-
-    /// @dev Error thrown when deployed address doesn't match predicted
-    error AddressMismatch(address predicted, address actual);
-
-    /// @dev Error thrown when no CREATE2 factory is available
-    error NoCreate2FactoryAvailable();
-
-    /// @dev Error thrown when CREATE2_FACTORY_ADDRESS env var is not set
-    error Create2FactoryEnvNotSet();
-
-    /// @dev Error thrown when factory address from env var has no code deployed
-    error Create2FactoryNotDeployed(address attempted);
-
-    /// @dev Error thrown when safety checks fail during factory deployment
-    error SafetyChecksFailed();
-
-    /// @dev Error thrown when factory deployment fails
-    error FactoryDeploymentFailed();
-
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
     /// @param factory The CREATE2 factory address
@@ -62,16 +41,10 @@ library Create2Deployer {
         deployedAtAddress = _deploy(factory, salt, initCode);
 
         // Case: Deployment failed
-        // Revert with error
-        if (deployedAtAddress == address(0)) {
-            revert DeploymentFailed(name, salt);
-        }
+        require(deployedAtAddress != address(0), string.concat("Deployment failed: ", name));
 
         // Case: Deployment address mismatch
-        // Revert with error
-        if (deployedAtAddress != predicted) {
-            revert AddressMismatch(predicted, deployedAtAddress);
-        }
+        require(deployedAtAddress == predicted, "Deployed address does not match predicted address");
 
         // Log success
         Logger.logDeployed(name, deployedAtAddress);
@@ -92,15 +65,11 @@ library Create2Deployer {
     function getCreate2Factory(Vm vm) internal view returns (address factory) {
         // Require explicit factory address from environment variable
         try vm.envAddress("CREATE2_FACTORY_ADDRESS") returns (address provided) {
-            if (provided == address(0)) {
-                revert NoCreate2FactoryAvailable();
-            }
-            if (!isContractDeployedAtAddress(provided)) {
-                revert Create2FactoryNotDeployed(provided);
-            }
+            require(provided != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
+            require(isContractDeployedAtAddress(provided), "CREATE2 factory not deployed at provided address");
             return provided;
         } catch {
-            revert Create2FactoryEnvNotSet();
+            revert("CREATE2_FACTORY_ADDRESS environment variable not set");
         }
     }
 
