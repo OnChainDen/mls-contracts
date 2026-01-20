@@ -40,8 +40,13 @@ format:
 lint:
 	forge fmt --check
 	forge lint
+	# Run solhint linter on our core source contracts
+	# This will automatically use our core config, located at `.solhint.json`.
 	npx solhint 'src/**/*.sol'
-	npx solhint 'script/**/*.sol' --config .solhint.script.json
+	# Run solhint linter on our scripts
+	# This will automatically use our script-specific config, located at `script/.solhint.json`. 
+	# This config "inherits" from our core config, but overrides rules that shouldn't apply to scripts.
+	npx solhint 'script/**/*.sol'
 
 # Analyze: Static Analysis (Slither)
 analyze:
