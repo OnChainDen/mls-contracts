@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Logger} from "script/libraries/Logger.sol";
 
 /**
  * @title DeploySafeSingletonFactory
@@ -82,9 +83,11 @@ contract DeploySafeSingletonFactory is Script {
 
         // Final verification that deployer matches expected
         if (deployerAddress != _EXPECTED_DEPLOYER) {
-            console.log(unicode"  ❌ ERROR: Deployer address mismatch!");
-            console.log("     Expected: %s", _EXPECTED_DEPLOYER);
-            console.log("     Got: %s", deployerAddress);
+            Logger.logFail("ERROR: Deployer address mismatch!");
+            Logger.logIndented("Expected:");
+            Logger.logKeyAddress("  ", _EXPECTED_DEPLOYER);
+            Logger.logIndented("Got:");
+            Logger.logKeyAddress("  ", deployerAddress);
             revert DeployerAddressMismatch(_EXPECTED_DEPLOYER, deployerAddress);
         }
 
@@ -96,7 +99,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Verify deployment
         if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
-            console.log(unicode"  ❌ ERROR: Factory deployment failed!");
+            Logger.logFail("ERROR: Factory deployment failed!");
             revert Create2Deployer.FactoryDeploymentFailed();
         }
 
@@ -109,17 +112,17 @@ contract DeploySafeSingletonFactory is Script {
     function fundDeployer() external {
         uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        console.log("");
-        console.log("  Funding Safe Singleton Factory deployer...");
-        console.log("  Target: %s", _EXPECTED_DEPLOYER);
-        console.log("  Amount: %s wei", _REQUIRED_ETH_BALANCE);
-        console.log("");
+        Logger.logEmptyLine();
+        Logger.logIndented("Funding Safe Singleton Factory deployer...");
+        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER);
+        Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
+        Logger.logEmptyLine();
 
         vm.startBroadcast(fundingPrivateKey);
         payable(_EXPECTED_DEPLOYER).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
-        console.log(unicode"  ✅ Deployer funded successfully");
+        Logger.logPass("Deployer funded successfully");
     }
 
     /// @dev Deploys the Safe Singleton Factory using inline assembly
@@ -145,8 +148,8 @@ contract DeploySafeSingletonFactory is Script {
 
         // The address should match due to CREATE from nonce 0
         if (deployedAtAddress != _EXPECTED_FACTORY_ADDRESS) {
-            console.log("  Deployed at: %s", deployedAtAddress);
-            console.log("  Expected: %s", _EXPECTED_FACTORY_ADDRESS);
+            Logger.logKeyAddress("Deployed at", deployedAtAddress);
+            Logger.logKeyAddress("Expected", _EXPECTED_FACTORY_ADDRESS);
             revert DeployedAddressMismatch(_EXPECTED_FACTORY_ADDRESS, deployedAtAddress);
         }
     }
@@ -155,70 +158,66 @@ contract DeploySafeSingletonFactory is Script {
     ///      Checks: Arachnid not present, factory not deployed, deployer key valid, nonce is 0, sufficient ETH
     /// @return passed True if all critical checks pass
     function _runSafetyChecks() internal view returns (bool passed) {
-        console.log("  Running safety checks...");
-        console.log("");
+        Logger.logSafetyChecksStart();
 
         bool allPassed = true;
 
         // Check 0: Arachnid factory should NOT exist (prefer Arachnid over SafeSingleton)
-        console.log("  [0/4] Checking if Arachnid factory exists...");
+        Logger.logCheckStart("0/4", "Checking if Arachnid factory exists...");
         if (Create2Deployer.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
-            console.log(
-                unicode"       ❌ FAIL: Arachnid factory already deployed at %s",
-                DeploymentConfig.ARACHNID_CREATE2_FACTORY
-            );
-            console.log("              Use Arachnid factory instead of Safe Singleton Factory.");
-            console.log("              Set CREATE2_FACTORY_ADDRESS=%s", DeploymentConfig.ARACHNID_CREATE2_FACTORY);
+            Logger.logCheckFail("Arachnid factory already deployed");
+            Logger.logCheckDetail("Use Arachnid factory instead of Safe Singleton Factory.");
+            Logger.logCheckDetail("Set CREATE2_FACTORY_ADDRESS to the Arachnid factory address.");
             allPassed = false;
         } else {
-            console.log(unicode"       ✅ PASS: Arachnid factory not present (Safe Singleton Factory needed)");
+            Logger.logCheckPass("Arachnid factory not present (Safe Singleton Factory needed)");
         }
 
         // Check 1: Safe Singleton Factory not already deployed
         if (Create2Deployer.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory", "1/4")) {
             // Factory already deployed - not a failure, but deployment not needed
             // However for Safe, we treat this as a failure since the factory existing means nothing to do
-            console.log(unicode"       ❌ FAIL: Factory already deployed");
+            Logger.logCheckFail("Factory already deployed");
             allPassed = false;
         }
 
         // Check 2: Deployer private key provided and matches expected address
-        console.log("  [2/4] Checking deployer private key...");
+        Logger.logCheckStart("2/4", "Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
             address deployerAddress = vm.addr(pk);
             if (deployerAddress == _EXPECTED_DEPLOYER) {
-                console.log(unicode"       ✅ PASS: Deployer key matches expected address");
+                Logger.logCheckPass("Deployer key matches expected address");
             } else {
-                console.log(unicode"       ❌ FAIL: Deployer address mismatch");
-                console.log("              Expected: %s", _EXPECTED_DEPLOYER);
-                console.log("              Got: %s", deployerAddress);
+                Logger.logCheckFail("Deployer address mismatch");
+                Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER constant");
+                Logger.logCheckDetail("Got: different address from provided key");
                 allPassed = false;
             }
         } catch {
-            console.log(unicode"       ❌ FAIL: SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set");
+            Logger.logCheckFail("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set");
             allPassed = false;
         }
 
         // Check 3: Deployer nonce is 0
-        console.log("  [3/4] Checking deployer nonce...");
+        Logger.logCheckStart("3/4", "Checking deployer nonce...");
         uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER);
         if (nonce == 0) {
-            console.log(unicode"       ✅ PASS: Deployer nonce is 0");
+            Logger.logCheckPass("Deployer nonce is 0");
         } else {
-            console.log(unicode"       ❌ FAIL: Deployer nonce is %s (expected 0)", nonce);
-            console.log("              CRITICAL: Nonce has been burned! Cannot deploy factory.");
+            Logger.logCheckFail("Deployer nonce is not 0 (expected 0)");
+            Logger.logCheckDetail("CRITICAL: Nonce has been burned! Cannot deploy factory.");
             allPassed = false;
         }
 
         // Check 4: Deployer has sufficient ETH (warning only, not a failure)
-        console.log("  [4/4] Checking deployer ETH balance...");
+        Logger.logCheckStart("4/4", "Checking deployer ETH balance...");
         uint256 balance = _EXPECTED_DEPLOYER.balance;
         if (balance >= _REQUIRED_ETH_BALANCE) {
-            console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);
+            Logger.logCheckPass("Deployer has sufficient ETH");
         } else {
-            console.log(unicode"       ⚠️  WARN: Deployer may need more ETH");
-            console.log("              Current: %s wei", balance);
-            console.log("              Recommended: %s wei", _REQUIRED_ETH_BALANCE);
+            Logger.logCheckWarn("Deployer may need more ETH");
+            Logger.logCheckDetail("Current balance may be insufficient.");
+            Logger.logCheckDetail("Recommended: fund deployer before proceeding.");
             // This is a warning, not a failure
         }
 

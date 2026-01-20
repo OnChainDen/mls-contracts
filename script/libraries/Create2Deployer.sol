@@ -3,10 +3,10 @@ pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {console} from "forge-std/console.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {ICreate2Factory, ISafeSingletonFactory} from "script/interfaces/ICreate2Factory.sol";
+import {Logger} from "script/libraries/Logger.sol";
 
 /**
  * @title Create2Deployer
@@ -54,7 +54,7 @@ library Create2Deployer {
         // Case: Contract already deployed
         // Log message and skip deployment
         if (isContractDeployedAtAddress(predicted)) {
-            console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, predicted);
+            Logger.logDeploymentSkipped(name, predicted);
             return (predicted, false);
         }
 
@@ -74,7 +74,7 @@ library Create2Deployer {
         }
 
         // Log success
-        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAtAddress);
+        Logger.logDeployed(name, deployedAtAddress);
         return (deployedAtAddress, true);
     }
 
@@ -114,13 +114,13 @@ library Create2Deployer {
         view
         returns (bool alreadyDeployed)
     {
-        console.log("  [%s] Checking if %s already deployed...", checkNumber, factoryName);
+        Logger.logCheckStart(checkNumber, string.concat("Checking if ", factoryName, " already deployed..."));
         if (isContractDeployedAtAddress(factoryAddress)) {
-            console.log(unicode"       ⏭️  INFO: Factory already deployed at %s", factoryAddress);
-            console.log("              No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
+            Logger.logCheckInfo(string.concat("Factory already deployed at ", _addressToString(factoryAddress)));
+            Logger.logCheckDetail("No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
             return true;
         } else {
-            console.log(unicode"       ✅ PASS: Factory not yet deployed");
+            Logger.logCheckPass("Factory not yet deployed");
             return false;
         }
     }
@@ -137,19 +137,19 @@ library Create2Deployer {
         string memory checkNumber,
         string memory scriptName
     ) internal view returns (bool hasSufficientBalance) {
-        console.log("  [%s] Checking deployer ETH balance...", checkNumber);
+        Logger.logCheckStart(checkNumber, "Checking deployer ETH balance...");
         uint256 balance = deployer.balance;
         if (balance >= requiredBalance) {
-            console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);
+            Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", _uintToString(balance), " wei)"));
             return true;
         } else {
-            console.log(unicode"       ❌ FAIL: Deployer needs more ETH");
-            console.log("              Current: %s wei", balance);
-            console.log("              Required: %s wei", requiredBalance);
-            console.log("");
-            console.log("              Fund the deployer by running:");
-            console.log("                forge script %s --sig \"fundDeployer()\" \\", scriptName);
-            console.log("                  --rpc-url $RPC_URL --broadcast");
+            Logger.logCheckFail("Deployer needs more ETH");
+            Logger.logCheckDetail(string.concat("Current: ", _uintToString(balance), " wei"));
+            Logger.logCheckDetail(string.concat("Required: ", _uintToString(requiredBalance), " wei"));
+            Logger.logEmptyLine();
+            Logger.logCheckDetail("Fund the deployer by running:");
+            Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
+            Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
             return false;
         }
     }
@@ -167,41 +167,31 @@ library Create2Deployer {
     /// @param factory The factory being used
     /// @param chainId The chain ID
     function logDeploymentHeader(address factory, uint256 chainId) internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Den Multi-layer Security (MLS) Wallet - Contract Deployment");
-        console.log("================================================================================");
-        console.log("  Chain ID: %s", chainId);
-        console.log("  CREATE2 Factory: %s", factory);
+        Logger.logBoxHeader("Den Multi-layer Security (MLS) Wallet - Contract Deployment");
+        Logger.logKeyUint("Chain ID", chainId);
+        Logger.logKeyAddress("CREATE2 Factory", factory);
 
         if (factory == DeploymentConfig.ARACHNID_CREATE2_FACTORY) {
-            console.log("  Factory Type: Arachnid Deterministic Deployment Proxy");
+            Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
         } else if (factory == DeploymentConfig.SAFE_SINGLETON_FACTORY) {
-            console.log("  Factory Type: Safe Singleton Factory");
+            Logger.logKeyValue("Factory Type", "Safe Singleton Factory");
         } else {
-            console.log("  Factory Type: Custom");
+            Logger.logKeyValue("Factory Type", "Custom");
         }
 
-        console.log("================================================================================");
-        console.log("");
+        Logger.logBoxFooter();
+        Logger.logEmptyLine();
     }
 
     /// @dev Logs a section header for organized console output
     /// @param sectionName The name of the deployment section
     function logSection(string memory sectionName) internal pure {
-        console.log("");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("  %s", sectionName);
-        console.log("--------------------------------------------------------------------------------");
+        Logger.logSection(sectionName);
     }
 
     /// @dev Logs deployment completion summary
     function logDeploymentComplete() internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log(unicode"  ✅ Deployment Complete!");
-        console.log("================================================================================");
-        console.log("");
+        Logger.logDeploymentComplete();
     }
 
     // =========================================================================
@@ -211,50 +201,27 @@ library Create2Deployer {
     /// @dev Logs a factory deployment script header
     /// @param factoryName Human-readable name of the factory being deployed
     function logFactoryDeploymentHeader(string memory factoryName) internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  %s - Factory Deployment", factoryName);
-        console.log("================================================================================");
-        console.log("");
+        Logger.logBoxHeader(string.concat(factoryName, " - Factory Deployment"));
+        Logger.logEmptyLine();
     }
 
     /// @dev Logs the dry run mode message with script-specific instructions
     /// @param scriptName Name of the script for the CONFIRM_DEPLOYMENT command
     /// @param additionalNotes Optional additional notes to display (can be empty string)
     function logDryRunMode(string memory scriptName, string memory additionalNotes) internal pure {
-        console.log("");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("  DRY RUN MODE");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("");
-        console.log("  All safety checks passed. To deploy, run with:");
-        console.log("");
-        console.log("    CONFIRM_DEPLOYMENT=true forge script %s ...", scriptName);
-        console.log("");
-        if (bytes(additionalNotes).length > 0) {
-            console.log("  %s", additionalNotes);
-            console.log("");
-        }
+        Logger.logDryRunMode(scriptName, additionalNotes);
     }
 
     /// @dev Logs a successful factory deployment with next steps
     /// @param factoryName Human-readable name of the deployed factory
     /// @param factoryAddress Address where the factory was deployed
     function logFactoryDeploymentSuccess(string memory factoryName, address factoryAddress) internal pure {
-        console.log("");
-        console.log(unicode"  ✅ %s deployed successfully!", factoryName);
-        console.log("     Address: %s", factoryAddress);
-        console.log("");
-        console.log("  Next step: Set the factory address in your environment:");
-        console.log("    export CREATE2_FACTORY_ADDRESS=%s", factoryAddress);
-        console.log("");
+        Logger.logDeploymentSuccess(factoryName, factoryAddress, "CREATE2_FACTORY_ADDRESS");
     }
 
     /// @dev Logs safety checks failed message
     function logSafetyChecksFailed() internal pure {
-        console.log("");
-        console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
-        console.log("");
+        Logger.logSafetyChecksFailed();
     }
 
     /// @dev Deploys using the appropriate factory interface based on factory address
@@ -271,5 +238,42 @@ library Create2Deployer {
             // Arachnid and similar: deploy(bytes32, bytes)
             deployedAtAddress = ICreate2Factory(factory).deploy(salt, initCode);
         }
+    }
+
+    /// @dev Converts an address to a string for logging
+    /// @param addr The address to convert
+    /// @return The address as a hex string
+    function _addressToString(address addr) private pure returns (string memory) {
+        bytes memory alphabet = "0123456789abcdef";
+        bytes memory str = new bytes(42);
+        str[0] = "0";
+        str[1] = "x";
+        for (uint256 i = 0; i < 20; ++i) {
+            str[2 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)) >> 4)];
+            str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i))) & 0x0f];
+        }
+        return string(str);
+    }
+
+    /// @dev Converts a uint256 to a string for logging
+    /// @param value The value to convert
+    /// @return The value as a decimal string
+    function _uintToString(uint256 value) private pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            ++digits;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            --digits;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }

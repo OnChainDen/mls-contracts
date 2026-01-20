@@ -10,7 +10,7 @@ import {CreateCall} from "@safe/libraries/CreateCall.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {ImplementationWhitelistFactory} from "implementation-whitelist/ImplementationWhitelistFactory.sol";
@@ -25,6 +25,7 @@ import {LibOrganizationInitialization} from "organization/libraries/LibOrganizat
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Logger} from "script/libraries/Logger.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
 /**
@@ -122,8 +123,8 @@ contract DeployContracts is Script {
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
         Create2Deployer.logDeploymentHeader(factoryAddress, block.chainid);
-        console.log("  Deployer EOA: %s", deployerAddress);
-        console.log("");
+        Logger.logKeyAddress("Deployer EOA", deployerAddress);
+        Logger.logEmptyLine();
 
         // Start broadcasting transactions
         vm.startBroadcast(deployerPrivateKey);
@@ -293,7 +294,7 @@ contract DeployContracts is Script {
 
         // Check if already deployed
         if (Create2Deployer.isContractDeployedAtAddress(safe)) {
-            console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, safe);
+            Logger.logDeploymentSkipped(name, safe);
             return safe;
         }
 
@@ -301,7 +302,7 @@ contract DeployContracts is Script {
         address deployedAtAddress = address(
             SafeProxyFactory(safeInfra.proxyFactory).createProxyWithNonce(safeInfra.singleton, initializer, saltNonce)
         );
-        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, deployedAtAddress);
+        Logger.logDeployed(name, deployedAtAddress);
 
         // Verify deployment matches expected address
         if (deployedAtAddress != safe) {
@@ -386,14 +387,14 @@ contract DeployContracts is Script {
 
         // Check if already deployed
         if (Create2Deployer.isContractDeployedAtAddress(expectedProxy)) {
-            console.log(unicode"  ⏭️  SKIPPED: ImplementationWhitelistProxy (already at %s)", expectedProxy);
+            Logger.logDeploymentSkippedWithReason("ImplementationWhitelistProxy already deployed");
             return expectedProxy;
         }
 
         // Note: This call must come from the deployerSafe
-        console.log("  Note: WhitelistProxy deployment requires deployerSafe to call the factory");
-        console.log("  For initial deployment, configure ImplementationWhitelistFactory with EOA deployer");
-        console.log("  Or execute this step via the Deployer Safe multisig");
+        Logger.logIndented("Note: WhitelistProxy deployment requires deployerSafe to call the factory");
+        Logger.logIndented("For initial deployment, configure ImplementationWhitelistFactory with EOA deployer");
+        Logger.logIndented("Or execute this step via the Deployer Safe multisig");
 
         // If deployer matches factory's DEPLOYER_ADDRESS, deploy directly
         try ImplementationWhitelistFactory(factories.whitelist)
@@ -404,10 +405,10 @@ contract DeployContracts is Script {
             ) returns (
             address deployedAtAddress
         ) {
-            console.log(unicode"  ✅ DEPLOYED: ImplementationWhitelistProxy at %s", deployedAtAddress);
+            Logger.logDeployed("ImplementationWhitelistProxy", deployedAtAddress);
             return deployedAtAddress;
         } catch {
-            console.log(unicode"  ⚠️  SKIPPED: Deployment requires authorization from deployerSafe");
+            Logger.logWarn("SKIPPED: Deployment requires authorization from deployerSafe");
             return expectedProxy;
         }
     }
@@ -419,7 +420,7 @@ contract DeployContracts is Script {
         Create2Deployer.logSection("Whitelist Implementations");
 
         if (whitelistProxy == address(0) || !Create2Deployer.isContractDeployedAtAddress(whitelistProxy)) {
-            console.log("  Skipping: WhitelistProxy not deployed yet");
+            Logger.logIndented("Skipping: WhitelistProxy not deployed yet");
             return;
         }
 
@@ -430,7 +431,7 @@ contract DeployContracts is Script {
         bool accWhitelisted = whitelist.isImplementationWhitelisted(ContractType.Account, impls.account);
 
         if (orgWhitelisted && accWhitelisted) {
-            console.log(unicode"  ⏭️  SKIPPED: Implementations already whitelisted");
+            Logger.logDeploymentSkippedWithReason("Implementations already whitelisted");
             return;
         }
 
@@ -443,9 +444,9 @@ contract DeployContracts is Script {
             toWhitelist = new address[](1);
             toWhitelist[0] = impls.organization;
             try whitelist.whitelistImplementations(ContractType.Organization, toWhitelist, empty) {
-                console.log(unicode"  ✅ Whitelisted OrganizationImplementation");
+                Logger.logPass("Whitelisted OrganizationImplementation");
             } catch {
-                console.log(unicode"  ⚠️  Failed to whitelist OrganizationImplementation (requires owner)");
+                Logger.logWarn("Failed to whitelist OrganizationImplementation (requires owner)");
             }
         }
 
@@ -454,9 +455,9 @@ contract DeployContracts is Script {
             toWhitelist = new address[](1);
             toWhitelist[0] = impls.account;
             try whitelist.whitelistImplementations(ContractType.Account, toWhitelist, empty) {
-                console.log(unicode"  ✅ Whitelisted AccountImplementation");
+                Logger.logPass("Whitelisted AccountImplementation");
             } catch {
-                console.log(unicode"  ⚠️  Failed to whitelist AccountImplementation (requires owner)");
+                Logger.logWarn("Failed to whitelist AccountImplementation (requires owner)");
             }
         }
     }
@@ -504,48 +505,38 @@ contract DeployContracts is Script {
 
         // Check if libraries are deployed at expected addresses
         if (!Create2Deployer.isContractDeployedAtAddress(expectedPoliciesLibAddress)) {
-            console.log(
-                unicode"  ❌ LibOrganizationPolicy NOT DEPLOYED at expected address: %s", expectedPoliciesLibAddress
-            );
+            Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            console.log(unicode"  ✅ LibOrganizationPolicy at %s", expectedPoliciesLibAddress);
+            Logger.logPass("LibOrganizationPolicy deployed");
         }
 
         if (!Create2Deployer.isContractDeployedAtAddress(expectedAdminLibAddress)) {
-            console.log(
-                unicode"  ❌ LibOrganizationAdmin NOT DEPLOYED at expected address: %s", expectedAdminLibAddress
-            );
+            Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            console.log(unicode"  ✅ LibOrganizationAdmin at %s", expectedAdminLibAddress);
+            Logger.logPass("LibOrganizationAdmin deployed");
         }
 
         if (!Create2Deployer.isContractDeployedAtAddress(expectedInitLibAddress)) {
-            console.log(
-                unicode"  ❌ LibOrganizationInitialization NOT DEPLOYED at expected address: %s",
-                expectedInitLibAddress
-            );
+            Logger.logFail("LibOrganizationInitialization NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            console.log(unicode"  ✅ LibOrganizationInitialization at %s", expectedInitLibAddress);
+            Logger.logPass("LibOrganizationInitialization deployed");
         }
 
         if (!Create2Deployer.isContractDeployedAtAddress(expectedAccSigLibAddress)) {
-            console.log(
-                unicode"  ❌ LibOrganizationAccountSignature NOT DEPLOYED at expected address: %s",
-                expectedAccSigLibAddress
-            );
+            Logger.logFail("LibOrganizationAccountSignature NOT DEPLOYED at expected address");
             allDeployed = false;
         } else {
-            console.log(unicode"  ✅ LibOrganizationAccountSignature at %s", expectedAccSigLibAddress);
+            Logger.logPass("LibOrganizationAccountSignature deployed");
         }
 
         if (!allDeployed) {
-            console.log("");
-            console.log(unicode"  ⚠️  WARNING: Some libraries are not deployed!");
-            console.log("     Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
-            console.log("");
+            Logger.logEmptyLine();
+            Logger.logWarn("WARNING: Some libraries are not deployed!");
+            Logger.logIndented("Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
+            Logger.logEmptyLine();
             revert("Some libraries are not deployed!");
         }
     }
@@ -563,7 +554,7 @@ contract DeployContracts is Script {
             owners = new address[](1);
             owners[0] = vm.addr(vm.envUint("PRIVATE_KEY"));
             threshold = 1;
-            console.log("  Warning: Using default Guardian Safe config (deployer as single owner)");
+            Logger.logWarn("Using default Guardian Safe config (deployer as single owner)");
         }
     }
 
@@ -580,44 +571,41 @@ contract DeployContracts is Script {
             owners = new address[](1);
             owners[0] = vm.addr(vm.envUint("PRIVATE_KEY"));
             threshold = 1;
-            console.log("  Warning: Using default Deployer Safe config (deployer as single owner)");
+            Logger.logWarn("Using default Deployer Safe config (deployer as single owner)");
         }
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary
     /// @param contracts Complete set of deployed contract addresses
     function _logDeployedAddresses(DeployedContracts memory contracts) internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Deployed Contract Addresses");
-        console.log("================================================================================");
-        console.log("");
-        console.log("  Safe Infrastructure:");
-        console.log("    Safe Singleton:              %s", contracts.safeInfra.singleton);
-        console.log("    SafeProxyFactory:            %s", contracts.safeInfra.proxyFactory);
-        console.log("    FallbackHandler:             %s", contracts.safeInfra.fallbackHandler);
-        console.log("    MultiSend:                   %s", contracts.safeInfra.multiSend);
-        console.log("    MultiSendCallOnly:           %s", contracts.safeInfra.multiSendCallOnly);
-        console.log("    CreateCall:                  %s", contracts.safeInfra.createCall);
-        console.log("    SimulateTxAccessor:          %s", contracts.safeInfra.simulateTxAccessor);
-        console.log("");
-        console.log("  Safe Multisigs:");
-        console.log("    Guardian Safe:               %s", contracts.safes.guardianSafe);
-        console.log("    Deployer Safe:               %s", contracts.safes.deployerSafe);
-        console.log("");
-        console.log("  Platform Implementations:");
-        console.log("    OrganizationImplementation:  %s", contracts.implementations.organization);
-        console.log("    AccountImplementation:       %s", contracts.implementations.account);
-        console.log("    WhitelistImplementation:     %s", contracts.implementations.whitelist);
-        console.log("");
-        console.log("  Platform Factories:");
-        console.log("    OrganizationFactory:         %s", contracts.factories.organization);
-        console.log("    WhitelistFactory:            %s", contracts.factories.whitelist);
-        console.log("");
-        console.log("  Platform Proxies:");
-        console.log("    WhitelistProxy:              %s", contracts.whitelistProxy);
-        console.log("");
-        console.log("================================================================================");
+        Logger.logBoxHeader("Deployed Contract Addresses");
+        Logger.logEmptyLine();
+        Logger.logIndented("Safe Infrastructure:");
+        Logger.logKeyAddress("  Safe Singleton", contracts.safeInfra.singleton);
+        Logger.logKeyAddress("  SafeProxyFactory", contracts.safeInfra.proxyFactory);
+        Logger.logKeyAddress("  FallbackHandler", contracts.safeInfra.fallbackHandler);
+        Logger.logKeyAddress("  MultiSend", contracts.safeInfra.multiSend);
+        Logger.logKeyAddress("  MultiSendCallOnly", contracts.safeInfra.multiSendCallOnly);
+        Logger.logKeyAddress("  CreateCall", contracts.safeInfra.createCall);
+        Logger.logKeyAddress("  SimulateTxAccessor", contracts.safeInfra.simulateTxAccessor);
+        Logger.logEmptyLine();
+        Logger.logIndented("Safe Multisigs:");
+        Logger.logKeyAddress("  Guardian Safe", contracts.safes.guardianSafe);
+        Logger.logKeyAddress("  Deployer Safe", contracts.safes.deployerSafe);
+        Logger.logEmptyLine();
+        Logger.logIndented("Platform Implementations:");
+        Logger.logKeyAddress("  OrganizationImplementation", contracts.implementations.organization);
+        Logger.logKeyAddress("  AccountImplementation", contracts.implementations.account);
+        Logger.logKeyAddress("  WhitelistImplementation", contracts.implementations.whitelist);
+        Logger.logEmptyLine();
+        Logger.logIndented("Platform Factories:");
+        Logger.logKeyAddress("  OrganizationFactory", contracts.factories.organization);
+        Logger.logKeyAddress("  WhitelistFactory", contracts.factories.whitelist);
+        Logger.logEmptyLine();
+        Logger.logIndented("Platform Proxies:");
+        Logger.logKeyAddress("  WhitelistProxy", contracts.whitelistProxy);
+        Logger.logEmptyLine();
+        Logger.logBoxFooter();
     }
 
     /// @dev Parses a comma-separated string of addresses into an array

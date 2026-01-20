@@ -1,0 +1,227 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.33;
+
+import {console} from "forge-std/console.sol";
+
+/**
+ * @title Logger
+ * @notice Centralized logging utilities for deployment scripts
+ * @dev Provides consistent formatting for console output across all scripts.
+ *      All functions are internal pure/view to be inlined during compilation.
+ *
+ *      Icon Legend:
+ *      - ✅ PASS/DEPLOYED/SUCCESS
+ *      - ❌ FAIL/ERROR
+ *      - ⏭️  SKIPPED/INFO
+ *      - ⚠️  WARN
+ *
+ * @author Den Technologies Inc
+ */
+library Logger {
+    // =========================================================================
+    // Status Messages (generic, reusable)
+    // =========================================================================
+
+    /// @dev Logs a success/pass message with checkmark icon
+    /// @param message The message to display
+    function logPass(string memory message) internal pure {
+        console.log(unicode"  ✅ %s", message);
+    }
+
+    /// @dev Logs a failure/error message with X icon
+    /// @param message The message to display
+    function logFail(string memory message) internal pure {
+        console.log(unicode"  ❌ %s", message);
+    }
+
+    /// @dev Logs a warning message with warning icon
+    /// @param message The message to display
+    function logWarn(string memory message) internal pure {
+        console.log(unicode"  ⚠️  %s", message);
+    }
+
+    /// @dev Logs an info/skip message with skip icon
+    /// @param message The message to display
+    function logInfo(string memory message) internal pure {
+        console.log(unicode"  ⏭️  %s", message);
+    }
+
+    /// @dev Logs a successful deployment
+    /// @param name Human-readable name of the deployed contract
+    /// @param addr Address where the contract was deployed
+    function logDeployed(string memory name, address addr) internal pure {
+        console.log(unicode"  ✅ DEPLOYED: %s at %s", name, addr);
+    }
+
+    /// @dev Logs a skipped deployment (already deployed)
+    /// @param name Human-readable name of the contract
+    /// @param addr Address where the contract already exists
+    function logDeploymentSkipped(string memory name, address addr) internal pure {
+        console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, addr);
+    }
+
+    /// @dev Logs a skipped deployment with a custom reason
+    /// @param reason The reason for skipping
+    function logDeploymentSkippedWithReason(string memory reason) internal pure {
+        console.log(unicode"  ⏭️  SKIPPED: %s", reason);
+    }
+
+    // =========================================================================
+    // Safety Check Messages
+    // =========================================================================
+
+    /// @dev Logs the start of a safety check
+    /// @param checkNumber The check number (e.g., "1/4", "2/4")
+    /// @param description What is being checked
+    function logCheckStart(string memory checkNumber, string memory description) internal pure {
+        console.log("  [%s] %s", checkNumber, description);
+    }
+
+    /// @dev Logs a passed check result (7-space indent for alignment)
+    /// @param message The pass message
+    function logCheckPass(string memory message) internal pure {
+        console.log(unicode"       ✅ PASS: %s", message);
+    }
+
+    /// @dev Logs a failed check result (7-space indent for alignment)
+    /// @param message The failure message
+    function logCheckFail(string memory message) internal pure {
+        console.log(unicode"       ❌ FAIL: %s", message);
+    }
+
+    /// @dev Logs a warning check result (7-space indent for alignment)
+    /// @param message The warning message
+    function logCheckWarn(string memory message) internal pure {
+        console.log(unicode"       ⚠️  WARN: %s", message);
+    }
+
+    /// @dev Logs an info check result (7-space indent for alignment)
+    /// @param message The info message
+    function logCheckInfo(string memory message) internal pure {
+        console.log(unicode"       ⏭️  INFO: %s", message);
+    }
+
+    /// @dev Logs additional detail for a check (14-space indent)
+    /// @param message The detail message
+    function logCheckDetail(string memory message) internal pure {
+        console.log("              %s", message);
+    }
+
+    // =========================================================================
+    // Structural/Layout
+    // =========================================================================
+
+    /// @dev Logs a box header with a title
+    /// @param title The title to display in the header
+    function logBoxHeader(string memory title) internal pure {
+        console.log("");
+        console.log("================================================================================");
+        console.log("  %s", title);
+        console.log("================================================================================");
+    }
+
+    /// @dev Logs a section divider with a name
+    /// @param name The section name
+    function logSection(string memory name) internal pure {
+        console.log("");
+        console.log("--------------------------------------------------------------------------------");
+        console.log("  %s", name);
+        console.log("--------------------------------------------------------------------------------");
+    }
+
+    /// @dev Logs a box footer (closing line)
+    function logBoxFooter() internal pure {
+        console.log("================================================================================");
+    }
+
+    /// @dev Logs an empty line
+    function logEmptyLine() internal pure {
+        console.log("");
+    }
+
+    /// @dev Logs a message with standard 2-space indentation
+    /// @param message The message to display
+    function logIndented(string memory message) internal pure {
+        console.log("  %s", message);
+    }
+
+    /// @dev Logs a key-value pair with standard indentation
+    /// @param key The label/key
+    /// @param value The value to display
+    function logKeyValue(string memory key, string memory value) internal pure {
+        console.log("  %s: %s", key, value);
+    }
+
+    /// @dev Logs a key-value pair with an address value
+    /// @param key The label/key
+    /// @param value The address value
+    function logKeyAddress(string memory key, address value) internal pure {
+        console.log("  %s: %s", key, value);
+    }
+
+    /// @dev Logs a key-value pair with a uint256 value
+    /// @param key The label/key
+    /// @param value The uint256 value
+    function logKeyUint(string memory key, uint256 value) internal pure {
+        console.log("  %s: %s", key, value);
+    }
+
+    // =========================================================================
+    // Common Deployment Messages
+    // =========================================================================
+
+    /// @dev Logs the start of safety checks
+    function logSafetyChecksStart() internal pure {
+        console.log("  Running safety checks...");
+        console.log("");
+    }
+
+    /// @dev Logs safety checks failed message
+    function logSafetyChecksFailed() internal pure {
+        console.log("");
+        console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
+        console.log("");
+    }
+
+    /// @dev Logs dry run mode instructions
+    /// @param scriptName Name of the script for the command example
+    /// @param notes Additional notes to display (can be empty)
+    function logDryRunMode(string memory scriptName, string memory notes) internal pure {
+        console.log("");
+        console.log("--------------------------------------------------------------------------------");
+        console.log("  DRY RUN MODE");
+        console.log("--------------------------------------------------------------------------------");
+        console.log("");
+        console.log("  All safety checks passed. To deploy, run with:");
+        console.log("");
+        console.log("    CONFIRM_DEPLOYMENT=true forge script %s ...", scriptName);
+        console.log("");
+        if (bytes(notes).length > 0) {
+            console.log("  %s", notes);
+            console.log("");
+        }
+    }
+
+    /// @dev Logs successful deployment with environment variable instruction
+    /// @param name Human-readable name of what was deployed
+    /// @param addr Address where it was deployed
+    /// @param envVarName Name of the environment variable to set
+    function logDeploymentSuccess(string memory name, address addr, string memory envVarName) internal pure {
+        console.log("");
+        console.log(unicode"  ✅ %s deployed successfully!", name);
+        console.log("     Address: %s", addr);
+        console.log("");
+        console.log("  Next step: Set the factory address in your environment:");
+        console.log("    export %s=%s", envVarName, addr);
+        console.log("");
+    }
+
+    /// @dev Logs deployment completion message
+    function logDeploymentComplete() internal pure {
+        console.log("");
+        console.log("================================================================================");
+        console.log(unicode"  ✅ Deployment Complete!");
+        console.log("================================================================================");
+        console.log("");
+    }
+}

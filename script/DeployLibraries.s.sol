@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -9,6 +9,7 @@ import {LibOrganizationInitialization} from "organization/libraries/LibOrganizat
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Logger} from "script/libraries/Logger.sol";
 
 /**
  * @title DeployLibraries
@@ -42,9 +43,9 @@ contract DeployLibraries is Script {
         address factory = Create2Deployer.getCreate2Factory(vm);
 
         Create2Deployer.logDeploymentHeader(factory, block.chainid);
-        console.log("  Deployer EOA: %s", deployerAddress);
-        console.log("  Mode: Library Deployment Only");
-        console.log("");
+        Logger.logKeyAddress("Deployer EOA", deployerAddress);
+        Logger.logKeyValue("Mode", "Library Deployment Only");
+        Logger.logEmptyLine();
 
         vm.startBroadcast(deployerPrivateKey);
         PlatformLibraries memory libs = _deployPlatformLibraries(factory);
@@ -62,21 +63,18 @@ contract DeployLibraries is Script {
     function computeAddresses() external view {
         address factory = Create2Deployer.getCreate2Factory(vm);
 
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Computed Deterministic Library Addresses");
-        console.log("================================================================================");
-        console.log("  CREATE2 Factory: %s", factory);
-        console.log("  Chain ID: %s", block.chainid);
-        console.log("");
+        Logger.logBoxHeader("Computed Deterministic Library Addresses");
+        Logger.logKeyAddress("CREATE2 Factory", factory);
+        Logger.logKeyUint("Chain ID", block.chainid);
+        Logger.logEmptyLine();
 
         PlatformLibraries memory libs = _computeLibraryAddresses(factory);
 
-        console.log("  LibOrganizationPolicy:           %s", libs.policy);
-        console.log("  LibOrganizationAdmin:            %s", libs.admin);
-        console.log("  LibOrganizationInitialization:   %s", libs.initialization);
-        console.log("  LibOrganizationAccountSignature: %s", libs.accountSignature);
-        console.log("");
+        Logger.logKeyAddress("LibOrganizationPolicy", libs.policy);
+        Logger.logKeyAddress("LibOrganizationAdmin", libs.admin);
+        Logger.logKeyAddress("LibOrganizationInitialization", libs.initialization);
+        Logger.logKeyAddress("LibOrganizationAccountSignature", libs.accountSignature);
+        Logger.logEmptyLine();
 
         _printLibrariesCommand(libs);
     }
@@ -141,36 +139,61 @@ contract DeployLibraries is Script {
     /// @dev Logs all deployed library addresses in a formatted summary
     /// @param libs Struct containing deployed library addresses
     function _logDeployedAddresses(PlatformLibraries memory libs) internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Deployed Library Addresses");
-        console.log("================================================================================");
-        console.log("");
-        console.log("  LibOrganizationPolicy:           %s", libs.policy);
-        console.log("  LibOrganizationAdmin:            %s", libs.admin);
-        console.log("  LibOrganizationInitialization:   %s", libs.initialization);
-        console.log("  LibOrganizationAccountSignature: %s", libs.accountSignature);
-        console.log("");
-        console.log("================================================================================");
+        Logger.logBoxHeader("Deployed Library Addresses");
+        Logger.logEmptyLine();
+        Logger.logKeyAddress("LibOrganizationPolicy", libs.policy);
+        Logger.logKeyAddress("LibOrganizationAdmin", libs.admin);
+        Logger.logKeyAddress("LibOrganizationInitialization", libs.initialization);
+        Logger.logKeyAddress("LibOrganizationAccountSignature", libs.accountSignature);
+        Logger.logEmptyLine();
+        Logger.logBoxFooter();
     }
 
     /// @dev Prints the forge --libraries command with library addresses
     /// @param libs Struct containing library addresses
     function _printLibrariesCommand(PlatformLibraries memory libs) internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  NEXT STEP: Run DeployContracts with the following --libraries flags:");
-        console.log("================================================================================");
-        console.log("");
-        console.log("  forge script script/DeployContracts.s.sol:DeployContracts \\");
-        console.log("    --rpc-url $RPC_URL \\");
-        console.log("    --broadcast \\");
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_POLICY_PATH, libs.policy);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ADMIN_PATH, libs.admin);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_INIT_PATH, libs.initialization);
-        console.log("    --libraries %s:%s \\", DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH, libs.accountSignature);
-        console.log("    -vvvv");
-        console.log("");
-        console.log("================================================================================");
+        Logger.logBoxHeader("NEXT STEP: Run DeployContracts with the following --libraries flags:");
+        Logger.logEmptyLine();
+        Logger.logIndented("forge script script/DeployContracts.s.sol:DeployContracts \\");
+        Logger.logIndented("  --rpc-url $RPC_URL \\");
+        Logger.logIndented("  --broadcast \\");
+        Logger.logIndented(
+            string.concat("  --libraries ", DeploymentConfig.LIB_ORG_POLICY_PATH, ":", _toHexString(libs.policy), " \\")
+        );
+        Logger.logIndented(
+            string.concat("  --libraries ", DeploymentConfig.LIB_ORG_ADMIN_PATH, ":", _toHexString(libs.admin), " \\")
+        );
+        Logger.logIndented(
+            string.concat(
+                "  --libraries ", DeploymentConfig.LIB_ORG_INIT_PATH, ":", _toHexString(libs.initialization), " \\"
+            )
+        );
+        Logger.logIndented(
+            string.concat(
+                "  --libraries ",
+                DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
+                ":",
+                _toHexString(libs.accountSignature),
+                " \\"
+            )
+        );
+        Logger.logIndented("  -vvvv");
+        Logger.logEmptyLine();
+        Logger.logBoxFooter();
+    }
+
+    /// @dev Converts an address to a hex string
+    /// @param addr The address to convert
+    /// @return The address as a hex string
+    function _toHexString(address addr) internal pure returns (string memory) {
+        bytes memory alphabet = "0123456789abcdef";
+        bytes memory str = new bytes(42);
+        str[0] = "0";
+        str[1] = "x";
+        for (uint256 i = 0; i < 20; ++i) {
+            str[2 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)) >> 4)];
+            str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i))) & 0x0f];
+        }
+        return string(str);
     }
 }

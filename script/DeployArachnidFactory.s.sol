@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Logger} from "script/libraries/Logger.sol";
 
 /**
  * @title DeployArachnidFactory
@@ -95,9 +96,9 @@ contract DeployArachnidFactory is Script {
 
         // Verify deployment
         if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
-            console.log(unicode"  ❌ ERROR: Factory deployment failed!");
-            console.log("     This chain may enforce EIP-155 replay protection.");
-            console.log("     Use DeploySafeSingletonFactory.s.sol instead.");
+            Logger.logFail("ERROR: Factory deployment failed!");
+            Logger.logIndented("This chain may enforce EIP-155 replay protection.");
+            Logger.logIndented("Use DeploySafeSingletonFactory.s.sol instead.");
             revert Create2Deployer.FactoryDeploymentFailed();
         }
 
@@ -110,25 +111,25 @@ contract DeployArachnidFactory is Script {
     function fundDeployer() external {
         uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        console.log("");
-        console.log("  Funding Arachnid factory deployer...");
-        console.log("  Target: %s", _EXPECTED_DEPLOYER);
-        console.log("  Amount: %s wei (~%s ETH)", _REQUIRED_ETH_BALANCE, _REQUIRED_ETH_BALANCE / 1 ether);
-        console.log("");
+        Logger.logEmptyLine();
+        Logger.logIndented("Funding Arachnid factory deployer...");
+        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER);
+        Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
+        Logger.logEmptyLine();
 
         vm.startBroadcast(fundingPrivateKey);
         payable(_EXPECTED_DEPLOYER).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
-        console.log(unicode"  ✅ Deployer funded successfully");
+        Logger.logPass("Deployer funded successfully");
     }
 
     /// @dev Broadcasts the pre-signed transaction to deploy the factory
     function _broadcastPresignedTransaction() internal {
-        console.log("  Broadcasting pre-signed transaction...");
-        console.log("  Deployer: %s", _EXPECTED_DEPLOYER);
-        console.log("  Expected factory address: %s", _EXPECTED_FACTORY_ADDRESS);
-        console.log("");
+        Logger.logIndented("Broadcasting pre-signed transaction...");
+        Logger.logKeyAddress("Deployer", _EXPECTED_DEPLOYER);
+        Logger.logKeyAddress("Expected factory address", _EXPECTED_FACTORY_ADDRESS);
+        Logger.logEmptyLine();
 
         // Use Foundry's vm.broadcastRawTransaction to broadcast the pre-signed tx
         vm.broadcastRawTransaction(_PRESIGNED_TX);
@@ -138,8 +139,7 @@ contract DeployArachnidFactory is Script {
     ///      Checks: factory not deployed, deployer has sufficient ETH
     /// @return passed True if all critical checks pass
     function _runSafetyChecks() internal view returns (bool passed) {
-        console.log("  Running safety checks...");
-        console.log("");
+        Logger.logSafetyChecksStart();
 
         // Check 1: Factory not already deployed
         // If already deployed, return true (success) - no deployment needed
