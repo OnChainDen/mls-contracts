@@ -31,6 +31,12 @@ library Create2Deployer {
     /// @dev Error thrown when factory address from env var has no code deployed
     error Create2FactoryNotDeployed(address attempted);
 
+    /// @dev Error thrown when safety checks fail during factory deployment
+    error SafetyChecksFailed();
+
+    /// @dev Error thrown when factory deployment fails
+    error FactoryDeploymentFailed();
+
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
     /// @param factory The CREATE2 factory address
@@ -98,6 +104,56 @@ library Create2Deployer {
         }
     }
 
+    /// @dev Checks if a factory is already deployed and logs the result
+    /// @param factoryAddress The factory address to check
+    /// @param factoryName Human-readable name for logging
+    /// @param checkNumber The check number for logging (e.g., "1/2")
+    /// @return alreadyDeployed True if factory exists at the address
+    function checkFactoryNotDeployed(address factoryAddress, string memory factoryName, string memory checkNumber)
+        internal
+        view
+        returns (bool alreadyDeployed)
+    {
+        console.log("  [%s] Checking if %s already deployed...", checkNumber, factoryName);
+        if (isContractDeployedAtAddress(factoryAddress)) {
+            console.log(unicode"       ⏭️  INFO: Factory already deployed at %s", factoryAddress);
+            console.log("              No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
+            return true;
+        } else {
+            console.log(unicode"       ✅ PASS: Factory not yet deployed");
+            return false;
+        }
+    }
+
+    /// @dev Checks if an address has sufficient ETH balance and logs the result
+    /// @param deployer The address to check
+    /// @param requiredBalance The minimum required balance in wei
+    /// @param checkNumber The check number for logging (e.g., "2/2")
+    /// @param scriptName Name of the script for the fund command (e.g., "DeployArachnidFactory")
+    /// @return hasSufficientBalance True if balance is sufficient
+    function checkDeployerBalance(
+        address deployer,
+        uint256 requiredBalance,
+        string memory checkNumber,
+        string memory scriptName
+    ) internal view returns (bool hasSufficientBalance) {
+        console.log("  [%s] Checking deployer ETH balance...", checkNumber);
+        uint256 balance = deployer.balance;
+        if (balance >= requiredBalance) {
+            console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);
+            return true;
+        } else {
+            console.log(unicode"       ❌ FAIL: Deployer needs more ETH");
+            console.log("              Current: %s wei", balance);
+            console.log("              Required: %s wei", requiredBalance);
+            console.log("");
+            console.log("              Fund the deployer by running:");
+            console.log("                forge script %s --sig \"fundDeployer()\" \\", scriptName);
+            console.log("                  --rpc-url $RPC_URL --broadcast");
+            return false;
+        }
+    }
+
     /// @dev Computes the CREATE2 address for a contract deployment
     /// @param factory The CREATE2 factory address
     /// @param salt The deployment salt
@@ -145,6 +201,59 @@ library Create2Deployer {
         console.log("================================================================================");
         console.log(unicode"  ✅ Deployment Complete!");
         console.log("================================================================================");
+        console.log("");
+    }
+
+    // =========================================================================
+    // Factory Deployment Helpers
+    // =========================================================================
+
+    /// @dev Logs a factory deployment script header
+    /// @param factoryName Human-readable name of the factory being deployed
+    function logFactoryDeploymentHeader(string memory factoryName) internal pure {
+        console.log("");
+        console.log("================================================================================");
+        console.log("  %s - Factory Deployment", factoryName);
+        console.log("================================================================================");
+        console.log("");
+    }
+
+    /// @dev Logs the dry run mode message with script-specific instructions
+    /// @param scriptName Name of the script for the CONFIRM_DEPLOYMENT command
+    /// @param additionalNotes Optional additional notes to display (can be empty string)
+    function logDryRunMode(string memory scriptName, string memory additionalNotes) internal pure {
+        console.log("");
+        console.log("--------------------------------------------------------------------------------");
+        console.log("  DRY RUN MODE");
+        console.log("--------------------------------------------------------------------------------");
+        console.log("");
+        console.log("  All safety checks passed. To deploy, run with:");
+        console.log("");
+        console.log("    CONFIRM_DEPLOYMENT=true forge script %s ...", scriptName);
+        console.log("");
+        if (bytes(additionalNotes).length > 0) {
+            console.log("  %s", additionalNotes);
+            console.log("");
+        }
+    }
+
+    /// @dev Logs a successful factory deployment with next steps
+    /// @param factoryName Human-readable name of the deployed factory
+    /// @param factoryAddress Address where the factory was deployed
+    function logFactoryDeploymentSuccess(string memory factoryName, address factoryAddress) internal pure {
+        console.log("");
+        console.log(unicode"  ✅ %s deployed successfully!", factoryName);
+        console.log("     Address: %s", factoryAddress);
+        console.log("");
+        console.log("  Next step: Set the factory address in your environment:");
+        console.log("    export CREATE2_FACTORY_ADDRESS=%s", factoryAddress);
+        console.log("");
+    }
+
+    /// @dev Logs safety checks failed message
+    function logSafetyChecksFailed() internal pure {
+        console.log("");
+        console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
         console.log("");
     }
 

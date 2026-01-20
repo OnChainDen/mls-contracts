@@ -41,14 +41,8 @@ contract DeploySafeSingletonFactory is Script {
     /// @dev Required ETH balance for the deployer (gas price * gas limit * 2 for buffer)
     uint256 internal constant _REQUIRED_ETH_BALANCE = _DEPLOYMENT_GAS_PRICE * _DEPLOYMENT_GAS_LIMIT * 2;
 
-    /// @dev Custom error for when safety checks fail
-    error SafetyChecksFailed();
-
     /// @dev Custom error for when the deployer address does not match expected
     error DeployerAddressMismatch(address expected, address actual);
-
-    /// @dev Custom error for when factory deployment fails
-    error FactoryDeploymentFailed();
 
     /// @dev Custom error for when deployed address does not match expected
     error DeployedAddressMismatch(address expected, address actual);
@@ -58,11 +52,7 @@ contract DeploySafeSingletonFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Safe Singleton Factory Deployment");
-        console.log("================================================================================");
-        console.log("");
+        Create2Deployer.logFactoryDeploymentHeader("Safe Singleton Factory");
 
         // Check if deployment is confirmed
         bool confirmDeployment = vm.envOr("CONFIRM_DEPLOYMENT", false);
@@ -71,33 +61,20 @@ contract DeploySafeSingletonFactory is Script {
         bool allChecksPassed = _runSafetyChecks();
 
         if (!allChecksPassed) {
-            console.log("");
-            console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
-            console.log("");
-            revert SafetyChecksFailed();
+            Create2Deployer.logSafetyChecksFailed();
+            revert Create2Deployer.SafetyChecksFailed();
         }
 
         if (!confirmDeployment) {
-            console.log("");
-            console.log("--------------------------------------------------------------------------------");
-            console.log("  DRY RUN MODE");
-            console.log("--------------------------------------------------------------------------------");
-            console.log("");
-            console.log("  All safety checks passed. To deploy, run with:");
-            console.log("");
-            console.log("    CONFIRM_DEPLOYMENT=true forge script DeploySafeSingletonFactory ...");
-            console.log("");
-            console.log("  WARNING: This will use nonce 0 of the deployer account.");
-            console.log("  Make sure this is the correct chain before confirming.");
-            console.log("");
+            // forgefmt: disable-next-item
+            Create2Deployer.logDryRunMode(
+                "DeploySafeSingletonFactory",
+                "WARNING: This will use nonce 0 of the deployer account. Make sure this is the correct chain."
+            );
             return;
         }
 
-        console.log("");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("  DEPLOYING SAFE SINGLETON FACTORY");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("");
+        Create2Deployer.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
         // Get the deployer private key
         uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
@@ -120,16 +97,10 @@ contract DeploySafeSingletonFactory is Script {
         // Verify deployment
         if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             console.log(unicode"  ❌ ERROR: Factory deployment failed!");
-            revert FactoryDeploymentFailed();
+            revert Create2Deployer.FactoryDeploymentFailed();
         }
 
-        console.log("");
-        console.log(unicode"  ✅ Safe Singleton Factory deployed successfully!");
-        console.log("     Address: %s", _EXPECTED_FACTORY_ADDRESS);
-        console.log("");
-        console.log("  Next step: Set the factory address in your environment:");
-        console.log("    export CREATE2_FACTORY_ADDRESS=%s", _EXPECTED_FACTORY_ADDRESS);
-        console.log("");
+        Create2Deployer.logFactoryDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS);
     }
 
     /// @notice Funds the Safe Singleton Factory deployer address with ETH
@@ -169,7 +140,7 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         if (deployedAtAddress == address(0)) {
-            revert FactoryDeploymentFailed();
+            revert Create2Deployer.FactoryDeploymentFailed();
         }
 
         // The address should match due to CREATE from nonce 0
@@ -190,7 +161,7 @@ contract DeploySafeSingletonFactory is Script {
         bool allPassed = true;
 
         // Check 0: Arachnid factory should NOT exist (prefer Arachnid over SafeSingleton)
-        console.log("  [0/5] Checking if Arachnid factory exists...");
+        console.log("  [0/4] Checking if Arachnid factory exists...");
         if (Create2Deployer.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY)) {
             console.log(
                 unicode"       ❌ FAIL: Arachnid factory already deployed at %s",
@@ -204,16 +175,15 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         // Check 1: Safe Singleton Factory not already deployed
-        console.log("  [1/5] Checking if Safe Singleton Factory already deployed...");
-        if (Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
-            console.log(unicode"       ❌ FAIL: Factory already deployed at %s", _EXPECTED_FACTORY_ADDRESS);
+        if (Create2Deployer.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory", "1/4")) {
+            // Factory already deployed - not a failure, but deployment not needed
+            // However for Safe, we treat this as a failure since the factory existing means nothing to do
+            console.log(unicode"       ❌ FAIL: Factory already deployed");
             allPassed = false;
-        } else {
-            console.log(unicode"       ✅ PASS: Factory not yet deployed");
         }
 
-        // Check 2: Deployer private key provided
-        console.log("  [2/5] Checking deployer private key...");
+        // Check 2: Deployer private key provided and matches expected address
+        console.log("  [2/4] Checking deployer private key...");
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
             address deployerAddress = vm.addr(pk);
             if (deployerAddress == _EXPECTED_DEPLOYER) {
@@ -230,7 +200,7 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         // Check 3: Deployer nonce is 0
-        console.log("  [3/5] Checking deployer nonce...");
+        console.log("  [3/4] Checking deployer nonce...");
         uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER);
         if (nonce == 0) {
             console.log(unicode"       ✅ PASS: Deployer nonce is 0");
@@ -240,8 +210,8 @@ contract DeploySafeSingletonFactory is Script {
             allPassed = false;
         }
 
-        // Check 4: Deployer has sufficient ETH
-        console.log("  [4/5] Checking deployer ETH balance...");
+        // Check 4: Deployer has sufficient ETH (warning only, not a failure)
+        console.log("  [4/4] Checking deployer ETH balance...");
         uint256 balance = _EXPECTED_DEPLOYER.balance;
         if (balance >= _REQUIRED_ETH_BALANCE) {
             console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);

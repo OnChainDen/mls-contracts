@@ -3,7 +3,6 @@ pragma solidity 0.8.33;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
 
 /**
@@ -33,7 +32,7 @@ contract DeployArachnidFactory is Script {
     address internal constant _EXPECTED_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     /// @dev Deployer address that will deploy the factory (derived from pre-signed tx)
-    address internal constant _EXPECTED_DEPLOYER = 0x3fab184622dc19b6109349b94811493bf2a45362;
+    address internal constant _EXPECTED_DEPLOYER = 0x3fAB184622Dc19b6109349B94811493BF2a45362;
 
     /// @dev Gas price used in the pre-signed transaction (100 gwei)
     uint256 internal constant _DEPLOYMENT_GAS_PRICE = 100_000_000_000;
@@ -43,15 +42,6 @@ contract DeployArachnidFactory is Script {
 
     /// @dev Required ETH balance for the deployer (gas price * gas limit with 50% buffer)
     uint256 internal constant _REQUIRED_ETH_BALANCE = (_DEPLOYMENT_GAS_PRICE * _DEPLOYMENT_GAS_LIMIT * 3) / 2;
-
-    /// @dev Custom error for when safety checks fail
-    error SafetyChecksFailed();
-
-    /// @dev Custom error for when factory deployment fails
-    error FactoryDeploymentFailed();
-
-    /// @dev Custom error for when the raw transaction broadcast fails
-    error RawTransactionBroadcastFailed();
 
     /**
      * @notice Pre-signed transaction for deploying the Arachnid factory
@@ -76,11 +66,7 @@ contract DeployArachnidFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
-        console.log("");
-        console.log("================================================================================");
-        console.log("  Arachnid Deterministic Deployment Proxy - Factory Deployment");
-        console.log("================================================================================");
-        console.log("");
+        Create2Deployer.logFactoryDeploymentHeader("Arachnid Deterministic Deployment Proxy");
 
         // Check if deployment is confirmed
         bool confirmDeployment = vm.envOr("CONFIRM_DEPLOYMENT", false);
@@ -89,34 +75,20 @@ contract DeployArachnidFactory is Script {
         bool allChecksPassed = _runSafetyChecks();
 
         if (!allChecksPassed) {
-            console.log("");
-            console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
-            console.log("");
-            revert SafetyChecksFailed();
+            Create2Deployer.logSafetyChecksFailed();
+            revert Create2Deployer.SafetyChecksFailed();
         }
 
         if (!confirmDeployment) {
-            console.log("");
-            console.log("--------------------------------------------------------------------------------");
-            console.log("  DRY RUN MODE");
-            console.log("--------------------------------------------------------------------------------");
-            console.log("");
-            console.log("  All safety checks passed. To deploy, run with:");
-            console.log("");
-            console.log("    CONFIRM_DEPLOYMENT=true forge script DeployArachnidFactory ...");
-            console.log("");
-            console.log("  NOTE: This broadcasts a pre-signed transaction. Some chains that enforce");
-            console.log("  EIP-155 may reject this transaction. If deployment fails, use");
-            console.log("  DeploySafeSingletonFactory.s.sol instead.");
-            console.log("");
+            // forgefmt: disable-next-item
+            Create2Deployer.logDryRunMode(
+                "DeployArachnidFactory",
+                "NOTE: This broadcasts a pre-signed transaction. Some chains that enforce EIP-155 may reject it."
+            );
             return;
         }
 
-        console.log("");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("  DEPLOYING ARACHNID FACTORY");
-        console.log("--------------------------------------------------------------------------------");
-        console.log("");
+        Create2Deployer.logSection("DEPLOYING ARACHNID FACTORY");
 
         // Broadcast the pre-signed transaction
         _broadcastPresignedTransaction();
@@ -126,16 +98,10 @@ contract DeployArachnidFactory is Script {
             console.log(unicode"  ❌ ERROR: Factory deployment failed!");
             console.log("     This chain may enforce EIP-155 replay protection.");
             console.log("     Use DeploySafeSingletonFactory.s.sol instead.");
-            revert FactoryDeploymentFailed();
+            revert Create2Deployer.FactoryDeploymentFailed();
         }
 
-        console.log("");
-        console.log(unicode"  ✅ Arachnid Factory deployed successfully!");
-        console.log("     Address: %s", _EXPECTED_FACTORY_ADDRESS);
-        console.log("");
-        console.log("  Next step: Set the factory address in your environment:");
-        console.log("    export CREATE2_FACTORY_ADDRESS=%s", _EXPECTED_FACTORY_ADDRESS);
-        console.log("");
+        Create2Deployer.logFactoryDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS);
     }
 
     /// @notice Funds the Arachnid factory deployer address with ETH
@@ -175,36 +141,17 @@ contract DeployArachnidFactory is Script {
         console.log("  Running safety checks...");
         console.log("");
 
-        bool allPassed = true;
-
         // Check 1: Factory not already deployed
-        console.log("  [1/2] Checking if factory already deployed...");
-        if (Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
-            console.log(unicode"       ⏭️  INFO: Factory already deployed at %s", _EXPECTED_FACTORY_ADDRESS);
-            console.log("              No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
-            // This is not a failure - the factory exists, which is the goal
-            // Return early with success since there's nothing to deploy
+        // If already deployed, return true (success) - no deployment needed
+        if (Create2Deployer.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Arachnid factory", "1/2")) {
             return true;
-        } else {
-            console.log(unicode"       ✅ PASS: Factory not yet deployed");
         }
 
         // Check 2: Deployer has sufficient ETH
-        console.log("  [2/2] Checking deployer ETH balance...");
-        uint256 balance = _EXPECTED_DEPLOYER.balance;
-        if (balance >= _REQUIRED_ETH_BALANCE) {
-            console.log(unicode"       ✅ PASS: Deployer has sufficient ETH (%s wei)", balance);
-        } else {
-            console.log(unicode"       ❌ FAIL: Deployer needs more ETH");
-            console.log("              Current: %s wei", balance);
-            console.log("              Required: %s wei (~0.015 ETH)", _REQUIRED_ETH_BALANCE);
-            console.log("");
-            console.log("              Fund the deployer by running:");
-            console.log("                forge script DeployArachnidFactory --sig \"fundDeployer()\" \\");
-            console.log("                  --rpc-url $RPC_URL --broadcast");
-            allPassed = false;
-        }
+        bool hasBalance = Create2Deployer.checkDeployerBalance(
+            _EXPECTED_DEPLOYER, _REQUIRED_ETH_BALANCE, "2/2", "DeployArachnidFactory"
+        );
 
-        return allPassed;
+        return hasBalance;
     }
 }
