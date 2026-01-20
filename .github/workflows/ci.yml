@@ -49,9 +49,9 @@ jobs:
         # Uses your Makefile to run tests
         run: make test
 
-  # JOB 2: Security Analysis (Slither)
+  # JOB 2: Security Analysis (Slither) for source contracts
   slither:
-    name: "Slither Analysis"
+    name: "Slither Analysis (src)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -59,8 +59,26 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Run Slither
+      - name: Run Slither on src
         uses: crytic/slither-action@v0.4.0
         with:
+          target: 'src/'
           slither-config: 'slither.config.json'
+          fail-on: high
+
+  # JOB 3: Security Analysis (Slither) for deployment scripts
+  slither-scripts:
+    name: "Slither Analysis (scripts)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run Slither on scripts
+        uses: crytic/slither-action@v0.4.0
+        with:
+          target: 'script/'
+          slither-config: 'slither.script.config.json'
           fail-on: high
