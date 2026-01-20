@@ -173,12 +173,18 @@ library Create2Utils {
         private
         returns (address deployedAtAddress)
     {
-        // Safe Singleton Factory has different parameter order: deploy(bytes, bytes32)
+        // Case:  using Safe Singleton Factory
         if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS) {
             deployedAtAddress = address(ISafeSingletonFactory(factoryAddress).deploy(initCode, salt));
-        } else {
-            // Arachnid and similar: deploy(bytes32, bytes)
-            deployedAtAddress = ICreate2Factory(factoryAddress).deploy(salt, initCode);
+            return deployedAtAddress;
         }
+        // Case: using Arachnid Deterministic Deployment Proxy (default)
+        if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            deployedAtAddress = ICreate2Factory(factoryAddress).deploy(salt, initCode);
+            return deployedAtAddress;
+        }
+
+        // Case: using custom factory
+        revert("Invalid factory address");
     }
 }
