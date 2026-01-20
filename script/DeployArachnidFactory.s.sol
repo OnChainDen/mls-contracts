@@ -60,6 +60,7 @@ contract DeployArachnidFactory is Script {
      *      Source: https://github.com/Arachnid/deterministic-deployment-proxy
      */
     // forgefmt: disable-next-item
+    // solhint-disable-next-line max-line-length
     bytes internal constant _PRESIGNED_TX = hex"f8a58085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222";
 
     /**

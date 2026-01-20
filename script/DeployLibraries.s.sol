@@ -158,17 +158,21 @@ contract DeployLibraries is Script {
         Logger.logIndented("  --rpc-url $RPC_URL \\");
         Logger.logIndented("  --broadcast \\");
         Logger.logIndented(
+            // solhint-disable-next-line func-named-parameters
             string.concat("  --libraries ", DeploymentConfig.LIB_ORG_POLICY_PATH, ":", _toHexString(libs.policy), " \\")
         );
         Logger.logIndented(
+            // solhint-disable-next-line func-named-parameters
             string.concat("  --libraries ", DeploymentConfig.LIB_ORG_ADMIN_PATH, ":", _toHexString(libs.admin), " \\")
         );
         Logger.logIndented(
+            // solhint-disable-next-line func-named-parameters
             string.concat(
                 "  --libraries ", DeploymentConfig.LIB_ORG_INIT_PATH, ":", _toHexString(libs.initialization), " \\"
             )
         );
         Logger.logIndented(
+            // solhint-disable-next-line func-named-parameters
             string.concat(
                 "  --libraries ",
                 DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
