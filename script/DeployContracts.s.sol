@@ -87,8 +87,7 @@ contract DeployContracts is Script {
      */
     function run() external {
         // Get the CREATE2 factory that will be used for deployments
-        // The address of the factory is either explicitly provided in the environment, or auto-detected
-        // If auto-detected, the factory is either Arachnid or Safe Singleton Factory
+        // The address of the factory is explicitly provided in the environment
         address factoryAddress = Create2Deployer.getCreate2Factory(vm);
 
         // Validate that the script was run with --libraries flag (critical for determinism)
@@ -99,16 +98,19 @@ contract DeployContracts is Script {
 
         // Get the Guardian Safe configuration from environment
         // The Guardian Safe is a multisig wallet that will be used to deploy the contracts
-        // The configuration is either explicitly provided in the environment, or defaults to the deployer as single
-        // owner
+        // The configuration must be explicitly provided via environment variables
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = _getGuardianSafeConfig();
 
         // Get the Deployer Safe configuration from environment
         // The Deployer Safe is a multisig wallet that will be the owner of the ImplementationWhitelist contract
         // and OrganizationFactory contract.
-        // The configuration is either explicitly provided in the environment, or defaults to the deployer as single
-        // owner
+        // The configuration must be explicitly provided via environment variables
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = _getDeployerSafeConfig();
+
+        // Validate Safe configurations and require explicit confirmation
+        _validateSafeConfigsAndConfirm(
+            guardianOwnerAddresses, guardianThreshold, deployerOwnerAddresses, deployerThreshold
+        );
 
         // Get Deployer private key/address from environment
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -405,6 +407,44 @@ contract DeployContracts is Script {
         );
     }
 
+    /// @dev Validates Safe configurations and prompts for user confirmation
+    /// @param guardianOwners Guardian Safe owners from env
+    /// @param guardianThreshold Guardian Safe threshold from env
+    /// @param deployerOwners Deployer Safe owners from env
+    /// @param deployerThreshold Deployer Safe threshold from env
+    function _validateSafeConfigsAndConfirm(
+        address[] memory guardianOwners,
+        uint256 guardianThreshold,
+        address[] memory deployerOwners,
+        uint256 deployerThreshold
+    ) internal {
+        bool guardianIsProd = _isProductionGuardianConfig(guardianOwners, guardianThreshold);
+        bool deployerIsProd = _isProductionDeployerConfig(deployerOwners, deployerThreshold);
+
+        Logger.logWarn("Safe configuration confirmation required");
+        if (guardianIsProd) {
+            Logger.logIndented("Guardian Safe: PRODUCTION configuration");
+        } else {
+            Logger.logIndented("Guardian Safe: NON-PRODUCTION configuration");
+        }
+
+        if (deployerIsProd) {
+            Logger.logIndented("Deployer Safe: PRODUCTION configuration");
+        } else {
+            Logger.logIndented("Deployer Safe: NON-PRODUCTION configuration");
+        }
+        Logger.logEmptyLine();
+
+        string memory mode = guardianIsProd && deployerIsProd ? "PRODUCTION" : "NON-PRODUCTION";
+        string memory prompt =
+            string(abi.encodePacked("Type 'yes' to confirm you want to deploy with ", mode, " configuration: "));
+        string memory response = vm.prompt(prompt);
+        string memory trimmedResponse = vm.trim(response);
+        if (!_isYesResponse(trimmedResponse)) {
+            revert("Deployment aborted: confirmation not received");
+        }
+    }
+
     /// @dev Computes the deterministic address of a Safe proxy before deployment
     /// @param safeInfra Safe infrastructure addresses needed for address computation
     /// @param initializer Encoded Safe.setup() call data
@@ -480,34 +520,18 @@ contract DeployContracts is Script {
     /// @return ownerAddresses Array of owner addresses for the Guardian Safe
     /// @return threshold Required number of signatures
     function _getGuardianSafeConfig() internal view returns (address[] memory ownerAddresses, uint256 threshold) {
-        // Try to get from environment
-        try vm.envString("GUARDIAN_SAFE_OWNERS") returns (string memory ownersStr) {
-            ownerAddresses = _parseAddressArray(ownersStr);
-            threshold = vm.envOr("GUARDIAN_SAFE_THRESHOLD", uint256(1));
-        } catch {
-            // Default: use deployer as single owner
-            ownerAddresses = new address[](1);
-            ownerAddresses[0] = vm.addr(vm.envUint("PRIVATE_KEY"));
-            threshold = 1;
-            Logger.logWarn("Using default Guardian Safe config (deployer as single owner)");
-        }
+        string memory ownersStr = vm.envString("GUARDIAN_SAFE_OWNERS");
+        ownerAddresses = _parseAddressArray(ownersStr);
+        threshold = vm.envUint("GUARDIAN_SAFE_THRESHOLD");
     }
 
     /// @dev Retrieves Deployer Safe configuration from environment variables
     /// @return ownerAddresses Array of owner addresses for the Deployer Safe
     /// @return threshold Required number of signatures
     function _getDeployerSafeConfig() internal view returns (address[] memory ownerAddresses, uint256 threshold) {
-        // Try to get from environment
-        try vm.envString("DEPLOYER_SAFE_OWNERS") returns (string memory ownersStr) {
-            ownerAddresses = _parseAddressArray(ownersStr);
-            threshold = vm.envOr("DEPLOYER_SAFE_THRESHOLD", uint256(1));
-        } catch {
-            // Default: use deployer as single owner
-            ownerAddresses = new address[](1);
-            ownerAddresses[0] = vm.addr(vm.envUint("PRIVATE_KEY"));
-            threshold = 1;
-            Logger.logWarn("Using default Deployer Safe config (deployer as single owner)");
-        }
+        string memory ownersStr = vm.envString("DEPLOYER_SAFE_OWNERS");
+        ownerAddresses = _parseAddressArray(ownersStr);
+        threshold = vm.envUint("DEPLOYER_SAFE_THRESHOLD");
     }
 
     /// @dev Parses a comma-separated string of addresses into an array
@@ -534,6 +558,57 @@ contract DeployContracts is Script {
         }
 
         return parsedAddresses;
+    }
+
+    /// @dev Checks if the provided Guardian Safe config matches production
+    /// @param owners Guardian Safe owner addresses from environment
+    /// @param threshold Guardian Safe threshold from environment
+    /// @return True if owners and threshold match production configuration
+    function _isProductionGuardianConfig(address[] memory owners, uint256 threshold) internal pure returns (bool) {
+        if (threshold != DeploymentConfig.PROD_GUARDIAN_SAFE_THRESHOLD) {
+            return false;
+        }
+
+        address[] memory prodOwners = DeploymentConfig.getProdGuardianSafeOwners();
+        return _areSameOwners(owners, prodOwners);
+    }
+
+    /// @dev Checks if the provided Deployer Safe config matches production
+    /// @param owners Deployer Safe owner addresses from environment
+    /// @param threshold Deployer Safe threshold from environment
+    /// @return True if owners and threshold match production configuration
+    function _isProductionDeployerConfig(address[] memory owners, uint256 threshold) internal pure returns (bool) {
+        if (threshold != DeploymentConfig.PROD_DEPLOYER_SAFE_THRESHOLD) {
+            return false;
+        }
+
+        address[] memory prodOwners = DeploymentConfig.getProdDeployerSafeOwners();
+        return _areSameOwners(owners, prodOwners);
+    }
+
+    /// @dev Compares two owner arrays for exact match (length and order)
+    /// @param owners First array of owners
+    /// @param expectedOwners Expected array of owners
+    /// @return True if arrays match exactly
+    function _areSameOwners(address[] memory owners, address[] memory expectedOwners) internal pure returns (bool) {
+        if (owners.length != expectedOwners.length) {
+            return false;
+        }
+
+        for (uint256 i = 0; i < owners.length; ++i) {
+            if (owners[i] != expectedOwners[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// @dev Checks if user confirmation input equals "yes"
+    /// @param response User input response
+    /// @return True if response equals "yes"
+    function _isYesResponse(string memory response) internal pure returns (bool) {
+        return keccak256(bytes(response)) == keccak256(bytes("yes"));
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
