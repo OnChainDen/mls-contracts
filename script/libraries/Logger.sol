@@ -169,19 +169,6 @@ library Logger {
     // Common Deployment Messages
     // =========================================================================
 
-    /// @dev Logs the start of safety checks
-    function logSafetyChecksStart() internal pure {
-        console.log("  Running safety checks...");
-        console.log("");
-    }
-
-    /// @dev Logs safety checks failed message
-    function logSafetyChecksFailed() internal pure {
-        console.log("");
-        console.log(unicode"  ❌ SAFETY CHECKS FAILED - Deployment aborted");
-        console.log("");
-    }
-
     /// @dev Logs successful deployment with environment variable instruction
     /// @param name Human-readable name of what was deployed
     /// @param deployedAddress Address where it was deployed

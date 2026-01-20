@@ -53,7 +53,6 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logBoxHeader("Safe Singleton Factory - Factory Deployment");
         Logger.logEmptyLine();
 
-        Logger.logSafetyChecksStart();
         Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
         _validateSafeFactoryNotDeployedOrRevert();
         _validateDeployerPrivateKeyOrRevert();
