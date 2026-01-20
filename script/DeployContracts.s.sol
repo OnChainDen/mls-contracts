@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {Arrays} from "@openzeppelin/contracts/utils/Arrays.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Safe} from "@safe/Safe.sol";
@@ -543,7 +544,7 @@ contract DeployContracts is Script {
         }
 
         address[] memory prodOwners = DeploymentConfig.getProdGuardianSafeOwners();
-        return _areSameOwners(owners, prodOwners);
+        return Arrays.equal(owners, prodOwners);
     }
 
     /// @dev Checks if the provided Deployer Safe config matches production
@@ -556,25 +557,7 @@ contract DeployContracts is Script {
         }
 
         address[] memory prodOwners = DeploymentConfig.getProdDeployerSafeOwners();
-        return _areSameOwners(owners, prodOwners);
-    }
-
-    /// @dev Compares two owner arrays for exact match (length and order)
-    /// @param owners First array of owners
-    /// @param expectedOwners Expected array of owners
-    /// @return True if arrays match exactly
-    function _areSameOwners(address[] memory owners, address[] memory expectedOwners) internal pure returns (bool) {
-        if (owners.length != expectedOwners.length) {
-            return false;
-        }
-
-        for (uint256 i = 0; i < owners.length; ++i) {
-            if (owners[i] != expectedOwners[i]) {
-                return false;
-            }
-        }
-
-        return true;
+        return Arrays.equal(owners, prodOwners);
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
