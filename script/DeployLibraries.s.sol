@@ -9,7 +9,7 @@ import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
-import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
@@ -43,11 +43,11 @@ contract DeployLibraries is Script {
 
         // Get the CREATE2 factory that will be used for deployments
         // The address of the factory is explicitly provided in the environment
-        address factoryAddress = Create2Deployer.getCreate2Factory(vm);
+        address factoryAddress = Create2Utils.getCreate2Factory(vm);
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
-        Create2Deployer.logDeploymentHeader(factoryAddress, block.chainid);
+        Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
         Logger.logKeyAddress("Deployer EOA", deployerAddress);
         Logger.logKeyValue("Mode", "Library Deployment Only");
         Logger.logEmptyLine();
@@ -61,7 +61,7 @@ contract DeployLibraries is Script {
         // Stop broadcasting transactions
         vm.stopBroadcast();
 
-        Create2Deployer.logDeploymentComplete();
+        Create2Utils.logDeploymentComplete();
         _logDeployedAddresses(libs);
         _printLibrariesCommand(libs);
     }
@@ -73,7 +73,7 @@ contract DeployLibraries is Script {
     function computeAddresses() external view {
         // Get the CREATE2 factory that will be used for deployments
         // The address of the factory is explicitly provided in the environment
-        address factoryAddress = Create2Deployer.getCreate2Factory(vm);
+        address factoryAddress = Create2Utils.getCreate2Factory(vm);
 
         // Log the header
         // This includes the factory type, chain ID, and deployed library addresses
@@ -101,10 +101,10 @@ contract DeployLibraries is Script {
     /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return libs Struct containing all deployed library addresses
     function _deployPlatformLibraries(address factoryAddress) internal returns (PlatformLibraries memory libs) {
-        Create2Deployer.logSection("Platform Libraries (CREATE2)");
+        Create2Utils.logSection("Platform Libraries (CREATE2)");
 
         // Deploy LibOrganizationPolicy
-        (libs.policyAddress,) = Create2Deployer.deployIfNotExists(
+        (libs.policyAddress,) = Create2Utils.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_POLICY_SALT,
             type(LibOrganizationPolicy).creationCode,
@@ -112,7 +112,7 @@ contract DeployLibraries is Script {
         );
 
         // Deploy LibOrganizationAdmin
-        (libs.adminAddress,) = Create2Deployer.deployIfNotExists(
+        (libs.adminAddress,) = Create2Utils.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_ADMIN_SALT,
             type(LibOrganizationAdmin).creationCode,
@@ -120,7 +120,7 @@ contract DeployLibraries is Script {
         );
 
         // Deploy LibOrganizationInitialization
-        (libs.initializationAddress,) = Create2Deployer.deployIfNotExists(
+        (libs.initializationAddress,) = Create2Utils.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_INIT_SALT,
             type(LibOrganizationInitialization).creationCode,
@@ -128,7 +128,7 @@ contract DeployLibraries is Script {
         );
 
         // Deploy LibOrganizationAccountSignature
-        (libs.accountSignatureAddress,) = Create2Deployer.deployIfNotExists(
+        (libs.accountSignatureAddress,) = Create2Utils.deployIfNotExists(
             factoryAddress,
             DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode,

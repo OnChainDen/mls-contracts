@@ -9,13 +9,13 @@ import {ICreate2Factory, ISafeSingletonFactory} from "script/interfaces/ICreate2
 import {Logger} from "script/libraries/Logger.sol";
 
 /**
- * @title Create2Deployer
+ * @title Create2Utils
  * @notice Helper library for deterministic CREATE2 deployments
  * @dev Abstracts differences between Arachnid and Safe Singleton Factory.
  *      Provides utilities for computing addresses, checking deployment status, and deploying.
  * @author Den Technologies Inc
  */
-library Create2Deployer {
+library Create2Utils {
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
     /// @param factoryAddress The CREATE2 factory address

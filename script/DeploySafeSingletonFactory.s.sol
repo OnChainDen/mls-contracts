@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 import {Script} from "forge-std/Script.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
-import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
@@ -51,17 +51,17 @@ contract DeploySafeSingletonFactory is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeSingletonFactory");
 
-        Create2Deployer.logFactoryDeploymentHeader("Safe Singleton Factory");
+        Create2Utils.logFactoryDeploymentHeader("Safe Singleton Factory");
 
         // Run all safety checks
         bool allChecksPassed = _runSafetyChecks();
 
         if (!allChecksPassed) {
-            Create2Deployer.logSafetyChecksFailed();
+            Create2Utils.logSafetyChecksFailed();
             revert("Safety checks failed");
         }
 
-        Create2Deployer.logSection("DEPLOYING SAFE SINGLETON FACTORY");
+        Create2Utils.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
         // Get the deployer private key
         uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
@@ -84,12 +84,12 @@ contract DeploySafeSingletonFactory is Script {
         vm.stopBroadcast();
 
         // Verify deployment
-        if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
+        if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             Logger.logFail("ERROR: Factory deployment failed!");
             revert("Factory deployment failed");
         }
 
-        Create2Deployer.logFactoryDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS);
+        Create2Utils.logFactoryDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS);
     }
 
     /// @notice Funds the Safe Singleton Factory deployer address with ETH
@@ -148,7 +148,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check 0: Arachnid factory should NOT exist (prefer Arachnid over SafeSingleton)
         Logger.logCheckStart("0/4", "Checking if Arachnid factory exists...");
-        if (Create2Deployer.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)) {
+        if (Create2Utils.isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)) {
             Logger.logCheckFail("Arachnid factory already deployed");
             Logger.logCheckDetail("Use Arachnid factory instead of Safe Singleton Factory.");
             Logger.logCheckDetail("Set CREATE2_FACTORY_ADDRESS to the Arachnid factory address.");
@@ -158,7 +158,7 @@ contract DeploySafeSingletonFactory is Script {
         }
 
         // Check 1: Safe Singleton Factory not already deployed
-        if (Create2Deployer.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory", "1/4")) {
+        if (Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory", "1/4")) {
             // Factory already deployed - not a failure, but deployment not needed
             // However for Safe, we treat this as a failure since the factory existing means nothing to do
             Logger.logCheckFail("Factory already deployed");

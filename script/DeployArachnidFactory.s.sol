@@ -3,7 +3,7 @@ pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 
-import {Create2Deployer} from "script/libraries/Create2Deployer.sol";
+import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
@@ -73,30 +73,30 @@ contract DeployArachnidFactory is Script {
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
 
         // Log the deployment header
-        Create2Deployer.logFactoryDeploymentHeader("Arachnid Deterministic Deployment Proxy");
+        Create2Utils.logFactoryDeploymentHeader("Arachnid Deterministic Deployment Proxy");
 
         // Run all safety checks
         bool allChecksPassed = _runSafetyChecks();
 
         if (!allChecksPassed) {
-            Create2Deployer.logSafetyChecksFailed();
+            Create2Utils.logSafetyChecksFailed();
             revert("Safety checks failed");
         }
 
-        Create2Deployer.logSection("DEPLOYING ARACHNID FACTORY");
+        Create2Utils.logSection("DEPLOYING ARACHNID FACTORY");
 
         // Broadcast the pre-signed transaction
         _broadcastPresignedTransaction();
 
         // Verify deployment
-        if (!Create2Deployer.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
+        if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             Logger.logFail("ERROR: Factory deployment failed!");
             Logger.logIndented("This chain may enforce EIP-155 replay protection.");
             Logger.logIndented("Use DeploySafeSingletonFactory.s.sol instead.");
             revert("Factory deployment failed");
         }
 
-        Create2Deployer.logFactoryDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS);
+        Create2Utils.logFactoryDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS);
     }
 
     /// @notice Funds the Arachnid factory deployer address with ETH
@@ -137,12 +137,12 @@ contract DeployArachnidFactory is Script {
 
         // Check 1: Factory not already deployed
         // If already deployed, return true (success) - no deployment needed
-        if (Create2Deployer.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Arachnid factory", "1/2")) {
+        if (Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Arachnid factory", "1/2")) {
             return true;
         }
 
         // Check 2: Deployer has sufficient ETH
-        bool hasBalance = Create2Deployer.checkDeployerBalance(
+        bool hasBalance = Create2Utils.checkDeployerBalance(
             _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "2/2", "DeployArachnidFactory"
         );
 
