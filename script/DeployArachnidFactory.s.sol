@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 
+import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
@@ -76,7 +77,9 @@ contract DeployArachnidFactory is Script {
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
 
         // Validate that the Arachnid factory is not already deployed
-        Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
+        Create2Utils.validateFactoryNotDeployedOrRevert(
+            DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS, "Arachnid factory"
+        );
 
         // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(

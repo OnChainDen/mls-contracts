@@ -70,28 +70,18 @@ library Create2Utils {
         require(isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address");
     }
 
-    /// @dev Checks if a factory is already deployed and logs the result
+    /// @dev Validates that a factory is NOT deployed at the given address, reverts if it is
     /// @param factoryAddress The factory address to check
     /// @param factoryName Human-readable name for logging
-    /// @return alreadyDeployed True if factory exists at the address
-    function checkFactoryNotDeployed(address factoryAddress, string memory factoryName)
-        internal
-        view
-        returns (bool alreadyDeployed)
-    {
-        // Log the check start
+    function validateFactoryNotDeployedOrRevert(address factoryAddress, string memory factoryName) internal view {
         Logger.logCheckStart(string.concat("Checking if ", factoryName, " already deployed..."));
 
-        // Case: Factory is already deployed
-        if (isContractDeployedAtAddress(factoryAddress)) {
-            Logger.logCheckInfo(string.concat("Factory already deployed at ", Strings.toHexString(factoryAddress)));
-            Logger.logCheckDetail("No deployment needed. Set CREATE2_FACTORY_ADDRESS to use it.");
-            return true;
-        }
+        require(
+            !isContractDeployedAtAddress(factoryAddress),
+            string.concat(factoryName, " already deployed at ", Strings.toHexString(factoryAddress))
+        );
 
-        // Case: Factory is not deployed
-        Logger.logCheckPass("Factory not yet deployed");
-        return false;
+        Logger.logCheckPass(string.concat(factoryName, " not deployed"));
     }
 
     /// @dev Validates that the deployer has sufficient ETH balance for deployment, reverts if not
@@ -124,21 +114,6 @@ library Create2Utils {
         Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
         Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
         revert("Deployer has insufficient ETH");
-    }
-
-    /// @dev Validates that the Arachnid factory is NOT deployed, reverts if it is
-    function validateArachnidFactoryNotDeployedOrRevert() internal view {
-        Logger.logCheckStart("Checking if Arachnid factory already deployed...");
-
-        require(
-            !isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS),
-            string.concat(
-                "Arachnid factory already deployed at ",
-                Strings.toHexString(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)
-            )
-        );
-
-        Logger.logCheckPass("Arachnid factory not deployed");
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment

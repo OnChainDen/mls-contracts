@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
+import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
@@ -56,12 +56,13 @@ contract DeploySafeSingletonFactory is Script {
 
         // Validate that the Arachnid factory is not already deployed
         // We should not be deploying the Safe Singleton Factory if the Arachnid factory is already deployed.
-        Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
+        Create2Utils.validateFactoryNotDeployedOrRevert(
+            DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS, "Arachnid factory"
+        );
 
         // Validate that the Safe Singleton Factory is not already deployed
-        require(
-            Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory"),
-            string.concat("Safe Singleton Factory already deployed at ", Strings.toHexString(_EXPECTED_FACTORY_ADDRESS))
+        Create2Utils.validateFactoryNotDeployedOrRevert(
+            DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
         );
 
         // Validate that the deployer private key matches the expected address
