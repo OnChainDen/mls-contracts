@@ -138,6 +138,13 @@ contract DeployArachnidFactory is Script {
         Logger.logEmptyLine();
 
         // Broadcast the pre-signed transaction that deploys the factory
+        // NOTE: vm.broadcastRawTransaction requires an active broadcast context to queue the
+        // transaction for on-chain execution. Without a broadcast context, the transaction
+        // is only applied to the simulation state but not sent to the network.
+        // We use vm.startBroadcast() to establish the context using the --private-key from CLI.
+        // The pre-signed transaction has its own signature and will be broadcast as-is.
+        vm.startBroadcast();
         vm.broadcastRawTransaction(_PRESIGNED_TX);
+        vm.stopBroadcast();
     }
 }

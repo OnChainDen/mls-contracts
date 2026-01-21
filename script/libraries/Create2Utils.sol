@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
-import {ICreate2Factory, ISafeSingletonFactory} from "script/interfaces/ICreate2Factory.sol";
+import {ISafeSingletonFactory} from "script/interfaces/ISafeSingletonFactory.sol";
 import {Logger} from "script/libraries/Logger.sol";
 
 /**
@@ -176,14 +176,30 @@ library Create2Utils {
         private
         returns (address deployedAtAddress)
     {
-        // Case:  using Safe Singleton Factory
+        // Case: using Safe Singleton Factory
         if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS) {
             deployedAtAddress = address(ISafeSingletonFactory(factoryAddress).deploy(initCode, salt));
             return deployedAtAddress;
         }
-        // Case: using Arachnid Deterministic Deployment Proxy (default)
+
+        // Case: using Arachnid Deterministic Deployment Proxy
+        // The Arachnid factory is a minimal proxy that expects raw calldata: salt (32 bytes) + initCode
+        // It does NOT have a function selector - data is sent directly via low-level call
+        // Returns the deployed address as raw 20 bytes (not ABI-encoded)
         if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
-            deployedAtAddress = ICreate2Factory(factoryAddress).deploy(salt, initCode);
+            // solhint-disable-next-line avoid-low-level-calls
+            (bool success, bytes memory result) = factoryAddress.call(abi.encodePacked(salt, initCode));
+            require(success, "Arachnid CREATE2 deployment failed");
+            require(result.length == 20, "Arachnid CREATE2 returned invalid address");
+            // Convert raw 20-byte return to address
+            // Memory layout: [32-byte length][20-byte address data][12 bytes junk]
+            // We load 32 bytes from the data section (offset 0x20), then shift right 96 bits (12 bytes)
+            // to align the 20-byte address to the lower bytes
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                let rawData := mload(add(result, 0x20))
+                deployedAtAddress := shr(96, rawData)
+            }
             return deployedAtAddress;
         }
 
