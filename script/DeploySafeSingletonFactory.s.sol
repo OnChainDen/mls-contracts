@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -145,50 +146,63 @@ contract DeploySafeSingletonFactory is Script {
 
     /// @dev Warns and prompts for confirmation if the deployer nonce is not 0
     function _warnAndConfirmIfDeployerNonceNotZero() internal {
-        // Log the check start
-        Logger.logCheckStart("Checking deployer nonce...");
-
         // Get the deployer's nonce
         uint256 nonce = vm.getNonce(msg.sender);
 
-        // Case: Deployer nonce is 0
+        // Case: Deployer nonce is 0 - no confirmation needed
         if (nonce == 0) {
             Logger.logCheckPass("Deployer nonce is 0");
             return;
         }
 
-        // Case: Deployer nonce is not 0
-        Logger.logCheckWarn("Deployer nonce is not 0 (expected 0)");
-        Logger.logCheckDetail("CRITICAL: Nonce has been burned! Factory address will change.");
-        Logger.logCheckDetail("Continuing may deploy to an unexpected address.");
-        Logger.logKeyUint("Current nonce", nonce);
+        // Case: Deployer nonce is not 0 - require confirmation with context in prompt
+        // NOTE: Context is embedded in prompt because console.log output is buffered
+        // solhint-disable-next-line func-named-parameters
+        string memory context = string.concat(
+            "\n  !! WARNING: Deployer nonce is not 0 (expected 0) !!\n",
+            "  CRITICAL: Nonce has been burned! Factory address will change.\n",
+            "  Continuing may deploy to an unexpected address.\n",
+            "  Current nonce: ",
+            Strings.toString(nonce)
+        );
 
-        ScriptUtils.promptForConfirmationOrRevert(vm);
+        ScriptUtils.promptForConfirmationOrRevert(vm, context);
     }
 
     /// @dev Warns and prompts for confirmation of the deployer address
     /// @return isProductionDeployer True if the deployer is the production deployer
     function _warnAndConfirmDeployerAddress() internal returns (bool isProductionDeployer) {
-        // Log the check start
-        Logger.logCheckStart("Confirming deployer address...");
-
         // Case: Deployer address matches production address
         if (msg.sender == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
-            Logger.logCheckWarn("Using PRODUCTION Safe Factory deployer");
-            Logger.logCheckDetail("This EOA must keep nonce 0 for deterministic deployment.");
-            Logger.logKeyAddress("Deployer", msg.sender);
-            Logger.logKeyAddress("Expected factory", DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS);
-            ScriptUtils.promptForConfirmationOrRevert(vm);
+            // Build context for prompt - embedded because console.log output is buffered
+            // solhint-disable-next-line func-named-parameters
+            string memory context = string.concat(
+                "\n  !! Using PRODUCTION Safe Factory deployer !!\n",
+                "  This EOA must keep nonce 0 for deterministic deployment.\n",
+                "  Deployer: ",
+                Strings.toHexString(msg.sender),
+                "\n  Expected factory: ",
+                Strings.toHexString(DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS)
+            );
+
+            ScriptUtils.promptForConfirmationOrRevert(vm, context);
             Logger.logCheckPass("Production deployer confirmed");
             return true;
         }
 
         // Case: Deployer address is NOT the production deployer
-        Logger.logCheckWarn("Using NON-PRODUCTION Safe Factory deployer");
-        Logger.logCheckDetail("Factory address will differ from production.");
-        Logger.logKeyAddress("Deployer", msg.sender);
-        Logger.logKeyAddress("Production deployer", DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS);
-        ScriptUtils.promptForConfirmationOrRevert(vm);
+        // Build context for prompt - embedded because console.log output is buffered
+        // solhint-disable-next-line func-named-parameters
+        string memory nonProdContext = string.concat(
+            "\n  !! Using NON-PRODUCTION Safe Factory deployer !!\n",
+            "  Factory address will differ from production.\n",
+            "  Deployer: ",
+            Strings.toHexString(msg.sender),
+            "\n  Production deployer: ",
+            Strings.toHexString(DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS)
+        );
+
+        ScriptUtils.promptForConfirmationOrRevert(vm, nonProdContext);
         Logger.logCheckPass("Non-production deployer confirmed");
         return false;
     }

@@ -10,10 +10,28 @@ import {Logger} from "script/libraries/Logger.sol";
 /**
  * @title ScriptUtils
  * @dev Helpers for Foundry deployment scripts.
+ *
+ *      NOTE: Foundry's console.log output is buffered and only displayed after script execution,
+ *      but vm.prompt displays immediately. Therefore, any context that needs to be visible
+ *      before user confirmation MUST be embedded in the prompt message itself.
  */
 library ScriptUtils {
     /**
-     * @dev Prompts the user for confirmation and reverts if they don't type "yes".
+     * @dev Prompts the user for confirmation with context and reverts if they don't type "yes".
+     * @param vm The Foundry Vm cheatcode instance
+     * @param context Context message to display before the prompt (will be shown immediately)
+     */
+    function promptForConfirmationOrRevert(Vm vm, string memory context) internal {
+        // Build prompt with context embedded so it displays immediately
+        // NOTE: console.log output is buffered, but vm.prompt displays immediately
+        string memory promptMessage = string.concat(context, "\nType 'yes' to continue: ");
+        string memory response = vm.prompt(promptMessage);
+        string memory trimmedResponse = vm.trim(response);
+        require(Strings.equal(trimmedResponse, "yes"), "Confirmation not received");
+    }
+
+    /**
+     * @dev Prompts the user for confirmation without context and reverts if they don't type "yes".
      * @param vm The Foundry Vm cheatcode instance
      */
     function promptForConfirmationOrRevert(Vm vm) internal {
@@ -32,19 +50,18 @@ library ScriptUtils {
         // Case: the script is being run with the --broadcast flag
         // Log the broadcast mode and prompt for confirmation
         if (vm.isContext(VmSafe.ForgeContext.ScriptBroadcast)) {
-            // Log the broadcast mode
-            Logger.logWarn("BROADCAST MODE DETECTED");
+            // Build the context message with all info embedded
+            // solhint-disable-next-line func-named-parameters
+            string memory context = string.concat(
+                "\n",
+                "  !! BROADCAST MODE DETECTED !!\n",
+                "  Script: ",
+                scriptName,
+                "\n",
+                "  Transactions WILL be sent to the network."
+            );
 
-            // Log the script name
-            Logger.logIndented(string.concat("Script: ", scriptName));
-
-            // Log the transaction will be sent to the network
-            Logger.logIndented("Transactions WILL be sent to the network.");
-            Logger.logEmptyLine();
-
-            // Prompt the user for confirmation
-            promptForConfirmationOrRevert(vm);
-
+            promptForConfirmationOrRevert(vm, context);
             Logger.logEmptyLine();
         } else {
             // Case: the script is being run with the --dry-run flag
@@ -63,22 +80,29 @@ library ScriptUtils {
         // Determine if the chain is a production chain
         bool isProductionChain = DeploymentConfig.isProductionChain(block.chainid);
 
-        // Warn the user if the chain is a production chain
-        if (isProductionChain) {
-            Logger.logWarn("PRODUCTION CHAIN DETECTED");
-        } else {
-            Logger.logInfo("NON-PRODUCTION CHAIN DETECTED");
-        }
-
-        // Log the script name and chain ID
-        Logger.logKeyValue("Script", scriptName);
-        Logger.logKeyUint("Chain ID", block.chainid);
-        Logger.logEmptyLine();
-
         // Case: the chain is a production chain
-        // Prompt for confirmation if the chain is a production chain
+        // Prompt for confirmation with embedded context
         if (isProductionChain) {
-            promptForConfirmationOrRevert(vm);
+            // Build the context message with all info embedded
+            // solhint-disable-next-line func-named-parameters
+            string memory context = string.concat(
+                "\n",
+                "  !! PRODUCTION CHAIN DETECTED !!\n",
+                "  Script: ",
+                scriptName,
+                "\n",
+                "  Chain ID: ",
+                Strings.toString(block.chainid)
+            );
+
+            promptForConfirmationOrRevert(vm, context);
+            Logger.logEmptyLine();
+        } else {
+            // Case: the chain is a non-production chain
+            // Log that we're on a non-production chain (no confirmation needed)
+            Logger.logInfo("NON-PRODUCTION CHAIN DETECTED");
+            Logger.logKeyValue("Script", scriptName);
+            Logger.logKeyUint("Chain ID", block.chainid);
             Logger.logEmptyLine();
         }
     }
