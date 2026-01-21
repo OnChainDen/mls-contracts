@@ -434,7 +434,6 @@ contract DeployContracts is Script {
     /// @param contracts Complete set of deployed contract addresses
     function _logDeployedAddresses(DeployedContracts memory contracts) internal pure {
         Logger.logBoxHeader("Deployed Contract Addresses");
-        Logger.logEmptyLine();
         Logger.logIndented("Safe Infrastructure:");
         Logger.logKeyAddress("  Safe Singleton", contracts.safeInfra.singletonAddress);
         Logger.logKeyAddress("  SafeProxyFactory", contracts.safeInfra.proxyFactoryAddress);

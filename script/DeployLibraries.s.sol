@@ -140,7 +140,6 @@ contract DeployLibraries is Script {
     /// @param libs Struct containing deployed library addresses
     function _logDeployedAddresses(PlatformLibraries memory libs) internal pure {
         Logger.logBoxHeader("Deployed Library Addresses");
-        Logger.logEmptyLine();
         Logger.logKeyAddress("LibOrganizationPolicy", libs.policyAddress);
         Logger.logKeyAddress("LibOrganizationAdmin", libs.adminAddress);
         Logger.logKeyAddress("LibOrganizationInitialization", libs.initializationAddress);
@@ -153,7 +152,6 @@ contract DeployLibraries is Script {
     /// @param libs Struct containing library addresses
     function _printLibrariesCommand(PlatformLibraries memory libs) internal pure {
         Logger.logBoxHeader("NEXT STEP: Run DeployContracts with the following --libraries flags:");
-        Logger.logEmptyLine();
         Logger.logIndented("forge script script/DeployContracts.s.sol:DeployContracts \\");
         Logger.logIndented("  --rpc-url $RPC_URL \\");
         Logger.logIndented("  --broadcast \\");

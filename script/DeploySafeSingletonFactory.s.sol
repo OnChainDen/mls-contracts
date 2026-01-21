@@ -51,7 +51,6 @@ contract DeploySafeSingletonFactory is Script {
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeSingletonFactory");
 
         Logger.logBoxHeader("Safe Singleton Factory - Factory Deployment");
-        Logger.logEmptyLine();
 
         Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
         _validateSafeFactoryNotDeployedOrRevert();
