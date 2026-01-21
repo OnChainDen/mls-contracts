@@ -59,18 +59,15 @@ contract DeploySafeSingletonFactory is Script {
             DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
         );
 
-        // Get the deployer address
-        address deployerAddress = msg.sender;
-
         // Warn and require confirmation for production and non-production deployers
-        bool isProductionDeployer = _warnAndConfirmDeployerAddress(deployerAddress);
+        bool isProductionDeployer = _warnAndConfirmDeployerAddress();
 
         // Validate that the deployer nonce is exactly 0
-        _warnAndConfirmIfDeployerNonceNotZero(deployerAddress);
+        _warnAndConfirmIfDeployerNonceNotZero();
 
         // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(
-            deployerAddress, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
+            msg.sender, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
         );
 
         // Log section header
@@ -147,13 +144,12 @@ contract DeploySafeSingletonFactory is Script {
     }
 
     /// @dev Warns and prompts for confirmation if the deployer nonce is not 0
-    /// @param deployerAddress The deployer address to check
-    function _warnAndConfirmIfDeployerNonceNotZero(address deployerAddress) internal {
+    function _warnAndConfirmIfDeployerNonceNotZero() internal {
         // Log the check start
         Logger.logCheckStart("Checking deployer nonce...");
 
         // Get the deployer's nonce
-        uint256 nonce = vm.getNonce(deployerAddress);
+        uint256 nonce = vm.getNonce(msg.sender);
 
         // Case: Deployer nonce is 0
         if (nonce == 0) {
@@ -171,17 +167,16 @@ contract DeploySafeSingletonFactory is Script {
     }
 
     /// @dev Warns and prompts for confirmation of the deployer address
-    /// @param deployerAddress The deployer address to confirm
     /// @return isProductionDeployer True if the deployer is the production deployer
-    function _warnAndConfirmDeployerAddress(address deployerAddress) internal returns (bool isProductionDeployer) {
+    function _warnAndConfirmDeployerAddress() internal returns (bool isProductionDeployer) {
         // Log the check start
         Logger.logCheckStart("Confirming deployer address...");
 
         // Case: Deployer address matches production address
-        if (deployerAddress == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
+        if (msg.sender == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
             Logger.logCheckWarn("Using PRODUCTION Safe Factory deployer");
             Logger.logCheckDetail("This EOA must keep nonce 0 for deterministic deployment.");
-            Logger.logKeyAddress("Deployer", deployerAddress);
+            Logger.logKeyAddress("Deployer", msg.sender);
             Logger.logKeyAddress("Expected factory", DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS);
             ScriptUtils.promptForConfirmationOrRevert(vm);
             Logger.logCheckPass("Production deployer confirmed");
@@ -191,7 +186,7 @@ contract DeploySafeSingletonFactory is Script {
         // Case: Deployer address is NOT the production deployer
         Logger.logCheckWarn("Using NON-PRODUCTION Safe Factory deployer");
         Logger.logCheckDetail("Factory address will differ from production.");
-        Logger.logKeyAddress("Deployer", deployerAddress);
+        Logger.logKeyAddress("Deployer", msg.sender);
         Logger.logKeyAddress("Production deployer", DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS);
         ScriptUtils.promptForConfirmationOrRevert(vm);
         Logger.logCheckPass("Non-production deployer confirmed");
