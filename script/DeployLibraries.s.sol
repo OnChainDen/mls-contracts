@@ -23,6 +23,7 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
  *
  *      Usage:
  *        forge script script/DeployLibraries.s.sol:DeployLibraries \
+ *          --sig "run(address)" <CREATE2_FACTORY_ADDRESS> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
@@ -32,17 +33,20 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
 contract DeployLibraries is Script {
     /**
      * @notice Main entry point - deploys all platform libraries via CREATE2
+     * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
-    function run() external {
+    function run(address factoryAddress) external {
+        // Validate the provided CREATE2 factory address
+        require(factoryAddress != address(0), "Factory address cannot be zero");
+        require(
+            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
+        );
+
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries");
 
         // Prevent using the production Safe Factory deployer for this script
         Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
-
-        // Get the CREATE2 factory that will be used for deployments
-        // The address of the factory is explicitly provided in the environment
-        address factoryAddress = Create2Utils.getCreate2Factory(vm);
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
@@ -68,11 +72,14 @@ contract DeployLibraries is Script {
     /**
      * @notice Compute and print library addresses without deploying
      * @dev Use this to preview the --libraries flags before any deployment
+     * @param factoryAddress Address of the CREATE2 factory to use for address computation
      */
-    function computeAddresses() external view {
-        // Get the CREATE2 factory that will be used for deployments
-        // The address of the factory is explicitly provided in the environment
-        address factoryAddress = Create2Utils.getCreate2Factory(vm);
+    function computeAddresses(address factoryAddress) external view {
+        // Validate the provided CREATE2 factory address
+        require(factoryAddress != address(0), "Factory address cannot be zero");
+        require(
+            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
+        );
 
         // Log the header
         // This includes the factory type, chain ID, and deployed library addresses

@@ -31,8 +31,7 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  * @dev This script must be run AFTER the DeployLibraries.s.sol script and must use the --libraries flags pointing
  *      to the library addresses outputted by the DeployLibraries.s.sol script.
  *
- *      This script also requires that the CREATE2 factory is already deployed and provided via the
- *      CREATE2_FACTORY_ADDRESS environment variable.
+ *      The CREATE2 factory address must be passed as an argument to the run function.
  *
  *      This script will revert if the libraries are not deployed at the expected addresses and if the
  *      script is not run with the --libraries flags pointing to the library addresses outputted by the
@@ -44,6 +43,14 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *      3. Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
  *      4. Factory Contracts (OrganizationFactory)
  *      5. ImplementationWhitelistProxy
+ *
+ *      Usage:
+ *        forge script script/DeployContracts.s.sol:DeployContracts \
+ *          --sig "run(address)" <CREATE2_FACTORY_ADDRESS> \
+ *          --rpc-url $RPC_URL \
+ *          --broadcast \
+ *          --libraries ... \
+ *          -vvvv
  *
  * @author Den Technologies Inc
  */
@@ -73,17 +80,20 @@ contract DeployContracts is Script {
     /**
      * @notice Main entry point for the deployment script
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
+     * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
-    function run() external {
+    function run(address factoryAddress) external {
+        // Validate the provided CREATE2 factory address
+        require(factoryAddress != address(0), "Factory address cannot be zero");
+        require(
+            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
+        );
+
         // Warn and confirm when targeting production chains
         ScriptUtils.warnAndConfirmIfProductionChain(vm, "DeployContracts");
 
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployContracts");
-
-        // Get the CREATE2 factory that will be used for deployments
-        // The address of the factory is explicitly provided in the environment
-        address factoryAddress = Create2Utils.getCreate2Factory(vm);
 
         // Validate that the script was run with --libraries flag (critical for determinism)
         _validateLibrariesLinkedOrRevert(factoryAddress);

@@ -755,12 +755,14 @@ This section covers how to deploy the Multi-layer Security (MLS) Wallet platform
 
 All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. This is critical for cross-chain operations and user experience.
 
-The deployment follows a **4-step process** that requires the `CREATE2_FACTORY_ADDRESS` environment variable to be explicitly set:
+The deployment follows a **4-step process**:
 
 1. **Step 1:** Deploy Arachnid Factory (if not already deployed)
 2. **Step 2:** Deploy Safe Singleton Factory (only if Arachnid is unavailable)
 3. **Step 3:** Deploy platform libraries via CREATE2
 4. **Step 4:** Deploy all contracts with library linking
+
+The CREATE2 factory address is passed as an argument to the deployment scripts (Steps 3-4).
 
 Two CREATE2 factory options are supported:
 1. **Arachnid Deterministic Deployment Proxy** (`0x4e59b44847b379578588920cA78FbF26c0B4956C`) - Preferred, available on most EVM chains
@@ -775,18 +777,18 @@ Before deploying, ensure you have:
    # Required for all deployments
    RPC_URL=<target-chain-rpc-endpoint>
 
-   # Required for Steps 3-4 (must be set after factory deployment)
-   CREATE2_FACTORY_ADDRESS=<factory-address>
-
    # Required for factory deployment (Step 1 or 2)
    CONFIRM_DEPLOYMENT=true
-
-   # Safe multisig configuration (optional, defaults to deployer as single owner)
-   GUARDIAN_SAFE_OWNERS=<comma-separated-addresses>
-   GUARDIAN_SAFE_THRESHOLD=<number>
-   DEPLOYER_SAFE_OWNERS=<comma-separated-addresses>
-   DEPLOYER_SAFE_THRESHOLD=<number>
    ```
+
+   **Note:** The CREATE2 factory address is passed as an argument to the deployment scripts (Steps 3-4), not via environment variables.
+
+   **Safe multisig configuration is no longer passed via environment variables.**
+   The Guardian/Deployer Safe owners and thresholds are hardcoded in
+   `script/config/DeploymentConfig.sol`. The deployment scripts automatically select the
+   **production** or **non-production** Safe config based on `block.chainid`.
+   Make sure the hardcoded non-production placeholders are updated before deploying to
+   any test or staging chain.
 
 2. **Signer Configuration (hot wallet or ledger)**
    The EOA that runs the scripts can be provided via Foundry CLI flags:
@@ -892,11 +894,12 @@ For fully deterministic deployment across all chains:
    ```bash
    # Option A: Compute addresses without deploying
    forge script script/DeployLibraries.s.sol:DeployLibraries \
-     --sig "computeAddresses()" \
+     --sig "computeAddresses(address)" <CREATE2_FACTORY_ADDRESS> \
      --rpc-url $RPC_URL
    
    # Option B: Deploy libraries
    forge script script/DeployLibraries.s.sol:DeployLibraries \
+     --sig "run(address)" <CREATE2_FACTORY_ADDRESS> \
      --rpc-url $RPC_URL \
      --broadcast
    ```
@@ -906,6 +909,7 @@ For fully deterministic deployment across all chains:
    The DeployLibraries script outputs the required `--libraries` flags. Use them:
    ```bash
    forge script script/DeployContracts.s.sol:DeployContracts \
+     --sig "run(address)" <CREATE2_FACTORY_ADDRESS> \
      --rpc-url $RPC_URL \
      --broadcast \
      --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x... \
@@ -992,8 +996,8 @@ forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
 CONFIRM_DEPLOYMENT=true forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
   --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 
-# Set the factory address
-export CREATE2_FACTORY_ADDRESS=0x4e59b44847b379578588920cA78FbF26c0B4956C
+# Use this factory address for Steps 3-4
+# CREATE2_FACTORY=0x4e59b44847b379578588920cA78FbF26c0B4956C
 ```
 
 **Step 2: Deploy Safe Singleton Factory (only if Arachnid failed)**
@@ -1015,8 +1019,8 @@ forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory 
 CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
   --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 
-# Set the factory address
-export CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
+# Use this factory address for Steps 3-4
+# CREATE2_FACTORY=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
 ```
 
 > **CRITICAL: Nonce Protection**
@@ -1026,11 +1030,14 @@ export CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
 **Step 3: Deploy Platform Libraries**
 
 ```bash
-# Ensure CREATE2_FACTORY_ADDRESS is set from Step 1 or 2
-echo $CREATE2_FACTORY_ADDRESS
+# Set the CREATE2 factory address from Step 1 or 2
+# Arachnid: 0x4e59b44847b379578588920cA78FbF26c0B4956C
+# Safe Singleton: 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
+CREATE2_FACTORY=<factory-address>
 
 # Deploy libraries (save the --libraries output!)
 forge script script/DeployLibraries.s.sol:DeployLibraries \
+  --sig "run(address)" $CREATE2_FACTORY \
   --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 ```
 
@@ -1040,6 +1047,7 @@ Use the library addresses output from Step 3:
 
 ```bash
 forge script script/DeployContracts.s.sol:DeployContracts \
+  --sig "run(address)" $CREATE2_FACTORY \
   --rpc-url $RPC_URL \
   $SIGNER_FLAGS \
   --broadcast \
@@ -1051,7 +1059,7 @@ forge script script/DeployContracts.s.sol:DeployContracts \
   -vvvv
 ```
 
-> **Note:** Replace `<ADDR>` placeholders with the actual library addresses output from Step 3.
+> **Note:** Replace `<ADDR>` placeholders with the actual library addresses output from Step 3. `$CREATE2_FACTORY` should be set to the same factory address used in Step 3.
 
 ### Post-Deployment Verification
 
@@ -1078,9 +1086,9 @@ After deployment, verify:
 
 | Issue | Solution |
 |-------|----------|
-| "CREATE2_FACTORY_ADDRESS not set" | Set the `CREATE2_FACTORY_ADDRESS` environment variable to the factory address after deploying it in Step 1 or 2. |
-| "No contract at CREATE2_FACTORY_ADDRESS" | The factory hasn't been deployed yet. Run Step 1 (Arachnid) or Step 2 (Safe Singleton) first. |
-| "Arachnid factory already deployed" (in Safe Singleton script) | Use the Arachnid factory instead. Set `CREATE2_FACTORY_ADDRESS=0x4e59b44847b379578588920cA78FbF26c0B4956C`. |
+| "Factory address cannot be zero" | Pass a valid CREATE2 factory address as an argument to the script (e.g., `--sig "run(address)" 0x4e59b44847b379578588920cA78FbF26c0B4956C`). |
+| "CREATE2 factory not deployed at provided address" | The factory hasn't been deployed yet at the provided address. Run Step 1 (Arachnid) or Step 2 (Safe Singleton) first, or verify you're using the correct address. |
+| "Arachnid factory already deployed" (in Safe Singleton script) | Use the Arachnid factory instead. Pass `0x4e59b44847b379578588920cA78FbF26c0B4956C` as the factory address. |
 | "Deployer nonce is not 0" | The nonce has been burned. You cannot deploy Safe Singleton Factory at the deterministic address on this chain. |
 | "Already deployed" messages | This is normal! The script skips contracts that already exist at their deterministic addresses. |
 | Library address mismatch warning | You ran the script without `--libraries` flag. Re-run with the correct library addresses for deterministic deployment. |

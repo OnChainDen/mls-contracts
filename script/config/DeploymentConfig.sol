@@ -111,13 +111,13 @@ library DeploymentConfig {
     uint256 internal constant PROD_DEPLOYER_SAFE_THRESHOLD = 2;
 
     /// @dev Non-production Guardian Safe owner addresses (placeholder - replace before deploying)
-    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0x0000000000000000000000000000000000000001);
+    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328);
 
     /// @dev Non-production Guardian Safe signature threshold
     uint256 internal constant NON_PROD_GUARDIAN_SAFE_THRESHOLD = 1;
 
     /// @dev Non-production Deployer Safe owner addresses (placeholder - replace before deploying)
-    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x0000000000000000000000000000000000000002);
+    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x901CAb5Fdb93571F0f6Cd6D643F8b2532f00d2A3);
 
     /// @dev Non-production Deployer Safe signature threshold
     uint256 internal constant NON_PROD_DEPLOYER_SAFE_THRESHOLD = 1;
