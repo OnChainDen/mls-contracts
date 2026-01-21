@@ -60,12 +60,6 @@ library Logger {
         console.log(unicode"  ⏭️  SKIPPED: %s (already deployed at %s)", name, existingAddress);
     }
 
-    /// @dev Logs a skipped deployment with a custom reason
-    /// @param reason The reason for skipping
-    function logDeploymentSkippedWithReason(string memory reason) internal pure {
-        console.log(unicode"  ⏭️  SKIPPED: %s", reason);
-    }
-
     // =========================================================================
     // Safety Check Messages
     // =========================================================================
@@ -86,18 +80,6 @@ library Logger {
     /// @param message The failure message
     function logCheckFail(string memory message) internal pure {
         console.log(unicode"       ❌ FAIL: %s", message);
-    }
-
-    /// @dev Logs a warning check result (7-space indent for alignment)
-    /// @param message The warning message
-    function logCheckWarn(string memory message) internal pure {
-        console.log(unicode"       ⚠️  WARN: %s", message);
-    }
-
-    /// @dev Logs an info check result (7-space indent for alignment)
-    /// @param message The info message
-    function logCheckInfo(string memory message) internal pure {
-        console.log(unicode"       ⏭️  INFO: %s", message);
     }
 
     /// @dev Logs additional detail for a check (14-space indent)
