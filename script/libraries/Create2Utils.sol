@@ -129,16 +129,15 @@ library Create2Utils {
     /// @dev Validates that the Arachnid factory is NOT deployed, reverts if it is
     function validateArachnidFactoryNotDeployedOrRevert() internal view {
         Logger.logCheckStart("Checking if Arachnid factory already deployed...");
-        if (isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)) {
-            Logger.logCheckFail("Arachnid factory already deployed");
-            Logger.logCheckDetail(
-                string.concat(
-                    "Factory address: ", Strings.toHexString(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)
-                )
-            );
-            Logger.logCheckDetail("Set CREATE2_FACTORY_ADDRESS to use it.");
-            revert("Arachnid factory already deployed");
-        }
+
+        require(
+            !isContractDeployedAtAddress(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS),
+            string.concat(
+                "Arachnid factory already deployed at ",
+                Strings.toHexString(DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS)
+            )
+        );
+
         Logger.logCheckPass("Arachnid factory not deployed");
     }
 

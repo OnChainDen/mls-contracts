@@ -86,7 +86,7 @@ contract DeployArachnidFactory is Script {
         // Log section header
         Logger.logSection("DEPLOYING ARACHNID FACTORY");
 
-        // Broadcast the pre-signed transaction
+        // Broadcast the pre-signed transaction that deploys the factory
         _broadcastPresignedTransaction();
 
         // Verify deployment
@@ -97,6 +97,7 @@ contract DeployArachnidFactory is Script {
             revert("Factory deployment failed");
         }
 
+        // Log success
         Logger.logDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS, "CREATE2_FACTORY_ADDRESS");
     }
 
@@ -104,29 +105,34 @@ contract DeployArachnidFactory is Script {
     /// @dev Can be called separately to fund the deployer before running the main script.
     ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
     function fundDeployer() external {
-        uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
-
+        // Log the funding details
         Logger.logEmptyLine();
         Logger.logIndented("Funding Arachnid factory deployer...");
         Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER_ADDRESS);
         Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
+        // Get the private key for the account that will fund the deployer
+        uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
+
+        // Fund the deployer
         vm.startBroadcast(fundingPrivateKey);
         payable(_EXPECTED_DEPLOYER_ADDRESS).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
+        // Log success
         Logger.logPass("Deployer funded successfully");
     }
 
     /// @dev Broadcasts the pre-signed transaction to deploy the factory
     function _broadcastPresignedTransaction() internal {
+        // Log the broadcasting details
         Logger.logIndented("Broadcasting pre-signed transaction...");
         Logger.logKeyAddress("Deployer", _EXPECTED_DEPLOYER_ADDRESS);
         Logger.logKeyAddress("Expected factory address", _EXPECTED_FACTORY_ADDRESS);
         Logger.logEmptyLine();
 
-        // Use Foundry's vm.broadcastRawTransaction to broadcast the pre-signed tx
+        // Broadcast the pre-signed transaction that deploys the factory
         vm.broadcastRawTransaction(_PRESIGNED_TX);
     }
 }
