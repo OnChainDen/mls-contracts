@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
@@ -50,23 +51,38 @@ contract DeploySafeSingletonFactory is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeSingletonFactory");
 
+        // Log the deployment header
         Logger.logBoxHeader("Safe Singleton Factory - Factory Deployment");
 
+        // Validate that the Arachnid factory is not already deployed
+        // We should not be deploying the Safe Singleton Factory if the Arachnid factory is already deployed.
         Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
-        _validateSafeFactoryNotDeployedOrRevert();
+
+        // Validate that the Safe Singleton Factory is not already deployed
+        require(
+            Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory"),
+            string.concat("Safe Singleton Factory already deployed at ", Strings.toHexString(_EXPECTED_FACTORY_ADDRESS))
+        );
+
+        // Validate that the deployer private key matches the expected address
         _validateDeployerPrivateKeyOrRevert();
+
+        // Validate that the deployer nonce is exactly 0
         _validateDeployerNonceZeroOrRevert();
+
+        // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(
             _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
         );
 
+        // Log section header
         Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
-        // Get the deployer private key
+        // Get the deployer private key/address from the environment variable
         uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
 
-        // Final verification that deployer matches expected
+        // Case: Deployer address is not the expected address
         if (deployerAddress != _EXPECTED_DEPLOYER_ADDRESS) {
             Logger.logFail("ERROR: Deployer address mismatch!");
             Logger.logIndented("Expected:");
@@ -81,12 +97,13 @@ contract DeploySafeSingletonFactory is Script {
         _deployFactory();
         vm.stopBroadcast();
 
-        // Verify that the factory was deployed at the expected address
+        // Case: Factory was not deployed at the expected address
         if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
-            Logger.logFail("ERROR: Factory deployment failed!");
+            Logger.logFail("ERROR: Factory was not deployed at the expected address!");
             revert("Factory deployment failed");
         }
 
+        // Log success
         Logger.logDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS, "CREATE2_FACTORY_ADDRESS");
     }
 
@@ -130,28 +147,26 @@ contract DeploySafeSingletonFactory is Script {
             deployedAtAddress := create(0, add(factoryBytecode, 0x20), mload(factoryBytecode))
         }
 
+        // Check that the factory was deployed
         require(deployedAtAddress != address(0), "Factory deployment failed");
 
-        // The address should match due to CREATE from nonce 0
+        // Case: Deployed address does not match expected factory address
         if (deployedAtAddress != _EXPECTED_FACTORY_ADDRESS) {
+            Logger.logFail("ERROR: Deployed address does not match expected factory address!");
             Logger.logKeyAddress("Deployed at", deployedAtAddress);
             Logger.logKeyAddress("Expected", _EXPECTED_FACTORY_ADDRESS);
             revert("Deployed address does not match expected factory address");
         }
     }
 
-    /// @dev Validates that the Safe Singleton Factory is not already deployed
-    function _validateSafeFactoryNotDeployedOrRevert() internal view {
-        if (Create2Utils.checkFactoryNotDeployed(_EXPECTED_FACTORY_ADDRESS, "Safe Singleton Factory")) {
-            Logger.logCheckFail("Safe Singleton Factory already deployed");
-            revert("Safe Singleton Factory already deployed");
-        }
-    }
-
     /// @dev Validates that the deployer private key is set and matches the expected address
     function _validateDeployerPrivateKeyOrRevert() internal view {
+        // Log the check start
         Logger.logCheckStart("Checking deployer private key...");
+
+        // Get the deployer's private key
         try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
+            // Get the deployer's address
             address deployerAddress = vm.addr(pk);
             if (deployerAddress == _EXPECTED_DEPLOYER_ADDRESS) {
                 Logger.logCheckPass("Deployer key matches expected address");
@@ -169,12 +184,19 @@ contract DeploySafeSingletonFactory is Script {
 
     /// @dev Validates that the deployer nonce is exactly 0
     function _validateDeployerNonceZeroOrRevert() internal view {
+        // Log the check start
         Logger.logCheckStart("Checking deployer nonce...");
+
+        // Get the deployer's nonce
         uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER_ADDRESS);
+
+        // Case: Deployer nonce is 0
         if (nonce == 0) {
             Logger.logCheckPass("Deployer nonce is 0");
             return;
         }
+
+        // Case: Deployer nonce is not 0
         Logger.logCheckFail("Deployer nonce is not 0 (expected 0)");
         Logger.logCheckDetail("CRITICAL: Nonce has been burned! Cannot deploy factory.");
         revert("Deployer nonce is not 0");
