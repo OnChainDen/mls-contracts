@@ -65,8 +65,11 @@ contract DeploySafeSingletonFactory is Script {
             DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
         );
 
+        // Get the deployer private key from the environment variable
+        uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
+
         // Validate that the deployer private key matches the expected address
-        _validateDeployerPrivateKeyOrRevert();
+        _validateDeployerPrivateKeyOrRevert(deployerPrivateKey);
 
         // Validate that the deployer nonce is exactly 0
         _validateDeployerNonceZeroOrRevert();
@@ -78,20 +81,6 @@ contract DeploySafeSingletonFactory is Script {
 
         // Log section header
         Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
-
-        // Get the deployer private key/address from the environment variable
-        uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
-
-        // Case: Deployer address is not the expected address
-        if (deployerAddress != _EXPECTED_DEPLOYER_ADDRESS) {
-            Logger.logFail("ERROR: Deployer address mismatch!");
-            Logger.logIndented("Expected:");
-            Logger.logKeyAddress("  ", _EXPECTED_DEPLOYER_ADDRESS);
-            Logger.logIndented("Got:");
-            Logger.logKeyAddress("  ", deployerAddress);
-            revert("Deployer address does not match expected address");
-        }
 
         // Deploy the factory
         vm.startBroadcast(deployerPrivateKey);
@@ -160,27 +149,26 @@ contract DeploySafeSingletonFactory is Script {
         }
     }
 
-    /// @dev Validates that the deployer private key is set and matches the expected address
-    function _validateDeployerPrivateKeyOrRevert() internal view {
+    /// @dev Validates that the deployer private key matches the expected address
+    /// @param deployerPrivateKey The private key to validate
+    function _validateDeployerPrivateKeyOrRevert(uint256 deployerPrivateKey) internal view {
         // Log the check start
         Logger.logCheckStart("Checking deployer private key...");
 
-        // Get the deployer's private key
-        try vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY") returns (uint256 pk) {
-            // Get the deployer's address
-            address deployerAddress = vm.addr(pk);
-            if (deployerAddress == _EXPECTED_DEPLOYER_ADDRESS) {
-                Logger.logCheckPass("Deployer key matches expected address");
-                return;
-            }
-            Logger.logCheckFail("Deployer address mismatch");
-            Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
-            Logger.logCheckDetail("Got: different address from provided key");
-            revert("Deployer address mismatch");
-        } catch {
-            Logger.logCheckFail("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set");
-            revert("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY not set");
+        // Get the deployer's address
+        address deployerAddress = vm.addr(deployerPrivateKey);
+
+        // Case: Deployer address matches expected address
+        if (deployerAddress == _EXPECTED_DEPLOYER_ADDRESS) {
+            Logger.logCheckPass("Deployer key matches expected address");
+            return;
         }
+
+        // Case: Deployer address does not match expected address
+        Logger.logCheckFail("Deployer address mismatch");
+        Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
+        Logger.logCheckDetail("Got: different address from provided key");
+        revert("Deployer address mismatch");
     }
 
     /// @dev Validates that the deployer nonce is exactly 0
