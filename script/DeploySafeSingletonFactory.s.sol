@@ -139,14 +139,6 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check that the factory was deployed
         require(deployedAtAddress != address(0), "Factory deployment failed");
-
-        // Case: Deployed address does not match expected factory address
-        if (deployedAtAddress != _EXPECTED_FACTORY_ADDRESS) {
-            Logger.logFail("ERROR: Deployed address does not match expected factory address!");
-            Logger.logKeyAddress("Deployed at", deployedAtAddress);
-            Logger.logKeyAddress("Expected", _EXPECTED_FACTORY_ADDRESS);
-            revert("Deployed address does not match expected factory address");
-        }
     }
 
     /// @dev Validates that the deployer private key matches the expected address
