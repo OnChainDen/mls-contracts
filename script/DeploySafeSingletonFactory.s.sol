@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -72,7 +73,7 @@ contract DeploySafeSingletonFactory is Script {
         _validateDeployerPrivateKeyOrRevert(deployerPrivateKey);
 
         // Validate that the deployer nonce is exactly 0
-        _validateDeployerNonceZeroOrRevert();
+        _warnAndConfirmIfDeployerNonceNotZero();
 
         // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(
@@ -90,6 +91,7 @@ contract DeploySafeSingletonFactory is Script {
         // Case: Factory was not deployed at the expected address
         if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             Logger.logFail("ERROR: Factory was not deployed at the expected address!");
+
             revert("Factory deployment failed");
         }
 
@@ -141,6 +143,32 @@ contract DeploySafeSingletonFactory is Script {
         require(deployedAtAddress != address(0), "Factory deployment failed");
     }
 
+    /// @dev Warns and prompts for confirmation if the deployer nonce is not 0
+    function _warnAndConfirmIfDeployerNonceNotZero() internal {
+        // Log the check start
+        Logger.logCheckStart("Checking deployer nonce...");
+
+        // Get the deployer's nonce
+        uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER_ADDRESS);
+
+        // Case: Deployer nonce is 0
+        if (nonce == 0) {
+            Logger.logCheckPass("Deployer nonce is 0");
+            return;
+        }
+
+        // Case: Deployer nonce is not 0
+        Logger.logCheckWarn("Deployer nonce is not 0 (expected 0)");
+        Logger.logCheckDetail("CRITICAL: Nonce has been burned! Factory address will change.");
+        Logger.logCheckDetail("Continuing may deploy to an unexpected address.");
+        Logger.logKeyUint("Current nonce", nonce);
+
+        string memory response = vm.prompt("Type 'yes' to continue anyway: ");
+        string memory trimmedResponse = vm.trim(response);
+
+        require(Strings.equal(trimmedResponse, "yes"), "Deployment cancelled");
+    }
+
     /// @dev Validates that the deployer private key matches the expected address
     /// @param deployerPrivateKey The private key to validate
     function _validateDeployerPrivateKeyOrRevert(uint256 deployerPrivateKey) internal view {
@@ -160,26 +188,7 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logCheckFail("Deployer address mismatch");
         Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
         Logger.logCheckDetail("Got: different address from provided key");
+
         revert("Deployer address mismatch");
-    }
-
-    /// @dev Validates that the deployer nonce is exactly 0
-    function _validateDeployerNonceZeroOrRevert() internal view {
-        // Log the check start
-        Logger.logCheckStart("Checking deployer nonce...");
-
-        // Get the deployer's nonce
-        uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER_ADDRESS);
-
-        // Case: Deployer nonce is 0
-        if (nonce == 0) {
-            Logger.logCheckPass("Deployer nonce is 0");
-            return;
-        }
-
-        // Case: Deployer nonce is not 0
-        Logger.logCheckFail("Deployer nonce is not 0 (expected 0)");
-        Logger.logCheckDetail("CRITICAL: Nonce has been burned! Cannot deploy factory.");
-        revert("Deployer nonce is not 0");
     }
 }
