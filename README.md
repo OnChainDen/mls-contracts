@@ -773,23 +773,30 @@ Before deploying, ensure you have:
 1. **Environment Variables**
    ```bash
    # Required for all deployments
-   PRIVATE_KEY=<deployer-eoa-private-key>
    RPC_URL=<target-chain-rpc-endpoint>
-   
+
    # Required for Steps 3-4 (must be set after factory deployment)
    CREATE2_FACTORY_ADDRESS=<factory-address>
-   
+
    # Required for factory deployment (Step 1 or 2)
    CONFIRM_DEPLOYMENT=true
-   
+
    # Safe multisig configuration (optional, defaults to deployer as single owner)
    GUARDIAN_SAFE_OWNERS=<comma-separated-addresses>
    GUARDIAN_SAFE_THRESHOLD=<number>
    DEPLOYER_SAFE_OWNERS=<comma-separated-addresses>
    DEPLOYER_SAFE_THRESHOLD=<number>
-   
-   # Only for deploying Safe Singleton Factory (Step 2)
-   SAFE_FACTORY_DEPLOYER_PRIVATE_KEY=<nonce-0-deployer-key>
+   ```
+
+2. **Signer Configuration (hot wallet or ledger)**
+   The EOA that runs the scripts can be provided via Foundry CLI flags:
+   ```bash
+   # Hot wallet (dev/staging)
+   SIGNER_FLAGS="--private-key $PRIVATE_KEY"
+
+   # Ledger (production)
+   # If you pass multiple --hd-paths, add --sender <ledger-address>
+   SIGNER_FLAGS="--ledger --hd-paths \"m/44'/60'/0'/0/0\""
    ```
 
 2. **RPC endpoint** for the target chain
@@ -805,6 +812,8 @@ The deployment system consists of four scripts:
 | `DeploySafeSingletonFactory.s.sol` | 2 | Deploys Safe Singleton Factory (only if Arachnid unavailable) |
 | `DeployLibraries.s.sol` | 3 | Deploys platform libraries via CREATE2 |
 | `DeployContracts.s.sol` | 4 | Deploys all other contracts (with library linking) |
+
+The EOA that executes these scripts can be a hot wallet or a Ledger. Scripts use `msg.sender` and rely on Foundry's signer flags, so pass the signer via `--private-key`, `--account`, `--keystore`, or `--ledger --hd-paths` when running `forge script`.
 
 ### What Gets Deployed
 
@@ -933,7 +942,7 @@ export PRIVATE_KEY=<your-deployer-key>
 export RPC_URL=<chain-rpc-url>
 export CONFIRM_DEPLOYMENT=true  # Required for factory deployment
 
-# Run the full deployment
+# Run the full deployment (hot wallet only)
 ./script/sh/deploy_all.sh
 
 # Or with contract verification
@@ -947,6 +956,8 @@ This runs `script/sh/deploy_all.sh`, which:
 4. Extracts library addresses from Foundry's broadcast JSON
 5. Deploys all remaining contracts with proper library linking
 
+> **Note:** `deploy_all.sh` currently expects `PRIVATE_KEY` and is intended for hot-wallet deployments. For Ledger, use the manual steps below with `SIGNER_FLAGS`.
+
 **Prerequisites:** The script requires `jq` for JSON parsing. Install via `brew install jq` (macOS) or `apt install jq` (Linux).
 
 ---
@@ -957,8 +968,11 @@ For more control, follow the 4-step deployment process manually:
 
 ```bash
 # Set base environment variables
-export PRIVATE_KEY=<your-deployer-key>
 export RPC_URL=<chain-rpc-url>
+
+# Choose signer flags (hot wallet or ledger)
+SIGNER_FLAGS="--private-key $PRIVATE_KEY"
+# SIGNER_FLAGS="--ledger --hd-paths \"m/44'/60'/0'/0/0\""
 ```
 
 **Step 1: Deploy Arachnid Factory (if not already deployed)**
@@ -972,11 +986,11 @@ cast code 0x4e59b44847b379578588920cA78FbF26c0B4956C --rpc-url $RPC_URL
 
 # Deploy (dry run first without CONFIRM_DEPLOYMENT)
 forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
-  --rpc-url $RPC_URL -vvvv
+  --rpc-url $RPC_URL $SIGNER_FLAGS -vvvv
 
 # If checks pass, deploy with confirmation
 CONFIRM_DEPLOYMENT=true forge script script/DeployArachnidFactory.s.sol:DeployArachnidFactory \
-  --rpc-url $RPC_URL --broadcast -vvvv
+  --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 
 # Set the factory address
 export CREATE2_FACTORY_ADDRESS=0x4e59b44847b379578588920cA78FbF26c0B4956C
@@ -988,17 +1002,18 @@ Only run this if Step 1 failed (e.g., chain enforces EIP-155):
 
 ```bash
 # Fund the Safe Singleton deployer: 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
-# Send ~0.025 ETH to cover deployment gas
-
-export SAFE_FACTORY_DEPLOYER_PRIVATE_KEY=<nonce-0-key>
+# Send ~0.025 ETH to cover deployment gas (using your signer)
+forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+  --sig "fundDeployer(address)" 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 \
+  --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 
 # Deploy (dry run first)
 forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
-  --rpc-url $RPC_URL -vvvv
+  --rpc-url $RPC_URL $SIGNER_FLAGS -vvvv
 
 # If checks pass, deploy with confirmation
 CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
-  --rpc-url $RPC_URL --broadcast -vvvv
+  --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 
 # Set the factory address
 export CREATE2_FACTORY_ADDRESS=0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
@@ -1016,7 +1031,7 @@ echo $CREATE2_FACTORY_ADDRESS
 
 # Deploy libraries (save the --libraries output!)
 forge script script/DeployLibraries.s.sol:DeployLibraries \
-  --rpc-url $RPC_URL --broadcast -vvvv
+  --rpc-url $RPC_URL $SIGNER_FLAGS --broadcast -vvvv
 ```
 
 **Step 4: Deploy Contracts with Library Linking**
@@ -1026,6 +1041,7 @@ Use the library addresses output from Step 3:
 ```bash
 forge script script/DeployContracts.s.sol:DeployContracts \
   --rpc-url $RPC_URL \
+  $SIGNER_FLAGS \
   --broadcast \
   --verify \
   --libraries src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:<ADDR> \
@@ -1084,7 +1100,7 @@ script/
 ├── interfaces/
 │   └── ICreate2Factory.sol           # CREATE2 factory interfaces
 ├── libraries/
-│   └── Create2Deployer.sol           # Deployment helper library
+│   └── Create2Utils.sol              # Deployment helper library
 └── sh/
     └── deploy_all.sh                 # One-command deployment script (Bash)
 ```
