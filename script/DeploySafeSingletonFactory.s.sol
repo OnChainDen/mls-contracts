@@ -57,7 +57,7 @@ contract DeploySafeSingletonFactory is Script {
 
         // Validate that the Safe Singleton Factory is not already deployed
         Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
+            DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
         );
 
         // Warn and require confirmation for production and non-production deployers
@@ -81,9 +81,9 @@ contract DeploySafeSingletonFactory is Script {
 
         // Case: Production deployer should yield the known deterministic address
         if (isProductionDeployer) {
-            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS)) {
+            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS)) {
                 Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
-                Logger.logKeyAddress("Expected", DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS);
+                Logger.logKeyAddress("Expected", DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
                 Logger.logKeyAddress("Got", deployedAtAddress);
                 revert("Factory deployment failed");
             }
@@ -182,7 +182,7 @@ contract DeploySafeSingletonFactory is Script {
                 "  Deployer: ",
                 Strings.toHexString(msg.sender),
                 "\n  Expected factory: ",
-                Strings.toHexString(DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS)
+                Strings.toHexString(DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS)
             );
 
             ScriptUtils.promptForConfirmationOrRevert(vm, context);

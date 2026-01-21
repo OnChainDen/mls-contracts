@@ -33,9 +33,8 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *
  *      The CREATE2 factory address must be passed as an argument to the run function.
  *
- *      This script will revert if the libraries are not deployed at the expected addresses and if the
- *      script is not run with the --libraries flags pointing to the library addresses outputted by the
- *      DeployLibraries.s.sol script.
+ *      This script will revert if the libraries are not deployed at the expected addresses.
+ *      Expected addresses are hardcoded in DeploymentConfig based on which CREATE2 factory is used.
  *
  *      This script deploys the following contracts in the following order:
  *      1. Safe Infrastructure (Safe singleton, proxy factory, handlers, libraries)
@@ -95,10 +94,10 @@ contract DeployContracts is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployContracts");
 
-        // Validate that the script was run with --libraries flag (critical for determinism)
+        // Validate that --libraries flag was used with correct addresses
         _validateLibrariesLinkedOrRevert(factoryAddress);
 
-        // Validate libraries are deployed at expected addresses (critical for determinism)
+        // Validate libraries are deployed at expected addresses
         _validateLibrariesDeployedOrRevert(factoryAddress);
 
         // Get the Guardian Safe configuration based on chain ID
@@ -346,21 +345,20 @@ contract DeployContracts is Script {
         );
     }
 
-    /// @dev Verifies that platform libraries are deployed at their expected CREATE2 addresses
-    /// @param factoryAddress Address of the CREATE2 factory used for address computation
+    /// @dev Verifies that platform libraries are deployed at the expected hardcoded addresses
+    /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
     function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
         Logger.logSection("Verify Library Addresses");
 
-        // Compute expected library addresses using the shared helper
-        // These addresses are dependent on which CREATE2 factory is used for deployment
-        PlatformLibraries memory expectedLibAddresses =
-            LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
+        // Get expected library addresses from hardcoded config (based on which factory was used)
+        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(factoryAddress);
 
         bool allDeployed = true;
 
         // Check if libraries are deployed at expected addresses
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.policyAddress)) {
             Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
+            Logger.logKeyAddress("  Expected", expectedLibAddresses.policyAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationPolicy deployed at expected address");
@@ -368,6 +366,7 @@ contract DeployContracts is Script {
 
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.adminAddress)) {
             Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
+            Logger.logKeyAddress("  Expected", expectedLibAddresses.adminAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationAdmin deployed at expected address");
@@ -375,6 +374,7 @@ contract DeployContracts is Script {
 
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.initializationAddress)) {
             Logger.logFail("LibOrganizationInitialization NOT DEPLOYED at expected address");
+            Logger.logKeyAddress("  Expected", expectedLibAddresses.initializationAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationInitialization deployed at expected address");
@@ -382,6 +382,7 @@ contract DeployContracts is Script {
 
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.accountSignatureAddress)) {
             Logger.logFail("LibOrganizationAccountSignature NOT DEPLOYED at expected address");
+            Logger.logKeyAddress("  Expected", expectedLibAddresses.accountSignatureAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationAccountSignature deployed at expected address");
@@ -392,31 +393,28 @@ contract DeployContracts is Script {
             Logger.logWarn("WARNING: Some libraries are not deployed!");
             Logger.logIndented("Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
             Logger.logEmptyLine();
-            revert("Some libraries are not deployed!");
+            revert("Some libraries are not deployed at expected addresses");
         }
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
-    /// @param factoryAddress Address of the CREATE2 factory used for computing expected library addresses
+    ///      Uses hardcoded expected addresses from DeploymentConfig to verify the correct addresses are embedded
+    /// @param factoryAddress Address of the CREATE2 factory (determines which hardcoded addresses to check for)
     function _validateLibrariesLinkedOrRevert(address factoryAddress) internal pure {
         // Get the creation code of OrganizationImplementation
         // If libraries aren't linked via --libraries flag, the creation code will have
         // placeholder bytes instead of the actual library addresses
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
-        // Compute expected library addresses using the shared helper
-        // These addresses are dependent on which CREATE2 factory is used for deployment
-        PlatformLibraries memory expectedLibAddresses =
-            LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
+        // Get expected library addresses from hardcoded config (based on which factory was used)
+        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(factoryAddress);
 
-        // Verify each library address appears in the creation code
-        // If --libraries flag wasn't used, these addresses won't be embedded in the bytecode
-        // forgefmt: disable-next-item
+        // Verify each expected library address appears in the creation code
+        // If --libraries flag wasn't used (or used with wrong addresses), these won't be in the bytecode
         require(
             LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.policyAddress),
             "LibOrgPolicy not linked. Use --libraries"
         );
-        // forgefmt: disable-next-item
         require(
             LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.adminAddress),
             "LibOrgAdmin not linked. Use --libraries"

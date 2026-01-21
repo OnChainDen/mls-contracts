@@ -156,8 +156,10 @@ library Create2Utils {
 
         if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
             Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
-        } else if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Safe Singleton Factory");
+        } else if (factoryAddress == DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+            Logger.logKeyValue("Factory Type", "Safe Singleton Factory (Production)");
+        } else if (factoryAddress == DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+            Logger.logKeyValue("Factory Type", "Safe Singleton Factory (Non-Production)");
         } else {
             Logger.logKeyValue("Factory Type", "Custom");
         }
@@ -176,8 +178,11 @@ library Create2Utils {
         private
         returns (address deployedAtAddress)
     {
-        // Case: using Safe Singleton Factory
-        if (factoryAddress == DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS) {
+        // Case: using Safe Singleton Factory (prod or non-prod)
+        if (
+            factoryAddress == DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS
+                || factoryAddress == DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS
+        ) {
             deployedAtAddress = address(ISafeSingletonFactory(factoryAddress).deploy(initCode, salt));
             return deployedAtAddress;
         }

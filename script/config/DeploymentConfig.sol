@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {PlatformLibraries} from "script/libraries/Types.sol";
+
 /**
  * @title DeploymentConfig
  * @notice Configuration constants for deterministic contract deployment
@@ -11,14 +13,19 @@ library DeploymentConfig {
     /// @dev Arachnid Deterministic Deployment Proxy address (deployed on most EVM chains)
     address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-    /// @dev Safe Singleton Factory address (deterministic across all chains where deployed)
-    address internal constant SAFE_SINGLETON_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
-
     /// @dev Production Safe Singleton Factory deployer address (must maintain nonce 0)
     address internal constant PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
 
     /// @dev Expected Safe Singleton Factory address when deployed from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS at nonce 0
-    address internal constant PROD_EXPECTED_SAFE_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
+    address internal constant PROD_SAFE_SINGLETON_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
+
+    /// @dev Non-production Safe Singleton Factory deployer address
+    ///      TODO: Fill in after determining non-prod deployer EOA
+    address internal constant NON_PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = address(0);
+
+    /// @dev Expected Safe Singleton Factory address for non-production deployments
+    ///      TODO: Fill in after deploying Safe Singleton Factory from NON_PROD_SAFE_FACTORY_DEPLOYER_ADDRESS
+    address internal constant NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS = address(0);
 
     /// @dev Salt for Safe Singleton (master copy) deployment
     bytes32 internal constant SAFE_SINGLETON_SALT = keccak256("den.external.safe.singleton.v1");
@@ -94,6 +101,33 @@ library DeploymentConfig {
     ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
     string internal constant LIB_ORG_ACCOUNT_SIG_PATH =
         "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature";
+
+    // ==================== Hardcoded Library Addresses ====================
+    // These are the expected deployment addresses for platform libraries when deployed via CREATE2
+    // using the specified factory. Addresses differ based on which factory is used because the
+    // factory address is part of the CREATE2 address computation.
+    //
+    // IMPORTANT: These addresses must be updated if library source code or salts change.
+
+    /// @dev Expected library addresses when deployed via Arachnid Deterministic Deployment Proxy
+    address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314;
+    address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x744CaFa607273AF5664073d05BE066C6bDbf8201;
+    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E;
+    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0x6A6709A2c898E719A6Ee7635a3963122059655eB;
+
+    /// @dev Expected library addresses when deployed via Production Safe Singleton Factory
+    ///      TODO: Fill in these addresses after deploying libraries via prod Safe Singleton Factory
+    address internal constant PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = address(0);
+    address internal constant PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = address(0);
+    address internal constant PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = address(0);
+    address internal constant PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS = address(0);
+
+    /// @dev Expected library addresses when deployed via Non-Production Safe Singleton Factory
+    ///      TODO: Fill in these addresses after deploying libraries via non-prod Safe Singleton Factory
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = address(0);
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = address(0);
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = address(0);
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS = address(0);
 
     /// @dev Production Guardian Safe owner addresses
     address internal constant PROD_GUARDIAN_SAFE_OWNER_1 = address(0x1111111111111111111111111111111111111111);
@@ -175,6 +209,36 @@ library DeploymentConfig {
             ownerAddresses = new address[](1);
             ownerAddresses[0] = NON_PROD_DEPLOYER_SAFE_OWNER_1;
             threshold = NON_PROD_DEPLOYER_SAFE_THRESHOLD;
+        }
+    }
+
+    /// @dev Returns expected library addresses based on which CREATE2 factory was used for deployment
+    /// @param factoryAddress The CREATE2 factory address used to deploy the libraries
+    /// @return libs Struct containing expected library addresses
+    function getExpectedLibraryAddresses(address factoryAddress) internal pure returns (PlatformLibraries memory libs) {
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            libs = PlatformLibraries({
+                policyAddress: ARACHNID_LIB_ORG_POLICY_ADDRESS,
+                adminAddress: ARACHNID_LIB_ORG_ADMIN_ADDRESS,
+                initializationAddress: ARACHNID_LIB_ORG_INIT_ADDRESS,
+                accountSignatureAddress: ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS
+            });
+        } else if (factoryAddress == PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+            libs = PlatformLibraries({
+                policyAddress: PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS,
+                adminAddress: PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS,
+                initializationAddress: PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS,
+                accountSignatureAddress: PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
+            });
+        } else if (factoryAddress == NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+            libs = PlatformLibraries({
+                policyAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS,
+                adminAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS,
+                initializationAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS,
+                accountSignatureAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
+            });
+        } else {
+            revert("Unknown factory - no expected library addresses");
         }
     }
 }
