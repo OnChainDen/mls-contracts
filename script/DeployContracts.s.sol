@@ -110,21 +110,17 @@ contract DeployContracts is Script {
             deployerThreshold: deployerThreshold
         });
 
-        // Get Deployer private key/address from environment
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
-
         // Prevent using the production Safe Factory deployer for this script
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(deployerAddress);
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
         Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
-        Logger.logKeyAddress("Deployer EOA", deployerAddress);
+        Logger.logKeyAddress("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
 
         // Start broadcasting transactions
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // Deploy Safe Infrastructure
         // This includes the Safe Singleton, Safe Proxy Factory, Compatibility Fallback Handler,

@@ -117,13 +117,12 @@ library Create2Utils {
     }
 
     /// @dev Validates that the deployer is NOT the production Safe Factory deployer
-    /// @param deployerAddress The address to validate
-    function validateNotProductionSafeFactoryDeployerOrRevert(address deployerAddress) internal view {
+    function validateNotProductionSafeFactoryDeployerOrRevert() internal view {
         // Log the check start
         Logger.logCheckStart("Checking deployer is not production Safe Factory deployer...");
 
         // Case: Deployer is the production Safe Factory deployer
-        if (deployerAddress == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
+        if (msg.sender == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
             Logger.logCheckFail("Deployer is the production Safe Factory deployer");
             Logger.logCheckDetail("This EOA should ONLY be used by DeploySafeSingletonFactory.");
             Logger.logCheckDetail("Use a different deployer for this script.");

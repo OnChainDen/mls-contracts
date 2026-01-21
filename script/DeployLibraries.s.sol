@@ -37,12 +37,8 @@ contract DeployLibraries is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries");
 
-        // Get the deployer private key/address from the environment
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
-
         // Prevent using the production Safe Factory deployer for this script
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(deployerAddress);
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
 
         // Get the CREATE2 factory that will be used for deployments
         // The address of the factory is explicitly provided in the environment
@@ -51,12 +47,12 @@ contract DeployLibraries is Script {
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
         Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
-        Logger.logKeyAddress("Deployer EOA", deployerAddress);
+        Logger.logKeyAddress("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Library Deployment Only");
         Logger.logEmptyLine();
 
         // Start broadcasting transactions
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // Deploy platform libraries
         PlatformLibraries memory libs = _deployPlatformLibraries(factoryAddress);

@@ -74,9 +74,7 @@ contract DeployArachnidFactory is Script {
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
 
         // Prevent using the production Safe Factory deployer for this script
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(deployerAddress);
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
 
         // Log the deployment header
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
@@ -111,14 +109,9 @@ contract DeployArachnidFactory is Script {
 
     /// @notice Funds the Arachnid factory deployer address with ETH
     /// @dev Can be called separately to fund the deployer before running the main script.
-    ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
     function fundDeployer() external {
-        // Get the private key for the account that will fund the deployer
-        uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
-        address fundingAddress = vm.addr(fundingPrivateKey);
-
         // Prevent using the production Safe Factory deployer for funding
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(fundingAddress);
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
 
         // Log the funding details
         Logger.logEmptyLine();
@@ -128,7 +121,7 @@ contract DeployArachnidFactory is Script {
         Logger.logEmptyLine();
 
         // Fund the deployer
-        vm.startBroadcast(fundingPrivateKey);
+        vm.startBroadcast();
         payable(_EXPECTED_DEPLOYER_ADDRESS).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 

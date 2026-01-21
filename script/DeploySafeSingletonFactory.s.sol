@@ -59,11 +59,8 @@ contract DeploySafeSingletonFactory is Script {
             DeploymentConfig.SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
         );
 
-        // Get the deployer private key from the environment variable
-        uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
-
         // Get the deployer address
-        address deployerAddress = vm.addr(deployerPrivateKey);
+        address deployerAddress = msg.sender;
 
         // Warn and require confirmation for production and non-production deployers
         bool isProductionDeployer = _warnAndConfirmDeployerAddress(deployerAddress);
@@ -80,7 +77,7 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
 
         // Deploy the factory
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
         address deployedAtAddress = _deployFactory();
         vm.stopBroadcast();
 
@@ -105,29 +102,23 @@ contract DeploySafeSingletonFactory is Script {
 
     /// @notice Funds the Safe Singleton Factory deployer address with ETH
     /// @dev Can be called separately to fund the deployer before running the main script.
-    ///      Requires PRIVATE_KEY environment variable to be set for the funding account.
-    function fundDeployer() external {
-        // Get the private key for the account that will fund the deployer
-        uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
-        address fundingAddress = vm.addr(fundingPrivateKey);
-
+    /// @param targetDeployerAddress The deployer address to fund
+    function fundDeployer(address targetDeployerAddress) external {
         // Prevent using the production Safe Factory deployer for funding
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(fundingAddress);
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
 
-        // Get the target deployer address
-        uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
-        address deployerAddress = vm.addr(deployerPrivateKey);
+        require(targetDeployerAddress != address(0), "Target deployer address cannot be zero");
 
         // Log the funding details
         Logger.logEmptyLine();
         Logger.logIndented("Funding Safe Singleton Factory deployer...");
-        Logger.logKeyAddress("Target", deployerAddress);
+        Logger.logKeyAddress("Target", targetDeployerAddress);
         Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
         // Fund the deployer
-        vm.startBroadcast(fundingPrivateKey);
-        payable(deployerAddress).transfer(_REQUIRED_ETH_BALANCE);
+        vm.startBroadcast();
+        payable(targetDeployerAddress).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
         // Log the success
