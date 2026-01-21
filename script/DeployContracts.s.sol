@@ -114,6 +114,9 @@ contract DeployContracts is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
 
+        // Prevent using the production Safe Factory deployer for this script
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(deployerAddress);
+
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
         Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);

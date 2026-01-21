@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
@@ -29,12 +28,6 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  * @author Den Technologies Inc
  */
 contract DeploySafeSingletonFactory is Script {
-    /// @dev Expected factory address after deployment (deterministic via nonce-0 CREATE)
-    address internal constant _EXPECTED_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
-
-    /// @dev Deployer address that must have nonce 0 for deterministic deployment
-    address internal constant _EXPECTED_DEPLOYER_ADDRESS = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
-
     /// @dev Gas price for the deployment transaction (125 gwei - works on most chains)
     uint256 internal constant _DEPLOYMENT_GAS_PRICE = 125_000_000_000;
 
@@ -69,15 +62,18 @@ contract DeploySafeSingletonFactory is Script {
         // Get the deployer private key from the environment variable
         uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
 
-        // Validate that the deployer private key matches the expected address
-        _validateDeployerPrivateKeyOrRevert(deployerPrivateKey);
+        // Get the deployer address
+        address deployerAddress = vm.addr(deployerPrivateKey);
+
+        // Warn and require confirmation for production and non-production deployers
+        bool isProductionDeployer = _warnAndConfirmDeployerAddress(deployerAddress);
 
         // Validate that the deployer nonce is exactly 0
-        _warnAndConfirmIfDeployerNonceNotZero();
+        _warnAndConfirmIfDeployerNonceNotZero(deployerAddress);
 
         // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(
-            _EXPECTED_DEPLOYER_ADDRESS, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
+            deployerAddress, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
         );
 
         // Log section header
@@ -85,18 +81,26 @@ contract DeploySafeSingletonFactory is Script {
 
         // Deploy the factory
         vm.startBroadcast(deployerPrivateKey);
-        _deployFactory();
+        address deployedAtAddress = _deployFactory();
         vm.stopBroadcast();
 
-        // Case: Factory was not deployed at the expected address
-        if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
-            Logger.logFail("ERROR: Factory was not deployed at the expected address!");
-
+        // Case: Production deployer should yield the known deterministic address
+        if (isProductionDeployer) {
+            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS)) {
+                Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
+                Logger.logKeyAddress("Expected", DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS);
+                Logger.logKeyAddress("Got", deployedAtAddress);
+                revert("Factory deployment failed");
+            }
+        } else if (!Create2Utils.isContractDeployedAtAddress(deployedAtAddress)) {
+            // Case: Non-production deployer should still deploy successfully
+            Logger.logFail("ERROR: Factory deployment failed for non-production deployer!");
+            Logger.logKeyAddress("Got", deployedAtAddress);
             revert("Factory deployment failed");
         }
 
         // Log success
-        Logger.logDeploymentSuccess("Safe Singleton Factory", _EXPECTED_FACTORY_ADDRESS, "CREATE2_FACTORY_ADDRESS");
+        Logger.logDeploymentSuccess("Safe Singleton Factory", deployedAtAddress, "CREATE2_FACTORY_ADDRESS");
     }
 
     /// @notice Funds the Safe Singleton Factory deployer address with ETH
@@ -105,17 +109,25 @@ contract DeploySafeSingletonFactory is Script {
     function fundDeployer() external {
         // Get the private key for the account that will fund the deployer
         uint256 fundingPrivateKey = vm.envUint("PRIVATE_KEY");
+        address fundingAddress = vm.addr(fundingPrivateKey);
+
+        // Prevent using the production Safe Factory deployer for funding
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(fundingAddress);
+
+        // Get the target deployer address
+        uint256 deployerPrivateKey = vm.envUint("SAFE_FACTORY_DEPLOYER_PRIVATE_KEY");
+        address deployerAddress = vm.addr(deployerPrivateKey);
 
         // Log the funding details
         Logger.logEmptyLine();
         Logger.logIndented("Funding Safe Singleton Factory deployer...");
-        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER_ADDRESS);
+        Logger.logKeyAddress("Target", deployerAddress);
         Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
         // Fund the deployer
         vm.startBroadcast(fundingPrivateKey);
-        payable(_EXPECTED_DEPLOYER_ADDRESS).transfer(_REQUIRED_ETH_BALANCE);
+        payable(deployerAddress).transfer(_REQUIRED_ETH_BALANCE);
         vm.stopBroadcast();
 
         // Log the success
@@ -124,15 +136,13 @@ contract DeploySafeSingletonFactory is Script {
 
     /// @dev Deploys the Safe Singleton Factory using inline assembly
     ///      Uses CREATE opcode from nonce 0 to achieve deterministic address
-    function _deployFactory() internal {
+    function _deployFactory() internal returns (address deployedAtAddress) {
         // Safe Singleton Factory bytecode (minimal CREATE2 factory)
         // This is the init code that produces a contract at the expected address
         // forgefmt: disable-next-item
         bytes memory factoryBytecode =
             // solhint-disable-next-line max-line-length
             hex"604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578082fd5b8082525050506014600cf3";
-
-        address deployedAtAddress;
 
         // slither-disable-next-line assembly
         assembly {
@@ -141,15 +151,18 @@ contract DeploySafeSingletonFactory is Script {
 
         // Check that the factory was deployed
         require(deployedAtAddress != address(0), "Factory deployment failed");
+
+        return deployedAtAddress;
     }
 
     /// @dev Warns and prompts for confirmation if the deployer nonce is not 0
-    function _warnAndConfirmIfDeployerNonceNotZero() internal {
+    /// @param deployerAddress The deployer address to check
+    function _warnAndConfirmIfDeployerNonceNotZero(address deployerAddress) internal {
         // Log the check start
         Logger.logCheckStart("Checking deployer nonce...");
 
         // Get the deployer's nonce
-        uint256 nonce = vm.getNonce(_EXPECTED_DEPLOYER_ADDRESS);
+        uint256 nonce = vm.getNonce(deployerAddress);
 
         // Case: Deployer nonce is 0
         if (nonce == 0) {
@@ -163,32 +176,34 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logCheckDetail("Continuing may deploy to an unexpected address.");
         Logger.logKeyUint("Current nonce", nonce);
 
-        string memory response = vm.prompt("Type 'yes' to continue anyway: ");
-        string memory trimmedResponse = vm.trim(response);
-
-        require(Strings.equal(trimmedResponse, "yes"), "Deployment cancelled");
+        ScriptUtils.promptForConfirmationOrRevert(vm);
     }
 
-    /// @dev Validates that the deployer private key matches the expected address
-    /// @param deployerPrivateKey The private key to validate
-    function _validateDeployerPrivateKeyOrRevert(uint256 deployerPrivateKey) internal view {
+    /// @dev Warns and prompts for confirmation of the deployer address
+    /// @param deployerAddress The deployer address to confirm
+    /// @return isProductionDeployer True if the deployer is the production deployer
+    function _warnAndConfirmDeployerAddress(address deployerAddress) internal returns (bool isProductionDeployer) {
         // Log the check start
-        Logger.logCheckStart("Checking deployer private key...");
+        Logger.logCheckStart("Confirming deployer address...");
 
-        // Get the deployer's address
-        address deployerAddress = vm.addr(deployerPrivateKey);
-
-        // Case: Deployer address matches expected address
-        if (deployerAddress == _EXPECTED_DEPLOYER_ADDRESS) {
-            Logger.logCheckPass("Deployer key matches expected address");
-            return;
+        // Case: Deployer address matches production address
+        if (deployerAddress == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
+            Logger.logCheckWarn("Using PRODUCTION Safe Factory deployer");
+            Logger.logCheckDetail("This EOA must keep nonce 0 for deterministic deployment.");
+            Logger.logKeyAddress("Deployer", deployerAddress);
+            Logger.logKeyAddress("Expected factory", DeploymentConfig.PROD_EXPECTED_SAFE_FACTORY_ADDRESS);
+            ScriptUtils.promptForConfirmationOrRevert(vm);
+            Logger.logCheckPass("Production deployer confirmed");
+            return true;
         }
 
-        // Case: Deployer address does not match expected address
-        Logger.logCheckFail("Deployer address mismatch");
-        Logger.logCheckDetail("Expected: see _EXPECTED_DEPLOYER_ADDRESS constant");
-        Logger.logCheckDetail("Got: different address from provided key");
-
-        revert("Deployer address mismatch");
+        // Case: Deployer address is NOT the production deployer
+        Logger.logCheckWarn("Using NON-PRODUCTION Safe Factory deployer");
+        Logger.logCheckDetail("Factory address will differ from production.");
+        Logger.logKeyAddress("Deployer", deployerAddress);
+        Logger.logKeyAddress("Production deployer", DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS);
+        ScriptUtils.promptForConfirmationOrRevert(vm);
+        Logger.logCheckPass("Non-production deployer confirmed");
+        return false;
     }
 }

@@ -2,7 +2,6 @@
 pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ISafe} from "@safe/interfaces/ISafe.sol";
 import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -11,6 +10,7 @@ import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {ArrayUtils} from "script/libraries/ArrayUtils.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
@@ -110,14 +110,7 @@ library SafeMultisigUtils {
         }
         Logger.logEmptyLine();
 
-        string memory mode = guardianIsProd && deployerIsProd ? "PRODUCTION" : "NON-PRODUCTION";
-        string memory prompt =
-            string(abi.encodePacked("Type 'yes' to confirm you want to deploy with ", mode, " configuration: "));
-        string memory response = vm.prompt(prompt);
-        string memory trimmedResponse = vm.trim(response);
-        if (!Strings.equal(trimmedResponse, "yes")) {
-            revert("Deployment aborted: confirmation not received");
-        }
+        ScriptUtils.promptForConfirmationOrRevert(vm);
     }
 
     /// @dev Computes the deterministic address of a Safe proxy before deployment

@@ -41,6 +41,9 @@ contract DeployLibraries is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployerAddress = vm.addr(deployerPrivateKey);
 
+        // Prevent using the production Safe Factory deployer for this script
+        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert(deployerAddress);
+
         // Get the CREATE2 factory that will be used for deployments
         // The address of the factory is explicitly provided in the environment
         address factoryAddress = Create2Utils.getCreate2Factory(vm);

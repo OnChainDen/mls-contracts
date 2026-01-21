@@ -12,6 +12,16 @@ import {Logger} from "script/libraries/Logger.sol";
  */
 library ScriptUtils {
     /**
+     * @dev Prompts the user for confirmation and reverts if they don't type "yes".
+     * @param vm The Foundry Vm cheatcode instance
+     */
+    function promptForConfirmationOrRevert(Vm vm) internal {
+        string memory response = vm.prompt("Type 'yes' to continue: ");
+        string memory trimmedResponse = vm.trim(response);
+        require(Strings.equal(trimmedResponse, "yes"), "Confirmation not received");
+    }
+
+    /**
      * @dev Logs the execution mode (broadcast or dry run) and prompts the user for confirmation
      *      when broadcasting.
      * @param vm The Foundry Vm cheatcode instance
@@ -32,13 +42,7 @@ library ScriptUtils {
             Logger.logEmptyLine();
 
             // Prompt the user for confirmation
-            string memory response = vm.prompt("Type 'yes' to continue with deployment: ");
-
-            // Trim the response to remove any whitespace
-            string memory trimmedResponse = vm.trim(response);
-
-            // Check if the response is "yes"
-            require(Strings.equal(trimmedResponse, "yes"), "Deployment cancelled");
+            promptForConfirmationOrRevert(vm);
 
             Logger.logEmptyLine();
         } else {
