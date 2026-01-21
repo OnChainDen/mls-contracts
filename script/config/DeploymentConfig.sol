@@ -110,20 +110,71 @@ library DeploymentConfig {
     /// @dev Production Deployer Safe signature threshold
     uint256 internal constant PROD_DEPLOYER_SAFE_THRESHOLD = 2;
 
-    /// @dev Returns the production Guardian Safe owner addresses
-    /// @return owners Array of owner addresses
-    function getProdGuardianSafeOwners() internal pure returns (address[] memory owners) {
-        owners = new address[](2);
-        owners[0] = PROD_GUARDIAN_SAFE_OWNER_1;
-        owners[1] = PROD_GUARDIAN_SAFE_OWNER_2;
+    /// @dev Non-production Guardian Safe owner addresses (placeholder - replace before deploying)
+    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0x0000000000000000000000000000000000000001);
+
+    /// @dev Non-production Guardian Safe signature threshold
+    uint256 internal constant NON_PROD_GUARDIAN_SAFE_THRESHOLD = 1;
+
+    /// @dev Non-production Deployer Safe owner addresses (placeholder - replace before deploying)
+    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x0000000000000000000000000000000000000002);
+
+    /// @dev Non-production Deployer Safe signature threshold
+    uint256 internal constant NON_PROD_DEPLOYER_SAFE_THRESHOLD = 1;
+
+    /// @dev Returns true if the given chain ID is a production network
+    /// @param chainId The chain ID to check
+    /// @return True if the chain is a production network
+    function isProductionChain(uint256 chainId) internal pure returns (bool) {
+        return chainId == 1 // Ethereum Mainnet
+            || chainId == 10 // Optimism
+            || chainId == 56 // BNB Smart Chain
+            || chainId == 137 // Polygon
+            || chainId == 8453 // Base
+            || chainId == 42_161 // Arbitrum One
+            || chainId == 43_114; // Avalanche C-Chain
     }
 
-    /// @dev Returns the production Deployer Safe owner addresses
-    /// @return owners Array of owner addresses
-    function getProdDeployerSafeOwners() internal pure returns (address[] memory owners) {
-        owners = new address[](3);
-        owners[0] = PROD_DEPLOYER_SAFE_OWNER_1;
-        owners[1] = PROD_DEPLOYER_SAFE_OWNER_2;
-        owners[2] = PROD_DEPLOYER_SAFE_OWNER_3;
+    /// @dev Returns Guardian Safe configuration based on chain ID
+    /// @param chainId The target chain ID
+    /// @return ownerAddresses Array of owner addresses for the Guardian Safe
+    /// @return threshold Required number of signatures
+    function getGuardianSafeConfig(uint256 chainId)
+        internal
+        pure
+        returns (address[] memory ownerAddresses, uint256 threshold)
+    {
+        if (isProductionChain(chainId)) {
+            ownerAddresses = new address[](2);
+            ownerAddresses[0] = PROD_GUARDIAN_SAFE_OWNER_1;
+            ownerAddresses[1] = PROD_GUARDIAN_SAFE_OWNER_2;
+            threshold = PROD_GUARDIAN_SAFE_THRESHOLD;
+        } else {
+            ownerAddresses = new address[](1);
+            ownerAddresses[0] = NON_PROD_GUARDIAN_SAFE_OWNER_1;
+            threshold = NON_PROD_GUARDIAN_SAFE_THRESHOLD;
+        }
+    }
+
+    /// @dev Returns Deployer Safe configuration based on chain ID
+    /// @param chainId The target chain ID
+    /// @return ownerAddresses Array of owner addresses for the Deployer Safe
+    /// @return threshold Required number of signatures
+    function getDeployerSafeConfig(uint256 chainId)
+        internal
+        pure
+        returns (address[] memory ownerAddresses, uint256 threshold)
+    {
+        if (isProductionChain(chainId)) {
+            ownerAddresses = new address[](3);
+            ownerAddresses[0] = PROD_DEPLOYER_SAFE_OWNER_1;
+            ownerAddresses[1] = PROD_DEPLOYER_SAFE_OWNER_2;
+            ownerAddresses[2] = PROD_DEPLOYER_SAFE_OWNER_3;
+            threshold = PROD_DEPLOYER_SAFE_THRESHOLD;
+        } else {
+            ownerAddresses = new address[](1);
+            ownerAddresses[0] = NON_PROD_DEPLOYER_SAFE_OWNER_1;
+            threshold = NON_PROD_DEPLOYER_SAFE_THRESHOLD;
+        }
     }
 }

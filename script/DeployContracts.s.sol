@@ -75,6 +75,9 @@ contract DeployContracts is Script {
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
      */
     function run() external {
+        // Warn and confirm when targeting production chains
+        ScriptUtils.warnAndConfirmIfProductionChain(vm, "DeployContracts");
+
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployContracts");
 
@@ -88,27 +91,16 @@ contract DeployContracts is Script {
         // Validate libraries are deployed at expected addresses (critical for determinism)
         _validateLibrariesDeployedOrRevert(factoryAddress);
 
-        // Get the Guardian Safe configuration from environment
+        // Get the Guardian Safe configuration based on chain ID
         // The Guardian Safe is a multisig wallet that will be used to deploy the contracts
-        // The configuration must be explicitly provided via environment variables
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) =
-            SafeMultisigUtils.getGuardianSafeConfig(vm);
+            DeploymentConfig.getGuardianSafeConfig(block.chainid);
 
-        // Get the Deployer Safe configuration from environment
+        // Get the Deployer Safe configuration based on chain ID
         // The Deployer Safe is a multisig wallet that will be the owner of the ImplementationWhitelist contract
         // and OrganizationFactory contract.
-        // The configuration must be explicitly provided via environment variables
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
-            SafeMultisigUtils.getDeployerSafeConfig(vm);
-
-        // Validate Safe configurations and require explicit confirmation
-        SafeMultisigUtils.validateSafeConfigsAndConfirm({
-            vm: vm,
-            guardianOwners: guardianOwnerAddresses,
-            guardianThreshold: guardianThreshold,
-            deployerOwners: deployerOwnerAddresses,
-            deployerThreshold: deployerThreshold
-        });
+            DeploymentConfig.getDeployerSafeConfig(block.chainid);
 
         // Prevent using the production Safe Factory deployer for this script
         Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
