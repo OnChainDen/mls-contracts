@@ -117,6 +117,7 @@ library Logger {
         console.log("================================================================================");
         console.log("  %s", title);
         console.log("================================================================================");
+        logEmptyLine();
     }
 
     /// @dev Logs a section divider with a name

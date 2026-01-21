@@ -74,7 +74,6 @@ contract DeployArachnidFactory is Script {
 
         // Log the deployment header
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
-        Logger.logEmptyLine();
 
         // Validate that the Arachnid factory is not already deployed
         Create2Utils.validateArachnidFactoryNotDeployedOrRevert();
