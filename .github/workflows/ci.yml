@@ -62,13 +62,16 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Run Slither on src
-        uses: crytic/slither-action@v0.4.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          target: 'src/'
-          slither-config: 'slither.config.json'
-          fail-on: high
-          node-version: '20'
+          python-version: '3.12'
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Run Slither on src
+        run: slither src/ --config-file slither.config.json --fail-high
 
   # JOB 3: Security Analysis (Slither) for deployment scripts
   slither-scripts:
@@ -83,10 +86,13 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Run Slither on scripts
-        uses: crytic/slither-action@v0.4.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          target: 'script/'
-          slither-config: 'slither.script.config.json'
-          fail-on: high
-          node-version: '20'
+          python-version: '3.12'
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Run Slither on scripts
+        run: slither script/ --config-file slither.script.config.json --fail-high
