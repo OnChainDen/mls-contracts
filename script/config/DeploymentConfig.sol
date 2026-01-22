@@ -10,23 +10,10 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
  * @author Den Technologies Inc
  */
 library DeploymentConfig {
-    /// @dev Arachnid Deterministic Deployment Proxy address (deployed on most EVM chains)
-    address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-
-    /// @dev Production Safe Singleton Factory deployer address (must maintain nonce 0)
-    address internal constant PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37;
-
-    /// @dev Expected Safe Singleton Factory address when deployed from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS at nonce 0
-    address internal constant PROD_SAFE_SINGLETON_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
-
-    /// @dev Non-production Safe Singleton Factory deployer address
-    ///      TODO: Fill in after determining non-prod deployer EOA
-    address internal constant NON_PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = address(0);
-
-    /// @dev Expected Safe Singleton Factory address for non-production deployments
-    ///      TODO: Fill in after deploying Safe Singleton Factory from NON_PROD_SAFE_FACTORY_DEPLOYER_ADDRESS
-    address internal constant NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS = address(0);
-
+    // ==================== Hardcoded Salts ====================
+    // These are the hardcoded salts for deploying contracts and linked-libraries via CREATE2 to achieve deterministic
+    // addresses. These salts are not expected to change, so they are hardcoded in the library.
+    // ==============================================================================
     /// @dev Salt for Safe Singleton (master copy) deployment
     bytes32 internal constant SAFE_SINGLETON_SALT = keccak256("den.external.safe.singleton.v1");
 
@@ -82,6 +69,39 @@ library DeploymentConfig {
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
 
+    // ==================== Hardcoded CREATE2 Factory Addresses ====================
+    // These are the hardcoded addresses for the CREATE2 factories that are used to deploy the platform contracts.
+    // These addresses are not expected to change, so they are hardcoded in the library.
+    //
+    // IMPORTANT: These addresses must be updated if the CREATE2 factory addresses change.
+    // ==============================================================================
+    /// @dev Arachnid Deterministic Deployment Proxy address (deployed on most EVM chains)
+    address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+
+    /// @dev Production Safe Singleton Factory deployer address (must maintain nonce 0)
+    ///      TODO: Fill in after deploying Safe Singleton Factory from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS
+    address internal constant PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = address(0);
+
+    /// @dev Expected Safe Singleton Factory address when deployed from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS at nonce 0
+    ///      TODO: Fill in after deploying Safe Singleton Factory from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS at nonce 0
+    address internal constant PROD_SAFE_SINGLETON_FACTORY_ADDRESS = address(0);
+
+    /// @dev Non-production Safe Singleton Factory deployer address
+    address internal constant NON_PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = 0x22002e8661A780d61EF4c86F4a9fFa843A6fea20;
+
+    /// @dev Expected Safe Singleton Factory address for non-production deployments
+    address internal constant NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS = 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db;
+
+    // ==================== Hardcoded Library Paths ====================
+    // These are the hardcoded paths for the platform libraries that are used when deploying contracts that
+    // link to the platform libraries. These paths are used to print the foundry --libraries flag that should
+    // be used when running DeployContracts.s.sol.
+    //
+    // These paths are not expected to change, so they are hardcoded.
+    //
+    // IMPORTANT: These paths must be updated if library paths change.
+    // ==============================================================================
+
     /// @dev Library path for LibOrganizationPolicy (used when deploying libraries to print the
     ///      foundry --libraries flag that should be used when running DeployContracts.s.sol)
     string internal constant LIB_ORG_POLICY_PATH =
@@ -108,8 +128,11 @@ library DeploymentConfig {
     // factory address is part of the CREATE2 address computation.
     //
     // IMPORTANT: These addresses must be updated if library source code or salts change.
+    // ==============================================================================
 
     /// @dev Expected library addresses when deployed via Arachnid Deterministic Deployment Proxy
+    ///      TODO: Update these addresses after making changes to library source code and deploying
+    ///      libraries via arachnid Deterministic Deployment Proxy
     address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314;
     address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x744CaFa607273AF5664073d05BE066C6bDbf8201;
     address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E;
@@ -117,17 +140,29 @@ library DeploymentConfig {
 
     /// @dev Expected library addresses when deployed via Production Safe Singleton Factory
     ///      TODO: Fill in these addresses after deploying libraries via prod Safe Singleton Factory
+    ///      TODO: Update these addresses after making changes to library source code and deploying
+    ///      libraries via prod Safe Singleton Factory
     address internal constant PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = address(0);
     address internal constant PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = address(0);
     address internal constant PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = address(0);
     address internal constant PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS = address(0);
 
     /// @dev Expected library addresses when deployed via Non-Production Safe Singleton Factory
-    ///      TODO: Fill in these addresses after deploying libraries via non-prod Safe Singleton Factory
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = address(0);
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = address(0);
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = address(0);
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS = address(0);
+    ///      TODO: Update these addresses after making changes to library source code and deploying
+    ///      libraries via non-prod Safe Singleton Factory
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x85c8b8410F0feeFd157496245c37d89F33985cC0;
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xCAE149fD735Cc65290e737BF06855Bba119b6082;
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = 0xB54293a48005C38881bddb20956Afd02c615c810;
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
+        0x7D27fFd10bbC381A8403B4B95eeFd6bC67D46219;
+
+    // ==================== Hardcoded Guardian Safe Multisig Configurations =====================
+    // These are the hardcoded multisig configurations for the Guardian Safe and Deployer Safe.
+    // that are used to deploy the platform contracts. These configurations are not expected to change,
+    // so they are hardcoded in the library.
+    //
+    // IMPORTANT: These configurations must be updated if the Guardian Safe or Deployer Safe configurations change.
+    // ==============================================================================
 
     /// @dev Production Guardian Safe owner addresses
     address internal constant PROD_GUARDIAN_SAFE_OWNER_1 = address(0x1111111111111111111111111111111111111111);
@@ -156,6 +191,10 @@ library DeploymentConfig {
     /// @dev Non-production Deployer Safe signature threshold
     uint256 internal constant NON_PROD_DEPLOYER_SAFE_THRESHOLD = 1;
 
+    // ==================== Helper Functions ====================
+    // These are the helper functions that are used to determine which configurations to use based on the chain ID.
+    // ==============================================================================
+
     /// @dev Returns true if the given chain ID is a production network
     /// @param chainId The chain ID to check
     /// @return True if the chain is a production network
@@ -178,16 +217,20 @@ library DeploymentConfig {
         pure
         returns (address[] memory ownerAddresses, uint256 threshold)
     {
+        // Case: Production chain
         if (isProductionChain(chainId)) {
             ownerAddresses = new address[](2);
             ownerAddresses[0] = PROD_GUARDIAN_SAFE_OWNER_1;
             ownerAddresses[1] = PROD_GUARDIAN_SAFE_OWNER_2;
             threshold = PROD_GUARDIAN_SAFE_THRESHOLD;
-        } else {
-            ownerAddresses = new address[](1);
-            ownerAddresses[0] = NON_PROD_GUARDIAN_SAFE_OWNER_1;
-            threshold = NON_PROD_GUARDIAN_SAFE_THRESHOLD;
+            return (ownerAddresses, threshold);
         }
+
+        // Case: Non-production chain
+        ownerAddresses = new address[](1);
+        ownerAddresses[0] = NON_PROD_GUARDIAN_SAFE_OWNER_1;
+        threshold = NON_PROD_GUARDIAN_SAFE_THRESHOLD;
+        return (ownerAddresses, threshold);
     }
 
     /// @dev Returns Deployer Safe configuration based on chain ID
@@ -199,23 +242,28 @@ library DeploymentConfig {
         pure
         returns (address[] memory ownerAddresses, uint256 threshold)
     {
+        // Case: Production chain
         if (isProductionChain(chainId)) {
             ownerAddresses = new address[](3);
             ownerAddresses[0] = PROD_DEPLOYER_SAFE_OWNER_1;
             ownerAddresses[1] = PROD_DEPLOYER_SAFE_OWNER_2;
             ownerAddresses[2] = PROD_DEPLOYER_SAFE_OWNER_3;
             threshold = PROD_DEPLOYER_SAFE_THRESHOLD;
-        } else {
-            ownerAddresses = new address[](1);
-            ownerAddresses[0] = NON_PROD_DEPLOYER_SAFE_OWNER_1;
-            threshold = NON_PROD_DEPLOYER_SAFE_THRESHOLD;
+            return (ownerAddresses, threshold);
         }
+
+        // Case: Non-production chain
+        ownerAddresses = new address[](1);
+        ownerAddresses[0] = NON_PROD_DEPLOYER_SAFE_OWNER_1;
+        threshold = NON_PROD_DEPLOYER_SAFE_THRESHOLD;
+        return (ownerAddresses, threshold);
     }
 
     /// @dev Returns expected library addresses based on which CREATE2 factory was used for deployment
     /// @param factoryAddress The CREATE2 factory address used to deploy the libraries
     /// @return libs Struct containing expected library addresses
     function getExpectedLibraryAddresses(address factoryAddress) internal pure returns (PlatformLibraries memory libs) {
+        // Case: Arachnid Deterministic Deployment Proxy
         if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
             libs = PlatformLibraries({
                 policyAddress: ARACHNID_LIB_ORG_POLICY_ADDRESS,
@@ -223,22 +271,31 @@ library DeploymentConfig {
                 initializationAddress: ARACHNID_LIB_ORG_INIT_ADDRESS,
                 accountSignatureAddress: ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS
             });
-        } else if (factoryAddress == PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+            return libs;
+        }
+
+        // Case: Production Safe Singleton Factory
+        if (factoryAddress == PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
             libs = PlatformLibraries({
                 policyAddress: PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS,
                 adminAddress: PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS,
                 initializationAddress: PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS,
                 accountSignatureAddress: PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
             });
-        } else if (factoryAddress == NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+            return libs;
+        }
+
+        // Case: Non-Production Safe Singleton Factory
+        if (factoryAddress == NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
             libs = PlatformLibraries({
                 policyAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS,
                 adminAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS,
                 initializationAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS,
                 accountSignatureAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
             });
-        } else {
-            revert("Unknown factory - no expected library addresses");
+            return libs;
         }
+
+        revert("Unknown factory - no expected library addresses");
     }
 }
