@@ -57,7 +57,7 @@ library SafeMultisigUtils {
         uint256 saltNonce = uint256(salt);
 
         // Compute expected address using SafeProxyFactory's CREATE2 formula
-        safeAddress = computeSafeProxyAddress(safeInfra, initializer, saltNonce);
+        safeAddress = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
 
         // Check if already deployed
         if (Create2Utils.isContractDeployedAtAddress(safeAddress)) {
@@ -81,9 +81,9 @@ library SafeMultisigUtils {
     /// @param initializer Encoded Safe.setup() call data
     /// @param saltNonce Nonce used for salt computation
     /// @return The predicted Safe proxy address
-    function computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
-        internal
-        view
+    function _computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
+        private
+        pure
         returns (address)
     {
         // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
