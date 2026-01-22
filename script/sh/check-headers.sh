@@ -3,7 +3,7 @@
 # check-headers.sh - Verify SPDX license and copyright headers in Solidity files
 # ==============================================================================
 #
-# This script ensures all .sol files in src/ and script/ have the correct
+# This script ensures all .sol files in src/, script/, and test/ have the correct
 # SPDX license identifier and copyright notice at the top of the file.
 #
 # Expected header format:
@@ -67,7 +67,7 @@ main() {
     local errors=0
     local checked=0
     
-    # Find all .sol files in src/ and script/, excluding lib/
+    # Find all .sol files in src/, script/, and test/
     while IFS= read -r -d '' file; do
         checked=$((checked + 1))
         
@@ -101,7 +101,7 @@ main() {
             echo ""
         fi
         
-    done < <(find "$PROJECT_ROOT/src" "$PROJECT_ROOT/script" -name "*.sol" -type f -print0 2>/dev/null)
+    done < <(find "$PROJECT_ROOT/src" "$PROJECT_ROOT/script" "$PROJECT_ROOT/test" -name "*.sol" -type f -print0 2>/dev/null)
     
     # Summary
     echo "----------------------------------------"
