@@ -7,6 +7,10 @@
 .PHONY: check-factory compute-lib-addresses
 .PHONY: validate-signer-vars
 
+# ==============================================================================
+# Core Commanmds
+# ==============================================================================
+
 # "make" (all)
 # Cleans artifacts, removes old submodules, installs deps, updates them, and builds
 # This guarantees a fresh working state
@@ -46,9 +50,11 @@ format:
 lint:
 	forge fmt --check
 	forge lint
+
 	# Run solhint linter on our core source contracts
 	# This will automatically use our core config, located at `.solhint.json`.
 	npx solhint 'src/**/*.sol'
+
 	# Run solhint linter on our scripts
 	# This will automatically use our script-specific config, located at `script/.solhint.json`. 
 	# This config "inherits" from our core config, but overrides rules that shouldn't apply to scripts.
@@ -317,7 +323,7 @@ deploy-platform: deploy-libraries deploy-contracts
 	@echo "  Factory: $(FACTORY)"
 
 # ==============================================================================
-# Utility Commands
+# Deployment Utility Commands
 # ==============================================================================
 
 # Check Factory: Verifies if a CREATE2 factory is deployed on the target network

@@ -71,7 +71,114 @@ This script:
 4. Deploys libraries via CREATE2
 5. Deploys all contracts with library linking
 
-## Step-by-Step Deployment
+## Deployment via Makefile (Recommended)
+
+The Makefile provides convenient commands for deployment with configurable networks, signers, and CREATE2 factories.
+
+### Configuration Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NETWORK` | `local` | Target network: `local`, `mainnet`, `polygon`, `arbitrum`, `optimism`, `base`, or any RPC URL |
+| `SIGNER` | `account` | Signing method: `account` (Foundry keystore) or `ledger` |
+| `ACCOUNT` | - | Foundry keystore account name (required when `SIGNER=account`) |
+| `SENDER` | - | EOA address (auto-derived from `ACCOUNT`, required for `ledger`) |
+| `FACTORY` | `arachnid` | CREATE2 factory: `arachnid`, `safe-prod`, or `safe-nonprod` |
+| `HD_PATH` | `m/44'/60'/0'/0/0` | Ledger HD derivation path (when `SIGNER=ledger`) |
+
+> **Note:** When using `SIGNER=account`, `SENDER` is automatically derived from your Foundry account. You'll be prompted for your keystore password. You can still provide `SENDER` explicitly to skip the password prompt.
+
+### Make Commands Reference
+
+#### Factory Deployment
+
+| Command | Description |
+|---------|-------------|
+| `make fund-arachnid-deployer` | Fund the Arachnid factory deployer address |
+| `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
+| `make fund-safe-deployer` | Fund a Safe Singleton Factory deployer (requires `SAFE_DEPLOYER_ADDRESS`) |
+| `make deploy-safe-factory` | Deploy the Safe Singleton Factory |
+
+#### Platform Deployment
+
+| Command | Description |
+|---------|-------------|
+| `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
+| `make deploy-contracts` | Deploy all contracts with library linking |
+| `make deploy-platform` | Full deployment (libraries + contracts) |
+
+#### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `make check-factory` | Check if CREATE2 factories exist on target network |
+| `make compute-lib-addresses` | Compute expected library addresses for a factory |
+
+### Example: Local Deployment with Foundry Account
+
+```bash
+# Start Anvil in a separate terminal
+anvil --chain-id 420 --disable-default-create2-deployer
+
+# Fund and deploy the Arachnid factory (password will be prompted)
+make fund-arachnid-deployer ACCOUNT=my-deployer
+make deploy-arachnid-factory ACCOUNT=my-deployer
+
+# Deploy libraries and contracts
+make deploy-libraries ACCOUNT=my-deployer
+make deploy-contracts ACCOUNT=my-deployer
+
+# Or use the combined command
+make deploy-platform ACCOUNT=my-deployer
+```
+
+### Example: Testnet Deployment with Ledger
+
+```bash
+# Check if factory already exists
+make check-factory NETWORK=sepolia
+
+# Deploy libraries and contracts using Ledger
+make deploy-libraries NETWORK=sepolia SIGNER=ledger SENDER=0x1234...
+make deploy-contracts NETWORK=sepolia SIGNER=ledger SENDER=0x1234...
+```
+
+### Example: Using Safe Singleton Factory
+
+If the Arachnid factory cannot be deployed (e.g., chain enforces EIP-155):
+
+```bash
+# Fund and deploy Safe Singleton Factory
+make fund-safe-deployer SAFE_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 \
+    NETWORK=mychain ACCOUNT=funder
+
+make deploy-safe-factory NETWORK=mychain ACCOUNT=safe-deployer
+
+# Deploy using the Safe factory
+make deploy-libraries FACTORY=safe-prod NETWORK=mychain ACCOUNT=my-deployer
+make deploy-contracts FACTORY=safe-prod NETWORK=mychain ACCOUNT=my-deployer
+```
+
+### Library Addresses by Factory
+
+The library addresses differ based on which CREATE2 factory is used. These are configured in the Makefile.
+
+**Arachnid Factory (`FACTORY=arachnid`):**
+
+| Library | Address |
+|---------|---------|
+| LibOrganizationPolicy | `0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314` |
+| LibOrganizationAdmin | `0x744CaFa607273AF5664073d05BE066C6bDbf8201` |
+| LibOrganizationInitialization | `0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E` |
+| LibOrganizationAccountSignature | `0x6A6709A2c898E719A6Ee7635a3963122059655eB` |
+
+**Safe Singleton Factory (`FACTORY=safe-prod` or `FACTORY=safe-nonprod`):**
+
+Library addresses for Safe factories must be computed after deploying the factory. Use `make compute-lib-addresses` to get the expected addresses, then update them in the Makefile before running `deploy-contracts`.
+
+## Step-by-Step Deployment (Manual)
+
+The following sections describe manual deployment using `forge script` directly. For most use cases, the [Makefile commands](#deployment-via-makefile-recommended) above are easier to use.
 
 ### Step 1: Deploy CREATE2 Factory
 
@@ -263,10 +370,14 @@ With the `--libraries` flag:
 | Issue | Solution |
 |-------|----------|
 | "Factory address cannot be zero" | Pass the CREATE2 factory address as an argument: `--sig "run(address)" <factory-address>` |
-| "CREATE2 factory not deployed" | Run Step 1 to deploy a factory first |
+| "CREATE2 factory not deployed" | Run Step 1 to deploy a factory first, or use `make check-factory` to verify |
 | "Deployer nonce is not 0" | The Safe Singleton Factory cannot be deployed at its deterministic address on this chain. Use Arachnid factory instead. |
 | "Already deployed" messages | Normal - the script skips contracts that already exist at their deterministic addresses |
-| Library address mismatch | You ran without `--libraries` flag. Re-run with the correct library addresses. |
+| Library address mismatch | You ran without `--libraries` flag. Use `make deploy-contracts` which includes the flags automatically. |
+| "ACCOUNT is required" | Set `ACCOUNT=<keystore-name>` when using `SIGNER=account` |
+| "SENDER is required" | Always set `SENDER=<your-address>` with deployment commands |
+| "Invalid FACTORY value" | Use one of: `arachnid`, `safe-prod`, `safe-nonprod` |
+| Safe factory library addresses are 0x0 | Update the library addresses in `Makefile` after deploying libraries via Safe factory |
 
 ## Script Reference
 
@@ -279,6 +390,7 @@ With the `--libraries` flag:
 | `script/config/DeploymentConfig.sol` | Deterministic salts, factory addresses, Safe configurations |
 | `script/sh/deploy_all.sh` | Automated script that runs all steps (uses `PRIVATE_KEY` env var) |
 | `test_deploy_scripts_locally.sh` | Local testing script for Anvil |
+| `Makefile` | Deployment commands with configurable networks, signers, and factories |
 
 ## Deterministic Addresses
 
