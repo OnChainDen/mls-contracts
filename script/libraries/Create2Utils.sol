@@ -3,7 +3,6 @@ pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {Vm} from "forge-std/Vm.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {ISafeSingletonFactory} from "script/interfaces/ISafeSingletonFactory.sol";
