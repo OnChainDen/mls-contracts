@@ -127,24 +127,24 @@ library Logger {
         console.log("  %s", message);
     }
 
-    /// @dev Logs a key-value pair with standard indentation
+    /// @dev Logs a key-value pair with standard indentation (string value)
     /// @param key The label/key
     /// @param value The value to display
     function logKeyValue(string memory key, string memory value) internal pure {
         console.log("  %s: %s", key, value);
     }
 
-    /// @dev Logs a key-value pair with an address value
+    /// @dev Logs a key-value pair with standard indentation (address value)
     /// @param key The label/key
-    /// @param valueAddress The address value
-    function logKeyAddress(string memory key, address valueAddress) internal pure {
-        console.log("  %s: %s", key, valueAddress);
+    /// @param value The address value
+    function logKeyValue(string memory key, address value) internal pure {
+        console.log("  %s: %s", key, value);
     }
 
-    /// @dev Logs a key-value pair with a uint256 value
+    /// @dev Logs a key-value pair with standard indentation (uint256 value)
     /// @param key The label/key
     /// @param value The uint256 value
-    function logKeyUint(string memory key, uint256 value) internal pure {
+    function logKeyValue(string memory key, uint256 value) internal pure {
         console.log("  %s: %s", key, value);
     }
 

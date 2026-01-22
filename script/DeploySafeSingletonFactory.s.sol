@@ -85,8 +85,8 @@ contract DeploySafeSingletonFactory is Script {
         if (isProductionDeployer) {
             if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS)) {
                 Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
-                Logger.logKeyAddress("Expected", DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
-                Logger.logKeyAddress("Got", deployedAtAddress);
+                Logger.logKeyValue("Expected", DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
+                Logger.logKeyValue("Got", deployedAtAddress);
                 revert("Factory deployment failed");
             }
         } else if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS))
@@ -94,8 +94,8 @@ contract DeploySafeSingletonFactory is Script {
             // Case: Non-production deployer
             // Check that the factory was deployed at the expected non-production address
             Logger.logFail("ERROR: Factory was not deployed at the expected non-production address!");
-            Logger.logKeyAddress("Expected", DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
-            Logger.logKeyAddress("Got", deployedAtAddress);
+            Logger.logKeyValue("Expected", DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
+            Logger.logKeyValue("Got", deployedAtAddress);
             revert("Factory deployment failed");
         }
 
@@ -115,8 +115,8 @@ contract DeploySafeSingletonFactory is Script {
         // Log the funding details
         Logger.logEmptyLine();
         Logger.logIndented("Funding Safe Singleton Factory deployer...");
-        Logger.logKeyAddress("Target", targetDeployerAddress);
-        Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
+        Logger.logKeyValue("Target", targetDeployerAddress);
+        Logger.logKeyValue("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
         // Fund the deployer

@@ -118,8 +118,8 @@ contract DeployArachnidFactory is Script {
         // Log the funding details
         Logger.logEmptyLine();
         Logger.logIndented("Funding Arachnid factory deployer...");
-        Logger.logKeyAddress("Target", _EXPECTED_DEPLOYER_ADDRESS);
-        Logger.logKeyUint("Amount (wei)", _REQUIRED_ETH_BALANCE);
+        Logger.logKeyValue("Target", _EXPECTED_DEPLOYER_ADDRESS);
+        Logger.logKeyValue("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
 
         // Fund the deployer
@@ -135,8 +135,8 @@ contract DeployArachnidFactory is Script {
     function _broadcastPresignedTransaction() internal {
         // Log the broadcasting details
         Logger.logIndented("Broadcasting pre-signed transaction...");
-        Logger.logKeyAddress("Deployer", _EXPECTED_DEPLOYER_ADDRESS);
-        Logger.logKeyAddress("Expected factory address", _EXPECTED_FACTORY_ADDRESS);
+        Logger.logKeyValue("Deployer", _EXPECTED_DEPLOYER_ADDRESS);
+        Logger.logKeyValue("Expected factory address", _EXPECTED_FACTORY_ADDRESS);
         Logger.logEmptyLine();
 
         // Broadcast the pre-signed transaction that deploys the factory

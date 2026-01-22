@@ -125,7 +125,7 @@ contract DeployContracts is Script {
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
         Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
-        Logger.logKeyAddress("Deployer EOA", msg.sender);
+        Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
 
         // Start broadcasting transactions
@@ -366,7 +366,7 @@ contract DeployContracts is Script {
         // Check if libraries are deployed at expected addresses
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.policyAddress)) {
             Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
-            Logger.logKeyAddress("  Expected", expectedLibAddresses.policyAddress);
+            Logger.logKeyValue("  Expected", expectedLibAddresses.policyAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationPolicy deployed at expected address");
@@ -374,7 +374,7 @@ contract DeployContracts is Script {
 
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.adminAddress)) {
             Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
-            Logger.logKeyAddress("  Expected", expectedLibAddresses.adminAddress);
+            Logger.logKeyValue("  Expected", expectedLibAddresses.adminAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationAdmin deployed at expected address");
@@ -382,7 +382,7 @@ contract DeployContracts is Script {
 
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.initializationAddress)) {
             Logger.logFail("LibOrganizationInitialization NOT DEPLOYED at expected address");
-            Logger.logKeyAddress("  Expected", expectedLibAddresses.initializationAddress);
+            Logger.logKeyValue("  Expected", expectedLibAddresses.initializationAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationInitialization deployed at expected address");
@@ -390,7 +390,7 @@ contract DeployContracts is Script {
 
         if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.accountSignatureAddress)) {
             Logger.logFail("LibOrganizationAccountSignature NOT DEPLOYED at expected address");
-            Logger.logKeyAddress("  Expected", expectedLibAddresses.accountSignatureAddress);
+            Logger.logKeyValue("  Expected", expectedLibAddresses.accountSignatureAddress);
             allDeployed = false;
         } else {
             Logger.logPass("LibOrganizationAccountSignature deployed at expected address");
@@ -442,28 +442,28 @@ contract DeployContracts is Script {
     function _logDeployedAddresses(DeployedContracts memory contracts) internal pure {
         Logger.logBoxHeader("Deployed Contract Addresses");
         Logger.logIndented("Safe Infrastructure:");
-        Logger.logKeyAddress("  Safe Singleton", contracts.safeInfra.singletonAddress);
-        Logger.logKeyAddress("  SafeProxyFactory", contracts.safeInfra.proxyFactoryAddress);
-        Logger.logKeyAddress("  FallbackHandler", contracts.safeInfra.fallbackHandlerAddress);
-        Logger.logKeyAddress("  MultiSend", contracts.safeInfra.multiSendAddress);
-        Logger.logKeyAddress("  MultiSendCallOnly", contracts.safeInfra.multiSendCallOnlyAddress);
-        Logger.logKeyAddress("  CreateCall", contracts.safeInfra.createCallAddress);
-        Logger.logKeyAddress("  SimulateTxAccessor", contracts.safeInfra.simulateTxAccessorAddress);
+        Logger.logKeyValue("  Safe Singleton", contracts.safeInfra.singletonAddress);
+        Logger.logKeyValue("  SafeProxyFactory", contracts.safeInfra.proxyFactoryAddress);
+        Logger.logKeyValue("  FallbackHandler", contracts.safeInfra.fallbackHandlerAddress);
+        Logger.logKeyValue("  MultiSend", contracts.safeInfra.multiSendAddress);
+        Logger.logKeyValue("  MultiSendCallOnly", contracts.safeInfra.multiSendCallOnlyAddress);
+        Logger.logKeyValue("  CreateCall", contracts.safeInfra.createCallAddress);
+        Logger.logKeyValue("  SimulateTxAccessor", contracts.safeInfra.simulateTxAccessorAddress);
         Logger.logEmptyLine();
         Logger.logIndented("Safe Multisigs:");
-        Logger.logKeyAddress("  Guardian Safe", contracts.safes.guardianSafeAddress);
-        Logger.logKeyAddress("  Deployer Safe", contracts.safes.deployerSafeAddress);
+        Logger.logKeyValue("  Guardian Safe", contracts.safes.guardianSafeAddress);
+        Logger.logKeyValue("  Deployer Safe", contracts.safes.deployerSafeAddress);
         Logger.logEmptyLine();
         Logger.logIndented("Platform Implementations:");
-        Logger.logKeyAddress("  OrganizationImplementation", contracts.implementations.organizationAddress);
-        Logger.logKeyAddress("  AccountImplementation", contracts.implementations.accountAddress);
-        Logger.logKeyAddress("  WhitelistImplementation", contracts.implementations.whitelistAddress);
+        Logger.logKeyValue("  OrganizationImplementation", contracts.implementations.organizationAddress);
+        Logger.logKeyValue("  AccountImplementation", contracts.implementations.accountAddress);
+        Logger.logKeyValue("  WhitelistImplementation", contracts.implementations.whitelistAddress);
         Logger.logEmptyLine();
         Logger.logIndented("Platform Factories:");
-        Logger.logKeyAddress("  OrganizationFactory", contracts.organizationFactoryAddress);
+        Logger.logKeyValue("  OrganizationFactory", contracts.organizationFactoryAddress);
         Logger.logEmptyLine();
         Logger.logIndented("Platform Proxies:");
-        Logger.logKeyAddress("  WhitelistProxy", contracts.whitelistProxyAddress);
+        Logger.logKeyValue("  WhitelistProxy", contracts.whitelistProxyAddress);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
     }

@@ -141,8 +141,8 @@ library Create2Utils {
     /// @param chainId The chain ID
     function logDeploymentHeader(address factoryAddress, uint256 chainId) internal pure {
         Logger.logBoxHeader("Den Multi-layer Security (MLS) Wallet - Contract Deployment");
-        Logger.logKeyUint("Chain ID", chainId);
-        Logger.logKeyAddress("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("Chain ID", chainId);
+        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
 
         if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
             Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");

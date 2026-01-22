@@ -102,7 +102,7 @@ library ScriptUtils {
             // Log that we're on a non-production chain (no confirmation needed)
             Logger.logInfo("NON-PRODUCTION CHAIN DETECTED");
             Logger.logKeyValue("Script", scriptName);
-            Logger.logKeyUint("Chain ID", block.chainid);
+            Logger.logKeyValue("Chain ID", block.chainid);
             Logger.logEmptyLine();
         }
     }

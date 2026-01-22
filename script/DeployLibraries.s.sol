@@ -58,7 +58,7 @@ contract DeployLibraries is Script {
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
         Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
-        Logger.logKeyAddress("Deployer EOA", msg.sender);
+        Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Library Deployment Only");
         Logger.logEmptyLine();
 
@@ -93,8 +93,8 @@ contract DeployLibraries is Script {
         // Log the header
         // This includes the factory type, chain ID, and deployed library addresses
         Logger.logBoxHeader("Computed Deterministic Library Addresses");
-        Logger.logKeyAddress("CREATE2 Factory", factoryAddress);
-        Logger.logKeyUint("Chain ID", block.chainid);
+        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logEmptyLine();
 
         // Compute the expected library addresses
@@ -102,10 +102,10 @@ contract DeployLibraries is Script {
             LinkedLibrariesUtils.computePlatformLibraryAddresses(factoryAddress);
 
         // Log the computed library addresses
-        Logger.logKeyAddress("LibOrganizationPolicy", expectedLibAddresses.policyAddress);
-        Logger.logKeyAddress("LibOrganizationAdmin", expectedLibAddresses.adminAddress);
-        Logger.logKeyAddress("LibOrganizationInitialization", expectedLibAddresses.initializationAddress);
-        Logger.logKeyAddress("LibOrganizationAccountSignature", expectedLibAddresses.accountSignatureAddress);
+        Logger.logKeyValue("LibOrganizationPolicy", expectedLibAddresses.policyAddress);
+        Logger.logKeyValue("LibOrganizationAdmin", expectedLibAddresses.adminAddress);
+        Logger.logKeyValue("LibOrganizationInitialization", expectedLibAddresses.initializationAddress);
+        Logger.logKeyValue("LibOrganizationAccountSignature", expectedLibAddresses.accountSignatureAddress);
         Logger.logEmptyLine();
 
         // Print the forge --libraries command with library addresses
@@ -155,10 +155,10 @@ contract DeployLibraries is Script {
     /// @param libs Struct containing deployed library addresses
     function _logDeployedAddresses(PlatformLibraries memory libs) internal pure {
         Logger.logBoxHeader("Deployed Library Addresses");
-        Logger.logKeyAddress("LibOrganizationPolicy", libs.policyAddress);
-        Logger.logKeyAddress("LibOrganizationAdmin", libs.adminAddress);
-        Logger.logKeyAddress("LibOrganizationInitialization", libs.initializationAddress);
-        Logger.logKeyAddress("LibOrganizationAccountSignature", libs.accountSignatureAddress);
+        Logger.logKeyValue("LibOrganizationPolicy", libs.policyAddress);
+        Logger.logKeyValue("LibOrganizationAdmin", libs.adminAddress);
+        Logger.logKeyValue("LibOrganizationInitialization", libs.initializationAddress);
+        Logger.logKeyValue("LibOrganizationAccountSignature", libs.accountSignatureAddress);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
