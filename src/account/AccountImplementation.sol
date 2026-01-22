@@ -23,10 +23,10 @@ contract AccountImplementation is IAccount {
 
     /**
      * @notice Receives native tokens (ETH) sent to this account
-     * @dev Emits OnchainCustodyAccountNativeTokenReceived event when native tokens are received
+     * @dev Emits MLSWalletAccountNativeTokenReceived event when native tokens are received
      */
     receive() external payable override {
-        emit OnchainCustodyAccountNativeTokenReceived(msg.sender, msg.value);
+        emit MLSWalletAccountNativeTokenReceived(msg.sender, msg.value);
     }
 
     /**
