@@ -4,7 +4,7 @@
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory
 .PHONY: fund-safe-deployer deploy-safe-factory
 .PHONY: deploy-libraries deploy-contracts deploy-platform
-.PHONY: check-factory compute-lib-addresses
+.PHONY: check-factory check-all-factories compute-lib-addresses compute-all-lib-addresses
 .PHONY: validate-signer-vars
 
 # ==============================================================================
@@ -102,9 +102,9 @@ HD_PATH ?= m/44'/60'/0'/0/0
 # CREATE2 Factory Addresses
 # ------------------------------------------------------------------------------
 ARACHNID_FACTORY_ADDRESS := 0x4e59b44847b379578588920cA78FbF26c0B4956C
+# TODO: Fill in after deploying Safe Singleton Factory from prod deployer
 SAFE_PROD_FACTORY_ADDRESS := 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
-# TODO: Fill in after deploying Safe Singleton Factory from non-prod deployer
-SAFE_NONPROD_FACTORY_ADDRESS := 0x0000000000000000000000000000000000000000
+SAFE_NONPROD_FACTORY_ADDRESS := 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db
 
 # Arachnid deployer address (for funding)
 ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
@@ -329,34 +329,37 @@ deploy-platform: deploy-libraries deploy-contracts
 # Deployment Utility Commands
 # ==============================================================================
 
-# Check Factory: Verifies if a CREATE2 factory is deployed on the target network
-# Checks for both Arachnid and Safe Singleton Factory addresses.
+# Check Factory: Verifies if a specific CREATE2 factory is deployed on the target network
+# Uses the FACTORY variable to select which factory to check.
 #
 # Example:
-#   make check-factory NETWORK=sepolia
-#   make check-factory NETWORK=mainnet
+#   make check-factory FACTORY=arachnid NETWORK=sepolia
+#   make check-factory FACTORY=safe-prod NETWORK=mainnet
 check-factory:
-	@echo "Checking for CREATE2 factories on $(NETWORK)..."
-	@echo ""
-	@echo "Arachnid Factory ($(ARACHNID_FACTORY_ADDRESS)):"
-	@cast code $(ARACHNID_FACTORY_ADDRESS) --rpc-url $(RPC_URL) > /dev/null 2>&1 && \
-		(code=$$(cast code $(ARACHNID_FACTORY_ADDRESS) --rpc-url $(RPC_URL)); \
-		if [ "$$code" != "0x" ] && [ -n "$$code" ]; then \
-			echo "  DEPLOYED"; \
-		else \
-			echo "  NOT DEPLOYED"; \
-		fi) || echo "  ERROR: Could not check"
-	@echo ""
-	@echo "Safe Singleton Factory - Prod ($(SAFE_PROD_FACTORY_ADDRESS)):"
-	@cast code $(SAFE_PROD_FACTORY_ADDRESS) --rpc-url $(RPC_URL) > /dev/null 2>&1 && \
-		(code=$$(cast code $(SAFE_PROD_FACTORY_ADDRESS) --rpc-url $(RPC_URL)); \
+	@echo "$(FACTORY) Factory ($(FACTORY_ADDRESS)):"
+	@cast code $(FACTORY_ADDRESS) --rpc-url $(RPC_URL) > /dev/null 2>&1 && \
+		(code=$$(cast code $(FACTORY_ADDRESS) --rpc-url $(RPC_URL)); \
 		if [ "$$code" != "0x" ] && [ -n "$$code" ]; then \
 			echo "  DEPLOYED"; \
 		else \
 			echo "  NOT DEPLOYED"; \
 		fi) || echo "  ERROR: Could not check"
 
-# Compute Lib Addresses: Computes expected library addresses for a factory
+# Check All Factories: Verifies if all CREATE2 factories are deployed on the target network
+#
+# Example:
+#   make check-all-factories NETWORK=sepolia
+#   make check-all-factories NETWORK=mainnet
+check-all-factories:
+	@echo "Checking for CREATE2 factories on $(NETWORK)..."
+	@echo ""
+	@$(MAKE) --no-print-directory check-factory FACTORY=arachnid NETWORK=$(NETWORK)
+	@echo ""
+	@$(MAKE) --no-print-directory check-factory FACTORY=safe-prod NETWORK=$(NETWORK)
+	@echo ""
+	@$(MAKE) --no-print-directory check-factory FACTORY=safe-nonprod NETWORK=$(NETWORK)
+
+# Compute Lib Addresses: Computes expected library addresses for a specific factory
 # Useful to preview addresses before deployment or verify configuration.
 #
 # Example:
@@ -369,3 +372,18 @@ compute-lib-addresses:
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL)
+
+# Compute All Lib Addresses: Computes expected library addresses for all factories
+# Continues even if a factory is not deployed (will show error but proceed to next).
+#
+# Example:
+#   make compute-all-lib-addresses NETWORK=sepolia
+#   make compute-all-lib-addresses NETWORK=mainnet
+compute-all-lib-addresses:
+	@echo "Computing library addresses for all factories on $(NETWORK)..."
+	@echo ""
+	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=arachnid NETWORK=$(NETWORK)
+	@echo ""
+	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=safe-prod NETWORK=$(NETWORK)
+	@echo ""
+	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=safe-nonprod NETWORK=$(NETWORK)

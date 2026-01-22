@@ -54,6 +54,7 @@ invariant = { runs = 256 }
 # --- Strategy: Arachnid Factory ---
 [profile.arachnid]
 libraries = [
+    # TODO: Update platform library addresses after making changes to library source code
     "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314",
     "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x744CaFa607273AF5664073d05BE066C6bDbf8201",
     "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E",
@@ -61,9 +62,10 @@ libraries = [
 ]
 
 # --- Strategy: Safe Singleton Factory (Prod) ---
-# TODO: Update platform library addresses after deploying libraries via prod Safe factory
 [profile.safe-prod]
 libraries = [
+    # TODO: Update platform library addresses after deploying libraries via prod Safe factory
+    # TODO: Update platform library addresses after making changes to library source code
     "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
     "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
     "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x0000000000000000000000000000000000000000",
@@ -71,13 +73,13 @@ libraries = [
 ]
 
 # --- Strategy: Safe Singleton Factory (Non-Prod) ---
-# TODO: Update platform library addresses after deploying libraries via non-prod Safe factory
 [profile.safe-nonprod]
 libraries = [
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x0000000000000000000000000000000000000000",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x0000000000000000000000000000000000000000"
+    # TODO: Update platform library addresses after making changes to library source code
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x85c8b8410F0feeFd157496245c37d89F33985cC0",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCAE149fD735Cc65290e737BF06855Bba119b6082",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xB54293a48005C38881bddb20956Afd02c615c810",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x7D27fFd10bbC381A8403B4B95eeFd6bC67D46219"
 ]
 
 # ==============================================================================
