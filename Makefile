@@ -1,11 +1,17 @@
-# ALWAYS list your targets here to prevent file conflicts
+# Core commands
 .PHONY: all build clean test format lint analyze check install update sizes
+
+# Legacy deployment (deploy_all.sh script)
 .PHONY: deploy-all deploy-dry-run
-.PHONY: fund-arachnid-deployer deploy-arachnid-factory
-.PHONY: fund-safe-deployer deploy-safe-factory
-.PHONY: deploy-libraries deploy-contracts deploy-platform
+
+# CREATE2 factory deployment
+.PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-safe-deployer deploy-safe-factory
+
+# Platform deployment
+.PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
+
+# Utilities
 .PHONY: check-factory check-all-factories compute-lib-addresses compute-all-lib-addresses
-.PHONY: validate-signer-vars
 
 # ==============================================================================
 # Core Commanmds
