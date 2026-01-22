@@ -3,9 +3,8 @@ pragma solidity 0.8.33;
 
 /**
  * @title ISafeSingletonFactory
- * @notice Interface for Safe Singleton Factory which has different parameter ordering
- * @dev Safe Singleton Factory: deploy(bytes initCode, bytes32 salt)
- *      Deployed at: 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
+ * @notice Interface for Safe Singleton Factory
+ * @dev Safe Singleton Factory: deploy(bytes initCode, bytes32 salt) -> address payable deployedAddress
  * @author Den Technologies Inc
  */
 interface ISafeSingletonFactory {
