@@ -68,6 +68,7 @@ jobs:
           target: 'src/'
           slither-config: 'slither.config.json'
           fail-on: high
+          node-version: '20'
 
   # JOB 3: Security Analysis (Slither) for deployment scripts
   slither-scripts:
@@ -88,3 +89,4 @@ jobs:
           target: 'script/'
           slither-config: 'slither.script.config.json'
           fail-on: high
+          node-version: '20'
