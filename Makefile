@@ -11,7 +11,7 @@
 # ==============================================================================
 
 # Core commands
-.PHONY: all build clean test format lint analyze check install update sizes remove
+.PHONY: all build clean test format lint analyze check install update sizes remove check-headers
 .PHONY: coverage snapshot gas-report help
 
 # CREATE2 factory deployment
@@ -38,6 +38,7 @@ help:
 	@echo "  check          Run all checks (format, lint, analyze, sizes, test)"
 	@echo "  format         Fix code formatting"
 	@echo "  lint           Check code style (no fixes)"
+	@echo "  check-headers  Verify SPDX license and copyright headers"
 	@echo "  analyze        Run Slither static analysis"
 	@echo "  sizes          Show contract sizes"
 	@echo "  coverage       Generate test coverage report"
@@ -122,8 +123,12 @@ test:
 format:
 	forge fmt
 
+# Check Headers: Verify SPDX license and copyright headers in all .sol files
+check-headers:
+	@./script/sh/check-headers.sh
+
 # Lint: Checks code style (no fixes)
-lint:
+lint: check-headers
 	forge fmt --check
 	forge lint
 
