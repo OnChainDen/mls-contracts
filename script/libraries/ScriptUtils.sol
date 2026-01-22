@@ -31,16 +31,6 @@ library ScriptUtils {
     }
 
     /**
-     * @dev Prompts the user for confirmation without context and reverts if they don't type "yes".
-     * @param vm The Foundry Vm cheatcode instance
-     */
-    function promptForConfirmationOrRevert(Vm vm) internal {
-        string memory response = vm.prompt("Type 'yes' to continue: ");
-        string memory trimmedResponse = vm.trim(response);
-        require(Strings.equal(trimmedResponse, "yes"), "Confirmation not received");
-    }
-
-    /**
      * @dev Logs the execution mode (broadcast or dry run) and prompts the user for confirmation
      *      when broadcasting.
      * @param vm The Foundry Vm cheatcode instance
