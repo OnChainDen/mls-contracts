@@ -17,7 +17,8 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
  * @title DeployLibraries
- * @notice Deploys platform libraries via CREATE2 for deterministic addresses
+ * @notice Deploys platform libraries that will need to be linked to contracts via CREATE2
+ *         for deterministic addresses.
  * @dev This script must be run BEFORE DeployContracts.s.sol.
  *      After running this script, use the outputted --libraries flags when running DeployContracts.
  *
@@ -27,6 +28,12 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
+ *
+ *      SAFETY CHECKS:
+ *      1. Verifies the provided CREATE2 factory address is not zero
+ *      2. Verifies the provided CREATE2 factory address is deployed at the provided address
+ *      3. Verifies that the deployer is not the production Safe Factory deployer
+ *      4. Requires interactive confirmation when broadcasting
  *
  * @author Den Technologies Inc
  */
@@ -64,6 +71,8 @@ contract DeployLibraries is Script {
         // Stop broadcasting transactions
         vm.stopBroadcast();
 
+        // Log that the deployment is complete and print the deployed library addresses and
+        // the forge --libraries command to run DeployContracts.s.sol with the correct library addresses.
         Logger.logDeploymentComplete();
         _logDeployedAddresses(libs);
         _printLibrariesCommand(libs);
