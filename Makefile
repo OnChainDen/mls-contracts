@@ -163,7 +163,6 @@ else
 endif
 
 # Validation target - use as dependency for targets that require signing
-.PHONY: validate-signer-vars
 validate-signer-vars:
 ifeq ($(SIGNER),ledger)
 ifndef SENDER
