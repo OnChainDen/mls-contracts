@@ -22,9 +22,11 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *
  *      SAFETY CHECKS:
  *      1. Verifies factory is not already deployed
- *      2. Verifies deployer address has sufficient ETH
- *      3. Requires interactive confirmation when broadcasting
- *      4. Logs dry-run mode when not broadcasting
+ *      2. Verifies that the deployer is not the production Safe Factory deployer
+ *          NOTE: the presigned transaction shouldn't even use the wallet passed into the
+ *          `forge script` command, but this is checked in the script to be safe.
+ *      3. Verifies deployer address has sufficient ETH
+ *      4. Requires interactive confirmation when broadcasting
  *
  *      Reference: https://github.com/Arachnid/deterministic-deployment-proxy
  *
