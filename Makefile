@@ -104,55 +104,15 @@ SAFE_NONPROD_FACTORY_ADDRESS := 0x0000000000000000000000000000000000000000
 ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
 
 # ------------------------------------------------------------------------------
-# Library Paths (constant - must match DeploymentConfig.sol)
-# ------------------------------------------------------------------------------
-LIB_POLICY_PATH := src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy
-LIB_ADMIN_PATH := src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin
-LIB_INIT_PATH := src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization
-LIB_ACCSIG_PATH := src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature
-
-# ------------------------------------------------------------------------------
-# Library Addresses by Factory (must match DeploymentConfig.sol)
-# ------------------------------------------------------------------------------
-# Arachnid factory library addresses
-ARACHNID_LIB_POLICY := 0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314
-ARACHNID_LIB_ADMIN := 0x744CaFa607273AF5664073d05BE066C6bDbf8201
-ARACHNID_LIB_INIT := 0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E
-ARACHNID_LIB_ACCSIG := 0x6A6709A2c898E719A6Ee7635a3963122059655eB
-
-# Safe prod factory library addresses (TODO: fill after deploying libraries via prod Safe factory)
-SAFE_PROD_LIB_POLICY := 0x0000000000000000000000000000000000000000
-SAFE_PROD_LIB_ADMIN := 0x0000000000000000000000000000000000000000
-SAFE_PROD_LIB_INIT := 0x0000000000000000000000000000000000000000
-SAFE_PROD_LIB_ACCSIG := 0x0000000000000000000000000000000000000000
-
-# Safe non-prod factory library addresses (TODO: fill after deploying libraries via non-prod Safe factory)
-SAFE_NONPROD_LIB_POLICY := 0x0000000000000000000000000000000000000000
-SAFE_NONPROD_LIB_ADMIN := 0x0000000000000000000000000000000000000000
-SAFE_NONPROD_LIB_INIT := 0x0000000000000000000000000000000000000000
-SAFE_NONPROD_LIB_ACCSIG := 0x0000000000000000000000000000000000000000
-
-# ------------------------------------------------------------------------------
 # Factory Address Selection (based on FACTORY variable)
+# Library addresses are now configured in foundry.toml profiles.
 # ------------------------------------------------------------------------------
 ifeq ($(FACTORY),arachnid)
     FACTORY_ADDRESS := $(ARACHNID_FACTORY_ADDRESS)
-    LIB_POLICY_ADDR := $(ARACHNID_LIB_POLICY)
-    LIB_ADMIN_ADDR := $(ARACHNID_LIB_ADMIN)
-    LIB_INIT_ADDR := $(ARACHNID_LIB_INIT)
-    LIB_ACCSIG_ADDR := $(ARACHNID_LIB_ACCSIG)
 else ifeq ($(FACTORY),safe-prod)
     FACTORY_ADDRESS := $(SAFE_PROD_FACTORY_ADDRESS)
-    LIB_POLICY_ADDR := $(SAFE_PROD_LIB_POLICY)
-    LIB_ADMIN_ADDR := $(SAFE_PROD_LIB_ADMIN)
-    LIB_INIT_ADDR := $(SAFE_PROD_LIB_INIT)
-    LIB_ACCSIG_ADDR := $(SAFE_PROD_LIB_ACCSIG)
 else ifeq ($(FACTORY),safe-nonprod)
     FACTORY_ADDRESS := $(SAFE_NONPROD_FACTORY_ADDRESS)
-    LIB_POLICY_ADDR := $(SAFE_NONPROD_LIB_POLICY)
-    LIB_ADMIN_ADDR := $(SAFE_NONPROD_LIB_ADMIN)
-    LIB_INIT_ADDR := $(SAFE_NONPROD_LIB_INIT)
-    LIB_ACCSIG_ADDR := $(SAFE_NONPROD_LIB_ACCSIG)
 else
     $(error Invalid FACTORY value '$(FACTORY)'. Use: arachnid, safe-prod, or safe-nonprod)
 endif
@@ -208,15 +168,6 @@ ifndef ACCOUNT
 	$(error ACCOUNT is required. Set ACCOUNT=<keystore-name>)
 endif
 endif
-
-# ------------------------------------------------------------------------------
-# Library Flags (only used by deploy-contracts)
-# ------------------------------------------------------------------------------
-LIBRARIES_FLAGS := \
-	--libraries $(LIB_POLICY_PATH):$(LIB_POLICY_ADDR) \
-	--libraries $(LIB_ADMIN_PATH):$(LIB_ADMIN_ADDR) \
-	--libraries $(LIB_INIT_PATH):$(LIB_INIT_ADDR) \
-	--libraries $(LIB_ACCSIG_PATH):$(LIB_ACCSIG_ADDR)
 
 # ==============================================================================
 # Legacy Deployment Commands (using deploy_all.sh script)
@@ -337,7 +288,7 @@ deploy-libraries: validate-signer-vars
 
 # Deploy Contracts: Deploys all platform contracts with library linking
 # IMPORTANT: Libraries must be deployed first (use deploy-libraries).
-# This target uses --libraries flags to link to the deployed library addresses.
+# Uses FOUNDRY_PROFILE to link libraries from foundry.toml profiles.
 #
 # Example:
 #   make deploy-contracts NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
@@ -346,17 +297,12 @@ deploy-contracts: validate-signer-vars
 	@echo "Deploying platform contracts with library linking..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Libraries:"
-	@echo "    Policy: $(LIB_POLICY_ADDR)"
-	@echo "    Admin: $(LIB_ADMIN_ADDR)"
-	@echo "    Init: $(LIB_INIT_ADDR)"
-	@echo "    AccSig: $(LIB_ACCSIG_ADDR)"
-	forge script script/DeployContracts.s.sol:DeployContracts \
+	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
+	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployContracts.s.sol:DeployContracts \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		$(LIBRARIES_FLAGS) \
 		-vvvv
 
 # Deploy Platform: Full deployment of libraries and contracts

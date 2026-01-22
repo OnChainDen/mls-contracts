@@ -1,3 +1,6 @@
+# ==============================================================================
+# COMMON CONFIGURATION (Shared by ALL profiles)
+# ==============================================================================
 [profile.default]
 src = "src"
 out = "out"
@@ -25,14 +28,68 @@ remappings = [
     "types/=src/types/"
 ]
 
+# ------------------------------------------------------------------------------
+# RPC ENDPOINTS (Network Aliases)
+# Available to ALL profiles. Use via: --rpc-url mainnet
+# ------------------------------------------------------------------------------
+[rpc_endpoints]
+mainnet = "https://rpc.ankr.com/eth"
+polygon = "https://rpc.ankr.com/polygon"
+arbitrum = "https://rpc.ankr.com/arbitrum"
+optimism = "https://rpc.ankr.com/optimism"
+base = "https://rpc.ankr.com/base"
+
+# ==============================================================================
+# CI PROFILE (For Continuous Integration)
+# ==============================================================================
 [profile.ci]
 fuzz = { runs = 256  }
 invariant = { runs = 256 }
 
+# ==============================================================================
+# LINKING PROFILES (Compilation Strategies)
+# These profiles inherit settings from [profile.default] but override libraries.
+# ==============================================================================
+
+# --- Strategy: Arachnid Factory ---
+[profile.arachnid]
+libraries = [
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x744CaFa607273AF5664073d05BE066C6bDbf8201",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x6A6709A2c898E719A6Ee7635a3963122059655eB"
+]
+
+# --- Strategy: Safe Singleton Factory (Prod) ---
+# TODO: Update platform library addresses after deploying libraries via prod Safe factory
+[profile.safe-prod]
+libraries = [
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x0000000000000000000000000000000000000000"
+]
+
+# --- Strategy: Safe Singleton Factory (Non-Prod) ---
+# TODO: Update platform library addresses after deploying libraries via non-prod Safe factory
+[profile.safe-nonprod]
+libraries = [
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x0000000000000000000000000000000000000000"
+]
+
+# ==============================================================================
+# LINTING CONFIGURATION
+# ==============================================================================
 [lint]
 # Disable the asm-keccak256 lint - we prefer readable keccak256() calls over assembly
 exclude_lints = ["asm-keccak256"]
 
+# ==============================================================================
+# FORMATTING CONFIGURATION
+# ==============================================================================
 [fmt]
 int_types = "long"           # Enforces "uint256" over "uint" (Implicit in your examples)
 line_length = 120
@@ -43,12 +100,5 @@ tab_width = 4
 wrap_comments = true
 bracket_spacing = false      # Matches "No spaces inside brackets: arr[i]" 
 sort_imports = true          # Enforces "Strictly alphabetize imports"
-
-[rpc_endpoints]
-mainnet = "https://rpc.ankr.com/eth"
-polygon = "https://rpc.ankr.com/polygon"
-arbitrum = "https://rpc.ankr.com/arbitrum"
-optimism = "https://rpc.ankr.com/optimism"
-base = "https://rpc.ankr.com/base"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
