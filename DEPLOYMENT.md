@@ -208,11 +208,11 @@ ACCOUNT="my-deployer"  # Name of your Foundry keystore account
 # -----------------------------------------------------------------------------
 # Step 1: Start local Anvil instance
 # -----------------------------------------------------------------------------
-# --chain-id 420: Use a non-production chain ID
+# Uses default chain ID 31337 (local development)
 # --disable-default-create2-deployer: Don't deploy Anvil's default CREATE2 factory
 #   (we want to deploy Arachnid ourselves to match production behavior)
 pkill anvil  # Kill any existing Anvil instances
-anvil --chain-id 420 --disable-default-create2-deployer -p $PORT &
+anvil --disable-default-create2-deployer -p $PORT &
 
 # Wait for Anvil to start
 sleep 3
@@ -279,8 +279,9 @@ DEN_DEPLOYER_ADDRESS="0x22002e8661A780d61EF4c86F4a9fFa843A6fea20"
 # -----------------------------------------------------------------------------
 # Step 1: Start local Anvil instance
 # -----------------------------------------------------------------------------
+# Uses default chain ID 31337 (local development)
 pkill anvil
-anvil --chain-id 420 --disable-default-create2-deployer -p $PORT &
+anvil --disable-default-create2-deployer -p $PORT &
 
 sleep 3
 
