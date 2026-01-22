@@ -69,11 +69,11 @@ library DeploymentConfig {
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
 
-    // ==================== Hardcoded CREATE2 Factory Addresses ====================
+    // ==================== Hardcoded CREATE2 Factory and Deployer Addresses =====================
     // These are the hardcoded addresses for the CREATE2 factories that are used to deploy the platform contracts.
     // These addresses are not expected to change, so they are hardcoded in the library.
     //
-    // IMPORTANT: These addresses must be updated if the CREATE2 factory addresses change.
+    // IMPORTANT: These addresses must be updated if the CREATE2 factory or deployer addresses change.
     // ==============================================================================
     /// @dev Arachnid Deterministic Deployment Proxy address (deployed on most EVM chains)
     address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
@@ -152,9 +152,9 @@ library DeploymentConfig {
     ///      libraries via non-prod Safe Singleton Factory
     address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x85c8b8410F0feeFd157496245c37d89F33985cC0;
     address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xCAE149fD735Cc65290e737BF06855Bba119b6082;
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = 0xB54293a48005C38881bddb20956Afd02c615c810;
+    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = 0x384803ADc053682c7f42270De5DF50d37c243913;
     address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
-        0x7D27fFd10bbC381A8403B4B95eeFd6bC67D46219;
+        0xFcBDb3e95De055ac3BAedADA90894E5624Af1162;
 
     // ==================== Hardcoded Guardian Safe Multisig Configurations =====================
     // These are the hardcoded multisig configurations for the Guardian Safe and Deployer Safe.

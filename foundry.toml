@@ -85,8 +85,8 @@ libraries = [
     # TODO: Update platform library addresses after making changes to library source code
     "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x85c8b8410F0feeFd157496245c37d89F33985cC0",
     "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCAE149fD735Cc65290e737BF06855Bba119b6082",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xB54293a48005C38881bddb20956Afd02c615c810",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x7D27fFd10bbC381A8403B4B95eeFd6bC67D46219"
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x384803ADc053682c7f42270De5DF50d37c243913",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xFcBDb3e95De055ac3BAedADA90894E5624Af1162"
 ]
 
 # ==============================================================================
