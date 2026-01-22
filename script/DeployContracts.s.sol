@@ -54,7 +54,7 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory address is not zero
  *      2. Verifies the provided CREATE2 factory address is deployed at the provided address
- *      3. Verifies that the deployer is not the production Safe Factory deployer
+ *      3. Verifies that the deployer is not the production Den Factory deployer
  *      4. Validates that --libraries flag was used with correct addresses
  *      5. Validates that libraries are deployed at expected addresses
  *      6. Requires interactive confirmation when broadcasting
@@ -119,8 +119,8 @@ contract DeployContracts is Script {
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
             DeploymentConfig.getDeployerSafeConfig(block.chainid);
 
-        // Prevent using the production Safe Factory deployer for this script
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
+        // Prevent using the production Den Factory deployer for this script
+        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address

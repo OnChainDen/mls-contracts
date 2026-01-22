@@ -68,10 +68,10 @@ libraries = [
     "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x6A6709A2c898E719A6Ee7635a3963122059655eB"
 ]
 
-# --- Strategy: Safe Singleton Factory (Prod) ---
-[profile.safe-prod]
+# --- Strategy: Den Singleton Factory (Prod) ---
+[profile.den-prod]
 libraries = [
-    # TODO: Update platform library addresses after deploying libraries via prod Safe factory
+    # TODO: Update platform library addresses after deploying libraries via prod Den factory
     # TODO: Update platform library addresses after making changes to library source code
     "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
     "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
@@ -79,8 +79,8 @@ libraries = [
     "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x0000000000000000000000000000000000000000"
 ]
 
-# --- Strategy: Safe Singleton Factory (Non-Prod) ---
-[profile.safe-nonprod]
+# --- Strategy: Den Singleton Factory (Non-Prod) ---
+[profile.den-nonprod]
 libraries = [
     # TODO: Update platform library addresses after making changes to library source code
     "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x85c8b8410F0feeFd157496245c37d89F33985cC0",

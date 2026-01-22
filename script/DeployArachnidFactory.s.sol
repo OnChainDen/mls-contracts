@@ -18,11 +18,11 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *      on any EVM chain, resulting in the factory being deployed at the same address.
  *
  *      IMPORTANT: Some chains enforce EIP-155 and will reject this transaction. In those cases,
- *      use DeploySafeSingletonFactory.s.sol instead.
+ *      use DeployDenSingletonFactory.s.sol instead.
  *
  *      SAFETY CHECKS:
  *      1. Verifies factory is not already deployed
- *      2. Verifies that the deployer is not the production Safe Factory deployer
+ *      2. Verifies that the deployer is not the production Den Factory deployer
  *          NOTE: the presigned transaction shouldn't even use the wallet passed into the
  *          `forge script` command, but this is checked in the script to be safe.
  *      3. Verifies deployer address has sufficient ETH
@@ -75,8 +75,8 @@ contract DeployArachnidFactory is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
 
-        // Prevent using the production Safe Factory deployer for this script
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
+        // Prevent using the production Den Factory deployer for this script
+        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
@@ -101,7 +101,7 @@ contract DeployArachnidFactory is Script {
         if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
             Logger.logFail("ERROR: Factory deployment failed!");
             Logger.logIndented("This chain may enforce EIP-155 replay protection.");
-            Logger.logIndented("Use DeploySafeSingletonFactory.s.sol instead.");
+            Logger.logIndented("Use DeployDenSingletonFactory.s.sol instead.");
             revert("Factory deployment failed");
         }
 
@@ -112,8 +112,8 @@ contract DeployArachnidFactory is Script {
     /// @notice Funds the Arachnid factory deployer address with ETH
     /// @dev Can be called separately to fund the deployer before running the main script.
     function fundDeployer() external {
-        // Prevent using the production Safe Factory deployer for funding
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
+        // Prevent using the production Den Factory deployer for funding
+        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the funding details
         Logger.logEmptyLine();

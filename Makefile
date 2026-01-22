@@ -15,7 +15,7 @@
 .PHONY: coverage snapshot gas-report help
 
 # CREATE2 factory deployment
-.PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-safe-deployer deploy-safe-factory
+.PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
 # Platform deployment
 .PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
@@ -59,8 +59,8 @@ help:
 	@echo "CREATE2 Factory Deployment:"
 	@echo "  fund-arachnid-deployer    Fund the Arachnid factory deployer"
 	@echo "  deploy-arachnid-factory   Deploy the Arachnid CREATE2 factory"
-	@echo "  fund-safe-deployer        Fund the Safe factory deployer"
-	@echo "  deploy-safe-factory       Deploy the Safe Singleton Factory"
+	@echo "  fund-den-deployer         Fund the Den factory deployer"
+	@echo "  deploy-den-factory        Deploy the Den Singleton Factory"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  check-factory             Check if a factory is deployed"
@@ -74,7 +74,7 @@ help:
 	@echo "  SIGNER    Signing method: account or ledger (default: account)"
 	@echo "  ACCOUNT   Foundry keystore account name (required for SIGNER=account)"
 	@echo "  SENDER    EOA address (auto-derived from ACCOUNT, required for ledger)"
-	@echo "  FACTORY   CREATE2 factory: arachnid, safe-prod, safe-nonprod (default: arachnid)"
+	@echo "  FACTORY   CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)"
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
 	@echo ""
@@ -170,7 +170,7 @@ gas-report:
 #   SIGNER   - Signing method: account or ledger (default: account)
 #   ACCOUNT  - Foundry keystore account name (required when SIGNER=account)
 #   SENDER   - EOA address (auto-derived from ACCOUNT, required for ledger)
-#   FACTORY  - CREATE2 factory: arachnid, safe-prod, safe-nonprod (default: arachnid)
+#   FACTORY  - CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)
 #   HD_PATH  - Ledger HD derivation path (default: m/44'/60'/0'/0/0)
 #
 # Example usage:
@@ -191,9 +191,9 @@ VERBOSITY ?= -vvvv
 # CREATE2 Factory Addresses
 # ------------------------------------------------------------------------------
 ARACHNID_FACTORY_ADDRESS := 0x4e59b44847b379578588920cA78FbF26c0B4956C
-# TODO: Fill in after deploying Safe Singleton Factory from prod deployer
-SAFE_PROD_FACTORY_ADDRESS := 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
-SAFE_NONPROD_FACTORY_ADDRESS := 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db
+# TODO: Fill in after deploying Den Singleton Factory from prod deployer
+DEN_PROD_FACTORY_ADDRESS := 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
+DEN_NONPROD_FACTORY_ADDRESS := 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db
 
 # Arachnid deployer address (for funding)
 ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
@@ -204,12 +204,12 @@ ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
 # ------------------------------------------------------------------------------
 ifeq ($(FACTORY),arachnid)
     FACTORY_ADDRESS := $(ARACHNID_FACTORY_ADDRESS)
-else ifeq ($(FACTORY),safe-prod)
-    FACTORY_ADDRESS := $(SAFE_PROD_FACTORY_ADDRESS)
-else ifeq ($(FACTORY),safe-nonprod)
-    FACTORY_ADDRESS := $(SAFE_NONPROD_FACTORY_ADDRESS)
+else ifeq ($(FACTORY),den-prod)
+    FACTORY_ADDRESS := $(DEN_PROD_FACTORY_ADDRESS)
+else ifeq ($(FACTORY),den-nonprod)
+    FACTORY_ADDRESS := $(DEN_NONPROD_FACTORY_ADDRESS)
 else
-    $(error Invalid FACTORY value '$(FACTORY)'. Use: arachnid, safe-prod, or safe-nonprod)
+    $(error Invalid FACTORY value '$(FACTORY)'. Use: arachnid, den-prod, or den-nonprod)
 endif
 
 # ------------------------------------------------------------------------------
@@ -303,37 +303,37 @@ deploy-arachnid-factory: validate-signer-vars
 		--broadcast \
 		$(VERBOSITY)
 
-# Fund Safe Deployer: Sends ETH to the Safe Singleton Factory deployer address
+# Fund Den Deployer: Sends ETH to the Den Singleton Factory deployer address
 # The target address depends on whether you're using prod or non-prod deployer.
-# Pass SAFE_DEPLOYER_ADDRESS to specify the target.
+# Pass DEN_DEPLOYER_ADDRESS to specify the target.
 #
 # Example:
-#   make fund-safe-deployer SAFE_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-fund-safe-deployer: validate-signer-vars
-ifndef SAFE_DEPLOYER_ADDRESS
-	$(error SAFE_DEPLOYER_ADDRESS is required. Set SAFE_DEPLOYER_ADDRESS=<deployer-address>)
+#   make fund-den-deployer DEN_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+fund-den-deployer: validate-signer-vars
+ifndef DEN_DEPLOYER_ADDRESS
+	$(error DEN_DEPLOYER_ADDRESS is required. Set DEN_DEPLOYER_ADDRESS=<deployer-address>)
 endif
-	@echo "Funding Safe Singleton Factory deployer..."
+	@echo "Funding Den Singleton Factory deployer..."
 	@echo "  Network: $(NETWORK)"
-	@echo "  Target: $(SAFE_DEPLOYER_ADDRESS)"
-	forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
-		--sig "fundDeployer(address)" $(SAFE_DEPLOYER_ADDRESS) \
+	@echo "  Target: $(DEN_DEPLOYER_ADDRESS)"
+	forge script script/DeployDenSingletonFactory.s.sol:DeployDenSingletonFactory \
+		--sig "fundDeployer(address)" $(DEN_DEPLOYER_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
-# Deploy Safe Factory: Deploys the Safe Singleton Factory
+# Deploy Den Factory: Deploys the Den Singleton Factory
 # IMPORTANT: Must be run from the correct deployer EOA at nonce 0 for deterministic address.
-# The deployer must be funded first (use fund-safe-deployer).
+# The deployer must be funded first (use fund-den-deployer).
 #
 # Example:
-#   make deploy-safe-factory NETWORK=sepolia ACCOUNT=safe-deployer SENDER=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
-deploy-safe-factory: validate-signer-vars
-	@echo "Deploying Safe Singleton Factory..."
+#   make deploy-den-factory NETWORK=sepolia ACCOUNT=den-deployer SENDER=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37
+deploy-den-factory: validate-signer-vars
+	@echo "Deploying Den Singleton Factory..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Deployer: $(SENDER)"
-	CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+	CONFIRM_DEPLOYMENT=true forge script script/DeployDenSingletonFactory.s.sol:DeployDenSingletonFactory \
 		--sig "run()" \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
@@ -350,7 +350,7 @@ deploy-safe-factory: validate-signer-vars
 #
 # Example:
 #   make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-#   make deploy-libraries FACTORY=safe-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+#   make deploy-libraries FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
 deploy-libraries: validate-signer-vars
 	@echo "Deploying platform libraries via CREATE2..."
 	@echo "  Network: $(NETWORK)"
@@ -368,7 +368,7 @@ deploy-libraries: validate-signer-vars
 #
 # Example:
 #   make deploy-contracts NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-#   make deploy-contracts FACTORY=safe-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+#   make deploy-contracts FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
 deploy-contracts: validate-signer-vars
 	@echo "Deploying platform contracts with library linking..."
 	@echo "  Network: $(NETWORK)"
@@ -442,7 +442,7 @@ deploy-platform-dry-run: deploy-libraries-dry-run deploy-contracts-dry-run
 #
 # Example:
 #   make check-factory FACTORY=arachnid NETWORK=sepolia
-#   make check-factory FACTORY=safe-prod NETWORK=mainnet
+#   make check-factory FACTORY=den-prod NETWORK=mainnet
 check-factory:
 	@echo "$(FACTORY) Factory ($(FACTORY_ADDRESS)):"
 	@code=$$(cast code $(FACTORY_ADDRESS) --rpc-url $(RPC_URL) 2>/dev/null) && \
@@ -462,16 +462,16 @@ check-all-factories:
 	@echo ""
 	@$(MAKE) --no-print-directory check-factory FACTORY=arachnid NETWORK=$(NETWORK)
 	@echo ""
-	@$(MAKE) --no-print-directory check-factory FACTORY=safe-prod NETWORK=$(NETWORK)
+	@$(MAKE) --no-print-directory check-factory FACTORY=den-prod NETWORK=$(NETWORK)
 	@echo ""
-	@$(MAKE) --no-print-directory check-factory FACTORY=safe-nonprod NETWORK=$(NETWORK)
+	@$(MAKE) --no-print-directory check-factory FACTORY=den-nonprod NETWORK=$(NETWORK)
 
 # Compute Lib Addresses: Computes expected library addresses for a specific factory
 # Useful to preview addresses before deployment or verify configuration.
 #
 # Example:
 #   make compute-lib-addresses FACTORY=arachnid NETWORK=sepolia
-#   make compute-lib-addresses FACTORY=safe-prod NETWORK=mainnet
+#   make compute-lib-addresses FACTORY=den-prod NETWORK=mainnet
 compute-lib-addresses:
 	@echo "Computing library addresses for factory: $(FACTORY)"
 	@echo "  Factory address: $(FACTORY_ADDRESS)"
@@ -491,9 +491,9 @@ compute-all-lib-addresses:
 	@echo ""
 	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=arachnid NETWORK=$(NETWORK)
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=safe-prod NETWORK=$(NETWORK)
+	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=den-prod NETWORK=$(NETWORK)
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=safe-nonprod NETWORK=$(NETWORK)
+	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=den-nonprod NETWORK=$(NETWORK)
 
 # Verify: Verifies a deployed contract on Etherscan
 # Requires CONTRACT_ADDRESS and CONTRACT_NAME variables.

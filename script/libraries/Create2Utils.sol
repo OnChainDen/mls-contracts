@@ -10,13 +10,13 @@ import {Logger} from "script/libraries/Logger.sol";
 /**
  * @title Create2Utils
  * @notice Helper library for deterministic CREATE2 deployments
- * @dev Abstracts differences between Arachnid and Safe Singleton Factory.
+ * @dev Abstracts differences between Arachnid and Den Singleton Factory.
  *      Provides utilities for computing addresses, checking deployment status, and deploying.
  * @author Den Technologies Inc
  */
 library Create2Utils {
     /// @dev Deploys a contract using CREATE2 if not already deployed
-    ///      Handles differences between Arachnid and Safe Singleton Factory parameter ordering
+    ///      Handles differences between Arachnid and Den Singleton Factory parameter ordering
     /// @param factoryAddress The CREATE2 factory address
     /// @param salt The deployment salt
     /// @param initCode The contract creation bytecode
@@ -104,21 +104,21 @@ library Create2Utils {
         revert("Deployer has insufficient ETH");
     }
 
-    /// @dev Validates that the deployer is NOT the production Safe Factory deployer
-    function validateNotProductionSafeFactoryDeployerOrRevert() internal view {
+    /// @dev Validates that the deployer is NOT the production Den Factory deployer
+    function validateNotProductionDenFactoryDeployerOrRevert() internal view {
         // Log the check start
-        Logger.logCheckStart("Checking deployer is not production Safe Factory deployer...");
+        Logger.logCheckStart("Checking deployer is not production Den Factory deployer...");
 
-        // Case: Deployer is the production Safe Factory deployer
-        if (msg.sender == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
-            Logger.logCheckFail("Deployer is the production Safe Factory deployer");
-            Logger.logCheckDetail("This EOA should ONLY be used by DeploySafeSingletonFactory.");
+        // Case: Deployer is the production Den Factory deployer
+        if (msg.sender == DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS) {
+            Logger.logCheckFail("Deployer is the production Den Factory deployer");
+            Logger.logCheckDetail("This EOA should ONLY be used by DeployDenSingletonFactory.");
             Logger.logCheckDetail("Use a different deployer for this script.");
-            revert("Cannot use production Safe Factory deployer for this script");
+            revert("Cannot use production Den Factory deployer for this script");
         }
 
-        // Case: Deployer is not the production Safe Factory deployer
-        Logger.logCheckPass("Deployer is not production Safe Factory deployer");
+        // Case: Deployer is not the production Den Factory deployer
+        Logger.logCheckPass("Deployer is not production Den Factory deployer");
     }
 
     /// @dev Computes the CREATE2 address for a contract deployment
@@ -144,10 +144,10 @@ library Create2Utils {
 
         if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
             Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
-        } else if (factoryAddress == DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Safe Singleton Factory (Production)");
-        } else if (factoryAddress == DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Safe Singleton Factory (Non-Production)");
+        } else if (factoryAddress == DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            Logger.logKeyValue("Factory Type", "Den Singleton Factory (Production)");
+        } else if (factoryAddress == DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            Logger.logKeyValue("Factory Type", "Den Singleton Factory (Non-Production)");
         } else {
             Logger.logKeyValue("Factory Type", "Custom");
         }
@@ -157,7 +157,7 @@ library Create2Utils {
     }
 
     /// @dev Deploys using a minimal CREATE2 factory
-    ///      All supported factories (Arachnid, Safe Singleton Factory) expect raw calldata: salt (32 bytes) + initCode
+    ///      All supported factories (Arachnid, Den Singleton Factory) expect raw calldata: salt (32 bytes) + initCode
     ///      They return the deployed address as raw 20 bytes (not ABI-encoded)
     /// @param factoryAddress The CREATE2 factory address
     /// @param salt The deployment salt
@@ -170,8 +170,8 @@ library Create2Utils {
         // Validate factory address upfront
         require(
             factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS
-                || factoryAddress == DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS
-                || factoryAddress == DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS,
+                || factoryAddress == DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS
+                || factoryAddress == DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS,
             "Invalid factory address"
         );
 

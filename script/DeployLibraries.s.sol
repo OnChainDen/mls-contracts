@@ -32,7 +32,7 @@ import {PlatformLibraries} from "script/libraries/Types.sol";
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory address is not zero
  *      2. Verifies the provided CREATE2 factory address is deployed at the provided address
- *      3. Verifies that the deployer is not the production Safe Factory deployer
+ *      3. Verifies that the deployer is not the production Den Factory deployer
  *      4. Requires interactive confirmation when broadcasting
  *
  * @author Den Technologies Inc
@@ -52,8 +52,8 @@ contract DeployLibraries is Script {
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries");
 
-        // Prevent using the production Safe Factory deployer for this script
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
+        // Prevent using the production Den Factory deployer for this script
+        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address

@@ -83,7 +83,7 @@ The Makefile provides convenient commands for deployment with configurable netwo
 | `SIGNER` | `account` | Signing method: `account` (Foundry keystore) or `ledger` |
 | `ACCOUNT` | - | Foundry keystore account name (required when `SIGNER=account`) |
 | `SENDER` | - | EOA address (auto-derived from `ACCOUNT`, required for `ledger`) |
-| `FACTORY` | `arachnid` | CREATE2 factory: `arachnid`, `safe-prod`, or `safe-nonprod` |
+| `FACTORY` | `arachnid` | CREATE2 factory: `arachnid`, `den-prod`, or `den-nonprod` |
 | `HD_PATH` | `m/44'/60'/0'/0/0` | Ledger HD derivation path (when `SIGNER=ledger`) |
 
 > **Note:** When using `SIGNER=account`, `SENDER` is automatically derived from your Foundry account. You'll be prompted for your keystore password. You can still provide `SENDER` explicitly to skip the password prompt.
@@ -96,8 +96,8 @@ The Makefile provides convenient commands for deployment with configurable netwo
 |---------|-------------|
 | `make fund-arachnid-deployer` | Fund the Arachnid factory deployer address |
 | `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
-| `make fund-safe-deployer` | Fund a Safe Singleton Factory deployer (requires `SAFE_DEPLOYER_ADDRESS`) |
-| `make deploy-safe-factory` | Deploy the Safe Singleton Factory |
+| `make fund-den-deployer` | Fund a Den Singleton Factory deployer (requires `DEN_DEPLOYER_ADDRESS`) |
+| `make deploy-den-factory` | Deploy the Den Singleton Factory |
 
 #### Platform Deployment
 
@@ -143,20 +143,20 @@ make deploy-libraries NETWORK=sepolia SIGNER=ledger SENDER=0x1234...
 make deploy-contracts NETWORK=sepolia SIGNER=ledger SENDER=0x1234...
 ```
 
-### Example: Using Safe Singleton Factory
+### Example: Using Den Singleton Factory
 
 If the Arachnid factory cannot be deployed (e.g., chain enforces EIP-155):
 
 ```bash
-# Fund and deploy Safe Singleton Factory
-make fund-safe-deployer SAFE_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 \
+# Fund and deploy Den Singleton Factory
+make fund-den-deployer DEN_DEPLOYER_ADDRESS=0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 \
     NETWORK=mychain ACCOUNT=funder
 
-make deploy-safe-factory NETWORK=mychain ACCOUNT=safe-deployer
+make deploy-den-factory NETWORK=mychain ACCOUNT=den-deployer
 
-# Deploy using the Safe factory
-make deploy-libraries FACTORY=safe-prod NETWORK=mychain ACCOUNT=my-deployer
-make deploy-contracts FACTORY=safe-prod NETWORK=mychain ACCOUNT=my-deployer
+# Deploy using the Den factory
+make deploy-libraries FACTORY=den-prod NETWORK=mychain ACCOUNT=my-deployer
+make deploy-contracts FACTORY=den-prod NETWORK=mychain ACCOUNT=my-deployer
 ```
 
 ### Library Addresses by Factory
@@ -172,9 +172,9 @@ The library addresses differ based on which CREATE2 factory is used. These are c
 | LibOrganizationInitialization | `0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E` |
 | LibOrganizationAccountSignature | `0x6A6709A2c898E719A6Ee7635a3963122059655eB` |
 
-**Safe Singleton Factory (`FACTORY=safe-prod` or `FACTORY=safe-nonprod`):**
+**Den Singleton Factory (`FACTORY=den-prod` or `FACTORY=den-nonprod`):**
 
-Library addresses for Safe factories must be computed after deploying the factory. Use `make compute-lib-addresses` to get the expected addresses, then update them in the Makefile before running `deploy-contracts`.
+Library addresses for Den factories must be computed after deploying the factory. Use `make compute-lib-addresses` to get the expected addresses, then update them in the Makefile before running `deploy-contracts`.
 
 ## Step-by-Step Deployment (Manual)
 
@@ -188,7 +188,7 @@ First, check if a CREATE2 factory already exists on your target chain:
 # Check for Arachnid factory
 cast code 0x4e59b44847b379578588920cA78FbF26c0B4956C --rpc-url $RPC_URL
 
-# Check for Safe Singleton factory
+# Check for Den Singleton factory
 cast code 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 --rpc-url $RPC_URL
 ```
 
@@ -216,22 +216,22 @@ CONFIRM_DEPLOYMENT=true forge script script/DeployArachnidFactory.s.sol:DeployAr
 
 Factory will be deployed at: `0x4e59b44847b379578588920cA78FbF26c0B4956C`
 
-#### Deploy Safe Singleton Factory (Fallback)
+#### Deploy Den Singleton Factory (Fallback)
 
 Only use this if Arachnid deployment fails (e.g., chain enforces EIP-155).
 
-> **CRITICAL:** The Safe Singleton Factory must be deployed from a specific EOA at nonce 0. The production deployer is `0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37`. If this address has already sent any transaction on the target chain, the factory cannot be deployed at its deterministic address.
+> **CRITICAL:** The Den Singleton Factory must be deployed from a specific EOA at nonce 0. The production deployer is `0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37`. If this address has already sent any transaction on the target chain, the factory cannot be deployed at its deterministic address.
 
 ```bash
-# Fund the Safe Singleton deployer
-forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+# Fund the Den Singleton deployer
+forge script script/DeployDenSingletonFactory.s.sol:DeployDenSingletonFactory \
   --sig "fundDeployer(address)" 0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37 \
   --rpc-url $RPC_URL \
   --account <your-keystore-name> --sender <your-address> \
   --broadcast -vvvv
 
 # Deploy the factory
-CONFIRM_DEPLOYMENT=true forge script script/DeploySafeSingletonFactory.s.sol:DeploySafeSingletonFactory \
+CONFIRM_DEPLOYMENT=true forge script script/DeployDenSingletonFactory.s.sol:DeployDenSingletonFactory \
   --rpc-url $RPC_URL \
   --account <your-keystore-name> --sender <your-address> \
   --broadcast -vvvv
@@ -251,7 +251,7 @@ forge script script/DeployLibraries.s.sol:DeployLibraries \
   --account <your-keystore-name> --sender <your-address> \
   --broadcast -vvvv
 
-# Or using Safe Singleton factory
+# Or using Den Singleton factory
 forge script script/DeployLibraries.s.sol:DeployLibraries \
   --sig "run(address)" 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7 \
   --rpc-url $RPC_URL \
@@ -371,20 +371,20 @@ With the `--libraries` flag:
 |-------|----------|
 | "Factory address cannot be zero" | Pass the CREATE2 factory address as an argument: `--sig "run(address)" <factory-address>` |
 | "CREATE2 factory not deployed" | Run Step 1 to deploy a factory first, or use `make check-factory` to verify |
-| "Deployer nonce is not 0" | The Safe Singleton Factory cannot be deployed at its deterministic address on this chain. Use Arachnid factory instead. |
+| "Deployer nonce is not 0" | The Den Singleton Factory cannot be deployed at its deterministic address on this chain. Use Arachnid factory instead. |
 | "Already deployed" messages | Normal - the script skips contracts that already exist at their deterministic addresses |
 | Library address mismatch | You ran without `--libraries` flag. Use `make deploy-contracts` which includes the flags automatically. |
 | "ACCOUNT is required" | Set `ACCOUNT=<keystore-name>` when using `SIGNER=account` |
 | "SENDER is required" | Always set `SENDER=<your-address>` with deployment commands |
-| "Invalid FACTORY value" | Use one of: `arachnid`, `safe-prod`, `safe-nonprod` |
-| Safe factory library addresses are 0x0 | Update the library addresses in `Makefile` after deploying libraries via Safe factory |
+| "Invalid FACTORY value" | Use one of: `arachnid`, `den-prod`, `den-nonprod` |
+| Den factory library addresses are 0x0 | Update the library addresses in `Makefile` after deploying libraries via Den factory |
 
 ## Script Reference
 
 | Script | Purpose |
 |--------|---------|
 | `script/DeployArachnidFactory.s.sol` | Deploy Arachnid CREATE2 factory (keyless transaction) |
-| `script/DeploySafeSingletonFactory.s.sol` | Deploy Safe Singleton Factory (fallback for EIP-155 chains) |
+| `script/DeployDenSingletonFactory.s.sol` | Deploy Den Singleton Factory (fallback for EIP-155 chains) |
 | `script/DeployLibraries.s.sol` | Deploy 4 platform libraries via CREATE2 |
 | `script/DeployContracts.s.sol` | Deploy Safe infrastructure, Safes, implementations, factories, proxies |
 | `script/config/DeploymentConfig.sol` | Deterministic salts, factory addresses, Safe configurations |

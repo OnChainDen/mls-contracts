@@ -78,19 +78,19 @@ library DeploymentConfig {
     /// @dev Arachnid Deterministic Deployment Proxy address (deployed on most EVM chains)
     address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
-    /// @dev Production Safe Singleton Factory deployer address (must maintain nonce 0)
-    ///      TODO: Fill in after deploying Safe Singleton Factory from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS
-    address internal constant PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = address(0);
+    /// @dev Production Den Singleton Factory deployer address (must maintain nonce 0)
+    ///      TODO: Fill in after deploying Den Singleton Factory from PROD_DEN_FACTORY_DEPLOYER_ADDRESS
+    address internal constant PROD_DEN_FACTORY_DEPLOYER_ADDRESS = address(0);
 
-    /// @dev Expected Safe Singleton Factory address when deployed from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS at nonce 0
-    ///      TODO: Fill in after deploying Safe Singleton Factory from PROD_SAFE_FACTORY_DEPLOYER_ADDRESS at nonce 0
-    address internal constant PROD_SAFE_SINGLETON_FACTORY_ADDRESS = address(0);
+    /// @dev Expected Den Singleton Factory address when deployed from PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0
+    ///      TODO: Fill in after deploying Den Singleton Factory from PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0
+    address internal constant PROD_DEN_SINGLETON_FACTORY_ADDRESS = address(0);
 
-    /// @dev Non-production Safe Singleton Factory deployer address
-    address internal constant NON_PROD_SAFE_FACTORY_DEPLOYER_ADDRESS = 0x22002e8661A780d61EF4c86F4a9fFa843A6fea20;
+    /// @dev Non-production Den Singleton Factory deployer address
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS = 0x22002e8661A780d61EF4c86F4a9fFa843A6fea20;
 
-    /// @dev Expected Safe Singleton Factory address for non-production deployments
-    address internal constant NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS = 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db;
+    /// @dev Expected Den Singleton Factory address for non-production deployments
+    address internal constant NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db;
 
     // ==================== Hardcoded Library Paths ====================
     // These are the hardcoded paths for the platform libraries that are used when deploying contracts that
@@ -138,22 +138,22 @@ library DeploymentConfig {
     address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E;
     address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0x6A6709A2c898E719A6Ee7635a3963122059655eB;
 
-    /// @dev Expected library addresses when deployed via Production Safe Singleton Factory
-    ///      TODO: Fill in these addresses after deploying libraries via prod Safe Singleton Factory
+    /// @dev Expected library addresses when deployed via Production Den Singleton Factory
+    ///      TODO: Fill in these addresses after deploying libraries via prod Den Singleton Factory
     ///      TODO: Update these addresses after making changes to library source code and deploying
-    ///      libraries via prod Safe Singleton Factory
-    address internal constant PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = address(0);
-    address internal constant PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = address(0);
-    address internal constant PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = address(0);
-    address internal constant PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS = address(0);
+    ///      libraries via prod Den Singleton Factory
+    address internal constant PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS = address(0);
 
-    /// @dev Expected library addresses when deployed via Non-Production Safe Singleton Factory
+    /// @dev Expected library addresses when deployed via Non-Production Den Singleton Factory
     ///      TODO: Update these addresses after making changes to library source code and deploying
-    ///      libraries via non-prod Safe Singleton Factory
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x85c8b8410F0feeFd157496245c37d89F33985cC0;
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xCAE149fD735Cc65290e737BF06855Bba119b6082;
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS = 0x384803ADc053682c7f42270De5DF50d37c243913;
-    address internal constant NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
+    ///      libraries via non-prod Den Singleton Factory
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x85c8b8410F0feeFd157496245c37d89F33985cC0;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xCAE149fD735Cc65290e737BF06855Bba119b6082;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0x384803ADc053682c7f42270De5DF50d37c243913;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
         0xFcBDb3e95De055ac3BAedADA90894E5624Af1162;
 
     // ==================== Hardcoded Guardian Safe Multisig Configurations =====================
@@ -274,24 +274,24 @@ library DeploymentConfig {
             return libs;
         }
 
-        // Case: Production Safe Singleton Factory
-        if (factoryAddress == PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
             libs = PlatformLibraries({
-                policyAddress: PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS,
-                adminAddress: PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS,
-                initializationAddress: PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS,
-                accountSignatureAddress: PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
+                policyAddress: PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS,
+                adminAddress: PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS,
+                initializationAddress: PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS,
+                accountSignatureAddress: PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
             });
             return libs;
         }
 
-        // Case: Non-Production Safe Singleton Factory
-        if (factoryAddress == NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS) {
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
             libs = PlatformLibraries({
-                policyAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_POLICY_ADDRESS,
-                adminAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_ADMIN_ADDRESS,
-                initializationAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_INIT_ADDRESS,
-                accountSignatureAddress: NON_PROD_SAFE_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
+                policyAddress: NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS,
+                adminAddress: NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS,
+                initializationAddress: NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS,
+                accountSignatureAddress: NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS
             });
             return libs;
         }

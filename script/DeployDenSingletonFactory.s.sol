@@ -10,26 +10,21 @@ import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
 /**
- * @title DeploySafeSingletonFactory
- * @notice Script to deploy the Safe Singleton Factory on chains where it doesn't exist
+ * @title DeployDenSingletonFactory
+ * @notice Script to deploy the Den Singleton Factory on chains where it doesn't exist
  * @dev CRITICAL: This script uses a special deployer key that MUST maintain nonce = 0.
  *      If the nonce is burned, the factory cannot be deployed at the expected address.
- *
- *      The Safe Singleton Factory is normally deployed via pre-signed raw transactions
- *      (see https://github.com/safe-global/safe-singleton-factory). This script instead
- *      deploys the bytecode directly for Foundry compatibility and multi-chain support,
- *      since pre-signed transactions are chain-specific (signature includes chainId).
  *
  *      SAFETY CHECKS:
  *      1. Verifies deployer nonce is exactly 0
  *      2. Verifies deployer has sufficient ETH balance
  *      3. Warns and requires confirmation when the deployer is the production deployer
- *      2. Verifies arachnid and safe singleton factories are not already deployed
+ *      2. Verifies arachnid and Den singleton factories are not already deployed
  *      3. Requires interactive confirmation when broadcasting
  *
  * @author Den Technologies Inc
  */
-contract DeploySafeSingletonFactory is Script {
+contract DeployDenSingletonFactory is Script {
     /// @dev Gas price for the deployment transaction (125 gwei - works on most chains)
     uint256 internal constant _DEPLOYMENT_GAS_PRICE = 125_000_000_000;
 
@@ -45,20 +40,20 @@ contract DeploySafeSingletonFactory is Script {
      */
     function run() external {
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeSingletonFactory");
+        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployDenSingletonFactory");
 
         // Log the deployment header
-        Logger.logBoxHeader("Safe Singleton Factory - Factory Deployment");
+        Logger.logBoxHeader("Den Singleton Factory - Factory Deployment");
 
         // Validate that the Arachnid factory is not already deployed
-        // We should not be deploying the Safe Singleton Factory if the Arachnid factory is already deployed.
+        // We should not be deploying the Den Singleton Factory if the Arachnid factory is already deployed.
         Create2Utils.validateFactoryNotDeployedOrRevert(
             DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS, "Arachnid factory"
         );
 
-        // Validate that the Safe Singleton Factory is not already deployed
+        // Validate that the Den Singleton Factory is not already deployed
         Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS, "Safe Singleton Factory"
+            DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS, "Den Singleton Factory"
         );
 
         // Warn and require confirmation for production and non-production deployers
@@ -69,11 +64,11 @@ contract DeploySafeSingletonFactory is Script {
 
         // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(
-            msg.sender, _REQUIRED_ETH_BALANCE, "DeploySafeSingletonFactory"
+            msg.sender, _REQUIRED_ETH_BALANCE, "DeployDenSingletonFactory"
         );
 
         // Log section header
-        Logger.logSection("DEPLOYING SAFE SINGLETON FACTORY");
+        Logger.logSection("DEPLOYING DEN SINGLETON FACTORY");
 
         // Deploy the factory
         vm.startBroadcast();
@@ -83,38 +78,37 @@ contract DeploySafeSingletonFactory is Script {
         // Case: Production deployer
         // Check that the factory was deployed at the expected production address
         if (isProductionDeployer) {
-            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS)) {
+            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)) {
                 Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
-                Logger.logKeyValue("Expected", DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
+                Logger.logKeyValue("Expected", DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS);
                 Logger.logKeyValue("Got", deployedAtAddress);
                 revert("Factory deployment failed");
             }
-        } else if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS))
-        {
+        } else if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS)) {
             // Case: Non-production deployer
             // Check that the factory was deployed at the expected non-production address
             Logger.logFail("ERROR: Factory was not deployed at the expected non-production address!");
-            Logger.logKeyValue("Expected", DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
+            Logger.logKeyValue("Expected", DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS);
             Logger.logKeyValue("Got", deployedAtAddress);
             revert("Factory deployment failed");
         }
 
         // Log success
-        Logger.logDeploymentSuccess("Safe Singleton Factory", deployedAtAddress, "CREATE2_FACTORY_ADDRESS");
+        Logger.logDeploymentSuccess("Den Singleton Factory", deployedAtAddress, "CREATE2_FACTORY_ADDRESS");
     }
 
-    /// @notice Funds the Safe Singleton Factory deployer address with ETH
+    /// @notice Funds the Den Singleton Factory deployer address with ETH
     /// @dev Can be called separately to fund the deployer before running the main script.
     /// @param targetDeployerAddress The deployer address to fund
     function fundDeployer(address targetDeployerAddress) external {
-        // Prevent using the production Safe Factory deployer for funding
-        Create2Utils.validateNotProductionSafeFactoryDeployerOrRevert();
+        // Prevent using the production Den Factory deployer for funding
+        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         require(targetDeployerAddress != address(0), "Target deployer address cannot be zero");
 
         // Log the funding details
         Logger.logEmptyLine();
-        Logger.logIndented("Funding Safe Singleton Factory deployer...");
+        Logger.logIndented("Funding Den Singleton Factory deployer...");
         Logger.logKeyValue("Target", targetDeployerAddress);
         Logger.logKeyValue("Amount (wei)", _REQUIRED_ETH_BALANCE);
         Logger.logEmptyLine();
@@ -128,10 +122,10 @@ contract DeploySafeSingletonFactory is Script {
         Logger.logPass("Deployer funded successfully");
     }
 
-    /// @dev Deploys the Safe Singleton Factory using inline assembly
+    /// @dev Deploys the Den Singleton Factory using inline assembly
     ///      Uses CREATE opcode from nonce 0 to achieve deterministic address
     function _deployFactory() internal returns (address deployedAtAddress) {
-        // Safe Singleton Factory bytecode (minimal CREATE2 factory)
+        // Den Singleton Factory bytecode (minimal CREATE2 factory)
         // This is the init code that produces a contract at the expected address
         // forgefmt: disable-next-item
         bytes memory factoryBytecode =
@@ -178,16 +172,16 @@ contract DeploySafeSingletonFactory is Script {
     /// @return isProductionDeployer True if the deployer is the production deployer
     function _warnAndConfirmDeployerAddress() internal returns (bool isProductionDeployer) {
         // Case: Deployer address matches production address
-        if (msg.sender == DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS) {
+        if (msg.sender == DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS) {
             // Build context for prompt - embedded because console.log output is buffered
             // solhint-disable-next-line func-named-parameters
             string memory context = string.concat(
-                "\n  !! Using PRODUCTION Safe Factory deployer !!\n",
+                "\n  !! Using PRODUCTION Den Factory deployer !!\n",
                 "  This EOA must keep nonce 0 for deterministic deployment.\n",
                 "  Deployer: ",
                 Strings.toHexString(msg.sender),
                 "\n  Expected factory: ",
-                Strings.toHexString(DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS)
+                Strings.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
             );
 
             ScriptUtils.promptForConfirmationOrRevert(vm, context);
@@ -199,12 +193,12 @@ contract DeploySafeSingletonFactory is Script {
         // Build context for prompt - embedded because console.log output is buffered
         // solhint-disable-next-line func-named-parameters
         string memory nonProdContext = string.concat(
-            "\n  !! Using NON-PRODUCTION Safe Factory deployer !!\n",
+            "\n  !! Using NON-PRODUCTION Den Factory deployer !!\n",
             "  Factory address will differ from production.\n",
             "  Deployer: ",
             Strings.toHexString(msg.sender),
             "\n  Production deployer: ",
-            Strings.toHexString(DeploymentConfig.PROD_SAFE_FACTORY_DEPLOYER_ADDRESS)
+            Strings.toHexString(DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS)
         );
 
         ScriptUtils.promptForConfirmationOrRevert(vm, nonProdContext);
