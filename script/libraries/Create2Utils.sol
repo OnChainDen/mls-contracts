@@ -60,16 +60,6 @@ library Create2Utils {
         return contractAddress.code.length > 0;
     }
 
-    /// @dev Retrieves the CREATE2 factory address from environment variable
-    ///      Requires CREATE2_FACTORY_ADDRESS to be explicitly set
-    /// @param vm The Forge Vm interface for accessing environment variables
-    /// @return factoryAddress Address of the CREATE2 factory
-    function getCreate2Factory(Vm vm) internal view returns (address factoryAddress) {
-        factoryAddress = vm.envAddress("CREATE2_FACTORY_ADDRESS");
-        require(factoryAddress != address(0), "CREATE2_FACTORY_ADDRESS is set to zero address");
-        require(isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address");
-    }
-
     /// @dev Validates that a factory is NOT deployed at the given address, reverts if it is
     /// @param factoryAddress The factory address to check
     /// @param factoryName Human-readable name for logging
