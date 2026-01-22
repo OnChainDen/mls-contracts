@@ -173,6 +173,9 @@ else ifeq ($(SIGNER),account)
 ifndef ACCOUNT
 	$(error ACCOUNT is required. Set ACCOUNT=<keystore-name>)
 endif
+ifeq ($(SENDER),)
+	$(error Failed to derive SENDER address from ACCOUNT '$(ACCOUNT)'. Does this account exist in your Foundry keystore? Run 'cast wallet list' to see available accounts)
+endif
 endif
 
 # ==============================================================================
