@@ -1,20 +1,90 @@
-# Core commands
-.PHONY: all build clean test format lint analyze check install update sizes
+# ==============================================================================
+# Makefile for Foundry Smart Contract Project
+# ==============================================================================
+#
+# Requirements:
+#   - Foundry (forge, cast) >= 0.2.0
+#   - Slither >= 0.10.0
+#   - Node.js >= 18 (for solhint)
+#   - solhint (npm install -g solhint)
+#
+# ==============================================================================
 
-# Legacy deployment (deploy_all.sh script)
-.PHONY: deploy-all deploy-dry-run
+# Core commands
+.PHONY: all build clean test format lint analyze check install update sizes remove
+.PHONY: coverage snapshot gas-report help
 
 # CREATE2 factory deployment
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-safe-deployer deploy-safe-factory
 
 # Platform deployment
 .PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
+.PHONY: deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
 
 # Utilities
-.PHONY: check-factory check-all-factories compute-lib-addresses compute-all-lib-addresses
+.PHONY: check-factory check-all-factories compute-lib-addresses compute-all-lib-addresses verify
 
 # ==============================================================================
-# Core Commanmds
+# Help
+# ==============================================================================
+
+help:
+	@echo "Usage: make <target> [VARIABLE=value ...]"
+	@echo ""
+	@echo "Core Commands:"
+	@echo "  all            Clean, reinstall dependencies, and build (default)"
+	@echo "  build          Compile contracts"
+	@echo "  test           Run tests"
+	@echo "  check          Run all checks (format, lint, analyze, sizes, test)"
+	@echo "  format         Fix code formatting"
+	@echo "  lint           Check code style (no fixes)"
+	@echo "  analyze        Run Slither static analysis"
+	@echo "  sizes          Show contract sizes"
+	@echo "  coverage       Generate test coverage report"
+	@echo "  snapshot       Generate gas snapshot"
+	@echo "  gas-report     Run tests with gas reporting"
+	@echo "  clean          Remove build artifacts"
+	@echo "  remove         Remove dependencies (lib/)"
+	@echo "  install        Install dependencies"
+	@echo "  update         Update dependencies"
+	@echo ""
+	@echo "Platform Deployment:"
+	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
+	@echo "  deploy-contracts          Deploy platform contracts with library linking"
+	@echo "  deploy-platform           Full deployment (libraries + contracts)"
+	@echo "  deploy-libraries-dry-run  Simulate library deployment (no broadcast)"
+	@echo "  deploy-contracts-dry-run  Simulate contract deployment (no broadcast)"
+	@echo "  deploy-platform-dry-run   Simulate full deployment (no broadcast)"
+	@echo ""
+	@echo "CREATE2 Factory Deployment:"
+	@echo "  fund-arachnid-deployer    Fund the Arachnid factory deployer"
+	@echo "  deploy-arachnid-factory   Deploy the Arachnid CREATE2 factory"
+	@echo "  fund-safe-deployer        Fund the Safe factory deployer"
+	@echo "  deploy-safe-factory       Deploy the Safe Singleton Factory"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  check-factory             Check if a factory is deployed"
+	@echo "  check-all-factories       Check all factories on a network"
+	@echo "  compute-lib-addresses     Compute expected library addresses"
+	@echo "  compute-all-lib-addresses Compute library addresses for all factories"
+	@echo "  verify                    Verify a contract on Etherscan"
+	@echo ""
+	@echo "Configuration Variables:"
+	@echo "  NETWORK   Target network: local, mainnet, sepolia, polygon, etc. (default: local)"
+	@echo "  SIGNER    Signing method: account or ledger (default: account)"
+	@echo "  ACCOUNT   Foundry keystore account name (required for SIGNER=account)"
+	@echo "  SENDER    EOA address (auto-derived from ACCOUNT, required for ledger)"
+	@echo "  FACTORY   CREATE2 factory: arachnid, safe-prod, safe-nonprod (default: arachnid)"
+	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
+	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
+	@echo "  make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x..."
+	@echo "  make check-all-factories NETWORK=mainnet"
+
+# ==============================================================================
+# Core Commands
 # ==============================================================================
 
 # "make" (all)
@@ -79,6 +149,18 @@ sizes:
 # This is what you run before pushing code.
 check: format lint analyze sizes test
 
+# Coverage: Generates test coverage report
+coverage:
+	forge coverage
+
+# Snapshot: Generates gas snapshot for regression testing
+snapshot:
+	forge snapshot
+
+# Gas Report: Runs tests with gas reporting
+gas-report:
+	forge test --gas-report
+
 # ==============================================================================
 # Deployment Configuration
 # ==============================================================================
@@ -103,6 +185,7 @@ NETWORK ?= local
 SIGNER ?= account
 FACTORY ?= arachnid
 HD_PATH ?= m/44'/60'/0'/0/0
+VERBOSITY ?= -vvvv
 
 # ------------------------------------------------------------------------------
 # CREATE2 Factory Addresses
@@ -143,10 +226,11 @@ endif
 # Auto-derive SENDER from ACCOUNT (for Foundry managed accounts)
 # If ACCOUNT is provided but SENDER is not, derive it using cast wallet address.
 # User will be prompted for their keystore password.
+# Uses deferred evaluation (=) so the shell command only runs when SENDER is needed.
 # ------------------------------------------------------------------------------
 ifdef ACCOUNT
     ifndef SENDER
-        SENDER := $(shell \
+        SENDER = $(shell \
             echo "" >&2 && \
             echo "========================================" >&2 && \
             echo "Deriving address for account: $(ACCOUNT)" >&2 && \
@@ -184,28 +268,6 @@ endif
 endif
 
 # ==============================================================================
-# Legacy Deployment Commands (using deploy_all.sh script)
-# ==============================================================================
-
-# Deploy All: Deploys the entire platform to a chain using the shell script
-# Requires: PRIVATE_KEY and RPC_URL environment variables
-# Optional: VERIFY=true ETHERSCAN_API_KEY=<key> for contract verification
-#
-# Example:
-#   PRIVATE_KEY=<key> RPC_URL=<url> make deploy-all
-#   PRIVATE_KEY=<key> RPC_URL=<url> VERIFY=true ETHERSCAN_API_KEY=<api> make deploy-all
-deploy-all:
-	@./script/sh/deploy_all.sh
-
-# Deploy Dry Run: Simulates deployment without broadcasting transactions
-# Use this to verify everything works before actual deployment
-#
-# Example:
-#   PRIVATE_KEY=<key> RPC_URL=<url> make deploy-dry-run
-deploy-dry-run:
-	@DRY_RUN=true ./script/sh/deploy_all.sh
-
-# ==============================================================================
 # CREATE2 Factory Deployment Commands
 # ==============================================================================
 
@@ -223,7 +285,7 @@ fund-arachnid-deployer: validate-signer-vars
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		-vvvv
+		$(VERBOSITY)
 
 # Deploy Arachnid Factory: Deploys the Arachnid Deterministic Deployment Proxy
 # Requires: The deployer address must be funded first (use fund-arachnid-deployer)
@@ -239,7 +301,7 @@ deploy-arachnid-factory: validate-signer-vars
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		-vvvv
+		$(VERBOSITY)
 
 # Fund Safe Deployer: Sends ETH to the Safe Singleton Factory deployer address
 # The target address depends on whether you're using prod or non-prod deployer.
@@ -259,7 +321,7 @@ endif
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		-vvvv
+		$(VERBOSITY)
 
 # Deploy Safe Factory: Deploys the Safe Singleton Factory
 # IMPORTANT: Must be run from the correct deployer EOA at nonce 0 for deterministic address.
@@ -276,7 +338,7 @@ deploy-safe-factory: validate-signer-vars
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		-vvvv
+		$(VERBOSITY)
 
 # ==============================================================================
 # Platform Deployment Commands
@@ -298,7 +360,7 @@ deploy-libraries: validate-signer-vars
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		-vvvv
+		$(VERBOSITY)
 
 # Deploy Contracts: Deploys all platform contracts with library linking
 # IMPORTANT: Libraries must be deployed first (use deploy-libraries).
@@ -317,7 +379,7 @@ deploy-contracts: validate-signer-vars
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
-		-vvvv
+		$(VERBOSITY)
 
 # Deploy Platform: Full deployment of libraries and contracts
 # This is a convenience target that runs deploy-libraries then deploy-contracts.
@@ -327,6 +389,47 @@ deploy-contracts: validate-signer-vars
 #   make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
 deploy-platform: deploy-libraries deploy-contracts
 	@echo "Platform deployment complete!"
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY)"
+
+# ------------------------------------------------------------------------------
+# Dry-Run (Simulation) Targets
+# These run without --broadcast to simulate deployment without sending transactions.
+# ------------------------------------------------------------------------------
+
+# Deploy Libraries Dry-Run: Simulates library deployment
+#
+# Example:
+#   make deploy-libraries-dry-run NETWORK=sepolia
+deploy-libraries-dry-run:
+	@echo "Simulating library deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Deploy Contracts Dry-Run: Simulates contract deployment
+#
+# Example:
+#   make deploy-contracts-dry-run NETWORK=sepolia
+deploy-contracts-dry-run:
+	@echo "Simulating contract deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
+	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployContracts.s.sol:DeployContracts \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Deploy Platform Dry-Run: Simulates full platform deployment
+#
+# Example:
+#   make deploy-platform-dry-run NETWORK=sepolia
+deploy-platform-dry-run: deploy-libraries-dry-run deploy-contracts-dry-run
+	@echo "Platform deployment simulation complete!"
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY)"
 
@@ -342,13 +445,12 @@ deploy-platform: deploy-libraries deploy-contracts
 #   make check-factory FACTORY=safe-prod NETWORK=mainnet
 check-factory:
 	@echo "$(FACTORY) Factory ($(FACTORY_ADDRESS)):"
-	@cast code $(FACTORY_ADDRESS) --rpc-url $(RPC_URL) > /dev/null 2>&1 && \
-		(code=$$(cast code $(FACTORY_ADDRESS) --rpc-url $(RPC_URL)); \
+	@code=$$(cast code $(FACTORY_ADDRESS) --rpc-url $(RPC_URL) 2>/dev/null) && \
 		if [ "$$code" != "0x" ] && [ -n "$$code" ]; then \
 			echo "  DEPLOYED"; \
 		else \
 			echo "  NOT DEPLOYED"; \
-		fi) || echo "  ERROR: Could not check"
+		fi || echo "  ERROR: Could not check"
 
 # Check All Factories: Verifies if all CREATE2 factories are deployed on the target network
 #
@@ -392,3 +494,23 @@ compute-all-lib-addresses:
 	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=safe-prod NETWORK=$(NETWORK)
 	@echo ""
 	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=safe-nonprod NETWORK=$(NETWORK)
+
+# Verify: Verifies a deployed contract on Etherscan
+# Requires CONTRACT_ADDRESS and CONTRACT_NAME variables.
+#
+# Example:
+#   make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=OrganizationImplementation NETWORK=mainnet
+#   make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=src/organization/OrganizationImplementation.sol:OrganizationImplementation NETWORK=sepolia
+verify:
+ifndef CONTRACT_ADDRESS
+	$(error CONTRACT_ADDRESS is required. Set CONTRACT_ADDRESS=<deployed-contract-address>)
+endif
+ifndef CONTRACT_NAME
+	$(error CONTRACT_NAME is required. Set CONTRACT_NAME=<contract-name-or-path>)
+endif
+	@echo "Verifying contract on $(NETWORK)..."
+	@echo "  Address: $(CONTRACT_ADDRESS)"
+	@echo "  Contract: $(CONTRACT_NAME)"
+	forge verify-contract $(CONTRACT_ADDRESS) $(CONTRACT_NAME) \
+		--chain $(NETWORK) \
+		--watch

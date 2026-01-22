@@ -33,11 +33,18 @@ remappings = [
 # Available to ALL profiles. Use via: --rpc-url mainnet
 # ------------------------------------------------------------------------------
 [rpc_endpoints]
+# Mainnets
 mainnet = "https://rpc.ankr.com/eth"
 polygon = "https://rpc.ankr.com/polygon"
 arbitrum = "https://rpc.ankr.com/arbitrum"
 optimism = "https://rpc.ankr.com/optimism"
 base = "https://rpc.ankr.com/base"
+
+# Testnets
+sepolia = "https://rpc.ankr.com/eth_sepolia"
+arbitrum-sepolia = "https://rpc.ankr.com/arbitrum_sepolia"
+base-sepolia = "https://rpc.ankr.com/base_sepolia"
+optimism-sepolia = "https://rpc.ankr.com/optimism_sepolia"
 
 # ==============================================================================
 # CI PROFILE (For Continuous Integration)
