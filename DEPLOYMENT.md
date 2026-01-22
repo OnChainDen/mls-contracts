@@ -37,7 +37,7 @@ This means: **Same salt + same factory + same bytecode = same address on every c
 
 #### Arachnid Deterministic Deployer (Preferred)
 
-The [Arachnid Deterministic Deployment Proxy](https://github.com/Arachnid/deterministic-deployment-proxy) is available on most EVM chains and is our preferred factory.
+The [Arachnid Deterministic Deployment Proxy](https://github.com/Arachnid/deterministic-deployment-proxy) is available on most EVM chains and is our preferred factory. It is automatically included in OP Stack chains and is by default deployed to Arbitrum Orbit chains, although Orbit chains can optionally choose to not include it in their initial state.
 
 - **Factory Address:** `0x4e59b44847b379578588920cA78FbF26c0B4956C`
 - **How it works:** Uses a pre-signed keyless transaction (Nick's Method) to deploy the factory at a deterministic address without requiring a specific EOA.
