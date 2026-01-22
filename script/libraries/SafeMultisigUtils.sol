@@ -83,15 +83,18 @@ library SafeMultisigUtils {
     /// @return The predicted Safe proxy address
     function _computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
         private
-        pure
+        view
         returns (address)
     {
         // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
         bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
 
-        // Get the init code hash from the factory (includes singleton address)
+        // Compute init code hash: proxyCreationCode + singleton address (as uint256)
+        // This matches SafeProxyFactory.deployProxy() which does:
+        // bytes memory deploymentData = abi.encodePacked(type(SafeProxy).creationCode, uint256(uint160(_singleton)));
+        bytes memory proxyCreationCode = SafeProxyFactory(safeInfra.proxyFactoryAddress).proxyCreationCode();
         bytes32 initCodeHash =
-            SafeProxyFactory(safeInfra.proxyFactoryAddress).proxyCreationCodehash(safeInfra.singletonAddress);
+            keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(safeInfra.singletonAddress))));
 
         // Use OpenZeppelin's Create2 utility for address computation
         return Create2.computeAddress(salt, initCodeHash, safeInfra.proxyFactoryAddress);
