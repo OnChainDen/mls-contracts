@@ -51,6 +51,14 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *          --libraries ... \
  *          -vvvv
  *
+ *      SAFETY CHECKS:
+ *      1. Verifies the provided CREATE2 factory address is not zero
+ *      2. Verifies the provided CREATE2 factory address is deployed at the provided address
+ *      3. Verifies that the deployer is not the production Safe Factory deployer
+ *      4. Validates that --libraries flag was used with correct addresses
+ *      5. Validates that libraries are deployed at expected addresses
+ *      6. Requires interactive confirmation when broadcasting
+ *
  * @author Den Technologies Inc
  */
 contract DeployContracts is Script {
