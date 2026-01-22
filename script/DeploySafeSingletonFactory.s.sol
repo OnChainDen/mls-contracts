@@ -22,9 +22,10 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *
  *      SAFETY CHECKS:
  *      1. Verifies deployer nonce is exactly 0
- *      2. Verifies factory is not already deployed
+ *      2. Verifies deployer has sufficient ETH balance
+ *      3. Warns and requires confirmation when the deployer is the production deployer
+ *      2. Verifies arachnid and safe singleton factories are not already deployed
  *      3. Requires interactive confirmation when broadcasting
- *      4. Logs dry-run mode when not broadcasting
  *
  * @author Den Technologies Inc
  */
@@ -79,7 +80,8 @@ contract DeploySafeSingletonFactory is Script {
         address deployedAtAddress = _deployFactory();
         vm.stopBroadcast();
 
-        // Case: Production deployer should yield the known deterministic address
+        // Case: Production deployer
+        // Check that the factory was deployed at the expected production address
         if (isProductionDeployer) {
             if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_SAFE_SINGLETON_FACTORY_ADDRESS)) {
                 Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
@@ -87,9 +89,12 @@ contract DeploySafeSingletonFactory is Script {
                 Logger.logKeyAddress("Got", deployedAtAddress);
                 revert("Factory deployment failed");
             }
-        } else if (!Create2Utils.isContractDeployedAtAddress(deployedAtAddress)) {
-            // Case: Non-production deployer should still deploy successfully
-            Logger.logFail("ERROR: Factory deployment failed for non-production deployer!");
+        } else if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS))
+        {
+            // Case: Non-production deployer
+            // Check that the factory was deployed at the expected non-production address
+            Logger.logFail("ERROR: Factory was not deployed at the expected non-production address!");
+            Logger.logKeyAddress("Expected", DeploymentConfig.NON_PROD_SAFE_SINGLETON_FACTORY_ADDRESS);
             Logger.logKeyAddress("Got", deployedAtAddress);
             revert("Factory deployment failed");
         }
