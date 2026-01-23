@@ -38,9 +38,6 @@ library SignatureUtils {
     /// @dev v value indicating an ERC-1271 contract signature
     uint8 internal constant V_CONTRACT_SIGNATURE = 0;
 
-    /// @dev Legacy constant for backwards compatibility
-    uint256 internal constant EOA_SIGNATURE_LENGTH = 65;
-
     /// @dev Half of the secp256k1 curve order, used for signature malleability check.
     ///      Signatures with s > HALF_CURVE_ORDER are rejected to prevent malleability.
     ///      See EIP-2 and OpenZeppelin ECDSA for details.
@@ -174,38 +171,6 @@ library SignatureUtils {
 
         // Case: Unknown signature type
         return (false, address(0), 0);
-    }
-
-    // ==================== Internal Pure Functions ====================
-
-    /**
-     * @dev Gets the size of the first signature in an array.
-     *      Useful for extracting initiator signature from combined signatures.
-     * @param signatures The signatures bytes array
-     * @return The size in bytes of the first signature (0 if invalid)
-     */
-    function getFirstSignatureSize(bytes memory signatures) internal pure returns (uint256) {
-        // Case: Empty signatures
-        if (signatures.length == 0) return 0;
-
-        uint8 v = _getVByte(signatures, 0);
-
-        // Case: ERC-1271 contract signature (v = 0)
-        if (v == V_CONTRACT_SIGNATURE) {
-            // Case: Not enough bytes for header
-            if (signatures.length < CONTRACT_SIGNATURE_HEADER_SIZE) return 0;
-
-            uint16 sigLength = _getContractSignatureLength(signatures, 0);
-            return CONTRACT_SIGNATURE_HEADER_SIZE + sigLength;
-        }
-
-        // Case: EOA signature (v = 27 or 28)
-        if (v == 27 || v == 28) {
-            return EOA_SIGNATURE_SIZE;
-        }
-
-        // Case: Unknown signature type
-        return 0;
     }
 
     // ==================== Private View Functions ====================
