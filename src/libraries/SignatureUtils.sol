@@ -53,6 +53,11 @@ library SignatureUtils {
     /// @dev Legacy constant for backwards compatibility
     uint256 internal constant SIGNATURE_LENGTH = 65;
 
+    /// @dev Half of the secp256k1 curve order, used for signature malleability check.
+    ///      Signatures with s > HALF_CURVE_ORDER are rejected to prevent malleability.
+    ///      See EIP-2 and OpenZeppelin ECDSA for details.
+    uint256 private constant _HALF_CURVE_ORDER = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
+
     // ==================== Internal View Functions ====================
 
     /**
@@ -347,6 +352,9 @@ library SignatureUtils {
             s := mload(add(signature, 0x41))
         }
 
+        // Case: Malleable signature (s in upper half of curve order)
+        if (uint256(s) > _HALF_CURVE_ORDER) return false;
+
         address recovered = ecrecover(hash, v, r, s);
 
         // Case: Recovery failed or signer mismatch
@@ -379,6 +387,12 @@ library SignatureUtils {
         assembly {
             r := mload(add(add(signatures, 0x20), add(offset, 1)))
             s := mload(add(add(signatures, 0x20), add(offset, 33)))
+        }
+
+        // Case: Malleable signature (s in upper half of curve order)
+        if (uint256(s) > _HALF_CURVE_ORDER) {
+            parsed.isValid = false;
+            return;
         }
 
         address signer = ecrecover(hash, v, r, s);
