@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 // Adapted from OpenZeppelin Contracts v5.4.0 (utils/cryptography/SignatureChecker.sol)
 // Removed ERC-7913 support to avoid Bytes.sol dependency which uses mcopy (Cancun opcode)
 
