@@ -84,8 +84,8 @@ library LibOrganizationAccountTransaction {
             revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
-        // Need at least one signature (initiator's SIGNATURE_LENGTH-byte signature)
-        if (signatures.length < SignatureUtils.SIGNATURE_LENGTH) {
+        // Need at least one signature (initiator's EOA_SIGNATURE_LENGTH-byte signature)
+        if (signatures.length < SignatureUtils.EOA_SIGNATURE_LENGTH) {
             revert IOrganizationAccountTransaction.InsufficientSignaturesLength();
         }
 
@@ -176,7 +176,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Need at least one signature
-        if (signatures.length < SignatureUtils.SIGNATURE_LENGTH) {
+        if (signatures.length < SignatureUtils.EOA_SIGNATURE_LENGTH) {
             revert IOrganizationAccountTransaction.InsufficientSignaturesLength();
         }
 

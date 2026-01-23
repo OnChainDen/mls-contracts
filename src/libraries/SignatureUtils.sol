@@ -39,7 +39,7 @@ library SignatureUtils {
     uint8 internal constant V_CONTRACT_SIGNATURE = 0;
 
     /// @dev Legacy constant for backwards compatibility
-    uint256 internal constant SIGNATURE_LENGTH = 65;
+    uint256 internal constant EOA_SIGNATURE_LENGTH = 65;
 
     /// @dev Half of the secp256k1 curve order, used for signature malleability check.
     ///      Signatures with s > HALF_CURVE_ORDER are rejected to prevent malleability.
