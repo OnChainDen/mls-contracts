@@ -168,6 +168,7 @@ library DeploymentConfig {
     /// @dev Production Guardian Safe owner addresses
     address internal constant PROD_GUARDIAN_SAFE_OWNER_1 = address(0x1111111111111111111111111111111111111111);
     address internal constant PROD_GUARDIAN_SAFE_OWNER_2 = address(0x2222222222222222222222222222222222222222);
+    address internal constant PROD_GUARDIAN_SAFE_OWNER_3 = address(0x6666666666666666666666666666666666666666);
 
     /// @dev Production Guardian Safe signature threshold
     uint256 internal constant PROD_GUARDIAN_SAFE_THRESHOLD = 2;
@@ -220,9 +221,10 @@ library DeploymentConfig {
     {
         // Case: Production chain
         if (isProductionChain(chainId)) {
-            ownerAddresses = new address[](2);
+            ownerAddresses = new address[](3);
             ownerAddresses[0] = PROD_GUARDIAN_SAFE_OWNER_1;
             ownerAddresses[1] = PROD_GUARDIAN_SAFE_OWNER_2;
+            ownerAddresses[2] = PROD_GUARDIAN_SAFE_OWNER_3;
             threshold = PROD_GUARDIAN_SAFE_THRESHOLD;
             return (ownerAddresses, threshold);
         }
