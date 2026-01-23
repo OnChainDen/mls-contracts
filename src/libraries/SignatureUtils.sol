@@ -48,20 +48,8 @@ library SignatureUtils {
 
     // ==================== Custom Errors ====================
 
-    /// @dev Thrown when a signature has an invalid format or type
-    error InvalidSignature();
-
-    /// @dev Thrown when a signature has an invalid length
-    error InvalidSignatureLength();
-
-    /// @dev Thrown when a signature has malleable s value (s > half curve order)
-    error SignatureMalleability();
-
-    /// @dev Thrown when ECDSA recovery returns address(0)
-    error ECDSARecoveryFailed();
-
-    /// @dev Thrown when ERC-1271 validation fails for a contract signer
-    error ERC1271ValidationFailed(address signer);
+    /// @dev Thrown when signature recovery fails (invalid format, length, malleability, or validation)
+    error SignatureRecoveryFailed();
 
     // ==================== Internal View Functions ====================
 
@@ -73,29 +61,49 @@ library SignatureUtils {
      * @return signer The recovered signer address
      */
     function recoverSignerOrRevert(bytes memory signature, bytes32 hash) internal view returns (address signer) {
+        bool success;
+        (success, signer) = tryRecoverSigner(signature, hash);
+        if (!success) {
+            revert SignatureRecoveryFailed();
+        }
+    }
+
+    /**
+     * @dev Attempts to recover the signer from a single signature (EOA or ERC-1271).
+     *      Returns false instead of reverting on failure.
+     * @param signature A single signature (65 bytes EOA or 23+N bytes ERC-1271)
+     * @param hash The hash that was signed
+     * @return success True if recovery succeeded
+     * @return signer The recovered signer address (address(0) if failed)
+     */
+    function tryRecoverSigner(bytes memory signature, bytes32 hash)
+        internal
+        view
+        returns (bool success, address signer)
+    {
         // Case: Empty signature
         if (signature.length == 0) {
-            revert InvalidSignatureLength();
+            return (false, address(0));
         }
 
         uint8 v = _getVByte(signature, 0);
 
         // Case: ERC-1271 contract signature (v = 0)
         if (v == V_CONTRACT_SIGNATURE) {
-            return _recoverContractSignerOrRevert(signature, 0, hash);
+            return _tryRecoverContractSigner(signature, 0, hash);
         }
 
         // Case: EOA signature (v = 27 or 28)
         if (v == 27 || v == 28) {
             // Verify exact length for single EOA signature
             if (signature.length != EOA_SIGNATURE_SIZE) {
-                revert InvalidSignatureLength();
+                return (false, address(0));
             }
-            return _recoverEOASignerOrRevert(signature, 0, hash, v);
+            return _tryRecoverEOASigner(signature, 0, hash, v);
         }
 
         // Case: Unknown signature type
-        revert InvalidSignature();
+        return (false, address(0));
     }
 
     /**
@@ -113,30 +121,59 @@ library SignatureUtils {
         view
         returns (address signer, uint256 nextOffset)
     {
+        bool success;
+        (success, signer, nextOffset) = tryRecoverSignerAtOffset(signatures, offset, hash);
+        if (!success) {
+            revert SignatureRecoveryFailed();
+        }
+    }
+
+    /**
+     * @dev Attempts to recover the signer from a signature at the given offset.
+     *      Returns false instead of reverting on failure.
+     *      Used for iterating through multiple signatures with a for-loop.
+     * @param signatures The concatenated signatures array
+     * @param offset The byte offset where this signature starts
+     * @param hash The hash that was signed (needed for ECDSA recovery)
+     * @return success True if recovery succeeded
+     * @return signer The recovered signer address (address(0) if failed)
+     * @return nextOffset The byte offset to the next signature
+     */
+    function tryRecoverSignerAtOffset(bytes memory signatures, uint256 offset, bytes32 hash)
+        internal
+        view
+        returns (bool success, address signer, uint256 nextOffset)
+    {
         // Case: Offset beyond signatures array
         if (offset >= signatures.length) {
-            revert InvalidSignatureLength();
+            return (false, address(0), 0);
         }
 
         uint8 v = _getVByte(signatures, offset);
 
         // Case: ERC-1271 contract signature (v = 0)
         if (v == V_CONTRACT_SIGNATURE) {
-            signer = _recoverContractSignerOrRevert(signatures, offset, hash);
+            (success, signer) = _tryRecoverContractSigner(signatures, offset, hash);
+            if (!success) {
+                return (false, address(0), 0);
+            }
             uint16 sigLength = _getContractSignatureLength(signatures, offset);
             nextOffset = offset + CONTRACT_SIGNATURE_HEADER_SIZE + sigLength;
-            return (signer, nextOffset);
+            return (true, signer, nextOffset);
         }
 
         // Case: EOA signature (v = 27 or 28)
         if (v == 27 || v == 28) {
-            signer = _recoverEOASignerOrRevert(signatures, offset, hash, v);
+            (success, signer) = _tryRecoverEOASigner(signatures, offset, hash, v);
+            if (!success) {
+                return (false, address(0), 0);
+            }
             nextOffset = offset + EOA_SIGNATURE_SIZE;
-            return (signer, nextOffset);
+            return (true, signer, nextOffset);
         }
 
         // Case: Unknown signature type
-        revert InvalidSignature();
+        return (false, address(0), 0);
     }
 
     // ==================== Internal Pure Functions ====================
@@ -194,21 +231,22 @@ library SignatureUtils {
     }
 
     /**
-     * @dev Recovers signer from an ERC-1271 contract signature at a given offset.
-     *      Reverts if the signature is invalid.
+     * @dev Attempts to recover signer from an ERC-1271 contract signature at a given offset.
+     *      Returns false instead of reverting on failure.
      * @param signatures The concatenated signatures array
      * @param offset The byte offset where this signature starts
      * @param hash The hash that was signed
-     * @return signer The recovered signer address
+     * @return success True if recovery and validation succeeded
+     * @return signer The recovered signer address (address(0) if failed)
      */
-    function _recoverContractSignerOrRevert(bytes memory signatures, uint256 offset, bytes32 hash)
+    function _tryRecoverContractSigner(bytes memory signatures, uint256 offset, bytes32 hash)
         private
         view
-        returns (address signer)
+        returns (bool success, address signer)
     {
         // Case: Not enough bytes for header
         if (offset + CONTRACT_SIGNATURE_HEADER_SIZE > signatures.length) {
-            revert InvalidSignatureLength();
+            return (false, address(0));
         }
 
         signer = _getContractSigner(signatures, offset);
@@ -217,7 +255,7 @@ library SignatureUtils {
 
         // Case: Not enough bytes for full signature
         if (offset + totalSize > signatures.length) {
-            revert InvalidSignatureLength();
+            return (false, address(0));
         }
 
         // Extract the inner signature bytes
@@ -225,27 +263,30 @@ library SignatureUtils {
 
         // Validate the signature
         if (!_isValidERC1271SignatureNow(signer, hash, contractSig)) {
-            revert ERC1271ValidationFailed(signer);
+            return (false, address(0));
         }
+
+        return (true, signer);
     }
 
     /**
-     * @dev Recovers signer from an EOA signature at a given offset.
-     *      Reverts if the signature is invalid.
+     * @dev Attempts to recover signer from an EOA signature at a given offset.
+     *      Returns false instead of reverting on failure.
      * @param signatures The concatenated signatures array
      * @param offset The byte offset where this signature starts
      * @param hash The hash that was signed
      * @param v The v component already extracted
-     * @return signer The recovered signer address
+     * @return success True if recovery succeeded
+     * @return signer The recovered signer address (address(0) if failed)
      */
-    function _recoverEOASignerOrRevert(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
+    function _tryRecoverEOASigner(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
         private
         pure
-        returns (address signer)
+        returns (bool success, address signer)
     {
         // Case: Not enough bytes for EOA signature
         if (offset + EOA_SIGNATURE_SIZE > signatures.length) {
-            revert InvalidSignatureLength();
+            return (false, address(0));
         }
 
         bytes32 r;
@@ -257,15 +298,17 @@ library SignatureUtils {
 
         // Case: Malleable signature (s in upper half of curve order)
         if (uint256(s) > _HALF_CURVE_ORDER) {
-            revert SignatureMalleability();
+            return (false, address(0));
         }
 
         signer = ecrecover(hash, v, r, s);
 
         // Case: Recovery failed
         if (signer == address(0)) {
-            revert ECDSARecoveryFailed();
+            return (false, address(0));
         }
+
+        return (true, signer);
     }
 
     // ==================== Private Pure Functions ====================

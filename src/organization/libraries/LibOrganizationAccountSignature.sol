@@ -154,8 +154,10 @@ library LibOrganizationAccountSignature {
             address guardianAddress = LibOrganizationGuardian.getGuardian();
             bytes32 guardianMessageHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
-            // Recover guardian signer and compare (reverts if signature is malformed)
-            if (SignatureUtils.recoverSignerOrRevert(guardianSignature, guardianMessageHash) != guardianAddress) {
+            // Recover guardian signer and compare (returns invalid if signature is malformed)
+            (bool guardianValid, address recoveredGuardian) =
+                SignatureUtils.tryRecoverSigner(guardianSignature, guardianMessageHash);
+            if (!guardianValid || recoveredGuardian != guardianAddress) {
                 return ERC1271_INVALID_VALUE;
             }
         }
@@ -165,8 +167,11 @@ library LibOrganizationAccountSignature {
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
         // Recover initiator signer and get the offset for review signatures
-        (address initiator, uint256 reviewSignaturesOffset) =
-            SignatureUtils.recoverSignerAtOffsetOrRevert(approverSignatures, 0, initiatorHash);
+        (bool initiatorValid, address initiator, uint256 reviewSignaturesOffset) =
+            SignatureUtils.tryRecoverSignerAtOffset(approverSignatures, 0, initiatorHash);
+        if (!initiatorValid) {
+            return ERC1271_INVALID_VALUE;
+        }
 
         // Case: Signature is not allowed by the policy
         if (!_isERC1271SignatureAllowedByPolicy(account, initiator, policyId, proofs)) {
