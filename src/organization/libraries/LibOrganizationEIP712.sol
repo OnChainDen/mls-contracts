@@ -55,11 +55,7 @@ library LibOrganizationEIP712 {
     function getDomainSeparator() internal view returns (bytes32) {
         return keccak256(
             abi.encode(
-                EIP712_DOMAIN_TYPEHASH,
-                keccak256("OnchainCustodyOrganization"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
+                EIP712_DOMAIN_TYPEHASH, keccak256("MLSWalletOrganization"), keccak256("1"), block.chainid, address(this)
             )
         );
     }

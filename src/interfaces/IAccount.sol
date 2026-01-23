@@ -37,7 +37,7 @@ interface IAccount is IERC1271 {
      *      not range queries, so filtering by amount is done in application code.
      */
     // solhint-disable-next-line gas-indexed-events
-    event OnchainCustodyAccountNativeTokenReceived(address indexed sender, uint256 value);
+    event MLSWalletAccountNativeTokenReceived(address indexed sender, uint256 value);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Errors
@@ -55,7 +55,7 @@ interface IAccount is IERC1271 {
 
     /**
      * @notice Receives native tokens (ETH) sent to this account
-     * @dev Emits OnchainCustodyAccountNativeTokenReceived event when native tokens are received
+     * @dev Emits MLSWalletAccountNativeTokenReceived event when native tokens are received
      */
     receive() external payable;
 

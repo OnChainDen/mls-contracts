@@ -37,7 +37,7 @@ In Multi-layer Security (MLS) Wallet, the three redundant layers of security are
 2. The offchain "Guardian" service 
 3. The onchain smart contracts
 
-![Multi-layer Security (MLS) Wallet Security Layers Diagram](docs/images/OnchainCustodySecurityLayersDiagram.svg)
+![Multi-layer Security (MLS) Wallet Security Layers Diagram](docs/images/MLSWalletSecurityLayersDiagram.svg)
 
 
 
@@ -197,7 +197,7 @@ Policies can be limited to either a single transaction at a time, or multiple tr
 
 For example, a time-based limitation on a Policy can be used to craft a policy that only allows a certain amount of tokens to be transfered every month.
 
-![User interface for editing a Policy's limitation](docs/images/OnchainCustodyDemoPolicyLimitationsScreenshot.png)
+![User interface for editing a Policy's limitation](docs/images/MLSWalletDemoPolicyLimitationsScreenshot.png)
 *The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
 
 ### Order of Policies
@@ -207,14 +207,14 @@ Policies are defined by the user in an ordered list. The first policy that match
 
 If no policy matches a transaction, then the transaction is automatically rejected.
 
-![User interface for reordering policies](docs/images/OnchainCustodyDemoPolicyOrderingScreenshot.png)
+![User interface for reordering policies](docs/images/MLSWalletDemoPolicyOrderingScreenshot.png)
 *The user interface for re-ordering Policies in the Multi-layer Security (MLS) Wallet web application*
 
 ### Demo of Policies
 We highly recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
 
 To view a demo of Multi-layer Security (MLS) Wallet's user interface for modifying Policies, visit:
-https://onchain-custody-demo.onchainden.com/policies
+https://mls-wallet-demo.onchainden.com/policies
 
 To view the demo, please request a username and password from the Den team.
 
@@ -271,7 +271,7 @@ The dedicated Multi-layer Security (MLS) Wallet mobile has a suite of security f
 
     In contrast, Multi-layer Security (MLS) Wallet's dedicate mobile wallet decodes transactions into a human-readable format locally on the user's device, so they know exactly what the transaction they're signing will do. This makes it possible for users to easily identify and reject malicious transactions.
 
-    ![Blind signing vs human-readable explanations](docs/images/OnchainCustodyMobileWalletDataDecodingDiagram.svg)
+    ![Blind signing vs human-readable explanations](docs/images/MLSWalletMobileWalletDataDecodingDiagram.svg)
 
 3. **The mobile wallet runs the Policy Engine locally to verify that a transaction is actually valid.**
 
@@ -300,7 +300,7 @@ There are two main abstractions represented as smart contracts in Multi-layer Se
 
     Note: an Organization can be deployed on multiple networks. If an Organization is deployed on multiple networks, it is expected to have the same address on each network.
 
-    *Located at `src/organization/OnchainCustodyOrganizationDiamond.sol`*
+    *Located at `src/organization/OrganizationProxy.sol`*
 
 2. **Accounts**
 
@@ -308,11 +308,11 @@ There are two main abstractions represented as smart contracts in Multi-layer Se
 
     Note: an Account can be deployed on multiple networks. If an Account is deployed on multiple networks, it is expected to have the same address on each network.
 
-    *Located at `src/account/OnchainCustodyAccountDiamond.sol`*
+    *Located at `src/account/AccountProxy.sol`*
 
 
 
-![Multi-layer Security (MLS) Wallet Core Contracts Diagram](docs/images/OnchainCustodyCoreContractsDiagram.svg)
+![Multi-layer Security (MLS) Wallet Core Contracts Diagram](docs/images/MLSWalletCoreContractsDiagram.svg)
 
 
 ### Guardian protection
@@ -385,13 +385,13 @@ src/
 There are only two smart contracts in Multi-layer Security (MLS) Wallet that are upgradable:
 1. **The Organization smart contract**
         
-    Diamond is located at `sr/corganization/OnchainCustodyOrganizationDiamond.sol`
+    Diamond is located at `src/organization/OrganizationProxy.sol`
 
     Facets are located at `src/organization/facets/`
 
 2. **The Account smart contract**
 
-    Diamond is located at `src/account/OnchainCustodyAccountDiamond.sol`
+    Diamond is located at `src/account/AccountProxy.sol`
 
     Facets are located at `src/account/facets/`
 
@@ -400,7 +400,7 @@ There are only two smart contracts in Multi-layer Security (MLS) Wallet that are
 
 ### Organizations
 
-Each Organization is represented as a Diamond proxy, which can be found at `src/organization/OnchainCustodyOrganizationDiamond.sol`.
+Each Organization is represented as a Diamond proxy, which can be found at `src/organization/OrganizationProxy.sol`.
 
 All facets for Accounts are located at `src/organization/facets/`.
 
@@ -494,7 +494,7 @@ function _getAdminOperationHash(
         keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("OnchainCustodyOrganization"),
+                keccak256("MLSWalletOrganization"),
                 keccak256("1"),
                 block.chainid,
                 address(this)
@@ -521,15 +521,15 @@ src/organization
 │   ├── IOrganizationGroupsFacet.sol
 │   ├── IOrganizationGuardianFacet.sol
 │   └── IOrganizationMembersFacet.sol
-├── OnchainCustodyOrganizationDiamond.sol
-├── OnchainCustodyOrganizationFactory.sol
+├── OrganizationProxy.sol
+├── OrganizationFactory.sol
 ├── OrganizationInit.sol
 └── OrganizationStorage.sol
 ```
 
 ### Accounts
 
-Each Account is represented as a Diamond proxy, which can be found at `src/account/OnchainCustodyAccountDiamond.sol`.
+Each Account is represented as a Diamond proxy, which can be found at `src/account/AccountProxy.sol`.
 
 All facets for Accounts are located at `src/account/facets/`.
 
@@ -622,7 +622,7 @@ function _getTransactionHash(
         keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("OnchainCustodyAccount"),
+                keccak256("MLSWalletAccount"),
                 keccak256("1"),
                 block.chainid,
                 address(this)
@@ -671,7 +671,7 @@ library AccountTransactionFacetStorage {
         mapping(uint256 => bool) usedNonces;
     }
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.account.transaction.storage");
+    bytes32 internal constant STORAGE_SLOT = keccak256("den.mls-wallet.account.transaction.storage");
 
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;
@@ -696,7 +696,7 @@ Deploying an Organization is a two-step process:
 The two-step process is required to avoid using contructor arguments to set initial state, as constructor arguments influence the address of the deployed contract.
 
 
-Deploying an Organization is done via the contract `src/organization/OnchainCustodyOrganizationFactory.sol`, which has a function `deployOrganization` that uses the CREATE2 opcode to deploy an Organization at a deterministic address. This function deploys Organizations with almost no state or functionality.
+Deploying an Organization is done via the contract `src/organization/OrganizationFactory.sol`, which has a function `deployOrganization` that uses the CREATE2 opcode to deploy an Organization at a deterministic address. This function deploys Organizations with almost no state or functionality.
 
 Organizations are deployed with the following facets only:
 1. **DiamondCutFacet**
@@ -736,7 +736,7 @@ Unlike deploying an Organization, deploying an Account is a one-step process and
 ```
 src/account
 ├── AccountInit.sol
-├── OnchainCustodyAccountDiamond.sol
+├── AccountProxy.sol
 ├── facets
 │   ├── AccountAdminFacet.sol
 │   ├── AccountGuardianFacet.sol
@@ -903,7 +903,7 @@ Using the API, an application can:
 ### Create an API Member
 Create your API Member in the Multi-layer Security (MLS) Wallet web app:
         
-1. Go to http://onchain-custody.onchainden.com/members.
+1. Go to http://mls-wallet.onchainden.com/members.
     
 2. Click "Add Member", then "Advanced", turn on "API Member", and click "Add".
 
@@ -915,12 +915,12 @@ Use the CLI to setup the API Member's private key.
 To install the CLI:
  
  ```bash
- npm install -i @onchainden/onchaincustody-cli
+ npm install -i @onchainden/mls-wallet-cli
  ```
 
 Next, to generate the API Member's private key:
 ```bash
-onchaincustody-cli setup
+mls-wallet-cli setup
 ```
 
 You'll be prompted to enter the API Member's API key from the previous step.
@@ -936,17 +936,17 @@ If you have unilateral Admin permission in your Organization, then you do not re
 Use the SDK to make your first request.
 
 Set environment variables:
-- `ONCHAIN_CUSTODY_API_KEY`: The API key from the first step
-- `ONCHAIN_CUSTODY_PRIVATE_KEY`: The private key generated by the CLI
+- `MLS_WALLET_API_KEY`: The API key from the first step
+- `MLS_WALLET_PRIVATE_KEY`: The private key generated by the CLI
 
 Then, import and use the SDK to make a request:
 ```typescript
-import { OnchainCustodyClient } from "@onchainden/onchaincustody`
+import { MLSWalletClient } from "@onchainden/mls-wallet`
 
-const API_KEY = process.env.ONCHAIN_CUSTODY_API_KEY;
-const PRIVATE_KEY = process.env.ONCHAIN_CUSTODY_PRIVATE_KEY;
+const API_KEY = process.env.MLS_WALLET_API_KEY;
+const PRIVATE_KEY = process.env.MLS_WALLET_PRIVATE_KEY;
 
-const client = new OnchainCustodyClient({
+const client = new MLSWalletClient({
     apiKey:     API_KEY,        // Always required
     privateKey: PRIVATE_KEY     // Optional: required for write access, 
                                 // but not required for read-only access
