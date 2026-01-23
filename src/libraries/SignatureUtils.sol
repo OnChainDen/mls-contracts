@@ -117,15 +117,15 @@ library SignatureUtils {
 
         // Case: ERC-1271 contract signature (v = 0)
         if (v == V_CONTRACT_SIGNATURE) {
+            parsed = _parseContractSignatureAtOffset({signatures: signatures, offset: offset, hash: hash});
             parsed.isContract = true;
-            _parseContractSignatureAtOffset({signatures: signatures, offset: offset, hash: hash, parsed: parsed});
             return parsed;
         }
 
         // Case: EOA signature (v = 27 or 28)
         if (v == 27 || v == 28) {
+            parsed = _parseEOASignatureAtOffset({signatures: signatures, offset: offset, hash: hash, v: v});
             parsed.isContract = false;
-            _parseEOASignatureAtOffset({signatures: signatures, offset: offset, hash: hash, v: v, parsed: parsed});
             return parsed;
         }
 
@@ -231,39 +231,37 @@ library SignatureUtils {
     }
 
     /**
-     * @dev Parses an ERC-1271 contract signature at a given offset
+     * @dev Parses an ERC-1271 contract signature at a given offset.
      * @param signatures The concatenated signatures array
      * @param offset The byte offset where this signature starts
      * @param hash The hash that was signed
-     * @param parsed The ParsedSignature struct to populate
+     * @return parsed The parsed signature data
      */
-    function _parseContractSignatureAtOffset(
-        bytes memory signatures,
-        uint256 offset,
-        bytes32 hash,
-        ParsedSignature memory parsed
-    ) private view {
+    function _parseContractSignatureAtOffset(bytes memory signatures, uint256 offset, bytes32 hash)
+        private
+        view
+        returns (ParsedSignature memory parsed)
+    {
         // Case: Not enough bytes for header
         if (offset + CONTRACT_SIGNATURE_HEADER_SIZE > signatures.length) {
             parsed.isValid = false;
-            return;
+            return parsed;
         }
 
         address signer = _getContractSigner(signatures, offset);
-        parsed.signer = signer;
-
         uint16 sigLength = _getContractSignatureLength(signatures, offset);
         uint256 totalSize = CONTRACT_SIGNATURE_HEADER_SIZE + sigLength;
 
         // Case: Not enough bytes for full signature
         if (offset + totalSize > signatures.length) {
             parsed.isValid = false;
-            return;
+            return parsed;
         }
 
         // Extract the inner signature bytes
         bytes memory contractSig = _extractContractInnerSignature(signatures, offset, sigLength);
 
+        parsed.signer = signer;
         parsed.isValid = isValidERC1271SignatureNow(signer, hash, contractSig);
         parsed.nextOffset = offset + totalSize;
     }
@@ -330,7 +328,8 @@ library SignatureUtils {
     }
 
     /**
-     * @dev Validates an EOA signature against an expected signer
+     * @dev Validates an EOA signature against an expected signer.
+     *      Delegates to _parseEOASignatureAtOffset to avoid code duplication.
      * @param signature The signature bytes (65 bytes: v|r|s)
      * @param hash The hash that was signed
      * @param expectedSigner The expected signer address
@@ -345,41 +344,29 @@ library SignatureUtils {
         // Case: Invalid signature length
         if (signature.length != EOA_SIGNATURE_SIZE) return false;
 
-        bytes32 r;
-        bytes32 s;
-        assembly {
-            r := mload(add(signature, 0x21))
-            s := mload(add(signature, 0x41))
-        }
-
-        // Case: Malleable signature (s in upper half of curve order)
-        if (uint256(s) > _HALF_CURVE_ORDER) return false;
-
-        address recovered = ecrecover(hash, v, r, s);
+        ParsedSignature memory parsed = _parseEOASignatureAtOffset({signatures: signature, offset: 0, hash: hash, v: v});
 
         // Case: Recovery failed or signer mismatch
-        return recovered != address(0) && recovered == expectedSigner;
+        return parsed.isValid && parsed.signer == expectedSigner;
     }
 
     /**
-     * @dev Parses an EOA signature at a given offset
+     * @dev Parses an EOA signature at a given offset.
      * @param signatures The concatenated signatures array
      * @param offset The byte offset where this signature starts
      * @param hash The hash that was signed
      * @param v The v component already extracted
-     * @param parsed The ParsedSignature struct to populate
+     * @return parsed The parsed signature data
      */
-    function _parseEOASignatureAtOffset(
-        bytes memory signatures,
-        uint256 offset,
-        bytes32 hash,
-        uint8 v,
-        ParsedSignature memory parsed
-    ) private pure {
+    function _parseEOASignatureAtOffset(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
+        private
+        pure
+        returns (ParsedSignature memory parsed)
+    {
         // Case: Not enough bytes for EOA signature
         if (offset + EOA_SIGNATURE_SIZE > signatures.length) {
             parsed.isValid = false;
-            return;
+            return parsed;
         }
 
         bytes32 r;
@@ -392,7 +379,7 @@ library SignatureUtils {
         // Case: Malleable signature (s in upper half of curve order)
         if (uint256(s) > _HALF_CURVE_ORDER) {
             parsed.isValid = false;
-            return;
+            return parsed;
         }
 
         address signer = ecrecover(hash, v, r, s);
@@ -400,7 +387,7 @@ library SignatureUtils {
         // Case: Recovery failed
         if (signer == address(0)) {
             parsed.isValid = false;
-            return;
+            return parsed;
         }
 
         parsed.signer = signer;
