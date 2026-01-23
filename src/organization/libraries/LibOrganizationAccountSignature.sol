@@ -155,22 +155,24 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Validate guardian signature (inlined for simplicity)
+        // Compute the initiator singature hash (used for both guardian and initiator signature validation)
+        bytes32 initiatorSignatureHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
+
+        // Validate guardian signature
         {
             address guardianAddress = LibOrganizationGuardian.getGuardian();
-            bytes32 guardianMessageHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
             // Recover guardian signer and compare (returns invalid if signature is malformed)
             (bool guardianValid, address recoveredGuardian) =
-                SignatureUtils.tryRecoverSigner(guardianSignature, guardianMessageHash);
+                SignatureUtils.tryRecoverSigner(guardianSignature, initiatorSignatureHash);
             if (!guardianValid || recoveredGuardian != guardianAddress) {
                 return ERC1271_INVALID_VALUE;
             }
         }
 
         // Recover initiator signer
-        bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
-        (bool initiatorValid, address initiator) = SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorHash);
+        (bool initiatorValid, address initiator) =
+            SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorSignatureHash);
         if (!initiatorValid) {
             return ERC1271_INVALID_VALUE;
         }
