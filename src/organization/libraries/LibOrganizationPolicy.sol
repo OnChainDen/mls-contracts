@@ -163,21 +163,22 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Counts valid approvals from a set of signatures (using Merkle proofs).
+     * @dev Checks if there are enough valid approvals from signatures (using Merkle proofs).
+     *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      *      Delegates to LibPolicyApproval.
      * @param policy The policy to check against
-     * @param signatures The concatenated signatures (65 bytes each)
+     * @param signatures The concatenated signatures (variable length, hybrid format)
      * @param messageHash The message hash that was signed
      * @param approverProofs The proofs for approver membership verification
-     * @return The number of valid approvals
+     * @return True if there are enough valid approvals, false otherwise
      */
-    function getValidApprovals(
+    function areApprovalsValid(
         Policy memory policy,
         bytes memory signatures,
         bytes32 messageHash,
         ApproverProofs memory approverProofs
-    ) public view returns (uint8) {
-        return LibPolicyApproval.getValidApprovals({
+    ) public view returns (bool) {
+        return LibPolicyApproval.areApprovalsValid({
             policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
         });
     }

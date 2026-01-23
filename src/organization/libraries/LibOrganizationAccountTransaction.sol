@@ -10,8 +10,6 @@ import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolic
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
 /**
  * @title Lib Organization Account Transaction
  * @dev Library for validating account transactions through the Organization contract.
@@ -101,9 +99,9 @@ library LibOrganizationAccountTransaction {
             policyId: policyId
         });
 
-        // Extract initiator signature and recover signer address
-        bytes memory initiatorSignature = SignatureUtils.extractSignature(signatures, 0);
-        address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
+        // Extract initiator signature and get signer address
+        bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(signatures);
+        address initiator = _getInitiatorFromSignature(params, data, initiatorSignature);
 
         // Verify the policy exists and applies to this specific transaction
         if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
@@ -187,9 +185,9 @@ library LibOrganizationAccountTransaction {
             policyId: policyId
         });
 
-        // Extract initiator signature and recover original initiator
-        bytes memory initiatorSignature = SignatureUtils.extractSignature(signatures, 0);
-        address initiator = _recoverInitiatorFromParams(params, data, initiatorSignature);
+        // Extract initiator signature and get original initiator
+        bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(signatures);
+        address initiator = _getInitiatorFromSignature(params, data, initiatorSignature);
 
         // Verify policy applies to this transaction
         if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
@@ -275,7 +273,8 @@ library LibOrganizationAccountTransaction {
     /**
      * @dev Validates rejection for auto-approve policies.
      *      For auto-approve policies, rejection requires a second signature from
-     *      an authorized initiator signing the rejection hash (isApproval = false)
+     *      an authorized initiator signing the rejection hash (isApproval = false).
+     *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures The signatures (original initiator + rejection signer)
@@ -290,28 +289,39 @@ library LibOrganizationAccountTransaction {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
-        // Need a second signature for rejection authorization
-        if (signatures.length < 130) {
+        // Extract the review signatures (rejection signature is after initiator signature)
+        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
+
+        // Case: No rejection signature provided
+        if (reviewSignatures.length == 0) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
-        bytes memory rejectionSignature = SignatureUtils.extractSignature(signatures, 1);
+
+        // Parse the rejection signature (first review signature)
+        SignatureUtils.ParsedSignature memory parsed =
+            SignatureUtils.parseSignatureAtOffset(reviewSignatures, 0, rejectionTxHash);
+
+        // Case: Rejection signature validation failed
+        if (!parsed.isValid) {
+            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
+        }
 
         // Verify the rejection signer is an authorized initiator for this policy
-        address rejectionSigner = ECDSA.recover(rejectionTxHash, rejectionSignature);
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, parsed.signer, proofs.initiatorProofs)) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
     }
 
     /**
-     * @dev Recovers the initiator address from the transaction parameters and signature.
-     *      Computes the EIP-712 hash of the transaction and recovers the signer.
+     * @dev Gets the initiator address from the transaction parameters and signature.
+     *      Computes the EIP-712 hash of the transaction and parses the signer.
+     *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
-     * @param initiatorSignature The initiator's ECDSA signature
-     * @return The recovered initiator address
+     * @param initiatorSignature The initiator's signature (EOA or ERC-1271 format)
+     * @return The initiator address (reverts if signature is invalid)
      */
-    function _recoverInitiatorFromParams(TxParams memory params, bytes calldata data, bytes memory initiatorSignature)
+    function _getInitiatorFromSignature(TxParams memory params, bytes calldata data, bytes memory initiatorSignature)
         private
         view
         returns (address)
@@ -319,8 +329,16 @@ library LibOrganizationAccountTransaction {
         // Compute the hash the initiator should have signed (isApproval = true)
         bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
 
-        // Recover signer from signature (reverts on invalid signature)
-        return ECDSA.recover(initiatorTxHash, initiatorSignature);
+        // Parse signature to get signer address (handles both EOA and ERC-1271)
+        SignatureUtils.ParsedSignature memory parsed =
+            SignatureUtils.parseSignatureAtOffset(initiatorSignature, 0, initiatorTxHash);
+
+        // Case: Signature validation failed
+        if (!parsed.isValid) {
+            revert IOrganizationAccountTransaction.InvalidInitiatorSignature();
+        }
+
+        return parsed.signer;
     }
 
     /**
@@ -353,13 +371,16 @@ library LibOrganizationAccountTransaction {
         // Includes initiator signature to bind approvals to specific request
         bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
 
-        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
-        uint256 validApprovals = LibOrganizationPolicy.getValidApprovals(
-            proofs.policy, reviewSignatures, reviewTxHash, proofs.approverProofs
-        );
+        // Check if there are enough valid approvals (with Merkle proofs for membership verification)
+        bool approvalsValid = LibOrganizationPolicy.areApprovalsValid({
+            policy: proofs.policy,
+            signatures: reviewSignatures,
+            messageHash: reviewTxHash,
+            approverProofs: proofs.approverProofs
+        });
 
-        if (validApprovals < requiredApprovals) {
-            revert IOrganizationAccountTransaction.InsufficientApprovals(requiredApprovals, validApprovals);
+        if (!approvalsValid) {
+            revert IOrganizationAccountTransaction.InsufficientApprovals(requiredApprovals, 0);
         }
     }
 

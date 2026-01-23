@@ -82,6 +82,11 @@ interface IOrganizationAccountTransaction {
     error InsufficientSignaturesLength();
 
     /**
+     * @notice Thrown when the initiator signature is invalid
+     */
+    error InvalidInitiatorSignature();
+
+    /**
      * @notice Thrown when a time-based limit is exceeded
      * @param policyId The policy ID that exceeded the limit
      */

@@ -17,7 +17,6 @@ import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMemb
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
@@ -111,18 +110,8 @@ library LibOrganizationAdmin {
             isApproval: isApproval
         });
 
-        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-
-        // Count valid signatures from admins
-        // forgefmt: disable-next-item
-        uint256 validSignatures = _getValidAdminSignatures(
-            authParams.signatures, 
-            operationHash, 
-            authParams.signingAdminsInOrgProofs
-        );
-
-        // Check if we have enough valid signatures
-        if (validSignatures < adminLayout.adminConfig.votingThreshold) {
+        // Check if there are enough valid signatures from admins
+        if (!_areAdminSignaturesValid(authParams.signatures, operationHash, authParams.signingAdminsInOrgProofs)) {
             revert IOrganizationAdmin.InsufficientAdminAuthorization();
         }
     }
@@ -202,47 +191,55 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Counts valid signatures from admin members
-     * @param signatures The signatures to verify
+     * @dev Checks if there are enough valid signatures from admin members.
+     *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
+     * @param signatures The signatures to verify (variable length, hybrid format)
      * @param operationHash The hash of the admin operation
      * @param signingAdminsInOrgProofs Proofs that the signing admins are in the organization
-     * @return The number of valid signatures from admins
+     * @return True if there are enough valid signatures, false otherwise
      */
-    function _getValidAdminSignatures(
+    function _areAdminSignaturesValid(
         bytes memory signatures,
         bytes32 operationHash,
         SigningAdminsInOrgProofs memory signingAdminsInOrgProofs
-    ) private view returns (uint256) {
+    ) private view returns (bool) {
         // Case: No signatures provided
-        if (signatures.length == 0) return 0;
+        if (signatures.length == 0) return false;
 
-        uint8 signatureCount = SignatureUtils.getSignatureCount(signatures);
+        // Get signature count from the proofs array length
+        uint256 signatureCount = signingAdminsInOrgProofs.adminInOrgAdminTreeProofs.length;
+
+        // Case: No proofs provided
+        if (signatureCount == 0) return false;
 
         // Validate admin proofs lengths
         _validateSigningAdminsProofsOrRevert(signingAdminsInOrgProofs, signatureCount);
 
-        uint256 validSignatures = 0;
-
-        // Track last signer to prevent duplicates
-        address lastSigner = address(0);
-
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
+        uint256 requiredSignatures = adminLayout.adminConfig.votingThreshold;
         bytes32 adminsRoot = adminLayout.adminConfig.adminsRoot;
 
         // Cache membersRoot to avoid repeated storage reads in the loop
         bytes32 membersRoot = LibOrganizationMembers.getMembersRoot();
 
-        // Iterate over signatures to count valid ones from admin members
-        for (uint8 i = 0; i < signatureCount; ++i) {
-            bytes memory signature = SignatureUtils.extractSignature(signatures, i);
+        uint256 validSignatures = 0;
+        address lastSigner = address(0);
+        uint256 offset = 0;
 
-            // Recover signer address from signature (reverts on invalid signature)
-            address signer = ECDSA.recover(operationHash, signature);
+        // Iterate over signatures to count valid ones from admin members
+        for (uint256 i = 0; i < signatureCount; ++i) {
+            // Parse signature at current offset (handles both EOA and ERC-1271)
+            SignatureUtils.ParsedSignature memory parsed =
+                SignatureUtils.parseSignatureAtOffset(signatures, offset, operationHash);
+
+            // Case: Signature parsing/validation failed
+            if (!parsed.isValid) continue;
+
+            address signer = parsed.signer;
+            offset = parsed.nextOffset;
 
             // Case: Signer address is not in ascending order or has duplicates
             if (signer <= lastSigner) continue;
-
-            // Update last signer for next iteration
             lastSigner = signer;
 
             // Case: Signer is not in the admin tree
@@ -258,9 +255,14 @@ library LibOrganizationAdmin {
             }
 
             ++validSignatures;
+
+            // Case: Early exit if we have enough valid signatures
+            if (validSignatures >= requiredSignatures) {
+                return true;
+            }
         }
 
-        return validSignatures;
+        return validSignatures >= requiredSignatures;
     }
 
     /**
@@ -306,7 +308,7 @@ library LibOrganizationAdmin {
      */
     function _validateSigningAdminsProofsOrRevert(
         SigningAdminsInOrgProofs memory signingAdminsInOrgProofs,
-        uint8 signatureCount
+        uint256 signatureCount
     ) private pure {
         uint256 adminTreeProofsLength = signingAdminsInOrgProofs.adminInOrgAdminTreeProofs.length;
         if (adminTreeProofsLength != signatureCount) {

@@ -315,6 +315,70 @@ There are two main abstractions represented as smart contracts in Multi-layer Se
 ![Multi-layer Security (MLS) Wallet Core Contracts Diagram](docs/images/MLSWalletCoreContractsDiagram.svg)
 
 
+### Unified Signature Format
+
+Multi-layer Security (MLS) Wallet supports both EOA (Externally Owned Account) signatures and ERC-1271 smart contract signatures across all signature validation points. This includes:
+
+- **Member approval signatures** (for manual approval policies)
+- **Admin signatures** (for organization operations)
+- **Initiator signatures** (for transactions)
+- **Guardian signatures** (for signature validation requests)
+- **Recovery address signatures** (for disaster recovery)
+
+#### Signature Format Specification
+
+All signatures use a hybrid format where the first byte (`v` value) determines the signature type:
+
+**EOA Signatures (v = 27 or 28)**
+```
+| v (1 byte) | r (32 bytes) | s (32 bytes) |
+Total: 65 bytes
+```
+
+**ERC-1271 Smart Contract Signatures (v = 0)**
+```
+| v=0 (1 byte) | signer address (20 bytes) | signature length (2 bytes) | signature data (N bytes) |
+Total: 23 + N bytes
+```
+
+#### Off-Chain Encoding Example
+
+```typescript
+function encodeSignatures(
+  signatures: Array<{signer: Address, signature: Bytes, isContract: boolean}>
+): Bytes {
+  const parts: Bytes[] = [];
+  
+  for (const {signer, signature, isContract} of signatures) {
+    if (isContract) {
+      // ERC-1271: | 0 | signer (20) | length (2) | signature (N) |
+      parts.push(new Uint8Array([0x00]));           // v = 0
+      parts.push(addressToBytes(signer));           // 20 bytes
+      parts.push(uint16ToBytes(signature.length));  // 2 bytes
+      parts.push(signature);                        // N bytes
+    } else {
+      // EOA: | v | r | s | (reorder from r,s,v to v,r,s)
+      const v = signature[64];
+      const r = signature.slice(0, 32);
+      const s = signature.slice(32, 64);
+      parts.push(new Uint8Array([v]));  // 1 byte
+      parts.push(r);                     // 32 bytes
+      parts.push(s);                     // 32 bytes
+    }
+  }
+  
+  return concat(parts);
+}
+```
+
+#### Validation Rules
+
+1. **Ascending Order**: Signer addresses must be in strictly ascending order (for multi-signature validation)
+2. **No Zero Address**: Signatures that recover to `address(0)` are rejected
+3. **ERC-1271 Validation**: For smart contract signatures, the `isValidSignature` function is called on the embedded signer address
+
+The signature validation logic is implemented in `src/libraries/SignatureUtils.sol`.
+
 ### Guardian protection
 Every external and public function on any Multi-layer Security (MLS) Wallet contract is protected by the Offchain Guardian.
 

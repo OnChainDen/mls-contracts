@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
-import {SignatureChecker} from "libraries/SignatureChecker.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 
 /**
@@ -179,8 +179,8 @@ library LibOrganizationTxRecovery {
             return false;
         }
 
-        // Use SignatureChecker to support both EOA and contract signers
-        return SignatureChecker.isValidSignatureNow(recoveryAddress, hash, signature);
+        // Use SignatureUtils to support both EOA and ERC-1271 contract signers
+        return SignatureUtils.isValidSignatureFrom(signature, hash, recoveryAddress);
     }
 
     /**

@@ -53,9 +53,12 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     function test_extractReviewSignatures_lessThan65Bytes_returnsEmpty() public view {
-        // Test various lengths less than 65
+        // Test with partial EOA signature (valid v value but incomplete signature)
+        // The hybrid format requires a complete signature to be valid
         for (uint256 len = 1; len < SIGNATURE_LENGTH; len++) {
             bytes memory input = new bytes(len);
+            // Set first byte to valid v value (27)
+            input[0] = bytes1(uint8(27));
             bytes memory result = harness.extractReviewSignatures(input);
 
             assertEq(result.length, 0, string.concat("Input of length ", vm.toString(len), " should return empty"));
@@ -152,23 +155,32 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     function test_extractReviewSignatures_dataIntegrity_allBytesUnique() public pure {
-        // Create a pattern where each byte is unique to detect any copying errors
+        // Create two valid EOA signatures where r and s bytes are unique
         bytes memory signatures = new bytes(130);
-        for (uint256 i = 0; i < 130; i++) {
+
+        // First signature: v=27, then r|s with unique bytes
+        signatures[0] = bytes1(uint8(27));
+        for (uint256 i = 1; i < 65; i++) {
             // forge-lint: disable-next-line(unsafe-typecast)
-            signatures[i] = bytes1(uint8(i)); // Safe: i is bounded to 0-129
+            signatures[i] = bytes1(uint8(i)); // Safe: i is bounded to 1-64
+        }
+
+        // Second signature: v=28, then r|s with unique bytes
+        signatures[65] = bytes1(uint8(28));
+        for (uint256 i = 66; i < 130; i++) {
+            // forge-lint: disable-next-line(unsafe-typecast)
+            signatures[i] = bytes1(uint8(i)); // Safe: i is bounded to 66-129
         }
 
         bytes memory result = LibOrganizationSignatures.extractReviewSignatures(signatures);
 
-        // Verify each byte in result matches the corresponding byte in original
+        // Verify each byte in result matches the corresponding byte in original signatures
+        // The result is the second signature (starting at offset 65)
         for (uint256 i = 0; i < result.length; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            uint8 expected = uint8(65 + i); // Safe: result.length is 65, so max is 129
             assertEq(
                 uint8(result[i]),
-                expected,
-                string.concat("Byte ", vm.toString(i), " should equal ", vm.toString(65 + i))
+                uint8(signatures[65 + i]),
+                string.concat("Byte ", vm.toString(i), " should match original at index ", vm.toString(65 + i))
             );
         }
     }
@@ -241,31 +253,25 @@ contract LibOrganizationSignaturesTest is Test {
         _verifySliceCorrectness(signatures, result, SIGNATURE_LENGTH);
     }
 
-    function testFuzz_extractReviewSignatures_arbitraryLength(uint16 totalLength) public view {
-        // Test with arbitrary lengths, not just multiples of 65
-        totalLength = uint16(bound(totalLength, 0, 1000));
+    function testFuzz_extractReviewSignatures_arbitrarySignatureCount(uint8 signatureCount) public view {
+        // Test with various valid signature counts (1-15)
+        signatureCount = uint8(bound(signatureCount, 1, 15));
 
-        bytes memory input = new bytes(totalLength);
-        // Fill with pattern
-        for (uint256 i = 0; i < totalLength; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            input[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
-        }
+        bytes memory signatures = _createSignaturePattern(signatureCount);
+        bytes memory result = harness.extractReviewSignatures(signatures);
 
-        bytes memory result = harness.extractReviewSignatures(input);
-
-        if (totalLength <= SIGNATURE_LENGTH) {
-            assertEq(result.length, 0, "Should return empty for input <= 65 bytes");
+        if (signatureCount == 1) {
+            assertEq(result.length, 0, "Should return empty for single signature");
         } else {
-            uint256 expectedLength = totalLength - SIGNATURE_LENGTH;
-            assertEq(result.length, expectedLength, "Length should be input.length - 65");
+            uint256 expectedLength = (signatureCount - 1) * SIGNATURE_LENGTH;
+            assertEq(result.length, expectedLength, "Length should be (count-1) * 65");
 
             // Verify data integrity
             for (uint256 i = 0; i < result.length; i++) {
                 uint256 originalIndex = SIGNATURE_LENGTH + i;
                 assertEq(
                     uint8(result[i]),
-                    uint8(input[originalIndex]),
+                    uint8(signatures[originalIndex]),
                     string.concat("Byte mismatch at index ", vm.toString(i))
                 );
             }
@@ -277,16 +283,25 @@ contract LibOrganizationSignaturesTest is Test {
     // ============================================================
 
     /**
-     * @dev Creates a bytes array with a known pattern for the specified number of signatures.
-     *      Each signature has bytes with values based on (signatureIndex * 65 + byteIndex) % 256.
-     *      This ensures each byte is predictable and verifiable.
+     * @dev Creates a bytes array with valid EOA signature patterns for the specified number of signatures.
+     *      Each signature is 65 bytes in hybrid format: v (1) | r (32) | s (32)
+     *      The v byte is set to 27 or 28 to indicate a valid EOA signature.
+     *      The r and s bytes are filled with predictable patterns for verification.
      */
     function _createSignaturePattern(uint256 signatureCount) internal pure returns (bytes memory) {
         bytes memory result = new bytes(signatureCount * SIGNATURE_LENGTH);
 
-        for (uint256 i = 0; i < result.length; i++) {
-            // forge-lint: disable-next-line(unsafe-typecast)
-            result[i] = bytes1(uint8(i % 256)); // Safe: modulo 256 ensures value fits in uint8
+        for (uint256 sigIndex = 0; sigIndex < signatureCount; sigIndex++) {
+            uint256 baseOffset = sigIndex * SIGNATURE_LENGTH;
+
+            // First byte is v (27 or 28) - alternating for variety
+            result[baseOffset] = bytes1(uint8(27 + (sigIndex % 2)));
+
+            // Fill r (32 bytes) and s (32 bytes) with predictable pattern
+            for (uint256 i = 1; i < SIGNATURE_LENGTH; i++) {
+                // forge-lint: disable-next-line(unsafe-typecast)
+                result[baseOffset + i] = bytes1(uint8((baseOffset + i) % 256));
+            }
         }
 
         return result;

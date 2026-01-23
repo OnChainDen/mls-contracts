@@ -3,10 +3,8 @@
 pragma solidity 0.8.33;
 
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {SignatureChecker} from "libraries/SignatureChecker.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
@@ -98,16 +96,20 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        bytes memory initiatorSignature = SignatureUtils.extractSignature(approverSignatures, 0);
+        // Extract initiator signature (supports variable-length hybrid format)
+        bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(approverSignatures);
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
-        // Use tryRecover to avoid reverting on invalid signatures (ERC-1271 should return failure, not revert)
-        (address initiator, ECDSA.RecoverError err,) = ECDSA.tryRecover(initiatorHash, initiatorSignature);
+        // Parse and validate initiator signature (supports both EOA and ERC-1271)
+        SignatureUtils.ParsedSignature memory parsed =
+            SignatureUtils.parseSignatureAtOffset(approverSignatures, 0, initiatorHash);
 
         // Case: Initiator signature is invalid
-        if (err != ECDSA.RecoverError.NoError || initiator == address(0)) {
+        if (!parsed.isValid || parsed.signer == address(0)) {
             return ERC1271_INVALID_VALUE;
         }
+
+        address initiator = parsed.signer;
 
         // Case: Signature is not allowed by the policy
         if (!_isERC1271SignatureAllowedByPolicy(account, initiator, policyId, proofs)) {
@@ -205,13 +207,10 @@ library LibOrganizationAccountSignature {
         bytes memory initiatorSignature,
         ValidationProofs memory proofs
     ) private view returns (bool) {
-        // Case: Not enough data provided to check for valid approval signatures
-        if (approverSignatures.length < SignatureUtils.SIGNATURE_LENGTH) {
+        // Case: No approver signatures provided
+        if (approverSignatures.length == 0) {
             return false;
         }
-
-        // Get required number of approvals from policy
-        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
 
         // Extract reviewer signatures (everything after the initiator signature)
         bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(approverSignatures);
@@ -226,11 +225,13 @@ library LibOrganizationAccountSignature {
             initiatorSignature: initiatorSignature
         });
 
-        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
-        uint256 validApprovals =
-            LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash, proofs.approverProofs);
-
-        return validApprovals >= requiredApprovals;
+        // Check if there are enough valid approvals (with Merkle proofs for membership verification)
+        return LibOrganizationPolicy.areApprovalsValid({
+            policy: proofs.policy,
+            signatures: reviewSignatures,
+            messageHash: reviewHash,
+            approverProofs: proofs.approverProofs
+        });
     }
 
     /**
@@ -256,8 +257,8 @@ library LibOrganizationAccountSignature {
         // Guardian signs the same hash structure as the initiator
         bytes32 guardianMessageHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
-        // Use SignatureChecker to support both EOA and smart contract guardians
-        return SignatureChecker.isValidSignatureNow(guardianAddress, guardianMessageHash, guardianSignature);
+        // Use SignatureUtils to support both EOA and ERC-1271 smart contract guardians
+        return SignatureUtils.isValidSignatureFrom(guardianSignature, guardianMessageHash, guardianAddress);
     }
 
     /**
