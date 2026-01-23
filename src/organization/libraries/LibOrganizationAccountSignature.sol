@@ -165,7 +165,7 @@ library LibOrganizationAccountSignature {
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
 
         // Recover initiator signer and get the offset for review signatures
-        (address initiator, uint256 reviewOffset) =
+        (address initiator, uint256 reviewSignaturesOffset) =
             SignatureUtils.recoverSignerAtOffsetOrRevert(approverSignatures, 0, initiatorHash);
 
         // Case: Signature is not allowed by the policy
@@ -189,7 +189,7 @@ library LibOrganizationAccountSignature {
                     policyId: policyId,
                     expirationTimestamp: expirationTimestamp,
                     approverSignatures: approverSignatures,
-                    reviewOffset: reviewOffset,
+                    reviewSignaturesOffset: reviewSignaturesOffset,
                     initiatorSignature: initiatorSignature,
                     proofs: proofs
                 })) {
@@ -245,13 +245,13 @@ library LibOrganizationAccountSignature {
 
     /**
      * @dev Checks if manual approval signatures meet the required threshold.
-     *      Validates signatures starting at reviewOffset against required threshold.
+     *      Validates signatures starting at reviewSignaturesOffset against required threshold.
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
      * @param policyId The policy ID being used for validation
      * @param expirationTimestamp When the signature request expires
      * @param approverSignatures Concatenated signatures from initiator and approvers
-     * @param reviewOffset The byte offset where review signatures start
+     * @param reviewSignaturesOffset The byte offset where review signatures start
      * @param initiatorSignature The initiator's signature (for hash binding)
      * @param proofs Merkle proofs and policy data
      * @return True if enough valid approvals, false otherwise
@@ -262,7 +262,7 @@ library LibOrganizationAccountSignature {
         uint256 policyId,
         uint256 expirationTimestamp,
         bytes memory approverSignatures,
-        uint256 reviewOffset,
+        uint256 reviewSignaturesOffset,
         bytes memory initiatorSignature,
         ValidationProofs memory proofs
     ) private view returns (bool) {
@@ -285,7 +285,7 @@ library LibOrganizationAccountSignature {
         return LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
             signatures: approverSignatures,
-            startOffset: reviewOffset,
+            startOffset: reviewSignaturesOffset,
             messageHash: reviewHash,
             approverProofs: proofs.approverProofs
         });

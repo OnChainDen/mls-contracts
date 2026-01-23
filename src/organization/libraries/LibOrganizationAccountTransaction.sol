@@ -104,7 +104,7 @@ library LibOrganizationAccountTransaction {
 
         // Compute the hash the initiator should have signed and recover the signer
         bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
-        (address initiator, uint256 reviewOffset) =
+        (address initiator, uint256 reviewSignaturesOffset) =
             SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, 0, initiatorTxHash);
 
         // Verify the policy exists and applies to this specific transaction
@@ -127,7 +127,7 @@ library LibOrganizationAccountTransaction {
                 params: params,
                 data: data,
                 signatures: signatures,
-                reviewOffset: reviewOffset,
+                reviewSignaturesOffset: reviewSignaturesOffset,
                 initiatorSignature: initiatorSignature,
                 proofs: proofs,
                 isApproval: true
@@ -195,7 +195,7 @@ library LibOrganizationAccountTransaction {
 
         // Compute the hash the initiator should have signed and recover the signer
         bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
-        (address initiator, uint256 reviewOffset) =
+        (address initiator, uint256 reviewSignaturesOffset) =
             SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, 0, initiatorTxHash);
 
         // Verify policy applies to this transaction
@@ -217,7 +217,11 @@ library LibOrganizationAccountTransaction {
         // AutoApprove: Need an authorized initiator to sign the rejection
         if (pType == PolicyType.AutoApprove) {
             _validateAutoApproveRejectionOrRevert({
-                params: params, data: data, signatures: signatures, reviewOffset: reviewOffset, proofs: proofs
+                params: params,
+                data: data,
+                signatures: signatures,
+                reviewSignaturesOffset: reviewSignaturesOffset,
+                proofs: proofs
             });
         }
         // ManualApproval: Need threshold approvals for the rejection
@@ -226,7 +230,7 @@ library LibOrganizationAccountTransaction {
                 params: params,
                 data: data,
                 signatures: signatures,
-                reviewOffset: reviewOffset,
+                reviewSignaturesOffset: reviewSignaturesOffset,
                 initiatorSignature: initiatorSignature,
                 proofs: proofs,
                 isApproval: false
@@ -290,27 +294,27 @@ library LibOrganizationAccountTransaction {
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures The signatures (original initiator + rejection signer)
-     * @param reviewOffset The byte offset where review signatures start (after initiator signature)
+     * @param reviewSignaturesOffset The byte offset where review signatures start (after initiator signature)
      * @param proofs Merkle proofs and policy data
      */
     function _validateAutoApproveRejectionOrRevert(
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
-        uint256 reviewOffset,
+        uint256 reviewSignaturesOffset,
         ValidationProofs calldata proofs
     ) private view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
         // Case: No rejection signature provided (offset at or beyond signatures length)
-        if (reviewOffset >= signatures.length) {
+        if (reviewSignaturesOffset >= signatures.length) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
 
         // Recover the rejection signer at the review offset
         (address rejectionSigner,) =
-            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, reviewOffset, rejectionTxHash);
+            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, reviewSignaturesOffset, rejectionTxHash);
 
         // Verify the rejection signer is an authorized initiator for this policy
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
@@ -320,13 +324,13 @@ library LibOrganizationAccountTransaction {
 
     /**
      * @dev Validates manual approval/rejection signatures meet the required threshold.
-     *      Validates signatures starting at reviewOffset against required threshold.
+     *      Validates signatures starting at reviewSignaturesOffset against required threshold.
      *      Used for both approval and rejection flows - the isApproval flag determines
      *      which hash is computed for signature verification.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures All signatures (initiator + reviewers)
-     * @param reviewOffset The byte offset where review signatures start
+     * @param reviewSignaturesOffset The byte offset where review signatures start
      * @param initiatorSignature The initiator's signature (for hash binding)
      * @param proofs Merkle proofs and policy data
      * @param isApproval True for approval validation, false for rejection validation
@@ -335,7 +339,7 @@ library LibOrganizationAccountTransaction {
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
-        uint256 reviewOffset,
+        uint256 reviewSignaturesOffset,
         bytes memory initiatorSignature,
         ValidationProofs calldata proofs,
         bool isApproval
@@ -351,7 +355,7 @@ library LibOrganizationAccountTransaction {
         bool approvalsValid = LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
             signatures: signatures,
-            startOffset: reviewOffset,
+            startOffset: reviewSignaturesOffset,
             messageHash: reviewTxHash,
             approverProofs: proofs.approverProofs
         });
