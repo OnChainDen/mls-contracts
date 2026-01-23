@@ -10,7 +10,6 @@ import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
@@ -122,7 +121,8 @@ library LibOrganizationAccountSignature {
      *      The signatureData is ABI-encoded and contains:
      *      - policyId: ID of the policy authorizing this signature
      *      - expirationTimestamp: When the signature request expires
-     *      - approverSignatures: Concatenated signatures (initiator + reviewers)
+     *      - initiatorSignature: The initiator's signature
+     *      - reviewSignatures: The reviewer signatures (empty for auto-approve policies)
      *      - guardianSignature: Guardian's approval of the signature request
      *      - proofs: Merkle proofs and policy data for validation
      * @param account The account address whose signature is being validated
@@ -139,13 +139,19 @@ library LibOrganizationAccountSignature {
         (
             uint256 policyId,
             uint256 expirationTimestamp,
-            bytes memory approverSignatures,
+            bytes memory initiatorSignature,
+            bytes memory reviewSignatures,
             bytes memory guardianSignature,
             ValidationProofs memory proofs
-        ) = abi.decode(signatureData, (uint256, uint256, bytes, bytes, ValidationProofs));
+        ) = abi.decode(signatureData, (uint256, uint256, bytes, bytes, bytes, ValidationProofs));
 
         // Case: Signature request has expired
         if (block.timestamp > expirationTimestamp) {
+            return ERC1271_INVALID_VALUE;
+        }
+
+        // Case: No initiator signature provided
+        if (initiatorSignature.length == 0) {
             return ERC1271_INVALID_VALUE;
         }
 
@@ -162,13 +168,9 @@ library LibOrganizationAccountSignature {
             }
         }
 
-        // Extract initiator signature for hash binding in review signatures
-        bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(approverSignatures);
+        // Recover initiator signer
         bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
-
-        // Recover initiator signer and get the offset for review signatures
-        (bool initiatorValid, address initiator, uint256 reviewSignaturesOffset) =
-            SignatureUtils.tryRecoverSignerAtOffset(approverSignatures, 0, initiatorHash);
+        (bool initiatorValid, address initiator) = SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorHash);
         if (!initiatorValid) {
             return ERC1271_INVALID_VALUE;
         }
@@ -193,8 +195,7 @@ library LibOrganizationAccountSignature {
                     hash: hash,
                     policyId: policyId,
                     expirationTimestamp: expirationTimestamp,
-                    approverSignatures: approverSignatures,
-                    reviewSignaturesOffset: reviewSignaturesOffset,
+                    reviewSignatures: reviewSignatures,
                     initiatorSignature: initiatorSignature,
                     proofs: proofs
                 })) {
@@ -250,13 +251,12 @@ library LibOrganizationAccountSignature {
 
     /**
      * @dev Checks if manual approval signatures meet the required threshold.
-     *      Validates signatures starting at reviewSignaturesOffset against required threshold.
+     *      Validates review signatures against required threshold.
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
      * @param policyId The policy ID being used for validation
      * @param expirationTimestamp When the signature request expires
-     * @param approverSignatures Concatenated signatures from initiator and approvers
-     * @param reviewSignaturesOffset The byte offset where review signatures start
+     * @param reviewSignatures The reviewer signatures
      * @param initiatorSignature The initiator's signature (for hash binding)
      * @param proofs Merkle proofs and policy data
      * @return True if enough valid approvals, false otherwise
@@ -266,16 +266,10 @@ library LibOrganizationAccountSignature {
         bytes32 hash,
         uint256 policyId,
         uint256 expirationTimestamp,
-        bytes memory approverSignatures,
-        uint256 reviewSignaturesOffset,
+        bytes memory reviewSignatures,
         bytes memory initiatorSignature,
         ValidationProofs memory proofs
     ) private view returns (bool) {
-        // Case: No approver signatures provided
-        if (approverSignatures.length == 0) {
-            return false;
-        }
-
         // Compute the hash that reviewers should have signed
         // Note: includes the initiator signature to bind approvals to the specific request
         bytes32 reviewHash = _getReviewSignatureHash({
@@ -289,8 +283,7 @@ library LibOrganizationAccountSignature {
         // Check if there are enough valid approvals (with Merkle proofs for membership verification)
         return LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
-            signatures: approverSignatures,
-            startOffset: reviewSignaturesOffset,
+            signatures: reviewSignatures,
             messageHash: reviewHash,
             approverProofs: proofs.approverProofs
         });

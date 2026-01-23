@@ -3,8 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
-import {BytesUtils} from "libraries/BytesUtils.sol";
-import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -52,24 +50,5 @@ library LibOrganizationSignatures {
         returns (uint256)
     {
         return uint256(keccak256(abi.encode(address(this), operationType, keccak256(operationData), salt)));
-    }
-
-    /**
-     * @dev Extracts the initiator signature from a signatures bytes array (the first signature).
-     *      Supports both fixed 65-byte EOA signatures and variable-length ERC-1271 signatures.
-     *      Used for hash binding in review signatures (reviewers sign over keccak256(initiatorSignature)).
-     * @param signatures The full signatures bytes array
-     * @return The initiator signature bytes
-     */
-    function extractInitiatorSignature(bytes memory signatures) internal pure returns (bytes memory) {
-        uint256 initiatorSigSize = SignatureUtils.getFirstSignatureSize(signatures);
-
-        // Case: Invalid or empty initiator signature
-        if (initiatorSigSize == 0 || initiatorSigSize > signatures.length) {
-            return new bytes(0);
-        }
-
-        // Return the initiator signature
-        return BytesUtils.sliceRange(signatures, 0, initiatorSigSize);
     }
 }

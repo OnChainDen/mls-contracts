@@ -7,7 +7,6 @@ import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
 /**
@@ -53,7 +52,7 @@ library LibOrganizationAccountTransaction {
      * @dev Validates a transaction against the specified policy using merkle proofs.
      *      Main entry point for transaction approval validation. This function:
      *      1. Verifies the transaction hasn't expired
-     *      2. Extracts and validates the initiator signature
+     *      2. Validates the initiator signature
      *      3. Checks that the policy applies to this transaction
      *      4. Routes to appropriate approval flow based on policy type
      *      5. Updates time-based limits if applicable
@@ -65,7 +64,8 @@ library LibOrganizationAccountTransaction {
      * @param salt Unique salt for replay protection
      * @param expirationTimestamp When the authorization expires
      * @param policyId The policy ID authorizing this transaction
-     * @param signatures Concatenated signatures (initiator + optional approvers)
+     * @param initiatorSignature The initiator's signature authorizing the transaction
+     * @param reviewSignatures The reviewer signatures (empty for auto-approve policies)
      * @param proofs Merkle proofs and policy data for validation
      */
     function validateTransactionApprovalOrRevert(
@@ -76,7 +76,8 @@ library LibOrganizationAccountTransaction {
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures,
+        bytes memory initiatorSignature,
+        bytes memory reviewSignatures,
         ValidationProofs calldata proofs
     ) internal {
         // Check transaction hasn't expired
@@ -84,8 +85,8 @@ library LibOrganizationAccountTransaction {
             revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
-        // Need at least one signature (initiator's EOA_SIGNATURE_LENGTH-byte signature)
-        if (signatures.length < SignatureUtils.EOA_SIGNATURE_LENGTH) {
+        // Need a valid initiator signature
+        if (initiatorSignature.length == 0) {
             revert IOrganizationAccountTransaction.InsufficientSignaturesLength();
         }
 
@@ -99,13 +100,9 @@ library LibOrganizationAccountTransaction {
             policyId: policyId
         });
 
-        // Extract initiator signature for hash binding in review signatures
-        bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(signatures);
-
         // Compute the hash the initiator should have signed and recover the signer
         bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
-        (address initiator, uint256 reviewSignaturesOffset) =
-            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, 0, initiatorTxHash);
+        address initiator = SignatureUtils.recoverSignerOrRevert(initiatorSignature, initiatorTxHash);
 
         // Verify the policy exists and applies to this specific transaction
         if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
@@ -126,8 +123,7 @@ library LibOrganizationAccountTransaction {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
-                signatures: signatures,
-                reviewSignaturesOffset: reviewSignaturesOffset,
+                reviewSignatures: reviewSignatures,
                 initiatorSignature: initiatorSignature,
                 proofs: proofs,
                 isApproval: true
@@ -156,7 +152,8 @@ library LibOrganizationAccountTransaction {
      * @param salt The transaction salt
      * @param expirationTimestamp When the transaction expires
      * @param policyId The policy ID for the transaction
-     * @param signatures Rejection signatures
+     * @param initiatorSignature The initiator's signature for the original transaction
+     * @param reviewSignatures The reviewer signatures authorizing the rejection
      * @param proofs Merkle proofs and policy data
      */
     function validateTransactionRejectionOrRevert(
@@ -167,7 +164,8 @@ library LibOrganizationAccountTransaction {
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes memory signatures,
+        bytes memory initiatorSignature,
+        bytes memory reviewSignatures,
         ValidationProofs calldata proofs
     ) internal view {
         // Check transaction hasn't expired (can only reject pending transactions)
@@ -175,8 +173,8 @@ library LibOrganizationAccountTransaction {
             revert IOrganizationAccountTransaction.TransactionExpired(expirationTimestamp, block.timestamp);
         }
 
-        // Need at least one signature
-        if (signatures.length < SignatureUtils.EOA_SIGNATURE_LENGTH) {
+        // Need a valid initiator signature
+        if (initiatorSignature.length == 0) {
             revert IOrganizationAccountTransaction.InsufficientSignaturesLength();
         }
 
@@ -190,13 +188,9 @@ library LibOrganizationAccountTransaction {
             policyId: policyId
         });
 
-        // Extract initiator signature for hash binding in review signatures
-        bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(signatures);
-
         // Compute the hash the initiator should have signed and recover the signer
         bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
-        (address initiator, uint256 reviewSignaturesOffset) =
-            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, 0, initiatorTxHash);
+        address initiator = SignatureUtils.recoverSignerOrRevert(initiatorSignature, initiatorTxHash);
 
         // Verify policy applies to this transaction
         if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
@@ -217,11 +211,7 @@ library LibOrganizationAccountTransaction {
         // AutoApprove: Need an authorized initiator to sign the rejection
         if (pType == PolicyType.AutoApprove) {
             _validateAutoApproveRejectionOrRevert({
-                params: params,
-                data: data,
-                signatures: signatures,
-                reviewSignaturesOffset: reviewSignaturesOffset,
-                proofs: proofs
+                params: params, data: data, reviewSignatures: reviewSignatures, proofs: proofs
             });
         }
         // ManualApproval: Need threshold approvals for the rejection
@@ -229,8 +219,7 @@ library LibOrganizationAccountTransaction {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
-                signatures: signatures,
-                reviewSignaturesOffset: reviewSignaturesOffset,
+                reviewSignatures: reviewSignatures,
                 initiatorSignature: initiatorSignature,
                 proofs: proofs,
                 isApproval: false
@@ -288,33 +277,30 @@ library LibOrganizationAccountTransaction {
 
     /**
      * @dev Validates rejection for auto-approve policies.
-     *      For auto-approve policies, rejection requires a second signature from
+     *      For auto-approve policies, rejection requires a signature from
      *      an authorized initiator signing the rejection hash (isApproval = false).
      *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
-     * @param signatures The signatures (original initiator + rejection signer)
-     * @param reviewSignaturesOffset The byte offset where review signatures start (after initiator signature)
+     * @param reviewSignatures The rejection signature from an authorized initiator
      * @param proofs Merkle proofs and policy data
      */
     function _validateAutoApproveRejectionOrRevert(
         TxParams memory params,
         bytes calldata data,
-        bytes memory signatures,
-        uint256 reviewSignaturesOffset,
+        bytes memory reviewSignatures,
         ValidationProofs calldata proofs
     ) private view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
-        // Case: No rejection signature provided (offset at or beyond signatures length)
-        if (reviewSignaturesOffset >= signatures.length) {
+        // Case: No rejection signature provided
+        if (reviewSignatures.length == 0) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
 
-        // Recover the rejection signer at the review offset
-        (address rejectionSigner,) =
-            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, reviewSignaturesOffset, rejectionTxHash);
+        // Recover the rejection signer (starts at offset 0 since reviewSignatures is separate)
+        address rejectionSigner = SignatureUtils.recoverSignerOrRevert(reviewSignatures, rejectionTxHash);
 
         // Verify the rejection signer is an authorized initiator for this policy
         if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
@@ -324,13 +310,12 @@ library LibOrganizationAccountTransaction {
 
     /**
      * @dev Validates manual approval/rejection signatures meet the required threshold.
-     *      Validates signatures starting at reviewSignaturesOffset against required threshold.
+     *      Validates review signatures against required threshold.
      *      Used for both approval and rejection flows - the isApproval flag determines
      *      which hash is computed for signature verification.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
-     * @param signatures All signatures (initiator + reviewers)
-     * @param reviewSignaturesOffset The byte offset where review signatures start
+     * @param reviewSignatures The reviewer signatures
      * @param initiatorSignature The initiator's signature (for hash binding)
      * @param proofs Merkle proofs and policy data
      * @param isApproval True for approval validation, false for rejection validation
@@ -338,8 +323,7 @@ library LibOrganizationAccountTransaction {
     function _validateManualConfirmationOrRevert(
         TxParams memory params,
         bytes calldata data,
-        bytes memory signatures,
-        uint256 reviewSignaturesOffset,
+        bytes memory reviewSignatures,
         bytes memory initiatorSignature,
         ValidationProofs calldata proofs,
         bool isApproval
@@ -354,8 +338,7 @@ library LibOrganizationAccountTransaction {
         // Check if there are enough valid approvals (with Merkle proofs for membership verification)
         bool approvalsValid = LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
-            signatures: signatures,
-            startOffset: reviewSignaturesOffset,
+            signatures: reviewSignatures,
             messageHash: reviewTxHash,
             approverProofs: proofs.approverProofs
         });

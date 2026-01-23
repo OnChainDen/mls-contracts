@@ -23,8 +23,7 @@ library LibPolicyApproval {
      *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      *      Reverts if any signature is malformed or if signers are not in ascending order.
      * @param policy The policy to check against
-     * @param signatures The concatenated signatures (variable length, hybrid format)
-     * @param startOffset The byte offset where approval signatures start
+     * @param signatures The concatenated reviewer signatures (variable length, hybrid format)
      * @param messageHash The message hash that was signed
      * @param approverProofs The proofs for approver membership verification
      * @return True if there are enough valid approvals, false otherwise
@@ -32,7 +31,6 @@ library LibPolicyApproval {
     function areApprovalsValid(
         Policy memory policy,
         bytes memory signatures,
-        uint256 startOffset,
         bytes32 messageHash,
         ApproverProofs memory approverProofs
     ) internal view returns (bool) {
@@ -61,7 +59,7 @@ library LibPolicyApproval {
         uint256 requiredApprovals = getRequiredApprovals(policy);
         uint8 validApprovals = 0;
         address lastSigner = address(0);
-        uint256 offset = startOffset;
+        uint256 offset = 0;
 
         // Iterate over signatures to count valid approvals
         for (uint256 i = 0; i < signatureCount; ++i) {
