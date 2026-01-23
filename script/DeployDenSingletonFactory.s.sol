@@ -160,7 +160,7 @@ contract DeployDenSingletonFactory is Script {
         string memory context = string.concat(
             "\n  !! WARNING: Deployer nonce is not 0 (expected 0) !!\n",
             "  CRITICAL: Nonce has been burned! Factory address will change.\n",
-            "  Continuing may deploy to an unexpected address.\n",
+            "  Continuing will deploy to an unexpected address.\n",
             "  Current nonce: ",
             Strings.toString(nonce)
         );
