@@ -228,18 +228,17 @@ library LibOrganizationAdmin {
 
         // Iterate over signatures to count valid ones from admin members
         for (uint256 i = 0; i < signatureCount; ++i) {
-            // Parse signature at current offset (handles both EOA and ERC-1271)
-            SignatureUtils.ParsedSignature memory parsed =
-                SignatureUtils.parseSignatureAtOffset(signatures, offset, operationHash);
+            // Recover signer at current offset (handles both EOA and ERC-1271)
+            // Reverts if signature is malformed
+            (address signer, uint256 nextOffset) =
+                SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, offset, operationHash);
 
-            // Case: Signature parsing/validation failed
-            if (!parsed.isValid) continue;
-
-            address signer = parsed.signer;
-            offset = parsed.nextOffset;
+            offset = nextOffset;
 
             // Case: Signer address is not in ascending order or has duplicates
-            if (signer <= lastSigner) continue;
+            if (signer <= lastSigner) {
+                revert IOrganizationAdmin.DuplicateOrOutOfOrderAdminSigner(signer, lastSigner);
+            }
             lastSigner = signer;
 
             // Case: Signer is not in the admin tree

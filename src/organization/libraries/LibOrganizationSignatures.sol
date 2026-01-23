@@ -57,6 +57,7 @@ library LibOrganizationSignatures {
     /**
      * @dev Extracts the initiator signature from a signatures bytes array (the first signature).
      *      Supports both fixed 65-byte EOA signatures and variable-length ERC-1271 signatures.
+     *      Used for hash binding in review signatures (reviewers sign over keccak256(initiatorSignature)).
      * @param signatures The full signatures bytes array
      * @return The initiator signature bytes
      */
@@ -70,23 +71,5 @@ library LibOrganizationSignatures {
 
         // Return the initiator signature
         return BytesUtils.sliceRange(signatures, 0, initiatorSigSize);
-    }
-
-    /**
-     * @dev Extracts the review signatures from a signatures bytes array (everything after the first signature).
-     *      Supports both fixed 65-byte EOA signatures and variable-length ERC-1271 signatures.
-     *      Review signatures start after the initiator signature and continue to the end.
-     * @param signatures The full signatures bytes array
-     * @return The review signatures (may be empty if only initiator signature provided)
-     */
-    function extractReviewSignatures(bytes memory signatures) internal pure returns (bytes memory) {
-        uint256 initiatorSigSize = SignatureUtils.getFirstSignatureSize(signatures);
-
-        // Case: Invalid initiator signature or no review signatures
-        if (initiatorSigSize == 0 || initiatorSigSize >= signatures.length) {
-            return new bytes(0);
-        }
-
-        return BytesUtils.sliceFrom(signatures, initiatorSigSize);
     }
 }

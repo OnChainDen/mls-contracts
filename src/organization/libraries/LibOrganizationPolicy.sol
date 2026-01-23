@@ -168,6 +168,7 @@ library LibOrganizationPolicy {
      *      Delegates to LibPolicyApproval.
      * @param policy The policy to check against
      * @param signatures The concatenated signatures (variable length, hybrid format)
+     * @param startOffset The byte offset where approval signatures start
      * @param messageHash The message hash that was signed
      * @param approverProofs The proofs for approver membership verification
      * @return True if there are enough valid approvals, false otherwise
@@ -175,11 +176,16 @@ library LibOrganizationPolicy {
     function areApprovalsValid(
         Policy memory policy,
         bytes memory signatures,
+        uint256 startOffset,
         bytes32 messageHash,
         ApproverProofs memory approverProofs
     ) public view returns (bool) {
         return LibPolicyApproval.areApprovalsValid({
-            policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
+            policy: policy,
+            signatures: signatures,
+            startOffset: startOffset,
+            messageHash: messageHash,
+            approverProofs: approverProofs
         });
     }
 

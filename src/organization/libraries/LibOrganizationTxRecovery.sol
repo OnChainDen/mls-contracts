@@ -167,6 +167,7 @@ library LibOrganizationTxRecovery {
      * @dev Checks if a signature is a valid recovery signature.
      *      The signature is valid if it's from the tx recovery address signing the hash.
      *      Supports both EOA and contract (ERC1271) recovery addresses.
+     *      Reverts if the signature is malformed.
      * @param hash The hash that was signed
      * @param signature The signature to validate
      * @return True if the signature is valid from the recovery address
@@ -180,7 +181,8 @@ library LibOrganizationTxRecovery {
         }
 
         // Use SignatureUtils to support both EOA and ERC-1271 contract signers
-        return SignatureUtils.isValidSignatureFrom(signature, hash, recoveryAddress);
+        // Reverts if signature is malformed, returns false if signer doesn't match
+        return SignatureUtils.recoverSignerOrRevert(signature, hash) == recoveryAddress;
     }
 
     /**

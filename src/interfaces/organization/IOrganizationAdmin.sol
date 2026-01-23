@@ -66,6 +66,13 @@ interface IOrganizationAdmin {
     error InvalidAdminSignature();
 
     /**
+     * @notice Thrown when admin signatures are not in ascending order by signer address or contain duplicates
+     * @param signer The signer address that violated ordering
+     * @param lastSigner The previous signer address
+     */
+    error DuplicateOrOutOfOrderAdminSigner(address signer, address lastSigner);
+
+    /**
      * @notice Thrown when an admin operation has wrong chain ID
      * @param expected The expected chain ID
      * @param provided The provided chain ID

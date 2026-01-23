@@ -21,8 +21,10 @@ library LibPolicyApproval {
      *      Signatures must be ordered by signer address (ascending) to prevent duplicates.
      *      Each signature is verified against the message hash and checked for authorization.
      *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
+     *      Reverts if any signature is malformed or if signers are not in ascending order.
      * @param policy The policy to check against
      * @param signatures The concatenated signatures (variable length, hybrid format)
+     * @param startOffset The byte offset where approval signatures start
      * @param messageHash The message hash that was signed
      * @param approverProofs The proofs for approver membership verification
      * @return True if there are enough valid approvals, false otherwise
@@ -30,6 +32,7 @@ library LibPolicyApproval {
     function areApprovalsValid(
         Policy memory policy,
         bytes memory signatures,
+        uint256 startOffset,
         bytes32 messageHash,
         ApproverProofs memory approverProofs
     ) internal view returns (bool) {
@@ -58,22 +61,21 @@ library LibPolicyApproval {
         uint256 requiredApprovals = getRequiredApprovals(policy);
         uint8 validApprovals = 0;
         address lastSigner = address(0);
-        uint256 offset = 0;
+        uint256 offset = startOffset;
 
         // Iterate over signatures to count valid approvals
         for (uint256 i = 0; i < signatureCount; ++i) {
-            // Parse signature at current offset (handles both EOA and ERC-1271)
-            SignatureUtils.ParsedSignature memory parsed =
-                SignatureUtils.parseSignatureAtOffset(signatures, offset, messageHash);
+            // Recover signer at current offset (handles both EOA and ERC-1271)
+            // Reverts if signature is malformed
+            (address signer, uint256 nextOffset) =
+                SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, offset, messageHash);
 
-            // Case: Signature parsing/validation failed or end of signatures
-            if (!parsed.isValid) continue;
+            offset = nextOffset;
 
-            address signer = parsed.signer;
-            offset = parsed.nextOffset;
-
-            // Case: Duplicate signers - signers must be unique and in ascending order
-            if (signer <= lastSigner) continue;
+            // Case: Duplicate or out-of-order signers - signers must be unique and in ascending order
+            if (signer <= lastSigner) {
+                revert IOrganizationPolicy.DuplicateOrOutOfOrderSigner(signer, lastSigner);
+            }
             lastSigner = signer;
 
             // Get the proofs for this signer

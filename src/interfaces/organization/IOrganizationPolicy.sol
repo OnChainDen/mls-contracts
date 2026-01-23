@@ -47,6 +47,13 @@ interface IOrganizationPolicy {
      */
     error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
 
+    /**
+     * @notice Thrown when signatures are not in ascending order by signer address or contain duplicates
+     * @param signer The signer address that violated ordering
+     * @param lastSigner The previous signer address
+     */
+    error DuplicateOrOutOfOrderSigner(address signer, address lastSigner);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════

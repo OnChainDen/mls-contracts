@@ -99,9 +99,13 @@ library LibOrganizationAccountTransaction {
             policyId: policyId
         });
 
-        // Extract initiator signature and get signer address
+        // Extract initiator signature for hash binding in review signatures
         bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(signatures);
-        address initiator = _getInitiatorFromSignature(params, data, initiatorSignature);
+
+        // Compute the hash the initiator should have signed and recover the signer
+        bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
+        (address initiator, uint256 reviewOffset) =
+            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, 0, initiatorTxHash);
 
         // Verify the policy exists and applies to this specific transaction
         if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
@@ -123,6 +127,7 @@ library LibOrganizationAccountTransaction {
                 params: params,
                 data: data,
                 signatures: signatures,
+                reviewOffset: reviewOffset,
                 initiatorSignature: initiatorSignature,
                 proofs: proofs,
                 isApproval: true
@@ -185,9 +190,13 @@ library LibOrganizationAccountTransaction {
             policyId: policyId
         });
 
-        // Extract initiator signature and get original initiator
+        // Extract initiator signature for hash binding in review signatures
         bytes memory initiatorSignature = LibOrganizationSignatures.extractInitiatorSignature(signatures);
-        address initiator = _getInitiatorFromSignature(params, data, initiatorSignature);
+
+        // Compute the hash the initiator should have signed and recover the signer
+        bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
+        (address initiator, uint256 reviewOffset) =
+            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, 0, initiatorTxHash);
 
         // Verify policy applies to this transaction
         if (!LibOrganizationPolicy.isTransactionAllowedByPolicy({
@@ -207,7 +216,9 @@ library LibOrganizationAccountTransaction {
 
         // AutoApprove: Need an authorized initiator to sign the rejection
         if (pType == PolicyType.AutoApprove) {
-            _validateAutoApproveRejectionOrRevert({params: params, data: data, signatures: signatures, proofs: proofs});
+            _validateAutoApproveRejectionOrRevert({
+                params: params, data: data, signatures: signatures, reviewOffset: reviewOffset, proofs: proofs
+            });
         }
         // ManualApproval: Need threshold approvals for the rejection
         else if (pType == PolicyType.RequireManualApproval) {
@@ -215,6 +226,7 @@ library LibOrganizationAccountTransaction {
                 params: params,
                 data: data,
                 signatures: signatures,
+                reviewOffset: reviewOffset,
                 initiatorSignature: initiatorSignature,
                 proofs: proofs,
                 isApproval: false
@@ -278,78 +290,44 @@ library LibOrganizationAccountTransaction {
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures The signatures (original initiator + rejection signer)
+     * @param reviewOffset The byte offset where review signatures start (after initiator signature)
      * @param proofs Merkle proofs and policy data
      */
     function _validateAutoApproveRejectionOrRevert(
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
+        uint256 reviewOffset,
         ValidationProofs calldata proofs
     ) private view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
-        // Extract the review signatures (rejection signature is after initiator signature)
-        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
-
-        // Case: No rejection signature provided
-        if (reviewSignatures.length == 0) {
+        // Case: No rejection signature provided (offset at or beyond signatures length)
+        if (reviewOffset >= signatures.length) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
 
-        // Parse the rejection signature (first review signature)
-        SignatureUtils.ParsedSignature memory parsed =
-            SignatureUtils.parseSignatureAtOffset(reviewSignatures, 0, rejectionTxHash);
-
-        // Case: Rejection signature validation failed
-        if (!parsed.isValid) {
-            revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
-        }
+        // Recover the rejection signer at the review offset
+        (address rejectionSigner,) =
+            SignatureUtils.recoverSignerAtOffsetOrRevert(signatures, reviewOffset, rejectionTxHash);
 
         // Verify the rejection signer is an authorized initiator for this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, parsed.signer, proofs.initiatorProofs)) {
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
-    }
-
-    /**
-     * @dev Gets the initiator address from the transaction parameters and signature.
-     *      Computes the EIP-712 hash of the transaction and parses the signer.
-     *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
-     * @param params The packed transaction parameters
-     * @param data The transaction calldata
-     * @param initiatorSignature The initiator's signature (EOA or ERC-1271 format)
-     * @return The initiator address (reverts if signature is invalid)
-     */
-    function _getInitiatorFromSignature(TxParams memory params, bytes calldata data, bytes memory initiatorSignature)
-        private
-        view
-        returns (address)
-    {
-        // Compute the hash the initiator should have signed (isApproval = true)
-        bytes32 initiatorTxHash = _computeInitiatorHashFromParams(params, data, true);
-
-        // Parse signature to get signer address (handles both EOA and ERC-1271)
-        SignatureUtils.ParsedSignature memory parsed =
-            SignatureUtils.parseSignatureAtOffset(initiatorSignature, 0, initiatorTxHash);
-
-        // Case: Signature validation failed
-        if (!parsed.isValid) {
-            revert IOrganizationAccountTransaction.InvalidInitiatorSignature();
-        }
-
-        return parsed.signer;
     }
 
     /**
      * @dev Validates manual approval/rejection signatures meet the required threshold.
-     *      Extracts reviewer signatures and validates against required threshold.
+     *      Validates signatures starting at reviewOffset against required threshold.
      *      Used for both approval and rejection flows - the isApproval flag determines
      *      which hash is computed for signature verification.
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param signatures All signatures (initiator + reviewers)
-     * @param initiatorSignature The initiator's signature
+     * @param reviewOffset The byte offset where review signatures start
+     * @param initiatorSignature The initiator's signature (for hash binding)
      * @param proofs Merkle proofs and policy data
      * @param isApproval True for approval validation, false for rejection validation
      */
@@ -357,15 +335,13 @@ library LibOrganizationAccountTransaction {
         TxParams memory params,
         bytes calldata data,
         bytes memory signatures,
+        uint256 reviewOffset,
         bytes memory initiatorSignature,
         ValidationProofs calldata proofs,
         bool isApproval
     ) private view {
         // Get required approval count from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
-
-        // Extract reviewer signatures (everything after initiator signature)
-        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(signatures);
 
         // Compute hash that reviewers should have signed
         // Includes initiator signature to bind approvals to specific request
@@ -374,7 +350,8 @@ library LibOrganizationAccountTransaction {
         // Check if there are enough valid approvals (with Merkle proofs for membership verification)
         bool approvalsValid = LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
-            signatures: reviewSignatures,
+            signatures: signatures,
+            startOffset: reviewOffset,
             messageHash: reviewTxHash,
             approverProofs: proofs.approverProofs
         });

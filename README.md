@@ -379,6 +379,60 @@ function encodeSignatures(
 
 The signature validation logic is implemented in `src/libraries/SignatureUtils.sol`.
 
+### ERC-1271 Signature Validation
+
+When calling `isValidSignature(bytes32 hash, bytes signature)` on an Account, the signature must be prefixed with a type byte that indicates the signature type:
+
+**Signature Format**
+```
+| Type (1 byte) | Signature Data (variable) |
+```
+
+**Type Values**
+
+| Type | Description |
+|------|-------------|
+| `0x00` | Recovery signature - raw signature from the recovery address (bypasses guardian and policy checks) |
+| `0x01` | Policy-based signature - ABI-encoded struct containing policy info and proofs |
+
+**Recovery Signature (Type `0x00`)**
+
+If recovery is both supported AND enabled for the organization, prepend `0x00` to a raw signature from the recovery address:
+```
+| 0x00 (1 byte) | raw EOA or ERC-1271 signature |
+```
+
+**Policy-Based Signature (Type `0x01`)**
+
+For normal signature validation, prepend `0x01` to the ABI-encoded signature data:
+```
+| 0x01 (1 byte) | ABI-encoded(policyId, expirationTimestamp, approverSignatures, guardianSignature, proofs) |
+```
+
+**Off-Chain Encoding Example**
+
+```typescript
+// Recovery signature
+function encodeRecoverySignature(signature: Bytes): Bytes {
+  return concat([new Uint8Array([0x00]), signature]);
+}
+
+// Policy-based signature
+function encodePolicySignature(
+  policyId: bigint,
+  expirationTimestamp: bigint,
+  approverSignatures: Bytes,
+  guardianSignature: Bytes,
+  proofs: ValidationProofs
+): Bytes {
+  const encoded = abi.encode(
+    ['uint256', 'uint256', 'bytes', 'bytes', 'tuple'],
+    [policyId, expirationTimestamp, approverSignatures, guardianSignature, proofs]
+  );
+  return concat([new Uint8Array([0x01]), encoded]);
+}
+```
+
 ### Guardian protection
 Every external and public function on any Multi-layer Security (MLS) Wallet contract is protected by the Offchain Guardian.
 
