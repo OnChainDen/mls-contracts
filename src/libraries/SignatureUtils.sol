@@ -27,8 +27,6 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  * @author Den Technologies Inc
  */
 library SignatureUtils {
-    // ==================== Constants ====================
-
     /// @dev EOA signature size: v (1) + r (32) + s (32) = 65 bytes
     uint256 internal constant EOA_SIGNATURE_SIZE = 65;
 
@@ -43,12 +41,8 @@ library SignatureUtils {
     ///      See EIP-2 and OpenZeppelin ECDSA for details.
     uint256 private constant _HALF_CURVE_ORDER = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
-    // ==================== Custom Errors ====================
-
     /// @dev Thrown when signature recovery fails (invalid format, length, malleability, or validation)
     error SignatureRecoveryFailed();
-
-    // ==================== Internal View Functions ====================
 
     /**
      * @dev Recovers the signer from a single signature (EOA or ERC-1271).
@@ -173,8 +167,6 @@ library SignatureUtils {
         return (false, address(0), 0);
     }
 
-    // ==================== Private View Functions ====================
-
     /**
      * @dev Checks if a signature is valid for a given signer using ERC-1271.
      *      NOTE: Unlike ECDSA signatures, contract signatures are revocable, and the outcome
@@ -275,8 +267,6 @@ library SignatureUtils {
 
         return (true, signer);
     }
-
-    // ==================== Private Pure Functions ====================
 
     /**
      * @dev Extracts the v byte (signature type indicator) at a given offset.
