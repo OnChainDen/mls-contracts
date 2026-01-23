@@ -7,6 +7,7 @@ out/
 cache/
 artifacts/
 
-# Test and script files (different conventions apply)
+# Test files (different conventions apply)
 test/
-script/
+
+# Note: script/ is NOT ignored - it's linted with .solhint.script.json

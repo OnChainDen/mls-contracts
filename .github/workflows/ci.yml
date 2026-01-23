@@ -49,9 +49,9 @@ jobs:
         # Uses your Makefile to run tests
         run: make test
 
-  # JOB 2: Security Analysis (Slither)
+  # JOB 2: Security Analysis (Slither) for source contracts
   slither:
-    name: "Slither Analysis"
+    name: "Slither Analysis (src)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -59,8 +59,40 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Run Slither
-        uses: crytic/slither-action@v0.4.0
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          slither-config: 'slither.config.json'
-          fail-on: high
+          python-version: '3.12'
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Run Slither on src
+        run: slither src/ --config-file slither.config.json --fail-high
+
+  # JOB 3: Security Analysis (Slither) for deployment scripts
+  slither-scripts:
+    name: "Slither Analysis (scripts)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Slither
+        run: pip install slither-analyzer
+
+      - name: Run Slither on scripts
+        run: slither script/ --config-file slither.script.config.json --fail-high

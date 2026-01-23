@@ -1,3 +1,6 @@
+# ==============================================================================
+# COMMON CONFIGURATION (Shared by ALL profiles)
+# ==============================================================================
 [profile.default]
 src = "src"
 out = "out"
@@ -14,23 +17,88 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "@safe/=lib/safe-smart-account/contracts/",
     "forge-std/=lib/forge-std/src/",
     "account/=src/account/",
     "implementation-whitelist/=src/implementation-whitelist/",
     "interfaces/=src/interfaces/",
     "libraries/=src/libraries/",
     "organization/=src/organization/",
+    "script/=script/",
     "types/=src/types/"
 ]
 
+# ------------------------------------------------------------------------------
+# RPC ENDPOINTS (Network Aliases)
+# Available to ALL profiles. Use via: --rpc-url mainnet
+# ------------------------------------------------------------------------------
+[rpc_endpoints]
+# Mainnets
+mainnet = "https://rpc.ankr.com/eth"
+polygon = "https://rpc.ankr.com/polygon"
+arbitrum = "https://rpc.ankr.com/arbitrum"
+optimism = "https://rpc.ankr.com/optimism"
+base = "https://rpc.ankr.com/base"
+
+# Testnets
+sepolia = "https://rpc.ankr.com/eth_sepolia"
+arbitrum-sepolia = "https://rpc.ankr.com/arbitrum_sepolia"
+base-sepolia = "https://rpc.ankr.com/base_sepolia"
+optimism-sepolia = "https://rpc.ankr.com/optimism_sepolia"
+
+# ==============================================================================
+# CI PROFILE (For Continuous Integration)
+# ==============================================================================
 [profile.ci]
 fuzz = { runs = 256  }
 invariant = { runs = 256 }
 
+# ==============================================================================
+# LINKING PROFILES (Compilation Strategies)
+# These profiles inherit settings from [profile.default] but override libraries.
+# ==============================================================================
+
+# --- Strategy: Arachnid Factory ---
+[profile.arachnid]
+libraries = [
+    # TODO: Update platform library addresses after making changes to library source code
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x744CaFa607273AF5664073d05BE066C6bDbf8201",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x6A6709A2c898E719A6Ee7635a3963122059655eB"
+]
+
+# --- Strategy: Den Singleton Factory (Prod) ---
+[profile.den-prod]
+libraries = [
+    # TODO: Update platform library addresses after deploying libraries via prod Den factory
+    # TODO: Update platform library addresses after making changes to library source code
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x0000000000000000000000000000000000000000",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x0000000000000000000000000000000000000000"
+]
+
+# --- Strategy: Den Singleton Factory (Non-Prod) ---
+[profile.den-nonprod]
+libraries = [
+    # TODO: Update platform library addresses after making changes to library source code
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x85c8b8410F0feeFd157496245c37d89F33985cC0",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCAE149fD735Cc65290e737BF06855Bba119b6082",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x384803ADc053682c7f42270De5DF50d37c243913",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xFcBDb3e95De055ac3BAedADA90894E5624Af1162"
+]
+
+# ==============================================================================
+# LINTING CONFIGURATION
+# ==============================================================================
 [lint]
 # Disable the asm-keccak256 lint - we prefer readable keccak256() calls over assembly
 exclude_lints = ["asm-keccak256"]
 
+# ==============================================================================
+# FORMATTING CONFIGURATION
+# ==============================================================================
 [fmt]
 int_types = "long"           # Enforces "uint256" over "uint" (Implicit in your examples)
 line_length = 120
@@ -41,12 +109,5 @@ tab_width = 4
 wrap_comments = true
 bracket_spacing = false      # Matches "No spaces inside brackets: arr[i]" 
 sort_imports = true          # Enforces "Strictly alphabetize imports"
-
-[rpc_endpoints]
-mainnet = "https://rpc.ankr.com/eth"
-polygon = "https://rpc.ankr.com/polygon"
-arbitrum = "https://rpc.ankr.com/arbitrum"
-optimism = "https://rpc.ankr.com/optimism"
-base = "https://rpc.ankr.com/base"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

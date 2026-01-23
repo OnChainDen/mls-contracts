@@ -841,13 +841,13 @@
       "updated": 1758313163683,
       "link": null,
       "locked": false,
-      "text": "Onchain Custody's mobile wallet",
+      "text": "MLS Wallet's mobile wallet",
       "fontSize": 16,
       "fontFamily": 5,
       "textAlign": "left",
       "verticalAlign": "top",
       "containerId": null,
-      "originalText": "Onchain Custody's mobile wallet",
+      "originalText": "MLS Wallet's mobile wallet",
       "autoResize": true,
       "lineHeight": 1.25
     }

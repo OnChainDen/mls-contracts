@@ -1,23 +1,23 @@
-# Onchain Custody Smart Contracts
-This repository contains the smart contracts for Onchain Custody.
+# Multi-layer Security (MLS) Wallet Smart Contracts
+This repository contains the smart contracts for Multi-layer Security (MLS) Wallet.
 
 > [!IMPORTANT]
 > The contents of this document and this repository are confidential. Do not share without expressed written permission from the Den team.
 
 > [!WARNING]
-> The contracts in this repository are a "rough draft" whose only purpose is to reason through how Onchain Custody might be implemented.
+> The contracts in this repository are a "rough draft" whose only purpose is to reason through how Multi-layer Security (MLS) Wallet might be implemented.
 >
 > **This code is not production-ready, or even audit-ready, and should not be trusted.** It is not gas-optimized, tested, or fully functional.
 
-## Onchain Custody Overview
-Onchain Custody is a new category of cryptocurrency custody. It is non-custodial and provides all the benefits of self-custody while being significantly more secure than all other forms of custody (traditional custody, self-custody, and MPC).
+## Multi-layer Security (MLS) Wallet Overview
+Multi-layer Security (MLS) Wallet is a new category of cryptocurrency custody. It is non-custodial and provides all the benefits of self-custody while being significantly more secure than all other forms of custody (traditional custody, self-custody, and MPC).
 
-Onchain Custody stores assets in a smart contract. Users interact with it via a web application and dedicated mobile wallet.
+Multi-layer Security (MLS) Wallet stores assets in a smart contract. Users interact with it via a web application and dedicated mobile wallet.
 
 
 
 ### Policy Engine
-The heart of Onchain Custody is the **policy engine**. The policy engine allows users to specify rules (a.k.a. "policies") that dictate:
+The heart of Multi-layer Security (MLS) Wallet is the **policy engine**. The policy engine allows users to specify rules (a.k.a. "policies") that dictate:
 1. what transactions can be executed
 2. who can execute them
 3. how often they can be executed
@@ -28,16 +28,16 @@ Policies aren't limited to just simple token transfers, however. They can also b
 
 
 ### Multiple Redundant Layers of Security
-What makes Onchain Custody significantly more secure than all other existing forms of custody is that it uses **multiple redundant layers of security**.
+What makes Multi-layer Security (MLS) Wallet significantly more secure than all other existing forms of custody is that it uses **multiple redundant layers of security**.
 
 Each of the layers operates independantly and all layers need to be compromised simultaneously in order for funds to be stolen. In contrast, other forms of custody, such as traditional custody, self-custody, and MPC, only need a single layer of security to be compromised.
 
-In Onchain Custody, the three redundant layers of security are:
+In Multi-layer Security (MLS) Wallet, the three redundant layers of security are:
 1. The dedicated mobile wallet
 2. The offchain "Guardian" service 
 3. The onchain smart contracts
 
-![Onchain Custody Security Layers Diagram](docs/images/OnchainCustodySecurityLayersDiagram.svg)
+![Multi-layer Security (MLS) Wallet Security Layers Diagram](docs/images/MLSWalletSecurityLayersDiagram.svg)
 
 
 
@@ -55,11 +55,11 @@ The order of operations is the following:
     It will not allow the transaction to execute if its policy engines fails to validate the transaction. It will also prevent the transaction from executing if any approvals are missing from the account owners or the offchain Guardian service.
 
 ## Core Concepts
-There are several core concepts in Onchain Custody:
+There are several core concepts in Multi-layer Security (MLS) Wallet:
 
 1. **Organizations**
 
-    An organization is a business or other non-individual entity that is using Onchain Custody.
+    An organization is a business or other non-individual entity that is using Multi-layer Security (MLS) Wallet.
 
 2. **Members**
 
@@ -197,8 +197,8 @@ Policies can be limited to either a single transaction at a time, or multiple tr
 
 For example, a time-based limitation on a Policy can be used to craft a policy that only allows a certain amount of tokens to be transfered every month.
 
-![User interface for editing a Policy's limitation](docs/images/OnchainCustodyDemoPolicyLimitationsScreenshot.png)
-*The user interface for editing a Policy's limitation in the Onchain Custody web application*
+![User interface for editing a Policy's limitation](docs/images/MLSWalletDemoPolicyLimitationsScreenshot.png)
+*The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
 
 ### Order of Policies
 The order of policies is important in determining which policy governs a transaction.
@@ -207,14 +207,14 @@ Policies are defined by the user in an ordered list. The first policy that match
 
 If no policy matches a transaction, then the transaction is automatically rejected.
 
-![User interface for reordering policies](docs/images/OnchainCustodyDemoPolicyOrderingScreenshot.png)
-*The user interface for re-ordering Policies in the Onchain Custody web application*
+![User interface for reordering policies](docs/images/MLSWalletDemoPolicyOrderingScreenshot.png)
+*The user interface for re-ordering Policies in the Multi-layer Security (MLS) Wallet web application*
 
 ### Demo of Policies
-We highly recommend viewing the demo web application for Onchain Custody to understand how policies are defined from the web application.
+We highly recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
 
-To view a demo of Onchain Custody's user interface for modifying Policies, visit:
-https://onchain-custody-demo.onchainden.com/policies
+To view a demo of Multi-layer Security (MLS) Wallet's user interface for modifying Policies, visit:
+https://mls-wallet-demo.onchainden.com/policies
 
 To view the demo, please request a username and password from the Den team.
 
@@ -243,7 +243,7 @@ The user flow for executing a transaction is the following:
 
 
 ## Mobile Wallet
-Onchain Custody's dedicated mobile wallet is used by Organization Members and Admins to approve and reject transactions and other actions.
+Multi-layer Security (MLS) Wallet's dedicated mobile wallet is used by Organization Members and Admins to approve and reject transactions and other actions.
 
 Under the hood, the mobile wallet securely stores a private key on a Member's mobile device. That private key is used to cryptographically sign approvals and rejections. 
 
@@ -253,15 +253,15 @@ The mobile wallet hosts a variety of features not found in other wallets that pr
 > We plan on also providing API support down the line as an alternative to mobile signing. Most users will still use the mobile wallet, but a subset will opt for the API to programatically control their accounts.
 
 ### Mobile Wallet Security Features
-The dedicated Onchain Custody mobile has a suite of security features that make it significantly more secure that other hardware and software wallets:
+The dedicated Multi-layer Security (MLS) Wallet mobile has a suite of security features that make it significantly more secure that other hardware and software wallets:
 
-1. **The mobile wallet can only be used with Onchain Custody to limit the attack surface.**
+1. **The mobile wallet can only be used with Multi-layer Security (MLS) Wallet to limit the attack surface.**
 
     In other forms of custody, such a self-custody (i.e. multisignature wallets), users can manage their cryptographic private keys using any external wallet, like Metamask or Ledger. 
     
     Those wallets can be used to sign *any* transaction and can be used with *any* decentralized application. If the wallet is used with a malicious or compromised decentralized application, the user can be tricked into signing a malicious transaction with the same private key that manages their funds, potentially causing their funds to be stolen.
 
-    By having a dedicated mobile wallet that can only be used with Onchain Custody, user's private keys aren't being used to interact with other potentially dangerous applications.
+    By having a dedicated mobile wallet that can only be used with Multi-layer Security (MLS) Wallet, user's private keys aren't being used to interact with other potentially dangerous applications.
 
 2. **The mobile wallet shows users what they're *actually* approving.**
     
@@ -269,13 +269,13 @@ The dedicated Onchain Custody mobile has a suite of security features that make 
 
     Users are therefore likely to accidentally approve malicious transactions.
 
-    In contrast, Onchain Custody's dedicate mobile wallet decodes transactions into a human-readable format locally on the user's device, so they know exactly what the transaction they're signing will do. This makes it possible for users to easily identify and reject malicious transactions.
+    In contrast, Multi-layer Security (MLS) Wallet's dedicate mobile wallet decodes transactions into a human-readable format locally on the user's device, so they know exactly what the transaction they're signing will do. This makes it possible for users to easily identify and reject malicious transactions.
 
-    ![Blind signing vs human-readable explanations](docs/images/OnchainCustodyMobileWalletDataDecodingDiagram.svg)
+    ![Blind signing vs human-readable explanations](docs/images/MLSWalletMobileWalletDataDecodingDiagram.svg)
 
 3. **The mobile wallet runs the Policy Engine locally to verify that a transaction is actually valid.**
 
-    This is part of Onchain Custody's approach of having "multiple redundant layers of security". Before a user can approve a transaction, the Policy Engine runs locally on their device to determine if the transaction is valid to prevent them from being present malicious transactions in the first place.
+    This is part of Multi-layer Security (MLS) Wallet's approach of having "multiple redundant layers of security". Before a user can approve a transaction, the Policy Engine runs locally on their device to determine if the transaction is valid to prevent them from being present malicious transactions in the first place.
 
 4. **The mobile wallet stores private keys in secure hardware enclaves and trusted execution environments (TEE).**
 
@@ -293,14 +293,14 @@ The dedicated Onchain Custody mobile has a suite of security features that make 
 
 ## Smart Contracts
 ### Organizations and Accounts
-There are two main abstractions represented as smart contracts in Onchain Custody:
+There are two main abstractions represented as smart contracts in Multi-layer Security (MLS) Wallet:
 1. **Organizations**
         
     Each real-world organization is represented onchain by a dedicated organization smart contract. That contract is a source of truth for the organization's state, such as its members, groups, policies, admins, etc. Funds are *not* stored in the organization contract.
 
     Note: an Organization can be deployed on multiple networks. If an Organization is deployed on multiple networks, it is expected to have the same address on each network.
 
-    *Located at `src/organization/OnchainCustodyOrganizationDiamond.sol`*
+    *Located at `src/organization/OrganizationProxy.sol`*
 
 2. **Accounts**
 
@@ -308,25 +308,25 @@ There are two main abstractions represented as smart contracts in Onchain Custod
 
     Note: an Account can be deployed on multiple networks. If an Account is deployed on multiple networks, it is expected to have the same address on each network.
 
-    *Located at `src/account/OnchainCustodyAccountDiamond.sol`*
+    *Located at `src/account/AccountProxy.sol`*
 
 
 
-![Onchain Custody Core Contracts Diagram](docs/images/OnchainCustodyCoreContractsDiagram.svg)
+![Multi-layer Security (MLS) Wallet Core Contracts Diagram](docs/images/MLSWalletCoreContractsDiagram.svg)
 
 
 ### Guardian protection
-Every external and public function on any Onchain Custody contract is protected by the Offchain Guardian.
+Every external and public function on any Multi-layer Security (MLS) Wallet contract is protected by the Offchain Guardian.
 
 **That means that the first thing any external or public function does is check if `msg.sender` is the Offchain Guardian Service's EOA address.**
 
-This is an important component of Onchain Custody's philosophy of "multiple redundant layers of security". 
+This is an important component of Multi-layer Security (MLS) Wallet's philosophy of "multiple redundant layers of security". 
 
 In the unlikely scenario that an exploit is found further on in the smart contracts, a malicious actor would be unable to execute the exploit, unless they also simultaneously compromise the Offchain Guardian Service. This significantly increases the difficulty of an attack, and is a unique layer of security not provided by other custody solutions.
 
 This similarly protects against attack scenarios where an attacker compromises the mobile devices of all the transactions signers and tricks them into signing a malicious payload. The attacker would not be able to execute the malicious transaction without also simultaneoulsy compromising the Offchain Guardian Service.
 
-In the event that the Offchain Guardian Service is unavailable, users can use the Disaster Recovery mechanism to withdraw their funds out of Onchain Custody without the Offchain Guardian Service's involvement. 
+In the event that the Offchain Guardian Service is unavailable, users can use the Disaster Recovery mechanism to withdraw their funds out of Multi-layer Security (MLS) Wallet without the Offchain Guardian Service's involvement. 
 
 > [!WARNING]
 > At the time of this writing, the Disaster Recovery mechanism has not yet been implemented. It will be implemented at the time of public release to ensure censorship resistance.
@@ -335,12 +335,12 @@ In the event that the Offchain Guardian Service is unavailable, users can use th
 ### Upgradability (ERC-2535 Diamond Standard)
 
 > [!WARNING]
-> We are exploring using the [ERC-1822 Universal Upgradeable Proxy Standard (UUPS)](https://eips.ethereum.org/EIPS/eip-1822) instead of the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) for upgradability due to the heavy interdepencies between the diamond cut facets in Onchain Custody.
+> We are exploring using the [ERC-1822 Universal Upgradeable Proxy Standard (UUPS)](https://eips.ethereum.org/EIPS/eip-1822) instead of the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) for upgradability due to the heavy interdepencies between the diamond cut facets in Multi-layer Security (MLS) Wallet.
 
 The smart contracts are upgradable according to the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) by Nick Mudgen.
 
 
-Onchain Custody's implementation of the ERC-2535 Diamond Standard is based on Nick Mudgen's [diamond-3-hardhat](https://github.com/mudgen/diamond-3-hardhat) reference implementation, with some notable changes:
+Multi-layer Security (MLS) Wallet's implementation of the ERC-2535 Diamond Standard is based on Nick Mudgen's [diamond-3-hardhat](https://github.com/mudgen/diamond-3-hardhat) reference implementation, with some notable changes:
 
 1. **Facet cuts must be whitelisted.**
 
@@ -358,12 +358,12 @@ Onchain Custody's implementation of the ERC-2535 Diamond Standard is based on Ni
 
 3. **Diamond cuts require approval the offchain Guardian service.**
 
-    In order to cut a diamond, the offchain Guardian service must also explicitly approve the action. This is part of Onchain Custody's **"multiple redundant layers of security"** model.
+    In order to cut a diamond, the offchain Guardian service must also explicitly approve the action. This is part of Multi-layer Security (MLS) Wallet's **"multiple redundant layers of security"** model.
 
     This is implemented in `src/diamond/facets/DiamondCutFacet.sol` in the function `diamondCut`.
 
 
-The implementation of the ERC-2535 Diamond Standard for Onchain Custody can be found in the directory `src/diamond`:
+The implementation of the ERC-2535 Diamond Standard for Multi-layer Security (MLS) Wallet can be found in the directory `src/diamond`:
 ```
 src/
 ├── diamond/
@@ -382,16 +382,16 @@ src/
 ```
 
 
-There are only two smart contracts in Onchain Custody that are upgradable:
+There are only two smart contracts in Multi-layer Security (MLS) Wallet that are upgradable:
 1. **The Organization smart contract**
         
-    Diamond is located at `sr/corganization/OnchainCustodyOrganizationDiamond.sol`
+    Diamond is located at `src/organization/OrganizationProxy.sol`
 
     Facets are located at `src/organization/facets/`
 
 2. **The Account smart contract**
 
-    Diamond is located at `src/account/OnchainCustodyAccountDiamond.sol`
+    Diamond is located at `src/account/AccountProxy.sol`
 
     Facets are located at `src/account/facets/`
 
@@ -400,7 +400,7 @@ There are only two smart contracts in Onchain Custody that are upgradable:
 
 ### Organizations
 
-Each Organization is represented as a Diamond proxy, which can be found at `src/organization/OnchainCustodyOrganizationDiamond.sol`.
+Each Organization is represented as a Diamond proxy, which can be found at `src/organization/OrganizationProxy.sol`.
 
 All facets for Accounts are located at `src/organization/facets/`.
 
@@ -494,7 +494,7 @@ function _getAdminOperationHash(
         keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("OnchainCustodyOrganization"),
+                keccak256("MLSWalletOrganization"),
                 keccak256("1"),
                 block.chainid,
                 address(this)
@@ -521,15 +521,15 @@ src/organization
 │   ├── IOrganizationGroupsFacet.sol
 │   ├── IOrganizationGuardianFacet.sol
 │   └── IOrganizationMembersFacet.sol
-├── OnchainCustodyOrganizationDiamond.sol
-├── OnchainCustodyOrganizationFactory.sol
+├── OrganizationProxy.sol
+├── OrganizationFactory.sol
 ├── OrganizationInit.sol
 └── OrganizationStorage.sol
 ```
 
 ### Accounts
 
-Each Account is represented as a Diamond proxy, which can be found at `src/account/OnchainCustodyAccountDiamond.sol`.
+Each Account is represented as a Diamond proxy, which can be found at `src/account/AccountProxy.sol`.
 
 All facets for Accounts are located at `src/account/facets/`.
 
@@ -557,7 +557,7 @@ It has two external functions that are responsible for transaction execution and
     ) external;
 ```
 
-Both of these functions, like all other external or public functions in Onchain Custody, require `msg.sender` to be the Guardian service's EOA address.
+Both of these functions, like all other external or public functions in Multi-layer Security (MLS) Wallet, require `msg.sender` to be the Guardian service's EOA address.
 
 To determine who has permission to approve or reject a transaction, the `to`, `value`, and `data` function arguments are used to find the first Policy that matches the transaction. That Policy dictates who has permission to approve or reject the transaction.
 
@@ -573,7 +573,7 @@ Note that transactions that are delegate calls are *not* allowed.
 
 Most self-custody smart accounts, like Safe, use a sequential nonce to prevent signature replay attacks. This however comes with an unituitive user experience, where transactions must be executed (or rejected) in the order they were proposed.
 
-Instead, Onchain custody uses a non-sequential nonce to prevent signature replay attacks, while providing a more intuitive user experience where transactions can be executed (or rejected) in any order.
+Instead, MLS Wallet uses a non-sequential nonce to prevent signature replay attacks, while providing a more intuitive user experience where transactions can be executed (or rejected) in any order.
 
 > [!WARNING]
 > The use of non-sequential nonces to prevent signature replays is still in the exploration phase, and may be replaced with a traditional sequential nonce, like in Safe smart accounts, if issues are found during consultations with audit firms.
@@ -622,7 +622,7 @@ function _getTransactionHash(
         keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("OnchainCustodyAccount"),
+                keccak256("MLSWalletAccount"),
                 keccak256("1"),
                 block.chainid,
                 address(this)
@@ -671,7 +671,7 @@ library AccountTransactionFacetStorage {
         mapping(uint256 => bool) usedNonces;
     }
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("onchain.custody.account.transaction.storage");
+    bytes32 internal constant STORAGE_SLOT = keccak256("den.mls-wallet.account.transaction.storage");
 
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;
@@ -696,7 +696,7 @@ Deploying an Organization is a two-step process:
 The two-step process is required to avoid using contructor arguments to set initial state, as constructor arguments influence the address of the deployed contract.
 
 
-Deploying an Organization is done via the contract `src/organization/OnchainCustodyOrganizationFactory.sol`, which has a function `deployOrganization` that uses the CREATE2 opcode to deploy an Organization at a deterministic address. This function deploys Organizations with almost no state or functionality.
+Deploying an Organization is done via the contract `src/organization/OrganizationFactory.sol`, which has a function `deployOrganization` that uses the CREATE2 opcode to deploy an Organization at a deterministic address. This function deploys Organizations with almost no state or functionality.
 
 Organizations are deployed with the following facets only:
 1. **DiamondCutFacet**
@@ -736,7 +736,7 @@ Unlike deploying an Organization, deploying an Account is a one-step process and
 ```
 src/account
 ├── AccountInit.sol
-├── OnchainCustodyAccountDiamond.sol
+├── AccountProxy.sol
 ├── facets
 │   ├── AccountAdminFacet.sol
 │   ├── AccountGuardianFacet.sol
@@ -747,8 +747,35 @@ src/account
     └── INativeTokenReceivedEventEmitter.sol
 ```
 
+## Deployment
+
+For detailed deployment instructions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+
+### Quick Overview
+
+All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. The deployment follows a 3-step process:
+
+1. **Deploy CREATE2 Factory** (if not already deployed on the chain)
+2. **Deploy Platform Libraries** via CREATE2
+3. **Deploy Contracts** with library linking
+
+### Local Testing
+
+```bash
+./test_deploy_scripts_locally.sh
+```
+
+### Production Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for:
+- Signer setup (Foundry keystore or Ledger)
+- Step-by-step deployment commands
+- Guardian/Deployer Safe configuration
+- Library linking requirements
+- Troubleshooting guide
+
 ## Questions blocking further development
-*Below are questions which are currently blocking further development of the Onchain Custody smart contracts. We are seeking external expert opinion to answer these questions.*
+*Below are questions which are currently blocking further development of the Multi-layer Security (MLS) Wallet smart contracts. We are seeking external expert opinion to answer these questions.*
 
 **Transaction nonce questions**
 
@@ -792,7 +819,7 @@ src/account
 - How do MPC providers implement disaster recovery?
 - How do traditional custodians implement disaster recovery? Do they at all?
 - How do self-custody solutions like Safe implement disaster recovery?
-- What design for disaster recovery do you recommend for Onchain Custody?
+- What design for disaster recovery do you recommend for Multi-layer Security (MLS) Wallet?
     - Additional context
         - The approach we originally thought of
             - We originally wanted to have organizations manage external wallets which could only be used to initiate disaster recovery. It would would look similar to a multisig transaction, but the transaction would only be able to send funds to a predetermined immutable recovery address.
@@ -819,7 +846,7 @@ src/account
 
 # API
 ## Overview
-Using the Onchain Custody API, an application can take any action that an ordinary member can take.
+Using the Multi-layer Security (MLS) Wallet API, an application can take any action that an ordinary member can take.
 
 The API can be used to:
 - build custom applications with custom user interfaces
@@ -835,7 +862,7 @@ The API Member is essentially an ordinary Member with all the same capabilities 
 
 There are only two key differences between an API Member and an ordinary Member:
 1. An API Member must use the API to interact with the Organization, instead of the Web Application.
-2. An API Member manages its own private key (or uses the Onchain Custody SDK and CLI to automatically manage the private key), instead of using the Onchain Custody Mobile Wallet.
+2. An API Member manages its own private key (or uses the Multi-layer Security (MLS) Wallet SDK and CLI to automatically manage the private key), instead of using the Multi-layer Security (MLS) Wallet Mobile Wallet.
 
 If the API Member is given sole Admin permissions over the organization, it can be used to programatically take any action within the organization without human intervention. 
 
@@ -874,9 +901,9 @@ Using the API, an application can:
 
 ## Usage Guide
 ### Create an API Member
-Create your API Member in the Onchain Custody web app:
+Create your API Member in the Multi-layer Security (MLS) Wallet web app:
         
-1. Go to http://onchain-custody.onchainden.com/members.
+1. Go to http://mls-wallet.onchainden.com/members.
     
 2. Click "Add Member", then "Advanced", turn on "API Member", and click "Add".
 
@@ -888,12 +915,12 @@ Use the CLI to setup the API Member's private key.
 To install the CLI:
  
  ```bash
- npm install -i @onchainden/onchaincustody-cli
+ npm install -i @onchainden/mls-wallet-cli
  ```
 
 Next, to generate the API Member's private key:
 ```bash
-onchaincustody-cli setup
+mls-wallet-cli setup
 ```
 
 You'll be prompted to enter the API Member's API key from the previous step.
@@ -909,17 +936,17 @@ If you have unilateral Admin permission in your Organization, then you do not re
 Use the SDK to make your first request.
 
 Set environment variables:
-- `ONCHAIN_CUSTODY_API_KEY`: The API key from the first step
-- `ONCHAIN_CUSTODY_PRIVATE_KEY`: The private key generated by the CLI
+- `MLS_WALLET_API_KEY`: The API key from the first step
+- `MLS_WALLET_PRIVATE_KEY`: The private key generated by the CLI
 
 Then, import and use the SDK to make a request:
 ```typescript
-import { OnchainCustodyClient } from "@onchainden/onchaincustody`
+import { MLSWalletClient } from "@onchainden/mls-wallet`
 
-const API_KEY = process.env.ONCHAIN_CUSTODY_API_KEY;
-const PRIVATE_KEY = process.env.ONCHAIN_CUSTODY_PRIVATE_KEY;
+const API_KEY = process.env.MLS_WALLET_API_KEY;
+const PRIVATE_KEY = process.env.MLS_WALLET_PRIVATE_KEY;
 
-const client = new OnchainCustodyClient({
+const client = new MLSWalletClient({
     apiKey:     API_KEY,        // Always required
     privateKey: PRIVATE_KEY     // Optional: required for write access, 
                                 // but not required for read-only access

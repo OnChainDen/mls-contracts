@@ -6,9 +6,6 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {
-    LibImplementationWhitelistDeployerAddressStorage
-} from "implementation-whitelist/libraries/storage/LibImplementationWhitelistDeployerAddressStorage.sol";
-import {
     LibImplementationWhitelistStorage
 } from "implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
@@ -25,14 +22,6 @@ contract ImplementationWhitelistImplementation is
     Ownable2StepUpgradeable,
     IImplementationWhitelist
 {
-    /**
-     * @notice Modifier that enforces only the deployer can call the function
-     */
-    modifier onlyDeployer() {
-        _enforceOnlyDeployer();
-        _;
-    }
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -41,10 +30,19 @@ contract ImplementationWhitelistImplementation is
     /**
      * @notice Initialize the implementation whitelist
      * @param initialOwner The initial owner address
+     * @param organizationImplementations Initial Organization implementations to whitelist
+     * @param accountImplementations Initial Account implementations to whitelist
      */
-    function initialize(address initialOwner) external override initializer onlyDeployer {
+    function initialize(
+        address initialOwner,
+        address[] calldata organizationImplementations,
+        address[] calldata accountImplementations
+    ) external override initializer {
         __Ownable_init(initialOwner);
         __Ownable2Step_init();
+
+        _addToWhitelist(ContractType.Organization, organizationImplementations);
+        _addToWhitelist(ContractType.Account, accountImplementations);
 
         emit ImplementationWhitelistInitialized(initialOwner);
     }
@@ -60,25 +58,8 @@ contract ImplementationWhitelistImplementation is
         address[] calldata toWhitelist,
         address[] calldata toUnwhitelist
     ) external override onlyOwner {
-        LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
-
-        for (uint256 i = 0; i < toWhitelist.length; ++i) {
-            storageLayout.whitelisted[contractType][toWhitelist[i]] = true;
-            emit ImplementationWhitelisted(contractType, toWhitelist[i]);
-        }
-
-        for (uint256 i = 0; i < toUnwhitelist.length; ++i) {
-            storageLayout.whitelisted[contractType][toUnwhitelist[i]] = false;
-            emit ImplementationUnwhitelisted(contractType, toUnwhitelist[i]);
-        }
-    }
-
-    /**
-     * @notice Returns the address that deployed this implementation whitelist proxy
-     * @return The deployer address
-     */
-    function getDeployerAddress() external view override returns (address) {
-        return LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress;
+        _addToWhitelist(contractType, toWhitelist);
+        _removeFromWhitelist(contractType, toUnwhitelist);
     }
 
     /**
@@ -129,12 +110,30 @@ contract ImplementationWhitelistImplementation is
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {}
 
     /**
-     * @dev Enforces that the caller is the deployer address.
-     *      This function will revert if msg.sender is not the deployer.
+     * @dev Adds implementation addresses to the whitelist.
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementations The implementation addresses to whitelist
      */
-    function _enforceOnlyDeployer() private view {
-        if (msg.sender != LibImplementationWhitelistDeployerAddressStorage.layout().deployerAddress) {
-            revert UnauthorizedDeployer();
+    function _addToWhitelist(ContractType contractType, address[] calldata implementations) private {
+        LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
+
+        for (uint256 i = 0; i < implementations.length; ++i) {
+            storageLayout.whitelisted[contractType][implementations[i]] = true;
+            emit ImplementationWhitelisted(contractType, implementations[i]);
+        }
+    }
+
+    /**
+     * @dev Removes implementation addresses from the whitelist.
+     * @param contractType The type of contract (Account or Organization)
+     * @param implementations The implementation addresses to remove from whitelist
+     */
+    function _removeFromWhitelist(ContractType contractType, address[] calldata implementations) private {
+        LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
+
+        for (uint256 i = 0; i < implementations.length; ++i) {
+            storageLayout.whitelisted[contractType][implementations[i]] = false;
+            emit ImplementationUnwhitelisted(contractType, implementations[i]);
         }
     }
 }

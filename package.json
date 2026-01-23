@@ -1,7 +1,7 @@
 {
-  "name": "onchain-custody-contracts",
+  "name": "mls-wallet-contracts",
   "version": "1.0.0",
-  "description": "This repository contains the smart contracts for Onchain Custody.",
+  "description": "This repository contains the smart contracts for Multi-layer Security (MLS) Wallet.",
   "main": "index.js",
   "directories": {
     "doc": "docs",
@@ -24,6 +24,6 @@
   },
   "homepage": "https://github.com/OnChainDen/onchain-custody-contracts#readme",
   "devDependencies": {
-    "solhint": "^6.0.2"
+    "solhint": "^6.0.3"
   }
 }
