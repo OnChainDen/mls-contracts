@@ -75,16 +75,17 @@ library LibOrganizationAccountSignature {
         // Strip the type prefix to get the signature data
         bytes memory signatureData = BytesUtils.sliceFrom(signature, 1);
 
-        // Route based on signature type
+        // Case: Recovery signature
         if (signatureType == SIGNATURE_TYPE_RECOVERY) {
             return _validateRecoverySignature(hash, signatureData);
         }
 
+        // Case: Policy-based signature
         if (signatureType == SIGNATURE_TYPE_POLICY) {
             return _validatePolicyBasedSignature(account, hash, signatureData);
         }
 
-        // Unknown signature type
+        // Case: Unknown signature type
         return ERC1271_INVALID_VALUE;
     }
 
@@ -200,7 +201,12 @@ library LibOrganizationAccountSignature {
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
         if (pType == PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
-            if (_hasSufficientValidApprovalSignatures(proofs, reviewSignatures, reviewHash)) {
+            if (LibOrganizationPolicy.areApprovalsValid({
+                    policy: proofs.policy,
+                    signatures: reviewSignatures,
+                    messageHash: reviewHash,
+                    approverProofs: proofs.approverProofs
+                })) {
                 return ERC1271_MAGIC_VALUE;
             }
         }
@@ -249,28 +255,6 @@ library LibOrganizationAccountSignature {
         }
 
         return true;
-    }
-
-    /**
-     * @dev Checks if manual approval signatures meet the required threshold.
-     *      Validates review signatures against required threshold.
-     * @param proofs Merkle proofs and policy data
-     * @param reviewSignatures The reviewer signatures
-     * @param reviewHash The pre-computed review hash that reviewers should have signed
-     * @return True if enough valid approvals, false otherwise
-     */
-    function _hasSufficientValidApprovalSignatures(
-        ValidationProofs memory proofs,
-        bytes memory reviewSignatures,
-        bytes32 reviewHash
-    ) private view returns (bool) {
-        // Check if there are enough valid approvals (with Merkle proofs for membership verification)
-        return LibOrganizationPolicy.areApprovalsValid({
-            policy: proofs.policy,
-            signatures: reviewSignatures,
-            messageHash: reviewHash,
-            approverProofs: proofs.approverProofs
-        });
     }
 
     /**
