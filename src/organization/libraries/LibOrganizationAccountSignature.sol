@@ -155,26 +155,34 @@ library LibOrganizationAccountSignature {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Compute the initiator singature hash (used for both guardian and initiator signature validation)
+        // Validate initiator signature and recover the initiator signer address
         bytes32 initiatorSignatureHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
+        (bool initiatorValid, address initiator) =
+            SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorSignatureHash);
+        if (!initiatorValid) {
+            return ERC1271_INVALID_VALUE;
+        }
 
-        // Validate guardian signature
+        // Compute review hash (used for both guardian and reviewer signature validation)
+        // Note: includes the initiator signature to bind approvals to the specific request
+        bytes32 reviewHash = _getReviewSignatureHash({
+            account: account,
+            hash: hash,
+            policyId: policyId,
+            expirationTimestamp: expirationTimestamp,
+            initiatorSignature: initiatorSignature
+        });
+
+        // Validate guardian signature against the review hash
         {
             address guardianAddress = LibOrganizationGuardian.getGuardian();
 
             // Recover guardian signer and compare (returns invalid if signature is malformed)
             (bool guardianValid, address recoveredGuardian) =
-                SignatureUtils.tryRecoverSigner(guardianSignature, initiatorSignatureHash);
+                SignatureUtils.tryRecoverSigner(guardianSignature, reviewHash);
             if (!guardianValid || recoveredGuardian != guardianAddress) {
                 return ERC1271_INVALID_VALUE;
             }
-        }
-
-        // Recover initiator signer
-        (bool initiatorValid, address initiator) =
-            SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorSignatureHash);
-        if (!initiatorValid) {
-            return ERC1271_INVALID_VALUE;
         }
 
         // Case: Signature is not allowed by the policy
@@ -192,15 +200,7 @@ library LibOrganizationAccountSignature {
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
         if (pType == PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
-            if (_hasSufficientValidApprovalSignatures({
-                    account: account,
-                    hash: hash,
-                    policyId: policyId,
-                    expirationTimestamp: expirationTimestamp,
-                    reviewSignatures: reviewSignatures,
-                    initiatorSignature: initiatorSignature,
-                    proofs: proofs
-                })) {
+            if (_hasSufficientValidApprovalSignatures(proofs, reviewSignatures, reviewHash)) {
                 return ERC1271_MAGIC_VALUE;
             }
         }
@@ -254,34 +254,16 @@ library LibOrganizationAccountSignature {
     /**
      * @dev Checks if manual approval signatures meet the required threshold.
      *      Validates review signatures against required threshold.
-     * @param account The account address whose signature is being validated
-     * @param hash The message hash that was signed
-     * @param policyId The policy ID being used for validation
-     * @param expirationTimestamp When the signature request expires
-     * @param reviewSignatures The reviewer signatures
-     * @param initiatorSignature The initiator's signature (for hash binding)
      * @param proofs Merkle proofs and policy data
+     * @param reviewSignatures The reviewer signatures
+     * @param reviewHash The pre-computed review hash that reviewers should have signed
      * @return True if enough valid approvals, false otherwise
      */
     function _hasSufficientValidApprovalSignatures(
-        address account,
-        bytes32 hash,
-        uint256 policyId,
-        uint256 expirationTimestamp,
+        ValidationProofs memory proofs,
         bytes memory reviewSignatures,
-        bytes memory initiatorSignature,
-        ValidationProofs memory proofs
+        bytes32 reviewHash
     ) private view returns (bool) {
-        // Compute the hash that reviewers should have signed
-        // Note: includes the initiator signature to bind approvals to the specific request
-        bytes32 reviewHash = _getReviewSignatureHash({
-            account: account,
-            hash: hash,
-            policyId: policyId,
-            expirationTimestamp: expirationTimestamp,
-            initiatorSignature: initiatorSignature
-        });
-
         // Check if there are enough valid approvals (with Merkle proofs for membership verification)
         return LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
