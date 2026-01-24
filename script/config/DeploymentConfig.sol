@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.33;
+pragma solidity >=0.7.0 <0.9.0;
 
-import {PlatformLibraries} from "script/libraries/Types.sol";
+import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeploymentConfig
@@ -156,6 +156,53 @@ library DeploymentConfig {
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
         0xFcBDb3e95De055ac3BAedADA90894E5624Af1162;
 
+    // ==================== Hardcoded Safe 1.3.0 Infrastructure Addresses ====================
+    // These are the expected deployment addresses for Safe 1.3.0 infrastructure contracts when deployed
+    // via CREATE2 using the specified factory. Safe infrastructure must be deployed BEFORE platform contracts
+    // using the DeploySafe.s.sol script (FOUNDRY_PROFILE=safe).
+    //
+    // IMPORTANT: These addresses must be updated after deploying Safe infrastructure for each factory.
+    // ==============================================================================
+
+    /// @dev Expected Safe infrastructure addresses when deployed via Arachnid Deterministic Deployment Proxy
+    address internal constant ARACHNID_SAFE_SINGLETON_ADDRESS = 0x7A26cf6987d32BCa2Feda46910b4c79Bbf3FB174;
+    address internal constant ARACHNID_SAFE_PROXY_FACTORY_ADDRESS = 0x04acB79cD2c208Fc4B983d92971A41F709532Ff5;
+    address internal constant ARACHNID_SAFE_FALLBACK_HANDLER_ADDRESS = 0xBF32F3DCE01B6c67E454066f8969Deee79D74a55;
+    address internal constant ARACHNID_SAFE_MULTISEND_ADDRESS = 0xe0487528D742Bd9e6295AE6f3873175f032ba8f3;
+    address internal constant ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0xD5c219A054E9fBceD9D9493f546a7B4995101e4B;
+    address internal constant ARACHNID_SAFE_CREATE_CALL_ADDRESS = 0x7880435e91818C84bfAdC2f454B8A92942f7AcbD;
+    address internal constant ARACHNID_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS = 0x205CeDEBdB936D473031f6140d50C11aeC948773;
+    address internal constant ARACHNID_GUARDIAN_SAFE_ADDRESS = 0x6aCC5D703Fa6136Bc9305fa1cCEF87F7e1dDCA99;
+    address internal constant ARACHNID_DEPLOYER_SAFE_ADDRESS = 0x53B78a4CeB12fB5cb48C8eEfcdAfd6a35F0a8246;
+
+    /// @dev Expected Safe infrastructure addresses when deployed via Production Den Singleton Factory
+    ///      TODO: Update these addresses after deploying Safe 1.3.0 via prod Den Singleton Factory
+    address internal constant PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = address(0);
+
+    /// @dev Expected Safe infrastructure addresses when deployed via Non-Production Den Singleton Factory
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS = 0x0c3254B2f12AbBC58A2104c432A943e22569Cfc2;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS =
+        0xC31214e6950B6f29c038c705bBD7068a46406f82;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS =
+        0x3B4c3b17F9d51B73a858A32324939bDcDCa497E4;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = 0xf3551E571f69Af6639344ADfB87BD7b6Ea2B0F0d;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS =
+        0x67e2AA5448B07839F9c2F4277b7DcB815738F0Bf;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS =
+        0xFB84686A1bedc983ca8D47000104E354171E00f1;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS =
+        0x05E252D33237dCea27607D6F061AD501c35b214d;
+    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = 0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb;
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = 0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b;
+
     // ==================== Hardcoded Guardian Safe Multisig Configurations =====================
     // These are the hardcoded multisig configurations for the Guardian Safe and Deployer Safe.
     // that are used to deploy the platform contracts. These configurations are not expected to change,
@@ -299,5 +346,110 @@ library DeploymentConfig {
         }
 
         revert("Unknown factory - no expected library addresses");
+    }
+
+    /// @dev Returns expected Safe infrastructure addresses based on which CREATE2 factory was used for deployment
+    /// @param factoryAddress The CREATE2 factory address used to deploy the Safe infrastructure
+    /// @return safeInfra Struct containing expected Safe infrastructure addresses
+    function getExpectedSafeInfrastructureAddresses(address factoryAddress)
+        internal
+        pure
+        returns (SafeInfrastructure memory safeInfra)
+    {
+        // Case: Arachnid Deterministic Deployment Proxy
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            safeInfra = SafeInfrastructure({
+                singletonAddress: ARACHNID_SAFE_SINGLETON_ADDRESS,
+                proxyFactoryAddress: ARACHNID_SAFE_PROXY_FACTORY_ADDRESS,
+                fallbackHandlerAddress: ARACHNID_SAFE_FALLBACK_HANDLER_ADDRESS,
+                multiSendAddress: ARACHNID_SAFE_MULTISEND_ADDRESS,
+                multiSendCallOnlyAddress: ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS,
+                createCallAddress: ARACHNID_SAFE_CREATE_CALL_ADDRESS,
+                simulateTxAccessorAddress: ARACHNID_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS
+            });
+            return safeInfra;
+        }
+
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            safeInfra = SafeInfrastructure({
+                singletonAddress: PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS,
+                proxyFactoryAddress: PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS,
+                fallbackHandlerAddress: PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS,
+                multiSendAddress: PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS,
+                multiSendCallOnlyAddress: PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS,
+                createCallAddress: PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS,
+                simulateTxAccessorAddress: PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS
+            });
+            return safeInfra;
+        }
+
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            safeInfra = SafeInfrastructure({
+                singletonAddress: NON_PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS,
+                proxyFactoryAddress: NON_PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS,
+                fallbackHandlerAddress: NON_PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS,
+                multiSendAddress: NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS,
+                multiSendCallOnlyAddress: NON_PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS,
+                createCallAddress: NON_PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS,
+                simulateTxAccessorAddress: NON_PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS
+            });
+            return safeInfra;
+        }
+
+        revert("Unknown factory - no expected Safe infrastructure addresses");
+    }
+
+    /// @dev Returns expected Guardian Safe address based on which CREATE2 factory was used for deployment
+    /// @param factoryAddress The CREATE2 factory address used to deploy the Safe
+    /// @return guardianSafeAddress The expected Guardian Safe address
+    function getExpectedGuardianSafeAddress(address factoryAddress)
+        internal
+        pure
+        returns (address guardianSafeAddress)
+    {
+        // Case: Arachnid Deterministic Deployment Proxy
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            return ARACHNID_GUARDIAN_SAFE_ADDRESS;
+        }
+
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            return PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS;
+        }
+
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            return NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS;
+        }
+
+        revert("Unknown factory - no expected Guardian Safe address");
+    }
+
+    /// @dev Returns expected Deployer Safe address based on which CREATE2 factory was used for deployment
+    /// @param factoryAddress The CREATE2 factory address used to deploy the Safe
+    /// @return deployerSafeAddress The expected Deployer Safe address
+    function getExpectedDeployerSafeAddress(address factoryAddress)
+        internal
+        pure
+        returns (address deployerSafeAddress)
+    {
+        // Case: Arachnid Deterministic Deployment Proxy
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            return ARACHNID_DEPLOYER_SAFE_ADDRESS;
+        }
+
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            return PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS;
+        }
+
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            return NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS;
+        }
+
+        revert("Unknown factory - no expected Deployer Safe address");
     }
 }

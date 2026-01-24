@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
@@ -172,42 +171,50 @@ contract DeployLibraries is Script {
         Logger.logIndented("  --broadcast \\");
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_POLICY_PATH,
-                ":",
-                Strings.toHexString(libs.policyAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_POLICY_PATH,
+                    ":",
+                    ScriptUtils.toHexString(libs.policyAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_ADMIN_PATH,
-                ":",
-                Strings.toHexString(libs.adminAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_ADMIN_PATH,
+                    ":",
+                    ScriptUtils.toHexString(libs.adminAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_INIT_PATH,
-                ":",
-                Strings.toHexString(libs.initializationAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_INIT_PATH,
+                    ":",
+                    ScriptUtils.toHexString(libs.initializationAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
-                ":",
-                Strings.toHexString(libs.accountSignatureAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
+                    ":",
+                    ScriptUtils.toHexString(libs.accountSignatureAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented("  -vvvv");

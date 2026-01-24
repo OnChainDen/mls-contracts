@@ -14,11 +14,14 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Networks](#networks)
    - [Signers](#signers)
    - [Factories](#factories)
-4. [Deployment Examples](#deployment-examples)
+4. [Safe 1.3.0 Deployment](#safe-130-deployment)
+   - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
+   - [Safe Deployment Commands](#safe-deployment-commands)
+5. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-5. [Verifying Deployments](#verifying-deployments)
-6. [Troubleshooting](#troubleshooting)
+6. [Verifying Deployments](#verifying-deployments)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -188,6 +191,98 @@ The `FACTORY` variable specifies which CREATE2 factory to use. Default is `arach
 
 ---
 
+## Safe 1.3.0 Deployment
+
+The platform uses Safe (Gnosis Safe) multisig wallets for the **Guardian Safe** and **Deployer Safe**. These Safes must be deployed before deploying the platform contracts.
+
+### Why Safe Uses a Separate Profile
+
+Safe 1.3.0 contracts were originally compiled with **Solidity 0.7.6**, and their official deployments use this compiler version. To ensure our Safe deployments produce **identical bytecode** (and therefore identical CREATE2 addresses) to the official Safe deployments, we compile Safe contracts with the same settings.
+
+However, our platform contracts use **Solidity 0.8.33**. Since Foundry can only use one Solidity version per compilation, we maintain a **separate Foundry profile** for Safe deployment:
+
+| Profile | Solidity Version | EVM Target | Purpose |
+|---------|------------------|------------|---------|
+| `default` | 0.8.33 | Paris | Platform contracts and libraries |
+| `safe` | 0.7.6 | Istanbul | Safe 1.3.0 infrastructure and multisigs |
+
+The Safe profile is defined in `foundry.toml` under `[profile.safe]`.
+
+### Safe Deployment Commands
+
+Safe deployment uses the `FOUNDRY_PROFILE=safe` environment variable internally, so you don't need to set it manually.
+
+#### Deploy Safe Infrastructure and Multisigs
+
+```bash
+# Deploy Safe to a local Anvil instance
+make deploy-safe ACCOUNT=my-deployer
+
+# Deploy Safe to Sepolia testnet
+make deploy-safe NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy Safe using Den non-prod factory
+make deploy-safe FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy Safe using a Ledger
+make deploy-safe NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+```
+
+This deploys:
+- **Safe Infrastructure**: GnosisSafe singleton, GnosisSafeProxyFactory, CompatibilityFallbackHandler, MultiSend, MultiSendCallOnly, CreateCall, SimulateTxAccessor
+- **Safe Multisigs**: Guardian Safe and Deployer Safe (configured per chain in `DeploymentConfig.sol`)
+
+#### Preview Safe Addresses (Dry Run)
+
+```bash
+# Simulate deployment without broadcasting transactions
+make deploy-safe-dry-run NETWORK=sepolia
+```
+
+#### Compute Expected Safe Addresses
+
+Preview the expected Safe addresses without deploying. This is useful for verifying addresses before deployment or updating configuration files.
+
+```bash
+# Compute addresses for Arachnid factory
+make compute-safe-addresses NETWORK=sepolia
+
+# Compute addresses for Den non-prod factory
+make compute-safe-addresses FACTORY=den-nonprod NETWORK=mainnet
+```
+
+### Safe Deployment Workflow
+
+Safe deployment only needs to happen **once per chain per factory**. After the first deployment:
+
+1. The deployed addresses are **hardcoded** in `DeploymentConfig.sol`
+2. The `DeployContracts.s.sol` script **verifies** that Safes are deployed before proceeding
+3. Running `deploy-safe` again will **skip** already-deployed contracts (idempotent)
+
+The full deployment order is:
+
+```
+1. Deploy CREATE2 Factory (if not already deployed)
+   └── make deploy-arachnid-factory  OR  make deploy-den-factory
+
+2. Deploy Safe Infrastructure and Multisigs
+   └── make deploy-safe
+
+3. Deploy Platform Libraries
+   └── make deploy-libraries
+
+4. Deploy Platform Contracts
+   └── make deploy-contracts
+```
+
+Or use the convenience target that runs steps 2-4:
+
+```bash
+make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
+```
+
+---
+
 ## Deployment Examples
 
 ### Example 1: Deploy via Arachnid Factory
@@ -237,12 +332,25 @@ make fund-arachnid-deployer ACCOUNT=$ACCOUNT
 make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
-# Step 4: Deploy platform libraries and contracts
+# Step 4: Deploy Safe infrastructure and multisigs
+# -----------------------------------------------------------------------------
+# Safe 1.3.0 must be deployed BEFORE platform contracts.
+# This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
+# Safe deployment is idempotent - it will skip already deployed contracts.
+
+make deploy-safe ACCOUNT=$ACCOUNT
+
+# -----------------------------------------------------------------------------
+# Step 5: Deploy platform libraries and contracts
 # -----------------------------------------------------------------------------
 # FACTORY=arachnid is the default, so we don't need to specify it
 # Libraries are deployed first, then contracts are deployed with library linking
 
-make deploy-platform ACCOUNT=$ACCOUNT
+make deploy-libraries ACCOUNT=$ACCOUNT
+make deploy-contracts ACCOUNT=$ACCOUNT
+
+# Or use the convenience target (includes Safe deployment):
+# make deploy-platform ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
 # Deployment complete!
@@ -304,13 +412,26 @@ cast rpc anvil_setBalance $DEN_DEPLOYER_ADDRESS 0xffffffffffffffffffffffffffffff
 make deploy-den-factory ACCOUNT=$DEN_DEPLOYER_ACCOUNT
 
 # -----------------------------------------------------------------------------
-# Step 4: Deploy platform libraries and contracts
+# Step 4: Deploy Safe infrastructure and multisigs
+# -----------------------------------------------------------------------------
+# Safe 1.3.0 must be deployed BEFORE platform contracts.
+# This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
+# IMPORTANT: Use FACTORY=den-nonprod to target the correct factory address.
+
+make deploy-safe ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+
+# -----------------------------------------------------------------------------
+# Step 5: Deploy platform libraries and contracts
 # -----------------------------------------------------------------------------
 # IMPORTANT: Use FACTORY=den-nonprod to:
 # - Target the correct factory address
 # - Use the correct library addresses (library addresses differ per factory)
 
-make deploy-platform ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-libraries ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-contracts ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+
+# Or use the convenience target (includes Safe deployment):
+# make deploy-platform ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
 # -----------------------------------------------------------------------------
 # Deployment complete!
@@ -395,6 +516,9 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `SENDER is required` | Set `SENDER=<your-address>` when using `SIGNER=ledger` |
 | `Invalid FACTORY value` | Use one of: `arachnid`, `den-prod`, `den-nonprod` |
 | Den factory library addresses are 0x0 | Library addresses for Den prod are not yet configured. Update `foundry.toml` after deploying. |
+| `Safe multisigs not deployed` | Run `make deploy-safe` before `make deploy-contracts`. Safe infrastructure must be deployed first. |
+| Safe compilation errors with 0.8.x | Safe deployment uses `FOUNDRY_PROFILE=safe` (Solidity 0.7.6). Use `make deploy-safe`, not direct `forge script`. |
+| Safe addresses differ from expected | Each CREATE2 factory produces different addresses. Ensure you're using the correct `FACTORY` value. |
 
 ---
 
@@ -408,9 +532,12 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
 | `make fund-den-deployer` | Fund a Den factory deployer (requires `DEN_DEPLOYER_ADDRESS`) |
 | `make deploy-den-factory` | Deploy the Den Singleton Factory |
+| `make deploy-safe` | Deploy Safe 1.3.0 infrastructure and multisigs |
+| `make deploy-safe-dry-run` | Simulate Safe deployment (no broadcast) |
+| `make compute-safe-addresses` | Preview expected Safe addresses |
 | `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
 | `make deploy-contracts` | Deploy all contracts with library linking |
-| `make deploy-platform` | Full deployment (libraries + contracts) |
+| `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
 | `make check-factory` | Check if a CREATE2 factory exists |
 | `make check-all-factories` | Check all factories on a network |
 | `make compute-lib-addresses` | Compute expected library addresses for a factory |
@@ -449,3 +576,37 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 **Den Prod Factory (`FACTORY=den-prod`):**
 
 *Library addresses not yet available. Update this section after deploying libraries via the production Den Singleton Factory.*
+
+### Safe Addresses by Factory
+
+**Arachnid Factory (`FACTORY=arachnid`):**
+
+| Contract | Address |
+|----------|---------|
+| GnosisSafe Singleton | `0x7A26cf6987d32BCa2Feda46910b4c79Bbf3FB174` |
+| GnosisSafeProxyFactory | `0x04acB79cD2c208Fc4B983d92971A41F709532Ff5` |
+| CompatibilityFallbackHandler | `0xBF32F3DCE01B6c67E454066f8969Deee79D74a55` |
+| MultiSend | `0xe0487528D742Bd9e6295AE6f3873175f032ba8f3` |
+| MultiSendCallOnly | `0xD5c219A054E9fBceD9D9493f546a7B4995101e4B` |
+| CreateCall | `0x7880435e91818C84bfAdC2f454B8A92942f7AcbD` |
+| SimulateTxAccessor | `0x205CeDEBdB936D473031f6140d50C11aeC948773` |
+| Guardian Safe | `0x6aCC5D703Fa6136Bc9305fa1cCEF87F7e1dDCA99` |
+| Deployer Safe | `0x53B78a4CeB12fB5cb48C8eEfcdAfd6a35F0a8246` |
+
+**Den Non-Prod Factory (`FACTORY=den-nonprod`):**
+
+| Contract | Address |
+|----------|---------|
+| GnosisSafe Singleton | `0x0c3254B2f12AbBC58A2104c432A943e22569Cfc2` |
+| GnosisSafeProxyFactory | `0xC31214e6950B6f29c038c705bBD7068a46406f82` |
+| CompatibilityFallbackHandler | `0x3B4c3b17F9d51B73a858A32324939bDcDCa497E4` |
+| MultiSend | `0xf3551E571f69Af6639344ADfB87BD7b6Ea2B0F0d` |
+| MultiSendCallOnly | `0x67e2AA5448B07839F9c2F4277b7DcB815738F0Bf` |
+| CreateCall | `0xFB84686A1bedc983ca8D47000104E354171E00f1` |
+| SimulateTxAccessor | `0x05E252D33237dCea27607D6F061AD501c35b214d` |
+| Guardian Safe | `0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb` |
+| Deployer Safe | `0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b` |
+
+**Den Prod Factory (`FACTORY=den-prod`):**
+
+*Safe addresses not yet available. Update this section after deploying Safe via the production Den Singleton Factory.*
