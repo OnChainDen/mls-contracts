@@ -157,48 +157,6 @@ contract SafeEOAExecutorModule {
         return (success, returnData);
     }
 
-    /**
-     * @notice Executes a transaction on behalf of the Safe and returns the result data
-     * @dev Same restrictions as executeOnBehalf, but returns call data
-     * @param to The target contract address
-     * @param data The calldata to execute
-     * @return success Whether the execution succeeded
-     * @return returnData The return data from the call
-     */
-    function executeOnBehalfWithReturn(
-        address to,
-        bytes calldata data
-    ) external returns (bool success, bytes memory returnData) {
-        // Only the authorized executor can call this function
-        if (msg.sender != authorizedExecutor) {
-            revert UnauthorizedCaller(msg.sender, authorizedExecutor);
-        }
-
-        // Cannot call the Safe itself
-        if (to == safe) {
-            revert CannotCallSafe(to);
-        }
-
-        // Cannot call this module
-        if (to == address(this)) {
-            revert CannotCallModule(to);
-        }
-
-        // Execute via Safe's execTransactionFromModuleReturnData
-        // Parameters: to, value (0), data, operation (0 = Call)
-        (success, returnData) = ISafe(safe).execTransactionFromModuleReturnData(
-            to,
-            0,      // value - always zero
-            data,
-            0       // operation - always Call
-        );
-
-        if (!success) {
-            revert ExecutionFailed();
-        }
-
-        return (success, returnData);
-    }
 }
 
 /// @notice Minimal interface for Safe module execution
@@ -209,13 +167,6 @@ interface ISafe {
         bytes memory data,
         uint8 operation
     ) external returns (bool success);
-
-    function execTransactionFromModuleReturnData(
-        address to,
-        uint256 value,
-        bytes memory data,
-        uint8 operation
-    ) external returns (bool success, bytes memory returnData);
 }
 ```
 
@@ -225,7 +176,7 @@ interface ISafe {
 |----------|-----------|
 | `immutable` for `safe` and `authorizedExecutor` | No admin functions needed; rotation requires new module deployment |
 | Custom errors instead of `require` strings | Gas efficient and provides better error context |
-| Two execution functions | `executeOnBehalf` for simple execution, `executeOnBehalfWithReturn` when return data is needed |
+| Single execution function | `executeOnBehalf` - simple and minimal; return data not needed for use cases |
 | No reentrancy guard | The module only calls the Safe, which handles its own reentrancy protection |
 | `0.8.33` compiler version | Matches platform contracts; enables compilation with default Foundry profile |
 
@@ -492,7 +443,6 @@ function setUp() public {
 | `test_executeOnBehalf_revertsUnauthorizedCaller` | Non-executor cannot call |
 | `test_executeOnBehalf_revertsCallToSafe` | Cannot call the Safe address |
 | `test_executeOnBehalf_revertsCallToModule` | Cannot call the module itself |
-| `test_executeOnBehalfWithReturn_returnsData` | Verify return data is passed through |
 
 #### Integration Tests
 
