@@ -559,19 +559,19 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 
 | Library | Address |
 |---------|---------|
-| LibOrganizationPolicy | `0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314` |
-| LibOrganizationAdmin | `0x744CaFa607273AF5664073d05BE066C6bDbf8201` |
-| LibOrganizationInitialization | `0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E` |
-| LibOrganizationAccountSignature | `0x6A6709A2c898E719A6Ee7635a3963122059655eB` |
+| LibOrganizationPolicy | `0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6` |
+| LibOrganizationAdmin | `0x8216540c25aD0Fc9F5C75F2b513d67ee09078568` |
+| LibOrganizationInitialization | `0x7624025fEcC583aDF57c6B51DBC69143A09bE935` |
+| LibOrganizationAccountSignature | `0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5` |
 
 **Den Non-Prod Factory (`FACTORY=den-nonprod`):**
 
 | Library | Address |
 |---------|---------|
-| LibOrganizationPolicy | `0x85c8b8410F0feeFd157496245c37d89F33985cC0` |
-| LibOrganizationAdmin | `0xCAE149fD735Cc65290e737BF06855Bba119b6082` |
-| LibOrganizationInitialization | `0x384803ADc053682c7f42270De5DF50d37c243913` |
-| LibOrganizationAccountSignature | `0xFcBDb3e95De055ac3BAedADA90894E5624Af1162` |
+| LibOrganizationPolicy | `0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd` |
+| LibOrganizationAdmin | `0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3` |
+| LibOrganizationInitialization | `0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78` |
+| LibOrganizationAccountSignature | `0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65` |
 
 **Den Prod Factory (`FACTORY=den-prod`):**
 
