@@ -199,37 +199,25 @@ This script deploys the SafeEOAExecutorModule via CREATE2 for deterministic addr
 ```solidity
 contract DeploySafeEOAExecutorModule is Script {
     /**
-     * @notice Deploy SafeEOAExecutorModules for both Guardian and Deployer Safes
-     * @dev Safe addresses and salts are retrieved from DeploymentConfig.sol based on factory
+     * @notice Deploy a SafeEOAExecutorModule for the specified Safe
+     * @dev Safe address and salt are retrieved from DeploymentConfig.sol based on factory and target
      * @param factoryAddress The CREATE2 factory to use
-     * @param executorAddress The authorized EOA (same for both modules)
-     */
-    function run(address factoryAddress, address executorAddress) external;
-
-    /**
-     * @notice Deploy only the Guardian Safe module
-     * @param factoryAddress The CREATE2 factory to use
+     * @param target "guardian" or "deployer" - which Safe to deploy the module for
      * @param executorAddress The authorized EOA
      */
-    function runGuardianOnly(address factoryAddress, address executorAddress) external;
+    function run(address factoryAddress, string calldata target, address executorAddress) external;
 
     /**
-     * @notice Deploy only the Deployer Safe module
-     * @param factoryAddress The CREATE2 factory to use
-     * @param executorAddress The authorized EOA
-     */
-    function runDeployerOnly(address factoryAddress, address executorAddress) external;
-
-    /**
-     * @notice Compute expected module addresses without deploying
+     * @notice Compute expected module address without deploying
      * @param factoryAddress The CREATE2 factory
+     * @param target "guardian" or "deployer"
      * @param executorAddress The authorized EOA
      */
-    function computeAddresses(address factoryAddress, address executorAddress) external view;
+    function computeAddress(address factoryAddress, string calldata target, address executorAddress) external view;
 }
 ```
 
-The script retrieves Safe addresses and salts from `DeploymentConfig.sol` based on the factory address, keeping the interface simple.
+The script retrieves Safe address and salt from `DeploymentConfig.sol` based on the factory and target, keeping the interface simple.
 
 #### Safety Checks (matching existing deployment scripts)
 
@@ -634,30 +622,27 @@ The Safe EOA Executor Module allows a designated EOA to execute contract calls o
 - **No calls to the Safe** - Prevents ownership/module changes
 - **No calls to the module** - Prevents self-modification
 
-### Deploying Modules
+### Deploying a Module
 
-Deploy the Guardian and Deployer Safe EOA Executor Modules:
+Deploy a SafeEOAExecutorModule for the Guardian or Deployer Safe:
 
 ```bash
-# Deploy both modules (Guardian and Deployer)
-make deploy-safe-modules \
+# Deploy module for Guardian Safe
+make deploy-safe-module \
+    TARGET=guardian \
     EXECUTOR=0xYourExecutorEOA \
     NETWORK=sepolia \
     ACCOUNT=my-deployer
 
-# Or deploy individually
-make deploy-guardian-safe-module \
+# Deploy module for Deployer Safe
+make deploy-safe-module \
+    TARGET=deployer \
     EXECUTOR=0xYourExecutorEOA \
     NETWORK=sepolia \
     ACCOUNT=my-deployer
 
-make deploy-deployer-safe-module \
-    EXECUTOR=0xYourExecutorEOA \
-    NETWORK=sepolia \
-    ACCOUNT=my-deployer
-
-# Compute expected addresses without deploying
-make compute-module-addresses EXECUTOR=0x...
+# Compute expected address without deploying
+make compute-module-address TARGET=guardian EXECUTOR=0x...
 ```
 
 ### Adding a Module to a Safe
@@ -706,7 +691,7 @@ To change the authorized executor, you must deploy a new module (with new salt v
 
 ```bash
 # Step 1: Update GUARDIAN_SAFE_EOA_MODULE_SALT to v2 in DeploymentConfig.sol, then:
-make deploy-guardian-safe-module EXECUTOR=0xNewEOA NETWORK=sepolia ACCOUNT=deployer
+make deploy-safe-module TARGET=guardian EXECUTOR=0xNewEOA NETWORK=sepolia ACCOUNT=deployer
 
 # Step 2: Add new module (TARGET=guardian uses the new v2 address from config)
 make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
@@ -727,59 +712,42 @@ Add new targets:
 # Safe EOA Executor Module Commands
 # ==============================================================================
 
-.PHONY: deploy-safe-modules deploy-guardian-safe-module deploy-deployer-safe-module
-.PHONY: deploy-safe-modules-dry-run compute-module-addresses
+.PHONY: deploy-safe-module deploy-safe-module-dry-run compute-module-address
 .PHONY: safe-add-module safe-remove-module safe-module-status
 
-# Deploy both Safe EOA Executor Modules (Guardian and Deployer)
-# Example: make deploy-safe-modules EXECUTOR=0x... NETWORK=sepolia ACCOUNT=deployer
-deploy-safe-modules: validate-signer-vars
+# Deploy Safe EOA Executor Module
+# TARGET: "guardian" or "deployer" - which Safe to deploy the module for
+# Example: make deploy-safe-module TARGET=guardian EXECUTOR=0x... NETWORK=sepolia ACCOUNT=deployer
+deploy-safe-module: validate-signer-vars
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
 ifndef EXECUTOR
 	$(error EXECUTOR is required. Set EXECUTOR=<executor-eoa-address>)
 endif
-	@echo "Deploying SafeEOAExecutorModules..."
+	@echo "Deploying SafeEOAExecutorModule..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Target: $(TARGET)"
 	@echo "  Executor: $(EXECUTOR)"
 	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
-		--sig "run(address,address)" $(FACTORY_ADDRESS) $(EXECUTOR) \
+		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
-# Deploy only Guardian Safe module
-deploy-guardian-safe-module: validate-signer-vars
+# Compute module address without deploying
+compute-module-address:
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
 ifndef EXECUTOR
 	$(error EXECUTOR is required. Set EXECUTOR=<executor-eoa-address>)
 endif
+	@echo "Computing SafeEOAExecutorModule address..."
 	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
-		--sig "runGuardianOnly(address,address)" $(FACTORY_ADDRESS) $(EXECUTOR) \
-		--rpc-url $(RPC_URL) \
-		$(SIGNER_FLAGS) \
-		--broadcast \
-		$(VERBOSITY)
-
-# Deploy only Deployer Safe module
-deploy-deployer-safe-module: validate-signer-vars
-ifndef EXECUTOR
-	$(error EXECUTOR is required. Set EXECUTOR=<executor-eoa-address>)
-endif
-	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
-		--sig "runDeployerOnly(address,address)" $(FACTORY_ADDRESS) $(EXECUTOR) \
-		--rpc-url $(RPC_URL) \
-		$(SIGNER_FLAGS) \
-		--broadcast \
-		$(VERBOSITY)
-
-# Compute module addresses without deploying
-compute-module-addresses:
-ifndef EXECUTOR
-	$(error EXECUTOR is required. Set EXECUTOR=<executor-eoa-address>)
-endif
-	@echo "Computing SafeEOAExecutorModule addresses..."
-	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
-		--sig "computeAddresses(address,address)" $(FACTORY_ADDRESS) $(EXECUTOR) \
+		--sig "computeAddress(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
 		--rpc-url $(RPC_URL)
 
 # Add module to Safe (onchain approval)
@@ -841,9 +809,9 @@ endif
 ### Phase 2: Module Deployment Script
 
 1. Create `script/safe-module/DeploySafeEOAExecutorModule.s.sol`
-2. Implement `run()`, `runGuardianOnly()`, `runDeployerOnly()` functions with all safety checks
+2. Implement `run()` function with TARGET parameter and all safety checks
 3. Implement `computeAddresses()` function
-4. Add Makefile targets: `deploy-safe-modules`, `deploy-guardian-safe-module`, `deploy-deployer-safe-module`, `compute-module-addresses`
+4. Add Makefile targets: `deploy-safe-module`, `compute-module-address`
 
 ### Phase 3: Safe Transaction Script
 
