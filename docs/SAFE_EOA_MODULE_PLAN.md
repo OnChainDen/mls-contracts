@@ -524,8 +524,9 @@ Verify the module cannot be used to call these Safe functions (by attempting cal
 
 Add new constants for module deployment. Following the existing pattern, we need:
 - 2 salt constants (Guardian and Deployer)
-- 6 address constants (2 modules × 3 factories: Arachnid, Den non-prod, Den prod)
-- Helper function to retrieve expected module addresses by factory
+- 4 authorized executor address constants (2 Safes × 2 environments: prod/non-prod)
+- 6 module address constants (2 modules × 3 factories: Arachnid, Den non-prod, Den prod)
+- Helper functions for validation and address retrieval
 
 ```solidity
 // ==================== Safe EOA Executor Module Salts ====================
@@ -537,6 +538,26 @@ bytes32 internal constant GUARDIAN_SAFE_EOA_MODULE_SALT =
 /// @dev Salt for Deployer Safe EOA Executor Module deployment
 bytes32 internal constant DEPLOYER_SAFE_EOA_MODULE_SALT =
     keccak256("den.mls-wallet.safe-module.eoa-executor.deployer.v1");
+
+// ==================== Safe EOA Executor Authorized Addresses ====================
+// These are the EOA addresses authorized to execute transactions via the modules.
+// The deployment script validates that the provided executor matches these addresses.
+
+/// @dev Non-production authorized executor for Guardian Safe module
+///      Foundry account name: "guardian-executor-nonprod"
+address internal constant NON_PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS = address(0); // TODO: Update after creating account
+
+/// @dev Production authorized executor for Guardian Safe module
+///      TODO: Update with production executor address before mainnet deployment
+address internal constant PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS = address(0);
+
+/// @dev Non-production authorized executor for Deployer Safe module
+///      Foundry account name: "deployer-executor-nonprod"
+address internal constant NON_PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS = address(0); // TODO: Update after creating account
+
+/// @dev Production authorized executor for Deployer Safe module
+///      TODO: Update with production executor address before mainnet deployment
+address internal constant PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS = address(0);
 
 // ==================== Safe EOA Executor Module Addresses ====================
 // Module addresses depend on which CREATE2 factory is used for deployment.
@@ -558,6 +579,37 @@ address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EOA_MODULE_ADDRESS 
 address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EOA_MODULE_ADDRESS = address(0);
 
 // ==================== Helper Functions ====================
+
+/// @dev Returns the expected authorized executor addresses based on chain ID
+/// @param chainId The target chain ID
+/// @return guardianExecutor Expected executor address for Guardian Safe module
+/// @return deployerExecutor Expected executor address for Deployer Safe module
+function getExpectedExecutorAddresses(uint256 chainId)
+    internal
+    pure
+    returns (address guardianExecutor, address deployerExecutor)
+{
+    if (isProductionChain(chainId)) {
+        return (PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS, PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS);
+    }
+    return (NON_PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS, NON_PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS);
+}
+
+/// @dev Validates that the provided executor address matches the expected address for the target
+/// @param chainId The target chain ID
+/// @param target "guardian" or "deployer"
+/// @param executorAddress The executor address to validate
+function validateExecutorAddress(uint256 chainId, string memory target, address executorAddress) internal pure {
+    (address expectedGuardian, address expectedDeployer) = getExpectedExecutorAddresses(chainId);
+
+    if (keccak256(bytes(target)) == keccak256("guardian")) {
+        require(executorAddress == expectedGuardian, "Invalid guardian executor address");
+    } else if (keccak256(bytes(target)) == keccak256("deployer")) {
+        require(executorAddress == expectedDeployer, "Invalid deployer executor address");
+    } else {
+        revert("Invalid target - must be 'guardian' or 'deployer'");
+    }
+}
 
 /// @dev Returns expected Safe EOA Executor Module addresses based on which CREATE2 factory was used
 /// @param factoryAddress The CREATE2 factory address used to deploy the modules
@@ -585,6 +637,27 @@ function getExpectedSafeEOAModuleAddresses(address factoryAddress)
 
     revert("Unknown factory - no expected Safe EOA module addresses");
 }
+```
+
+#### Foundry Account Names for Non-Production Executors
+
+For local testing and non-production deployments, create these Foundry managed accounts:
+
+| Account Name | Purpose |
+|--------------|---------|
+| `guardian-executor-nonprod` | Non-prod executor for Guardian Safe module |
+| `deployer-executor-nonprod` | Non-prod executor for Deployer Safe module |
+
+Create accounts with:
+```bash
+cast wallet import guardian-executor-nonprod --mnemonic "your mnemonic" --mnemonic-index <N>
+cast wallet import deployer-executor-nonprod --mnemonic "your mnemonic" --mnemonic-index <N+1>
+```
+
+Then update `DeploymentConfig.sol` with the addresses:
+```bash
+cast wallet address --account guardian-executor-nonprod
+cast wallet address --account deployer-executor-nonprod
 ```
 
 ### foundry.toml Updates
@@ -887,14 +960,10 @@ Deployment scripts use interactive input (confirmations, password prompts for Fo
 | Salt naming convention | `den.mls-wallet.safe-module.eoa-executor.guardian.v1` and `den.mls-wallet.safe-module.eoa-executor.deployer.v1` |
 | Module address tracking | Add to `DeploymentConfig.sol` with 3 sets of addresses (Arachnid, Den non-prod, Den prod) for both Guardian and Deployer modules |
 | Previous module query utility | Not needed - script computes it automatically |
+| Executor address configuration | Passed as script parameter, validated against hardcoded addresses in `DeploymentConfig.sol`. 4 addresses: prod/non-prod × guardian/deployer. Non-prod uses Foundry accounts `guardian-executor-nonprod` and `deployer-executor-nonprod`. |
 
 ---
 
 ## Open Questions
 
 1. **Gas Optimization:** The current design uses custom errors. Should we add `unchecked` blocks where safe (e.g., for the address comparisons)?
-
-2. **Authorized Executor Configuration:** Where will the authorized executor EOA addresses be configured? Options:
-   - Hardcoded in `DeploymentConfig.sol` (like Safe owner addresses)
-   - Passed as command-line arguments to the deployment script
-   - Environment variables
