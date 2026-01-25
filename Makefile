@@ -216,7 +216,7 @@ VERBOSITY ?= -vvvv
 ARACHNID_FACTORY_ADDRESS := 0x4e59b44847b379578588920cA78FbF26c0B4956C
 # TODO: Fill in after deploying Den Singleton Factory from prod deployer
 DEN_PROD_FACTORY_ADDRESS := 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
-DEN_NONPROD_FACTORY_ADDRESS := 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db
+DEN_NONPROD_FACTORY_ADDRESS := 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5
 
 # Arachnid deployer address (for funding)
 ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
@@ -248,17 +248,16 @@ endif
 # ------------------------------------------------------------------------------
 # Auto-derive SENDER from ACCOUNT (for Foundry managed accounts)
 # If ACCOUNT is provided but SENDER is not, derive it using cast wallet address.
-# User will be prompted for their keystore password.
-# Uses deferred evaluation (=) so the shell command only runs when SENDER is needed.
+# Uses immediate evaluation (:=) so the shell command only runs once.
 # ------------------------------------------------------------------------------
 ifdef ACCOUNT
     ifndef SENDER
-        SENDER = $(shell \
+        SENDER := $(shell \
             echo "" >&2 && \
             echo "========================================" >&2 && \
             echo "Deriving address for account: $(ACCOUNT)" >&2 && \
             echo "Enter your keystore password below." >&2 && \
-            echo "(This is to get the --sender address, not to broadcast transactions)" >&2 && \
+            echo "(This is for --sender flag, not to broadcast)" >&2 && \
             echo "========================================" >&2 && \
             cast wallet address --account $(ACCOUNT))
     endif

@@ -109,10 +109,10 @@ libraries = [
 [profile.den-nonprod]
 libraries = [
     # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65"
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x9F660541d484d72d411891C815FaCeF2f7271C08",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x7ADeaC98946A0770878328eD9f9F137A04fb6329",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x901dF40d912B9764725124A9b435E11a36769269",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xbc6B9b3DcEA1e7bDF4244d3b27C3c34188Ed52b2"
 ]
 
 # ==============================================================================

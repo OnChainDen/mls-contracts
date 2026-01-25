@@ -95,10 +95,12 @@ library DeploymentConfig {
     address internal constant PROD_DEN_SINGLETON_FACTORY_ADDRESS = address(0);
 
     /// @dev Non-production Den Singleton Factory deployer address
-    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS = 0x22002e8661A780d61EF4c86F4a9fFa843A6fea20;
+    ///      For local/testnet testing, use the test-den-factory-deployer foundry account
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS = 0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328;
 
     /// @dev Expected Den Singleton Factory address for non-production deployments
-    address internal constant NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db;
+    ///      Computed from NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0
+    address internal constant NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5;
 
     // ==================== Hardcoded Library Paths ====================
     // These are the hardcoded paths for the platform libraries that are used when deploying contracts that
@@ -158,11 +160,11 @@ library DeploymentConfig {
     /// @dev Expected library addresses when deployed via Non-Production Den Singleton Factory
     ///      TODO: Update these addresses after making changes to library source code and deploying
     ///      libraries via non-prod Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x9F660541d484d72d411891C815FaCeF2f7271C08;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0x7ADeaC98946A0770878328eD9f9F137A04fb6329;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0x901dF40d912B9764725124A9b435E11a36769269;
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
-        0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65;
+        0xbc6B9b3DcEA1e7bDF4244d3b27C3c34188Ed52b2;
 
     // ==================== Hardcoded Safe 1.3.0 Infrastructure Addresses ====================
     // These are the expected deployment addresses for Safe 1.3.0 infrastructure contracts when deployed
@@ -180,8 +182,8 @@ library DeploymentConfig {
     address internal constant ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0xD5c219A054E9fBceD9D9493f546a7B4995101e4B;
     address internal constant ARACHNID_SAFE_CREATE_CALL_ADDRESS = 0x7880435e91818C84bfAdC2f454B8A92942f7AcbD;
     address internal constant ARACHNID_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS = 0x205CeDEBdB936D473031f6140d50C11aeC948773;
-    address internal constant ARACHNID_GUARDIAN_SAFE_ADDRESS = 0x6aCC5D703Fa6136Bc9305fa1cCEF87F7e1dDCA99;
-    address internal constant ARACHNID_DEPLOYER_SAFE_ADDRESS = 0x53B78a4CeB12fB5cb48C8eEfcdAfd6a35F0a8246;
+    address internal constant ARACHNID_GUARDIAN_SAFE_ADDRESS = 0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305;
+    address internal constant ARACHNID_DEPLOYER_SAFE_ADDRESS = 0x84246979f1678Cc3c5949106B958275aA15B807e;
 
     /// @dev Expected Safe infrastructure addresses when deployed via Production Den Singleton Factory
     ///      TODO: Update these addresses after deploying Safe 1.3.0 via prod Den Singleton Factory
@@ -196,20 +198,15 @@ library DeploymentConfig {
     address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = address(0);
 
     /// @dev Expected Safe infrastructure addresses when deployed via Non-Production Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS = 0x0c3254B2f12AbBC58A2104c432A943e22569Cfc2;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS =
-        0xC31214e6950B6f29c038c705bBD7068a46406f82;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS =
-        0x3B4c3b17F9d51B73a858A32324939bDcDCa497E4;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = 0xf3551E571f69Af6639344ADfB87BD7b6Ea2B0F0d;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS =
-        0x67e2AA5448B07839F9c2F4277b7DcB815738F0Bf;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS =
-        0xFB84686A1bedc983ca8D47000104E354171E00f1;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS =
-        0x05E252D33237dCea27607D6F061AD501c35b214d;
-    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = 0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb;
-    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = 0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS = 0x9732b61234C43C49B98812E09D81D433b7789b25;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS = 0x400F1f8fC868476bAb030909F049a70074570c7e;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS = 0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = 0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0x73D5641c3d1E6c53bDa6D06231Cbd7b3A43F391B;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS = 0x619B2299DD5C77DF72AE1a8a70885D89E423B382;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS = 0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d;
+    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = 0x4fbeF24b88228A6639409150214bb5A798930fA9;
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = 0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f;
 
     // ==================== Hardcoded Safe Executor Module Addresses ====================
     // These are the expected deployment addresses for Safe Executor Modules when deployed via CREATE2
@@ -220,9 +217,8 @@ library DeploymentConfig {
     // ==============================================================================
 
     /// @dev Expected module addresses when deployed via Arachnid Deterministic Deployment Proxy
-    ///      TODO: Update after deploying modules via Arachnid factory
-    address internal constant ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
-    address internal constant ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+    address internal constant ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = 0x922B1C473CbF70651D132998668c9e802C81b4e4;
+    address internal constant ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = 0x44b5FDbEbd206BdfA2ADd953beeF1c208460E6a1;
 
     /// @dev Expected module addresses when deployed via Production Den Singleton Factory
     ///      TODO: Update after deploying modules via prod Den Singleton Factory
@@ -230,9 +226,8 @@ library DeploymentConfig {
     address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
 
     /// @dev Expected module addresses when deployed via Non-Production Den Singleton Factory
-    ///      TODO: Update after deploying modules via non-prod Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
-    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = 0x53CF94351bFF5E3CA989a0D711Acf9b4E1ea8039;
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = 0x301A7750811D672C14c367c94163f06DfCA761A8;
 
     // ==================== Hardcoded Safe Executor EOA Addresses ====================
     // These are the EOA addresses (Safe Executor EOAs) authorized to execute transactions via the
@@ -245,7 +240,8 @@ library DeploymentConfig {
     /// @dev Non-production Safe Executor EOA for Guardian Safe module
     ///      Foundry account name: "guardian-executor-nonprod"
     ///      TODO: Update after creating the Foundry managed account
-    address internal constant NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
+    /// @dev For local/testnet testing, use the test-guardian-executor foundry account
+    address internal constant NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS = 0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1;
 
     /// @dev Production Safe Executor EOA for Guardian Safe module
     ///      TODO: Update with production Safe Executor EOA address before mainnet deployment
@@ -254,7 +250,8 @@ library DeploymentConfig {
     /// @dev Non-production Safe Executor EOA for Deployer Safe module
     ///      Foundry account name: "deployer-executor-nonprod"
     ///      TODO: Update after creating the Foundry managed account
-    address internal constant NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
+    /// @dev For local/testnet testing, use the test-deployer-executor foundry account
+    address internal constant NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS = 0xBd7DF30E88C5C7fD54F2Ac77a1302581d577E0Fd;
 
     /// @dev Production Safe Executor EOA for Deployer Safe module
     ///      TODO: Update with production Safe Executor EOA address before mainnet deployment
@@ -284,14 +281,16 @@ library DeploymentConfig {
     /// @dev Production Deployer Safe signature threshold
     uint256 internal constant PROD_DEPLOYER_SAFE_THRESHOLD = 2;
 
-    /// @dev Non-production Guardian Safe owner addresses (placeholder - replace before deploying)
-    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328);
+    /// @dev Non-production Guardian Safe owner address
+    ///      For local/testnet testing, use the test-guardian-safe-owner foundry account
+    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0x22002e8661A780d61EF4c86F4a9fFa843A6fea20);
 
     /// @dev Non-production Guardian Safe signature threshold
     uint256 internal constant NON_PROD_GUARDIAN_SAFE_THRESHOLD = 1;
 
-    /// @dev Non-production Deployer Safe owner addresses (placeholder - replace before deploying)
-    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x901CAb5Fdb93571F0f6Cd6D643F8b2532f00d2A3);
+    /// @dev Non-production Deployer Safe owner address
+    ///      For local/testnet testing, use the test-deployer-safe-owner foundry account
+    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x8DA06Ab9bBb0736d36c92E10B1d6e23A890FD32F);
 
     /// @dev Non-production Deployer Safe signature threshold
     uint256 internal constant NON_PROD_DEPLOYER_SAFE_THRESHOLD = 1;
