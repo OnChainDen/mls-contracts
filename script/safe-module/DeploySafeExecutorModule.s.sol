@@ -3,20 +3,21 @@ pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 
-import {SafeEOAExecutorModule} from "../../src/safe-module/SafeEOAExecutorModule.sol";
+import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
- * @title DeploySafeEOAExecutorModule
- * @notice Deploys a SafeEOAExecutorModule for the Guardian or Deployer Safe via CREATE2
- * @dev This script deploys a minimal Safe module that allows a designated EOA to execute
- *      contract calls on behalf of a Safe multisig.
+ * @title DeploySafeExecutorModule
+ * @notice Deploys a SafeExecutorModule for the Guardian or Deployer Safe via CREATE2
+ * @dev This script deploys a minimal Safe module that allows a designated EOA (the "Safe Executor EOA")
+ *      to execute contract calls on behalf of a Safe multisig.
  *
  *      Usage:
- *        forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
+ *        forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
  *          --sig "run(address,string,address)" <FACTORY_ADDRESS> <TARGET> <EXECUTOR_ADDRESS> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
@@ -25,7 +26,7 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory to use (Arachnid or Den Singleton Factory)
  *        - TARGET: "guardian" or "deployer" - which Safe to deploy the module for
- *        - EXECUTOR_ADDRESS: The EOA that will be authorized to execute transactions
+ *        - EXECUTOR_ADDRESS: The Safe Executor EOA that will be authorized to execute transactions
  *
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory address is not zero
@@ -38,12 +39,12 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeploySafeEOAExecutorModule is Script {
+contract DeploySafeExecutorModule is Script {
     /**
-     * @notice Main entry point - deploys a SafeEOAExecutorModule via CREATE2
+     * @notice Main entry point - deploys a SafeExecutorModule via CREATE2
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
      * @param target "guardian" or "deployer" - which Safe to deploy the module for
-     * @param executorAddress The EOA that will be authorized to execute transactions
+     * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
     function run(address factoryAddress, string calldata target, address executorAddress) external {
         // Validate the provided CREATE2 factory address
@@ -57,26 +58,26 @@ contract DeploySafeEOAExecutorModule is Script {
 
         // Validate executor address matches expected configuration
         require(executorAddress != address(0), "Executor address cannot be zero");
-        DeploymentConfig.validateExecutorAddressOrRevert(block.chainid, isGuardian, executorAddress);
+        _validateExecutorAddressOrRevert(block.chainid, isGuardian, executorAddress);
 
         // Get the Safe address for this target
         address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed at expected address");
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeEOAExecutorModule");
+        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeExecutorModule");
 
         // Prevent using the production Den Factory deployer for this script
         Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
-        Logger.logBoxHeader("Safe EOA Executor Module Deployment");
+        Logger.logBoxHeader("Safe Executor Module Deployment");
         Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Target", target);
         Logger.logKeyValue("Safe Address", safeAddress);
-        Logger.logKeyValue("Executor Address", executorAddress);
+        Logger.logKeyValue("Safe Executor EOA", executorAddress);
         Logger.logEmptyLine();
 
         // Start broadcasting transactions
@@ -91,7 +92,7 @@ contract DeploySafeEOAExecutorModule is Script {
         // Log the result
         Logger.logDeploymentComplete();
         Logger.logBoxHeader("Deployed Module Address");
-        Logger.logKeyValue("SafeEOAExecutorModule", moduleAddress);
+        Logger.logKeyValue("SafeExecutorModule", moduleAddress);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
 
@@ -103,7 +104,7 @@ contract DeploySafeEOAExecutorModule is Script {
      * @notice Compute and print module address without deploying
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      * @param target "guardian" or "deployer" - which Safe to compute the module address for
-     * @param executorAddress The EOA that will be authorized to execute transactions
+     * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
     function computeAddress(address factoryAddress, string calldata target, address executorAddress) external view {
         // Validate the provided CREATE2 factory address
@@ -127,12 +128,12 @@ contract DeploySafeEOAExecutorModule is Script {
         address expectedAddress = Create2Utils.computeAddress(factoryAddress, salt, initCode);
 
         // Log the computed address
-        Logger.logBoxHeader("Computed SafeEOAExecutorModule Address");
+        Logger.logBoxHeader("Computed SafeExecutorModule Address");
         Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logKeyValue("Target", target);
         Logger.logKeyValue("Safe Address", safeAddress);
-        Logger.logKeyValue("Executor Address", executorAddress);
+        Logger.logKeyValue("Safe Executor EOA", executorAddress);
         Logger.logEmptyLine();
         Logger.logKeyValue("Expected Module Address", expectedAddress);
 
@@ -145,6 +146,17 @@ contract DeploySafeEOAExecutorModule is Script {
 
         Logger.logEmptyLine();
         Logger.logBoxFooter();
+    }
+
+    /// @dev Validates that the provided executor address matches the expected address for the target
+    /// @param chainId The target chain ID
+    /// @param isGuardian True if validating for Guardian Safe, false for Deployer Safe
+    /// @param executorAddress The executor address to validate
+    function _validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal pure {
+        (address expectedGuardian, address expectedDeployer) = DeploymentConfig.getExpectedExecutorEOAAddresses(chainId);
+
+        address expected = isGuardian ? expectedGuardian : expectedDeployer;
+        require(executorAddress == expected, "Invalid executor address for target");
     }
 
     /// @dev Validates and parses the target string
@@ -177,24 +189,24 @@ contract DeploySafeEOAExecutorModule is Script {
     /// @return salt The CREATE2 salt
     function _getSalt(bool isGuardian) internal pure returns (bytes32 salt) {
         if (isGuardian) {
-            return DeploymentConfig.GUARDIAN_SAFE_EOA_MODULE_SALT;
+            return DeploymentConfig.GUARDIAN_SAFE_EXECUTOR_MODULE_SALT;
         }
-        return DeploymentConfig.DEPLOYER_SAFE_EOA_MODULE_SALT;
+        return DeploymentConfig.DEPLOYER_SAFE_EXECUTOR_MODULE_SALT;
     }
 
     /// @dev Constructs the init code for the module deployment
     /// @param safeAddress The Safe address
-    /// @param executorAddress The authorized executor address
+    /// @param executorAddress The Safe Executor EOA address
     /// @return initCode The init code (creation code + constructor args)
     function _getInitCode(address safeAddress, address executorAddress) internal pure returns (bytes memory initCode) {
-        return abi.encodePacked(type(SafeEOAExecutorModule).creationCode, abi.encode(safeAddress, executorAddress));
+        return abi.encodePacked(type(SafeExecutorModule).creationCode, abi.encode(safeAddress, executorAddress));
     }
 
-    /// @dev Deploys the SafeEOAExecutorModule via CREATE2
+    /// @dev Deploys the SafeExecutorModule via CREATE2
     /// @param factoryAddress The CREATE2 factory address
     /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
     /// @param safeAddress The Safe address
-    /// @param executorAddress The authorized executor address
+    /// @param executorAddress The Safe Executor EOA address
     /// @return moduleAddress The deployed module address
     function _deployModule(address factoryAddress, bool isGuardian, address safeAddress, address executorAddress)
         internal
@@ -202,9 +214,9 @@ contract DeploySafeEOAExecutorModule is Script {
     {
         bytes32 salt = _getSalt(isGuardian);
         bytes memory initCode = _getInitCode(safeAddress, executorAddress);
-        string memory name = isGuardian ? "Guardian SafeEOAExecutorModule" : "Deployer SafeEOAExecutorModule";
+        string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
 
-        Logger.logSection("SafeEOAExecutorModule (CREATE2)");
+        Logger.logSection("SafeExecutorModule (CREATE2)");
 
         (moduleAddress,) = Create2Utils.deployIfNotExists(factoryAddress, salt, initCode, name);
 
@@ -227,24 +239,9 @@ contract DeploySafeEOAExecutorModule is Script {
             )
         );
         Logger.logEmptyLine();
-        Logger.logIndented(string(abi.encodePacked("Safe: ", _addressToString(safeAddress))));
-        Logger.logIndented(string(abi.encodePacked("Module: ", _addressToString(moduleAddress))));
+        Logger.logIndented(string(abi.encodePacked("Safe: ", StringUtils.toHexString(safeAddress))));
+        Logger.logIndented(string(abi.encodePacked("Module: ", StringUtils.toHexString(moduleAddress))));
         Logger.logEmptyLine();
         Logger.logBoxFooter();
-    }
-
-    /// @dev Converts an address to a hex string
-    /// @param addr The address to convert
-    /// @return The hex string representation
-    function _addressToString(address addr) internal pure returns (string memory) {
-        bytes memory alphabet = "0123456789abcdef";
-        bytes memory str = new bytes(42);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint256 i = 0; i < 20; i++) {
-            str[2 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i)) >> 4) & 0xf];
-            str[3 + i * 2] = alphabet[uint8(uint160(addr) >> (8 * (19 - i))) & 0xf];
-        }
-        return string(str);
     }
 }

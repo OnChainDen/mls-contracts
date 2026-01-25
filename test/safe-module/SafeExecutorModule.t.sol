@@ -3,11 +3,11 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
-import {SafeEOAExecutorModule} from "../../src/safe-module/SafeEOAExecutorModule.sol";
+import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 
 /**
  * @title MockSafe
- * @notice A mock Safe contract for testing the SafeEOAExecutorModule
+ * @notice A mock Safe contract for testing the SafeExecutorModule
  * @dev Implements only the execTransactionFromModule function needed for testing.
  *      Tracks calls for verification and allows configuring success/failure responses.
  */
@@ -102,8 +102,8 @@ contract MockTarget {
 }
 
 /**
- * @title SafeEOAExecutorModuleTest
- * @notice Comprehensive tests for the SafeEOAExecutorModule contract
+ * @title SafeExecutorModuleTest
+ * @notice Comprehensive tests for the SafeExecutorModule contract
  * @dev Tests cover:
  *      - Constructor validation and initialization
  *      - Authorization checks
@@ -113,10 +113,10 @@ contract MockTarget {
  *
  * @author Den Technologies Inc
  */
-contract SafeEOAExecutorModuleTest is Test {
+contract SafeExecutorModuleTest is Test {
     MockSafe public mockSafe;
     MockTarget public mockTarget;
-    SafeEOAExecutorModule public module;
+    SafeExecutorModule public module;
 
     address public authorizedExecutor;
     address public unauthorizedUser;
@@ -132,7 +132,7 @@ contract SafeEOAExecutorModuleTest is Test {
         mockTarget = new MockTarget();
 
         // Deploy the module
-        module = new SafeEOAExecutorModule(address(mockSafe), authorizedExecutor);
+        module = new SafeExecutorModule(address(mockSafe), authorizedExecutor);
     }
 
     // ============================================================
@@ -140,23 +140,23 @@ contract SafeEOAExecutorModuleTest is Test {
     // ============================================================
 
     function test_constructor_setsImmutables() public view {
-        assertEq(module.safe(), address(mockSafe), "Safe address should be set correctly");
-        assertEq(module.authorizedExecutor(), authorizedExecutor, "Executor address should be set correctly");
+        assertEq(module.SAFE(), address(mockSafe), "Safe address should be set correctly");
+        assertEq(module.AUTHORIZED_EXECUTOR(), authorizedExecutor, "Executor address should be set correctly");
     }
 
     function test_constructor_revertsOnZeroSafe() public {
-        vm.expectRevert("Safe address cannot be zero");
-        new SafeEOAExecutorModule(address(0), authorizedExecutor);
+        vm.expectRevert(SafeExecutorModule.SafeAddressCannotBeZero.selector);
+        new SafeExecutorModule(address(0), authorizedExecutor);
     }
 
     function test_constructor_revertsOnZeroExecutor() public {
-        vm.expectRevert("Executor address cannot be zero");
-        new SafeEOAExecutorModule(address(mockSafe), address(0));
+        vm.expectRevert(SafeExecutorModule.ExecutorAddressCannotBeZero.selector);
+        new SafeExecutorModule(address(mockSafe), address(0));
     }
 
     function test_constructor_revertsOnBothZero() public {
-        vm.expectRevert("Safe address cannot be zero");
-        new SafeEOAExecutorModule(address(0), address(0));
+        vm.expectRevert(SafeExecutorModule.SafeAddressCannotBeZero.selector);
+        new SafeExecutorModule(address(0), address(0));
     }
 
     // ============================================================
@@ -168,9 +168,7 @@ contract SafeEOAExecutorModuleTest is Test {
 
         vm.prank(unauthorizedUser);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                SafeEOAExecutorModule.UnauthorizedCaller.selector, unauthorizedUser, authorizedExecutor
-            )
+            abi.encodeWithSelector(SafeExecutorModule.UnauthorizedCaller.selector, unauthorizedUser, authorizedExecutor)
         );
         module.executeOnBehalf(address(mockTarget), data);
     }
@@ -198,7 +196,7 @@ contract SafeEOAExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("newOwner"), 2);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeEOAExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
     }
 
@@ -207,7 +205,7 @@ contract SafeEOAExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeEOAExecutorModule.CannotCallModule.selector, address(module)));
+        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallModule.selector, address(module)));
         module.executeOnBehalf(address(module), data);
     }
 
@@ -244,7 +242,7 @@ contract SafeEOAExecutorModuleTest is Test {
         mockSafe.setFailMode(true);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(SafeEOAExecutorModule.ExecutionFailed.selector);
+        vm.expectRevert(SafeExecutorModule.ExecutionFailed.selector);
         module.executeOnBehalf(address(mockTarget), data);
     }
 
@@ -331,7 +329,7 @@ contract SafeEOAExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("newOwner"), 2);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeEOAExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
     }
 
@@ -339,7 +337,7 @@ contract SafeEOAExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockSafe.enableModule.selector, makeAddr("newModule"));
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeEOAExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
     }
 
@@ -384,9 +382,9 @@ contract SafeEOAExecutorModuleTest is Test {
         vm.assume(safe != address(0));
         vm.assume(executor != address(0));
 
-        SafeEOAExecutorModule newModule = new SafeEOAExecutorModule(safe, executor);
+        SafeExecutorModule newModule = new SafeExecutorModule(safe, executor);
 
-        assertEq(newModule.safe(), safe, "Safe should be set");
-        assertEq(newModule.authorizedExecutor(), executor, "Executor should be set");
+        assertEq(newModule.SAFE(), safe, "Safe should be set");
+        assertEq(newModule.AUTHORIZED_EXECUTOR(), executor, "Executor should be set");
     }
 }

@@ -69,12 +69,12 @@ library DeploymentConfig {
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
 
-    /// @dev Salt for Guardian Safe EOA Executor Module deployment
-    bytes32 internal constant GUARDIAN_SAFE_EOA_MODULE_SALT =
+    /// @dev Salt for Guardian Safe Executor Module deployment
+    bytes32 internal constant GUARDIAN_SAFE_EXECUTOR_MODULE_SALT =
         keccak256("den.mls-wallet.safe-module.eoa-executor.guardian.v1");
 
-    /// @dev Salt for Deployer Safe EOA Executor Module deployment
-    bytes32 internal constant DEPLOYER_SAFE_EOA_MODULE_SALT =
+    /// @dev Salt for Deployer Safe Executor Module deployment
+    bytes32 internal constant DEPLOYER_SAFE_EXECUTOR_MODULE_SALT =
         keccak256("den.mls-wallet.safe-module.eoa-executor.deployer.v1");
 
     // ==================== Hardcoded CREATE2 Factory and Deployer Addresses =====================
@@ -211,8 +211,8 @@ library DeploymentConfig {
     address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = 0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb;
     address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = 0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b;
 
-    // ==================== Hardcoded Safe EOA Executor Module Addresses ====================
-    // These are the expected deployment addresses for Safe EOA Executor modules when deployed via CREATE2
+    // ==================== Hardcoded Safe Executor Module Addresses ====================
+    // These are the expected deployment addresses for Safe Executor Modules when deployed via CREATE2
     // using the specified factory. Addresses differ based on which factory is used because the
     // factory address is part of the CREATE2 address computation.
     //
@@ -221,43 +221,44 @@ library DeploymentConfig {
 
     /// @dev Expected module addresses when deployed via Arachnid Deterministic Deployment Proxy
     ///      TODO: Update after deploying modules via Arachnid factory
-    address internal constant ARACHNID_GUARDIAN_SAFE_EOA_MODULE_ADDRESS = address(0);
-    address internal constant ARACHNID_DEPLOYER_SAFE_EOA_MODULE_ADDRESS = address(0);
+    address internal constant ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+    address internal constant ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
 
     /// @dev Expected module addresses when deployed via Production Den Singleton Factory
     ///      TODO: Update after deploying modules via prod Den Singleton Factory
-    address internal constant PROD_DEN_FACTORY_GUARDIAN_SAFE_EOA_MODULE_ADDRESS = address(0);
-    address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_EOA_MODULE_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
 
     /// @dev Expected module addresses when deployed via Non-Production Den Singleton Factory
     ///      TODO: Update after deploying modules via non-prod Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EOA_MODULE_ADDRESS = address(0);
-    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EOA_MODULE_ADDRESS = address(0);
+    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
 
-    // ==================== Hardcoded Safe EOA Executor Authorized Addresses ====================
-    // These are the EOA addresses authorized to execute transactions via the Safe EOA Executor modules.
-    // The deployment script validates that the provided executor matches these addresses.
+    // ==================== Hardcoded Safe Executor EOA Addresses ====================
+    // These are the EOA addresses (Safe Executor EOAs) authorized to execute transactions via the
+    // Safe Executor Modules. The deployment script validates that the provided executor matches
+    // these addresses.
     //
     // IMPORTANT: These addresses must be updated before deploying modules.
     // ==============================================================================
 
-    /// @dev Non-production authorized executor for Guardian Safe module
+    /// @dev Non-production Safe Executor EOA for Guardian Safe module
     ///      Foundry account name: "guardian-executor-nonprod"
     ///      TODO: Update after creating the Foundry managed account
-    address internal constant NON_PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS = address(0);
+    address internal constant NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
 
-    /// @dev Production authorized executor for Guardian Safe module
-    ///      TODO: Update with production executor address before mainnet deployment
-    address internal constant PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS = address(0);
+    /// @dev Production Safe Executor EOA for Guardian Safe module
+    ///      TODO: Update with production Safe Executor EOA address before mainnet deployment
+    address internal constant PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
 
-    /// @dev Non-production authorized executor for Deployer Safe module
+    /// @dev Non-production Safe Executor EOA for Deployer Safe module
     ///      Foundry account name: "deployer-executor-nonprod"
     ///      TODO: Update after creating the Foundry managed account
-    address internal constant NON_PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS = address(0);
+    address internal constant NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
 
-    /// @dev Production authorized executor for Deployer Safe module
-    ///      TODO: Update with production executor address before mainnet deployment
-    address internal constant PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS = address(0);
+    /// @dev Production Safe Executor EOA for Deployer Safe module
+    ///      TODO: Update with production Safe Executor EOA address before mainnet deployment
+    address internal constant PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
 
     // ==================== Hardcoded Guardian Safe Multisig Configurations =====================
     // These are the hardcoded multisig configurations for the Guardian Safe and Deployer Safe.
@@ -509,63 +510,54 @@ library DeploymentConfig {
         revert("Unknown factory - no expected Deployer Safe address");
     }
 
-    /// @dev Returns expected Safe EOA Executor Module addresses based on which CREATE2 factory was used
+    /// @dev Returns expected Safe Executor Module addresses based on which CREATE2 factory was used
     /// @param factoryAddress The CREATE2 factory address used to deploy the modules
-    /// @return guardianModuleAddress Expected Guardian Safe module address
-    /// @return deployerModuleAddress Expected Deployer Safe module address
-    function getExpectedSafeEOAModuleAddresses(address factoryAddress)
+    /// @return guardianModuleAddress Expected Guardian Safe Executor Module address
+    /// @return deployerModuleAddress Expected Deployer Safe Executor Module address
+    function getExpectedSafeExecutorModuleAddresses(address factoryAddress)
         internal
         pure
         returns (address guardianModuleAddress, address deployerModuleAddress)
     {
         // Case: Arachnid Deterministic Deployment Proxy
         if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
-            return (ARACHNID_GUARDIAN_SAFE_EOA_MODULE_ADDRESS, ARACHNID_DEPLOYER_SAFE_EOA_MODULE_ADDRESS);
+            return (ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS, ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS);
         }
 
         // Case: Production Den Singleton Factory
         if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
-            return
-                (PROD_DEN_FACTORY_GUARDIAN_SAFE_EOA_MODULE_ADDRESS, PROD_DEN_FACTORY_DEPLOYER_SAFE_EOA_MODULE_ADDRESS);
+            return (
+                PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS,
+                PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS
+            );
         }
 
         // Case: Non-Production Den Singleton Factory
         if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
             return (
-                NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EOA_MODULE_ADDRESS,
-                NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EOA_MODULE_ADDRESS
+                NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS,
+                NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS
             );
         }
 
-        revert("Unknown factory - no expected Safe EOA module addresses");
+        revert("Unknown factory - no expected Safe Executor Module addresses");
     }
 
-    /// @dev Returns the expected authorized executor addresses based on chain ID
+    /// @dev Returns the expected Safe Executor EOA addresses based on chain ID
     /// @param chainId The target chain ID
-    /// @return guardianExecutor Expected executor address for Guardian Safe module
-    /// @return deployerExecutor Expected executor address for Deployer Safe module
-    function getExpectedExecutorAddresses(uint256 chainId)
+    /// @return guardianExecutor Expected Safe Executor EOA address for Guardian Safe module
+    /// @return deployerExecutor Expected Safe Executor EOA address for Deployer Safe module
+    function getExpectedExecutorEOAAddresses(uint256 chainId)
         internal
         pure
         returns (address guardianExecutor, address deployerExecutor)
     {
         // Case: Production chain
         if (isProductionChain(chainId)) {
-            return (PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS, PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS);
+            return (PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS, PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS);
         }
 
         // Case: Non-production chain
-        return (NON_PROD_GUARDIAN_SAFE_EXECUTOR_ADDRESS, NON_PROD_DEPLOYER_SAFE_EXECUTOR_ADDRESS);
-    }
-
-    /// @dev Validates that the provided executor address matches the expected address for the target
-    /// @param chainId The target chain ID
-    /// @param isGuardian True if validating for Guardian Safe, false for Deployer Safe
-    /// @param executorAddress The executor address to validate
-    function validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal pure {
-        (address expectedGuardian, address expectedDeployer) = getExpectedExecutorAddresses(chainId);
-
-        address expected = isGuardian ? expectedGuardian : expectedDeployer;
-        require(executorAddress == expected, "Invalid executor address for target");
+        return (NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS, NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS);
     }
 }

@@ -20,8 +20,8 @@
 # Safe 1.3.0 deployment
 .PHONY: deploy-safe deploy-safe-dry-run compute-safe-addresses
 
-# Safe EOA Executor Module
-.PHONY: deploy-safe-module compute-module-address safe-add-module safe-remove-module safe-module-status
+# Safe Executor Module
+.PHONY: deploy-safe-module compute-module-address safe-add-module safe-remove-module check-safe-module-status
 
 # Platform deployment
 .PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
@@ -59,12 +59,12 @@ help:
 	@echo "  deploy-safe-dry-run       Simulate Safe deployment (no broadcast)"
 	@echo "  compute-safe-addresses    Preview expected Safe addresses without deploying"
 	@echo ""
-	@echo "Safe EOA Executor Module:"
-	@echo "  deploy-safe-module        Deploy SafeEOAExecutorModule for a Safe"
+	@echo "Safe Executor Module:"
+	@echo "  deploy-safe-module        Deploy SafeExecutorModule for a Safe"
 	@echo "  compute-module-address    Preview expected module address without deploying"
 	@echo "  safe-add-module           Approve adding a module to a Safe (Safe owner operation)"
 	@echo "  safe-remove-module        Approve removing a module from a Safe (Safe owner operation)"
-	@echo "  safe-module-status        Check approval status for a module transaction"
+	@echo "  check-safe-module-status  Check approval status for a module transaction"
 	@echo ""
 	@echo "Platform Deployment:
 	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
@@ -421,18 +421,18 @@ compute-safe-addresses:
 		--rpc-url $(RPC_URL)
 
 # ==============================================================================
-# Safe EOA Executor Module Commands
+# Safe Executor Module Commands
 # ==============================================================================
 #
-# The SafeEOAExecutorModule allows a designated EOA to execute contract calls
-# on behalf of a Safe multisig. These commands handle deployment and Safe owner
-# operations for adding/removing the module.
+# The SafeExecutorModule allows a designated EOA (the "Safe Executor EOA") to execute
+# contract calls on behalf of a Safe multisig. These commands handle deployment and
+# Safe owner operations for adding/removing the module.
 #
 # IMPORTANT: Module deployment is separate from enabling the module on a Safe.
 # After deployment, Safe owners must approve adding the module via safe-add-module.
 
-# Deploy Safe Module: Deploys the SafeEOAExecutorModule for a Safe via CREATE2
-# The Safe must be deployed first. The executor address is validated against DeploymentConfig.
+# Deploy Safe Module: Deploys the SafeExecutorModule for a Safe via CREATE2
+# The Safe must be deployed first. The Safe Executor EOA address is validated against DeploymentConfig.
 #
 # Example:
 #   make deploy-safe-module TARGET=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
@@ -442,14 +442,14 @@ ifndef TARGET
 	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
 endif
 ifndef EXECUTOR
-	$(error EXECUTOR is required. Set EXECUTOR=<authorized-eoa-address>)
+	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
 endif
-	@echo "Deploying SafeEOAExecutorModule..."
+	@echo "Deploying SafeExecutorModule..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Target: $(TARGET)"
-	@echo "  Executor: $(EXECUTOR)"
-	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
+	@echo "  Safe Executor EOA: $(EXECUTOR)"
+	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
 		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
@@ -466,14 +466,14 @@ ifndef TARGET
 	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
 endif
 ifndef EXECUTOR
-	$(error EXECUTOR is required. Set EXECUTOR=<authorized-eoa-address>)
+	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
 endif
-	@echo "Computing SafeEOAExecutorModule address..."
+	@echo "Computing SafeExecutorModule address..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Target: $(TARGET)"
-	@echo "  Executor: $(EXECUTOR)"
-	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
+	@echo "  Safe Executor EOA: $(EXECUTOR)"
+	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
 		--sig "computeAddress(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
 		--rpc-url $(RPC_URL)
 
@@ -523,13 +523,13 @@ endif
 		--broadcast \
 		$(VERBOSITY)
 
-# Module Status: Check approval status for a module transaction
+# Check Module Status: Check approval status for a module transaction
 # Shows how many approvals exist and who has approved.
 #
 # Example:
-#   make safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
-#   make safe-module-status TARGET=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
-safe-module-status:
+#   make check-safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
+#   make check-safe-module-status TARGET=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
+check-safe-module-status:
 ifndef TARGET
 	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
 endif

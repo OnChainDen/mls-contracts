@@ -3,10 +3,15 @@ pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
 
+import {IModuleManager} from "lib/safe-smart-account/contracts/interfaces/IModuleManager.sol";
+import {ISafe} from "lib/safe-smart-account/contracts/interfaces/ISafe.sol";
+import {Enum} from "lib/safe-smart-account/contracts/libraries/Enum.sol";
+
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title SafeModuleTransaction
@@ -35,12 +40,6 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  * @author Den Technologies Inc
  */
 contract SafeModuleTransaction is Script {
-    /// @dev Enum for operation type in Safe transactions
-    enum Operation {
-        Call,
-        DelegateCall
-    }
-
     /**
      * @notice Approve and optionally execute adding a module to a Safe
      * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
@@ -56,10 +55,10 @@ contract SafeModuleTransaction is Script {
         require(Create2Utils.isContractDeployedAtAddress(moduleAddress), "Module not deployed");
 
         // Check module is not already enabled
-        require(!IGnosisSafe(safeAddress).isModuleEnabled(moduleAddress), "Module already enabled");
+        require(!ISafe(payable(safeAddress)).isModuleEnabled(moduleAddress), "Module already enabled");
 
         // Build the transaction data for enableModule
-        bytes memory txData = abi.encodeWithSelector(IGnosisSafe.enableModule.selector, moduleAddress);
+        bytes memory txData = abi.encodeWithSelector(IModuleManager.enableModule.selector, moduleAddress);
 
         // Process the transaction
         _processTransaction(safeAddress, moduleAddress, txData, target, "ADD", executeIfReady);
@@ -79,13 +78,13 @@ contract SafeModuleTransaction is Script {
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
 
         // Check module is currently enabled
-        require(IGnosisSafe(safeAddress).isModuleEnabled(moduleAddress), "Module not enabled");
+        require(ISafe(payable(safeAddress)).isModuleEnabled(moduleAddress), "Module not enabled");
 
         // Find the previous module in the linked list
         address prevModule = _findPrevModule(safeAddress, moduleAddress);
 
         // Build the transaction data for disableModule
-        bytes memory txData = abi.encodeWithSelector(IGnosisSafe.disableModule.selector, prevModule, moduleAddress);
+        bytes memory txData = abi.encodeWithSelector(IModuleManager.disableModule.selector, prevModule, moduleAddress);
 
         // Process the transaction
         _processTransaction(safeAddress, moduleAddress, txData, target, "REMOVE", executeIfReady);
@@ -104,10 +103,10 @@ contract SafeModuleTransaction is Script {
         // Build the transaction data
         bytes memory txData;
         if (keccak256(bytes(action)) == keccak256("add")) {
-            txData = abi.encodeWithSelector(IGnosisSafe.enableModule.selector, moduleAddress);
+            txData = abi.encodeWithSelector(IModuleManager.enableModule.selector, moduleAddress);
         } else if (keccak256(bytes(action)) == keccak256("remove")) {
             address prevModule = _findPrevModule(safeAddress, moduleAddress);
-            txData = abi.encodeWithSelector(IGnosisSafe.disableModule.selector, prevModule, moduleAddress);
+            txData = abi.encodeWithSelector(IModuleManager.disableModule.selector, prevModule, moduleAddress);
         } else {
             revert("Invalid action - must be 'add' or 'remove'");
         }
@@ -116,8 +115,8 @@ contract SafeModuleTransaction is Script {
         bytes32 txHash = _getTransactionHash(safeAddress, txData);
 
         // Get approval info
-        uint256 threshold = IGnosisSafe(safeAddress).getThreshold();
-        address[] memory owners = IGnosisSafe(safeAddress).getOwners();
+        uint256 threshold = ISafe(payable(safeAddress)).getThreshold();
+        address[] memory owners = ISafe(payable(safeAddress)).getOwners();
         uint256 approvalCount = _countApprovals(safeAddress, txHash, owners);
 
         // Log status
@@ -134,7 +133,9 @@ contract SafeModuleTransaction is Script {
         } else {
             Logger.logIndented(
                 string(
-                    abi.encodePacked("Status: NEEDS ", _uint256ToString(threshold - approvalCount), " MORE APPROVAL(S)")
+                    abi.encodePacked(
+                        "Status: NEEDS ", StringUtils.toString(threshold - approvalCount), " MORE APPROVAL(S)"
+                    )
                 )
             );
         }
@@ -142,7 +143,7 @@ contract SafeModuleTransaction is Script {
         Logger.logEmptyLine();
         Logger.logIndented("Owners who have approved:");
         for (uint256 i = 0; i < owners.length; i++) {
-            if (IGnosisSafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
+            if (ISafe(payable(safeAddress)).approvedHashes(owners[i], txHash) == 1) {
                 Logger.logKeyValue("  ", owners[i]);
             }
         }
@@ -167,8 +168,8 @@ contract SafeModuleTransaction is Script {
         bytes32 txHash = _getTransactionHash(safeAddress, txData);
 
         // Get threshold and current approvals
-        uint256 threshold = IGnosisSafe(safeAddress).getThreshold();
-        address[] memory owners = IGnosisSafe(safeAddress).getOwners();
+        uint256 threshold = ISafe(payable(safeAddress)).getThreshold();
+        address[] memory owners = ISafe(payable(safeAddress)).getOwners();
 
         // Log header
         Logger.logBoxHeader(string(abi.encodePacked("Safe Module Transaction - ", action)));
@@ -189,14 +190,14 @@ contract SafeModuleTransaction is Script {
         require(isOwner, "Sender is not a Safe owner");
 
         // Check if sender has already approved
-        bool alreadyApproved = IGnosisSafe(safeAddress).approvedHashes(msg.sender, txHash) == 1;
+        bool alreadyApproved = ISafe(payable(safeAddress)).approvedHashes(msg.sender, txHash) == 1;
 
         vm.startBroadcast();
 
         // Approve if not already done
         if (!alreadyApproved) {
             Logger.logIndented("Submitting approval...");
-            IGnosisSafe(safeAddress).approveHash(txHash);
+            ISafe(payable(safeAddress)).approveHash(txHash);
             Logger.logIndented("Approval submitted successfully");
         } else {
             Logger.logIndented("Already approved by this owner");
@@ -219,12 +220,12 @@ contract SafeModuleTransaction is Script {
             bytes memory signatures = _buildApprovedSignatures(safeAddress, txHash, owners, threshold);
 
             // Execute the transaction
-            bool success = IGnosisSafe(safeAddress)
+            bool success = ISafe(payable(safeAddress))
                 .execTransaction(
                     safeAddress, // to (call the Safe itself)
                     0, // value
                     txData, // data
-                    Operation.Call, // operation
+                    Enum.Operation.Call, // operation
                     0, // safeTxGas
                     0, // baseGas
                     0, // gasPrice
@@ -240,7 +241,7 @@ contract SafeModuleTransaction is Script {
             Logger.logIndented(
                 string(
                     abi.encodePacked(
-                        "Need ", _uint256ToString(threshold - approvalCount), " more approval(s) to execute"
+                        "Need ", StringUtils.toString(threshold - approvalCount), " more approval(s) to execute"
                     )
                 )
             );
@@ -269,7 +270,7 @@ contract SafeModuleTransaction is Script {
         }
 
         (address guardianModule, address deployerModule) =
-            DeploymentConfig.getExpectedSafeEOAModuleAddresses(factoryAddress);
+            DeploymentConfig.getExpectedSafeExecutorModuleAddresses(factoryAddress);
         moduleAddress = isGuardian ? guardianModule : deployerModule;
     }
 
@@ -277,7 +278,7 @@ contract SafeModuleTransaction is Script {
     function _findPrevModule(address safeAddress, address moduleAddress) internal view returns (address prevModule) {
         // SENTINEL_MODULES = address(0x1)
         address SENTINEL = address(0x1);
-        (address[] memory modules,) = IGnosisSafe(safeAddress).getModulesPaginated(SENTINEL, 100);
+        (address[] memory modules,) = ISafe(payable(safeAddress)).getModulesPaginated(SENTINEL, 100);
 
         prevModule = SENTINEL;
         for (uint256 i = 0; i < modules.length; i++) {
@@ -291,13 +292,13 @@ contract SafeModuleTransaction is Script {
 
     /// @dev Get the Safe transaction hash
     function _getTransactionHash(address safeAddress, bytes memory txData) internal view returns (bytes32) {
-        uint256 nonce = IGnosisSafe(safeAddress).nonce();
-        return IGnosisSafe(safeAddress)
+        uint256 nonce = ISafe(payable(safeAddress)).nonce();
+        return ISafe(payable(safeAddress))
             .getTransactionHash(
                 safeAddress, // to (call the Safe itself for module management)
                 0, // value
                 txData, // data
-                Operation.Call, // operation
+                Enum.Operation.Call, // operation
                 0, // safeTxGas
                 0, // baseGas
                 0, // gasPrice
@@ -314,7 +315,7 @@ contract SafeModuleTransaction is Script {
         returns (uint256 count)
     {
         for (uint256 i = 0; i < owners.length; i++) {
-            if (IGnosisSafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
+            if (ISafe(payable(safeAddress)).approvedHashes(owners[i], txHash) == 1) {
                 count++;
             }
         }
@@ -331,7 +332,7 @@ contract SafeModuleTransaction is Script {
         uint256 approverCount = 0;
 
         for (uint256 i = 0; i < owners.length && approverCount < threshold; i++) {
-            if (IGnosisSafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
+            if (ISafe(payable(safeAddress)).approvedHashes(owners[i], txHash) == 1) {
                 approvers[approverCount] = owners[i];
                 approverCount++;
             }
@@ -369,64 +370,4 @@ contract SafeModuleTransaction is Script {
             }
         }
     }
-
-    /// @dev Convert uint256 to string
-    function _uint256ToString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
-    }
-}
-
-/// @notice Minimal interface for Safe module management and transaction execution
-interface IGnosisSafe {
-    function enableModule(address module) external;
-    function disableModule(address prevModule, address module) external;
-    function isModuleEnabled(address module) external view returns (bool);
-    function getModulesPaginated(address start, uint256 pageSize)
-        external
-        view
-        returns (address[] memory array, address next);
-    function getThreshold() external view returns (uint256);
-    function getOwners() external view returns (address[] memory);
-    function nonce() external view returns (uint256);
-    function approvedHashes(address owner, bytes32 hash) external view returns (uint256);
-    function approveHash(bytes32 hashToApprove) external;
-    function getTransactionHash(
-        address to,
-        uint256 value,
-        bytes memory data,
-        SafeModuleTransaction.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address refundReceiver,
-        uint256 _nonce
-    ) external view returns (bytes32);
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        SafeModuleTransaction.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
-        bytes memory signatures
-    ) external payable returns (bool success);
 }

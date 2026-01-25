@@ -17,7 +17,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 4. [Safe 1.3.0 Deployment](#safe-130-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
-5. [Safe EOA Executor Module](#safe-eoa-executor-module)
+5. [Safe Executor Module](#safe-executor-module)
    - [Module Overview](#module-overview)
    - [Module Deployment Commands](#module-deployment-commands)
    - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
@@ -287,29 +287,29 @@ make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
 
 ---
 
-## Safe EOA Executor Module
+## Safe Executor Module
 
-The Safe EOA Executor Module allows a designated EOA to execute contract calls on behalf of a Safe multisig without requiring multisig signatures for every transaction.
+The Safe Executor Module allows a designated EOA (the "Safe Executor EOA") to execute contract calls on behalf of a Safe multisig without requiring multisig signatures for every transaction.
 
 ### Module Overview
 
-The `SafeEOAExecutorModule` is a minimal Safe module with the following properties:
+The `SafeExecutorModule` is a minimal Safe module with the following properties:
 
-- **Single authorized executor**: Only one EOA can execute transactions via the module
-- **Immutable configuration**: The authorized executor cannot be changed after deployment
+- **Single Safe Executor EOA**: Only one EOA can execute transactions via the module
+- **Immutable configuration**: The Safe Executor EOA cannot be changed after deployment
 - **Restricted operations**:
   - No delegate calls (only regular `CALL` operations)
   - No ETH transfers (value must always be zero)
   - No calls to the Safe itself (prevents ownership/module modifications)
   - No calls to the module itself
 
-To rotate the authorized executor, deploy a new module instance and have Safe owners swap modules via multisig transaction.
+To rotate the Safe Executor EOA, deploy a new module instance and have Safe owners swap modules via multisig transaction.
 
 ### Module Deployment Commands
 
 #### Deploy a Module
 
-Deploy a SafeEOAExecutorModule for a Safe:
+Deploy a SafeExecutorModule for a Safe:
 
 ```bash
 # Deploy module for Guardian Safe
@@ -363,10 +363,10 @@ Check how many approvals exist for a module transaction:
 
 ```bash
 # Check status for adding Guardian module
-make safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
+make check-safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
 
 # Check status for removing Deployer module
-make safe-module-status TARGET=deployer ACTION=remove NETWORK=mainnet
+make check-safe-module-status TARGET=deployer ACTION=remove NETWORK=mainnet
 ```
 
 #### Remove a Module
@@ -663,11 +663,11 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
 | `make deploy-contracts` | Deploy all contracts with library linking |
 | `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
-| `make deploy-safe-module` | Deploy SafeEOAExecutorModule for a Safe |
+| `make deploy-safe-module` | Deploy SafeExecutorModule for a Safe |
 | `make compute-module-address` | Preview expected module address |
 | `make safe-add-module` | Approve adding a module to a Safe |
 | `make safe-remove-module` | Approve removing a module from a Safe |
-| `make safe-module-status` | Check approval status for a module transaction |
+| `make check-safe-module-status` | Check approval status for a module transaction |
 | `make check-factory` | Check if a CREATE2 factory exists |
 | `make check-all-factories` | Check all factories on a network |
 | `make compute-lib-addresses` | Compute expected library addresses for a factory |
