@@ -20,6 +20,9 @@
 # Safe 1.3.0 deployment
 .PHONY: deploy-safe deploy-safe-dry-run compute-safe-addresses
 
+# Safe EOA Executor Module
+.PHONY: deploy-safe-module compute-module-address safe-add-module safe-remove-module safe-module-status
+
 # Platform deployment
 .PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
 .PHONY: deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
@@ -56,7 +59,14 @@ help:
 	@echo "  deploy-safe-dry-run       Simulate Safe deployment (no broadcast)"
 	@echo "  compute-safe-addresses    Preview expected Safe addresses without deploying"
 	@echo ""
-	@echo "Platform Deployment:"
+	@echo "Safe EOA Executor Module:"
+	@echo "  deploy-safe-module        Deploy SafeEOAExecutorModule for a Safe"
+	@echo "  compute-module-address    Preview expected module address without deploying"
+	@echo "  safe-add-module           Approve adding a module to a Safe (Safe owner operation)"
+	@echo "  safe-remove-module        Approve removing a module from a Safe (Safe owner operation)"
+	@echo "  safe-module-status        Check approval status for a module transaction"
+	@echo ""
+	@echo "Platform Deployment:
 	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
 	@echo "  deploy-contracts          Deploy platform contracts with library linking"
 	@echo "  deploy-platform           Full deployment (libraries + contracts)"
@@ -85,11 +95,16 @@ help:
 	@echo "  FACTORY   CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)"
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
+	@echo "  TARGET    Safe module target: guardian or deployer (for module commands)"
+	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
+	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x..."
 	@echo "  make check-all-factories NETWORK=mainnet"
+	@echo "  make deploy-safe-module TARGET=guardian EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
+	@echo "  make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 
 # ==============================================================================
 # Core Commands
@@ -403,6 +418,131 @@ compute-safe-addresses:
 	@echo "  Profile: safe (Solidity 0.7.6)"
 	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
 		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL)
+
+# ==============================================================================
+# Safe EOA Executor Module Commands
+# ==============================================================================
+#
+# The SafeEOAExecutorModule allows a designated EOA to execute contract calls
+# on behalf of a Safe multisig. These commands handle deployment and Safe owner
+# operations for adding/removing the module.
+#
+# IMPORTANT: Module deployment is separate from enabling the module on a Safe.
+# After deployment, Safe owners must approve adding the module via safe-add-module.
+
+# Deploy Safe Module: Deploys the SafeEOAExecutorModule for a Safe via CREATE2
+# The Safe must be deployed first. The executor address is validated against DeploymentConfig.
+#
+# Example:
+#   make deploy-safe-module TARGET=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-safe-module TARGET=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+deploy-safe-module: validate-signer-vars
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
+ifndef EXECUTOR
+	$(error EXECUTOR is required. Set EXECUTOR=<authorized-eoa-address>)
+endif
+	@echo "Deploying SafeEOAExecutorModule..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Target: $(TARGET)"
+	@echo "  Executor: $(EXECUTOR)"
+	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
+		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Compute Module Address: Preview expected module address without deploying
+#
+# Example:
+#   make compute-module-address TARGET=guardian EXECUTOR=0x1234... NETWORK=sepolia
+#   make compute-module-address TARGET=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet
+compute-module-address:
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
+ifndef EXECUTOR
+	$(error EXECUTOR is required. Set EXECUTOR=<authorized-eoa-address>)
+endif
+	@echo "Computing SafeEOAExecutorModule address..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Target: $(TARGET)"
+	@echo "  Executor: $(EXECUTOR)"
+	forge script script/safe-module/DeploySafeEOAExecutorModule.s.sol:DeploySafeEOAExecutorModule \
+		--sig "computeAddress(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
+		--rpc-url $(RPC_URL)
+
+# Add Module to Safe: Approve adding a module to a Safe (Safe owner operation)
+# Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# the transaction is automatically executed.
+#
+# Example:
+#   make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make safe-add-module TARGET=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+safe-add-module: validate-signer-vars
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
+	@echo "Adding module to Safe (approve transaction)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Target: $(TARGET)"
+	@echo "  Execute if ready: $(EXECUTE)"
+	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
+		--sig "addModule(address,string,bool)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTE) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Remove Module from Safe: Approve removing a module from a Safe (Safe owner operation)
+# Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# the transaction is automatically executed.
+#
+# Example:
+#   make safe-remove-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make safe-remove-module TARGET=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+safe-remove-module: validate-signer-vars
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
+	@echo "Removing module from Safe (approve transaction)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Target: $(TARGET)"
+	@echo "  Execute if ready: $(EXECUTE)"
+	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
+		--sig "removeModule(address,string,bool)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTE) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Module Status: Check approval status for a module transaction
+# Shows how many approvals exist and who has approved.
+#
+# Example:
+#   make safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
+#   make safe-module-status TARGET=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
+safe-module-status:
+ifndef TARGET
+	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+endif
+ifndef ACTION
+	$(error ACTION is required. Set ACTION=add or ACTION=remove)
+endif
+	@echo "Checking module transaction status..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Target: $(TARGET)"
+	@echo "  Action: $(ACTION)"
+	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
+		--sig "checkStatus(address,string,string)" $(FACTORY_ADDRESS) $(TARGET) $(ACTION) \
 		--rpc-url $(RPC_URL)
 
 # ==============================================================================

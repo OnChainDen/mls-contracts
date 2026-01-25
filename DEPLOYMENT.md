@@ -17,11 +17,15 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 4. [Safe 1.3.0 Deployment](#safe-130-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
-5. [Deployment Examples](#deployment-examples)
+5. [Safe EOA Executor Module](#safe-eoa-executor-module)
+   - [Module Overview](#module-overview)
+   - [Module Deployment Commands](#module-deployment-commands)
+   - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
+6. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-6. [Verifying Deployments](#verifying-deployments)
-7. [Troubleshooting](#troubleshooting)
+7. [Verifying Deployments](#verifying-deployments)
+8. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -283,6 +287,127 @@ make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
 
 ---
 
+## Safe EOA Executor Module
+
+The Safe EOA Executor Module allows a designated EOA to execute contract calls on behalf of a Safe multisig without requiring multisig signatures for every transaction.
+
+### Module Overview
+
+The `SafeEOAExecutorModule` is a minimal Safe module with the following properties:
+
+- **Single authorized executor**: Only one EOA can execute transactions via the module
+- **Immutable configuration**: The authorized executor cannot be changed after deployment
+- **Restricted operations**:
+  - No delegate calls (only regular `CALL` operations)
+  - No ETH transfers (value must always be zero)
+  - No calls to the Safe itself (prevents ownership/module modifications)
+  - No calls to the module itself
+
+To rotate the authorized executor, deploy a new module instance and have Safe owners swap modules via multisig transaction.
+
+### Module Deployment Commands
+
+#### Deploy a Module
+
+Deploy a SafeEOAExecutorModule for a Safe:
+
+```bash
+# Deploy module for Guardian Safe
+make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy module for Deployer Safe
+make deploy-safe-module TARGET=deployer EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
+
+# Deploy using Den non-prod factory
+make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+```
+
+The script validates:
+1. The executor address matches the expected address in `DeploymentConfig.sol`
+2. The target Safe is deployed at the expected address
+3. The CREATE2 factory is deployed
+
+#### Compute Module Address
+
+Preview the expected module address without deploying:
+
+```bash
+# Compute address for Guardian Safe module
+make compute-module-address TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia
+
+# Compute address for Deployer Safe module with Den non-prod factory
+make compute-module-address TARGET=deployer EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=mainnet
+```
+
+### Adding a Module to a Safe
+
+After deploying a module, Safe owners must approve adding it to the Safe. This is a multisig operation that requires threshold approvals.
+
+#### Approve Adding a Module
+
+Each Safe owner runs this command to submit their approval:
+
+```bash
+# Approve adding module to Guardian Safe (execute if threshold is met)
+make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+
+# Approve without auto-executing (just submit approval)
+make safe-add-module TARGET=deployer EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
+```
+
+When `EXECUTE=true` and the approval threshold is met, the transaction is automatically executed.
+
+#### Check Approval Status
+
+Check how many approvals exist for a module transaction:
+
+```bash
+# Check status for adding Guardian module
+make safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
+
+# Check status for removing Deployer module
+make safe-module-status TARGET=deployer ACTION=remove NETWORK=mainnet
+```
+
+#### Remove a Module
+
+If you need to remove a module (e.g., to rotate the authorized executor):
+
+```bash
+# Approve removing module from Guardian Safe
+make safe-remove-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+```
+
+### Module Deployment Workflow
+
+The typical workflow for deploying and enabling a module is:
+
+```
+1. Deploy the module
+   └── make deploy-safe-module TARGET=guardian EXECUTOR=0x... ...
+
+2. Each Safe owner approves adding the module
+   └── make safe-add-module TARGET=guardian EXECUTE=true ...
+   └── (repeat for each owner until threshold is met)
+
+3. Module is now active and the executor can use it
+```
+
+To rotate an executor:
+
+```
+1. Deploy a new module with the new executor address
+   └── make deploy-safe-module TARGET=guardian EXECUTOR=0xNewExecutor ...
+
+2. Safe owners approve adding the new module
+   └── make safe-add-module TARGET=guardian EXECUTE=true ...
+
+3. Safe owners approve removing the old module
+   └── make safe-remove-module TARGET=guardian EXECUTE=true ...
+```
+
+---
+
 ## Deployment Examples
 
 ### Example 1: Deploy via Arachnid Factory
@@ -538,6 +663,11 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
 | `make deploy-contracts` | Deploy all contracts with library linking |
 | `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
+| `make deploy-safe-module` | Deploy SafeEOAExecutorModule for a Safe |
+| `make compute-module-address` | Preview expected module address |
+| `make safe-add-module` | Approve adding a module to a Safe |
+| `make safe-remove-module` | Approve removing a module from a Safe |
+| `make safe-module-status` | Check approval status for a module transaction |
 | `make check-factory` | Check if a CREATE2 factory exists |
 | `make check-all-factories` | Check all factories on a network |
 | `make compute-lib-addresses` | Compute expected library addresses for a factory |
