@@ -4,6 +4,7 @@ pragma solidity >=0.7.0 <0.9.0;
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title Create2Utils
@@ -74,7 +75,7 @@ library Create2Utils {
 
         require(
             !isContractDeployedAtAddress(factoryAddress),
-            string(abi.encodePacked(factoryName, " already deployed at ", ScriptUtils.toHexString(factoryAddress)))
+            string(abi.encodePacked(factoryName, " already deployed at ", StringUtils.toHexString(factoryAddress)))
         );
 
         Logger.logCheckPass(string(abi.encodePacked(factoryName, " not deployed")));
@@ -98,15 +99,15 @@ library Create2Utils {
         // Case: Deployer has sufficient balance
         if (balance >= requiredBalance) {
             Logger.logCheckPass(
-                string(abi.encodePacked("Deployer has sufficient ETH (", ScriptUtils.toString(balance), " wei)"))
+                string(abi.encodePacked("Deployer has sufficient ETH (", StringUtils.toString(balance), " wei)"))
             );
             return;
         }
 
         // Case: Deployer does not have sufficient balance
         Logger.logCheckFail("Deployer needs more ETH");
-        Logger.logCheckDetail(string(abi.encodePacked("Current: ", ScriptUtils.toString(balance), " wei")));
-        Logger.logCheckDetail(string(abi.encodePacked("Required: ", ScriptUtils.toString(requiredBalance), " wei")));
+        Logger.logCheckDetail(string(abi.encodePacked("Current: ", StringUtils.toString(balance), " wei")));
+        Logger.logCheckDetail(string(abi.encodePacked("Required: ", StringUtils.toString(requiredBalance), " wei")));
         Logger.logEmptyLine();
         Logger.logCheckDetail("Fund the deployer by running:");
         Logger.logCheckDetail(string(abi.encodePacked("  forge script ", scriptName, " --sig \"fundDeployer()\" \\")));

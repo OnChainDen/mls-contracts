@@ -7,6 +7,7 @@ import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title DeployDenSingletonFactory
@@ -162,7 +163,7 @@ contract DeployDenSingletonFactory is Script {
                 "  CRITICAL: Nonce has been burned! Factory address will change.\n",
                 "  Continuing will deploy to an unexpected address.\n",
                 "  Current nonce: ",
-                ScriptUtils.toString(nonce)
+                StringUtils.toString(nonce)
             )
         );
 
@@ -181,9 +182,9 @@ contract DeployDenSingletonFactory is Script {
                     "\n  !! Using PRODUCTION Den Factory deployer !!\n",
                     "  This EOA must keep nonce 0 for deterministic deployment.\n",
                     "  Deployer: ",
-                    ScriptUtils.toHexString(msg.sender),
+                    StringUtils.toHexString(msg.sender),
                     "\n  Expected factory: ",
-                    ScriptUtils.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
+                    StringUtils.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
                 )
             );
 
@@ -200,9 +201,9 @@ contract DeployDenSingletonFactory is Script {
                 "\n  !! Using NON-PRODUCTION Den Factory deployer !!\n",
                 "  Factory address will differ from production.\n",
                 "  Deployer: ",
-                ScriptUtils.toHexString(msg.sender),
+                StringUtils.toHexString(msg.sender),
                 "\n  Production deployer: ",
-                ScriptUtils.toHexString(DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS)
+                StringUtils.toHexString(DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS)
             )
         );
 

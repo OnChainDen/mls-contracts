@@ -12,6 +12,7 @@ import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 import {PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
@@ -176,7 +177,7 @@ contract DeployLibraries is Script {
                     "  --libraries ",
                     DeploymentConfig.LIB_ORG_POLICY_PATH,
                     ":",
-                    ScriptUtils.toHexString(libs.policyAddress),
+                    StringUtils.toHexString(libs.policyAddress),
                     " \\"
                 )
             )
@@ -188,7 +189,7 @@ contract DeployLibraries is Script {
                     "  --libraries ",
                     DeploymentConfig.LIB_ORG_ADMIN_PATH,
                     ":",
-                    ScriptUtils.toHexString(libs.adminAddress),
+                    StringUtils.toHexString(libs.adminAddress),
                     " \\"
                 )
             )
@@ -200,7 +201,7 @@ contract DeployLibraries is Script {
                     "  --libraries ",
                     DeploymentConfig.LIB_ORG_INIT_PATH,
                     ":",
-                    ScriptUtils.toHexString(libs.initializationAddress),
+                    StringUtils.toHexString(libs.initializationAddress),
                     " \\"
                 )
             )
@@ -212,7 +213,7 @@ contract DeployLibraries is Script {
                     "  --libraries ",
                     DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
                     ":",
-                    ScriptUtils.toHexString(libs.accountSignatureAddress),
+                    StringUtils.toHexString(libs.accountSignatureAddress),
                     " \\"
                 )
             )
