@@ -3,6 +3,7 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
+import {ISafeExecutorModule} from "../../src/interfaces/ISafeExecutorModule.sol";
 import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 
 /**
@@ -145,17 +146,17 @@ contract SafeExecutorModuleTest is Test {
     }
 
     function test_constructor_revertsOnZeroSafe() public {
-        vm.expectRevert(SafeExecutorModule.SafeAddressCannotBeZero.selector);
+        vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
         new SafeExecutorModule(address(0), authorizedExecutor);
     }
 
     function test_constructor_revertsOnZeroExecutor() public {
-        vm.expectRevert(SafeExecutorModule.ExecutorAddressCannotBeZero.selector);
+        vm.expectRevert(ISafeExecutorModule.ExecutorAddressCannotBeZero.selector);
         new SafeExecutorModule(address(mockSafe), address(0));
     }
 
     function test_constructor_revertsOnBothZero() public {
-        vm.expectRevert(SafeExecutorModule.SafeAddressCannotBeZero.selector);
+        vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
         new SafeExecutorModule(address(0), address(0));
     }
 
@@ -168,7 +169,9 @@ contract SafeExecutorModuleTest is Test {
 
         vm.prank(unauthorizedUser);
         vm.expectRevert(
-            abi.encodeWithSelector(SafeExecutorModule.UnauthorizedCaller.selector, unauthorizedUser, authorizedExecutor)
+            abi.encodeWithSelector(
+                ISafeExecutorModule.UnauthorizedCaller.selector, unauthorizedUser, authorizedExecutor
+            )
         );
         module.executeOnBehalf(address(mockTarget), data);
     }
@@ -196,7 +199,7 @@ contract SafeExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("newOwner"), 2);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
     }
 
@@ -205,7 +208,7 @@ contract SafeExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallModule.selector, address(module)));
+        vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallModule.selector, address(module)));
         module.executeOnBehalf(address(module), data);
     }
 
@@ -242,7 +245,7 @@ contract SafeExecutorModuleTest is Test {
         mockSafe.setFailMode(true);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(SafeExecutorModule.ExecutionFailed.selector);
+        vm.expectRevert(ISafeExecutorModule.ExecutionFailed.selector);
         module.executeOnBehalf(address(mockTarget), data);
     }
 
@@ -329,7 +332,7 @@ contract SafeExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("newOwner"), 2);
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
     }
 
@@ -337,7 +340,7 @@ contract SafeExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockSafe.enableModule.selector, makeAddr("newModule"));
 
         vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(SafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
     }
 

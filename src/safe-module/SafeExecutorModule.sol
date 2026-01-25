@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
+import {ISafeExecutorModule} from "../interfaces/ISafeExecutorModule.sol";
+
 /// @notice Minimal interface for Safe module execution
 interface ISafe {
     /// @notice Executes a transaction from a module
@@ -33,34 +35,12 @@ interface ISafe {
  *
  * @author Den Technologies Inc
  */
-contract SafeExecutorModule {
-    /// @notice The Safe this module is authorized to execute transactions for
+contract SafeExecutorModule is ISafeExecutorModule {
+    /// @inheritdoc ISafeExecutorModule
     address public immutable SAFE;
 
-    /// @notice The EOA authorized to execute transactions via this module
+    /// @inheritdoc ISafeExecutorModule
     address public immutable AUTHORIZED_EXECUTOR;
-
-    /// @notice Error thrown when caller is not the authorized executor
-    /// @param caller The address that attempted to call the function
-    /// @param expected The authorized executor address
-    error UnauthorizedCaller(address caller, address expected);
-
-    /// @notice Error thrown when attempting to call the Safe itself
-    /// @param target The target address that was blocked
-    error CannotCallSafe(address target);
-
-    /// @notice Error thrown when attempting to call the module itself
-    /// @param target The target address that was blocked
-    error CannotCallModule(address target);
-
-    /// @notice Error thrown when the Safe execution fails
-    error ExecutionFailed();
-
-    /// @notice Error thrown when the Safe address is zero
-    error SafeAddressCannotBeZero();
-
-    /// @notice Error thrown when the executor address is zero
-    error ExecutorAddressCannotBeZero();
 
     /**
      * @notice Initializes the module with the Safe address and authorized executor
@@ -79,17 +59,7 @@ contract SafeExecutorModule {
         AUTHORIZED_EXECUTOR = authorizedExecutor;
     }
 
-    /**
-     * @notice Executes a transaction on behalf of the Safe
-     * @dev Only callable by the authorized executor. Enforces:
-     *      - No calls to the Safe address (prevents ownership/module modifications)
-     *      - No calls to this module (prevents self-modification attempts)
-     *      - No ETH value transfers (hardcoded to 0)
-     *      - No delegate calls (hardcoded to Call operation)
-     * @param to The target contract address
-     * @param data The calldata to execute
-     * @return success Whether the execution succeeded
-     */
+    /// @inheritdoc ISafeExecutorModule
     function executeOnBehalf(address to, bytes calldata data) external returns (bool success) {
         // Case: Caller is not the authorized executor
         if (msg.sender != AUTHORIZED_EXECUTOR) {
