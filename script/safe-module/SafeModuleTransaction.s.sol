@@ -58,21 +58,21 @@ interface IGnosisSafe {
  *
  *      For adding a module:
  *        forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
- *          --sig "addModule(address,string,bool)" <FACTORY_ADDRESS> <TARGET> <EXECUTE_IF_READY> \
+ *          --sig "addModule(address,string,bool)" <FACTORY_ADDRESS> <SAFE_TYPE> <EXECUTE_IF_READY> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
  *
  *      For removing a module:
  *        forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
- *          --sig "removeModule(address,string,bool)" <FACTORY_ADDRESS> <TARGET> <EXECUTE_IF_READY> \
+ *          --sig "removeModule(address,string,bool)" <FACTORY_ADDRESS> <SAFE_TYPE> <EXECUTE_IF_READY> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
  *
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory used for deployment (to lookup addresses)
- *        - TARGET: "guardian" or "deployer" - which Safe to modify
+ *        - SAFE_TYPE: "guardian" or "deployer" - which Safe to modify
  *        - EXECUTE_IF_READY: true to execute if threshold is met after approval
  *
  * @author Den Technologies Inc
@@ -81,12 +81,12 @@ contract SafeModuleTransaction is Script {
     /**
      * @notice Approve and optionally execute adding a module to a Safe
      * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
-     * @param target "guardian" or "deployer" - which Safe to modify
+     * @param safeType "guardian" or "deployer" - which Safe to modify
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
-    function addModule(address factoryAddress, string calldata target, bool executeIfReady) external {
+    function addModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
         // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, target);
+        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, safeType);
 
         // Validate the Safe and module are deployed
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
@@ -99,18 +99,18 @@ contract SafeModuleTransaction is Script {
         bytes memory txData = abi.encodeWithSelector(IGnosisSafe.enableModule.selector, moduleAddress);
 
         // Process the transaction
-        _processTransaction(safeAddress, moduleAddress, txData, target, "ADD", executeIfReady);
+        _processTransaction(safeAddress, moduleAddress, txData, safeType, "ADD", executeIfReady);
     }
 
     /**
      * @notice Approve and optionally execute removing a module from a Safe
      * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
-     * @param target "guardian" or "deployer" - which Safe to modify
+     * @param safeType "guardian" or "deployer" - which Safe to modify
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
-    function removeModule(address factoryAddress, string calldata target, bool executeIfReady) external {
+    function removeModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
         // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, target);
+        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, safeType);
 
         // Validate the Safe is deployed
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
@@ -125,18 +125,18 @@ contract SafeModuleTransaction is Script {
         bytes memory txData = abi.encodeWithSelector(IGnosisSafe.disableModule.selector, prevModule, moduleAddress);
 
         // Process the transaction
-        _processTransaction(safeAddress, moduleAddress, txData, target, "REMOVE", executeIfReady);
+        _processTransaction(safeAddress, moduleAddress, txData, safeType, "REMOVE", executeIfReady);
     }
 
     /**
      * @notice Check the approval status for a module transaction
      * @param factoryAddress The CREATE2 factory address
-     * @param target "guardian" or "deployer"
+     * @param safeType "guardian" or "deployer"
      * @param action "add" or "remove"
      */
-    function checkStatus(address factoryAddress, string calldata target, string calldata action) external view {
+    function checkStatus(address factoryAddress, string calldata safeType, string calldata action) external view {
         // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, target);
+        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, safeType);
 
         // Build the transaction data
         // slither-disable-next-line uninitialized-local
@@ -197,7 +197,7 @@ contract SafeModuleTransaction is Script {
         address safeAddress,
         address moduleAddress,
         bytes memory txData,
-        string calldata target,
+        string calldata safeType,
         string memory action,
         bool executeIfReady
     ) internal {
@@ -213,7 +213,7 @@ contract SafeModuleTransaction is Script {
 
         // Log header
         Logger.logBoxHeader(string(abi.encodePacked("Safe Module Transaction - ", action)));
-        Logger.logKeyValue("Target", target);
+        Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe", safeAddress);
         Logger.logKeyValue("Module", moduleAddress);
         Logger.logKeyValue("Threshold", threshold);
@@ -294,14 +294,14 @@ contract SafeModuleTransaction is Script {
     }
 
     /// @dev Get Safe and module addresses from DeploymentConfig
-    function _getAddresses(address factoryAddress, string calldata target)
+    function _getAddresses(address factoryAddress, string calldata safeType)
         internal
         pure
         returns (address safeAddress, address moduleAddress)
     {
-        bool isGuardian = keccak256(bytes(target)) == keccak256("guardian");
-        bool isDeployer = keccak256(bytes(target)) == keccak256("deployer");
-        require(isGuardian || isDeployer, "Invalid target - must be 'guardian' or 'deployer'");
+        bool isGuardian = keccak256(bytes(safeType)) == keccak256("guardian");
+        bool isDeployer = keccak256(bytes(safeType)) == keccak256("deployer");
+        require(isGuardian || isDeployer, "Invalid safeType - must be 'guardian' or 'deployer'");
 
         if (isGuardian) {
             safeAddress = DeploymentConfig.getExpectedGuardianSafeAddress(factoryAddress);

@@ -138,10 +138,10 @@ echo ""
 echo "[Step 7] Deploying Safe Executor Modules..."
 
 echo "  Deploying guardian Safe Executor Module (executor: $GUARDIAN_EXECUTOR_ADDRESS)..."
-make deploy-safe-module TARGET=guardian EXECUTOR=$GUARDIAN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=$GUARDIAN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 echo "  Deploying deployer Safe Executor Module (executor: $DEPLOYER_EXECUTOR_ADDRESS)..."
-make deploy-safe-module TARGET=deployer EXECUTOR=$DEPLOYER_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+make deploy-safe-module SAFE_TYPE=deployer EXECUTOR=$DEPLOYER_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
 # Step 8: Add Modules to Safes (Local Testing Only)
@@ -152,13 +152,13 @@ echo "  Note: This requires Safe owner signatures. Using the Safe owner accounts
 
 # Add module to guardian Safe (using guardian Safe owner account)
 echo "  Adding module to guardian Safe..."
-make safe-add-module TARGET=guardian ACCOUNT=$GUARDIAN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
+make safe-add-module SAFE_TYPE=guardian ACCOUNT=$GUARDIAN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
     echo "  Warning: Failed to add module to guardian Safe (may need multi-sig approval)"
 }
 
 # Add module to deployer Safe (using deployer Safe owner account)
 echo "  Adding module to deployer Safe..."
-make safe-add-module TARGET=deployer ACCOUNT=$DEPLOYER_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
+make safe-add-module SAFE_TYPE=deployer ACCOUNT=$DEPLOYER_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
     echo "  Warning: Failed to add module to deployer Safe (may need multi-sig approval)"
 }
 

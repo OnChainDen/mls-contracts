@@ -95,7 +95,7 @@ help:
 	@echo "  FACTORY   CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)"
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
-	@echo "  TARGET    Safe module target: guardian or deployer (for module commands)"
+	@echo "  SAFE_TYPE Safe type: guardian or deployer (for module commands)"
 	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
 	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
 	@echo ""
@@ -103,8 +103,8 @@ help:
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x..."
 	@echo "  make check-all-factories NETWORK=mainnet"
-	@echo "  make deploy-safe-module TARGET=guardian EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
-	@echo "  make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
+	@echo "  make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
+	@echo "  make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 
 # ==============================================================================
 # Core Commands
@@ -434,11 +434,11 @@ compute-safe-addresses:
 # The Safe must be deployed first. The Safe Executor EOA address is validated against DeploymentConfig.
 #
 # Example:
-#   make deploy-safe-module TARGET=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
-#   make deploy-safe-module TARGET=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+#   make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-safe-module SAFE_TYPE=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
 deploy-safe-module: validate-signer-vars
-ifndef TARGET
-	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
 ifndef EXECUTOR
 	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
@@ -446,10 +446,10 @@ endif
 	@echo "Deploying SafeExecutorModule..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Target: $(TARGET)"
+	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Safe Executor EOA: $(EXECUTOR)"
 	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
+		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTOR) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
@@ -458,11 +458,11 @@ endif
 # Compute Module Address: Preview expected module address without deploying
 #
 # Example:
-#   make compute-module-address TARGET=guardian EXECUTOR=0x1234... NETWORK=sepolia
-#   make compute-module-address TARGET=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet
+#   make compute-module-address SAFE_TYPE=guardian EXECUTOR=0x1234... NETWORK=sepolia
+#   make compute-module-address SAFE_TYPE=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet
 compute-module-address:
-ifndef TARGET
-	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
 ifndef EXECUTOR
 	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
@@ -470,10 +470,10 @@ endif
 	@echo "Computing SafeExecutorModule address..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Target: $(TARGET)"
+	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Safe Executor EOA: $(EXECUTOR)"
 	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-		--sig "computeAddress(address,string,address)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTOR) \
+		--sig "computeAddress(address,string,address)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTOR) \
 		--rpc-url $(RPC_URL)
 
 # Add Module to Safe: Approve adding a module to a Safe (Safe owner operation)
@@ -481,19 +481,19 @@ endif
 # the transaction is automatically executed.
 #
 # Example:
-#   make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
-#   make safe-add-module TARGET=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+#   make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make safe-add-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
 safe-add-module: validate-signer-vars
-ifndef TARGET
-	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
 	@echo "Adding module to Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Target: $(TARGET)"
+	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Execute if ready: $(EXECUTE)"
 	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
-		--sig "addModule(address,string,bool)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTE) \
+		--sig "addModule(address,string,bool)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTE) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
@@ -504,19 +504,19 @@ endif
 # the transaction is automatically executed.
 #
 # Example:
-#   make safe-remove-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
-#   make safe-remove-module TARGET=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+#   make safe-remove-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make safe-remove-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
 safe-remove-module: validate-signer-vars
-ifndef TARGET
-	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
 	@echo "Removing module from Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Target: $(TARGET)"
+	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Execute if ready: $(EXECUTE)"
 	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
-		--sig "removeModule(address,string,bool)" $(FACTORY_ADDRESS) $(TARGET) $(EXECUTE) \
+		--sig "removeModule(address,string,bool)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTE) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
@@ -526,11 +526,11 @@ endif
 # Shows how many approvals exist and who has approved.
 #
 # Example:
-#   make check-safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
-#   make check-safe-module-status TARGET=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
+#   make check-safe-module-status SAFE_TYPE=guardian ACTION=add NETWORK=sepolia
+#   make check-safe-module-status SAFE_TYPE=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
 check-safe-module-status:
-ifndef TARGET
-	$(error TARGET is required. Set TARGET=guardian or TARGET=deployer)
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
 ifndef ACTION
 	$(error ACTION is required. Set ACTION=add or ACTION=remove)
@@ -538,10 +538,10 @@ endif
 	@echo "Checking module transaction status..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Target: $(TARGET)"
+	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Action: $(ACTION)"
 	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
-		--sig "checkStatus(address,string,string)" $(FACTORY_ADDRESS) $(TARGET) $(ACTION) \
+		--sig "checkStatus(address,string,string)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(ACTION) \
 		--rpc-url $(RPC_URL)
 
 # ==============================================================================

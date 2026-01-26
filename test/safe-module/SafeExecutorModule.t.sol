@@ -103,6 +103,20 @@ contract MockTarget {
 }
 
 /**
+ * @title MockMultiSendCallOnly
+ * @notice A mock MultiSendCallOnly contract for testing delegatecall functionality
+ */
+contract MockMultiSendCallOnly {
+    /// @notice Tracks if multiSend was called
+    bool public wasCalled;
+
+    /// @notice Simulates the multiSend function
+    function multiSend(bytes memory) external {
+        wasCalled = true;
+    }
+}
+
+/**
  * @title SafeExecutorModuleTest
  * @notice Comprehensive tests for the SafeExecutorModule contract
  * @dev Tests cover:
@@ -110,6 +124,7 @@ contract MockTarget {
  *      - Authorization checks
  *      - Target address restrictions (Safe, module)
  *      - Execution success and failure handling
+ *      - DelegateCall to MultiSendCallOnly
  *      - Integration with mock Safe contract
  *
  * @author Den Technologies Inc
@@ -117,6 +132,7 @@ contract MockTarget {
 contract SafeExecutorModuleTest is Test {
     MockSafe public mockSafe;
     MockTarget public mockTarget;
+    MockMultiSendCallOnly public mockMultiSendCallOnly;
     SafeExecutorModule public module;
 
     address public authorizedExecutor;
@@ -131,9 +147,10 @@ contract SafeExecutorModuleTest is Test {
         // Deploy mock contracts
         mockSafe = new MockSafe();
         mockTarget = new MockTarget();
+        mockMultiSendCallOnly = new MockMultiSendCallOnly();
 
         // Deploy the module
-        module = new SafeExecutorModule(address(mockSafe), authorizedExecutor);
+        module = new SafeExecutorModule(address(mockSafe), authorizedExecutor, address(mockMultiSendCallOnly));
     }
 
     // ============================================================
@@ -143,21 +160,31 @@ contract SafeExecutorModuleTest is Test {
     function test_constructor_setsImmutables() public view {
         assertEq(module.SAFE(), address(mockSafe), "Safe address should be set correctly");
         assertEq(module.AUTHORIZED_EXECUTOR(), authorizedExecutor, "Executor address should be set correctly");
+        assertEq(
+            module.MULTI_SEND_CALL_ONLY(),
+            address(mockMultiSendCallOnly),
+            "MultiSendCallOnly address should be set correctly"
+        );
     }
 
     function test_constructor_revertsOnZeroSafe() public {
         vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
-        new SafeExecutorModule(address(0), authorizedExecutor);
+        new SafeExecutorModule(address(0), authorizedExecutor, address(mockMultiSendCallOnly));
     }
 
     function test_constructor_revertsOnZeroExecutor() public {
         vm.expectRevert(ISafeExecutorModule.ExecutorAddressCannotBeZero.selector);
-        new SafeExecutorModule(address(mockSafe), address(0));
+        new SafeExecutorModule(address(mockSafe), address(0), address(mockMultiSendCallOnly));
     }
 
-    function test_constructor_revertsOnBothZero() public {
+    function test_constructor_revertsOnZeroMultiSendCallOnly() public {
+        vm.expectRevert(ISafeExecutorModule.MultiSendCallOnlyAddressCannotBeZero.selector);
+        new SafeExecutorModule(address(mockSafe), authorizedExecutor, address(0));
+    }
+
+    function test_constructor_revertsOnZeroSafeFirst() public {
         vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
-        new SafeExecutorModule(address(0), address(0));
+        new SafeExecutorModule(address(0), address(0), address(0));
     }
 
     // ============================================================
@@ -258,13 +285,23 @@ contract SafeExecutorModuleTest is Test {
         assertEq(mockSafe.lastCallValue(), 0, "Value should always be zero");
     }
 
-    function test_executeOnBehalf_passesCallOperation() public {
+    function test_executeOnBehalf_passesCallOperationForRegularTargets() public {
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
         vm.prank(authorizedExecutor);
         module.executeOnBehalf(address(mockTarget), data);
 
-        assertEq(mockSafe.lastCallOperation(), 0, "Operation should be Call (0), not DelegateCall (1)");
+        assertEq(mockSafe.lastCallOperation(), 0, "Operation should be Call (0) for regular targets");
+    }
+
+    function test_executeOnBehalf_passesDelegateCallOperationForMultiSendCallOnly() public {
+        bytes memory data = abi.encodeWithSelector(MockMultiSendCallOnly.multiSend.selector, "");
+
+        vm.prank(authorizedExecutor);
+        module.executeOnBehalf(address(mockMultiSendCallOnly), data);
+
+        assertEq(mockSafe.lastCallOperation(), 1, "Operation should be DelegateCall (1) for MultiSendCallOnly");
+        assertEq(mockSafe.lastCallTo(), address(mockMultiSendCallOnly), "Call should be to MultiSendCallOnly");
     }
 
     function test_executeOnBehalf_passesCorrectData() public {
@@ -381,13 +418,36 @@ contract SafeExecutorModuleTest is Test {
         assertEq(mockTarget.value(), value, "Value should be set correctly");
     }
 
-    function testFuzz_constructor_anyValidAddresses(address safe, address executor) public {
+    function testFuzz_constructor_anyValidAddresses(address safe, address executor, address multiSend) public {
         vm.assume(safe != address(0));
         vm.assume(executor != address(0));
+        vm.assume(multiSend != address(0));
 
-        SafeExecutorModule newModule = new SafeExecutorModule(safe, executor);
+        SafeExecutorModule newModule = new SafeExecutorModule(safe, executor, multiSend);
 
         assertEq(newModule.SAFE(), safe, "Safe should be set");
         assertEq(newModule.AUTHORIZED_EXECUTOR(), executor, "Executor should be set");
+        assertEq(newModule.MULTI_SEND_CALL_ONLY(), multiSend, "MultiSendCallOnly should be set");
+    }
+
+    function testFuzz_executeOnBehalf_onlyMultiSendCallOnlyGetsDelegateCall(address target) public {
+        // Skip invalid targets
+        vm.assume(target != address(mockSafe));
+        vm.assume(target != address(module));
+        vm.assume(target != address(0));
+
+        bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
+
+        vm.prank(authorizedExecutor);
+        try module.executeOnBehalf(target, data) {
+            // Check operation type
+            if (target == address(mockMultiSendCallOnly)) {
+                assertEq(mockSafe.lastCallOperation(), 1, "MultiSendCallOnly should use DelegateCall");
+            } else {
+                assertEq(mockSafe.lastCallOperation(), 0, "Other targets should use Call");
+            }
+        } catch {
+            // Failure is fine (target may not be a contract)
+        }
     }
 }

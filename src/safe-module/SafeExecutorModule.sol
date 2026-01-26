@@ -21,7 +21,7 @@ interface ISafe {
  * @notice A minimal Safe module that allows a single authorized EOA (the "Safe Executor EOA")
  *         to execute contract calls on behalf of a Safe multisig.
  * @dev This module enforces the following restrictions:
- *      - Only regular CALL operations (no delegate calls)
+ *      - Only CALL operations, except delegatecall is allowed ONLY to MultiSendCallOnly
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
  *      - No calls to the module itself
@@ -42,21 +42,29 @@ contract SafeExecutorModule is ISafeExecutorModule {
     /// @inheritdoc ISafeExecutorModule
     address public immutable AUTHORIZED_EXECUTOR;
 
+    /// @inheritdoc ISafeExecutorModule
+    address public immutable MULTI_SEND_CALL_ONLY;
+
     /**
-     * @notice Initializes the module with the Safe address and authorized executor
+     * @notice Initializes the module with the Safe address, authorized executor, and MultiSendCallOnly
      * @param safe The Safe multisig this module will execute transactions for
      * @param authorizedExecutor The EOA authorized to call executeOnBehalf
+     * @param multiSendCallOnly The MultiSendCallOnly contract address (only target allowed for delegatecall)
      */
-    constructor(address safe, address authorizedExecutor) {
+    constructor(address safe, address authorizedExecutor, address multiSendCallOnly) {
         if (safe == address(0)) {
             revert SafeAddressCannotBeZero();
         }
         if (authorizedExecutor == address(0)) {
             revert ExecutorAddressCannotBeZero();
         }
+        if (multiSendCallOnly == address(0)) {
+            revert MultiSendCallOnlyAddressCannotBeZero();
+        }
 
         SAFE = safe;
         AUTHORIZED_EXECUTOR = authorizedExecutor;
+        MULTI_SEND_CALL_ONLY = multiSendCallOnly;
     }
 
     /// @inheritdoc ISafeExecutorModule
@@ -76,14 +84,19 @@ contract SafeExecutorModule is ISafeExecutorModule {
             revert CannotCallModule(to);
         }
 
+        // Determine operation type:
+        // - DelegateCall (1) is ONLY allowed when target is MultiSendCallOnly
+        // - Call (0) is used for all other targets
+        uint8 operation = (to == MULTI_SEND_CALL_ONLY) ? 1 : 0;
+
         // Execute via Safe's execTransactionFromModule
-        // Parameters: to, value (0), data, operation (0 = Call)
+        // Parameters: to, value (0), data, operation
         success = ISafe(SAFE)
             .execTransactionFromModule(
                 to,
                 0, // value - always zero (no ETH transfers)
                 data,
-                0 // operation - always Call (no delegate calls)
+                operation
             );
 
         // Case: Safe execution failed

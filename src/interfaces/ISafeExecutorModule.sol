@@ -8,7 +8,7 @@ pragma solidity 0.8.33;
  *      to execute contract calls on behalf of a Safe multisig.
  *
  *      This module enforces the following restrictions:
- *      - Only regular CALL operations (no delegate calls)
+ *      - Only CALL operations, except delegatecall is allowed ONLY to MultiSendCallOnly
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
  *      - No calls to the module itself
@@ -41,13 +41,16 @@ interface ISafeExecutorModule {
     /// @notice Error thrown when the executor address is zero
     error ExecutorAddressCannotBeZero();
 
+    /// @notice Error thrown when the MultiSendCallOnly address is zero
+    error MultiSendCallOnlyAddressCannotBeZero();
+
     /**
      * @notice Executes a transaction on behalf of the Safe
      * @dev Only callable by the authorized executor. Enforces:
      *      - No calls to the Safe address (prevents ownership/module modifications)
      *      - No calls to this module (prevents self-modification attempts)
      *      - No ETH value transfers (hardcoded to 0)
-     *      - No delegate calls (hardcoded to Call operation)
+     *      - Uses CALL for all targets except MultiSendCallOnly (which uses DELEGATECALL)
      * @param to The target contract address
      * @param data The calldata to execute
      * @return success Whether the execution succeeded
@@ -65,4 +68,11 @@ interface ISafeExecutorModule {
      * @return The authorized executor address
      */
     function AUTHORIZED_EXECUTOR() external view returns (address);
+
+    /**
+     * @notice Returns the MultiSendCallOnly contract address
+     * @dev This is the only address that can be called via delegatecall
+     * @return The MultiSendCallOnly address
+     */
+    function MULTI_SEND_CALL_ONLY() external view returns (address);
 }

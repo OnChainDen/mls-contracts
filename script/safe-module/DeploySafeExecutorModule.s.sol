@@ -9,6 +9,7 @@ import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
+import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeploySafeExecutorModule
@@ -18,24 +19,25 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  *
  *      Usage:
  *        forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
- *          --sig "run(address,string,address)" <FACTORY_ADDRESS> <TARGET> <EXECUTOR_ADDRESS> \
+ *          --sig "run(address,string,address)" <FACTORY_ADDRESS> <SAFE_TYPE> <EXECUTOR_ADDRESS> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
  *
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory to use (Arachnid or Den Singleton Factory)
- *        - TARGET: "guardian" or "deployer" - which Safe to deploy the module for
+ *        - SAFE_TYPE: "guardian" or "deployer" - which Safe to deploy the module for
  *        - EXECUTOR_ADDRESS: The Safe Executor EOA that will be authorized to execute transactions
  *
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory address is not zero
  *      2. Verifies the provided CREATE2 factory address is deployed
- *      3. Verifies the target is valid ("guardian" or "deployer")
+ *      3. Verifies the safeType is valid ("guardian" or "deployer")
  *      4. Verifies the executor address matches the expected address in DeploymentConfig
  *      5. Verifies the Safe is deployed at the expected address
- *      6. Verifies the deployer is not the production Den Factory deployer
- *      7. Requires interactive confirmation when broadcasting
+ *      6. Verifies the MultiSendCallOnly is deployed at the expected address
+ *      7. Verifies the deployer is not the production Den Factory deployer
+ *      8. Requires interactive confirmation when broadcasting
  *
  * @author Den Technologies Inc
  */
@@ -43,26 +45,33 @@ contract DeploySafeExecutorModule is Script {
     /**
      * @notice Main entry point - deploys a SafeExecutorModule via CREATE2
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
-     * @param target "guardian" or "deployer" - which Safe to deploy the module for
+     * @param safeType "guardian" or "deployer" - which Safe to deploy the module for
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
-    function run(address factoryAddress, string calldata target, address executorAddress) external {
+    function run(address factoryAddress, string calldata safeType, address executorAddress) external {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
         require(
             Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
         );
 
-        // Validate target is "guardian" or "deployer"
-        bool isGuardian = _isGuardianTarget(target);
+        // Validate safeType is "guardian" or "deployer"
+        bool isGuardian = _isGuardianSafeType(safeType);
 
         // Validate executor address matches expected configuration
         require(executorAddress != address(0), "Executor address cannot be zero");
         _validateExecutorAddressOrRevert(block.chainid, isGuardian, executorAddress);
 
-        // Get the Safe address for this target
+        // Get the Safe address for this safeType
         address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed at expected address");
+
+        // Get and verify MultiSendCallOnly address
+        address multiSendCallOnly = _getMultiSendCallOnlyAddress(factoryAddress);
+        require(
+            Create2Utils.isContractDeployedAtAddress(multiSendCallOnly),
+            "MultiSendCallOnly not deployed at expected address"
+        );
 
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeExecutorModule");
@@ -75,16 +84,18 @@ contract DeploySafeExecutorModule is Script {
         Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logKeyValue("Deployer EOA", msg.sender);
-        Logger.logKeyValue("Target", target);
+        Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
         Logger.logKeyValue("Safe Executor EOA", executorAddress);
+        Logger.logKeyValue("MultiSendCallOnly", multiSendCallOnly);
         Logger.logEmptyLine();
 
         // Start broadcasting transactions
         vm.startBroadcast();
 
         // Deploy the module
-        address moduleAddress = _deployModule(factoryAddress, isGuardian, safeAddress, executorAddress);
+        address moduleAddress =
+            _deployModule(factoryAddress, isGuardian, safeAddress, executorAddress, multiSendCallOnly);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -97,33 +108,36 @@ contract DeploySafeExecutorModule is Script {
         Logger.logBoxFooter();
 
         // Log next steps
-        _logNextSteps(target, safeAddress, moduleAddress);
+        _logNextSteps(safeType, safeAddress, moduleAddress);
     }
 
     /**
      * @notice Compute and print module address without deploying
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
-     * @param target "guardian" or "deployer" - which Safe to compute the module address for
+     * @param safeType "guardian" or "deployer" - which Safe to compute the module address for
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
-    function computeAddress(address factoryAddress, string calldata target, address executorAddress) external view {
+    function computeAddress(address factoryAddress, string calldata safeType, address executorAddress) external view {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
         require(
             Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
         );
 
-        // Validate target
-        bool isGuardian = _isGuardianTarget(target);
+        // Validate safeType
+        bool isGuardian = _isGuardianSafeType(safeType);
 
         // Validate executor address
         require(executorAddress != address(0), "Executor address cannot be zero");
 
-        // Get the Safe address for this target
+        // Get the Safe address for this safeType
         address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
 
+        // Get MultiSendCallOnly address
+        address multiSendCallOnly = _getMultiSendCallOnlyAddress(factoryAddress);
+
         // Compute the module address
-        bytes memory initCode = _getInitCode(safeAddress, executorAddress);
+        bytes memory initCode = _getInitCode(safeAddress, executorAddress, multiSendCallOnly);
         bytes32 salt = _getSalt(isGuardian);
         address expectedAddress = Create2Utils.computeAddress(factoryAddress, salt, initCode);
 
@@ -131,9 +145,10 @@ contract DeploySafeExecutorModule is Script {
         Logger.logBoxHeader("Computed SafeExecutorModule Address");
         Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
-        Logger.logKeyValue("Target", target);
+        Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
         Logger.logKeyValue("Safe Executor EOA", executorAddress);
+        Logger.logKeyValue("MultiSendCallOnly", multiSendCallOnly);
         Logger.logEmptyLine();
         Logger.logKeyValue("Expected Module Address", expectedAddress);
 
@@ -159,21 +174,21 @@ contract DeploySafeExecutorModule is Script {
         require(executorAddress == expected, "Invalid executor address for target");
     }
 
-    /// @dev Validates and parses the target string
-    /// @param target The target string ("guardian" or "deployer")
-    /// @return isGuardian True if target is "guardian", false if "deployer"
-    function _isGuardianTarget(string calldata target) internal pure returns (bool isGuardian) {
-        bytes32 targetHash = keccak256(bytes(target));
-        if (targetHash == keccak256("guardian")) {
+    /// @dev Validates and parses the safeType string
+    /// @param safeType The safeType string ("guardian" or "deployer")
+    /// @return isGuardian True if safeType is "guardian", false if "deployer"
+    function _isGuardianSafeType(string calldata safeType) internal pure returns (bool isGuardian) {
+        bytes32 safeTypeHash = keccak256(bytes(safeType));
+        if (safeTypeHash == keccak256("guardian")) {
             return true;
         }
-        if (targetHash == keccak256("deployer")) {
+        if (safeTypeHash == keccak256("deployer")) {
             return false;
         }
-        revert("Invalid target - must be 'guardian' or 'deployer'");
+        revert("Invalid safeType - must be 'guardian' or 'deployer'");
     }
 
-    /// @dev Gets the Safe address for the given target and factory
+    /// @dev Gets the Safe address for the given safeType and factory
     /// @param factoryAddress The CREATE2 factory address
     /// @param isGuardian True for Guardian Safe, false for Deployer Safe
     /// @return safeAddress The Safe address
@@ -184,7 +199,15 @@ contract DeploySafeExecutorModule is Script {
         return DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
     }
 
-    /// @dev Gets the salt for the given target
+    /// @dev Gets the MultiSendCallOnly address for the given factory
+    /// @param factoryAddress The CREATE2 factory address
+    /// @return multiSendCallOnly The MultiSendCallOnly address
+    function _getMultiSendCallOnlyAddress(address factoryAddress) internal pure returns (address multiSendCallOnly) {
+        SafeInfrastructure memory safeInfra = DeploymentConfig.getExpectedSafeInfrastructureAddresses(factoryAddress);
+        return safeInfra.multiSendCallOnlyAddress;
+    }
+
+    /// @dev Gets the salt for the given safeType
     /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
     /// @return salt The CREATE2 salt
     function _getSalt(bool isGuardian) internal pure returns (bytes32 salt) {
@@ -197,9 +220,16 @@ contract DeploySafeExecutorModule is Script {
     /// @dev Constructs the init code for the module deployment
     /// @param safeAddress The Safe address
     /// @param executorAddress The Safe Executor EOA address
+    /// @param multiSendCallOnly The MultiSendCallOnly address
     /// @return initCode The init code (creation code + constructor args)
-    function _getInitCode(address safeAddress, address executorAddress) internal pure returns (bytes memory initCode) {
-        return abi.encodePacked(type(SafeExecutorModule).creationCode, abi.encode(safeAddress, executorAddress));
+    function _getInitCode(address safeAddress, address executorAddress, address multiSendCallOnly)
+        internal
+        pure
+        returns (bytes memory initCode)
+    {
+        return abi.encodePacked(
+            type(SafeExecutorModule).creationCode, abi.encode(safeAddress, executorAddress, multiSendCallOnly)
+        );
     }
 
     /// @dev Deploys the SafeExecutorModule via CREATE2
@@ -207,13 +237,17 @@ contract DeploySafeExecutorModule is Script {
     /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
     /// @param safeAddress The Safe address
     /// @param executorAddress The Safe Executor EOA address
+    /// @param multiSendCallOnly The MultiSendCallOnly address
     /// @return moduleAddress The deployed module address
-    function _deployModule(address factoryAddress, bool isGuardian, address safeAddress, address executorAddress)
-        internal
-        returns (address moduleAddress)
-    {
+    function _deployModule(
+        address factoryAddress,
+        bool isGuardian,
+        address safeAddress,
+        address executorAddress,
+        address multiSendCallOnly
+    ) internal returns (address moduleAddress) {
         bytes32 salt = _getSalt(isGuardian);
-        bytes memory initCode = _getInitCode(safeAddress, executorAddress);
+        bytes memory initCode = _getInitCode(safeAddress, executorAddress, multiSendCallOnly);
         string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
 
         Logger.logSection("SafeExecutorModule (CREATE2)");
@@ -224,17 +258,17 @@ contract DeploySafeExecutorModule is Script {
     }
 
     /// @dev Logs the next steps after deployment
-    /// @param target The target ("guardian" or "deployer")
+    /// @param safeType The safeType ("guardian" or "deployer")
     /// @param safeAddress The Safe address
     /// @param moduleAddress The deployed module address
-    function _logNextSteps(string calldata target, address safeAddress, address moduleAddress) internal pure {
+    function _logNextSteps(string calldata safeType, address safeAddress, address moduleAddress) internal pure {
         Logger.logBoxHeader("NEXT STEP: Add the module to the Safe");
         Logger.logIndented("Safe owners must approve adding the module. Run:");
         Logger.logEmptyLine();
         Logger.logIndented(
             string(
                 abi.encodePacked(
-                    "make safe-add-module TARGET=", target, " EXECUTE=true NETWORK=<network> ACCOUNT=<safe-owner>"
+                    "make safe-add-module SAFE_TYPE=", safeType, " EXECUTE=true NETWORK=<network> ACCOUNT=<safe-owner>"
                 )
             )
         );
