@@ -223,9 +223,9 @@ library DeploymentConfig {
 
     /// @dev Expected module addresses when deployed via Arachnid Deterministic Deployment Proxy
     address internal constant ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0x922B1C473CbF70651D132998668c9e802C81b4e4;
+        0xeC90Dfc59847C2421A9E08f65709Bc0781104932;
     address internal constant ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0x44b5FDbEbd206BdfA2ADd953beeF1c208460E6a1;
+        0xDC87f1164a42D43db77981478B4c6a79A1387060;
 
     /// @dev Expected module addresses when deployed via Production Den Singleton Factory
     ///      TODO: Update after deploying modules via prod Den Singleton Factory
@@ -234,9 +234,9 @@ library DeploymentConfig {
 
     /// @dev Expected module addresses when deployed via Non-Production Den Singleton Factory
     address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0x53CF94351bFF5E3CA989a0D711Acf9b4E1ea8039;
+        0x051Bb7D7B7E7FF76201bDf6Ca19f1Db8Bb6CB4D6;
     address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0x301A7750811D672C14c367c94163f06DfCA761A8;
+        0x68931Ba1536817FEada8275ACb906df5A7a29774;
 
     // ==================== Hardcoded Safe Executor EOA Addresses ====================
     // These are the EOA addresses (Safe Executor EOAs) authorized to execute transactions via the
