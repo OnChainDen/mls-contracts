@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
@@ -14,6 +13,7 @@ import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 import {PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
@@ -173,42 +173,50 @@ contract DeployLibraries is Script {
         Logger.logIndented("  --broadcast \\");
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_POLICY_PATH,
-                ":",
-                Strings.toHexString(libs.policyAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_POLICY_PATH,
+                    ":",
+                    StringUtils.toHexString(libs.policyAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_ADMIN_PATH,
-                ":",
-                Strings.toHexString(libs.adminAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_ADMIN_PATH,
+                    ":",
+                    StringUtils.toHexString(libs.adminAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_INIT_PATH,
-                ":",
-                Strings.toHexString(libs.initializationAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_INIT_PATH,
+                    ":",
+                    StringUtils.toHexString(libs.initializationAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented(
             // solhint-disable-next-line func-named-parameters
-            string.concat(
-                "  --libraries ",
-                DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
-                ":",
-                Strings.toHexString(libs.accountSignatureAddress),
-                " \\"
+            string(
+                abi.encodePacked(
+                    "  --libraries ",
+                    DeploymentConfig.LIB_ORG_ACCOUNT_SIG_PATH,
+                    ":",
+                    StringUtils.toHexString(libs.accountSignatureAddress),
+                    " \\"
+                )
             )
         );
         Logger.logIndented("  -vvvv");

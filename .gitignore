@@ -2,6 +2,10 @@
 cache/
 out/
 
+# Safe profile build artifacts
+cache-safe/
+out-safe/
+
 # Ignores development broadcast logs
 !/broadcast
 /broadcast/*/31337/

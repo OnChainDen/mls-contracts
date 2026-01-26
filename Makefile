@@ -17,6 +17,9 @@
 # CREATE2 factory deployment
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
+# Safe 1.3.0 deployment
+.PHONY: deploy-safe deploy-safe-dry-run compute-safe-addresses
+
 # Platform deployment
 .PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
 .PHONY: deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
@@ -48,6 +51,11 @@ help:
 	@echo "  remove         Remove dependencies (lib/)"
 	@echo "  install        Install dependencies"
 	@echo "  update         Update dependencies"
+	@echo ""
+	@echo "Safe 1.3.0 Deployment:"
+	@echo "  deploy-safe               Deploy Safe 1.3.0 infrastructure (requires FOUNDRY_PROFILE=safe)"
+	@echo "  deploy-safe-dry-run       Simulate Safe deployment (no broadcast)"
+	@echo "  compute-safe-addresses    Preview expected Safe addresses without deploying"
 	@echo ""
 	@echo "Platform Deployment:"
 	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
@@ -137,9 +145,9 @@ lint: check-headers
 	npx solhint 'src/**/*.sol'
 
 	# Run solhint linter on our scripts
-	# This will automatically use our script-specific config, located at `script/.solhint.json`. 
-	# This config "inherits" from our core config, but overrides rules that shouldn't apply to scripts.
-	npx solhint 'script/**/*.sol'
+	# Uses script-specific config that disables rules not applicable to scripts
+	# (e.g., compiler-version, gas-custom-errors, no-console, ordering)
+	npx solhint -c script/.solhint.json 'script/**/*.sol'
 
 # Analyze: Static Analysis (Slither)
 analyze:
@@ -346,6 +354,63 @@ deploy-den-factory: validate-signer-vars
 		$(VERBOSITY)
 
 # ==============================================================================
+# Safe 1.3.0 Deployment Commands
+# ==============================================================================
+#
+# Safe 1.3.0 infrastructure must be deployed BEFORE platform contracts.
+# Uses Solidity 0.7.6 via FOUNDRY_PROFILE=safe for deterministic addresses.
+#
+# IMPORTANT: Safe deployment only needs to be done ONCE per chain per factory.
+# After deployment, addresses are hardcoded in DeploymentConfig.sol.
+
+# Deploy Safe: Deploys Safe 1.3.0 infrastructure (singleton, proxy factory, handlers, multisigs)
+# IMPORTANT: This uses FOUNDRY_PROFILE=safe which compiles with Solidity 0.7.6.
+#
+# Example:
+#   make deploy-safe NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-safe FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-safe: validate-signer-vars
+	@echo "Deploying Safe 1.3.0 infrastructure..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Profile: safe (Solidity 0.7.6)"
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Deploy Safe Dry-Run: Simulates Safe deployment without broadcasting
+#
+# Example:
+#   make deploy-safe-dry-run NETWORK=sepolia
+deploy-safe-dry-run:
+	@echo "Simulating Safe 1.3.0 deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Profile: safe (Solidity 0.7.6)"
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Compute Safe Addresses: Preview expected Safe addresses without deploying
+# Useful for verifying addresses before deployment or updating DeploymentConfig.sol
+#
+# Example:
+#   make compute-safe-addresses NETWORK=sepolia
+#   make compute-safe-addresses FACTORY=den-nonprod NETWORK=mainnet
+compute-safe-addresses:
+	@echo "Computing Safe 1.3.0 addresses..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Profile: safe (Solidity 0.7.6)"
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL)
+
+# ==============================================================================
 # Platform Deployment Commands
 # ==============================================================================
 
@@ -386,13 +451,14 @@ deploy-contracts: validate-signer-vars
 		--broadcast \
 		$(VERBOSITY)
 
-# Deploy Platform: Full deployment of libraries and contracts
-# This is a convenience target that runs deploy-libraries then deploy-contracts.
+# Deploy Platform: Full deployment of Safe, libraries, and contracts
+# This is a convenience target that runs deploy-safe, deploy-libraries, then deploy-contracts.
+# Safe deployment is idempotent (skips already deployed contracts).
 #
 # Example:
 #   make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
 #   make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
-deploy-platform: deploy-libraries deploy-contracts
+deploy-platform: deploy-safe deploy-libraries deploy-contracts
 	@echo "Platform deployment complete!"
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY)"

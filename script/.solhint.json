@@ -1,6 +1,8 @@
 {
   "rules": {
     "no-console": "off",
-    "gas-custom-errors": "off"
+    "gas-custom-errors": "off",
+    "compiler-version": "off",
+    "ordering": "off"
   }
 }
