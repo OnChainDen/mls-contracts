@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.33;
-
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+pragma solidity >=0.7.0 <0.9.0;
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Logger} from "script/libraries/Logger.sol";
+import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title Create2Utils
  * @notice Helper library for deterministic CREATE2 deployments
  * @dev Abstracts differences between Arachnid and Den Singleton Factory.
  *      Provides utilities for computing addresses, checking deployment status, and deploying.
+ *
+ *      This library uses a floating pragma (>=0.7.0 <0.9.0) to allow reuse by both
+ *      platform scripts (0.8.33) and Safe deployment scripts (0.7.6).
+ *
  * @author Den Technologies Inc
  */
 library Create2Utils {
@@ -41,7 +44,7 @@ library Create2Utils {
         deployedAtAddress = _deploy(factoryAddress, salt, initCode);
 
         // Case: Deployment failed
-        require(deployedAtAddress != address(0), string.concat("Deployment failed: ", name));
+        require(deployedAtAddress != address(0), string(abi.encodePacked("Deployment failed: ", name)));
 
         // Case: Deployment address mismatch
         require(deployedAtAddress == predictedAddress, "Deployed address does not match predicted address");
@@ -55,21 +58,27 @@ library Create2Utils {
     /// @param contractAddress The address to check
     /// @return deployed True if there is code at the address
     function isContractDeployedAtAddress(address contractAddress) internal view returns (bool deployed) {
-        return contractAddress.code.length > 0;
+        // Use assembly for 0.7.x compatibility (address.code was added in 0.8.0)
+        uint256 size;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            size := extcodesize(contractAddress)
+        }
+        return size > 0;
     }
 
     /// @dev Validates that a factory is NOT deployed at the given address, reverts if it is
     /// @param factoryAddress The factory address to check
     /// @param factoryName Human-readable name for logging
     function validateFactoryNotDeployedOrRevert(address factoryAddress, string memory factoryName) internal view {
-        Logger.logCheckStart(string.concat("Checking if ", factoryName, " already deployed..."));
+        Logger.logCheckStart(string(abi.encodePacked("Checking if ", factoryName, " already deployed...")));
 
         require(
             !isContractDeployedAtAddress(factoryAddress),
-            string.concat(factoryName, " already deployed at ", Strings.toHexString(factoryAddress))
+            string(abi.encodePacked(factoryName, " already deployed at ", StringUtils.toHexString(factoryAddress)))
         );
 
-        Logger.logCheckPass(string.concat(factoryName, " not deployed"));
+        Logger.logCheckPass(string(abi.encodePacked(factoryName, " not deployed")));
     }
 
     /// @dev Validates that the deployer has sufficient ETH balance for deployment, reverts if not
@@ -89,17 +98,19 @@ library Create2Utils {
 
         // Case: Deployer has sufficient balance
         if (balance >= requiredBalance) {
-            Logger.logCheckPass(string.concat("Deployer has sufficient ETH (", Strings.toString(balance), " wei)"));
+            Logger.logCheckPass(
+                string(abi.encodePacked("Deployer has sufficient ETH (", StringUtils.toString(balance), " wei)"))
+            );
             return;
         }
 
         // Case: Deployer does not have sufficient balance
         Logger.logCheckFail("Deployer needs more ETH");
-        Logger.logCheckDetail(string.concat("Current: ", Strings.toString(balance), " wei"));
-        Logger.logCheckDetail(string.concat("Required: ", Strings.toString(requiredBalance), " wei"));
+        Logger.logCheckDetail(string(abi.encodePacked("Current: ", StringUtils.toString(balance), " wei")));
+        Logger.logCheckDetail(string(abi.encodePacked("Required: ", StringUtils.toString(requiredBalance), " wei")));
         Logger.logEmptyLine();
         Logger.logCheckDetail("Fund the deployer by running:");
-        Logger.logCheckDetail(string.concat("  forge script ", scriptName, " --sig \"fundDeployer()\" \\"));
+        Logger.logCheckDetail(string(abi.encodePacked("  forge script ", scriptName, " --sig \"fundDeployer()\" \\")));
         Logger.logCheckDetail("    --rpc-url $RPC_URL --broadcast");
         revert("Deployer has insufficient ETH");
     }
@@ -131,7 +142,7 @@ library Create2Utils {
         pure
         returns (address)
     {
-        return Create2.computeAddress(salt, keccak256(initCode), factoryAddress);
+        return ScriptUtils.computeCreate2Address(salt, keccak256(initCode), factoryAddress);
     }
 
     /// @dev Logs deployment summary header with factory and chain info

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.33;
 
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Script} from "forge-std/Script.sol";
 
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
+import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title DeployDenSingletonFactory
@@ -157,12 +157,14 @@ contract DeployDenSingletonFactory is Script {
         // Case: Deployer nonce is not 0 - require confirmation with context in prompt
         // NOTE: Context is embedded in prompt because console.log output is buffered
         // solhint-disable-next-line func-named-parameters
-        string memory context = string.concat(
-            "\n  !! WARNING: Deployer nonce is not 0 (expected 0) !!\n",
-            "  CRITICAL: Nonce has been burned! Factory address will change.\n",
-            "  Continuing will deploy to an unexpected address.\n",
-            "  Current nonce: ",
-            Strings.toString(nonce)
+        string memory context = string(
+            abi.encodePacked(
+                "\n  !! WARNING: Deployer nonce is not 0 (expected 0) !!\n",
+                "  CRITICAL: Nonce has been burned! Factory address will change.\n",
+                "  Continuing will deploy to an unexpected address.\n",
+                "  Current nonce: ",
+                StringUtils.toString(nonce)
+            )
         );
 
         ScriptUtils.promptForConfirmationOrRevert(vm, context);
@@ -175,13 +177,15 @@ contract DeployDenSingletonFactory is Script {
         if (msg.sender == DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS) {
             // Build context for prompt - embedded because console.log output is buffered
             // solhint-disable-next-line func-named-parameters
-            string memory context = string.concat(
-                "\n  !! Using PRODUCTION Den Factory deployer !!\n",
-                "  This EOA must keep nonce 0 for deterministic deployment.\n",
-                "  Deployer: ",
-                Strings.toHexString(msg.sender),
-                "\n  Expected factory: ",
-                Strings.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
+            string memory context = string(
+                abi.encodePacked(
+                    "\n  !! Using PRODUCTION Den Factory deployer !!\n",
+                    "  This EOA must keep nonce 0 for deterministic deployment.\n",
+                    "  Deployer: ",
+                    StringUtils.toHexString(msg.sender),
+                    "\n  Expected factory: ",
+                    StringUtils.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
+                )
             );
 
             ScriptUtils.promptForConfirmationOrRevert(vm, context);
@@ -192,13 +196,15 @@ contract DeployDenSingletonFactory is Script {
         // Case: Deployer address is NOT the production deployer
         // Build context for prompt - embedded because console.log output is buffered
         // solhint-disable-next-line func-named-parameters
-        string memory nonProdContext = string.concat(
-            "\n  !! Using NON-PRODUCTION Den Factory deployer !!\n",
-            "  Factory address will differ from production.\n",
-            "  Deployer: ",
-            Strings.toHexString(msg.sender),
-            "\n  Production deployer: ",
-            Strings.toHexString(DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS)
+        string memory nonProdContext = string(
+            abi.encodePacked(
+                "\n  !! Using NON-PRODUCTION Den Factory deployer !!\n",
+                "  Factory address will differ from production.\n",
+                "  Deployer: ",
+                StringUtils.toHexString(msg.sender),
+                "\n  Production deployer: ",
+                StringUtils.toHexString(DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS)
+            )
         );
 
         ScriptUtils.promptForConfirmationOrRevert(vm, nonProdContext);

@@ -10,6 +10,8 @@ cache_path = "cache"
 solc = "0.8.33"
 evm_version = "paris"
 ignored_error_codes = [2424]  # Suppress deprecated memory-safe-assembly natspec warning from forge-std
+# Skip Safe 1.3.0 contracts (use FOUNDRY_PROFILE=safe to compile them with Solidity 0.7.6)
+skip = ["lib/safe-smart-account/**", "script/safe/**"]
 optimizer = true
 optimizer_runs = 200
 via_ir = true
@@ -54,6 +56,30 @@ fuzz = { runs = 256  }
 invariant = { runs = 256 }
 
 # ==============================================================================
+# SAFE 1.3.0 DEPLOYMENT PROFILE
+# Uses Solidity 0.7.6 for deterministic Safe deployments matching official bytecode
+# ==============================================================================
+[profile.safe]
+src = "script/safe"            # Only compile Safe deployment script and its dependencies
+out = "out-safe"               # Separate output directory to avoid conflicts
+libs = ["lib"]
+test = "script/safe"           # No tests for Safe profile
+cache_path = "cache-safe"      # Separate cache to avoid conflicts
+solc = "0.7.6"                 # Safe 1.3.0 official compiler version
+evm_version = "istanbul"       # Safe 1.3.0 was deployed targeting Istanbul
+optimizer = true
+optimizer_runs = 200
+via_ir = false                 # Safe 1.3.0 was compiled without IR pipeline
+fs_permissions = [{ access = "read-write", path = "./"}]
+# Skip 0.8.33 files that are incompatible with Solidity 0.7.6
+skip = ["script/Deploy*.s.sol", "script/libraries/Array*.sol", "script/libraries/Linked*.sol", "test/**", "src/**"]
+remappings = [
+    "@safe/=lib/safe-smart-account/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "script/=script/"
+]
+
+# ==============================================================================
 # LINKING PROFILES (Compilation Strategies)
 # These profiles inherit settings from [profile.default] but override libraries.
 # ==============================================================================
@@ -62,10 +88,10 @@ invariant = { runs = 256 }
 [profile.arachnid]
 libraries = [
     # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0c39cb4F67AA70D53ceE37d4c88f11ffDb07E314",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x744CaFa607273AF5664073d05BE066C6bDbf8201",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x95A9CDA2a67E48b154d8EFa3B147f31eC6e8147E",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x6A6709A2c898E719A6Ee7635a3963122059655eB"
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x8216540c25aD0Fc9F5C75F2b513d67ee09078568",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x7624025fEcC583aDF57c6B51DBC69143A09bE935",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5"
 ]
 
 # --- Strategy: Den Singleton Factory (Prod) ---
@@ -83,10 +109,10 @@ libraries = [
 [profile.den-nonprod]
 libraries = [
     # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x85c8b8410F0feeFd157496245c37d89F33985cC0",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCAE149fD735Cc65290e737BF06855Bba119b6082",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x384803ADc053682c7f42270De5DF50d37c243913",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xFcBDb3e95De055ac3BAedADA90894E5624Af1162"
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65"
 ]
 
 # ==============================================================================
