@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 /**
@@ -8,7 +9,7 @@ pragma solidity 0.8.33;
  *      to execute contract calls on behalf of a Safe multisig.
  *
  *      This module enforces the following restrictions:
- *      - Only CALL operations, except delegatecall is allowed ONLY to MultiSendCallOnly
+ *      - Only CALL operations, except delegatecall is allowed ONLY to BatchedTransaction
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
  *      - No calls to the module itself
@@ -41,8 +42,8 @@ interface ISafeExecutorModule {
     /// @notice Error thrown when the executor address is zero
     error ExecutorAddressCannotBeZero();
 
-    /// @notice Error thrown when the MultiSendCallOnly address is zero
-    error MultiSendCallOnlyAddressCannotBeZero();
+    /// @notice Error thrown when the BatchedTransaction address is zero
+    error BatchedTransactionAddressCannotBeZero();
 
     /**
      * @notice Executes a transaction on behalf of the Safe
@@ -50,7 +51,7 @@ interface ISafeExecutorModule {
      *      - No calls to the Safe address (prevents ownership/module modifications)
      *      - No calls to this module (prevents self-modification attempts)
      *      - No ETH value transfers (hardcoded to 0)
-     *      - Uses CALL for all targets except MultiSendCallOnly (which uses DELEGATECALL)
+     *      - Uses CALL for all targets except BatchedTransaction (which uses DELEGATECALL)
      * @param to The target contract address
      * @param data The calldata to execute
      * @return success Whether the execution succeeded
@@ -70,9 +71,9 @@ interface ISafeExecutorModule {
     function AUTHORIZED_EXECUTOR() external view returns (address);
 
     /**
-     * @notice Returns the MultiSendCallOnly contract address
+     * @notice Returns the BatchedTransaction contract address
      * @dev This is the only address that can be called via delegatecall
-     * @return The MultiSendCallOnly address
+     * @return The BatchedTransaction address
      */
-    function MULTI_SEND_CALL_ONLY() external view returns (address);
+    function BATCHED_TRANSACTION() external view returns (address);
 }

@@ -78,6 +78,9 @@ library DeploymentConfig {
     bytes32 internal constant DEPLOYER_SAFE_EXECUTOR_MODULE_SALT =
         keccak256("den.mls-wallet.safe-module.eoa-executor.deployer.v1");
 
+    /// @dev Salt for BatchedTransaction deployment
+    bytes32 internal constant BATCHED_TRANSACTION_SALT = keccak256("den.mls-wallet.batched-transaction.v1");
+
     // ==================== Hardcoded CREATE2 Factory and Deployer Addresses =====================
     // These are the hardcoded addresses for the CREATE2 factories that are used to deploy the platform contracts.
     // These addresses are not expected to change, so they are hardcoded in the library.
@@ -238,6 +241,26 @@ library DeploymentConfig {
         0x051Bb7D7B7E7FF76201bDf6Ca19f1Db8Bb6CB4D6;
     address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
         0x68931Ba1536817FEada8275ACb906df5A7a29774;
+
+    // ==================== Hardcoded BatchedTransaction Addresses ====================
+    // These are the expected deployment addresses for BatchedTransaction when deployed via CREATE2
+    // using the specified factory. Addresses differ based on which factory is used because the
+    // factory address is part of the CREATE2 address computation.
+    //
+    // IMPORTANT: These addresses must be updated after deploying BatchedTransaction for each factory.
+    // ==============================================================================
+
+    /// @dev Expected BatchedTransaction address when deployed via Arachnid Deterministic Deployment Proxy
+    ///      TODO: Update after deploying BatchedTransaction via Arachnid factory
+    address internal constant ARACHNID_BATCHED_TRANSACTION_ADDRESS = address(0);
+
+    /// @dev Expected BatchedTransaction address when deployed via Production Den Singleton Factory
+    ///      TODO: Update after deploying BatchedTransaction via prod Den Singleton Factory
+    address internal constant PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS = address(0);
+
+    /// @dev Expected BatchedTransaction address when deployed via Non-Production Den Singleton Factory
+    ///      TODO: Update after deploying BatchedTransaction via non-prod Den Singleton Factory
+    address internal constant NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS = address(0);
 
     // ==================== Hardcoded Safe Executor EOA Addresses ====================
     // These are the EOA addresses (Safe Executor EOAs) authorized to execute transactions via the
@@ -582,5 +605,40 @@ library DeploymentConfig {
 
         // Case: Non-production chain
         return (NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS, NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS);
+    }
+
+    /// @dev Returns expected BatchedTransaction address based on which CREATE2 factory was used for deployment
+    /// @param factoryAddress The CREATE2 factory address used to deploy the BatchedTransaction
+    /// @return batchedTransactionAddress The expected BatchedTransaction address
+    function getExpectedBatchedTransactionAddress(address factoryAddress)
+        internal
+        pure
+        returns (address batchedTransactionAddress)
+    {
+        // Case: Arachnid Deterministic Deployment Proxy
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            require(ARACHNID_BATCHED_TRANSACTION_ADDRESS != address(0), "ARACHNID_BATCHED_TRANSACTION_ADDRESS not set");
+            return ARACHNID_BATCHED_TRANSACTION_ADDRESS;
+        }
+
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            require(
+                PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS != address(0),
+                "PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS not set"
+            );
+            return PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS;
+        }
+
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            require(
+                NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS != address(0),
+                "NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS not set"
+            );
+            return NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS;
+        }
+
+        revert("Unknown factory - no expected BatchedTransaction address");
     }
 }

@@ -17,15 +17,19 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 4. [Safe 1.3.0 Deployment](#safe-130-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
-5. [Safe Executor Module](#safe-executor-module)
+5. [BatchedTransaction Contract](#batchedtransaction-contract)
+   - [Why BatchedTransaction?](#why-batchedtransaction)
+   - [Transaction Encoding Format](#transaction-encoding-format)
+   - [BatchedTransaction Deployment Commands](#batchedtransaction-deployment-commands)
+6. [Safe Executor Module](#safe-executor-module)
    - [Module Overview](#module-overview)
    - [Module Deployment Commands](#module-deployment-commands)
    - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
-6. [Deployment Examples](#deployment-examples)
+7. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-7. [Verifying Deployments](#verifying-deployments)
-8. [Troubleshooting](#troubleshooting)
+8. [Verifying Deployments](#verifying-deployments)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -287,6 +291,80 @@ make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
 
 ---
 
+## BatchedTransaction Contract
+
+The `BatchedTransaction` contract is a security-focused alternative to `MultiSendCallOnly` that provides secure batched transaction execution when delegatecalled from a Safe.
+
+### Why BatchedTransaction?
+
+When `SafeExecutorModule` delegatecalls to a batching contract, sub-transactions can potentially:
+1. Transfer ETH via non-zero `value` fields
+2. Call the Safe address to modify owners/modules
+3. Perform other malicious operations
+
+`BatchedTransaction` addresses these vulnerabilities with:
+
+- **No value field**: ETH value is hardcoded to 0 in the encoding, preventing ETH transfers
+- **address(this) validation**: When delegatecalled, `address(this)` is the Safe, and calls to `address(this)` are blocked
+- **Efficient encoding**: `28 + N bytes` per transaction (vs `85 + N bytes` for MultiSendCallOnly)
+
+### Transaction Encoding Format
+
+Transactions are packed sequentially with no padding:
+
+```
+[to (20 bytes)][dataLength (8 bytes)][data (N bytes)][to (20 bytes)][dataLength (8 bytes)][data (N bytes)]...
+```
+
+| Field | Size | Description |
+|-------|------|-------------|
+| `to` | 20 bytes | Target contract address |
+| `dataLength` | 8 bytes | Length of calldata (uint64) |
+| `data` | N bytes | Calldata to execute |
+
+### BatchedTransaction Deployment Commands
+
+#### Deploy BatchedTransaction
+
+```bash
+# Deploy to local Anvil instance
+make deploy-batched-transaction ACCOUNT=my-deployer
+
+# Deploy to Sepolia testnet
+make deploy-batched-transaction NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy using Den non-prod factory
+make deploy-batched-transaction FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy using a Ledger
+make deploy-batched-transaction NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+```
+
+#### Compute Expected Address
+
+Preview the expected address without deploying:
+
+```bash
+make compute-batched-transaction-address NETWORK=sepolia
+make compute-batched-transaction-address FACTORY=den-nonprod NETWORK=mainnet
+```
+
+### Deployment Order
+
+**IMPORTANT**: BatchedTransaction must be deployed BEFORE SafeExecutorModules.
+
+```
+1. Deploy CREATE2 Factory (if not already deployed)
+2. Deploy Safe Infrastructure and Multisigs
+3. Deploy Platform Libraries
+4. Deploy Platform Contracts
+5. Deploy BatchedTransaction     ← Must be before modules
+6. Deploy SafeExecutorModules    ← Depends on BatchedTransaction
+7. Add Modules to Safes
+```
+
+---
+
 ## Safe Executor Module
 
 The Safe Executor Module allows a designated EOA (the "Safe Executor EOA") to execute contract calls on behalf of a Safe multisig without requiring multisig signatures for every transaction.
@@ -298,12 +376,12 @@ The `SafeExecutorModule` is a minimal Safe module with the following properties:
 - **Single Safe Executor EOA**: Only one EOA can execute transactions via the module
 - **Immutable configuration**: The Safe Executor EOA cannot be changed after deployment
 - **Restricted operations**:
-  - Uses `CALL` for all targets, except `DELEGATECALL` is allowed ONLY to `MultiSendCallOnly`
+  - Uses `CALL` for all targets, except `DELEGATECALL` is allowed ONLY to `BatchedTransaction`
   - No ETH transfers (value must always be zero)
   - No calls to the Safe itself (prevents ownership/module modifications)
   - No calls to the module itself
 
-The `DELEGATECALL` exception for `MultiSendCallOnly` enables batching multiple calls into a single transaction, which is essential for complex operations that need to be atomic.
+The `DELEGATECALL` exception for `BatchedTransaction` enables batching multiple calls into a single transaction, which is essential for complex operations that need to be atomic.
 
 To rotate the Safe Executor EOA, deploy a new module instance and have Safe owners swap modules via multisig transaction.
 
@@ -666,6 +744,8 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
 | `make deploy-contracts` | Deploy all contracts with library linking |
 | `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
+| `make deploy-batched-transaction` | Deploy BatchedTransaction contract |
+| `make compute-batched-transaction-address` | Preview expected BatchedTransaction address |
 | `make deploy-safe-module` | Deploy SafeExecutorModule for a Safe |
 | `make compute-module-address` | Preview expected module address |
 | `make safe-add-module` | Approve adding a module to a Safe |

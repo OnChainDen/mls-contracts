@@ -132,6 +132,13 @@ echo "[Step 6] Deploying platform contracts..."
 make deploy-contracts ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
+# Step 6.5: Deploy BatchedTransaction
+# =============================================================================
+echo ""
+echo "[Step 6.5] Deploying BatchedTransaction..."
+make deploy-batched-transaction ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+
+# =============================================================================
 # Step 7: Deploy Safe Executor Modules
 # =============================================================================
 echo ""

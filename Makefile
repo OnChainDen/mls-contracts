@@ -21,6 +21,7 @@
 .PHONY: deploy-safe deploy-safe-dry-run compute-safe-addresses
 
 # Safe Executor Module
+.PHONY: deploy-batched-transaction compute-batched-transaction-address
 .PHONY: deploy-safe-module compute-module-address safe-add-module safe-remove-module check-safe-module-status
 
 # Platform deployment
@@ -61,11 +62,13 @@ help:
 	@echo "  compute-safe-addresses    Preview expected Safe addresses without deploying"
 	@echo ""
 	@echo "Safe Executor Module:"
-	@echo "  deploy-safe-module        Deploy SafeExecutorModule for a Safe"
-	@echo "  compute-module-address    Preview expected module address without deploying"
-	@echo "  safe-add-module           Approve adding a module to a Safe (Safe owner operation)"
-	@echo "  safe-remove-module        Approve removing a module from a Safe (Safe owner operation)"
-	@echo "  check-safe-module-status  Check approval status for a module transaction"
+	@echo "  deploy-batched-transaction        Deploy BatchedTransaction contract"
+	@echo "  compute-batched-transaction-address Preview expected BatchedTransaction address"
+	@echo "  deploy-safe-module                Deploy SafeExecutorModule for a Safe"
+	@echo "  compute-module-address            Preview expected module address without deploying"
+	@echo "  safe-add-module                   Approve adding a module to a Safe (Safe owner operation)"
+	@echo "  safe-remove-module                Approve removing a module from a Safe (Safe owner operation)"
+	@echo "  check-safe-module-status          Check approval status for a module transaction"
 	@echo ""
 	@echo "Platform Deployment:"
 	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
@@ -425,6 +428,46 @@ compute-safe-addresses:
 		--rpc-url $(RPC_URL)
 
 # ==============================================================================
+# BatchedTransaction Deployment Commands
+# ==============================================================================
+#
+# BatchedTransaction is a security-focused batched transaction contract that must be
+# deployed BEFORE SafeExecutorModules. It provides:
+# - No ETH transfers (value hardcoded to 0)
+# - msg.sender validation (blocks calls to Safe when delegatecalled)
+# - Efficient transaction encoding
+
+# Deploy BatchedTransaction: Deploys the BatchedTransaction contract via CREATE2
+# IMPORTANT: Must be deployed BEFORE deploying SafeExecutorModules.
+#
+# Example:
+#   make deploy-batched-transaction NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-batched-transaction FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+deploy-batched-transaction: validate-signer-vars
+	@echo "Deploying BatchedTransaction..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Compute BatchedTransaction Address: Preview expected address without deploying
+#
+# Example:
+#   make compute-batched-transaction-address NETWORK=sepolia
+#   make compute-batched-transaction-address FACTORY=den-nonprod NETWORK=mainnet
+compute-batched-transaction-address:
+	@echo "Computing BatchedTransaction address..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \
+		--sig "computeAddress(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL)
+
+# ==============================================================================
 # Safe Executor Module Commands
 # ==============================================================================
 #
@@ -432,8 +475,8 @@ compute-safe-addresses:
 # contract calls on behalf of a Safe multisig. These commands handle deployment and
 # Safe owner operations for adding/removing the module.
 #
-# IMPORTANT: Module deployment is separate from enabling the module on a Safe.
-# After deployment, Safe owners must approve adding the module via safe-add-module.
+# IMPORTANT: BatchedTransaction must be deployed BEFORE deploying SafeExecutorModules.
+# After module deployment, Safe owners must approve adding the module via safe-add-module.
 
 # Deploy Safe Module: Deploys the SafeExecutorModule for a Safe via CREATE2
 # The Safe must be deployed first. The Safe Executor EOA address is validated against DeploymentConfig.

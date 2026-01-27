@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {Script} from "forge-std/Script.sol";
@@ -9,7 +10,6 @@ import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
-import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeploySafeExecutorModule
@@ -35,7 +35,7 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
  *      3. Verifies the safeType is valid ("guardian" or "deployer")
  *      4. Verifies the executor address matches the expected address in DeploymentConfig
  *      5. Verifies the Safe is deployed at the expected address
- *      6. Verifies the MultiSendCallOnly is deployed at the expected address
+ *      6. Verifies the BatchedTransaction is deployed at the expected address
  *      7. Verifies the deployer is not the production Den Factory deployer
  *      8. Requires interactive confirmation when broadcasting
  *
@@ -66,11 +66,11 @@ contract DeploySafeExecutorModule is Script {
         address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed at expected address");
 
-        // Get and verify MultiSendCallOnly address
-        address multiSendCallOnly = _getMultiSendCallOnlyAddress(factoryAddress);
+        // Get and verify BatchedTransaction address
+        address batchedTransaction = _getBatchedTransactionAddress(factoryAddress);
         require(
-            Create2Utils.isContractDeployedAtAddress(multiSendCallOnly),
-            "MultiSendCallOnly not deployed at expected address"
+            Create2Utils.isContractDeployedAtAddress(batchedTransaction),
+            "BatchedTransaction not deployed at expected address"
         );
 
         // Prompt for confirmation when running with --broadcast
@@ -87,7 +87,7 @@ contract DeploySafeExecutorModule is Script {
         Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
         Logger.logKeyValue("Safe Executor EOA", executorAddress);
-        Logger.logKeyValue("MultiSendCallOnly", multiSendCallOnly);
+        Logger.logKeyValue("BatchedTransaction", batchedTransaction);
         Logger.logEmptyLine();
 
         // Start broadcasting transactions
@@ -95,7 +95,7 @@ contract DeploySafeExecutorModule is Script {
 
         // Deploy the module
         address moduleAddress =
-            _deployModule(factoryAddress, isGuardian, safeAddress, executorAddress, multiSendCallOnly);
+            _deployModule(factoryAddress, isGuardian, safeAddress, executorAddress, batchedTransaction);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -133,11 +133,11 @@ contract DeploySafeExecutorModule is Script {
         // Get the Safe address for this safeType
         address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
 
-        // Get MultiSendCallOnly address
-        address multiSendCallOnly = _getMultiSendCallOnlyAddress(factoryAddress);
+        // Get BatchedTransaction address
+        address batchedTransaction = _getBatchedTransactionAddress(factoryAddress);
 
         // Compute the module address
-        bytes memory initCode = _getInitCode(safeAddress, executorAddress, multiSendCallOnly);
+        bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
         bytes32 salt = _getSalt(isGuardian);
         address expectedAddress = Create2Utils.computeAddress(factoryAddress, salt, initCode);
 
@@ -148,7 +148,7 @@ contract DeploySafeExecutorModule is Script {
         Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
         Logger.logKeyValue("Safe Executor EOA", executorAddress);
-        Logger.logKeyValue("MultiSendCallOnly", multiSendCallOnly);
+        Logger.logKeyValue("BatchedTransaction", batchedTransaction);
         Logger.logEmptyLine();
         Logger.logKeyValue("Expected Module Address", expectedAddress);
 
@@ -199,12 +199,11 @@ contract DeploySafeExecutorModule is Script {
         return DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
     }
 
-    /// @dev Gets the MultiSendCallOnly address for the given factory
+    /// @dev Gets the BatchedTransaction address for the given factory
     /// @param factoryAddress The CREATE2 factory address
-    /// @return multiSendCallOnly The MultiSendCallOnly address
-    function _getMultiSendCallOnlyAddress(address factoryAddress) internal pure returns (address multiSendCallOnly) {
-        SafeInfrastructure memory safeInfra = DeploymentConfig.getExpectedSafeInfrastructureAddresses(factoryAddress);
-        return safeInfra.multiSendCallOnlyAddress;
+    /// @return batchedTransaction The BatchedTransaction address
+    function _getBatchedTransactionAddress(address factoryAddress) internal pure returns (address batchedTransaction) {
+        return DeploymentConfig.getExpectedBatchedTransactionAddress(factoryAddress);
     }
 
     /// @dev Gets the salt for the given safeType
@@ -220,15 +219,15 @@ contract DeploySafeExecutorModule is Script {
     /// @dev Constructs the init code for the module deployment
     /// @param safeAddress The Safe address
     /// @param executorAddress The Safe Executor EOA address
-    /// @param multiSendCallOnly The MultiSendCallOnly address
+    /// @param batchedTransaction The BatchedTransaction address
     /// @return initCode The init code (creation code + constructor args)
-    function _getInitCode(address safeAddress, address executorAddress, address multiSendCallOnly)
+    function _getInitCode(address safeAddress, address executorAddress, address batchedTransaction)
         internal
         pure
         returns (bytes memory initCode)
     {
         return abi.encodePacked(
-            type(SafeExecutorModule).creationCode, abi.encode(safeAddress, executorAddress, multiSendCallOnly)
+            type(SafeExecutorModule).creationCode, abi.encode(safeAddress, executorAddress, batchedTransaction)
         );
     }
 
@@ -237,17 +236,17 @@ contract DeploySafeExecutorModule is Script {
     /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
     /// @param safeAddress The Safe address
     /// @param executorAddress The Safe Executor EOA address
-    /// @param multiSendCallOnly The MultiSendCallOnly address
+    /// @param batchedTransaction The BatchedTransaction address
     /// @return moduleAddress The deployed module address
     function _deployModule(
         address factoryAddress,
         bool isGuardian,
         address safeAddress,
         address executorAddress,
-        address multiSendCallOnly
+        address batchedTransaction
     ) internal returns (address moduleAddress) {
         bytes32 salt = _getSalt(isGuardian);
-        bytes memory initCode = _getInitCode(safeAddress, executorAddress, multiSendCallOnly);
+        bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
         string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
 
         Logger.logSection("SafeExecutorModule (CREATE2)");

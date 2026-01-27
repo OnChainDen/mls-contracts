@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {ISafeExecutorModule} from "../interfaces/ISafeExecutorModule.sol";
@@ -21,7 +22,7 @@ interface ISafe {
  * @notice A minimal Safe module that allows a single authorized EOA (the "Safe Executor EOA")
  *         to execute contract calls on behalf of a Safe multisig.
  * @dev This module enforces the following restrictions:
- *      - Only CALL operations, except delegatecall is allowed ONLY to MultiSendCallOnly
+ *      - Only CALL operations, except delegatecall is allowed ONLY to BatchedTransaction
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
  *      - No calls to the module itself
@@ -43,28 +44,28 @@ contract SafeExecutorModule is ISafeExecutorModule {
     address public immutable AUTHORIZED_EXECUTOR;
 
     /// @inheritdoc ISafeExecutorModule
-    address public immutable MULTI_SEND_CALL_ONLY;
+    address public immutable BATCHED_TRANSACTION;
 
     /**
-     * @notice Initializes the module with the Safe address, authorized executor, and MultiSendCallOnly
+     * @notice Initializes the module with the Safe address, authorized executor, and BatchedTransaction
      * @param safe The Safe multisig this module will execute transactions for
      * @param authorizedExecutor The EOA authorized to call executeOnBehalf
-     * @param multiSendCallOnly The MultiSendCallOnly contract address (only target allowed for delegatecall)
+     * @param batchedTransaction The BatchedTransaction contract address (only target allowed for delegatecall)
      */
-    constructor(address safe, address authorizedExecutor, address multiSendCallOnly) {
+    constructor(address safe, address authorizedExecutor, address batchedTransaction) {
         if (safe == address(0)) {
             revert SafeAddressCannotBeZero();
         }
         if (authorizedExecutor == address(0)) {
             revert ExecutorAddressCannotBeZero();
         }
-        if (multiSendCallOnly == address(0)) {
-            revert MultiSendCallOnlyAddressCannotBeZero();
+        if (batchedTransaction == address(0)) {
+            revert BatchedTransactionAddressCannotBeZero();
         }
 
         SAFE = safe;
         AUTHORIZED_EXECUTOR = authorizedExecutor;
-        MULTI_SEND_CALL_ONLY = multiSendCallOnly;
+        BATCHED_TRANSACTION = batchedTransaction;
     }
 
     /// @inheritdoc ISafeExecutorModule
@@ -85,9 +86,9 @@ contract SafeExecutorModule is ISafeExecutorModule {
         }
 
         // Determine operation type:
-        // - DelegateCall (1) is ONLY allowed when target is MultiSendCallOnly
+        // - DelegateCall (1) is ONLY allowed when target is BatchedTransaction
         // - Call (0) is used for all other targets
-        uint8 operation = (to == MULTI_SEND_CALL_ONLY) ? 1 : 0;
+        uint8 operation = (to == BATCHED_TRANSACTION) ? 1 : 0;
 
         // Execute via Safe's execTransactionFromModule
         // Parameters: to, value (0), data, operation
