@@ -246,8 +246,8 @@ contract DeployLibraries is Script {
     function _validateIndependentLibrariesDeployedOrRevert(address factoryAddress) internal view {
         Logger.logSection("Verify Independent Libraries Deployed");
 
-        // Get expected addresses from hardcoded config (not computed, to avoid --libraries affecting bytecode)
-        PlatformLibraries memory expected = DeploymentConfig.getExpectedLibraryAddresses(factoryAddress);
+        // Get expected addresses from deployment.toml (not computed, to avoid --libraries affecting bytecode)
+        PlatformLibraries memory expected = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
 
         bool allDeployed = true;
 
@@ -281,11 +281,11 @@ contract DeployLibraries is Script {
     /// @dev Validates that dependent libraries have the independent libraries correctly linked
     ///      Checks that the --libraries flag was used with correct addresses for Policy and Admin
     /// @param factoryAddress Address of the CREATE2 factory (determines expected addresses)
-    function _validateDependentLibrariesLinkedOrRevert(address factoryAddress) internal pure {
+    function _validateDependentLibrariesLinkedOrRevert(address factoryAddress) internal view {
         Logger.logSection("Verify Libraries Linked in Bytecode");
 
-        // Get expected addresses from hardcoded config (not computed, to avoid --libraries affecting computation)
-        PlatformLibraries memory expected = DeploymentConfig.getExpectedLibraryAddresses(factoryAddress);
+        // Get expected addresses from deployment.toml (not computed, to avoid --libraries affecting computation)
+        PlatformLibraries memory expected = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
 
         // Get the creation code of dependent libraries
         bytes memory initInitCode = type(LibOrganizationInitialization).creationCode;

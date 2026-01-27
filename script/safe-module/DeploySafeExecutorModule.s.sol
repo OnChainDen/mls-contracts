@@ -183,8 +183,9 @@ contract DeploySafeExecutorModule is Script {
     /// @param chainId The target chain ID
     /// @param isGuardian True if validating for Guardian Safe, false for Deployer Safe
     /// @param executorAddress The executor address to validate
-    function _validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal pure {
-        (address expectedGuardian, address expectedDeployer) = DeploymentConfig.getExpectedExecutorEOAAddresses(chainId);
+    function _validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal view {
+        (address expectedGuardian, address expectedDeployer) =
+            DeploymentConfig.getExpectedExecutorEOAAddresses(vm, chainId);
 
         address expected = isGuardian ? expectedGuardian : expectedDeployer;
         require(executorAddress == expected, "Invalid executor address for target");
@@ -208,18 +209,18 @@ contract DeploySafeExecutorModule is Script {
     /// @param factoryAddress The CREATE2 factory address
     /// @param isGuardian True for Guardian Safe, false for Deployer Safe
     /// @return safeAddress The Safe address
-    function _getSafeAddress(address factoryAddress, bool isGuardian) internal pure returns (address safeAddress) {
+    function _getSafeAddress(address factoryAddress, bool isGuardian) internal view returns (address safeAddress) {
         if (isGuardian) {
-            return DeploymentConfig.getExpectedGuardianSafeAddress(factoryAddress);
+            return DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
         }
-        return DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
+        return DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
     }
 
     /// @dev Gets the BatchedTransaction address for the given factory
     /// @param factoryAddress The CREATE2 factory address
     /// @return batchedTransaction The BatchedTransaction address
-    function _getBatchedTransactionAddress(address factoryAddress) internal pure returns (address batchedTransaction) {
-        return DeploymentConfig.getExpectedBatchedTransactionAddress(factoryAddress);
+    function _getBatchedTransactionAddress(address factoryAddress) internal view returns (address batchedTransaction) {
+        return DeploymentConfig.getExpectedBatchedTransactionAddress(vm, factoryAddress);
     }
 
     /// @dev Gets the salt for the given safeType

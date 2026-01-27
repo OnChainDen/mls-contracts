@@ -291,10 +291,10 @@ contract SafeModuleTransaction is Script {
         Logger.logBoxFooter();
     }
 
-    /// @dev Get Safe and module addresses from DeploymentConfig
+    /// @dev Get Safe and module addresses from deployment.toml via DeploymentConfig
     function _getAddresses(address factoryAddress, string calldata safeType)
         internal
-        pure
+        view
         returns (address safeAddress, address moduleAddress)
     {
         bool isGuardian = keccak256(bytes(safeType)) == keccak256("guardian");
@@ -302,13 +302,13 @@ contract SafeModuleTransaction is Script {
         require(isGuardian || isDeployer, "Invalid safeType - must be 'guardian' or 'deployer'");
 
         if (isGuardian) {
-            safeAddress = DeploymentConfig.getExpectedGuardianSafeAddress(factoryAddress);
+            safeAddress = DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
         } else {
-            safeAddress = DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
+            safeAddress = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
         }
 
         (address guardianModule, address deployerModule) =
-            DeploymentConfig.getExpectedSafeExecutorModuleAddresses(factoryAddress);
+            DeploymentConfig.getExpectedSafeExecutorModuleAddresses(vm, factoryAddress);
         moduleAddress = isGuardian ? guardianModule : deployerModule;
     }
 

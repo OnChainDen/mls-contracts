@@ -35,7 +35,7 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *      - Safe infrastructure is not deployed at expected addresses
  *      - Guardian and Deployer Safes are not deployed
  *
- *      Expected addresses are hardcoded in DeploymentConfig based on which CREATE2 factory is used.
+ *      Expected addresses are read from deployment.toml based on which CREATE2 factory is used.
  *
  *      This script deploys the following contracts in the following order:
  *      1. Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
@@ -109,7 +109,7 @@ contract DeployContracts is Script {
         _validateSafeMultisigsDeployedOrRevert(factoryAddress);
 
         // Get the expected Deployer Safe address (needed for factory and whitelist deployment)
-        address deployerSafeAddress = DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
+        address deployerSafeAddress = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
 
         // Prevent using the production Den Factory deployer for this script
         Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
@@ -315,13 +315,13 @@ contract DeployContracts is Script {
         );
     }
 
-    /// @dev Verifies that platform libraries are deployed at the expected hardcoded addresses
+    /// @dev Verifies that platform libraries are deployed at the expected addresses from deployment.toml
     /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
     function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
         Logger.logSection("Verify Library Addresses");
 
-        // Get expected library addresses from hardcoded config (based on which factory was used)
-        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(factoryAddress);
+        // Get expected library addresses from deployment.toml (based on which factory was used)
+        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
 
         bool allDeployed = true;
 
@@ -367,14 +367,14 @@ contract DeployContracts is Script {
         }
     }
 
-    /// @dev Verifies that Safe infrastructure is deployed at the expected hardcoded addresses
+    /// @dev Verifies that Safe infrastructure is deployed at the expected addresses from deployment.toml
     /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
     function _validateSafeInfrastructureDeployedOrRevert(address factoryAddress) internal view {
         Logger.logSection("Verify Safe 1.3.0 Infrastructure");
 
-        // Get expected Safe infrastructure addresses from hardcoded config
+        // Get expected Safe infrastructure addresses from deployment.toml
         SafeInfrastructure memory expectedSafeInfra =
-            DeploymentConfig.getExpectedSafeInfrastructureAddresses(factoryAddress);
+            DeploymentConfig.getExpectedSafeInfrastructureAddresses(vm, factoryAddress);
 
         bool allDeployed = true;
 
@@ -450,14 +450,14 @@ contract DeployContracts is Script {
         }
     }
 
-    /// @dev Verifies that Guardian and Deployer Safes are deployed at the expected hardcoded addresses
+    /// @dev Verifies that Guardian and Deployer Safes are deployed at the expected addresses from deployment.toml
     /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
     function _validateSafeMultisigsDeployedOrRevert(address factoryAddress) internal view {
         Logger.logSection("Verify Safe Multisigs");
 
-        // Get expected Safe addresses from hardcoded config
-        address expectedGuardianSafe = DeploymentConfig.getExpectedGuardianSafeAddress(factoryAddress);
-        address expectedDeployerSafe = DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
+        // Get expected Safe addresses from deployment.toml
+        address expectedGuardianSafe = DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
+        address expectedDeployerSafe = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
 
         bool allDeployed = true;
 
@@ -489,16 +489,16 @@ contract DeployContracts is Script {
     }
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
-    ///      Uses hardcoded expected addresses from DeploymentConfig to verify the correct addresses are embedded
-    /// @param factoryAddress Address of the CREATE2 factory (determines which hardcoded addresses to check for)
-    function _validateLibrariesLinkedOrRevert(address factoryAddress) internal pure {
+    ///      Uses expected addresses from deployment.toml to verify the correct addresses are embedded
+    /// @param factoryAddress Address of the CREATE2 factory (determines which addresses to check for)
+    function _validateLibrariesLinkedOrRevert(address factoryAddress) internal view {
         // Get the creation code of OrganizationImplementation
         // If libraries aren't linked via --libraries flag, the creation code will have
         // placeholder bytes instead of the actual library addresses
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
-        // Get expected library addresses from hardcoded config (based on which factory was used)
-        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(factoryAddress);
+        // Get expected library addresses from deployment.toml (based on which factory was used)
+        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
 
         // Verify each expected library address appears in the creation code
         // If --libraries flag wasn't used (or used with wrong addresses), these won't be in the bytecode
@@ -523,11 +523,12 @@ contract DeployContracts is Script {
     /// @dev Logs all deployed contract addresses in a formatted summary
     /// @param contracts Complete set of deployed contract addresses
     /// @param factoryAddress The CREATE2 factory used for deployment (to look up Safe addresses)
-    function _logDeployedAddresses(DeployedContracts memory contracts, address factoryAddress) internal pure {
-        // Get Safe addresses from config for logging
-        SafeInfrastructure memory safeInfra = DeploymentConfig.getExpectedSafeInfrastructureAddresses(factoryAddress);
-        address guardianSafe = DeploymentConfig.getExpectedGuardianSafeAddress(factoryAddress);
-        address deployerSafe = DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
+    function _logDeployedAddresses(DeployedContracts memory contracts, address factoryAddress) internal view {
+        // Get Safe addresses from deployment.toml for logging
+        SafeInfrastructure memory safeInfra =
+            DeploymentConfig.getExpectedSafeInfrastructureAddresses(vm, factoryAddress);
+        address guardianSafe = DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
+        address deployerSafe = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
 
         Logger.logBoxHeader("Deployed Contract Addresses");
         Logger.logIndented("Safe Infrastructure (pre-deployed):");

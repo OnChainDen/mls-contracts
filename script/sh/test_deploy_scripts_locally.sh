@@ -8,9 +8,30 @@
 #   ./test_deploy_scripts_locally.sh arachnid      # Test Arachnid factory flow
 #   ./test_deploy_scripts_locally.sh den-nonprod   # Test Den non-prod factory flow
 #
+# Requirements:
+#   - yq (for reading deployment.toml)
+#
 # =============================================================================
 
 set -e  # Stop on first error
+
+# =============================================================================
+# Configuration (read from deployment.toml)
+# =============================================================================
+DEPLOYMENT_TOML="deployment.toml"
+
+# Verify deployment.toml exists
+if [[ ! -f "$DEPLOYMENT_TOML" ]]; then
+    echo "Error: deployment.toml not found"
+    exit 1
+fi
+
+# Verify yq is available
+if ! command -v yq &> /dev/null; then
+    echo "Error: yq is required but not installed"
+    echo "Install with: brew install yq"
+    exit 1
+fi
 
 # =============================================================================
 # Argument Validation
@@ -37,10 +58,10 @@ fi
 # Foundry managed accounts and their addresses:
 #   test-deployer              - 0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3 (default for deployments)
 #   test-den-factory-deployer  - 0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328 (for Den factory deployment)
-#   test-guardian-safe-owner   - 0x22002e8661a780d61ef4c86f4a9ffa843a6fea20 (guardian Safe owner)
-#   test-deployer-safe-owner   - 0x8da06ab9bbb0736d36c92e10b1d6e23a890fd32f (deployer Safe owner)
-#   test-guardian-executor     - 0x66fb51bf8c7a973a278578a2e381fb5e89796de1 (guardian module executor)
-#   test-deployer-executor     - 0xbd7df30e88c5c7fd54f2ac77a1302581d577e0fd (deployer module executor)
+#   test-guardian-safe-owner   - (read from deployment.toml)
+#   test-deployer-safe-owner   - (read from deployment.toml)
+#   test-guardian-executor     - (read from deployment.toml)
+#   test-deployer-executor     - (read from deployment.toml)
 
 PORT="8545"
 RPC_URL="http://127.0.0.1:$PORT"
@@ -51,19 +72,43 @@ DEN_FACTORY_DEPLOYER_ACCOUNT="test-den-factory-deployer"
 GUARDIAN_SAFE_OWNER_ACCOUNT="test-guardian-safe-owner"
 DEPLOYER_SAFE_OWNER_ACCOUNT="test-deployer-safe-owner"
 
-# EOA addresses
+# EOA addresses - some hardcoded (foundry test accounts), some from deployment.toml
 DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
 DEN_FACTORY_DEPLOYER_ADDRESS="0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328"
-GUARDIAN_SAFE_OWNER_ADDRESS="0x22002e8661a780d61ef4c86f4a9ffa843a6fea20"
-DEPLOYER_SAFE_OWNER_ADDRESS="0x8da06ab9bbb0736d36c92e10b1d6e23a890fd32f"
-GUARDIAN_EXECUTOR_ADDRESS="0x66fb51bf8c7a973a278578a2e381fb5e89796de1"
-DEPLOYER_EXECUTOR_ADDRESS="0xbd7df30e88c5c7fd54f2ac77a1302581d577e0fd"
+
+# Read Safe owner and executor addresses from deployment.toml (nonprod)
+GUARDIAN_SAFE_OWNER_ADDRESS=$(yq -r '.safe.nonprod.guardian_safe_owner_1' "$DEPLOYMENT_TOML")
+DEPLOYER_SAFE_OWNER_ADDRESS=$(yq -r '.safe.nonprod.deployer_safe_owner_1' "$DEPLOYMENT_TOML")
+GUARDIAN_EXECUTOR_ADDRESS=$(yq -r '.safe.nonprod.guardian_executor_eoa' "$DEPLOYMENT_TOML")
+DEPLOYER_EXECUTOR_ADDRESS=$(yq -r '.safe.nonprod.deployer_executor_eoa' "$DEPLOYMENT_TOML")
+
+# Validate addresses were read successfully
+if [[ -z "$GUARDIAN_SAFE_OWNER_ADDRESS" || "$GUARDIAN_SAFE_OWNER_ADDRESS" == "null" ]]; then
+    echo "Error: Guardian Safe owner address not found in deployment.toml"
+    exit 1
+fi
+if [[ -z "$DEPLOYER_SAFE_OWNER_ADDRESS" || "$DEPLOYER_SAFE_OWNER_ADDRESS" == "null" ]]; then
+    echo "Error: Deployer Safe owner address not found in deployment.toml"
+    exit 1
+fi
+if [[ -z "$GUARDIAN_EXECUTOR_ADDRESS" || "$GUARDIAN_EXECUTOR_ADDRESS" == "null" ]]; then
+    echo "Error: Guardian executor EOA address not found in deployment.toml"
+    exit 1
+fi
+if [[ -z "$DEPLOYER_EXECUTOR_ADDRESS" || "$DEPLOYER_EXECUTOR_ADDRESS" == "null" ]]; then
+    echo "Error: Deployer executor EOA address not found in deployment.toml"
+    exit 1
+fi
 
 echo "============================================================================="
 echo "Local Deployment Test: $FACTORY"
 echo "============================================================================="
 echo "  RPC URL: $RPC_URL"
 echo "  Deployer Account: $DEPLOYER_ACCOUNT ($DEPLOYER_ADDRESS)"
+echo "  Guardian Safe Owner: $GUARDIAN_SAFE_OWNER_ADDRESS"
+echo "  Deployer Safe Owner: $DEPLOYER_SAFE_OWNER_ADDRESS"
+echo "  Guardian Executor: $GUARDIAN_EXECUTOR_ADDRESS"
+echo "  Deployer Executor: $DEPLOYER_EXECUTOR_ADDRESS"
 echo "============================================================================="
 
 # =============================================================================

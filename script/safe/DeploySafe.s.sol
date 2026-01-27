@@ -83,13 +83,13 @@ contract DeploySafe is Script {
         // Get chain ID using assembly for 0.7.x compatibility
         uint256 chainId = ScriptUtils.getChainId();
 
-        // Get the Guardian Safe configuration based on chain ID
+        // Get the Guardian Safe configuration from deployment.toml based on chain ID
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) =
-            DeploymentConfig.getGuardianSafeConfig(chainId);
+            DeploymentConfig.getGuardianSafeConfig(vm, chainId);
 
-        // Get the Deployer Safe configuration based on chain ID
+        // Get the Deployer Safe configuration from deployment.toml based on chain ID
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
-            DeploymentConfig.getDeployerSafeConfig(chainId);
+            DeploymentConfig.getDeployerSafeConfig(vm, chainId);
 
         // Log the deployment header
         Create2Utils.logDeploymentHeader(factoryAddress, chainId);
@@ -303,13 +303,13 @@ contract DeploySafe is Script {
         // Get chain ID using assembly for 0.7.x compatibility
         uint256 chainId = ScriptUtils.getChainId();
 
-        // Get the Guardian Safe configuration based on chain ID
+        // Get the Guardian Safe configuration from deployment.toml based on chain ID
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) =
-            DeploymentConfig.getGuardianSafeConfig(chainId);
+            DeploymentConfig.getGuardianSafeConfig(vm, chainId);
 
-        // Get the Deployer Safe configuration based on chain ID
+        // Get the Deployer Safe configuration from deployment.toml based on chain ID
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
-            DeploymentConfig.getDeployerSafeConfig(chainId);
+            DeploymentConfig.getDeployerSafeConfig(vm, chainId);
 
         // Log header
         Logger.logBoxHeader("Computed Safe 1.3.0 Addresses");
