@@ -101,6 +101,7 @@ help:
 	@echo "  SAFE_TYPE Safe type: guardian or deployer (for module commands)"
 	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
 	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
+	@echo "  ACTION    Action to check status for: add or remove (for check-safe-module-status)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
