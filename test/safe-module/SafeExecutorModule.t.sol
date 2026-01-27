@@ -62,9 +62,9 @@ contract MockSafe {
         return success;
     }
 
-    /// @notice Configure mock to return failure
-    function setFailMode(bool fail) external {
-        shouldSucceed = !fail;
+    /// @notice Configure whether mock executions should succeed or fail
+    function setShouldSucceed(bool succeed) external {
+        shouldSucceed = succeed;
     }
 
     /// @notice Reset call tracking
@@ -270,7 +270,7 @@ contract SafeExecutorModuleTest is Test {
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
         // Set mock Safe to fail
-        mockSafe.setFailMode(true);
+        mockSafe.setShouldSucceed(false);
 
         vm.prank(authorizedExecutor);
         vm.expectRevert(ISafeExecutorModule.ExecutionFailed.selector);
