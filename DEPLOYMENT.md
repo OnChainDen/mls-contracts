@@ -7,6 +7,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 1. [Core Concepts](#core-concepts)
    - [CREATE2 Deterministic Deployment](#create2-deterministic-deployment)
    - [Library Linking](#library-linking)
+   - [Two-Stage Library Deployment](#two-stage-library-deployment)
 2. [Prerequisites](#prerequisites)
    - [Required Tools](#required-tools)
    - [Signer Setup](#signer-setup)
@@ -83,12 +84,12 @@ Some of our libraries use `public` functions, which Solidity compiles as **exter
 
 The four platform libraries that require linking are:
 
-| Library | Purpose |
-|---------|---------|
-| `LibOrganizationPolicy` | Policy validation and enforcement |
-| `LibOrganizationAdmin` | Admin operations |
-| `LibOrganizationInitialization` | Organization setup |
-| `LibOrganizationAccountSignature` | Account signature verification |
+| Library | Purpose | Dependencies |
+|---------|---------|--------------|
+| `LibOrganizationPolicy` | Policy validation and enforcement | None (independent) |
+| `LibOrganizationAdmin` | Admin operations | None (independent) |
+| `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
+| `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
 
 #### Why Linking Matters
 
@@ -101,6 +102,39 @@ With explicit library linking:
 - Libraries are deployed via CREATE2 with deterministic addresses
 - The compiler links to these known addresses
 - Contract bytecode is identical across all chains
+
+#### Two-Stage Library Deployment
+
+Due to inter-library dependencies, libraries must be deployed in **two stages**:
+
+**Stage 1 - Independent Libraries (Policy and Admin):**
+These libraries have no dependencies on other platform libraries. They can be deployed without any `--libraries` flags.
+
+**Stage 2 - Dependent Libraries (Init and AccountSig):**
+These libraries depend on the independent libraries being linked into their bytecode:
+- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`
+- `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
+
+When compiling dependent libraries, the Solidity compiler embeds the addresses of the libraries they depend on directly into their bytecode. This means the CREATE2 address of a dependent library is affected by the addresses of its dependencies.
+
+**Why this matters for CREATE2:**
+
+The CREATE2 address formula is:
+```
+address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
+```
+
+If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flag, the Admin address is embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
+
+The Makefile handles this automatically with the `deploy-libraries` target (which runs both stages), or you can run them separately:
+
+```bash
+# Deploy independent libraries (Policy, Admin)
+make deploy-independent-libs ACCOUNT=my-deployer
+
+# Deploy dependent libraries (Init, AccountSig) - requires --libraries flags
+make deploy-dependent-libs ACCOUNT=my-deployer
+```
 
 The library addresses depend on which CREATE2 factory is used. Our Makefile handles this automatically via Foundry profiles configured in `foundry.toml`.
 
@@ -276,8 +310,10 @@ The full deployment order is:
 2. Deploy Safe Infrastructure and Multisigs
    └── make deploy-safe
 
-3. Deploy Platform Libraries
-   └── make deploy-libraries
+3. Deploy Platform Libraries (two stages due to inter-library dependencies)
+   ├── Stage 1: make deploy-independent-libs  (Policy, Admin)
+   └── Stage 2: make deploy-dependent-libs    (Init, AccountSig)
+   └── Or: make deploy-libraries              (runs both stages)
 
 4. Deploy Platform Contracts
    └── make deploy-contracts
@@ -547,15 +583,27 @@ make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 make deploy-safe ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
-# Step 5: Deploy platform libraries and contracts
+# Step 5: Deploy platform libraries (two stages)
 # -----------------------------------------------------------------------------
 # FACTORY=arachnid is the default, so we don't need to specify it
-# Libraries are deployed first, then contracts are deployed with library linking
+# Libraries must be deployed in two stages due to inter-library dependencies:
+#   Stage 1: Independent libraries (Policy, Admin) - no dependencies
+#   Stage 2: Dependent libraries (Init, AccountSig) - depend on Policy/Admin
 
-make deploy-libraries ACCOUNT=$ACCOUNT
+make deploy-independent-libs ACCOUNT=$ACCOUNT
+make deploy-dependent-libs ACCOUNT=$ACCOUNT
+
+# Or use the convenience target that runs both stages:
+# make deploy-libraries ACCOUNT=$ACCOUNT
+
+# -----------------------------------------------------------------------------
+# Step 6: Deploy platform contracts
+# -----------------------------------------------------------------------------
+# Contracts are deployed with library linking via FOUNDRY_PROFILE
+
 make deploy-contracts ACCOUNT=$ACCOUNT
 
-# Or use the convenience target (includes Safe deployment):
+# Or use the convenience target (includes Safe deployment + both library stages):
 # make deploy-platform ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
@@ -627,16 +675,26 @@ make deploy-den-factory ACCOUNT=$DEN_DEPLOYER_ACCOUNT
 make deploy-safe ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
 # -----------------------------------------------------------------------------
-# Step 5: Deploy platform libraries and contracts
+# Step 5: Deploy platform libraries (two stages)
 # -----------------------------------------------------------------------------
 # IMPORTANT: Use FACTORY=den-nonprod to:
 # - Target the correct factory address
 # - Use the correct library addresses (library addresses differ per factory)
+#
+# Libraries must be deployed in two stages due to inter-library dependencies
 
-make deploy-libraries ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-independent-libs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-dependent-libs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+
+# Or use the convenience target that runs both stages:
+# make deploy-libraries ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+
+# -----------------------------------------------------------------------------
+# Step 6: Deploy platform contracts
+# -----------------------------------------------------------------------------
 make deploy-contracts ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
-# Or use the convenience target (includes Safe deployment):
+# Or use the convenience target (includes Safe deployment + both library stages):
 # make deploy-platform ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
 # -----------------------------------------------------------------------------
@@ -648,6 +706,21 @@ echo "Deployment complete. Contracts deployed via Den Singleton Factory (non-pro
 ---
 
 ## Verifying Deployments
+
+### Compute All Expected Addresses
+
+Before deploying, you can preview all expected CREATE2 addresses for all contracts across all three factories:
+
+```bash
+# Compute addresses for all factories (arachnid, den-nonprod, den-prod)
+make compute-all-addresses
+
+# Compute addresses for a specific factory
+make compute-addresses FACTORY=arachnid
+make compute-addresses FACTORY=den-nonprod
+```
+
+This runs the `compute_all_addresses.sh` script which orchestrates calls to all deployment scripts' `computeAddresses()` functions, handles library linking correctly, and outputs all expected addresses in a formatted table.
 
 ### Check Factory Deployment
 
@@ -741,7 +814,9 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-safe` | Deploy Safe 1.3.0 infrastructure and multisigs |
 | `make deploy-safe-dry-run` | Simulate Safe deployment (no broadcast) |
 | `make compute-safe-addresses` | Preview expected Safe addresses |
-| `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
+| `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin) via CREATE2 |
+| `make deploy-dependent-libs` | Deploy dependent libraries (Init, AccountSig) via CREATE2 |
+| `make deploy-libraries` | Deploy all platform libraries (runs both stages) |
 | `make deploy-contracts` | Deploy all contracts with library linking |
 | `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
 | `make deploy-batched-transaction` | Deploy BatchedTransaction contract |
@@ -753,7 +828,8 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make check-safe-module-status` | Check approval status for a module transaction |
 | `make check-factory` | Check if a CREATE2 factory exists |
 | `make check-all-factories` | Check all factories on a network |
-| `make compute-lib-addresses` | Compute expected library addresses for a factory |
+| `make compute-addresses` | Compute all CREATE2 addresses for a specific factory |
+| `make compute-all-addresses` | Compute all CREATE2 addresses for all three factories |
 
 ### Key Addresses
 
@@ -774,8 +850,8 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 |---------|---------|
 | LibOrganizationPolicy | `0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA` |
 | LibOrganizationAdmin | `0x6A87f1102404F4e36080732E535AD1F90cEde41B` |
-| LibOrganizationInitialization | `0x11d0aa12422064fD6c690B824B9551425435178A` |
-| LibOrganizationAccountSignature | `0x58895a03e143b71cC52e6d9ec64609295861cb2A` |
+| LibOrganizationInitialization | `0xbcAD4381C92c350f590111EDe66E83f0584E42F9` |
+| LibOrganizationAccountSignature | `0xEdd0540b7109196ac93CD64970FEc869a7011aCF` |
 
 **Den Non-Prod Factory (`FACTORY=den-nonprod`):**
 
@@ -783,8 +859,8 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 |---------|---------|
 | LibOrganizationPolicy | `0x58fC18a42DDd82725471bcE76bb5d9D6509A0641` |
 | LibOrganizationAdmin | `0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1` |
-| LibOrganizationInitialization | `0xCa24f5F2601c4Ac1250e4f1267d3EEdFFFC4587A` |
-| LibOrganizationAccountSignature | `0xF2cbC9adffb0Ca4c28a1EbB31b1a8c2509ff17E1` |
+| LibOrganizationInitialization | `0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e` |
+| LibOrganizationAccountSignature | `0x8F8c7526cb63885061c4d922e66D7d8589ac045c` |
 
 **Den Prod Factory (`FACTORY=den-prod`):**
 
