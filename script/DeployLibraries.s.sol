@@ -145,12 +145,19 @@ contract DeployLibraries is Script {
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logEmptyLine();
 
-        // Compute the expected independent library addresses
-        IndependentLibraries memory libs = LinkedLibrariesUtils.computeIndependentLibraryAddresses(factoryAddress);
-
-        // Log the computed library addresses
-        Logger.logKeyValue("LibOrganizationPolicy", libs.policyAddress);
-        Logger.logKeyValue("LibOrganizationAdmin", libs.adminAddress);
+        // Compute and log the expected independent library addresses
+        Logger.logKeyValue(
+            "LibOrganizationPolicy",
+            Create2Utils.computeAddress(
+                factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+            )
+        );
+        Logger.logKeyValue(
+            "LibOrganizationAdmin",
+            Create2Utils.computeAddress(
+                factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+            )
+        );
         Logger.logEmptyLine();
     }
 
@@ -170,12 +177,21 @@ contract DeployLibraries is Script {
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logEmptyLine();
 
-        // Compute the expected dependent library addresses
-        DependentLibraries memory libs = LinkedLibrariesUtils.computeDependentLibraryAddresses(factoryAddress);
-
-        // Log the computed library addresses
-        Logger.logKeyValue("LibOrganizationInitialization", libs.initializationAddress);
-        Logger.logKeyValue("LibOrganizationAccountSignature", libs.accountSignatureAddress);
+        // Compute and log the expected dependent library addresses
+        Logger.logKeyValue(
+            "LibOrganizationInitialization",
+            Create2Utils.computeAddress(
+                factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+            )
+        );
+        Logger.logKeyValue(
+            "LibOrganizationAccountSignature",
+            Create2Utils.computeAddress(
+                factoryAddress,
+                DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+                type(LibOrganizationAccountSignature).creationCode
+            )
+        );
         Logger.logEmptyLine();
     }
 

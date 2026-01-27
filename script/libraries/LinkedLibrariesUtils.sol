@@ -2,84 +2,12 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
-import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
-import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
-import {Create2Utils} from "script/libraries/Create2Utils.sol";
-import {DependentLibraries, IndependentLibraries, PlatformLibraries} from "script/libraries/Types.sol";
-
 /**
  * @title LinkedLibrariesUtils
- * @notice Utility functions for computing and working with platform library addresses
- * @dev Provides a single source of truth for computing deterministic library addresses
- *      used across deployment scripts to avoid code duplication
+ * @notice Utility functions for working with linked library bytecode
  * @author Den Technologies Inc
  */
 library LinkedLibrariesUtils {
-    /// @dev Computes the deterministic addresses for all platform libraries
-    /// @param factoryAddress Address of the CREATE2 factory used for address computation
-    /// @return libs Struct containing computed library addresses
-    function computePlatformLibraryAddresses(address factoryAddress)
-        internal
-        pure
-        returns (PlatformLibraries memory libs)
-    {
-        libs.policyAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        libs.adminAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-        libs.initializationAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        libs.accountSignatureAddress = Create2Utils.computeAddress(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
-        );
-    }
-
-    /// @dev Computes the deterministic addresses for independent platform libraries (Policy and Admin)
-    ///      These libraries have no dependencies on other platform libraries.
-    /// @param factoryAddress Address of the CREATE2 factory used for address computation
-    /// @return libs Struct containing computed independent library addresses
-    function computeIndependentLibraryAddresses(address factoryAddress)
-        internal
-        pure
-        returns (IndependentLibraries memory libs)
-    {
-        libs.policyAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-        );
-        libs.adminAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-        );
-    }
-
-    /// @dev Computes the deterministic addresses for dependent platform libraries (Init and AccountSig)
-    ///      These libraries depend on independent libraries being linked via --libraries flag.
-    ///      IMPORTANT: This function must be called after independent libraries are deployed and
-    ///      linked via the --libraries flag, otherwise the computed addresses will be incorrect.
-    /// @param factoryAddress Address of the CREATE2 factory used for address computation
-    /// @return libs Struct containing computed dependent library addresses
-    function computeDependentLibraryAddresses(address factoryAddress)
-        internal
-        pure
-        returns (DependentLibraries memory libs)
-    {
-        libs.initializationAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
-        );
-        libs.accountSignatureAddress = Create2Utils.computeAddress(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-            type(LibOrganizationAccountSignature).creationCode
-        );
-    }
-
     /// @dev Checks if an address is in the creation code of a contract
     /// @param initCode The byte array to search in
     /// @param targetAddress The address to search for
