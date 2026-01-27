@@ -31,7 +31,7 @@ contract MockSafe {
     /// @param to Target address
     /// @param value ETH value (should always be 0 for our module)
     /// @param data Calldata
-    /// @param operation 0 = Call, 1 = DelegateCall (should always be 0 for our module)
+    /// @param operation 0 = Call, 1 = DelegateCall
     /// @return success Whether the execution succeeded
     function execTransactionFromModule(address to, uint256 value, bytes memory data, uint8 operation)
         external
@@ -48,8 +48,17 @@ contract MockSafe {
             return false;
         }
 
-        // Actually execute the call (for integration tests)
-        (success,) = to.call(data);
+        // Execute based on operation type
+        if (operation == 0) {
+            // Call - actually execute to test integration
+            (success,) = to.call{value: value}(data);
+        } else {
+            // DelegateCall - don't actually execute because it would run in this contract's
+            // context and corrupt our tracking storage. The mock's purpose is to verify the
+            // module passes correct parameters, not to fully simulate Safe's delegatecall.
+            // BatchedTransaction delegatecall behavior is tested in BatchedTransaction.t.sol.
+            success = true;
+        }
         return success;
     }
 
