@@ -440,7 +440,7 @@ make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress FACTORY=d
 The script validates:
 1. The executor address matches the expected address in `DeploymentConfig.sol`
 2. The target Safe is deployed at the expected address
-3. The `MultiSendCallOnly` contract is deployed at the expected address
+3. The `BatchedTransaction` contract is deployed at the expected address
 4. The CREATE2 factory is deployed
 
 #### Compute Module Address
