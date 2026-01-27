@@ -772,19 +772,19 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 
 | Library | Address |
 |---------|---------|
-| LibOrganizationPolicy | `0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6` |
-| LibOrganizationAdmin | `0x8216540c25aD0Fc9F5C75F2b513d67ee09078568` |
-| LibOrganizationInitialization | `0x7624025fEcC583aDF57c6B51DBC69143A09bE935` |
-| LibOrganizationAccountSignature | `0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5` |
+| LibOrganizationPolicy | `0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA` |
+| LibOrganizationAdmin | `0x6A87f1102404F4e36080732E535AD1F90cEde41B` |
+| LibOrganizationInitialization | `0x11d0aa12422064fD6c690B824B9551425435178A` |
+| LibOrganizationAccountSignature | `0x58895a03e143b71cC52e6d9ec64609295861cb2A` |
 
 **Den Non-Prod Factory (`FACTORY=den-nonprod`):**
 
 | Library | Address |
 |---------|---------|
-| LibOrganizationPolicy | `0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd` |
-| LibOrganizationAdmin | `0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3` |
-| LibOrganizationInitialization | `0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78` |
-| LibOrganizationAccountSignature | `0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65` |
+| LibOrganizationPolicy | `0x58fC18a42DDd82725471bcE76bb5d9D6509A0641` |
+| LibOrganizationAdmin | `0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1` |
+| LibOrganizationInitialization | `0xCa24f5F2601c4Ac1250e4f1267d3EEdFFFC4587A` |
+| LibOrganizationAccountSignature | `0xF2cbC9adffb0Ca4c28a1EbB31b1a8c2509ff17E1` |
 
 **Den Prod Factory (`FACTORY=den-prod`):**
 
@@ -800,25 +800,25 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | GnosisSafeProxyFactory | `0x04acB79cD2c208Fc4B983d92971A41F709532Ff5` |
 | CompatibilityFallbackHandler | `0xBF32F3DCE01B6c67E454066f8969Deee79D74a55` |
 | MultiSend | `0xe0487528D742Bd9e6295AE6f3873175f032ba8f3` |
-| MultiSendCallOnly | `0xD5c219A054E9fBceD9D9493f546a7B4995101e4B` |
+| MultiSendCallOnly | `0x5f7fd4Bd58C7777F7C777Cd4C19cF68Fc0A17Dc4` |
 | CreateCall | `0x7880435e91818C84bfAdC2f454B8A92942f7AcbD` |
 | SimulateTxAccessor | `0x205CeDEBdB936D473031f6140d50C11aeC948773` |
-| Guardian Safe | `0x6aCC5D703Fa6136Bc9305fa1cCEF87F7e1dDCA99` |
-| Deployer Safe | `0x53B78a4CeB12fB5cb48C8eEfcdAfd6a35F0a8246` |
+| Guardian Safe | `0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305` |
+| Deployer Safe | `0x84246979f1678Cc3c5949106B958275aA15B807e` |
 
 **Den Non-Prod Factory (`FACTORY=den-nonprod`):**
 
 | Contract | Address |
 |----------|---------|
-| GnosisSafe Singleton | `0x0c3254B2f12AbBC58A2104c432A943e22569Cfc2` |
-| GnosisSafeProxyFactory | `0xC31214e6950B6f29c038c705bBD7068a46406f82` |
-| CompatibilityFallbackHandler | `0x3B4c3b17F9d51B73a858A32324939bDcDCa497E4` |
-| MultiSend | `0xf3551E571f69Af6639344ADfB87BD7b6Ea2B0F0d` |
-| MultiSendCallOnly | `0x67e2AA5448B07839F9c2F4277b7DcB815738F0Bf` |
-| CreateCall | `0xFB84686A1bedc983ca8D47000104E354171E00f1` |
-| SimulateTxAccessor | `0x05E252D33237dCea27607D6F061AD501c35b214d` |
-| Guardian Safe | `0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb` |
-| Deployer Safe | `0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b` |
+| GnosisSafe Singleton | `0x9732b61234C43C49B98812E09D81D433b7789b25` |
+| GnosisSafeProxyFactory | `0x400F1f8fC868476bAb030909F049a70074570c7e` |
+| CompatibilityFallbackHandler | `0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0` |
+| MultiSend | `0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479` |
+| MultiSendCallOnly | `0x1D6535926E595Bb84Fc4d548E6d3615212EDa92C` |
+| CreateCall | `0x619B2299DD5C77DF72AE1a8a70885D89E423B382` |
+| SimulateTxAccessor | `0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d` |
+| Guardian Safe | `0x4fbeF24b88228A6639409150214bb5A798930fA9` |
+| Deployer Safe | `0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f` |
 
 **Den Prod Factory (`FACTORY=den-prod`):**
 

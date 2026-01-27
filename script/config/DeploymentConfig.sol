@@ -147,10 +147,10 @@ library DeploymentConfig {
     /// @dev Expected library addresses when deployed via Arachnid Deterministic Deployment Proxy
     ///      TODO: Update these addresses after making changes to library source code and deploying
     ///      libraries via arachnid Deterministic Deployment Proxy
-    address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6;
-    address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x8216540c25aD0Fc9F5C75F2b513d67ee09078568;
-    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x7624025fEcC583aDF57c6B51DBC69143A09bE935;
-    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5;
+    address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA;
+    address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x6A87f1102404F4e36080732E535AD1F90cEde41B;
+    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x11d0aa12422064fD6c690B824B9551425435178A;
+    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0x58895a03e143b71cC52e6d9ec64609295861cb2A;
 
     /// @dev Expected library addresses when deployed via Production Den Singleton Factory
     ///      TODO: Fill in these addresses after deploying libraries via prod Den Singleton Factory
@@ -164,11 +164,11 @@ library DeploymentConfig {
     /// @dev Expected library addresses when deployed via Non-Production Den Singleton Factory
     ///      TODO: Update these addresses after making changes to library source code and deploying
     ///      libraries via non-prod Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x9F660541d484d72d411891C815FaCeF2f7271C08;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0x7ADeaC98946A0770878328eD9f9F137A04fb6329;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0x901dF40d912B9764725124A9b435E11a36769269;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x58fC18a42DDd82725471bcE76bb5d9D6509A0641;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0xCa24f5F2601c4Ac1250e4f1267d3EEdFFFC4587A;
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
-        0xbc6B9b3DcEA1e7bDF4244d3b27C3c34188Ed52b2;
+        0xF2cbC9adffb0Ca4c28a1EbB31b1a8c2509ff17E1;
 
     // ==================== Hardcoded Safe 1.3.0 Infrastructure Addresses ====================
     // These are the expected deployment addresses for Safe 1.3.0 infrastructure contracts when deployed
@@ -183,7 +183,7 @@ library DeploymentConfig {
     address internal constant ARACHNID_SAFE_PROXY_FACTORY_ADDRESS = 0x04acB79cD2c208Fc4B983d92971A41F709532Ff5;
     address internal constant ARACHNID_SAFE_FALLBACK_HANDLER_ADDRESS = 0xBF32F3DCE01B6c67E454066f8969Deee79D74a55;
     address internal constant ARACHNID_SAFE_MULTISEND_ADDRESS = 0xe0487528D742Bd9e6295AE6f3873175f032ba8f3;
-    address internal constant ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0xD5c219A054E9fBceD9D9493f546a7B4995101e4B;
+    address internal constant ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0x5f7fd4Bd58C7777F7C777Cd4C19cF68Fc0A17Dc4;
     address internal constant ARACHNID_SAFE_CREATE_CALL_ADDRESS = 0x7880435e91818C84bfAdC2f454B8A92942f7AcbD;
     address internal constant ARACHNID_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS = 0x205CeDEBdB936D473031f6140d50C11aeC948773;
     address internal constant ARACHNID_GUARDIAN_SAFE_ADDRESS = 0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305;
@@ -209,7 +209,7 @@ library DeploymentConfig {
         0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = 0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS =
-        0x73D5641c3d1E6c53bDa6D06231Cbd7b3A43F391B;
+        0x1D6535926E595Bb84Fc4d548E6d3615212EDa92C;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS =
         0x619B2299DD5C77DF72AE1a8a70885D89E423B382;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS =
@@ -227,9 +227,9 @@ library DeploymentConfig {
 
     /// @dev Expected module addresses when deployed via Arachnid Deterministic Deployment Proxy
     address internal constant ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0xeC90Dfc59847C2421A9E08f65709Bc0781104932;
+        0x138Caa22BD0963856d1C0e041922dDFF934911cF;
     address internal constant ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0xDC87f1164a42D43db77981478B4c6a79A1387060;
+        0xA139E09add4405549F437A64a6d73FFF20Cf69Bb;
 
     /// @dev Expected module addresses when deployed via Production Den Singleton Factory
     ///      TODO: Update after deploying modules via prod Den Singleton Factory
@@ -238,9 +238,9 @@ library DeploymentConfig {
 
     /// @dev Expected module addresses when deployed via Non-Production Den Singleton Factory
     address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0x051Bb7D7B7E7FF76201bDf6Ca19f1Db8Bb6CB4D6;
+        0xf9590304dfAd565d50bD9e87E0Accb5ABc91dB90;
     address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
-        0x68931Ba1536817FEada8275ACb906df5A7a29774;
+        0x6f87dE25d473De4671824790AB86D59e45E1B185;
 
     // ==================== Hardcoded BatchedTransaction Addresses ====================
     // These are the expected deployment addresses for BatchedTransaction when deployed via CREATE2
@@ -251,16 +251,15 @@ library DeploymentConfig {
     // ==============================================================================
 
     /// @dev Expected BatchedTransaction address when deployed via Arachnid Deterministic Deployment Proxy
-    ///      TODO: Update after deploying BatchedTransaction via Arachnid factory
-    address internal constant ARACHNID_BATCHED_TRANSACTION_ADDRESS = address(0);
+    address internal constant ARACHNID_BATCHED_TRANSACTION_ADDRESS = 0xbaFA880487F37868903cd04d642a16CB3Ab54449;
 
     /// @dev Expected BatchedTransaction address when deployed via Production Den Singleton Factory
     ///      TODO: Update after deploying BatchedTransaction via prod Den Singleton Factory
     address internal constant PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS = address(0);
 
     /// @dev Expected BatchedTransaction address when deployed via Non-Production Den Singleton Factory
-    ///      TODO: Update after deploying BatchedTransaction via non-prod Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS = address(0);
+    address internal constant NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS =
+        0x0cedE35f7bac439D35e261E386315c62C17d6Ec1;
 
     // ==================== Hardcoded Safe Executor EOA Addresses ====================
     // These are the EOA addresses (Safe Executor EOAs) authorized to execute transactions via the

@@ -546,7 +546,8 @@ endif
 
 # Deploy Libraries: Deploys the 4 platform libraries via CREATE2
 # These must be deployed BEFORE running deploy-contracts.
-# Does NOT use --libraries flags (libraries are being deployed, not linked).
+# Uses FOUNDRY_PROFILE to ensure correct library addresses are embedded in bytecode
+# (some libraries depend on other libraries).
 #
 # Example:
 #   make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
@@ -555,7 +556,8 @@ deploy-libraries: validate-signer-vars
 	@echo "Deploying platform libraries via CREATE2..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	forge script script/DeployLibraries.s.sol:DeployLibraries \
+	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
+	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
@@ -606,7 +608,8 @@ deploy-libraries-dry-run:
 	@echo "Simulating library deployment (dry-run)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	forge script script/DeployLibraries.s.sol:DeployLibraries \
+	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
+	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
