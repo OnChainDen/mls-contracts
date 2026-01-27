@@ -415,7 +415,6 @@ The `SafeExecutorModule` is a minimal Safe module with the following properties:
   - Uses `CALL` for all targets, except `DELEGATECALL` is allowed ONLY to `BatchedTransaction`
   - No ETH transfers (value must always be zero)
   - No calls to the Safe itself (prevents ownership/module modifications)
-  - No calls to the module itself
 
 The `DELEGATECALL` exception for `BatchedTransaction` enables batching multiple calls into a single transaction, which is essential for complex operations that need to be atomic.
 

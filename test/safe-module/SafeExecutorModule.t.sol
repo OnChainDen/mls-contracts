@@ -123,7 +123,7 @@ contract MockBatchedTransaction {
  * @dev Tests cover:
  *      - Constructor validation and initialization
  *      - Authorization checks
- *      - Target address restrictions (Safe, module)
+ *      - Target address restrictions (Safe)
  *      - Execution success and failure handling
  *      - DelegateCall to BatchedTransaction
  *      - Integration with mock Safe contract
@@ -229,15 +229,6 @@ contract SafeExecutorModuleTest is Test {
         vm.prank(authorizedExecutor);
         vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
         module.executeOnBehalf(address(mockSafe), data);
-    }
-
-    function test_executeOnBehalf_revertsCallToModule() public {
-        // Try to call the module itself
-        bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
-
-        vm.prank(authorizedExecutor);
-        vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallModule.selector, address(module)));
-        module.executeOnBehalf(address(module), data);
     }
 
     function test_executeOnBehalf_canCallOtherContracts() public {
@@ -386,10 +377,9 @@ contract SafeExecutorModuleTest is Test {
     // Fuzz Tests
     // ============================================================
 
-    function testFuzz_executeOnBehalf_anyTargetExceptSafeAndModule(address target) public {
+    function testFuzz_executeOnBehalf_anyTargetExceptSafe(address target) public {
         // Skip invalid targets
         vm.assume(target != address(mockSafe));
-        vm.assume(target != address(module));
         vm.assume(target != address(0));
 
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
@@ -401,7 +391,7 @@ contract SafeExecutorModuleTest is Test {
             assertEq(mockSafe.lastCallTo(), target, "Call should be forwarded to the target");
         } catch {
             // Failure is also fine (target may not be a contract)
-            // The important thing is it didn't revert with CannotCallSafe or CannotCallModule
+            // The important thing is it didn't revert with CannotCallSafe
         }
     }
 
@@ -431,7 +421,6 @@ contract SafeExecutorModuleTest is Test {
     function testFuzz_executeOnBehalf_onlyBatchedTransactionGetsDelegateCall(address target) public {
         // Skip invalid targets
         vm.assume(target != address(mockSafe));
-        vm.assume(target != address(module));
         vm.assume(target != address(0));
 
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
