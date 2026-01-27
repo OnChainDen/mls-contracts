@@ -312,7 +312,9 @@ contract SafeModuleTransaction is Script {
         moduleAddress = isGuardian ? guardianModule : deployerModule;
     }
 
-    /// @dev Find the previous module in the linked list (needed for disableModule)
+    /// @dev Find the previous module in the linked list (needed for disableModule).
+    ///      This function only checks the first page of 100 modules. Our Guardian and Deployer
+    ///      Safes will never have more than a handful of modules, so pagination is unnecessary.
     function _findPrevModule(address safeAddress, address moduleAddress) internal view returns (address prevModule) {
         // SENTINEL_MODULES = address(0x1)
         address SENTINEL = address(0x1);
