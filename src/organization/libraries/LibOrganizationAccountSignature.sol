@@ -1,16 +1,15 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {SignatureChecker} from "libraries/SignatureChecker.sol";
+import {BytesUtils} from "libraries/BytesUtils.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
@@ -20,13 +19,18 @@ import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.s
  *      This library enables smart accounts to sign messages in a policy-controlled manner.
  *      When an external contract calls isValidSignature() on an Account, the Account
  *      delegates to the Organization, which uses this library to validate that:
- *      1. (Recovery path) If recovery is supported AND enabled, check if signature is from recovery address
- *      2. The signature request hasn't expired
- *      3. The guardian has approved the signature request
- *      4. A valid policy exists for signature operations
- *      5. The policy applies to the requesting account
- *      6. The initiator is authorized by the policy
- *      7. Required approvals have been collected (for manual approval policies)
+ *      1. (Recovery path) If type prefix is 0x00, validates recovery signature
+ *      2. (Policy path) If type prefix is 0x01, validates policy-based signature:
+ *         - The signature request hasn't expired
+ *         - The guardian has approved the signature request
+ *         - A valid policy exists for signature operations
+ *         - The policy applies to the requesting account
+ *         - The initiator is authorized by the policy
+ *         - Required approvals have been collected (for manual approval policies)
+ *
+ *      Signature format: | type (1 byte) | signature data (variable) |
+ *      - 0x00 = Recovery signature (raw signature from recovery address)
+ *      - 0x01 = Policy-based signature (ABI-encoded policy data and proofs)
  *
  *      Policy existence is verified via merkle proof. Policy data is provided in calldata.
  * @author Den Technologies Inc
@@ -39,19 +43,20 @@ library LibOrganizationAccountSignature {
     /// @dev Value returned when signature validation fails per ERC-1271 standard
     bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
 
+    /// @dev Signature type prefix for recovery signatures
+    uint8 internal constant SIGNATURE_TYPE_RECOVERY = 0x00;
+
+    /// @dev Signature type prefix for policy-based signatures
+    uint8 internal constant SIGNATURE_TYPE_POLICY = 0x01;
+
     /**
      * @dev Validates an ERC-1271 signature for a given account.
-     *      First checks for recovery signatures (if recovery is supported AND enabled).
-     *      For normal signatures, the signature parameter is ABI-encoded and contains:
-     *      - policyId: ID of the policy authorizing this signature
-     *      - expirationTimestamp: When the signature request expires
-     *      - approverSignatures: Concatenated signatures (initiator + reviewers)
-     *      - guardianSignature: Guardian's approval of the signature request
-     *      - proofs: Merkle proofs and policy data for validation
+     *      The signature must be prefixed with a type byte:
+     *      - 0x00: Recovery signature (if recovery is supported AND enabled)
+     *      - 0x01: Policy-based signature (ABI-encoded with policy info and proofs)
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
-     * @param signature ABI-encoded signature data containing policy info and proofs,
-     *                  or a raw recovery signature if using recovery mode
+     * @param signature Type-prefixed signature data
      * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
      */
     function isValidSignature(address account, bytes32 hash, bytes memory signature)
@@ -59,53 +64,126 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4 magicValue)
     {
-        // Check for recovery signature first - must be BOTH supported AND enabled
-        // Recovery signatures bypass all guardian and policy checks
-        if (
-            LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271()
-                && LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271()
-        ) {
-            if (LibOrganizationTxRecovery.isValidRecoverySignature(hash, signature)) {
-                return ERC1271_MAGIC_VALUE;
-            }
-            // If recovery signature check fails, fall through to normal validation
+        // Case: Empty signature
+        if (signature.length == 0) {
+            return ERC1271_INVALID_VALUE;
         }
 
-        // Normal signature validation path
+        // Extract the type prefix byte
+        uint8 signatureType = uint8(signature[0]);
+
+        // Strip the type prefix to get the signature data
+        bytes memory signatureData = BytesUtils.sliceFrom(signature, 1);
+
+        // Case: Recovery signature
+        if (signatureType == SIGNATURE_TYPE_RECOVERY) {
+            return _validateRecoverySignature(hash, signatureData);
+        }
+
+        // Case: Policy-based signature
+        if (signatureType == SIGNATURE_TYPE_POLICY) {
+            return _validatePolicyBasedSignature(account, hash, signatureData);
+        }
+
+        // Case: Unknown signature type
+        return ERC1271_INVALID_VALUE;
+    }
+
+    /**
+     * @dev Validates a recovery signature.
+     *      Recovery signatures bypass all guardian and policy checks.
+     * @param hash The message hash that was signed
+     * @param signatureData The raw recovery signature (without type prefix)
+     * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     */
+    function _validateRecoverySignature(bytes32 hash, bytes memory signatureData)
+        private
+        view
+        returns (bytes4 magicValue)
+    {
+        // Recovery must be both supported AND enabled
+        if (
+            !LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271()
+                || !LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271()
+        ) {
+            return ERC1271_INVALID_VALUE;
+        }
+
+        // Validate the recovery signature
+        if (LibOrganizationTxRecovery.isValidRecoverySignature(hash, signatureData)) {
+            return ERC1271_MAGIC_VALUE;
+        }
+
+        return ERC1271_INVALID_VALUE;
+    }
+
+    /**
+     * @dev Validates a policy-based signature.
+     *      The signatureData is ABI-encoded and contains:
+     *      - policyId: ID of the policy authorizing this signature
+     *      - expirationTimestamp: When the signature request expires
+     *      - initiatorSignature: The initiator's signature
+     *      - reviewSignatures: The reviewer signatures (empty for auto-approve policies)
+     *      - guardianSignature: Guardian's approval of the signature request
+     *      - proofs: Merkle proofs and policy data for validation
+     * @param account The account address whose signature is being validated
+     * @param hash The message hash that was signed
+     * @param signatureData ABI-encoded signature data (without type prefix)
+     * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     */
+    function _validatePolicyBasedSignature(address account, bytes32 hash, bytes memory signatureData)
+        private
+        view
+        returns (bytes4 magicValue)
+    {
         // Decode the packed signature data
         (
             uint256 policyId,
             uint256 expirationTimestamp,
-            bytes memory approverSignatures,
+            bytes memory initiatorSignature,
+            bytes memory reviewSignatures,
             bytes memory guardianSignature,
             ValidationProofs memory proofs
-        ) = abi.decode(signature, (uint256, uint256, bytes, bytes, ValidationProofs));
+        ) = abi.decode(signatureData, (uint256, uint256, bytes, bytes, bytes, ValidationProofs));
 
         // Case: Signature request has expired
         if (block.timestamp > expirationTimestamp) {
             return ERC1271_INVALID_VALUE;
         }
 
-        // Case: Guardian signature is invalid
-        if (!_isGuardianSignatureValid({
-                account: account,
-                hash: hash,
-                policyId: policyId,
-                expirationTimestamp: expirationTimestamp,
-                guardianSignature: guardianSignature
-            })) {
+        // Case: No initiator signature provided
+        if (initiatorSignature.length == 0) {
             return ERC1271_INVALID_VALUE;
         }
 
-        bytes memory initiatorSignature = SignatureUtils.extractSignature(approverSignatures, 0);
-        bytes32 initiatorHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
-
-        // Use tryRecover to avoid reverting on invalid signatures (ERC-1271 should return failure, not revert)
-        (address initiator, ECDSA.RecoverError err,) = ECDSA.tryRecover(initiatorHash, initiatorSignature);
-
-        // Case: Initiator signature is invalid
-        if (err != ECDSA.RecoverError.NoError || initiator == address(0)) {
+        // Validate initiator signature and recover the initiator signer address
+        bytes32 initiatorSignatureHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
+        (bool initiatorValid, address initiator) =
+            SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorSignatureHash);
+        if (!initiatorValid) {
             return ERC1271_INVALID_VALUE;
+        }
+
+        // Compute review hash (used for both guardian and reviewer signature validation)
+        // Note: includes the initiator signature to bind approvals to the specific request
+        bytes32 reviewHash = _getReviewSignatureHash({
+            account: account,
+            hash: hash,
+            policyId: policyId,
+            expirationTimestamp: expirationTimestamp,
+            initiatorSignature: initiatorSignature
+        });
+
+        // Validate guardian signature against the review hash
+        {
+            address guardianAddress = LibOrganizationGuardian.getGuardian();
+
+            // Recover guardian signer and compare (returns invalid if signature is malformed)
+            (bool guardianValid, address recoveredGuardian) =
+                SignatureUtils.tryRecoverSigner(guardianSignature, reviewHash);
+            if (!guardianValid || recoveredGuardian != guardianAddress) {
+                return ERC1271_INVALID_VALUE;
+            }
         }
 
         // Case: Signature is not allowed by the policy
@@ -123,14 +201,11 @@ library LibOrganizationAccountSignature {
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
         if (pType == PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
-            if (_hasSufficientValidApprovalSignatures({
-                    account: account,
-                    hash: hash,
-                    policyId: policyId,
-                    expirationTimestamp: expirationTimestamp,
-                    approverSignatures: approverSignatures,
-                    initiatorSignature: initiatorSignature,
-                    proofs: proofs
+            if (LibOrganizationPolicy.areApprovalsValid({
+                    policy: proofs.policy,
+                    signatures: reviewSignatures,
+                    messageHash: reviewHash,
+                    approverProofs: proofs.approverProofs
                 })) {
                 return ERC1271_MAGIC_VALUE;
             }
@@ -180,83 +255,6 @@ library LibOrganizationAccountSignature {
         }
 
         return true;
-    }
-
-    /**
-     * @dev Checks if manual approval signatures meet the required threshold.
-     *      Extracts reviewer signatures (all after the first initiator signature),
-     *      computes the review hash, and counts valid approvals from authorized approvers.
-     * @param account The account address whose signature is being validated
-     * @param hash The message hash that was signed
-     * @param policyId The policy ID being used for validation
-     * @param expirationTimestamp When the signature request expires
-     * @param approverSignatures Concatenated signatures from initiator and approvers
-     * @param initiatorSignature The initiator's signature
-     * @param proofs Merkle proofs and policy data
-     * @return True if enough valid approvals, false otherwise
-     */
-    function _hasSufficientValidApprovalSignatures(
-        address account,
-        bytes32 hash,
-        uint256 policyId,
-        uint256 expirationTimestamp,
-        bytes memory approverSignatures,
-        bytes memory initiatorSignature,
-        ValidationProofs memory proofs
-    ) private view returns (bool) {
-        // Case: Not enough data provided to check for valid approval signatures
-        if (approverSignatures.length < SignatureUtils.SIGNATURE_LENGTH) {
-            return false;
-        }
-
-        // Get required number of approvals from policy
-        uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
-
-        // Extract reviewer signatures (everything after the initiator signature)
-        bytes memory reviewSignatures = LibOrganizationSignatures.extractReviewSignatures(approverSignatures);
-
-        // Compute the hash that reviewers should have signed
-        // Note: includes the initiator signature to bind approvals to the specific request
-        bytes32 reviewHash = _getReviewSignatureHash({
-            account: account,
-            hash: hash,
-            policyId: policyId,
-            expirationTimestamp: expirationTimestamp,
-            initiatorSignature: initiatorSignature
-        });
-
-        // Count valid approvals from authorized signers (with Merkle proofs for membership verification)
-        uint256 validApprovals =
-            LibOrganizationPolicy.getValidApprovals(proofs.policy, reviewSignatures, reviewHash, proofs.approverProofs);
-
-        return validApprovals >= requiredApprovals;
-    }
-
-    /**
-     * @dev Checks if the guardian's signature is valid for an ERC-1271 signature request.
-     *      The guardian provides an additional layer of security by approving
-     *      signature requests off-chain before they can be validated on-chain.
-     * @param account The account whose signature is being validated
-     * @param hash The message hash being signed
-     * @param policyId The policy ID being used
-     * @param expirationTimestamp When the request expires
-     * @param guardianSignature The guardian's signature
-     * @return True if guardian signature is valid
-     */
-    function _isGuardianSignatureValid(
-        address account,
-        bytes32 hash,
-        uint256 policyId,
-        uint256 expirationTimestamp,
-        bytes memory guardianSignature
-    ) private view returns (bool) {
-        address guardianAddress = LibOrganizationGuardian.getGuardian();
-
-        // Guardian signs the same hash structure as the initiator
-        bytes32 guardianMessageHash = _getInitiatorSignatureHash(account, hash, policyId, expirationTimestamp);
-
-        // Use SignatureChecker to support both EOA and smart contract guardians
-        return SignatureChecker.isValidSignatureNow(guardianAddress, guardianMessageHash, guardianSignature);
     }
 
     /**

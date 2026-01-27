@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
@@ -63,6 +64,13 @@ interface IOrganizationAdmin {
      * @notice Thrown when an admin operation has an invalid signature
      */
     error InvalidAdminSignature();
+
+    /**
+     * @notice Thrown when admin signatures are not in ascending order by signer address or contain duplicates
+     * @param signer The signer address that violated ordering
+     * @param lastSigner The previous signer address
+     */
+    error DuplicateOrOutOfOrderAdminSigner(address signer, address lastSigner);
 
     /**
      * @notice Thrown when an admin operation has wrong chain ID

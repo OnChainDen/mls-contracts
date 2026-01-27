@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -392,7 +393,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
-     * @param signatures The signatures authorizing the transaction
+     * @param initiatorSignature The initiator's signature authorizing the transaction
+     * @param reviewSignatures The reviewer signatures (empty for auto-approve policies)
      * @param proofs The validation proofs containing policy data and merkle proofs
      */
     function executeAccountTransaction(
@@ -403,7 +405,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes calldata signatures,
+        bytes calldata initiatorSignature,
+        bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
         // Verify the account is deployed by this organization
@@ -428,7 +431,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
             salt: salt,
             expirationTimestamp: expirationTimestamp,
             policyId: policyId,
-            signatures: signatures,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
             proofs: proofs
         });
 
@@ -458,7 +462,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
-     * @param signatures The signatures authorizing the rejection
+     * @param initiatorSignature The initiator's signature for the original transaction
+     * @param reviewSignatures The reviewer signatures authorizing the rejection
      * @param proofs The validation proofs containing policy data and merkle proofs
      */
     function rejectAccountTransaction(
@@ -469,7 +474,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes calldata signatures,
+        bytes calldata initiatorSignature,
+        bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
         // Verify the account is deployed by this organization
@@ -493,7 +499,8 @@ contract OrganizationImplementation is UUPSUpgradeable, Initializable, IOrganiza
             salt: salt,
             expirationTimestamp: expirationTimestamp,
             policyId: policyId,
-            signatures: signatures,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
             proofs: proofs
         });
 

@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity >=0.7.0 <0.9.0;
 
 import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";

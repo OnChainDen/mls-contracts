@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {AdminAuthParams} from "types/AdminTypes.sol";
@@ -45,6 +46,13 @@ interface IOrganizationPolicy {
      * @param actual The actual length of proofs array
      */
     error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
+
+    /**
+     * @notice Thrown when signatures are not in ascending order by signer address or contain duplicates
+     * @param signer The signer address that violated ordering
+     * @param lastSigner The previous signer address
+     */
+    error DuplicateOrOutOfOrderSigner(address signer, address lastSigner);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
