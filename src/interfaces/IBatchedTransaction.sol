@@ -24,10 +24,6 @@ interface IBatchedTransaction {
     /// @param target The target address that was blocked
     error CannotCallSafe(address target);
 
-    /// @notice Error thrown when a sub-transaction execution fails
-    /// @param target The target address of the failed transaction
-    error SubTransactionFailed(address target);
-
     /**
      * @notice Executes a batch of transactions
      * @dev Designed to be called via DELEGATECALL from a Safe.

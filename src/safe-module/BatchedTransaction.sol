@@ -61,13 +61,9 @@ contract BatchedTransaction is IBatchedTransaction {
                 // call(gas, to, value, inOffset, inSize, outOffset, outSize)
                 let success := call(gas(), to, 0, data, dataLength, 0x00, 0x00)
 
-                // Case: Call failed - revert with SubTransactionFailed(target)
+                // Revert if sub-transaction failed (consistent with Safe's MultiSendCallOnly)
                 if iszero(success) {
-                    // Store error selector and parameter
-                    // Shift left by 224 bits (28 bytes) to position selector in first 4 bytes
-                    mstore(0x00, shl(224, 0xa082a07d))
-                    mstore(0x04, to)
-                    revert(0x00, 0x24)
+                    revert(0x00, 0x00)
                 }
 
                 // Advance to the next transaction
