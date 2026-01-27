@@ -8,7 +8,7 @@ import {LibOrganizationInitialization} from "organization/libraries/LibOrganizat
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
-import {PlatformLibraries} from "script/libraries/Types.sol";
+import {DependentLibraries, IndependentLibraries, PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
  * @title LinkedLibrariesUtils
@@ -32,6 +32,44 @@ library LinkedLibrariesUtils {
         libs.adminAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
         );
+        libs.initializationAddress = Create2Utils.computeAddress(
+            factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+        );
+        libs.accountSignatureAddress = Create2Utils.computeAddress(
+            factoryAddress,
+            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            type(LibOrganizationAccountSignature).creationCode
+        );
+    }
+
+    /// @dev Computes the deterministic addresses for independent platform libraries (Policy and Admin)
+    ///      These libraries have no dependencies on other platform libraries.
+    /// @param factoryAddress Address of the CREATE2 factory used for address computation
+    /// @return libs Struct containing computed independent library addresses
+    function computeIndependentLibraryAddresses(address factoryAddress)
+        internal
+        pure
+        returns (IndependentLibraries memory libs)
+    {
+        libs.policyAddress = Create2Utils.computeAddress(
+            factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
+        );
+        libs.adminAddress = Create2Utils.computeAddress(
+            factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
+        );
+    }
+
+    /// @dev Computes the deterministic addresses for dependent platform libraries (Init and AccountSig)
+    ///      These libraries depend on independent libraries being linked via --libraries flag.
+    ///      IMPORTANT: This function must be called after independent libraries are deployed and
+    ///      linked via the --libraries flag, otherwise the computed addresses will be incorrect.
+    /// @param factoryAddress Address of the CREATE2 factory used for address computation
+    /// @return libs Struct containing computed dependent library addresses
+    function computeDependentLibraryAddresses(address factoryAddress)
+        internal
+        pure
+        returns (DependentLibraries memory libs)
+    {
         libs.initializationAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
         );

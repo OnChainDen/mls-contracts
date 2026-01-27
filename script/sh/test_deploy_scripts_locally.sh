@@ -118,11 +118,18 @@ echo "[Step 4] Deploying Safe 1.3.0 infrastructure and multisigs..."
 make deploy-safe ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
-# Step 5: Deploy Platform Libraries
+# Step 5: Deploy Platform Libraries (in two stages)
 # =============================================================================
+# Libraries must be deployed in two stages due to inter-library dependencies:
+#   Stage 1 (independent): Policy and Admin (no dependencies on other libs)
+#   Stage 2 (dependent): Init and AccountSig (depend on Policy/Admin being linked)
 echo ""
-echo "[Step 5] Deploying platform libraries..."
-make deploy-libraries ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+echo "[Step 5a] Deploying independent libraries (Policy, Admin)..."
+make deploy-independent-libs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+
+echo ""
+echo "[Step 5b] Deploying dependent libraries (Init, AccountSig)..."
+make deploy-dependent-libs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
 # Step 6: Deploy Platform Contracts

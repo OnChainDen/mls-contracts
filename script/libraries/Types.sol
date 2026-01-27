@@ -16,6 +16,18 @@ struct PlatformLibraries {
     address accountSignatureAddress;
 }
 
+/// @dev Grouped addresses for independent libraries (no dependencies on other platform libraries)
+struct IndependentLibraries {
+    address policyAddress;
+    address adminAddress;
+}
+
+/// @dev Grouped addresses for dependent libraries (depend on independent libraries being linked)
+struct DependentLibraries {
+    address initializationAddress;
+    address accountSignatureAddress;
+}
+
 /// @dev Grouped addresses for deployed Safe infrastructure contracts
 struct SafeInfrastructure {
     address singletonAddress;

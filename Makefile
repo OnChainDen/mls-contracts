@@ -25,8 +25,8 @@
 .PHONY: deploy-safe-module safe-add-module safe-remove-module check-safe-module-status
 
 # Platform deployment
-.PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
-.PHONY: deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
+.PHONY: deploy-independent-libs deploy-dependent-libs deploy-libraries deploy-contracts deploy-platform validate-signer-vars
+.PHONY: deploy-independent-libs-dry-run deploy-dependent-libs-dry-run deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
 
 # Utilities
 .PHONY: check-factory check-all-factories compute-addresses compute-all-addresses verify
@@ -68,10 +68,12 @@ help:
 	@echo "  check-safe-module-status          Check approval status for a module transaction"
 	@echo ""
 	@echo "Platform Deployment:"
-	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
+	@echo "  deploy-independent-libs   Deploy independent libraries (Policy, Admin) via CREATE2"
+	@echo "  deploy-dependent-libs     Deploy dependent libraries (Init, AccountSig) via CREATE2"
+	@echo "  deploy-libraries          Deploy all platform libraries (both stages)"
 	@echo "  deploy-contracts          Deploy platform contracts with library linking"
 	@echo "  deploy-platform           Full deployment (libraries + contracts)"
-	@echo "  deploy-libraries-dry-run  Simulate library deployment (no broadcast)"
+	@echo "  deploy-libraries-dry-run  Simulate all library deployment (no broadcast)"
 	@echo "  deploy-contracts-dry-run  Simulate contract deployment (no broadcast)"
 	@echo "  deploy-platform-dry-run   Simulate full deployment (no broadcast)"
 	@echo ""
@@ -227,15 +229,43 @@ DEN_NONPROD_FACTORY_ADDRESS := 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5
 ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
 
 # ------------------------------------------------------------------------------
-# Factory Address Selection (based on FACTORY variable)
-# Library addresses are now configured in foundry.toml profiles.
+# Library Addresses (for staged library deployment)
+# These are the independent library addresses (Policy, Admin) used when deploying
+# dependent libraries (Init, AccountSig). Must match DeploymentConfig.sol.
+# ------------------------------------------------------------------------------
+# Library paths (same for all factories)
+LIB_ORG_POLICY_PATH := src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy
+LIB_ORG_ADMIN_PATH := src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin
+
+# Arachnid factory library addresses
+ARACHNID_LIB_ORG_POLICY_ADDRESS := 0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA
+ARACHNID_LIB_ORG_ADMIN_ADDRESS := 0x6A87f1102404F4e36080732E535AD1F90cEde41B
+
+# Den Production factory library addresses (TODO: Update after deployment)
+DEN_PROD_LIB_ORG_POLICY_ADDRESS := 0x0000000000000000000000000000000000000000
+DEN_PROD_LIB_ORG_ADMIN_ADDRESS := 0x0000000000000000000000000000000000000000
+
+# Den Non-Production factory library addresses
+DEN_NONPROD_LIB_ORG_POLICY_ADDRESS := 0x58fC18a42DDd82725471bcE76bb5d9D6509A0641
+DEN_NONPROD_LIB_ORG_ADMIN_ADDRESS := 0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1
+
+# ------------------------------------------------------------------------------
+# Factory Address and Library Selection (based on FACTORY variable)
+# Library addresses for contract deployment are configured in foundry.toml profiles.
+# For staged library deployment, addresses are selected below.
 # ------------------------------------------------------------------------------
 ifeq ($(FACTORY),arachnid)
     FACTORY_ADDRESS := $(ARACHNID_FACTORY_ADDRESS)
+    LIB_ORG_POLICY_ADDRESS := $(ARACHNID_LIB_ORG_POLICY_ADDRESS)
+    LIB_ORG_ADMIN_ADDRESS := $(ARACHNID_LIB_ORG_ADMIN_ADDRESS)
 else ifeq ($(FACTORY),den-prod)
     FACTORY_ADDRESS := $(DEN_PROD_FACTORY_ADDRESS)
+    LIB_ORG_POLICY_ADDRESS := $(DEN_PROD_LIB_ORG_POLICY_ADDRESS)
+    LIB_ORG_ADMIN_ADDRESS := $(DEN_PROD_LIB_ORG_ADMIN_ADDRESS)
 else ifeq ($(FACTORY),den-nonprod)
     FACTORY_ADDRESS := $(DEN_NONPROD_FACTORY_ADDRESS)
+    LIB_ORG_POLICY_ADDRESS := $(DEN_NONPROD_LIB_ORG_POLICY_ADDRESS)
+    LIB_ORG_ADMIN_ADDRESS := $(DEN_NONPROD_LIB_ORG_ADMIN_ADDRESS)
 else
     $(error Invalid FACTORY value '$(FACTORY)'. Use: arachnid, den-prod, or den-nonprod)
 endif
@@ -544,25 +574,56 @@ endif
 # Platform Deployment Commands
 # ==============================================================================
 
-# Deploy Libraries: Deploys the 4 platform libraries via CREATE2
-# These must be deployed BEFORE running deploy-contracts.
-# Uses FOUNDRY_PROFILE to ensure correct library addresses are embedded in bytecode
-# (some libraries depend on other libraries).
+# Deploy Independent Libraries: Deploys Policy and Admin libraries via CREATE2
+# These libraries have no dependencies on other platform libraries.
+# Run this BEFORE deploy-dependent-libs.
 #
 # Example:
-#   make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-#   make deploy-libraries FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
-deploy-libraries: validate-signer-vars
-	@echo "Deploying platform libraries via CREATE2..."
+#   make deploy-independent-libs NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+#   make deploy-independent-libs FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-independent-libs: validate-signer-vars
+	@echo "Deploying independent platform libraries (Policy, Admin) via CREATE2..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
-	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployLibraries.s.sol:DeployLibraries \
-		--sig "run(address)" $(FACTORY_ADDRESS) \
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "runDeployIndependentLibs(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
+
+# Deploy Dependent Libraries: Deploys Init and AccountSig libraries via CREATE2
+# These libraries depend on Policy and Admin being deployed and linked.
+# IMPORTANT: Run deploy-independent-libs first. Uses --libraries flags.
+#
+# Example:
+#   make deploy-dependent-libs NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+#   make deploy-dependent-libs FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-dependent-libs: validate-signer-vars
+	@echo "Deploying dependent platform libraries (Init, AccountSig) via CREATE2..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Linked Policy: $(LIB_ORG_POLICY_ADDRESS)"
+	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
+		--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
+		--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Deploy Libraries: Convenience target that deploys all platform libraries (both stages)
+# This runs deploy-independent-libs followed by deploy-dependent-libs.
+#
+# Example:
+#   make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+#   make deploy-libraries FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-libraries: deploy-independent-libs deploy-dependent-libs
+	@echo "All platform libraries deployed!"
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY)"
 
 # Deploy Contracts: Deploys all platform contracts with library linking
 # IMPORTANT: Libraries must be deployed first (use deploy-libraries).
@@ -600,19 +661,44 @@ deploy-platform: deploy-safe deploy-libraries deploy-contracts
 # These run without --broadcast to simulate deployment without sending transactions.
 # ------------------------------------------------------------------------------
 
-# Deploy Libraries Dry-Run: Simulates library deployment
+# Deploy Independent Libraries Dry-Run: Simulates independent library deployment
+#
+# Example:
+#   make deploy-independent-libs-dry-run NETWORK=sepolia
+deploy-independent-libs-dry-run:
+	@echo "Simulating independent library deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "runDeployIndependentLibs(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Deploy Dependent Libraries Dry-Run: Simulates dependent library deployment
+#
+# Example:
+#   make deploy-dependent-libs-dry-run NETWORK=sepolia
+deploy-dependent-libs-dry-run:
+	@echo "Simulating dependent library deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Linked Policy: $(LIB_ORG_POLICY_ADDRESS)"
+	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
+		--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
+		--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Deploy Libraries Dry-Run: Simulates all library deployment (both stages)
 #
 # Example:
 #   make deploy-libraries-dry-run NETWORK=sepolia
-deploy-libraries-dry-run:
-	@echo "Simulating library deployment (dry-run)..."
+deploy-libraries-dry-run: deploy-independent-libs-dry-run deploy-dependent-libs-dry-run
+	@echo "All library deployment simulations complete!"
 	@echo "  Network: $(NETWORK)"
-	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
-	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployLibraries.s.sol:DeployLibraries \
-		--sig "run(address)" $(FACTORY_ADDRESS) \
-		--rpc-url $(RPC_URL) \
-		$(VERBOSITY)
+	@echo "  Factory: $(FACTORY)"
 
 # Deploy Contracts Dry-Run: Simulates contract deployment
 #

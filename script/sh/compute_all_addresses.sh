@@ -153,28 +153,64 @@ if [[ -z "$DEPLOYER_SAFE_ADDRESS" ]]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Step 2: Compute Library Addresses
+# Step 2: Compute Library Addresses (in dependency order)
 # -----------------------------------------------------------------------------
-print_progress "  Computing library addresses..."
-LIB_OUTPUT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
-    --sig "computeAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
+# Library dependency chain:
+#   - LibOrganizationPolicy: No deps on other deployed libraries
+#   - LibOrganizationAdmin: No deps on other deployed libraries
+#   - LibOrganizationInitialization: Depends on LibOrganizationAdmin
+#   - LibOrganizationAccountSignature: Depends on LibOrganizationPolicy
+#
+# We must compute in stages because some libraries have their bytecode affected
+# by the addresses of other libraries they depend on.
+
+# Step 2a: Compute independent library addresses (Policy and Admin)
+print_progress "  Computing independent library addresses (Policy, Admin)..."
+LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
+    --sig "computeIndependentAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute library addresses"
-    echo "$LIB_OUTPUT"
+    echo "Error: Failed to compute independent library addresses"
+    echo "$LIB_OUTPUT_INDEPENDENT"
     exit 1
 }
 
-# Extract library addresses
-LIB_ORG_POLICY_ADDRESS=$(extract_address "$LIB_OUTPUT" "LibOrganizationPolicy")
-LIB_ORG_ADMIN_ADDRESS=$(extract_address "$LIB_OUTPUT" "LibOrganizationAdmin")
-LIB_ORG_INIT_ADDRESS=$(extract_address "$LIB_OUTPUT" "LibOrganizationInitialization")
-LIB_ORG_ACCOUNT_SIG_ADDRESS=$(extract_address "$LIB_OUTPUT" "LibOrganizationAccountSignature")
+# Extract independent library addresses (these are correct without --libraries)
+LIB_ORG_POLICY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationPolicy")
+LIB_ORG_ADMIN_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationAdmin")
 
-# Verify we got all library addresses
-if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_INIT_ADDRESS" || -z "$LIB_ORG_ACCOUNT_SIG_ADDRESS" ]]; then
+if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" ]]; then
     clear_progress
-    echo "Error: Failed to extract all library addresses from output"
-    echo "$LIB_OUTPUT"
+    echo "Error: Failed to extract independent library addresses from output"
+    echo "$LIB_OUTPUT_INDEPENDENT"
+    exit 1
+fi
+
+# Step 2b: Compute dependent library addresses (Init and AccountSig)
+# These require --libraries flags because their bytecode contains the addresses
+# of the libraries they depend on
+print_progress "  Computing dependent library addresses (Init, AccountSig)..."
+
+# Build --libraries flags for the independent libraries
+DEP_LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
+
+LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
+    --sig "computeDependentAddresses(address)" "$FACTORY_ADDRESS" \
+    $DEP_LIBRARIES_FLAGS --offline 2>&1) || {
+    clear_progress
+    echo "Error: Failed to compute dependent library addresses"
+    echo "$LIB_OUTPUT_DEPENDENT"
+    exit 1
+}
+
+# Extract dependent library addresses (these are now correct with --libraries)
+LIB_ORG_INIT_ADDRESS=$(extract_address "$LIB_OUTPUT_DEPENDENT" "LibOrganizationInitialization")
+LIB_ORG_ACCOUNT_SIG_ADDRESS=$(extract_address "$LIB_OUTPUT_DEPENDENT" "LibOrganizationAccountSignature")
+
+if [[ -z "$LIB_ORG_INIT_ADDRESS" || -z "$LIB_ORG_ACCOUNT_SIG_ADDRESS" ]]; then
+    clear_progress
+    echo "Error: Failed to extract dependent library addresses from output"
+    echo "$LIB_OUTPUT_DEPENDENT"
     exit 1
 fi
 
@@ -295,5 +331,3 @@ echo "--- Safe Executor Modules ---"
 print_address "GUARDIAN_MODULE_ADDRESS" "${GUARDIAN_MODULE_ADDRESS:-NOT_COMPUTED}"
 print_address "DEPLOYER_MODULE_ADDRESS" "${DEPLOYER_MODULE_ADDRESS:-NOT_COMPUTED}"
 echo ""
-
-echo "================================================================================"

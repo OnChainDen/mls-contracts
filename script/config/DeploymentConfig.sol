@@ -149,8 +149,8 @@ library DeploymentConfig {
     ///      libraries via arachnid Deterministic Deployment Proxy
     address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA;
     address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x6A87f1102404F4e36080732E535AD1F90cEde41B;
-    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x11d0aa12422064fD6c690B824B9551425435178A;
-    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0x58895a03e143b71cC52e6d9ec64609295861cb2A;
+    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0xbcAD4381C92c350f590111EDe66E83f0584E42F9;
+    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0xEdd0540b7109196ac93CD64970FEc869a7011aCF;
 
     /// @dev Expected library addresses when deployed via Production Den Singleton Factory
     ///      TODO: Fill in these addresses after deploying libraries via prod Den Singleton Factory
@@ -166,9 +166,9 @@ library DeploymentConfig {
     ///      libraries via non-prod Den Singleton Factory
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x58fC18a42DDd82725471bcE76bb5d9D6509A0641;
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0xCa24f5F2601c4Ac1250e4f1267d3EEdFFFC4587A;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e;
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
-        0xF2cbC9adffb0Ca4c28a1EbB31b1a8c2509ff17E1;
+        0x8F8c7526cb63885061c4d922e66D7d8589ac045c;
 
     // ==================== Hardcoded Safe 1.3.0 Infrastructure Addresses ====================
     // These are the expected deployment addresses for Safe 1.3.0 infrastructure contracts when deployed
