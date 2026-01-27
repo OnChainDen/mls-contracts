@@ -86,15 +86,6 @@ extract_address() {
     echo "$output" | grep -E "^[[:space:]]+${key}([[:space:]]+\[.*\])?:[[:space:]]+0x[a-fA-F0-9]{40}" | head -1 | grep -oE "0x[a-fA-F0-9]{40}"
 }
 
-# Print a section header
-print_header() {
-    echo ""
-    echo "================================================================================"
-    echo "  $1"
-    echo "================================================================================"
-    echo ""
-}
-
 # Print a key-value pair aligned for easy copying
 print_address() {
     local key="$1"
@@ -102,21 +93,41 @@ print_address() {
     printf "  %-45s = %s\n" "$key" "$value"
 }
 
+# Track number of progress lines printed (for clearing later)
+PROGRESS_LINES=0
+
+# Print a progress message and track line count
+print_progress() {
+    echo "$1"
+    PROGRESS_LINES=$((PROGRESS_LINES + 1))
+}
+
+# Clear progress lines and move cursor back up
+clear_progress() {
+    if [[ $PROGRESS_LINES -gt 0 ]]; then
+        # Move cursor up N lines and clear from cursor to end of screen
+        printf "\033[%dA\033[J" "$PROGRESS_LINES"
+    fi
+}
+
 # =============================================================================
 # Main Execution
 # =============================================================================
 
-print_header "CREATE2 Address Computation"
-echo "  Factory: $FACTORY"
-echo "  Factory Address: $FACTORY_ADDRESS"
+# Print the header first (this stays)
+echo ""
+echo "================================================================================"
+echo "  Computed Addresses for $FACTORY ($FACTORY_ADDRESS)"
+echo "================================================================================"
 echo ""
 
 # -----------------------------------------------------------------------------
 # Step 1: Compute Safe Infrastructure Addresses
 # -----------------------------------------------------------------------------
-echo "Computing Safe infrastructure addresses..."
+print_progress "  Computing Safe infrastructure addresses..."
 SAFE_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
     --sig "computeAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
+    clear_progress
     echo "Error: Failed to compute Safe addresses"
     echo "$SAFE_OUTPUT"
     exit 1
@@ -135,19 +146,19 @@ DEPLOYER_SAFE_ADDRESS=$(extract_address "$SAFE_OUTPUT" "Deployer Safe")
 
 # Verify we got the critical addresses
 if [[ -z "$DEPLOYER_SAFE_ADDRESS" ]]; then
+    clear_progress
     echo "Error: Failed to extract Deployer Safe address from output"
     echo "$SAFE_OUTPUT"
     exit 1
 fi
 
-echo "  Done."
-
 # -----------------------------------------------------------------------------
 # Step 2: Compute Library Addresses
 # -----------------------------------------------------------------------------
-echo "Computing library addresses..."
+print_progress "  Computing library addresses..."
 LIB_OUTPUT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
+    clear_progress
     echo "Error: Failed to compute library addresses"
     echo "$LIB_OUTPUT"
     exit 1
@@ -161,19 +172,19 @@ LIB_ORG_ACCOUNT_SIG_ADDRESS=$(extract_address "$LIB_OUTPUT" "LibOrganizationAcco
 
 # Verify we got all library addresses
 if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_INIT_ADDRESS" || -z "$LIB_ORG_ACCOUNT_SIG_ADDRESS" ]]; then
+    clear_progress
     echo "Error: Failed to extract all library addresses from output"
     echo "$LIB_OUTPUT"
     exit 1
 fi
 
-echo "  Done."
-
 # -----------------------------------------------------------------------------
 # Step 3: Compute BatchedTransaction Address
 # -----------------------------------------------------------------------------
-echo "Computing BatchedTransaction address..."
+print_progress "  Computing BatchedTransaction address..."
 BATCHED_OUTPUT=$(forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \
     --sig "computeAddress(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
+    clear_progress
     echo "Error: Failed to compute BatchedTransaction address"
     echo "$BATCHED_OUTPUT"
     exit 1
@@ -183,17 +194,16 @@ BATCHED_OUTPUT=$(forge script script/safe-module/DeployBatchedTransaction.s.sol:
 BATCHED_TRANSACTION_ADDRESS=$(extract_address "$BATCHED_OUTPUT" "BatchedTransaction")
 
 if [[ -z "$BATCHED_TRANSACTION_ADDRESS" ]]; then
+    clear_progress
     echo "Error: Failed to extract BatchedTransaction address from output"
     echo "$BATCHED_OUTPUT"
     exit 1
 fi
 
-echo "  Done."
-
 # -----------------------------------------------------------------------------
 # Step 4: Compute Platform Contract Addresses
 # -----------------------------------------------------------------------------
-echo "Computing platform contract addresses (with dynamic library linking)..."
+print_progress "  Computing platform contract addresses..."
 
 # Build --libraries flags using computed library addresses
 LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
@@ -205,6 +215,7 @@ LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${LIB_
 CONTRACTS_OUTPUT=$(forge script script/DeployContracts.s.sol:DeployContracts \
     --sig "computeAddresses(address,address)" "$FACTORY_ADDRESS" "$DEPLOYER_SAFE_ADDRESS" \
     $LIBRARIES_FLAGS --offline 2>&1) || {
+    clear_progress
     echo "Error: Failed to compute platform contract addresses"
     echo "$CONTRACTS_OUTPUT"
     exit 1
@@ -217,12 +228,10 @@ ACCOUNT_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "AccountImplementatio
 ORG_FACTORY_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "OrganizationFactory")
 WHITELIST_PROXY_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "ImplementationWhitelistProxy")
 
-echo "  Done."
-
 # -----------------------------------------------------------------------------
 # Step 5: Compute Safe Executor Module Addresses
 # -----------------------------------------------------------------------------
-echo "Computing Safe Executor Module addresses..."
+print_progress "  Computing Safe Executor Module addresses..."
 
 # Guardian module - use the overloaded function that accepts Safe and BatchedTransaction addresses
 # This ensures we use the computed addresses, not hardcoded ones from DeploymentConfig
@@ -243,14 +252,14 @@ DEPLOYER_MODULE_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModul
 }
 DEPLOYER_MODULE_ADDRESS=$(extract_address "$DEPLOYER_MODULE_OUTPUT" "SafeExecutorModule")
 
-echo "  Done."
-
 # =============================================================================
-# Output Results
+# Output Results (clear progress first)
 # =============================================================================
 
-print_header "Computed Addresses for $FACTORY ($FACTORY_ADDRESS)"
+# Clear the progress lines
+clear_progress
 
+# Print the final results
 echo "--- Safe 1.3.0 Infrastructure ---"
 print_address "SAFE_SINGLETON_ADDRESS" "${SAFE_SINGLETON_ADDRESS:-NOT_COMPUTED}"
 print_address "SAFE_PROXY_FACTORY_ADDRESS" "${SAFE_PROXY_FACTORY_ADDRESS:-NOT_COMPUTED}"
@@ -287,6 +296,4 @@ print_address "GUARDIAN_MODULE_ADDRESS" "${GUARDIAN_MODULE_ADDRESS:-NOT_COMPUTED
 print_address "DEPLOYER_MODULE_ADDRESS" "${DEPLOYER_MODULE_ADDRESS:-NOT_COMPUTED}"
 echo ""
 
-echo "================================================================================"
-echo "  Done!"
 echo "================================================================================"
