@@ -534,6 +534,14 @@ library DeploymentConfig {
 
         // Case: Production Den Singleton Factory
         if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            require(
+                PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS != address(0),
+                "PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS not set"
+            );
+            require(
+                PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS != address(0),
+                "PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS not set"
+            );
             return (
                 PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS,
                 PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS
@@ -562,6 +570,12 @@ library DeploymentConfig {
     {
         // Case: Production chain
         if (isProductionChain(chainId)) {
+            require(
+                PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS != address(0), "PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS not set"
+            );
+            require(
+                PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS != address(0), "PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS not set"
+            );
             return (PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS, PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS);
         }
 
