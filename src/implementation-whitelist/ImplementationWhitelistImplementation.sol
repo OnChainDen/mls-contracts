@@ -28,12 +28,7 @@ contract ImplementationWhitelistImplementation is
         _disableInitializers();
     }
 
-    /**
-     * @notice Initialize the implementation whitelist
-     * @param initialOwner The initial owner address
-     * @param organizationImplementations Initial Organization implementations to whitelist
-     * @param accountImplementations Initial Account implementations to whitelist
-     */
+    /// @inheritdoc IImplementationWhitelist
     function initialize(
         address initialOwner,
         address[] calldata organizationImplementations,
@@ -48,12 +43,7 @@ contract ImplementationWhitelistImplementation is
         emit ImplementationWhitelistInitialized(initialOwner);
     }
 
-    /**
-     * @notice Whitelists and/or unwhitelists implementation addresses
-     * @param contractType The type of contract (Account or Organization)
-     * @param toWhitelist The implementation addresses to whitelist
-     * @param toUnwhitelist The implementation addresses to remove from whitelist
-     */
+    /// @inheritdoc IImplementationWhitelist
     function whitelistImplementations(
         ContractType contractType,
         address[] calldata toWhitelist,
@@ -63,21 +53,12 @@ contract ImplementationWhitelistImplementation is
         _removeFromWhitelist(contractType, toUnwhitelist);
     }
 
-    /**
-     * @notice Checks if the implementation whitelist has been initialized
-     * @dev Checks if owner is set (since every initialized whitelist must have an owner)
-     * @return True if initialized, false otherwise
-     */
+    /// @inheritdoc IImplementationWhitelist
     function isInitialized() external view override returns (bool) {
         return owner() != address(0);
     }
 
-    /**
-     * @notice Checks if an implementation address is whitelisted
-     * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address to check
-     * @return True if the implementation is whitelisted, false otherwise
-     */
+    /// @inheritdoc IImplementationWhitelist
     function isImplementationWhitelisted(ContractType contractType, address implementation)
         external
         view
@@ -87,11 +68,7 @@ contract ImplementationWhitelistImplementation is
         return LibImplementationWhitelistStorage.layout().whitelisted[contractType][implementation];
     }
 
-    /**
-     * @notice Validates that an implementation address is whitelisted, reverts if not
-     * @param contractType The type of contract (Account or Organization)
-     * @param implementation The implementation address to check
-     */
+    /// @inheritdoc IImplementationWhitelist
     function validateIsImplementationWhitelistedOrRevert(ContractType contractType, address implementation)
         external
         view
