@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity >=0.7.0 <0.9.0;
 
+import {Vm} from "forge-std/Vm.sol";
+
 import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
@@ -82,6 +84,55 @@ library Create2Utils {
         Logger.logCheckPass(string(abi.encodePacked(factoryName, " not deployed")));
     }
 
+    /// @dev Validates that a factory address is one of the known factories from deployment.toml
+    ///      and that a contract is deployed at that address.
+    ///      This is the centralized factory validation used by all deployment scripts.
+    /// @param vm The Foundry VM instance for TOML parsing
+    /// @param factoryAddress The factory address to validate
+    /// @return factoryName The human-readable name of the factory (for logging)
+    function validateKnownFactoryOrRevert(Vm vm, address factoryAddress)
+        internal
+        view
+        returns (string memory factoryName)
+    {
+        // Validate address is not zero
+        require(factoryAddress != address(0), "Factory address cannot be zero");
+
+        // Read factory addresses from deployment.toml
+        address arachnidFactory = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_ARACHNID);
+        address denProdFactory = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_DEN_PROD);
+        address denNonprodFactory = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_DEN_NONPROD);
+
+        // Determine factory name based on address
+        if (factoryAddress == arachnidFactory) {
+            factoryName = "Arachnid Deterministic Deployment Proxy";
+        } else if (factoryAddress == denProdFactory) {
+            factoryName = "Den Singleton Factory (Production)";
+        } else if (factoryAddress == denNonprodFactory) {
+            factoryName = "Den Singleton Factory (Non-Production)";
+        } else {
+            revert(
+                string(
+                    abi.encodePacked(
+                        "Unknown factory address: ",
+                        StringUtils.toHexString(factoryAddress),
+                        ". Must be one of the factories defined in deployment.toml"
+                    )
+                )
+            );
+        }
+
+        // Validate factory is deployed
+        require(
+            isContractDeployedAtAddress(factoryAddress),
+            string(abi.encodePacked(factoryName, " not deployed at ", StringUtils.toHexString(factoryAddress)))
+        );
+
+        // Log success
+        Logger.logCheckStart("Validating CREATE2 factory...");
+        Logger.logCheckPass(string(abi.encodePacked(factoryName, " deployed at expected address")));
+    }
+
     /// @dev Validates that the deployer has sufficient ETH balance for deployment, reverts if not
     /// @param deployerAddress The address to check
     /// @param requiredBalance The minimum required balance in wei
@@ -148,22 +199,13 @@ library Create2Utils {
 
     /// @dev Logs deployment summary header with factory and chain info
     /// @param factoryAddress The factory being used
+    /// @param factoryName Human-readable name of the factory (from validateKnownFactoryOrRevert)
     /// @param chainId The chain ID
-    function logDeploymentHeader(address factoryAddress, uint256 chainId) internal pure {
+    function logDeploymentHeader(address factoryAddress, string memory factoryName, uint256 chainId) internal pure {
         Logger.logBoxHeader("Den Multi-layer Security (MLS) Wallet - Contract Deployment");
         Logger.logKeyValue("Chain ID", chainId);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
-
-        if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
-        } else if (factoryAddress == DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Den Singleton Factory (Production)");
-        } else if (factoryAddress == DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Den Singleton Factory (Non-Production)");
-        } else {
-            Logger.logKeyValue("Factory Type", "Custom");
-        }
-
+        Logger.logKeyValue("Factory Type", factoryName);
         Logger.logBoxFooter();
         Logger.logEmptyLine();
     }
@@ -171,7 +213,8 @@ library Create2Utils {
     /// @dev Deploys using a minimal CREATE2 factory
     ///      All supported factories (Arachnid, Den Singleton Factory) expect raw calldata: salt (32 bytes) + initCode
     ///      They return the deployed address as raw 20 bytes (not ABI-encoded)
-    /// @param factoryAddress The CREATE2 factory address
+    ///      IMPORTANT: Callers must validate the factory address using validateKnownFactoryOrRevert() first
+    /// @param factoryAddress The CREATE2 factory address (must be validated by caller)
     /// @param salt The deployment salt
     /// @param initCode The contract creation bytecode
     /// @return deployedAtAddress The deployed contract address
@@ -179,14 +222,6 @@ library Create2Utils {
         private
         returns (address deployedAtAddress)
     {
-        // Validate factory address upfront
-        require(
-            factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS
-                || factoryAddress == DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS
-                || factoryAddress == DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS,
-            "Invalid factory address"
-        );
-
         // All supported factories are minimal CREATE2 factories that expect raw calldata: salt (32 bytes) + initCode
         // They do NOT have function selectors - data is sent directly via low-level call
         // solhint-disable-next-line avoid-low-level-calls

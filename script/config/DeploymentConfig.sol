@@ -127,22 +127,10 @@ library DeploymentConfig {
     string internal constant FACTORY_DEN_PROD = "den-prod";
     string internal constant FACTORY_DEN_NONPROD = "den-nonprod";
 
-    // ==================== Compile-Time Factory Constants ====================
-    // These are hardcoded because they're used for compile-time validation and safety checks
-    // in deployment scripts. They must be constants for the require() statements to work.
+    // ==================== Production Deployer Safety Check ====================
+    // This is the only hardcoded address constant needed - used for safety checks to prevent
+    // accidentally using the production deployer EOA for non-factory deployments.
     // ==============================================================================
-    /// @dev Arachnid CREATE2 factory address (deterministic deployer proxy)
-    ///      Same address on all EVM chains - deployed via keyless transaction.
-    address internal constant ARACHNID_CREATE2_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-
-    /// @dev Production Den Singleton Factory address
-    ///      Used for mainnet deployments. Deployed from PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0.
-    address internal constant PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;
-
-    /// @dev Non-production Den Singleton Factory address
-    ///      Used for local development and testnet deployments.
-    address internal constant NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5;
-
     /// @dev Production Den Factory deployer EOA address (used for safety checks)
     ///      This EOA should ONLY be used by DeployDenSingletonFactory.s.sol
     address internal constant PROD_DEN_FACTORY_DEPLOYER_ADDRESS = 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7;

@@ -51,8 +51,8 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *          -vvvv
  *
  *      SAFETY CHECKS:
- *      1. Verifies the provided CREATE2 factory address is not zero
- *      2. Verifies the provided CREATE2 factory address is deployed at the provided address
+ *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
+ *      2. Verifies the provided CREATE2 factory is deployed
  *      3. Verifies that the deployer is not the production Den Factory deployer
  *      4. Validates that --libraries flag was used with correct addresses
  *      5. Validates that libraries are deployed at expected addresses
@@ -84,11 +84,8 @@ contract DeployContracts is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        // Validate the provided CREATE2 factory is a known factory and is deployed
+        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
 
         // Warn and confirm when targeting production chains
         ScriptUtils.warnAndConfirmIfProductionChain(vm, "DeployContracts");
@@ -116,7 +113,7 @@ contract DeployContracts is Script {
 
         // Log the deployment header
         // This includes the factory type, chain ID, and deployer EOA address
-        Create2Utils.logDeploymentHeader(factoryAddress, ScriptUtils.getChainId());
+        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, ScriptUtils.getChainId());
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
 

@@ -38,8 +38,8 @@ import {DependentLibraries, IndependentLibraries, PlatformLibraries} from "scrip
  *          --rpc-url $RPC_URL --broadcast -vvvv
  *
  *      SAFETY CHECKS:
- *      1. Verifies the provided CREATE2 factory address is not zero
- *      2. Verifies the provided CREATE2 factory address is deployed at the provided address
+ *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
+ *      2. Verifies the provided CREATE2 factory is deployed
  *      3. Verifies that the deployer is not the production Den Factory deployer
  *      4. For Stage 2: Validates independent libraries are deployed and correctly linked
  *      5. Requires interactive confirmation when broadcasting
@@ -54,11 +54,8 @@ contract DeployLibraries is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployIndependentLibs(address factoryAddress) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        // Validate the provided CREATE2 factory is a known factory and is deployed
+        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
 
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries (Stage 1: Independent)");
@@ -67,7 +64,7 @@ contract DeployLibraries is Script {
         Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
-        Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
+        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, block.chainid);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Stage 1: Independent Libraries (Policy, Admin)");
         Logger.logEmptyLine();
@@ -93,11 +90,8 @@ contract DeployLibraries is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployDependentLibs(address factoryAddress) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        // Validate the provided CREATE2 factory is a known factory and is deployed
+        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
 
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries (Stage 2: Dependent)");
@@ -112,7 +106,7 @@ contract DeployLibraries is Script {
         _validateDependentLibrariesLinkedOrRevert(factoryAddress);
 
         // Log the deployment header
-        Create2Utils.logDeploymentHeader(factoryAddress, block.chainid);
+        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, block.chainid);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Stage 2: Dependent Libraries (Init, AccountSig)");
         Logger.logEmptyLine();

@@ -30,10 +30,10 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  *        - EXECUTOR_ADDRESS: The Safe Executor EOA that will be authorized to execute transactions
  *
  *      SAFETY CHECKS:
- *      1. Verifies the provided CREATE2 factory address is not zero
- *      2. Verifies the provided CREATE2 factory address is deployed
+ *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
+ *      2. Verifies the provided CREATE2 factory is deployed
  *      3. Verifies the safeType is valid ("guardian" or "deployer")
- *      4. Verifies the executor address matches the expected address in DeploymentConfig
+ *      4. Verifies the executor address matches the expected address in deployment.toml
  *      5. Verifies the Safe is deployed at the expected address
  *      6. Verifies the BatchedTransaction is deployed at the expected address
  *      7. Verifies the deployer is not the production Den Factory deployer
@@ -49,11 +49,8 @@ contract DeploySafeExecutorModule is Script {
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
     function run(address factoryAddress, string calldata safeType, address executorAddress) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        // Validate the provided CREATE2 factory is a known factory and is deployed
+        Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
 
         // Validate safeType is "guardian" or "deployer"
         bool isGuardian = _isGuardianSafeType(safeType);

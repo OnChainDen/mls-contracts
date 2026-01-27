@@ -40,6 +40,11 @@ contract DeployDenSingletonFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
+        // Read expected factory addresses from deployment.toml
+        address arachnidFactoryAddress = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_ARACHNID);
+        address denProdFactoryAddress = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_DEN_PROD);
+        address denNonprodFactoryAddress = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_DEN_NONPROD);
+
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployDenSingletonFactory");
 
@@ -48,17 +53,13 @@ contract DeployDenSingletonFactory is Script {
 
         // Validate that the Arachnid factory is not already deployed
         // We should not be deploying the Den Singleton Factory if the Arachnid factory is already deployed.
-        Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS, "Arachnid factory"
-        );
+        Create2Utils.validateFactoryNotDeployedOrRevert(arachnidFactoryAddress, "Arachnid factory");
 
-        // Validate that the Den Singleton Factory is not already deployed
-        Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS, "Den Singleton Factory"
-        );
+        // Validate that the Den Singleton Factory (prod) is not already deployed
+        Create2Utils.validateFactoryNotDeployedOrRevert(denProdFactoryAddress, "Den Singleton Factory (prod)");
 
         // Warn and require confirmation for production and non-production deployers
-        bool isProductionDeployer = _warnAndConfirmDeployerAddress();
+        bool isProductionDeployer = _warnAndConfirmDeployerAddress(denProdFactoryAddress);
 
         // Validate that the deployer nonce is exactly 0
         _warnAndConfirmIfDeployerNonceNotZero();
@@ -79,17 +80,17 @@ contract DeployDenSingletonFactory is Script {
         // Case: Production deployer
         // Check that the factory was deployed at the expected production address
         if (isProductionDeployer) {
-            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)) {
+            if (!Create2Utils.isContractDeployedAtAddress(denProdFactoryAddress)) {
                 Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
-                Logger.logKeyValue("Expected", DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS);
+                Logger.logKeyValue("Expected", denProdFactoryAddress);
                 Logger.logKeyValue("Got", deployedAtAddress);
                 revert("Factory deployment failed");
             }
-        } else if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS)) {
+        } else if (!Create2Utils.isContractDeployedAtAddress(denNonprodFactoryAddress)) {
             // Case: Non-production deployer
             // Check that the factory was deployed at the expected non-production address
             Logger.logFail("ERROR: Factory was not deployed at the expected non-production address!");
-            Logger.logKeyValue("Expected", DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS);
+            Logger.logKeyValue("Expected", denNonprodFactoryAddress);
             Logger.logKeyValue("Got", deployedAtAddress);
             revert("Factory deployment failed");
         }
@@ -172,8 +173,12 @@ contract DeployDenSingletonFactory is Script {
     }
 
     /// @dev Warns and prompts for confirmation of the deployer address
+    /// @param expectedProdFactoryAddress The expected production factory address (from deployment.toml)
     /// @return isProductionDeployer True if the deployer is the production deployer
-    function _warnAndConfirmDeployerAddress() internal returns (bool isProductionDeployer) {
+    function _warnAndConfirmDeployerAddress(address expectedProdFactoryAddress)
+        internal
+        returns (bool isProductionDeployer)
+    {
         // Case: Deployer address matches production address
         if (msg.sender == DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS) {
             // Build context for prompt - embedded because console.log output is buffered
@@ -185,7 +190,7 @@ contract DeployDenSingletonFactory is Script {
                     "  Deployer: ",
                     StringUtils.toHexString(msg.sender),
                     "\n  Expected factory: ",
-                    StringUtils.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
+                    StringUtils.toHexString(expectedProdFactoryAddress)
                 )
             );
 

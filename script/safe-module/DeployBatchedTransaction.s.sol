@@ -29,8 +29,8 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *        - FACTORY_ADDRESS: The CREATE2 factory to use (Arachnid or Den Singleton Factory)
  *
  *      SAFETY CHECKS:
- *      1. Verifies the provided CREATE2 factory address is not zero
- *      2. Verifies the provided CREATE2 factory address is deployed
+ *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
+ *      2. Verifies the provided CREATE2 factory is deployed
  *      3. Verifies the deployer is not the production Den Factory deployer
  *      4. Requires interactive confirmation when broadcasting
  *
@@ -42,11 +42,8 @@ contract DeployBatchedTransaction is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
      */
     function run(address factoryAddress) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        // Validate the provided CREATE2 factory is a known factory and is deployed
+        Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
 
         // Prompt for confirmation when running with --broadcast
         ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployBatchedTransaction");

@@ -39,8 +39,8 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
  *      2. Safe Multisigs (Guardian Safe, Deployer Safe)
  *
  *      SAFETY CHECKS:
- *      1. Verifies the provided CREATE2 factory address is not zero
- *      2. Verifies the provided CREATE2 factory address is deployed
+ *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
+ *      2. Verifies the provided CREATE2 factory is deployed
  *      3. Verifies that the deployer is not the production Den Factory deployer
  *      4. Warns and requires confirmation when targeting production chains
  *      5. Requires interactive confirmation when broadcasting
@@ -65,11 +65,8 @@ contract DeploySafe is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        // Validate the provided CREATE2 factory is a known factory and is deployed
+        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
 
         // Warn and confirm when targeting production chains
         ScriptUtils.warnAndConfirmIfProductionChain(vm, "DeploySafe");
@@ -92,7 +89,7 @@ contract DeploySafe is Script {
             DeploymentConfig.getDeployerSafeConfig(vm, chainId);
 
         // Log the deployment header
-        Create2Utils.logDeploymentHeader(factoryAddress, chainId);
+        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, chainId);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Safe 1.3.0 Infrastructure Deployment");
         Logger.logEmptyLine();
