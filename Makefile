@@ -66,7 +66,7 @@ help:
 	@echo "  safe-remove-module        Approve removing a module from a Safe (Safe owner operation)"
 	@echo "  check-safe-module-status  Check approval status for a module transaction"
 	@echo ""
-	@echo "Platform Deployment:
+	@echo "Platform Deployment:"
 	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
 	@echo "  deploy-contracts          Deploy platform contracts with library linking"
 	@echo "  deploy-platform           Full deployment (libraries + contracts)"
