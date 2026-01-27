@@ -88,10 +88,10 @@ remappings = [
 [profile.arachnid]
 libraries = [
     # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x8216540c25aD0Fc9F5C75F2b513d67ee09078568",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x7624025fEcC583aDF57c6B51DBC69143A09bE935",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5"
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x6A87f1102404F4e36080732E535AD1F90cEde41B",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xbcAD4381C92c350f590111EDe66E83f0584E42F9",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xEdd0540b7109196ac93CD64970FEc869a7011aCF"
 ]
 
 # --- Strategy: Den Singleton Factory (Prod) ---
@@ -109,10 +109,10 @@ libraries = [
 [profile.den-nonprod]
 libraries = [
     # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65"
+    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x58fC18a42DDd82725471bcE76bb5d9D6509A0641",
+    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1",
+    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e",
+    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x8F8c7526cb63885061c4d922e66D7d8589ac045c"
 ]
 
 # ==============================================================================

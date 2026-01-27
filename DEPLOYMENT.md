@@ -7,6 +7,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 1. [Core Concepts](#core-concepts)
    - [CREATE2 Deterministic Deployment](#create2-deterministic-deployment)
    - [Library Linking](#library-linking)
+   - [Two-Stage Library Deployment](#two-stage-library-deployment)
 2. [Prerequisites](#prerequisites)
    - [Required Tools](#required-tools)
    - [Signer Setup](#signer-setup)
@@ -17,11 +18,19 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 4. [Safe 1.3.0 Deployment](#safe-130-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
-5. [Deployment Examples](#deployment-examples)
+5. [BatchedTransaction Contract](#batchedtransaction-contract)
+   - [Why BatchedTransaction?](#why-batchedtransaction)
+   - [Transaction Encoding Format](#transaction-encoding-format)
+   - [BatchedTransaction Deployment Commands](#batchedtransaction-deployment-commands)
+6. [Safe Executor Module](#safe-executor-module)
+   - [Module Overview](#module-overview)
+   - [Module Deployment Commands](#module-deployment-commands)
+   - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
+7. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-6. [Verifying Deployments](#verifying-deployments)
-7. [Troubleshooting](#troubleshooting)
+8. [Verifying Deployments](#verifying-deployments)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -75,12 +84,12 @@ Some of our libraries use `public` functions, which Solidity compiles as **exter
 
 The four platform libraries that require linking are:
 
-| Library | Purpose |
-|---------|---------|
-| `LibOrganizationPolicy` | Policy validation and enforcement |
-| `LibOrganizationAdmin` | Admin operations |
-| `LibOrganizationInitialization` | Organization setup |
-| `LibOrganizationAccountSignature` | Account signature verification |
+| Library | Purpose | Dependencies |
+|---------|---------|--------------|
+| `LibOrganizationPolicy` | Policy validation and enforcement | None (independent) |
+| `LibOrganizationAdmin` | Admin operations | None (independent) |
+| `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
+| `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
 
 #### Why Linking Matters
 
@@ -93,6 +102,39 @@ With explicit library linking:
 - Libraries are deployed via CREATE2 with deterministic addresses
 - The compiler links to these known addresses
 - Contract bytecode is identical across all chains
+
+#### Two-Stage Library Deployment
+
+Due to inter-library dependencies, libraries must be deployed in **two stages**:
+
+**Stage 1 - Independent Libraries (Policy and Admin):**
+These libraries have no dependencies on other platform libraries. They can be deployed without any `--libraries` flags.
+
+**Stage 2 - Dependent Libraries (Init and AccountSig):**
+These libraries depend on the independent libraries being linked into their bytecode:
+- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`
+- `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
+
+When compiling dependent libraries, the Solidity compiler embeds the addresses of the libraries they depend on directly into their bytecode. This means the CREATE2 address of a dependent library is affected by the addresses of its dependencies.
+
+**Why this matters for CREATE2:**
+
+The CREATE2 address formula is:
+```
+address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
+```
+
+If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flag, the Admin address is embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
+
+The Makefile handles this automatically with the `deploy-libraries` target (which runs both stages), or you can run them separately:
+
+```bash
+# Deploy independent libraries (Policy, Admin)
+make deploy-independent-libs ACCOUNT=my-deployer
+
+# Deploy dependent libraries (Init, AccountSig) - requires --libraries flags
+make deploy-dependent-libs ACCOUNT=my-deployer
+```
 
 The library addresses depend on which CREATE2 factory is used. Our Makefile handles this automatically via Foundry profiles configured in `foundry.toml`.
 
@@ -268,8 +310,10 @@ The full deployment order is:
 2. Deploy Safe Infrastructure and Multisigs
    └── make deploy-safe
 
-3. Deploy Platform Libraries
-   └── make deploy-libraries
+3. Deploy Platform Libraries (two stages due to inter-library dependencies)
+   ├── Stage 1: make deploy-independent-libs  (Policy, Admin)
+   └── Stage 2: make deploy-dependent-libs    (Init, AccountSig)
+   └── Or: make deploy-libraries              (runs both stages)
 
 4. Deploy Platform Contracts
    └── make deploy-contracts
@@ -279,6 +323,203 @@ Or use the convenience target that runs steps 2-4:
 
 ```bash
 make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
+```
+
+---
+
+## BatchedTransaction Contract
+
+The `BatchedTransaction` contract is a security-focused alternative to `MultiSendCallOnly` that provides secure batched transaction execution when delegatecalled from a Safe.
+
+### Why BatchedTransaction?
+
+When `SafeExecutorModule` delegatecalls to a batching contract, sub-transactions can potentially:
+1. Transfer ETH via non-zero `value` fields
+2. Call the Safe address to modify owners/modules
+3. Perform other malicious operations
+
+`BatchedTransaction` addresses these vulnerabilities with:
+
+- **No value field**: ETH value is hardcoded to 0 in the encoding, preventing ETH transfers
+- **address(this) validation**: When delegatecalled, `address(this)` is the Safe, and calls to `address(this)` are blocked
+- **Efficient encoding**: `28 + N bytes` per transaction (vs `85 + N bytes` for MultiSendCallOnly)
+
+### Transaction Encoding Format
+
+Transactions are packed sequentially with no padding:
+
+```
+[to (20 bytes)][dataLength (8 bytes)][data (N bytes)][to (20 bytes)][dataLength (8 bytes)][data (N bytes)]...
+```
+
+| Field | Size | Description |
+|-------|------|-------------|
+| `to` | 20 bytes | Target contract address |
+| `dataLength` | 8 bytes | Length of calldata (uint64) |
+| `data` | N bytes | Calldata to execute |
+
+### BatchedTransaction Deployment Commands
+
+#### Deploy BatchedTransaction
+
+```bash
+# Deploy to local Anvil instance
+make deploy-batched-transaction ACCOUNT=my-deployer
+
+# Deploy to Sepolia testnet
+make deploy-batched-transaction NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy using Den non-prod factory
+make deploy-batched-transaction FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy using a Ledger
+make deploy-batched-transaction NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+```
+
+#### Compute Expected Address
+
+Preview the expected address without deploying:
+
+```bash
+make compute-batched-transaction-address NETWORK=sepolia
+make compute-batched-transaction-address FACTORY=den-nonprod NETWORK=mainnet
+```
+
+### Deployment Order
+
+**IMPORTANT**: BatchedTransaction must be deployed BEFORE SafeExecutorModules.
+
+```
+1. Deploy CREATE2 Factory (if not already deployed)
+2. Deploy Safe Infrastructure and Multisigs
+3. Deploy Platform Libraries
+4. Deploy Platform Contracts
+5. Deploy BatchedTransaction     ← Must be before modules
+6. Deploy SafeExecutorModules    ← Depends on BatchedTransaction
+7. Add Modules to Safes
+```
+
+---
+
+## Safe Executor Module
+
+The Safe Executor Module allows a designated EOA (the "Safe Executor EOA") to execute contract calls on behalf of a Safe multisig without requiring multisig signatures for every transaction.
+
+### Module Overview
+
+The `SafeExecutorModule` is a minimal Safe module with the following properties:
+
+- **Single Safe Executor EOA**: Only one EOA can execute transactions via the module
+- **Immutable configuration**: The Safe Executor EOA cannot be changed after deployment
+- **Restricted operations**:
+  - Uses `CALL` for all targets, except `DELEGATECALL` is allowed ONLY to `BatchedTransaction`
+  - No ETH transfers (value must always be zero)
+  - No calls to the Safe itself (prevents ownership/module modifications)
+
+The `DELEGATECALL` exception for `BatchedTransaction` enables batching multiple calls into a single transaction, which is essential for complex operations that need to be atomic.
+
+To rotate the Safe Executor EOA, deploy a new module instance and have Safe owners swap modules via multisig transaction.
+
+### Module Deployment Commands
+
+#### Deploy a Module
+
+Deploy a SafeExecutorModule for a Safe:
+
+```bash
+# Deploy module for Guardian Safe
+make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy module for Deployer Safe
+make deploy-safe-module TARGET=deployer EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
+
+# Deploy using Den non-prod factory
+make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+```
+
+The script validates:
+1. The executor address matches the expected address in `DeploymentConfig.sol`
+2. The target Safe is deployed at the expected address
+3. The `BatchedTransaction` contract is deployed at the expected address
+4. The CREATE2 factory is deployed
+
+#### Compute Module Address
+
+Preview the expected module address without deploying:
+
+```bash
+# Compute address for Guardian Safe module
+make compute-module-address TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia
+
+# Compute address for Deployer Safe module with Den non-prod factory
+make compute-module-address TARGET=deployer EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=mainnet
+```
+
+### Adding a Module to a Safe
+
+After deploying a module, Safe owners must approve adding it to the Safe. This is a multisig operation that requires threshold approvals.
+
+#### Approve Adding a Module
+
+Each Safe owner runs this command to submit their approval:
+
+```bash
+# Approve adding module to Guardian Safe (execute if threshold is met)
+make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+
+# Approve without auto-executing (just submit approval)
+make safe-add-module TARGET=deployer EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
+```
+
+When `EXECUTE=true` and the approval threshold is met, the transaction is automatically executed.
+
+#### Check Approval Status
+
+Check how many approvals exist for a module transaction:
+
+```bash
+# Check status for adding Guardian module
+make check-safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
+
+# Check status for removing Deployer module
+make check-safe-module-status TARGET=deployer ACTION=remove NETWORK=mainnet
+```
+
+#### Remove a Module
+
+If you need to remove a module (e.g., to rotate the authorized executor):
+
+```bash
+# Approve removing module from Guardian Safe
+make safe-remove-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+```
+
+### Module Deployment Workflow
+
+The typical workflow for deploying and enabling a module is:
+
+```
+1. Deploy the module
+   └── make deploy-safe-module TARGET=guardian EXECUTOR=0x... ...
+
+2. Each Safe owner approves adding the module
+   └── make safe-add-module TARGET=guardian EXECUTE=true ...
+   └── (repeat for each owner until threshold is met)
+
+3. Module is now active and the executor can use it
+```
+
+To rotate an executor:
+
+```
+1. Deploy a new module with the new executor address
+   └── make deploy-safe-module TARGET=guardian EXECUTOR=0xNewExecutor ...
+
+2. Safe owners approve adding the new module
+   └── make safe-add-module TARGET=guardian EXECUTE=true ...
+
+3. Safe owners approve removing the old module
+   └── make safe-remove-module TARGET=guardian EXECUTE=true ...
 ```
 
 ---
@@ -341,15 +582,27 @@ make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 make deploy-safe ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
-# Step 5: Deploy platform libraries and contracts
+# Step 5: Deploy platform libraries (two stages)
 # -----------------------------------------------------------------------------
 # FACTORY=arachnid is the default, so we don't need to specify it
-# Libraries are deployed first, then contracts are deployed with library linking
+# Libraries must be deployed in two stages due to inter-library dependencies:
+#   Stage 1: Independent libraries (Policy, Admin) - no dependencies
+#   Stage 2: Dependent libraries (Init, AccountSig) - depend on Policy/Admin
 
-make deploy-libraries ACCOUNT=$ACCOUNT
+make deploy-independent-libs ACCOUNT=$ACCOUNT
+make deploy-dependent-libs ACCOUNT=$ACCOUNT
+
+# Or use the convenience target that runs both stages:
+# make deploy-libraries ACCOUNT=$ACCOUNT
+
+# -----------------------------------------------------------------------------
+# Step 6: Deploy platform contracts
+# -----------------------------------------------------------------------------
+# Contracts are deployed with library linking via FOUNDRY_PROFILE
+
 make deploy-contracts ACCOUNT=$ACCOUNT
 
-# Or use the convenience target (includes Safe deployment):
+# Or use the convenience target (includes Safe deployment + both library stages):
 # make deploy-platform ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
@@ -421,16 +674,26 @@ make deploy-den-factory ACCOUNT=$DEN_DEPLOYER_ACCOUNT
 make deploy-safe ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
 # -----------------------------------------------------------------------------
-# Step 5: Deploy platform libraries and contracts
+# Step 5: Deploy platform libraries (two stages)
 # -----------------------------------------------------------------------------
 # IMPORTANT: Use FACTORY=den-nonprod to:
 # - Target the correct factory address
 # - Use the correct library addresses (library addresses differ per factory)
+#
+# Libraries must be deployed in two stages due to inter-library dependencies
 
-make deploy-libraries ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-independent-libs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-dependent-libs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+
+# Or use the convenience target that runs both stages:
+# make deploy-libraries ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+
+# -----------------------------------------------------------------------------
+# Step 6: Deploy platform contracts
+# -----------------------------------------------------------------------------
 make deploy-contracts ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
-# Or use the convenience target (includes Safe deployment):
+# Or use the convenience target (includes Safe deployment + both library stages):
 # make deploy-platform ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
 # -----------------------------------------------------------------------------
@@ -442,6 +705,21 @@ echo "Deployment complete. Contracts deployed via Den Singleton Factory (non-pro
 ---
 
 ## Verifying Deployments
+
+### Compute All Expected Addresses
+
+Before deploying, you can preview all expected CREATE2 addresses for all contracts across all three factories:
+
+```bash
+# Compute addresses for all factories (arachnid, den-nonprod, den-prod)
+make compute-all-addresses
+
+# Compute addresses for a specific factory
+make compute-addresses FACTORY=arachnid
+make compute-addresses FACTORY=den-nonprod
+```
+
+This runs the `compute_all_addresses.sh` script which orchestrates calls to all deployment scripts' `computeAddresses()` functions, handles library linking correctly, and outputs all expected addresses in a formatted table.
 
 ### Check Factory Deployment
 
@@ -535,12 +813,22 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-safe` | Deploy Safe 1.3.0 infrastructure and multisigs |
 | `make deploy-safe-dry-run` | Simulate Safe deployment (no broadcast) |
 | `make compute-safe-addresses` | Preview expected Safe addresses |
-| `make deploy-libraries` | Deploy the 4 platform libraries via CREATE2 |
+| `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin) via CREATE2 |
+| `make deploy-dependent-libs` | Deploy dependent libraries (Init, AccountSig) via CREATE2 |
+| `make deploy-libraries` | Deploy all platform libraries (runs both stages) |
 | `make deploy-contracts` | Deploy all contracts with library linking |
 | `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
+| `make deploy-batched-transaction` | Deploy BatchedTransaction contract |
+| `make compute-batched-transaction-address` | Preview expected BatchedTransaction address |
+| `make deploy-safe-module` | Deploy SafeExecutorModule for a Safe |
+| `make compute-module-address` | Preview expected module address |
+| `make safe-add-module` | Approve adding a module to a Safe |
+| `make safe-remove-module` | Approve removing a module from a Safe |
+| `make check-safe-module-status` | Check approval status for a module transaction |
 | `make check-factory` | Check if a CREATE2 factory exists |
 | `make check-all-factories` | Check all factories on a network |
-| `make compute-lib-addresses` | Compute expected library addresses for a factory |
+| `make compute-addresses` | Compute all CREATE2 addresses for a specific factory |
+| `make compute-all-addresses` | Compute all CREATE2 addresses for all three factories |
 
 ### Key Addresses
 
@@ -559,19 +847,19 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 
 | Library | Address |
 |---------|---------|
-| LibOrganizationPolicy | `0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6` |
-| LibOrganizationAdmin | `0x8216540c25aD0Fc9F5C75F2b513d67ee09078568` |
-| LibOrganizationInitialization | `0x7624025fEcC583aDF57c6B51DBC69143A09bE935` |
-| LibOrganizationAccountSignature | `0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5` |
+| LibOrganizationPolicy | `0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA` |
+| LibOrganizationAdmin | `0x6A87f1102404F4e36080732E535AD1F90cEde41B` |
+| LibOrganizationInitialization | `0xbcAD4381C92c350f590111EDe66E83f0584E42F9` |
+| LibOrganizationAccountSignature | `0xEdd0540b7109196ac93CD64970FEc869a7011aCF` |
 
 **Den Non-Prod Factory (`FACTORY=den-nonprod`):**
 
 | Library | Address |
 |---------|---------|
-| LibOrganizationPolicy | `0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd` |
-| LibOrganizationAdmin | `0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3` |
-| LibOrganizationInitialization | `0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78` |
-| LibOrganizationAccountSignature | `0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65` |
+| LibOrganizationPolicy | `0x58fC18a42DDd82725471bcE76bb5d9D6509A0641` |
+| LibOrganizationAdmin | `0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1` |
+| LibOrganizationInitialization | `0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e` |
+| LibOrganizationAccountSignature | `0x8F8c7526cb63885061c4d922e66D7d8589ac045c` |
 
 **Den Prod Factory (`FACTORY=den-prod`):**
 
@@ -587,25 +875,25 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | GnosisSafeProxyFactory | `0x04acB79cD2c208Fc4B983d92971A41F709532Ff5` |
 | CompatibilityFallbackHandler | `0xBF32F3DCE01B6c67E454066f8969Deee79D74a55` |
 | MultiSend | `0xe0487528D742Bd9e6295AE6f3873175f032ba8f3` |
-| MultiSendCallOnly | `0xD5c219A054E9fBceD9D9493f546a7B4995101e4B` |
+| MultiSendCallOnly | `0x5f7fd4Bd58C7777F7C777Cd4C19cF68Fc0A17Dc4` |
 | CreateCall | `0x7880435e91818C84bfAdC2f454B8A92942f7AcbD` |
 | SimulateTxAccessor | `0x205CeDEBdB936D473031f6140d50C11aeC948773` |
-| Guardian Safe | `0x6aCC5D703Fa6136Bc9305fa1cCEF87F7e1dDCA99` |
-| Deployer Safe | `0x53B78a4CeB12fB5cb48C8eEfcdAfd6a35F0a8246` |
+| Guardian Safe | `0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305` |
+| Deployer Safe | `0x84246979f1678Cc3c5949106B958275aA15B807e` |
 
 **Den Non-Prod Factory (`FACTORY=den-nonprod`):**
 
 | Contract | Address |
 |----------|---------|
-| GnosisSafe Singleton | `0x0c3254B2f12AbBC58A2104c432A943e22569Cfc2` |
-| GnosisSafeProxyFactory | `0xC31214e6950B6f29c038c705bBD7068a46406f82` |
-| CompatibilityFallbackHandler | `0x3B4c3b17F9d51B73a858A32324939bDcDCa497E4` |
-| MultiSend | `0xf3551E571f69Af6639344ADfB87BD7b6Ea2B0F0d` |
-| MultiSendCallOnly | `0x67e2AA5448B07839F9c2F4277b7DcB815738F0Bf` |
-| CreateCall | `0xFB84686A1bedc983ca8D47000104E354171E00f1` |
-| SimulateTxAccessor | `0x05E252D33237dCea27607D6F061AD501c35b214d` |
-| Guardian Safe | `0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb` |
-| Deployer Safe | `0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b` |
+| GnosisSafe Singleton | `0x9732b61234C43C49B98812E09D81D433b7789b25` |
+| GnosisSafeProxyFactory | `0x400F1f8fC868476bAb030909F049a70074570c7e` |
+| CompatibilityFallbackHandler | `0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0` |
+| MultiSend | `0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479` |
+| MultiSendCallOnly | `0x1D6535926E595Bb84Fc4d548E6d3615212EDa92C` |
+| CreateCall | `0x619B2299DD5C77DF72AE1a8a70885D89E423B382` |
+| SimulateTxAccessor | `0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d` |
+| Guardian Safe | `0x4fbeF24b88228A6639409150214bb5A798930fA9` |
+| Deployer Safe | `0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f` |
 
 **Den Prod Factory (`FACTORY=den-prod`):**
 

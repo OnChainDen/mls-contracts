@@ -18,14 +18,18 @@
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
 # Safe 1.3.0 deployment
-.PHONY: deploy-safe deploy-safe-dry-run compute-safe-addresses
+.PHONY: deploy-safe deploy-safe-dry-run
+
+# Safe Executor Module
+.PHONY: deploy-batched-transaction
+.PHONY: deploy-safe-module safe-add-module safe-remove-module check-safe-module-status
 
 # Platform deployment
-.PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
-.PHONY: deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
+.PHONY: deploy-independent-libs deploy-dependent-libs deploy-libraries deploy-contracts deploy-platform validate-signer-vars
+.PHONY: deploy-independent-libs-dry-run deploy-dependent-libs-dry-run deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
 
 # Utilities
-.PHONY: check-factory check-all-factories compute-lib-addresses compute-all-lib-addresses verify
+.PHONY: check-factory check-all-factories compute-addresses compute-all-addresses verify
 
 # ==============================================================================
 # Help
@@ -55,13 +59,21 @@ help:
 	@echo "Safe 1.3.0 Deployment:"
 	@echo "  deploy-safe               Deploy Safe 1.3.0 infrastructure (requires FOUNDRY_PROFILE=safe)"
 	@echo "  deploy-safe-dry-run       Simulate Safe deployment (no broadcast)"
-	@echo "  compute-safe-addresses    Preview expected Safe addresses without deploying"
+	@echo ""
+	@echo "Safe Executor Module:"
+	@echo "  deploy-batched-transaction        Deploy BatchedTransaction contract"
+	@echo "  deploy-safe-module                Deploy SafeExecutorModule for a Safe"
+	@echo "  safe-add-module                   Approve adding a module to a Safe (Safe owner operation)"
+	@echo "  safe-remove-module                Approve removing a module from a Safe (Safe owner operation)"
+	@echo "  check-safe-module-status          Check approval status for a module transaction"
 	@echo ""
 	@echo "Platform Deployment:"
-	@echo "  deploy-libraries          Deploy platform libraries via CREATE2"
+	@echo "  deploy-independent-libs   Deploy independent libraries (Policy, Admin) via CREATE2"
+	@echo "  deploy-dependent-libs     Deploy dependent libraries (Init, AccountSig) via CREATE2"
+	@echo "  deploy-libraries          Deploy all platform libraries (both stages)"
 	@echo "  deploy-contracts          Deploy platform contracts with library linking"
 	@echo "  deploy-platform           Full deployment (libraries + contracts)"
-	@echo "  deploy-libraries-dry-run  Simulate library deployment (no broadcast)"
+	@echo "  deploy-libraries-dry-run  Simulate all library deployment (no broadcast)"
 	@echo "  deploy-contracts-dry-run  Simulate contract deployment (no broadcast)"
 	@echo "  deploy-platform-dry-run   Simulate full deployment (no broadcast)"
 	@echo ""
@@ -74,8 +86,8 @@ help:
 	@echo "Utilities:"
 	@echo "  check-factory             Check if a factory is deployed"
 	@echo "  check-all-factories       Check all factories on a network"
-	@echo "  compute-lib-addresses     Compute expected library addresses"
-	@echo "  compute-all-lib-addresses Compute library addresses for all factories"
+	@echo "  compute-addresses         Compute all CREATE2 addresses for a factory"
+	@echo "  compute-all-addresses     Compute all CREATE2 addresses for all factories"
 	@echo "  verify                    Verify a contract on Etherscan"
 	@echo ""
 	@echo "Configuration Variables:"
@@ -86,11 +98,17 @@ help:
 	@echo "  FACTORY   CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)"
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
+	@echo "  SAFE_TYPE Safe type: guardian or deployer (for module commands)"
+	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
+	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
+	@echo "  ACTION    Action to check status for: add or remove (for check-safe-module-status)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x..."
 	@echo "  make check-all-factories NETWORK=mainnet"
+	@echo "  make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
+	@echo "  make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 
 # ==============================================================================
 # Core Commands
@@ -206,21 +224,49 @@ VERBOSITY ?= -vvvv
 ARACHNID_FACTORY_ADDRESS := 0x4e59b44847b379578588920cA78FbF26c0B4956C
 # TODO: Fill in after deploying Den Singleton Factory from prod deployer
 DEN_PROD_FACTORY_ADDRESS := 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
-DEN_NONPROD_FACTORY_ADDRESS := 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db
+DEN_NONPROD_FACTORY_ADDRESS := 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5
 
 # Arachnid deployer address (for funding)
 ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
 
 # ------------------------------------------------------------------------------
-# Factory Address Selection (based on FACTORY variable)
-# Library addresses are now configured in foundry.toml profiles.
+# Library Addresses (for staged library deployment)
+# These are the independent library addresses (Policy, Admin) used when deploying
+# dependent libraries (Init, AccountSig). Must match DeploymentConfig.sol.
+# ------------------------------------------------------------------------------
+# Library paths (same for all factories)
+LIB_ORG_POLICY_PATH := src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy
+LIB_ORG_ADMIN_PATH := src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin
+
+# Arachnid factory library addresses
+ARACHNID_LIB_ORG_POLICY_ADDRESS := 0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA
+ARACHNID_LIB_ORG_ADMIN_ADDRESS := 0x6A87f1102404F4e36080732E535AD1F90cEde41B
+
+# Den Production factory library addresses (TODO: Update after deployment)
+DEN_PROD_LIB_ORG_POLICY_ADDRESS := 0x0000000000000000000000000000000000000000
+DEN_PROD_LIB_ORG_ADMIN_ADDRESS := 0x0000000000000000000000000000000000000000
+
+# Den Non-Production factory library addresses
+DEN_NONPROD_LIB_ORG_POLICY_ADDRESS := 0x58fC18a42DDd82725471bcE76bb5d9D6509A0641
+DEN_NONPROD_LIB_ORG_ADMIN_ADDRESS := 0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1
+
+# ------------------------------------------------------------------------------
+# Factory Address and Library Selection (based on FACTORY variable)
+# Library addresses for contract deployment are configured in foundry.toml profiles.
+# For staged library deployment, addresses are selected below.
 # ------------------------------------------------------------------------------
 ifeq ($(FACTORY),arachnid)
     FACTORY_ADDRESS := $(ARACHNID_FACTORY_ADDRESS)
+    LIB_ORG_POLICY_ADDRESS := $(ARACHNID_LIB_ORG_POLICY_ADDRESS)
+    LIB_ORG_ADMIN_ADDRESS := $(ARACHNID_LIB_ORG_ADMIN_ADDRESS)
 else ifeq ($(FACTORY),den-prod)
     FACTORY_ADDRESS := $(DEN_PROD_FACTORY_ADDRESS)
+    LIB_ORG_POLICY_ADDRESS := $(DEN_PROD_LIB_ORG_POLICY_ADDRESS)
+    LIB_ORG_ADMIN_ADDRESS := $(DEN_PROD_LIB_ORG_ADMIN_ADDRESS)
 else ifeq ($(FACTORY),den-nonprod)
     FACTORY_ADDRESS := $(DEN_NONPROD_FACTORY_ADDRESS)
+    LIB_ORG_POLICY_ADDRESS := $(DEN_NONPROD_LIB_ORG_POLICY_ADDRESS)
+    LIB_ORG_ADMIN_ADDRESS := $(DEN_NONPROD_LIB_ORG_ADMIN_ADDRESS)
 else
     $(error Invalid FACTORY value '$(FACTORY)'. Use: arachnid, den-prod, or den-nonprod)
 endif
@@ -238,17 +284,16 @@ endif
 # ------------------------------------------------------------------------------
 # Auto-derive SENDER from ACCOUNT (for Foundry managed accounts)
 # If ACCOUNT is provided but SENDER is not, derive it using cast wallet address.
-# User will be prompted for their keystore password.
-# Uses deferred evaluation (=) so the shell command only runs when SENDER is needed.
+# Uses immediate evaluation (:=) so the shell command only runs once.
 # ------------------------------------------------------------------------------
 ifdef ACCOUNT
     ifndef SENDER
-        SENDER = $(shell \
+        SENDER := $(shell \
             echo "" >&2 && \
             echo "========================================" >&2 && \
             echo "Deriving address for account: $(ACCOUNT)" >&2 && \
             echo "Enter your keystore password below." >&2 && \
-            echo "(This is to get the --sender address, not to broadcast transactions)" >&2 && \
+            echo "(This is for --sender flag, not to broadcast)" >&2 && \
             echo "========================================" >&2 && \
             cast wallet address --account $(ACCOUNT))
     endif
@@ -395,42 +440,197 @@ deploy-safe-dry-run:
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
 
-# Compute Safe Addresses: Preview expected Safe addresses without deploying
-# Useful for verifying addresses before deployment or updating DeploymentConfig.sol
+# ==============================================================================
+# BatchedTransaction Deployment Commands
+# ==============================================================================
+#
+# BatchedTransaction is a security-focused batched transaction contract that must be
+# deployed BEFORE SafeExecutorModules. It provides:
+# - No ETH transfers (value hardcoded to 0)
+# - msg.sender validation (blocks calls to Safe when delegatecalled)
+# - Efficient transaction encoding
+
+# Deploy BatchedTransaction: Deploys the BatchedTransaction contract via CREATE2
+# IMPORTANT: Must be deployed BEFORE deploying SafeExecutorModules.
 #
 # Example:
-#   make compute-safe-addresses NETWORK=sepolia
-#   make compute-safe-addresses FACTORY=den-nonprod NETWORK=mainnet
-compute-safe-addresses:
-	@echo "Computing Safe 1.3.0 addresses..."
+#   make deploy-batched-transaction NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-batched-transaction FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+deploy-batched-transaction: validate-signer-vars
+	@echo "Deploying BatchedTransaction..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Profile: safe (Solidity 0.7.6)"
-	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
-		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
+	forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# ==============================================================================
+# Safe Executor Module Commands
+# ==============================================================================
+#
+# The SafeExecutorModule allows a designated EOA (the "Safe Executor EOA") to execute
+# contract calls on behalf of a Safe multisig. These commands handle deployment and
+# Safe owner operations for adding/removing the module.
+#
+# IMPORTANT: BatchedTransaction must be deployed BEFORE deploying SafeExecutorModules.
+# After module deployment, Safe owners must approve adding the module via safe-add-module.
+
+# Deploy Safe Module: Deploys the SafeExecutorModule for a Safe via CREATE2
+# The Safe must be deployed first. The Safe Executor EOA address is validated against DeploymentConfig.
+#
+# Example:
+#   make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-safe-module SAFE_TYPE=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+deploy-safe-module: validate-signer-vars
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+endif
+ifndef EXECUTOR
+	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
+endif
+	@echo "Deploying SafeExecutorModule..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Safe Type: $(SAFE_TYPE)"
+	@echo "  Safe Executor EOA: $(EXECUTOR)"
+	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
+		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTOR) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Add Module to Safe: Approve adding a module to a Safe (Safe owner operation)
+# Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# the transaction is automatically executed.
+#
+# Example:
+#   make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make safe-add-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+safe-add-module: validate-signer-vars
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+endif
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
+endif
+	@echo "Adding module to Safe (approve transaction)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Safe Type: $(SAFE_TYPE)"
+	@echo "  Execute if ready: $(EXECUTE)"
+	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
+		--sig "addModule(address,string,bool)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTE) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Remove Module from Safe: Approve removing a module from a Safe (Safe owner operation)
+# Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# the transaction is automatically executed.
+#
+# Example:
+#   make safe-remove-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make safe-remove-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+safe-remove-module: validate-signer-vars
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+endif
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
+endif
+	@echo "Removing module from Safe (approve transaction)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Safe Type: $(SAFE_TYPE)"
+	@echo "  Execute if ready: $(EXECUTE)"
+	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
+		--sig "removeModule(address,string,bool)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTE) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Check Module Status: Check approval status for a module transaction
+# Shows how many approvals exist and who has approved.
+#
+# Example:
+#   make check-safe-module-status SAFE_TYPE=guardian ACTION=add NETWORK=sepolia
+#   make check-safe-module-status SAFE_TYPE=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
+check-safe-module-status:
+ifndef SAFE_TYPE
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+endif
+ifndef ACTION
+	$(error ACTION is required. Set ACTION=add or ACTION=remove)
+endif
+	@echo "Checking module transaction status..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Safe Type: $(SAFE_TYPE)"
+	@echo "  Action: $(ACTION)"
+	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
+		--sig "checkStatus(address,string,string)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(ACTION) \
 		--rpc-url $(RPC_URL)
 
 # ==============================================================================
 # Platform Deployment Commands
 # ==============================================================================
 
-# Deploy Libraries: Deploys the 4 platform libraries via CREATE2
-# These must be deployed BEFORE running deploy-contracts.
-# Does NOT use --libraries flags (libraries are being deployed, not linked).
+# Deploy Independent Libraries: Deploys Policy and Admin libraries via CREATE2
+# These libraries have no dependencies on other platform libraries.
+# Run this BEFORE deploy-dependent-libs.
 #
 # Example:
-#   make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
-#   make deploy-libraries FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
-deploy-libraries: validate-signer-vars
-	@echo "Deploying platform libraries via CREATE2..."
+#   make deploy-independent-libs NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+#   make deploy-independent-libs FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-independent-libs: validate-signer-vars
+	@echo "Deploying independent platform libraries (Policy, Admin) via CREATE2..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
-		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--sig "runDeployIndependentLibs(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
+
+# Deploy Dependent Libraries: Deploys Init and AccountSig libraries via CREATE2
+# These libraries depend on Policy and Admin being deployed and linked.
+# IMPORTANT: Run deploy-independent-libs first. Uses --libraries flags.
+#
+# Example:
+#   make deploy-dependent-libs NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+#   make deploy-dependent-libs FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-dependent-libs: validate-signer-vars
+	@echo "Deploying dependent platform libraries (Init, AccountSig) via CREATE2..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Linked Policy: $(LIB_ORG_POLICY_ADDRESS)"
+	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
+		--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
+		--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Deploy Libraries: Convenience target that deploys all platform libraries (both stages)
+# This runs deploy-independent-libs followed by deploy-dependent-libs.
+#
+# Example:
+#   make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
+#   make deploy-libraries FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-libraries: deploy-independent-libs deploy-dependent-libs
+	@echo "All platform libraries deployed!"
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY)"
 
 # Deploy Contracts: Deploys all platform contracts with library linking
 # IMPORTANT: Libraries must be deployed first (use deploy-libraries).
@@ -468,18 +668,44 @@ deploy-platform: deploy-safe deploy-libraries deploy-contracts
 # These run without --broadcast to simulate deployment without sending transactions.
 # ------------------------------------------------------------------------------
 
-# Deploy Libraries Dry-Run: Simulates library deployment
+# Deploy Independent Libraries Dry-Run: Simulates independent library deployment
 #
 # Example:
-#   make deploy-libraries-dry-run NETWORK=sepolia
-deploy-libraries-dry-run:
-	@echo "Simulating library deployment (dry-run)..."
+#   make deploy-independent-libs-dry-run NETWORK=sepolia
+deploy-independent-libs-dry-run:
+	@echo "Simulating independent library deployment (dry-run)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
-		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--sig "runDeployIndependentLibs(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
+
+# Deploy Dependent Libraries Dry-Run: Simulates dependent library deployment
+#
+# Example:
+#   make deploy-dependent-libs-dry-run NETWORK=sepolia
+deploy-dependent-libs-dry-run:
+	@echo "Simulating dependent library deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Linked Policy: $(LIB_ORG_POLICY_ADDRESS)"
+	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
+	forge script script/DeployLibraries.s.sol:DeployLibraries \
+		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
+		--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
+		--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Deploy Libraries Dry-Run: Simulates all library deployment (both stages)
+#
+# Example:
+#   make deploy-libraries-dry-run NETWORK=sepolia
+deploy-libraries-dry-run: deploy-independent-libs-dry-run deploy-dependent-libs-dry-run
+	@echo "All library deployment simulations complete!"
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY)"
 
 # Deploy Contracts Dry-Run: Simulates contract deployment
 #
@@ -537,34 +763,30 @@ check-all-factories:
 	@echo ""
 	@$(MAKE) --no-print-directory check-factory FACTORY=den-nonprod NETWORK=$(NETWORK)
 
-# Compute Lib Addresses: Computes expected library addresses for a specific factory
-# Useful to preview addresses before deployment or verify configuration.
+# Compute Addresses: Computes all CREATE2 addresses for a specific factory
+# This runs the compute_all_addresses.sh script which orchestrates calls to all
+# deployment scripts' computeAddresses() functions and handles library linking correctly.
 #
 # Example:
-#   make compute-lib-addresses FACTORY=arachnid NETWORK=sepolia
-#   make compute-lib-addresses FACTORY=den-prod NETWORK=mainnet
-compute-lib-addresses:
-	@echo "Computing library addresses for factory: $(FACTORY)"
-	@echo "  Factory address: $(FACTORY_ADDRESS)"
-	@echo ""
-	forge script script/DeployLibraries.s.sol:DeployLibraries \
-		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
-		--rpc-url $(RPC_URL)
+#   make compute-addresses FACTORY=arachnid
+#   make compute-addresses FACTORY=den-nonprod
+#   make compute-addresses FACTORY=den-prod
+compute-addresses:
+	@./script/sh/compute_all_addresses.sh $(FACTORY)
 
-# Compute All Lib Addresses: Computes expected library addresses for all factories
-# Continues even if a factory is not deployed (will show error but proceed to next).
+# Compute All Addresses: Computes all CREATE2 addresses for all three factories
+# Continues even if a factory computation fails.
 #
 # Example:
-#   make compute-all-lib-addresses NETWORK=sepolia
-#   make compute-all-lib-addresses NETWORK=mainnet
-compute-all-lib-addresses:
-	@echo "Computing library addresses for all factories on $(NETWORK)..."
+#   make compute-all-addresses
+compute-all-addresses:
+	@echo "Computing all addresses for all factories..."
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=arachnid NETWORK=$(NETWORK)
+	-@./script/sh/compute_all_addresses.sh arachnid
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=den-prod NETWORK=$(NETWORK)
+	-@./script/sh/compute_all_addresses.sh den-nonprod
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=den-nonprod NETWORK=$(NETWORK)
+	-@./script/sh/compute_all_addresses.sh den-prod
 
 # Verify: Verifies a deployed contract on Etherscan
 # Requires CONTRACT_ADDRESS and CONTRACT_NAME variables.

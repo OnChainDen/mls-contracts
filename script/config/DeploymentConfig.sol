@@ -70,6 +70,17 @@ library DeploymentConfig {
     /// @dev Salt for ImplementationWhitelistProxy deployment (via factory)
     bytes32 internal constant WHITELIST_PROXY_SALT = keccak256("den.mls-wallet.whitelist.proxy.v1");
 
+    /// @dev Salt for Guardian Safe Executor Module deployment
+    bytes32 internal constant GUARDIAN_SAFE_EXECUTOR_MODULE_SALT =
+        keccak256("den.mls-wallet.safe-module.eoa-executor.guardian.v1");
+
+    /// @dev Salt for Deployer Safe Executor Module deployment
+    bytes32 internal constant DEPLOYER_SAFE_EXECUTOR_MODULE_SALT =
+        keccak256("den.mls-wallet.safe-module.eoa-executor.deployer.v1");
+
+    /// @dev Salt for BatchedTransaction deployment
+    bytes32 internal constant BATCHED_TRANSACTION_SALT = keccak256("den.mls-wallet.batched-transaction.v1");
+
     // ==================== Hardcoded CREATE2 Factory and Deployer Addresses =====================
     // These are the hardcoded addresses for the CREATE2 factories that are used to deploy the platform contracts.
     // These addresses are not expected to change, so they are hardcoded in the library.
@@ -88,10 +99,12 @@ library DeploymentConfig {
     address internal constant PROD_DEN_SINGLETON_FACTORY_ADDRESS = address(0);
 
     /// @dev Non-production Den Singleton Factory deployer address
-    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS = 0x22002e8661A780d61EF4c86F4a9fFa843A6fea20;
+    ///      For local/testnet testing, use the test-den-factory-deployer foundry account
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS = 0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328;
 
     /// @dev Expected Den Singleton Factory address for non-production deployments
-    address internal constant NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db;
+    ///      Computed from NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0
+    address internal constant NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS = 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5;
 
     // ==================== Hardcoded Library Paths ====================
     // These are the hardcoded paths for the platform libraries that are used when deploying contracts that
@@ -134,10 +147,10 @@ library DeploymentConfig {
     /// @dev Expected library addresses when deployed via Arachnid Deterministic Deployment Proxy
     ///      TODO: Update these addresses after making changes to library source code and deploying
     ///      libraries via arachnid Deterministic Deployment Proxy
-    address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0x3114B93B9952eA9870a857eD8aa12b1F64c56cb6;
-    address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x8216540c25aD0Fc9F5C75F2b513d67ee09078568;
-    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0x7624025fEcC583aDF57c6B51DBC69143A09bE935;
-    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0x5f825C43d0284feCFeB72b6E1fDEf9d1418e51D5;
+    address internal constant ARACHNID_LIB_ORG_POLICY_ADDRESS = 0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA;
+    address internal constant ARACHNID_LIB_ORG_ADMIN_ADDRESS = 0x6A87f1102404F4e36080732E535AD1F90cEde41B;
+    address internal constant ARACHNID_LIB_ORG_INIT_ADDRESS = 0xbcAD4381C92c350f590111EDe66E83f0584E42F9;
+    address internal constant ARACHNID_LIB_ORG_ACCOUNT_SIG_ADDRESS = 0xEdd0540b7109196ac93CD64970FEc869a7011aCF;
 
     /// @dev Expected library addresses when deployed via Production Den Singleton Factory
     ///      TODO: Fill in these addresses after deploying libraries via prod Den Singleton Factory
@@ -151,11 +164,11 @@ library DeploymentConfig {
     /// @dev Expected library addresses when deployed via Non-Production Den Singleton Factory
     ///      TODO: Update these addresses after making changes to library source code and deploying
     ///      libraries via non-prod Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x0219e94f408E7cBE554E4ced6f5045A64A5B5Abd;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xCd72cf4D6A75ad1b59a1bf65cbDd2e14801362C3;
-    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0xf5E7148da9E8e66a3A9D87c487A1128F3a50DA78;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_POLICY_ADDRESS = 0x58fC18a42DDd82725471bcE76bb5d9D6509A0641;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ADMIN_ADDRESS = 0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1;
+    address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_INIT_ADDRESS = 0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e;
     address internal constant NON_PROD_DEN_FACTORY_LIB_ORG_ACCOUNT_SIG_ADDRESS =
-        0xcDb9A5f2ccD755cAa5f3B5eA10DC6E9e5897eE65;
+        0x8F8c7526cb63885061c4d922e66D7d8589ac045c;
 
     // ==================== Hardcoded Safe 1.3.0 Infrastructure Addresses ====================
     // These are the expected deployment addresses for Safe 1.3.0 infrastructure contracts when deployed
@@ -170,11 +183,11 @@ library DeploymentConfig {
     address internal constant ARACHNID_SAFE_PROXY_FACTORY_ADDRESS = 0x04acB79cD2c208Fc4B983d92971A41F709532Ff5;
     address internal constant ARACHNID_SAFE_FALLBACK_HANDLER_ADDRESS = 0xBF32F3DCE01B6c67E454066f8969Deee79D74a55;
     address internal constant ARACHNID_SAFE_MULTISEND_ADDRESS = 0xe0487528D742Bd9e6295AE6f3873175f032ba8f3;
-    address internal constant ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0xD5c219A054E9fBceD9D9493f546a7B4995101e4B;
+    address internal constant ARACHNID_SAFE_MULTISEND_CALL_ONLY_ADDRESS = 0x5f7fd4Bd58C7777F7C777Cd4C19cF68Fc0A17Dc4;
     address internal constant ARACHNID_SAFE_CREATE_CALL_ADDRESS = 0x7880435e91818C84bfAdC2f454B8A92942f7AcbD;
     address internal constant ARACHNID_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS = 0x205CeDEBdB936D473031f6140d50C11aeC948773;
-    address internal constant ARACHNID_GUARDIAN_SAFE_ADDRESS = 0x6aCC5D703Fa6136Bc9305fa1cCEF87F7e1dDCA99;
-    address internal constant ARACHNID_DEPLOYER_SAFE_ADDRESS = 0x53B78a4CeB12fB5cb48C8eEfcdAfd6a35F0a8246;
+    address internal constant ARACHNID_GUARDIAN_SAFE_ADDRESS = 0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305;
+    address internal constant ARACHNID_DEPLOYER_SAFE_ADDRESS = 0x84246979f1678Cc3c5949106B958275aA15B807e;
 
     /// @dev Expected Safe infrastructure addresses when deployed via Production Den Singleton Factory
     ///      TODO: Update these addresses after deploying Safe 1.3.0 via prod Den Singleton Factory
@@ -189,20 +202,92 @@ library DeploymentConfig {
     address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = address(0);
 
     /// @dev Expected Safe infrastructure addresses when deployed via Non-Production Den Singleton Factory
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS = 0x0c3254B2f12AbBC58A2104c432A943e22569Cfc2;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_SINGLETON_ADDRESS = 0x9732b61234C43C49B98812E09D81D433b7789b25;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_PROXY_FACTORY_ADDRESS =
-        0xC31214e6950B6f29c038c705bBD7068a46406f82;
+        0x400F1f8fC868476bAb030909F049a70074570c7e;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_FALLBACK_HANDLER_ADDRESS =
-        0x3B4c3b17F9d51B73a858A32324939bDcDCa497E4;
-    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = 0xf3551E571f69Af6639344ADfB87BD7b6Ea2B0F0d;
+        0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0;
+    address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_ADDRESS = 0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_MULTISEND_CALL_ONLY_ADDRESS =
-        0x67e2AA5448B07839F9c2F4277b7DcB815738F0Bf;
+        0x1D6535926E595Bb84Fc4d548E6d3615212EDa92C;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_CREATE_CALL_ADDRESS =
-        0xFB84686A1bedc983ca8D47000104E354171E00f1;
+        0x619B2299DD5C77DF72AE1a8a70885D89E423B382;
     address internal constant NON_PROD_DEN_FACTORY_SAFE_SIMULATE_TX_ACCESSOR_ADDRESS =
-        0x05E252D33237dCea27607D6F061AD501c35b214d;
-    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = 0xcd5C2f201Daa00F52647B5a4FE09D6ca387a11Eb;
-    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = 0x0C5d97E559Ede9E8bf5D14c6020C0b6D9e689d6b;
+        0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d;
+    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_ADDRESS = 0x4fbeF24b88228A6639409150214bb5A798930fA9;
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_ADDRESS = 0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f;
+
+    // ==================== Hardcoded Safe Executor Module Addresses ====================
+    // These are the expected deployment addresses for Safe Executor Modules when deployed via CREATE2
+    // using the specified factory. Addresses differ based on which factory is used because the
+    // factory address is part of the CREATE2 address computation.
+    //
+    // IMPORTANT: These addresses must be updated after deploying modules for each factory.
+    // ==============================================================================
+
+    /// @dev Expected module addresses when deployed via Arachnid Deterministic Deployment Proxy
+    address internal constant ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS =
+        0x138Caa22BD0963856d1C0e041922dDFF934911cF;
+    address internal constant ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
+        0xA139E09add4405549F437A64a6d73FFF20Cf69Bb;
+
+    /// @dev Expected module addresses when deployed via Production Den Singleton Factory
+    ///      TODO: Update after deploying modules via prod Den Singleton Factory
+    address internal constant PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+    address internal constant PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS = address(0);
+
+    /// @dev Expected module addresses when deployed via Non-Production Den Singleton Factory
+    address internal constant NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS =
+        0xf9590304dfAd565d50bD9e87E0Accb5ABc91dB90;
+    address internal constant NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS =
+        0x6f87dE25d473De4671824790AB86D59e45E1B185;
+
+    // ==================== Hardcoded BatchedTransaction Addresses ====================
+    // These are the expected deployment addresses for BatchedTransaction when deployed via CREATE2
+    // using the specified factory. Addresses differ based on which factory is used because the
+    // factory address is part of the CREATE2 address computation.
+    //
+    // IMPORTANT: These addresses must be updated after deploying BatchedTransaction for each factory.
+    // ==============================================================================
+
+    /// @dev Expected BatchedTransaction address when deployed via Arachnid Deterministic Deployment Proxy
+    address internal constant ARACHNID_BATCHED_TRANSACTION_ADDRESS = 0xbaFA880487F37868903cd04d642a16CB3Ab54449;
+
+    /// @dev Expected BatchedTransaction address when deployed via Production Den Singleton Factory
+    ///      TODO: Update after deploying BatchedTransaction via prod Den Singleton Factory
+    address internal constant PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS = address(0);
+
+    /// @dev Expected BatchedTransaction address when deployed via Non-Production Den Singleton Factory
+    address internal constant NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS =
+        0x0cedE35f7bac439D35e261E386315c62C17d6Ec1;
+
+    // ==================== Hardcoded Safe Executor EOA Addresses ====================
+    // These are the EOA addresses (Safe Executor EOAs) authorized to execute transactions via the
+    // Safe Executor Modules. The deployment script validates that the provided executor matches
+    // these addresses.
+    //
+    // IMPORTANT: These addresses must be updated before deploying modules.
+    // ==============================================================================
+
+    /// @dev Non-production Safe Executor EOA for Guardian Safe module
+    ///      Foundry account name: "guardian-executor-nonprod"
+    ///      TODO: Update after creating the Foundry managed account
+    /// @dev For local/testnet testing, use the test-guardian-executor foundry account
+    address internal constant NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS = 0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1;
+
+    /// @dev Production Safe Executor EOA for Guardian Safe module
+    ///      TODO: Update with production Safe Executor EOA address before mainnet deployment
+    address internal constant PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
+
+    /// @dev Non-production Safe Executor EOA for Deployer Safe module
+    ///      Foundry account name: "deployer-executor-nonprod"
+    ///      TODO: Update after creating the Foundry managed account
+    /// @dev For local/testnet testing, use the test-deployer-executor foundry account
+    address internal constant NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS = 0xBd7DF30E88C5C7fD54F2Ac77a1302581d577E0Fd;
+
+    /// @dev Production Safe Executor EOA for Deployer Safe module
+    ///      TODO: Update with production Safe Executor EOA address before mainnet deployment
+    address internal constant PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS = address(0);
 
     // ==================== Hardcoded Guardian Safe Multisig Configurations =====================
     // These are the hardcoded multisig configurations for the Guardian Safe and Deployer Safe.
@@ -228,14 +313,16 @@ library DeploymentConfig {
     /// @dev Production Deployer Safe signature threshold
     uint256 internal constant PROD_DEPLOYER_SAFE_THRESHOLD = 2;
 
-    /// @dev Non-production Guardian Safe owner addresses (placeholder - replace before deploying)
-    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328);
+    /// @dev Non-production Guardian Safe owner address
+    ///      For local/testnet testing, use the test-guardian-safe-owner foundry account
+    address internal constant NON_PROD_GUARDIAN_SAFE_OWNER_1 = address(0x22002e8661A780d61EF4c86F4a9fFa843A6fea20);
 
     /// @dev Non-production Guardian Safe signature threshold
     uint256 internal constant NON_PROD_GUARDIAN_SAFE_THRESHOLD = 1;
 
-    /// @dev Non-production Deployer Safe owner addresses (placeholder - replace before deploying)
-    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x901CAb5Fdb93571F0f6Cd6D643F8b2532f00d2A3);
+    /// @dev Non-production Deployer Safe owner address
+    ///      For local/testnet testing, use the test-deployer-safe-owner foundry account
+    address internal constant NON_PROD_DEPLOYER_SAFE_OWNER_1 = address(0x8DA06Ab9bBb0736d36c92E10B1d6e23A890FD32F);
 
     /// @dev Non-production Deployer Safe signature threshold
     uint256 internal constant NON_PROD_DEPLOYER_SAFE_THRESHOLD = 1;
@@ -452,5 +539,105 @@ library DeploymentConfig {
         }
 
         revert("Unknown factory - no expected Deployer Safe address");
+    }
+
+    /// @dev Returns expected Safe Executor Module addresses based on which CREATE2 factory was used
+    /// @param factoryAddress The CREATE2 factory address used to deploy the modules
+    /// @return guardianModuleAddress Expected Guardian Safe Executor Module address
+    /// @return deployerModuleAddress Expected Deployer Safe Executor Module address
+    function getExpectedSafeExecutorModuleAddresses(address factoryAddress)
+        internal
+        pure
+        returns (address guardianModuleAddress, address deployerModuleAddress)
+    {
+        // Case: Arachnid Deterministic Deployment Proxy
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            return (ARACHNID_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS, ARACHNID_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS);
+        }
+
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            require(
+                PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS != address(0),
+                "PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS not set"
+            );
+            require(
+                PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS != address(0),
+                "PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS not set"
+            );
+            return (
+                PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS,
+                PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS
+            );
+        }
+
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            return (
+                NON_PROD_DEN_FACTORY_GUARDIAN_SAFE_EXECUTOR_MODULE_ADDRESS,
+                NON_PROD_DEN_FACTORY_DEPLOYER_SAFE_EXECUTOR_MODULE_ADDRESS
+            );
+        }
+
+        revert("Unknown factory - no expected Safe Executor Module addresses");
+    }
+
+    /// @dev Returns the expected Safe Executor EOA addresses based on chain ID
+    /// @param chainId The target chain ID
+    /// @return guardianExecutor Expected Safe Executor EOA address for Guardian Safe module
+    /// @return deployerExecutor Expected Safe Executor EOA address for Deployer Safe module
+    function getExpectedExecutorEOAAddresses(uint256 chainId)
+        internal
+        pure
+        returns (address guardianExecutor, address deployerExecutor)
+    {
+        // Case: Production chain
+        if (isProductionChain(chainId)) {
+            require(
+                PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS != address(0), "PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS not set"
+            );
+            require(
+                PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS != address(0), "PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS not set"
+            );
+            return (PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS, PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS);
+        }
+
+        // Case: Non-production chain
+        return (NON_PROD_GUARDIAN_SAFE_EXECUTOR_EOA_ADDRESS, NON_PROD_DEPLOYER_SAFE_EXECUTOR_EOA_ADDRESS);
+    }
+
+    /// @dev Returns expected BatchedTransaction address based on which CREATE2 factory was used for deployment
+    /// @param factoryAddress The CREATE2 factory address used to deploy the BatchedTransaction
+    /// @return batchedTransactionAddress The expected BatchedTransaction address
+    function getExpectedBatchedTransactionAddress(address factoryAddress)
+        internal
+        pure
+        returns (address batchedTransactionAddress)
+    {
+        // Case: Arachnid Deterministic Deployment Proxy
+        if (factoryAddress == ARACHNID_CREATE2_FACTORY_ADDRESS) {
+            require(ARACHNID_BATCHED_TRANSACTION_ADDRESS != address(0), "ARACHNID_BATCHED_TRANSACTION_ADDRESS not set");
+            return ARACHNID_BATCHED_TRANSACTION_ADDRESS;
+        }
+
+        // Case: Production Den Singleton Factory
+        if (factoryAddress == PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            require(
+                PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS != address(0),
+                "PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS not set"
+            );
+            return PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS;
+        }
+
+        // Case: Non-Production Den Singleton Factory
+        if (factoryAddress == NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
+            require(
+                NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS != address(0),
+                "NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS not set"
+            );
+            return NON_PROD_DEN_FACTORY_BATCHED_TRANSACTION_ADDRESS;
+        }
+
+        revert("Unknown factory - no expected BatchedTransaction address");
     }
 }
