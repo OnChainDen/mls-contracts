@@ -80,14 +80,12 @@ contract DeployBatchedTransaction is Script {
 
     /**
      * @notice Compute and print BatchedTransaction address without deploying
+     * @dev Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      */
-    function computeAddress(address factoryAddress) external view {
+    function computeAddress(address factoryAddress) external pure {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
 
         // Compute the address
         bytes memory initCode = type(BatchedTransaction).creationCode;
@@ -96,18 +94,9 @@ contract DeployBatchedTransaction is Script {
 
         // Log the computed address
         Logger.logBoxHeader("Computed BatchedTransaction Address");
-        Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logEmptyLine();
-        Logger.logKeyValue("Expected Address", expectedAddress);
-
-        // Check if already deployed
-        if (Create2Utils.isContractDeployedAtAddress(expectedAddress)) {
-            Logger.logKeyValue("Status", "ALREADY DEPLOYED");
-        } else {
-            Logger.logKeyValue("Status", "NOT DEPLOYED");
-        }
-
+        Logger.logKeyValue("BatchedTransaction", expectedAddress);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
     }

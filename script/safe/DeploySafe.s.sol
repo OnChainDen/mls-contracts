@@ -11,6 +11,7 @@ import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackH
 import {CreateCall} from "@safe/libraries/CreateCall.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
+import {GnosisSafeProxy} from "@safe/proxies/GnosisSafeProxy.sol";
 import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
 
 // Shared script utilities
@@ -271,7 +272,7 @@ contract DeploySafe is Script {
     /// @return The predicted Safe proxy address
     function _computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
         private
-        view
+        pure
         returns (address)
     {
         // GnosisSafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
@@ -281,7 +282,8 @@ contract DeploySafe is Script {
         // This matches GnosisSafeProxyFactory.deployProxyWithNonce() which does:
         // bytes memory deploymentData = abi.encodePacked(type(GnosisSafeProxy).creationCode,
         // uint256(uint160(_singleton)));
-        bytes memory proxyCreationCode = GnosisSafeProxyFactory(safeInfra.proxyFactoryAddress).proxyCreationCode();
+        // Using compile-time proxy creation code to avoid requiring the factory to be deployed
+        bytes memory proxyCreationCode = type(GnosisSafeProxy).creationCode;
         bytes32 initCodeHash =
             keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(safeInfra.singletonAddress))));
 
@@ -291,15 +293,12 @@ contract DeploySafe is Script {
 
     /**
      * @notice Computes and displays expected Safe addresses without deploying
-     * @dev Use this to preview addresses before deployment
+     * @dev Use this to preview addresses before deployment. Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      */
     function computeAddresses(address factoryAddress) external view {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
 
         // Get chain ID using assembly for 0.7.x compatibility
         uint256 chainId = ScriptUtils.getChainId();
@@ -313,8 +312,9 @@ contract DeploySafe is Script {
             DeploymentConfig.getDeployerSafeConfig(chainId);
 
         // Log header
-        Create2Utils.logDeploymentHeader(factoryAddress, chainId);
-        Logger.logKeyValue("Mode", "Address Computation (No Deployment)");
+        Logger.logBoxHeader("Computed Safe 1.3.0 Addresses");
+        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("Chain ID", chainId);
         Logger.logEmptyLine();
 
         // Compute Safe Infrastructure addresses
@@ -332,7 +332,7 @@ contract DeploySafe is Script {
         // Build the complete contracts struct for logging
         DeployedContracts memory contracts = DeployedContracts({safeInfra: safeInfra, safes: safes});
 
-        // Log computed addresses
+        // Log computed addresses summary
         _logComputedAddresses(contracts);
     }
 
@@ -341,52 +341,52 @@ contract DeploySafe is Script {
     /// @return safeInfra Struct containing all computed Safe infrastructure addresses
     function _computeSafeInfrastructureAddresses(address factoryAddress)
         internal
-        view
+        pure
         returns (SafeInfrastructure memory safeInfra)
     {
-        Logger.logSection("Safe 1.3.0 Infrastructure (Expected Addresses)");
+        Logger.logSection("Safe 1.3.0 Infrastructure");
 
         // Compute Safe Singleton address
         safeInfra.singletonAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode
         );
-        _logComputedAddress("GnosisSafe Singleton", safeInfra.singletonAddress);
+        Logger.logKeyValue("GnosisSafe Singleton", safeInfra.singletonAddress);
 
         // Compute Safe Proxy Factory address
         safeInfra.proxyFactoryAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_PROXY_FACTORY_SALT, type(GnosisSafeProxyFactory).creationCode
         );
-        _logComputedAddress("GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
+        Logger.logKeyValue("GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
 
         // Compute Compatibility Fallback Handler address
         safeInfra.fallbackHandlerAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_FALLBACK_HANDLER_SALT, type(CompatibilityFallbackHandler).creationCode
         );
-        _logComputedAddress("CompatibilityFallbackHandler", safeInfra.fallbackHandlerAddress);
+        Logger.logKeyValue("CompatibilityFallbackHandler", safeInfra.fallbackHandlerAddress);
 
         // Compute MultiSend address
         safeInfra.multiSendAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode
         );
-        _logComputedAddress("MultiSend", safeInfra.multiSendAddress);
+        Logger.logKeyValue("MultiSend", safeInfra.multiSendAddress);
 
         // Compute MultiSendCallOnly address
         safeInfra.multiSendCallOnlyAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_MULTISEND_CALL_ONLY_SALT, type(MultiSendCallOnly).creationCode
         );
-        _logComputedAddress("MultiSendCallOnly", safeInfra.multiSendCallOnlyAddress);
+        Logger.logKeyValue("MultiSendCallOnly", safeInfra.multiSendCallOnlyAddress);
 
         // Compute CreateCall address
         safeInfra.createCallAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode
         );
-        _logComputedAddress("CreateCall", safeInfra.createCallAddress);
+        Logger.logKeyValue("CreateCall", safeInfra.createCallAddress);
 
         // Compute SimulateTxAccessor address
         safeInfra.simulateTxAccessorAddress = Create2Utils.computeAddress(
             factoryAddress, DeploymentConfig.SAFE_SIMULATE_TX_ACCESSOR_SALT, type(SimulateTxAccessor).creationCode
         );
-        _logComputedAddress("SimulateTxAccessor", safeInfra.simulateTxAccessorAddress);
+        Logger.logKeyValue("SimulateTxAccessor", safeInfra.simulateTxAccessorAddress);
     }
 
     /// @dev Computes Guardian and Deployer Safe multisig addresses without deploying
@@ -403,7 +403,7 @@ contract DeploySafe is Script {
         address[] memory deployerOwnerAddresses,
         uint256 deployerThreshold
     ) internal view returns (SafeMultisigs memory safes) {
-        Logger.logSection("Safe Multisigs (Expected Addresses)");
+        Logger.logSection("Safe Multisigs");
 
         // Compute Guardian Safe address
         safes.guardianSafeAddress = _computeSafeMultisigAddress({
@@ -412,7 +412,7 @@ contract DeploySafe is Script {
             threshold: guardianThreshold,
             salt: DeploymentConfig.GUARDIAN_SAFE_SALT
         });
-        _logComputedAddress("Guardian Safe", safes.guardianSafeAddress);
+        Logger.logKeyValue("Guardian Safe", safes.guardianSafeAddress);
 
         // Compute Deployer Safe address
         safes.deployerSafeAddress = _computeSafeMultisigAddress({
@@ -421,7 +421,7 @@ contract DeploySafe is Script {
             threshold: deployerThreshold,
             salt: DeploymentConfig.DEPLOYER_SAFE_SALT
         });
-        _logComputedAddress("Deployer Safe", safes.deployerSafeAddress);
+        Logger.logKeyValue("Deployer Safe", safes.deployerSafeAddress);
     }
 
     /// @dev Computes a Safe multisig address without deploying
@@ -454,15 +454,6 @@ contract DeploySafe is Script {
 
         // Compute expected address using GnosisSafeProxyFactory's CREATE2 formula
         safeAddress = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
-    }
-
-    /// @dev Logs a computed address with deployment status
-    /// @param name Human-readable name of the contract
-    /// @param computedAddress Computed CREATE2 address
-    function _logComputedAddress(string memory name, address computedAddress) internal view {
-        bool isDeployed = Create2Utils.isContractDeployedAtAddress(computedAddress);
-        string memory status = isDeployed ? " [DEPLOYED]" : " [NOT DEPLOYED]";
-        Logger.logKeyValue(string(abi.encodePacked(name, status)), computedAddress);
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary

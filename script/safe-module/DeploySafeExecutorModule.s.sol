@@ -113,54 +113,70 @@ contract DeploySafeExecutorModule is Script {
 
     /**
      * @notice Compute and print module address without deploying
+     * @dev Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      * @param safeType "guardian" or "deployer" - which Safe to compute the module address for
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
+     * @param safeAddress The Safe address (computed by DeploySafe.s.sol)
+     * @param batchedTransactionAddress The BatchedTransaction address (computed by DeployBatchedTransaction.s.sol)
      */
-    function computeAddress(address factoryAddress, string calldata safeType, address executorAddress) external view {
-        // Validate the provided CREATE2 factory address
+    function computeAddress(
+        address factoryAddress,
+        string calldata safeType,
+        address executorAddress,
+        address safeAddress,
+        address batchedTransactionAddress
+    ) external pure {
+        // Validate inputs
         require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
+        require(executorAddress != address(0), "Executor address cannot be zero");
+        require(safeAddress != address(0), "Safe address cannot be zero");
+        require(batchedTransactionAddress != address(0), "BatchedTransaction address cannot be zero");
 
-        // Validate safeType
+        // Validate safeType and get guardian flag
         bool isGuardian = _isGuardianSafeType(safeType);
 
-        // Validate executor address
-        require(executorAddress != address(0), "Executor address cannot be zero");
-
-        // Get the Safe address for this safeType
-        address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
-
-        // Get BatchedTransaction address
-        address batchedTransaction = _getBatchedTransactionAddress(factoryAddress);
-
         // Compute the module address
-        bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
+        bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransactionAddress);
         bytes32 salt = _getSalt(isGuardian);
         address expectedAddress = Create2Utils.computeAddress(factoryAddress, salt, initCode);
 
         // Log the computed address
         Logger.logBoxHeader("Computed SafeExecutorModule Address");
-        Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
         Logger.logKeyValue("Safe Executor EOA", executorAddress);
-        Logger.logKeyValue("BatchedTransaction", batchedTransaction);
+        Logger.logKeyValue("BatchedTransaction", batchedTransactionAddress);
         Logger.logEmptyLine();
-        Logger.logKeyValue("Expected Module Address", expectedAddress);
-
-        // Check if already deployed
-        if (Create2Utils.isContractDeployedAtAddress(expectedAddress)) {
-            Logger.logKeyValue("Status", "ALREADY DEPLOYED");
-        } else {
-            Logger.logKeyValue("Status", "NOT DEPLOYED");
-        }
-
+        Logger.logKeyValue("SafeExecutorModule", expectedAddress);
         Logger.logEmptyLine();
         Logger.logBoxFooter();
+    }
+
+    /// @dev Deploys the SafeExecutorModule via CREATE2
+    /// @param factoryAddress The CREATE2 factory address
+    /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
+    /// @param safeAddress The Safe address
+    /// @param executorAddress The Safe Executor EOA address
+    /// @param batchedTransaction The BatchedTransaction address
+    /// @return moduleAddress The deployed module address
+    function _deployModule(
+        address factoryAddress,
+        bool isGuardian,
+        address safeAddress,
+        address executorAddress,
+        address batchedTransaction
+    ) internal returns (address moduleAddress) {
+        bytes32 salt = _getSalt(isGuardian);
+        bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
+        string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
+
+        Logger.logSection("SafeExecutorModule (CREATE2)");
+
+        (moduleAddress,) = Create2Utils.deployIfNotExists(factoryAddress, salt, initCode, name);
+
+        return moduleAddress;
     }
 
     /// @dev Validates that the provided executor address matches the expected address for the target
@@ -229,31 +245,6 @@ contract DeploySafeExecutorModule is Script {
         return abi.encodePacked(
             type(SafeExecutorModule).creationCode, abi.encode(safeAddress, executorAddress, batchedTransaction)
         );
-    }
-
-    /// @dev Deploys the SafeExecutorModule via CREATE2
-    /// @param factoryAddress The CREATE2 factory address
-    /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
-    /// @param safeAddress The Safe address
-    /// @param executorAddress The Safe Executor EOA address
-    /// @param batchedTransaction The BatchedTransaction address
-    /// @return moduleAddress The deployed module address
-    function _deployModule(
-        address factoryAddress,
-        bool isGuardian,
-        address safeAddress,
-        address executorAddress,
-        address batchedTransaction
-    ) internal returns (address moduleAddress) {
-        bytes32 salt = _getSalt(isGuardian);
-        bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
-        string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
-
-        Logger.logSection("SafeExecutorModule (CREATE2)");
-
-        (moduleAddress,) = Create2Utils.deployIfNotExists(factoryAddress, salt, initCode, name);
-
-        return moduleAddress;
     }
 
     /// @dev Logs the next steps after deployment

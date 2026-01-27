@@ -18,18 +18,18 @@
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
 # Safe 1.3.0 deployment
-.PHONY: deploy-safe deploy-safe-dry-run compute-safe-addresses
+.PHONY: deploy-safe deploy-safe-dry-run
 
 # Safe Executor Module
-.PHONY: deploy-batched-transaction compute-batched-transaction-address
-.PHONY: deploy-safe-module compute-module-address safe-add-module safe-remove-module check-safe-module-status
+.PHONY: deploy-batched-transaction
+.PHONY: deploy-safe-module safe-add-module safe-remove-module check-safe-module-status
 
 # Platform deployment
 .PHONY: deploy-libraries deploy-contracts deploy-platform validate-signer-vars
 .PHONY: deploy-libraries-dry-run deploy-contracts-dry-run deploy-platform-dry-run
 
 # Utilities
-.PHONY: check-factory check-all-factories compute-lib-addresses compute-all-lib-addresses verify
+.PHONY: check-factory check-all-factories compute-addresses compute-all-addresses verify
 
 # ==============================================================================
 # Help
@@ -59,13 +59,10 @@ help:
 	@echo "Safe 1.3.0 Deployment:"
 	@echo "  deploy-safe               Deploy Safe 1.3.0 infrastructure (requires FOUNDRY_PROFILE=safe)"
 	@echo "  deploy-safe-dry-run       Simulate Safe deployment (no broadcast)"
-	@echo "  compute-safe-addresses    Preview expected Safe addresses without deploying"
 	@echo ""
 	@echo "Safe Executor Module:"
 	@echo "  deploy-batched-transaction        Deploy BatchedTransaction contract"
-	@echo "  compute-batched-transaction-address Preview expected BatchedTransaction address"
 	@echo "  deploy-safe-module                Deploy SafeExecutorModule for a Safe"
-	@echo "  compute-module-address            Preview expected module address without deploying"
 	@echo "  safe-add-module                   Approve adding a module to a Safe (Safe owner operation)"
 	@echo "  safe-remove-module                Approve removing a module from a Safe (Safe owner operation)"
 	@echo "  check-safe-module-status          Check approval status for a module transaction"
@@ -87,8 +84,8 @@ help:
 	@echo "Utilities:"
 	@echo "  check-factory             Check if a factory is deployed"
 	@echo "  check-all-factories       Check all factories on a network"
-	@echo "  compute-lib-addresses     Compute expected library addresses"
-	@echo "  compute-all-lib-addresses Compute library addresses for all factories"
+	@echo "  compute-addresses         Compute all CREATE2 addresses for a factory"
+	@echo "  compute-all-addresses     Compute all CREATE2 addresses for all factories"
 	@echo "  verify                    Verify a contract on Etherscan"
 	@echo ""
 	@echo "Configuration Variables:"
@@ -412,21 +409,6 @@ deploy-safe-dry-run:
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
 
-# Compute Safe Addresses: Preview expected Safe addresses without deploying
-# Useful for verifying addresses before deployment or updating DeploymentConfig.sol
-#
-# Example:
-#   make compute-safe-addresses NETWORK=sepolia
-#   make compute-safe-addresses FACTORY=den-nonprod NETWORK=mainnet
-compute-safe-addresses:
-	@echo "Computing Safe 1.3.0 addresses..."
-	@echo "  Network: $(NETWORK)"
-	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Profile: safe (Solidity 0.7.6)"
-	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
-		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
-		--rpc-url $(RPC_URL)
-
 # ==============================================================================
 # BatchedTransaction Deployment Commands
 # ==============================================================================
@@ -453,19 +435,6 @@ deploy-batched-transaction: validate-signer-vars
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
-
-# Compute BatchedTransaction Address: Preview expected address without deploying
-#
-# Example:
-#   make compute-batched-transaction-address NETWORK=sepolia
-#   make compute-batched-transaction-address FACTORY=den-nonprod NETWORK=mainnet
-compute-batched-transaction-address:
-	@echo "Computing BatchedTransaction address..."
-	@echo "  Network: $(NETWORK)"
-	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \
-		--sig "computeAddress(address)" $(FACTORY_ADDRESS) \
-		--rpc-url $(RPC_URL)
 
 # ==============================================================================
 # Safe Executor Module Commands
@@ -502,27 +471,6 @@ endif
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
-
-# Compute Module Address: Preview expected module address without deploying
-#
-# Example:
-#   make compute-module-address SAFE_TYPE=guardian EXECUTOR=0x1234... NETWORK=sepolia
-#   make compute-module-address SAFE_TYPE=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet
-compute-module-address:
-ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
-endif
-ifndef EXECUTOR
-	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
-endif
-	@echo "Computing SafeExecutorModule address..."
-	@echo "  Network: $(NETWORK)"
-	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Safe Type: $(SAFE_TYPE)"
-	@echo "  Safe Executor EOA: $(EXECUTOR)"
-	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-		--sig "computeAddress(address,string,address)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTOR) \
-		--rpc-url $(RPC_URL)
 
 # Add Module to Safe: Approve adding a module to a Safe (Safe owner operation)
 # Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
@@ -719,34 +667,30 @@ check-all-factories:
 	@echo ""
 	@$(MAKE) --no-print-directory check-factory FACTORY=den-nonprod NETWORK=$(NETWORK)
 
-# Compute Lib Addresses: Computes expected library addresses for a specific factory
-# Useful to preview addresses before deployment or verify configuration.
+# Compute Addresses: Computes all CREATE2 addresses for a specific factory
+# This runs the compute_all_addresses.sh script which orchestrates calls to all
+# deployment scripts' computeAddresses() functions and handles library linking correctly.
 #
 # Example:
-#   make compute-lib-addresses FACTORY=arachnid NETWORK=sepolia
-#   make compute-lib-addresses FACTORY=den-prod NETWORK=mainnet
-compute-lib-addresses:
-	@echo "Computing library addresses for factory: $(FACTORY)"
-	@echo "  Factory address: $(FACTORY_ADDRESS)"
-	@echo ""
-	forge script script/DeployLibraries.s.sol:DeployLibraries \
-		--sig "computeAddresses(address)" $(FACTORY_ADDRESS) \
-		--rpc-url $(RPC_URL)
+#   make compute-addresses FACTORY=arachnid
+#   make compute-addresses FACTORY=den-nonprod
+#   make compute-addresses FACTORY=den-prod
+compute-addresses:
+	@./script/sh/compute_all_addresses.sh $(FACTORY)
 
-# Compute All Lib Addresses: Computes expected library addresses for all factories
-# Continues even if a factory is not deployed (will show error but proceed to next).
+# Compute All Addresses: Computes all CREATE2 addresses for all three factories
+# Continues even if a factory computation fails.
 #
 # Example:
-#   make compute-all-lib-addresses NETWORK=sepolia
-#   make compute-all-lib-addresses NETWORK=mainnet
-compute-all-lib-addresses:
-	@echo "Computing library addresses for all factories on $(NETWORK)..."
+#   make compute-all-addresses
+compute-all-addresses:
+	@echo "Computing all addresses for all factories..."
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=arachnid NETWORK=$(NETWORK)
+	-@./script/sh/compute_all_addresses.sh arachnid
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=den-prod NETWORK=$(NETWORK)
+	-@./script/sh/compute_all_addresses.sh den-nonprod
 	@echo ""
-	-@$(MAKE) --no-print-directory compute-lib-addresses FACTORY=den-nonprod NETWORK=$(NETWORK)
+	-@./script/sh/compute_all_addresses.sh den-prod
 
 # Verify: Verifies a deployed contract on Etherscan
 # Requires CONTRACT_ADDRESS and CONTRACT_NAME variables.

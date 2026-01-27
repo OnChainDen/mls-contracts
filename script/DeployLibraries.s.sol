@@ -81,21 +81,16 @@ contract DeployLibraries is Script {
 
     /**
      * @notice Compute and print library addresses without deploying
-     * @dev Use this to preview the --libraries flags before any deployment
+     * @dev Use this to preview the --libraries flags before any deployment. Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      */
-    function computeAddresses(address factoryAddress) external view {
+    function computeAddresses(address factoryAddress) external pure {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(
-            Create2Utils.isContractDeployedAtAddress(factoryAddress), "CREATE2 factory not deployed at provided address"
-        );
 
         // Log the header
-        // This includes the factory type, chain ID, and deployed library addresses
-        Logger.logBoxHeader("Computed Deterministic Library Addresses");
+        Logger.logBoxHeader("Computed Platform Library Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
-        Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logEmptyLine();
 
         // Compute the expected library addresses

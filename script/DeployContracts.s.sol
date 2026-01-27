@@ -148,6 +148,83 @@ contract DeployContracts is Script {
         _logDeployedAddresses(contracts, factoryAddress);
     }
 
+    /**
+     * @notice Compute and print platform contract addresses without deploying
+     * @dev Use this to preview addresses before deployment or for updating DeploymentConfig.sol.
+     *      Does not require RPC connection.
+     *      IMPORTANT: This function must be called with the correct --libraries flags to ensure
+     *      the library addresses are linked at compile time. The bash script compute_all_addresses.sh
+     *      handles this by first computing library addresses and passing them via --libraries.
+     * @param factoryAddress Address of the CREATE2 factory to use for address computation
+     * @param deployerSafeAddress Address of the Deployer Safe (computed by DeploySafe.s.sol)
+     */
+    function computeAddresses(address factoryAddress, address deployerSafeAddress) external pure {
+        // Validate inputs
+        require(factoryAddress != address(0), "Factory address cannot be zero");
+        require(deployerSafeAddress != address(0), "Deployer Safe address cannot be zero");
+
+        // Log header
+        Logger.logBoxHeader("Computed Platform Contract Addresses");
+        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("Deployer Safe", deployerSafeAddress);
+        Logger.logEmptyLine();
+
+        // Compute implementation addresses
+        Logger.logSection("Implementation Contracts");
+
+        address whitelistImplAddress = Create2Utils.computeAddress(
+            factoryAddress,
+            DeploymentConfig.WHITELIST_IMPL_SALT,
+            type(ImplementationWhitelistImplementation).creationCode
+        );
+        Logger.logKeyValue("ImplementationWhitelistImplementation", whitelistImplAddress);
+
+        address orgImplAddress = Create2Utils.computeAddress(
+            factoryAddress, DeploymentConfig.ORG_IMPL_SALT, type(OrganizationImplementation).creationCode
+        );
+        Logger.logKeyValue("OrganizationImplementation", orgImplAddress);
+
+        address accountImplAddress = Create2Utils.computeAddress(
+            factoryAddress, DeploymentConfig.ACCOUNT_IMPL_SALT, type(AccountImplementation).creationCode
+        );
+        Logger.logKeyValue("AccountImplementation", accountImplAddress);
+
+        // Compute OrganizationFactory address (depends on deployerSafeAddress constructor arg)
+        Logger.logSection("Factory Contracts");
+
+        bytes memory orgFactoryInitCode =
+            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
+        address orgFactoryAddress =
+            Create2Utils.computeAddress(factoryAddress, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode);
+        Logger.logKeyValue("OrganizationFactory", orgFactoryAddress);
+
+        // Compute ImplementationWhitelistProxy address
+        // (depends on whitelistImplAddress, orgImplAddress, accountImplAddress, deployerSafeAddress)
+        Logger.logSection("Proxy Contracts");
+
+        // Build the same init data that _deployWhitelistProxy uses
+        address[] memory organizationImplementationAddresses = new address[](1);
+        organizationImplementationAddresses[0] = orgImplAddress;
+        address[] memory accountImplementationAddresses = new address[](1);
+        accountImplementationAddresses[0] = accountImplAddress;
+
+        bytes memory initData = abi.encodeCall(
+            ImplementationWhitelistImplementation.initialize,
+            (deployerSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
+        );
+
+        bytes memory proxyBytecode = abi.encodePacked(
+            type(ImplementationWhitelistProxy).creationCode, abi.encode(whitelistImplAddress, initData)
+        );
+
+        address whitelistProxyAddress =
+            Create2Utils.computeAddress(factoryAddress, DeploymentConfig.WHITELIST_PROXY_SALT, proxyBytecode);
+        Logger.logKeyValue("ImplementationWhitelistProxy", whitelistProxyAddress);
+
+        Logger.logEmptyLine();
+        Logger.logBoxFooter();
+    }
+
     /// @dev Deploys all implementation contracts via CREATE2
     /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return implementationContracts Struct containing all deployed implementation addresses
