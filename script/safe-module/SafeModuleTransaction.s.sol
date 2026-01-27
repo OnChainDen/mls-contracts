@@ -243,11 +243,8 @@ contract SafeModuleTransaction is Script {
             Logger.logIndented("Already approved by this owner");
         }
 
-        // Count approvals after our approval
+        // Count approvals after our approval (includes the one we just submitted)
         uint256 approvalCount = _countApprovals(safeAddress, txHash, owners);
-        if (!alreadyApproved) {
-            approvalCount++; // Add our pending approval
-        }
 
         Logger.logKeyValue("Approvals after this", approvalCount);
 
