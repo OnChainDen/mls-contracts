@@ -396,15 +396,12 @@ contract SafeExecutorModuleTest is Test {
         vm.prank(authorizedExecutor);
         // Should not revert due to target restrictions (may revert for other reasons like no code)
         try module.executeOnBehalf(target, data) {
-        // Success is fine
-        }
-            catch {
+            // Success - verify the call was forwarded to the Safe
+            assertEq(mockSafe.lastCallTo(), target, "Call should be forwarded to the target");
+        } catch {
             // Failure is also fine (target may not be a contract)
             // The important thing is it didn't revert with CannotCallSafe or CannotCallModule
         }
-
-        // Verify the call was forwarded to the Safe
-        assertEq(mockSafe.lastCallTo(), target, "Call should be forwarded to the target");
     }
 
     function testFuzz_executeOnBehalf_anyValueInData(uint256 value) public {
