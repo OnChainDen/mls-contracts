@@ -514,6 +514,9 @@ safe-add-module: validate-signer-vars
 ifndef SAFE_TYPE
 	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
+endif
 	@echo "Adding module to Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
@@ -536,6 +539,9 @@ endif
 safe-remove-module: validate-signer-vars
 ifndef SAFE_TYPE
 	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+endif
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
 endif
 	@echo "Removing module from Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
