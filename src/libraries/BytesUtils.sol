@@ -41,8 +41,11 @@ library BytesUtils {
         pure
         returns (bytes memory result)
     {
-        // Case: Invalid range
-        if (startIndex + length > buffer.length) {
+        // Case: Invalid range (avoid overflow)
+        if (startIndex > buffer.length) {
+            return new bytes(0);
+        }
+        if (length > buffer.length - startIndex) {
             return new bytes(0);
         }
 
