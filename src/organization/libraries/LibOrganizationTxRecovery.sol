@@ -1,8 +1,9 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
-import {SignatureChecker} from "libraries/SignatureChecker.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 
 /**
@@ -166,6 +167,7 @@ library LibOrganizationTxRecovery {
      * @dev Checks if a signature is a valid recovery signature.
      *      The signature is valid if it's from the tx recovery address signing the hash.
      *      Supports both EOA and contract (ERC1271) recovery addresses.
+     *      Returns false if the signature is malformed or signer doesn't match.
      * @param hash The hash that was signed
      * @param signature The signature to validate
      * @return True if the signature is valid from the recovery address
@@ -178,8 +180,10 @@ library LibOrganizationTxRecovery {
             return false;
         }
 
-        // Use SignatureChecker to support both EOA and contract signers
-        return SignatureChecker.isValidSignatureNow(recoveryAddress, hash, signature);
+        // Use SignatureUtils to support both EOA and ERC-1271 contract signers
+        // Returns false if signature is malformed or signer doesn't match
+        (bool success, address signer) = SignatureUtils.tryRecoverSigner(signature, hash);
+        return success && signer == recoveryAddress;
     }
 
     /**

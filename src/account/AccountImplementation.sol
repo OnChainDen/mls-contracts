@@ -1,5 +1,8 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
+
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import {LibAccountOrganizationAddressStorage} from "account/libraries/storage/LibAccountOrganizationAddressStorage.sol";
 import {IAccount} from "interfaces/IAccount.sol";
@@ -21,23 +24,12 @@ contract AccountImplementation is IAccount {
         _;
     }
 
-    /**
-     * @notice Receives native tokens (ETH) sent to this account
-     * @dev Emits MLSWalletAccountNativeTokenReceived event when native tokens are received
-     */
+    /// @inheritdoc IAccount
     receive() external payable override {
         emit MLSWalletAccountNativeTokenReceived(msg.sender, msg.value);
     }
 
-    /**
-     * @notice Executes a transaction from this account
-     * @dev Can only be called by the associated Organization contract
-     * @param to The destination address of the transaction
-     * @param value The value of the transaction
-     * @param data The data of the transaction
-     * @param nonce The nonce for this transaction (computed by Organization)
-     * @param policyId The ID of the policy that governs this transaction
-     */
+    /// @inheritdoc IAccount
     function executeTransaction(address to, uint256 value, bytes calldata data, uint256 nonce, uint256 policyId)
         external
         override
@@ -53,23 +45,12 @@ contract AccountImplementation is IAccount {
         emit TransactionExecuted({to: to, value: value, data: data, nonce: nonce, policyId: policyId});
     }
 
-    /**
-     * @notice Gets the organization address that this account is associated with (the beacon)
-     * @return The organization address
-     */
+    /// @inheritdoc IAccount
     function getOrganizationAddress() external view override returns (address) {
         return LibAccountOrganizationAddressStorage.getOrganizationAddress();
     }
 
-    /**
-     * @notice Validates a signature according to ERC-1271
-     * @dev Delegates signature validation to the associated Organization contract.
-     *      Note: Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
-     *      requires isValidSignature to be a view function (cannot modify storage to track usage).
-     * @param hash The hash of the data that was signed
-     * @param signature The signature to validate (encoded with policyId, approver signatures, guardian signature)
-     * @return magicValue 0x1626ba7e if valid, 0xffffffff otherwise
-     */
+    /// @inheritdoc IERC1271
     function isValidSignature(bytes32 hash, bytes calldata signature)
         external
         view

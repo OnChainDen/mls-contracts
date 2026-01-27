@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {ValidationProofs} from "types/PolicyTypes.sol";
@@ -81,6 +82,11 @@ interface IOrganizationAccountTransaction {
     error InsufficientSignaturesLength();
 
     /**
+     * @notice Thrown when the initiator signature is invalid
+     */
+    error InvalidInitiatorSignature();
+
+    /**
      * @notice Thrown when a time-based limit is exceeded
      * @param policyId The policy ID that exceeded the limit
      */
@@ -100,7 +106,8 @@ interface IOrganizationAccountTransaction {
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
-     * @param signatures The signatures authorizing the transaction
+     * @param initiatorSignature The initiator's signature authorizing the transaction
+     * @param reviewSignatures The reviewer signatures (empty for auto-approve policies)
      * @param proofs The validation proofs containing policy data and merkle proofs
      */
     function executeAccountTransaction(
@@ -111,7 +118,8 @@ interface IOrganizationAccountTransaction {
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes calldata signatures,
+        bytes calldata initiatorSignature,
+        bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external;
 
@@ -125,7 +133,8 @@ interface IOrganizationAccountTransaction {
      * @param salt A user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param policyId The ID of the policy that governs this transaction
-     * @param signatures The signatures authorizing the rejection
+     * @param initiatorSignature The initiator's signature for the original transaction
+     * @param reviewSignatures The reviewer signatures authorizing the rejection
      * @param proofs The validation proofs containing policy data and merkle proofs
      */
     function rejectAccountTransaction(
@@ -136,7 +145,8 @@ interface IOrganizationAccountTransaction {
         uint256 salt,
         uint256 expirationTimestamp,
         uint256 policyId,
-        bytes calldata signatures,
+        bytes calldata initiatorSignature,
+        bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external;
 }

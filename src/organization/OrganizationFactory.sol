@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
@@ -16,9 +17,7 @@ import {ContractType, InitializationParams} from "types/CommonTypes.sol";
  * @author Den Technologies Inc
  */
 contract OrganizationFactory is IOrganizationFactory {
-    /**
-     * @notice The address authorized to deploy organization proxies
-     */
+    /// @inheritdoc IOrganizationFactory
     address public immutable override DEPLOYER_ADDRESS;
 
     /**
@@ -32,16 +31,7 @@ contract OrganizationFactory is IOrganizationFactory {
         DEPLOYER_ADDRESS = _deployerAddress;
     }
 
-    /**
-     * @notice Deploys and initializes a new OrganizationProxy at a deterministic address
-     * @dev Uses CREATE2 to ensure the same address across different chains.
-     *      Deployment and initialization are atomic - if initialization fails, the entire transaction reverts.
-     * @param salt The salt for CREATE2 deployment
-     * @param implementationAddress The address of the OrganizationImplementation contract
-     * @param whitelistAddress The address of the implementation whitelist contract
-     * @param initParams The initialization parameters for the organization
-     * @return organizationAddress The address of the deployed organization proxy
-     */
+    /// @inheritdoc IOrganizationFactory
     function deployOrganization(
         bytes32 salt,
         address implementationAddress,
@@ -74,13 +64,7 @@ contract OrganizationFactory is IOrganizationFactory {
         OrganizationImplementation(organizationAddress).initialize(initParams);
     }
 
-    /**
-     * @notice Computes the address where an organization proxy would be deployed
-     * @param salt The salt for CREATE2 deployment
-     * @param implementationAddress The address of the OrganizationImplementation contract
-     * @param whitelistAddress The address of the implementation whitelist contract
-     * @return The computed address
-     */
+    /// @inheritdoc IOrganizationFactory
     function computeOrganizationAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
         public
         view
