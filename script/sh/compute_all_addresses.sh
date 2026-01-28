@@ -101,6 +101,12 @@ GUARDIAN_SAFE_ADDRESS=$(extract_address "$SAFE_OUTPUT" "Guardian Safe")
 DEPLOYER_SAFE_ADDRESS=$(extract_address "$SAFE_OUTPUT" "Deployer Safe")
 
 # Verify we got the critical addresses
+if [[ -z "$GUARDIAN_SAFE_ADDRESS" ]]; then
+    clear_progress
+    echo "Error: Failed to extract Guardian Safe address from output"
+    echo "$SAFE_OUTPUT"
+    exit 1
+fi
 if [[ -z "$DEPLOYER_SAFE_ADDRESS" ]]; then
     clear_progress
     echo "Error: Failed to extract Deployer Safe address from output" >&2

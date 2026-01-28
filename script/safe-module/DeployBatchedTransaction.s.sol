@@ -12,8 +12,10 @@ import {Logger} from "script/libraries/Logger.sol";
  * @notice Deploys the BatchedTransaction contract via CREATE2
  * @dev This script deploys a security-focused batched transaction contract that provides:
  *      - No ETH transfers (value is hardcoded to 0 in encoding)
- *      - msg.sender validation (blocks calls to the Safe when delegatecalled)
- *      - Efficient transaction encoding (22 + N bytes per tx)
+ *      - address(this) validation (blocks calls to the Safe when delegatecalled, since
+ *        address(this) is the Safe's address during delegatecall)
+ *      - Efficient transaction encoding (28 bytes header per tx: 20 address + 8 dataLength,
+ *        plus N bytes of calldata)
  *
  *      Usage:
  *        forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \

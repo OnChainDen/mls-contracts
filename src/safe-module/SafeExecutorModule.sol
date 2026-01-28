@@ -25,7 +25,6 @@ interface ISafe {
  *      - Only CALL operations, except delegatecall is allowed ONLY to BatchedTransaction
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
- *      - No calls to the module itself
  *
  *      The Safe Executor EOA is immutable - to rotate, deploy a new module instance
  *      and have Safe owners swap modules via multisig transaction.
@@ -78,11 +77,6 @@ contract SafeExecutorModule is ISafeExecutorModule {
         // Case: Target is the Safe itself (prevents ownership/module modifications)
         if (to == SAFE) {
             revert CannotCallSafe(to);
-        }
-
-        // Case: Target is this module (prevents self-modification attempts)
-        if (to == address(this)) {
-            revert CannotCallModule(to);
         }
 
         // Determine operation type:

@@ -415,7 +415,6 @@ The `SafeExecutorModule` is a minimal Safe module with the following properties:
   - Uses `CALL` for all targets, except `DELEGATECALL` is allowed ONLY to `BatchedTransaction`
   - No ETH transfers (value must always be zero)
   - No calls to the Safe itself (prevents ownership/module modifications)
-  - No calls to the module itself
 
 The `DELEGATECALL` exception for `BatchedTransaction` enables batching multiple calls into a single transaction, which is essential for complex operations that need to be atomic.
 
@@ -441,7 +440,7 @@ make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress FACTORY=d
 The script validates:
 1. The executor address matches the expected address in `DeploymentConfig.sol`
 2. The target Safe is deployed at the expected address
-3. The `MultiSendCallOnly` contract is deployed at the expected address
+3. The `BatchedTransaction` contract is deployed at the expected address
 4. The CREATE2 factory is deployed
 
 #### Compute Module Address

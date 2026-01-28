@@ -102,6 +102,7 @@ help:
 	@echo "  SAFE_TYPE Safe type: guardian or deployer (for module commands)"
 	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
 	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
+	@echo "  ACTION    Action to check status for: add or remove (for check-safe-module-status)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
@@ -497,6 +498,9 @@ safe-add-module: validate-signer-vars
 ifndef SAFE_TYPE
 	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
 endif
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
+endif
 	@echo "Adding module to Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
@@ -519,6 +523,9 @@ endif
 safe-remove-module: validate-signer-vars
 ifndef SAFE_TYPE
 	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+endif
+ifndef EXECUTE
+	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
 endif
 	@echo "Removing module from Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"

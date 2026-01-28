@@ -12,7 +12,6 @@ pragma solidity 0.8.33;
  *      - Only CALL operations, except delegatecall is allowed ONLY to BatchedTransaction
  *      - No ETH value transfers (value must be zero)
  *      - No calls to the Safe itself (prevents ownership/module changes)
- *      - No calls to the module itself
  *
  *      The Safe Executor EOA is immutable - to rotate, deploy a new module instance
  *      and have Safe owners swap modules via multisig transaction.
@@ -28,10 +27,6 @@ interface ISafeExecutorModule {
     /// @notice Error thrown when attempting to call the Safe itself
     /// @param target The target address that was blocked
     error CannotCallSafe(address target);
-
-    /// @notice Error thrown when attempting to call the module itself
-    /// @param target The target address that was blocked
-    error CannotCallModule(address target);
 
     /// @notice Error thrown when the Safe execution fails
     error ExecutionFailed();
@@ -49,7 +44,6 @@ interface ISafeExecutorModule {
      * @notice Executes a transaction on behalf of the Safe
      * @dev Only callable by the authorized executor. Enforces:
      *      - No calls to the Safe address (prevents ownership/module modifications)
-     *      - No calls to this module (prevents self-modification attempts)
      *      - No ETH value transfers (hardcoded to 0)
      *      - Uses CALL for all targets except BatchedTransaction (which uses DELEGATECALL)
      * @param to The target contract address
