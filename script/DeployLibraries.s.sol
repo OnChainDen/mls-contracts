@@ -10,7 +10,12 @@ import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {DependentLibraries, IndependentLibraries, PlatformLibraries} from "script/libraries/Types.sol";
+import {
+    DependentLibraries,
+    IndependentLibraries,
+    LinkedLibraryInfo,
+    PlatformLibraries
+} from "script/libraries/Types.sol";
 
 /**
  * @title DeployLibraries
@@ -81,9 +86,22 @@ contract DeployLibraries is BaseDeployScript {
             factoryAddress, "DeployLibraries - Stage 2: Dependent (Init, AccountSig)"
         );
 
-        // Script-specific validations
-        _validateIndependentLibrariesDeployedOrRevert();
-        _validateDependentLibrariesLinkedOrRevert();
+        // Get expected addresses from deployment.toml
+        PlatformLibraries memory expected = getExpectedLibraryAddresses();
+
+        // Validate Admin is linked in LibOrganizationInitialization and deployed
+        Logger.logSection("Verify LibOrganizationAdmin Linked and Deployed");
+        bytes memory initInitCode = type(LibOrganizationInitialization).creationCode;
+        LinkedLibraryInfo[] memory adminLib = new LinkedLibraryInfo[](1);
+        adminLib[0] = LinkedLibraryInfo(expected.adminAddress, "LibOrganizationAdmin");
+        LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(initInitCode, adminLib);
+
+        // Validate Policy is linked in LibOrganizationAccountSignature and deployed
+        Logger.logSection("Verify LibOrganizationPolicy Linked and Deployed");
+        bytes memory accountSigInitCode = type(LibOrganizationAccountSignature).creationCode;
+        LinkedLibraryInfo[] memory policyLib = new LinkedLibraryInfo[](1);
+        policyLib[0] = LinkedLibraryInfo(expected.policyAddress, "LibOrganizationPolicy");
+        LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(accountSigInitCode, policyLib);
 
         // Start broadcasting transactions
         vm.startBroadcast();
@@ -192,83 +210,6 @@ contract DeployLibraries is BaseDeployScript {
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
         );
-    }
-
-    /// @dev Validates that independent libraries (Policy and Admin) are deployed
-    function _validateIndependentLibrariesDeployedOrRevert() internal {
-        Logger.logSection("Verify Independent Libraries Deployed");
-
-        // Get expected addresses from deployment.toml (not computed, to avoid --libraries affecting bytecode)
-        PlatformLibraries memory expected = getExpectedLibraryAddresses();
-
-        bool allDeployed = true;
-
-        // Check if Policy is deployed at expected address
-        if (!Create2Utils.isContractDeployedAtAddress(expected.policyAddress)) {
-            Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expected.policyAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("LibOrganizationPolicy deployed at expected address");
-        }
-
-        // Check if Admin is deployed at expected address
-        if (!Create2Utils.isContractDeployedAtAddress(expected.adminAddress)) {
-            Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expected.adminAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("LibOrganizationAdmin deployed at expected address");
-        }
-
-        if (!allDeployed) {
-            Logger.logEmptyLine();
-            Logger.logWarn("WARNING: Independent libraries not deployed!");
-            Logger.logIndented("Run runDeployIndependentLibs first, then re-run runDeployDependentLibs.");
-            Logger.logEmptyLine();
-            revert("Independent libraries not deployed at expected addresses");
-        }
-    }
-
-    /// @dev Validates that dependent libraries have the independent libraries correctly linked
-    ///      Checks that the --libraries flag was used with correct addresses for Policy and Admin
-    function _validateDependentLibrariesLinkedOrRevert() internal {
-        Logger.logSection("Verify Libraries Linked in Bytecode");
-
-        // Get expected addresses from deployment.toml (not computed, to avoid --libraries affecting computation)
-        PlatformLibraries memory expected = getExpectedLibraryAddresses();
-
-        // Get the creation code of dependent libraries
-        bytes memory initInitCode = type(LibOrganizationInitialization).creationCode;
-        bytes memory accountSigInitCode = type(LibOrganizationAccountSignature).creationCode;
-
-        bool allLinked = true;
-
-        // Verify LibOrganizationInitialization has LibOrganizationAdmin linked
-        if (!LinkedLibrariesUtils.isAddressInInitCode(initInitCode, expected.adminAddress)) {
-            Logger.logFail("LibOrganizationAdmin NOT linked in LibOrganizationInitialization bytecode");
-            Logger.logKeyValue("  Expected Admin address", expected.adminAddress);
-            allLinked = false;
-        } else {
-            Logger.logPass("LibOrganizationAdmin linked in LibOrganizationInitialization");
-        }
-
-        // Verify LibOrganizationAccountSignature has LibOrganizationPolicy linked
-        if (!LinkedLibrariesUtils.isAddressInInitCode(accountSigInitCode, expected.policyAddress)) {
-            Logger.logFail("LibOrganizationPolicy NOT linked in LibOrganizationAccountSignature bytecode");
-            Logger.logKeyValue("  Expected Policy address", expected.policyAddress);
-            allLinked = false;
-        } else {
-            Logger.logPass("LibOrganizationPolicy linked in LibOrganizationAccountSignature");
-        }
-
-        if (!allLinked) {
-            Logger.logEmptyLine();
-            Logger.logWarn("WARNING: Libraries not correctly linked!");
-            Logger.logIndented("Use --libraries flag with Policy and Admin addresses.");
-            Logger.logEmptyLine();
-            revert("Dependent libraries not correctly linked. Use --libraries flag.");
-        }
     }
 
     /// @dev Logs independent library addresses in a formatted summary

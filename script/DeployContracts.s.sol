@@ -13,7 +13,7 @@ import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";
+import {LinkedLibraryInfo, PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeployContracts
@@ -85,8 +85,7 @@ contract DeployContracts is BaseDeployScript {
         validateAndInitializeDeploymentOrRevert(factoryAddress, "DeployContracts");
 
         // Script-specific validations
-        _validateLibrariesLinkedOrRevert();
-        _validateLibrariesDeployedOrRevert();
+        _validateLinkedLibrariesOrRevert();
         _validateSafeInfrastructureDeployedOrRevert();
         _validateSafeMultisigsDeployedOrRevert();
         address deployerSafeAddress = getExpectedDeployerSafeAddress();
@@ -266,57 +265,6 @@ contract DeployContracts is BaseDeployScript {
         );
     }
 
-    /// @dev Verifies that platform libraries are deployed at the expected addresses from deployment.toml
-    function _validateLibrariesDeployedOrRevert() internal {
-        Logger.logSection("Verify Library Addresses");
-
-        // Get expected library addresses from deployment.toml (based on which factory was used)
-        PlatformLibraries memory expectedLibAddresses = getExpectedLibraryAddresses();
-
-        bool allDeployed = true;
-
-        // Check if libraries are deployed at expected addresses
-        if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.policyAddress)) {
-            Logger.logFail("LibOrganizationPolicy NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedLibAddresses.policyAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("LibOrganizationPolicy deployed at expected address");
-        }
-
-        if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.adminAddress)) {
-            Logger.logFail("LibOrganizationAdmin NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedLibAddresses.adminAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("LibOrganizationAdmin deployed at expected address");
-        }
-
-        if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.initializationAddress)) {
-            Logger.logFail("LibOrganizationInitialization NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedLibAddresses.initializationAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("LibOrganizationInitialization deployed at expected address");
-        }
-
-        if (!Create2Utils.isContractDeployedAtAddress(expectedLibAddresses.accountSignatureAddress)) {
-            Logger.logFail("LibOrganizationAccountSignature NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedLibAddresses.accountSignatureAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("LibOrganizationAccountSignature deployed at expected address");
-        }
-
-        if (!allDeployed) {
-            Logger.logEmptyLine();
-            Logger.logWarn("WARNING: Some libraries are not deployed!");
-            Logger.logIndented("Run DeployLibraries.s.sol first, then re-run this script with --libraries flags.");
-            Logger.logEmptyLine();
-            revert("Some libraries are not deployed at expected addresses");
-        }
-    }
-
     /// @dev Verifies that Safe infrastructure is deployed at the expected addresses from deployment.toml
     function _validateSafeInfrastructureDeployedOrRevert() internal {
         Logger.logSection("Verify Safe 1.3.0 Infrastructure");
@@ -435,35 +383,28 @@ contract DeployContracts is BaseDeployScript {
         }
     }
 
-    /// @dev Validates that external libraries are properly linked via --libraries flag
+    /// @dev Validates that external libraries are properly linked via --libraries flag AND deployed
     ///      Uses expected addresses from deployment.toml to verify the correct addresses are embedded
-    function _validateLibrariesLinkedOrRevert() internal {
+    function _validateLinkedLibrariesOrRevert() internal {
+        Logger.logSection("Verify Libraries Linked and Deployed");
+
+        // Get expected library addresses from deployment.toml (based on which factory was used)
+        PlatformLibraries memory expected = getExpectedLibraryAddresses();
+
         // Get the creation code of OrganizationImplementation
         // If libraries aren't linked via --libraries flag, the creation code will have
         // placeholder bytes instead of the actual library addresses
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
-        // Get expected library addresses from deployment.toml (based on which factory was used)
-        PlatformLibraries memory expectedLibAddresses = getExpectedLibraryAddresses();
+        // Build array of libraries to validate
+        LinkedLibraryInfo[] memory libs = new LinkedLibraryInfo[](4);
+        libs[0] = LinkedLibraryInfo(expected.policyAddress, "LibOrganizationPolicy");
+        libs[1] = LinkedLibraryInfo(expected.adminAddress, "LibOrganizationAdmin");
+        libs[2] = LinkedLibraryInfo(expected.initializationAddress, "LibOrganizationInitialization");
+        libs[3] = LinkedLibraryInfo(expected.accountSignatureAddress, "LibOrganizationAccountSignature");
 
-        // Verify each expected library address appears in the creation code
-        // If --libraries flag wasn't used (or used with wrong addresses), these won't be in the bytecode
-        require(
-            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.policyAddress),
-            "LibOrgPolicy not linked. Use --libraries"
-        );
-        require(
-            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.adminAddress),
-            "LibOrgAdmin not linked. Use --libraries"
-        );
-        require(
-            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.initializationAddress),
-            "LibOrgInit not linked. Use --libraries"
-        );
-        require(
-            LinkedLibrariesUtils.isAddressInInitCode(initCode, expectedLibAddresses.accountSignatureAddress),
-            "LibOrgAccSig not linked. Use --libraries"
-        );
+        // Validate all libraries are linked in bytecode and deployed
+        LinkedLibrariesUtils.validateLinkedLibrariesOrRevert(initCode, libs);
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary

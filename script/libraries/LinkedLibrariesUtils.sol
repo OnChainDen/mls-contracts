@@ -2,6 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Create2Utils} from "script/libraries/Create2Utils.sol";
+import {Logger} from "script/libraries/Logger.sol";
+import {LinkedLibraryInfo} from "script/libraries/Types.sol";
+
 /**
  * @title LinkedLibrariesUtils
  * @notice Utility functions for working with linked library bytecode
@@ -48,5 +52,50 @@ library LinkedLibrariesUtils {
 
         // Case: we didn't find the address in the byte array
         return false;
+    }
+
+    /// @dev Validates that all libraries in the array are linked in the init code AND deployed
+    /// @param initCode The bytecode to check for linked library addresses
+    /// @param libraries Array of library info to validate (address and name)
+    function validateLinkedLibrariesOrRevert(bytes memory initCode, LinkedLibraryInfo[] memory libraries)
+        internal
+        view
+    {
+        bool allValid = true;
+
+        for (uint256 i = 0; i < libraries.length; ++i) {
+            LinkedLibraryInfo memory lib = libraries[i];
+            bool isLinked = isAddressInInitCode(initCode, lib.expectedAddress);
+            bool isDeployed = Create2Utils.isContractDeployedAtAddress(lib.expectedAddress);
+
+            // Case: Library is linked and deployed
+            if (isLinked && isDeployed) {
+                Logger.logPass(string.concat(lib.name, " linked and deployed"));
+                continue;
+            }
+
+            // Case: Library is not linked
+            if (!isLinked) {
+                Logger.logFail(string.concat(lib.name, " NOT linked in bytecode"));
+                Logger.logKeyValue("  Expected", lib.expectedAddress);
+                allValid = false;
+            }
+
+            // Case: Library is not deployed
+            if (!isDeployed) {
+                Logger.logFail(string.concat(lib.name, " NOT deployed at expected address"));
+                Logger.logKeyValue("  Expected", lib.expectedAddress);
+                allValid = false;
+            }
+        }
+
+        // Case: One or more libraries failed validation
+        if (!allValid) {
+            Logger.logEmptyLine();
+            Logger.logWarn("WARNING: Some libraries are not linked or deployed!");
+            Logger.logIndented("Ensure --libraries flag is used with correct addresses.");
+            Logger.logEmptyLine();
+            revert("Library validation failed. See logs above for details.");
+        }
     }
 }
