@@ -54,7 +54,7 @@ contract DeploySafeExecutorModule is BaseDeployScript {
 
         // Validate executor address matches expected configuration
         require(executorAddress != address(0), "Executor address cannot be zero");
-        _validateExecutorAddressOrRevert(block.chainid, isGuardian, executorAddress);
+        _validateExecutorAddressOrRevert(isGuardian, executorAddress);
 
         // Get the Safe address for this safeType
         address safeAddress = _getSafeAddress(isGuardian);
@@ -75,7 +75,6 @@ contract DeploySafeExecutorModule is BaseDeployScript {
 
         // Log the deployment header
         Logger.logBoxHeader("Safe Executor Module Deployment");
-        Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Safe Type", safeType);
@@ -169,11 +168,10 @@ contract DeploySafeExecutorModule is BaseDeployScript {
     }
 
     /// @dev Validates that the provided executor address matches the expected address for the target
-    /// @param chainId The target chain ID
     /// @param isGuardian True if validating for Guardian Safe, false for Deployer Safe
     /// @param executorAddress The executor address to validate
-    function _validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal {
-        (address expectedGuardian, address expectedDeployer) = getExpectedExecutorEOAAddresses(chainId);
+    function _validateExecutorAddressOrRevert(bool isGuardian, address executorAddress) internal {
+        (address expectedGuardian, address expectedDeployer) = getExpectedExecutorEOAAddresses();
 
         address expected = isGuardian ? expectedGuardian : expectedDeployer;
         require(executorAddress == expected, "Invalid executor address for target");

@@ -194,10 +194,10 @@ abstract contract BaseDeployScript is Script {
         }
     }
 
-    /// @dev Returns true if the given chain ID is a production network
-    /// @param chainId The chain ID to check
+    /// @dev Returns true if the current chain is a production network
     /// @return True if the chain is a production network
-    function _isProductionChain(uint256 chainId) internal pure returns (bool) {
+    function _isProductionChain() internal view returns (bool) {
+        uint256 chainId = _getChainId();
         return chainId == 1 // Ethereum Mainnet
             || chainId == 10 // Optimism
             || chainId == 56 // BNB Smart Chain
@@ -245,10 +245,7 @@ abstract contract BaseDeployScript is Script {
     /// @dev Logs whether a production chain is detected and prompts for confirmation if so
     /// @param scriptName Human-readable script name for logging
     function warnAndConfirmIfProductionChain(string memory scriptName) internal {
-        uint256 chainId = _getChainId();
-        bool isProdChain = _isProductionChain(chainId);
-
-        if (isProdChain) {
+        if (_isProductionChain()) {
             // solhint-disable-next-line func-named-parameters
             string memory context = string(
                 abi.encodePacked(
@@ -258,7 +255,7 @@ abstract contract BaseDeployScript is Script {
                     scriptName,
                     "\n",
                     "  Chain ID: ",
-                    StringUtils.toString(chainId)
+                    StringUtils.toString(_getChainId())
                 )
             );
             _promptForConfirmationOrRevert(context);
@@ -266,7 +263,6 @@ abstract contract BaseDeployScript is Script {
         } else {
             Logger.logInfo("NON-PRODUCTION CHAIN DETECTED");
             Logger.logKeyValue("Script", scriptName);
-            Logger.logKeyValue("Chain ID", chainId);
             Logger.logEmptyLine();
         }
     }
@@ -450,22 +446,18 @@ abstract contract BaseDeployScript is Script {
     // Read Safe multisig configurations from deployment.toml based on environment (prod/nonprod)
     // ==============================================================================
 
-    /// @dev Returns Guardian Safe configuration based on chain ID (prod vs nonprod)
-    /// @param chainId The target chain ID
+    /// @dev Returns Guardian Safe configuration based on current chain (prod vs nonprod)
     /// @return ownerAddresses Array of owner addresses for the Guardian Safe
     /// @return threshold Required number of signatures
-    function getGuardianSafeConfig(uint256 chainId)
-        internal
-        returns (address[] memory ownerAddresses, uint256 threshold)
-    {
+    function getGuardianSafeConfig() internal returns (address[] memory ownerAddresses, uint256 threshold) {
         string memory toml = _toml();
-        string memory env = _isProductionChain(chainId) ? "prod" : "nonprod";
+        string memory env = _isProductionChain() ? "prod" : "nonprod";
         string memory prefix = string.concat(".safe.", env);
 
         threshold = vm.parseTomlUint(toml, string.concat(prefix, ".guardian_safe_threshold"));
 
         // For production, we have 3 owners; for non-production, we have 1 owner
-        if (_isProductionChain(chainId)) {
+        if (_isProductionChain()) {
             ownerAddresses = new address[](3);
             ownerAddresses[0] = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_owner_1"));
             ownerAddresses[1] = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_owner_2"));
@@ -476,22 +468,18 @@ abstract contract BaseDeployScript is Script {
         }
     }
 
-    /// @dev Returns Deployer Safe configuration based on chain ID (prod vs nonprod)
-    /// @param chainId The target chain ID
+    /// @dev Returns Deployer Safe configuration based on current chain (prod vs nonprod)
     /// @return ownerAddresses Array of owner addresses for the Deployer Safe
     /// @return threshold Required number of signatures
-    function getDeployerSafeConfig(uint256 chainId)
-        internal
-        returns (address[] memory ownerAddresses, uint256 threshold)
-    {
+    function getDeployerSafeConfig() internal returns (address[] memory ownerAddresses, uint256 threshold) {
         string memory toml = _toml();
-        string memory env = _isProductionChain(chainId) ? "prod" : "nonprod";
+        string memory env = _isProductionChain() ? "prod" : "nonprod";
         string memory prefix = string.concat(".safe.", env);
 
         threshold = vm.parseTomlUint(toml, string.concat(prefix, ".deployer_safe_threshold"));
 
         // For production, we have 3 owners; for non-production, we have 1 owner
-        if (_isProductionChain(chainId)) {
+        if (_isProductionChain()) {
             ownerAddresses = new address[](3);
             ownerAddresses[0] = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_owner_1"));
             ownerAddresses[1] = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_owner_2"));
@@ -502,23 +490,19 @@ abstract contract BaseDeployScript is Script {
         }
     }
 
-    /// @dev Returns the expected Safe Executor EOA addresses based on chain ID (prod vs nonprod)
-    /// @param chainId The target chain ID
+    /// @dev Returns the expected Safe Executor EOA addresses based on current chain (prod vs nonprod)
     /// @return guardianExecutor Expected Safe Executor EOA address for Guardian Safe module
     /// @return deployerExecutor Expected Safe Executor EOA address for Deployer Safe module
-    function getExpectedExecutorEOAAddresses(uint256 chainId)
-        internal
-        returns (address guardianExecutor, address deployerExecutor)
-    {
+    function getExpectedExecutorEOAAddresses() internal returns (address guardianExecutor, address deployerExecutor) {
         string memory toml = _toml();
-        string memory env = _isProductionChain(chainId) ? "prod" : "nonprod";
+        string memory env = _isProductionChain() ? "prod" : "nonprod";
         string memory prefix = string.concat(".safe.", env);
 
         guardianExecutor = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_executor_eoa"));
         deployerExecutor = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_executor_eoa"));
 
         // Validate addresses are set for production chains
-        if (_isProductionChain(chainId)) {
+        if (_isProductionChain()) {
             require(guardianExecutor != address(0), "Guardian Executor EOA not set in deployment.toml for production");
             require(deployerExecutor != address(0), "Deployer Executor EOA not set in deployment.toml for production");
         }

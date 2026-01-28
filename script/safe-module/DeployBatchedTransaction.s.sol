@@ -50,7 +50,6 @@ contract DeployBatchedTransaction is BaseDeployScript {
 
         // Log the deployment header
         Logger.logBoxHeader("BatchedTransaction Deployment");
-        Logger.logKeyValue("Chain ID", block.chainid);
         Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();

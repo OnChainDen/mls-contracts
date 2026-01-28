@@ -74,14 +74,11 @@ contract DeploySafe is BaseDeployScript {
         // Prevent using the production Den Factory deployer for this script
         validateNotProductionDenFactoryDeployerOrRevert();
 
-        // Get chain ID using assembly for 0.7.x compatibility
-        uint256 chainId = _getChainId();
+        // Get the Guardian Safe configuration from deployment.toml based on current chain
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig();
 
-        // Get the Guardian Safe configuration from deployment.toml based on chain ID
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(chainId);
-
-        // Get the Deployer Safe configuration from deployment.toml based on chain ID
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(chainId);
+        // Get the Deployer Safe configuration from deployment.toml based on current chain
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig();
 
         // Log the deployment header
         logDeploymentHeader();
@@ -285,19 +282,15 @@ contract DeploySafe is BaseDeployScript {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
 
-        // Get chain ID using assembly for 0.7.x compatibility
-        uint256 chainId = _getChainId();
+        // Get the Guardian Safe configuration from deployment.toml based on current chain
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig();
 
-        // Get the Guardian Safe configuration from deployment.toml based on chain ID
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(chainId);
-
-        // Get the Deployer Safe configuration from deployment.toml based on chain ID
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(chainId);
+        // Get the Deployer Safe configuration from deployment.toml based on current chain
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig();
 
         // Log header
         Logger.logBoxHeader("Computed Safe 1.3.0 Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
-        Logger.logKeyValue("Chain ID", chainId);
         Logger.logEmptyLine();
 
         // Compute Safe Infrastructure addresses

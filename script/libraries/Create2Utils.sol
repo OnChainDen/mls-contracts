@@ -47,19 +47,6 @@ library Create2Utils {
         return computeCreate2Address(salt, keccak256(initCode), factoryAddress);
     }
 
-    // ==================== Chain ID Utilities ====================
-    // For 0.7.x compatibility (block.chainid was added in 0.8.0)
-    // ==============================================================================
-
-    /// @dev Gets the current chain ID using inline assembly for 0.7.x compatibility
-    /// @return chainId The chain ID of the current network
-    function getChainId() internal view returns (uint256 chainId) {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            chainId := chainid()
-        }
-    }
-
     // ==================== Deployment Functions ====================
     // ==============================================================================
 
