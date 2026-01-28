@@ -875,7 +875,7 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | GnosisSafeProxyFactory | `0x04acB79cD2c208Fc4B983d92971A41F709532Ff5` |
 | CompatibilityFallbackHandler | `0xBF32F3DCE01B6c67E454066f8969Deee79D74a55` |
 | MultiSend | `0xe0487528D742Bd9e6295AE6f3873175f032ba8f3` |
-| MultiSendCallOnly | `0x5f7fd4Bd58C7777F7C777Cd4C19cF68Fc0A17Dc4` |
+| MultiSendCallOnly | `0xD5c219A054E9fBceD9D9493f546a7B4995101e4B` |
 | CreateCall | `0x7880435e91818C84bfAdC2f454B8A92942f7AcbD` |
 | SimulateTxAccessor | `0x205CeDEBdB936D473031f6140d50C11aeC948773` |
 | Guardian Safe | `0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305` |
@@ -889,7 +889,7 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | GnosisSafeProxyFactory | `0x400F1f8fC868476bAb030909F049a70074570c7e` |
 | CompatibilityFallbackHandler | `0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0` |
 | MultiSend | `0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479` |
-| MultiSendCallOnly | `0x1D6535926E595Bb84Fc4d548E6d3615212EDa92C` |
+| MultiSendCallOnly | `0x73D5641c3d1E6c53bDa6D06231Cbd7b3A43F391B` |
 | CreateCall | `0x619B2299DD5C77DF72AE1a8a70885D89E423B382` |
 | SimulateTxAccessor | `0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d` |
 | Guardian Safe | `0x4fbeF24b88228A6639409150214bb5A798930fA9` |
