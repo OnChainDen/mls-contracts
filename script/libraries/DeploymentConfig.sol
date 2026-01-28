@@ -122,7 +122,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         });
     }
 
-    /// @dev Returns expected Guardian Safe address based on the initialized factory
+    /// @dev Returns expected Guardian Safe address based on the initialized factory and chain (prod vs nonprod)
     ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
     /// @return guardianSafeAddress The expected Guardian Safe address
     function getExpectedGuardianSafeAddress() internal returns (address guardianSafeAddress) {
@@ -131,11 +131,12 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".guardian_safe"));
+        string memory variant = _isProductionChain() ? "prod" : "nonprod";
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".guardian_safe"));
         return vm.parseTomlAddress(toml, key);
     }
 
-    /// @dev Returns expected Deployer Safe address based on the initialized factory
+    /// @dev Returns expected Deployer Safe address based on the initialized factory and chain (prod vs nonprod)
     ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
     /// @return deployerSafeAddress The expected Deployer Safe address
     function getExpectedDeployerSafeAddress() internal returns (address deployerSafeAddress) {
@@ -144,12 +145,41 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".deployer_safe"));
+        string memory variant = _isProductionChain() ? "prod" : "nonprod";
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".deployer_safe"));
         return vm.parseTomlAddress(toml, key);
     }
 
-    /// @dev Returns expected Safe Executor Module addresses based on the initialized factory
+    /// @dev Returns expected OrganizationFactory address based on the initialized factory and chain (prod vs nonprod)
     ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
+    /// @return orgFactoryAddress The expected OrganizationFactory address
+    function getExpectedOrgFactoryAddress() internal returns (address orgFactoryAddress) {
+        require(
+            _factoryAddress != address(0), "Factory not initialized - call validateAndInitializeFactoryOrRevert() first"
+        );
+
+        string memory toml = _toml();
+        string memory variant = _isProductionChain() ? "prod" : "nonprod";
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".org_factory"));
+        return vm.parseTomlAddress(toml, key);
+    }
+
+    /// @dev Returns expected ImplementationWhitelistProxy address based on the initialized factory and chain
+    ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
+    /// @return whitelistProxyAddress The expected ImplementationWhitelistProxy address
+    function getExpectedWhitelistProxyAddress() internal returns (address whitelistProxyAddress) {
+        require(
+            _factoryAddress != address(0), "Factory not initialized - call validateAndInitializeFactoryOrRevert() first"
+        );
+
+        string memory toml = _toml();
+        string memory variant = _isProductionChain() ? "prod" : "nonprod";
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".whitelist_proxy"));
+        return vm.parseTomlAddress(toml, key);
+    }
+
+    /// @dev Returns expected Safe Executor Module addresses based on the initialized factory and chain (prod vs
+    /// nonprod) NOTE: validateAndInitializeFactoryOrRevert() must be called first
     /// @return guardianModuleAddress Expected Guardian Safe Executor Module address
     /// @return deployerModuleAddress Expected Deployer Safe Executor Module address
     function getExpectedSafeExecutorModuleAddresses()
@@ -161,7 +191,8 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory prefix = string(abi.encodePacked(".factory.", _factoryName));
+        string memory variant = _isProductionChain() ? "prod" : "nonprod";
+        string memory prefix = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant));
 
         guardianModuleAddress =
             vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_executor_module")));
@@ -187,18 +218,22 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         require(batchedTransactionAddress != address(0), "BatchedTransaction address not set in deployment.toml");
     }
 
-    /// @dev Returns Guardian Safe configuration based on current chain (prod vs nonprod)
+    /// @dev Returns Guardian Safe configuration for a specific variant
+    /// @param variant The Safe variant ("prod" or "nonprod")
     /// @return ownerAddresses Array of owner addresses for the Guardian Safe
     /// @return threshold Required number of signatures
-    function getGuardianSafeConfig() internal returns (address[] memory ownerAddresses, uint256 threshold) {
+    function getGuardianSafeConfig(string memory variant)
+        internal
+        returns (address[] memory ownerAddresses, uint256 threshold)
+    {
         string memory toml = _toml();
-        string memory env = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string(abi.encodePacked(".safe.", env));
+        string memory prefix = string(abi.encodePacked(".safe.", variant));
 
         threshold = vm.parseTomlUint(toml, string(abi.encodePacked(prefix, ".guardian_safe_threshold")));
 
-        // For production, we have 3 owners; for non-production, we have 1 owner
-        if (_isProductionChain()) {
+        // Check if this is prod variant (has 3 owners) or nonprod (has 1 owner)
+        bool isProd = keccak256(bytes(variant)) == keccak256(bytes("prod"));
+        if (isProd) {
             ownerAddresses = new address[](3);
             ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_owner_1")));
             ownerAddresses[1] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_owner_2")));
@@ -209,18 +244,22 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         }
     }
 
-    /// @dev Returns Deployer Safe configuration based on current chain (prod vs nonprod)
+    /// @dev Returns Deployer Safe configuration for a specific variant
+    /// @param variant The Safe variant ("prod" or "nonprod")
     /// @return ownerAddresses Array of owner addresses for the Deployer Safe
     /// @return threshold Required number of signatures
-    function getDeployerSafeConfig() internal returns (address[] memory ownerAddresses, uint256 threshold) {
+    function getDeployerSafeConfig(string memory variant)
+        internal
+        returns (address[] memory ownerAddresses, uint256 threshold)
+    {
         string memory toml = _toml();
-        string memory env = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string(abi.encodePacked(".safe.", env));
+        string memory prefix = string(abi.encodePacked(".safe.", variant));
 
         threshold = vm.parseTomlUint(toml, string(abi.encodePacked(prefix, ".deployer_safe_threshold")));
 
-        // For production, we have 3 owners; for non-production, we have 1 owner
-        if (_isProductionChain()) {
+        // Check if this is prod variant (has 3 owners) or nonprod (has 1 owner)
+        bool isProd = keccak256(bytes(variant)) == keccak256(bytes("prod"));
+        if (isProd) {
             ownerAddresses = new address[](3);
             ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_1")));
             ownerAddresses[1] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_2")));

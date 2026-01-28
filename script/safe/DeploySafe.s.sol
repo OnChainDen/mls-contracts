@@ -65,9 +65,12 @@ contract DeploySafe is BaseDeployScript {
         // Common deployment initialization (factory validation, confirmations, header logging)
         validateAndInitializeDeploymentOrRevert(factoryAddress, "DeploySafe");
 
+        // Determine variant based on chain (prod for production chains, nonprod otherwise)
+        string memory variant = _isProductionChain() ? "prod" : "nonprod";
+
         // Get Safe configurations (after init since they read from TOML)
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig();
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig();
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(variant);
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(variant);
 
         // Start broadcasting transactions
         vm.startBroadcast();
@@ -256,23 +259,32 @@ contract DeploySafe is BaseDeployScript {
     }
 
     /**
-     * @notice Computes and displays expected Safe addresses without deploying
+     * @notice Computes and displays expected Safe addresses for a specific variant without deploying
      * @dev Use this to preview addresses before deployment. Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
+     * @param safeVariant The Safe configuration variant to use ("prod" or "nonprod")
      */
-    function computeAddresses(address factoryAddress) external {
+    function computeAddresses(address factoryAddress, string calldata safeVariant) external {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
 
-        // Get the Guardian Safe configuration from deployment.toml based on current chain
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig();
+        // Validate the safeVariant
+        bytes32 variantHash = keccak256(bytes(safeVariant));
+        require(
+            variantHash == keccak256(bytes("prod")) || variantHash == keccak256(bytes("nonprod")),
+            "Invalid safeVariant - must be 'prod' or 'nonprod'"
+        );
 
-        // Get the Deployer Safe configuration from deployment.toml based on current chain
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig();
+        // Get the Guardian Safe configuration for the specified variant
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(safeVariant);
+
+        // Get the Deployer Safe configuration for the specified variant
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(safeVariant);
 
         // Log header
         Logger.logBoxHeader("Computed Safe 1.3.0 Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("Safe Variant", safeVariant);
         Logger.logEmptyLine();
 
         // Compute Safe Infrastructure addresses

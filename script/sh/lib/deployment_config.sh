@@ -148,7 +148,7 @@ get_lib_org_account_sig() {
 }
 
 # =============================================================================
-# Safe Config Getters
+# Safe Config Getters (from [safe.*] sections)
 # =============================================================================
 
 # Get guardian executor EOA address
@@ -177,6 +177,58 @@ get_guardian_safe_owner() {
 get_deployer_safe_owner() {
     local env="$1"
     get_config ".safe.$env.deployer_safe_owner_1"
+}
+
+# =============================================================================
+# Environment-Dependent Address Getters (from [factory.*.env.*] sections)
+# =============================================================================
+
+# Get guardian Safe address for a factory/env combination
+# Usage: get_guardian_safe_address "arachnid" "nonprod"
+get_guardian_safe_address() {
+    local factory="$1"
+    local env="$2"
+    get_config ".factory[\"$factory\"].env.$env.guardian_safe"
+}
+
+# Get deployer Safe address for a factory/env combination
+# Usage: get_deployer_safe_address "arachnid" "nonprod"
+get_deployer_safe_address() {
+    local factory="$1"
+    local env="$2"
+    get_config ".factory[\"$factory\"].env.$env.deployer_safe"
+}
+
+# Get OrganizationFactory address for a factory/env combination
+# Usage: get_org_factory_address "arachnid" "nonprod"
+get_org_factory_address() {
+    local factory="$1"
+    local env="$2"
+    get_config ".factory[\"$factory\"].env.$env.org_factory"
+}
+
+# Get ImplementationWhitelistProxy address for a factory/env combination
+# Usage: get_whitelist_proxy_address "arachnid" "nonprod"
+get_whitelist_proxy_address() {
+    local factory="$1"
+    local env="$2"
+    get_config ".factory[\"$factory\"].env.$env.whitelist_proxy"
+}
+
+# Get guardian module address for a factory/env combination
+# Usage: get_guardian_module_address "arachnid" "nonprod"
+get_guardian_module_address() {
+    local factory="$1"
+    local env="$2"
+    get_config ".factory[\"$factory\"].env.$env.guardian_safe_executor_module"
+}
+
+# Get deployer module address for a factory/env combination
+# Usage: get_deployer_module_address "arachnid" "nonprod"
+get_deployer_module_address() {
+    local factory="$1"
+    local env="$2"
+    get_config ".factory[\"$factory\"].env.$env.deployer_safe_executor_module"
 }
 
 # =============================================================================

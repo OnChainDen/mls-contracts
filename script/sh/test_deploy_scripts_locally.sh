@@ -46,7 +46,7 @@ fi
 # =============================================================================
 # Foundry managed accounts and their addresses:
 #   test-deployer              - 0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3 (default for deployments)
-#   test-den-factory-deployer  - 0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328 (for Den factory deployment)
+#   test-den-factory-deployer  - (read from deployment.toml factory_deployer)
 #   test-guardian-safe-owner   - (read from deployment.toml)
 #   test-deployer-safe-owner   - (read from deployment.toml)
 #   test-guardian-executor     - (read from deployment.toml)
@@ -63,7 +63,7 @@ DEPLOYER_SAFE_OWNER_ACCOUNT="test-deployer-safe-owner"
 
 # EOA addresses - some hardcoded (foundry test accounts), some from deployment.toml
 DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
-DEN_FACTORY_DEPLOYER_ADDRESS="0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328"
+DEN_FACTORY_DEPLOYER_ADDRESS=$(get_factory_deployer "den-nonprod")
 
 # Read Safe owner and executor addresses from deployment.toml (nonprod)
 # Note: get_* functions exit with error if value not found, so no need for separate validation
