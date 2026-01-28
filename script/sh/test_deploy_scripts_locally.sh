@@ -8,36 +8,25 @@
 #   ./test_deploy_scripts_locally.sh arachnid      # Test Arachnid factory flow
 #   ./test_deploy_scripts_locally.sh den-nonprod   # Test Den non-prod factory flow
 #
-# Requirements:
-#   - yq (for reading deployment.toml)
-#
 # =============================================================================
 
 set -e  # Stop on first error
 
 # =============================================================================
-# Configuration (read from deployment.toml)
+# Source Shared Configuration
 # =============================================================================
-DEPLOYMENT_TOML="deployment.toml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/deployment_config.sh"
 
-# Verify deployment.toml exists
-if [[ ! -f "$DEPLOYMENT_TOML" ]]; then
-    echo "Error: deployment.toml not found"
-    exit 1
-fi
-
-# Verify yq is available
-if ! command -v yq &> /dev/null; then
-    echo "Error: yq is required but not installed"
-    echo "Install with: brew install yq"
-    exit 1
-fi
+# Validate prerequisites (deployment.toml exists, yq available)
+validate_prerequisites
 
 # =============================================================================
 # Argument Validation
 # =============================================================================
 FACTORY="$1"
 
+# For this script, only arachnid and den-nonprod are valid (local testing)
 if [[ -z "$FACTORY" ]]; then
     echo "Error: Factory argument required"
     echo "Usage: $0 <arachnid|den-nonprod>"
@@ -77,28 +66,11 @@ DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
 DEN_FACTORY_DEPLOYER_ADDRESS="0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328"
 
 # Read Safe owner and executor addresses from deployment.toml (nonprod)
-GUARDIAN_SAFE_OWNER_ADDRESS=$(yq -r '.safe.nonprod.guardian_safe_owner_1' "$DEPLOYMENT_TOML")
-DEPLOYER_SAFE_OWNER_ADDRESS=$(yq -r '.safe.nonprod.deployer_safe_owner_1' "$DEPLOYMENT_TOML")
-GUARDIAN_EXECUTOR_ADDRESS=$(yq -r '.safe.nonprod.guardian_executor_eoa' "$DEPLOYMENT_TOML")
-DEPLOYER_EXECUTOR_ADDRESS=$(yq -r '.safe.nonprod.deployer_executor_eoa' "$DEPLOYMENT_TOML")
-
-# Validate addresses were read successfully
-if [[ -z "$GUARDIAN_SAFE_OWNER_ADDRESS" || "$GUARDIAN_SAFE_OWNER_ADDRESS" == "null" ]]; then
-    echo "Error: Guardian Safe owner address not found in deployment.toml"
-    exit 1
-fi
-if [[ -z "$DEPLOYER_SAFE_OWNER_ADDRESS" || "$DEPLOYER_SAFE_OWNER_ADDRESS" == "null" ]]; then
-    echo "Error: Deployer Safe owner address not found in deployment.toml"
-    exit 1
-fi
-if [[ -z "$GUARDIAN_EXECUTOR_ADDRESS" || "$GUARDIAN_EXECUTOR_ADDRESS" == "null" ]]; then
-    echo "Error: Guardian executor EOA address not found in deployment.toml"
-    exit 1
-fi
-if [[ -z "$DEPLOYER_EXECUTOR_ADDRESS" || "$DEPLOYER_EXECUTOR_ADDRESS" == "null" ]]; then
-    echo "Error: Deployer executor EOA address not found in deployment.toml"
-    exit 1
-fi
+# Note: get_* functions exit with error if value not found, so no need for separate validation
+GUARDIAN_SAFE_OWNER_ADDRESS=$(get_guardian_safe_owner "nonprod")
+DEPLOYER_SAFE_OWNER_ADDRESS=$(get_deployer_safe_owner "nonprod")
+GUARDIAN_EXECUTOR_ADDRESS=$(get_guardian_executor "nonprod")
+DEPLOYER_EXECUTOR_ADDRESS=$(get_deployer_executor "nonprod")
 
 echo "============================================================================="
 echo "Local Deployment Test: $FACTORY"

@@ -23,102 +23,31 @@
 #   - den-nonprod
 #   - den-prod
 #
-# Requirements:
-#   - yq (for reading deployment.toml)
-#
 # =============================================================================
 
 set -e  # Stop on first error
 
 # =============================================================================
-# Configuration (read from deployment.toml)
+# Source Shared Configuration
 # =============================================================================
-DEPLOYMENT_TOML="deployment.toml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/deployment_config.sh"
 
-# Verify deployment.toml exists
-if [[ ! -f "$DEPLOYMENT_TOML" ]]; then
-    echo "Error: deployment.toml not found"
-    exit 1
-fi
-
-# Verify yq is available
-if ! command -v yq &> /dev/null; then
-    echo "Error: yq is required but not installed"
-    echo "Install with: brew install yq"
-    exit 1
-fi
-
-# Library paths for --libraries flag (these are constants, not addresses)
-LIB_ORG_POLICY_PATH="src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy"
-LIB_ORG_ADMIN_PATH="src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin"
-LIB_ORG_INIT_PATH="src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization"
-LIB_ORG_ACCOUNT_SIG_PATH="src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature"
+# Validate prerequisites (deployment.toml exists, yq available)
+validate_prerequisites
 
 # =============================================================================
 # Argument Validation
 # =============================================================================
 FACTORY="$1"
-
-if [[ -z "$FACTORY" ]]; then
-    echo "Error: Factory argument required"
-    echo "Usage: $0 <arachnid|den-nonprod|den-prod>"
-    exit 1
-fi
-
-case "$FACTORY" in
-    arachnid|den-nonprod|den-prod)
-        # Valid factory name
-        ;;
-    *)
-        echo "Error: Invalid factory '$FACTORY'"
-        echo "Usage: $0 <arachnid|den-nonprod|den-prod>"
-        exit 1
-        ;;
-esac
+validate_factory "$FACTORY"
 
 # Read factory address from deployment.toml
-FACTORY_ADDRESS=$(yq -r ".factory[\"$FACTORY\"].factory" "$DEPLOYMENT_TOML")
-
-if [[ -z "$FACTORY_ADDRESS" || "$FACTORY_ADDRESS" == "null" ]]; then
-    echo "Error: Factory address not found in deployment.toml for '$FACTORY'"
-    exit 1
-fi
+FACTORY_ADDRESS=$(get_factory_address "$FACTORY")
 
 # Read executor EOA addresses from deployment.toml (nonprod for local/testnet computation)
-GUARDIAN_EXECUTOR_ADDRESS=$(yq -r '.safe.nonprod.guardian_executor_eoa' "$DEPLOYMENT_TOML")
-DEPLOYER_EXECUTOR_ADDRESS=$(yq -r '.safe.nonprod.deployer_executor_eoa' "$DEPLOYMENT_TOML")
-
-if [[ -z "$GUARDIAN_EXECUTOR_ADDRESS" || "$GUARDIAN_EXECUTOR_ADDRESS" == "null" ]]; then
-    echo "Error: Guardian executor EOA address not found in deployment.toml"
-    exit 1
-fi
-
-if [[ -z "$DEPLOYER_EXECUTOR_ADDRESS" || "$DEPLOYER_EXECUTOR_ADDRESS" == "null" ]]; then
-    echo "Error: Deployer executor EOA address not found in deployment.toml"
-    exit 1
-fi
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-# Extract an address from forge script output given a key pattern
-# Usage: extract_address "output" "KeyName"
-# Returns: address (0x...) or empty string if not found
-extract_address() {
-    local output="$1"
-    local key="$2"
-    # Match lines like "  KeyName: 0x..." or "  KeyName [STATUS]: 0x..."
-    # Use grep -o to extract just the address part (more portable than sed with \s)
-    echo "$output" | grep -E "^[[:space:]]+${key}([[:space:]]+\[.*\])?:[[:space:]]+0x[a-fA-F0-9]{40}" | head -1 | grep -oE "0x[a-fA-F0-9]{40}"
-}
-
-# Print a TOML key-value pair
-print_toml() {
-    local key="$1"
-    local value="$2"
-    printf "%s = \"%s\"\n" "$key" "$value"
-}
+GUARDIAN_EXECUTOR_ADDRESS=$(get_guardian_executor "nonprod")
+DEPLOYER_EXECUTOR_ADDRESS=$(get_deployer_executor "nonprod")
 
 # Track number of progress lines printed (for clearing later)
 PROGRESS_LINES=0
@@ -330,7 +259,7 @@ echo "# Compare with deployment.toml to verify correctness."
 echo ""
 echo "[factory.\"$FACTORY\"]"
 print_toml "factory" "$FACTORY_ADDRESS"
-print_toml "factory_deployer" "$(yq -r ".factory[\"$FACTORY\"].factory_deployer" "$DEPLOYMENT_TOML")"
+print_toml "factory_deployer" "$(get_factory_deployer "$FACTORY")"
 echo ""
 echo "# Safe 1.3.0 Infrastructure"
 print_toml "safe_singleton" "${SAFE_SINGLETON_ADDRESS:-NOT_COMPUTED}"

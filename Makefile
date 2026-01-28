@@ -222,46 +222,7 @@ HD_PATH ?= m/44'/60'/0'/0/0
 VERBOSITY ?= -vvvv
 
 # ------------------------------------------------------------------------------
-# Addresses from deployment.toml (read via yq)
-# ------------------------------------------------------------------------------
-# Factory address and deployer
-FACTORY_ADDRESS := $(shell yq -r '.factory["$(FACTORY)"].factory' deployment.toml)
-FACTORY_DEPLOYER_ADDRESS := $(shell yq -r '.factory["$(FACTORY)"].factory_deployer' deployment.toml)
-
-# Library addresses
-LIB_ORG_POLICY_ADDRESS := $(shell yq -r '.factory["$(FACTORY)"].lib_org_policy' deployment.toml)
-LIB_ORG_ADMIN_ADDRESS := $(shell yq -r '.factory["$(FACTORY)"].lib_org_admin' deployment.toml)
-LIB_ORG_INIT_ADDRESS := $(shell yq -r '.factory["$(FACTORY)"].lib_org_init' deployment.toml)
-LIB_ORG_ACCOUNT_SIG_ADDRESS := $(shell yq -r '.factory["$(FACTORY)"].lib_org_account_sig' deployment.toml)
-
-# Arachnid deployer address (special case for funding - only used for arachnid factory)
-ARACHNID_DEPLOYER_ADDRESS := $(shell yq -r '.factory["arachnid"].factory_deployer' deployment.toml)
-
-# ------------------------------------------------------------------------------
-# Library Paths (for --libraries flag)
-# ------------------------------------------------------------------------------
-LIB_ORG_POLICY_PATH := src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy
-LIB_ORG_ADMIN_PATH := src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin
-LIB_ORG_INIT_PATH := src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization
-LIB_ORG_ACCOUNT_SIG_PATH := src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature
-
-# ------------------------------------------------------------------------------
-# Library Linking Flags (for deploy-contracts and deploy-dependent-libs)
-# ------------------------------------------------------------------------------
-# Independent libraries (Policy, Admin) - used for deploy-dependent-libs
-INDEPENDENT_LIBRARIES_FLAGS = \
-	--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
-	--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS)
-
-# All libraries - used for deploy-contracts
-ALL_LIBRARIES_FLAGS = \
-	--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
-	--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
-	--libraries $(LIB_ORG_INIT_PATH):$(LIB_ORG_INIT_ADDRESS) \
-	--libraries $(LIB_ORG_ACCOUNT_SIG_PATH):$(LIB_ORG_ACCOUNT_SIG_ADDRESS)
-
-# ------------------------------------------------------------------------------
-# Validate FACTORY value
+# Validate FACTORY value (must be done before generating variables)
 # ------------------------------------------------------------------------------
 ifneq ($(FACTORY),arachnid)
 ifneq ($(FACTORY),den-prod)
@@ -270,6 +231,28 @@ ifneq ($(FACTORY),den-nonprod)
 endif
 endif
 endif
+
+# ------------------------------------------------------------------------------
+# Generated Deployment Variables (from deployment.toml)
+# ------------------------------------------------------------------------------
+# This include file is auto-generated from deployment.toml via the shared config library.
+# It provides: FACTORY_ADDRESS, library addresses, library paths, and linking flags.
+# Regenerates when deployment.toml or config scripts change, or when FACTORY changes.
+-include .make-deploy-vars.mk
+
+# Check if the FACTORY in the generated file matches current FACTORY
+# If not, we need to regenerate even if file timestamps are current
+CURRENT_FACTORY_IN_FILE := $(shell grep -m1 'Factory:' .make-deploy-vars.mk 2>/dev/null | cut -d' ' -f3)
+ifneq ($(CURRENT_FACTORY_IN_FILE),$(FACTORY))
+    # Force regeneration by making the file depend on a phony target
+    .make-deploy-vars.mk: FORCE
+endif
+
+.make-deploy-vars.mk: deployment.toml script/sh/lib/generate_make_vars.sh script/sh/lib/deployment_config.sh
+	@./script/sh/lib/generate_make_vars.sh $(FACTORY) > $@
+
+.PHONY: FORCE
+FORCE:
 
 # ------------------------------------------------------------------------------
 # RPC URL Resolution (based on NETWORK variable)

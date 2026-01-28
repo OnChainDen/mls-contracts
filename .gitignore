@@ -14,6 +14,9 @@ out-safe/
 # Dotenv file
 .env
 
+# Generated Makefile variables (from deployment.toml)
+.make-deploy-vars.mk
+
 # TODO list
 .TODO.md
 
