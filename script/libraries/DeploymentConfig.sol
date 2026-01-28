@@ -62,7 +62,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     /// @return factoryAddress The factory address
     function getFactoryAddress(string memory factoryName) internal returns (address factoryAddress) {
         string memory toml = _toml();
-        string memory key = string.concat(".factory.", factoryName, ".factory");
+        string memory key = string(abi.encodePacked(".factory.", factoryName, ".factory"));
         return vm.parseTomlAddress(toml, key);
     }
 
@@ -71,7 +71,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     /// @return deployerAddress The factory deployer address
     function getFactoryDeployerAddress(string memory factoryName) internal returns (address deployerAddress) {
         string memory toml = _toml();
-        string memory key = string.concat(".factory.", factoryName, ".factory_deployer");
+        string memory key = string(abi.encodePacked(".factory.", factoryName, ".factory_deployer"));
         return vm.parseTomlAddress(toml, key);
     }
 
@@ -84,13 +84,13 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory prefix = string.concat(".factory.", _factoryName);
+        string memory prefix = string(abi.encodePacked(".factory.", _factoryName));
 
         libs = PlatformLibraries({
-            policyAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".lib_org_policy")),
-            adminAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".lib_org_admin")),
-            initializationAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".lib_org_init")),
-            accountSignatureAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".lib_org_account_sig"))
+            policyAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_policy"))),
+            adminAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_admin"))),
+            initializationAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_init"))),
+            accountSignatureAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_account_sig")))
         });
     }
 
@@ -103,16 +103,22 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory prefix = string.concat(".factory.", _factoryName);
+        string memory prefix = string(abi.encodePacked(".factory.", _factoryName));
 
         safeInfra = SafeInfrastructure({
-            singletonAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_singleton")),
-            proxyFactoryAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_proxy_factory")),
-            fallbackHandlerAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_fallback_handler")),
-            multiSendAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_multisend")),
-            multiSendCallOnlyAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_multisend_call_only")),
-            createCallAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_create_call")),
-            simulateTxAccessorAddress: vm.parseTomlAddress(toml, string.concat(prefix, ".safe_simulate_tx_accessor"))
+            singletonAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".safe_singleton"))),
+            proxyFactoryAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".safe_proxy_factory"))),
+            fallbackHandlerAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".safe_fallback_handler"))
+            ),
+            multiSendAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".safe_multisend"))),
+            multiSendCallOnlyAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".safe_multisend_call_only"))
+            ),
+            createCallAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".safe_create_call"))),
+            simulateTxAccessorAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".safe_simulate_tx_accessor"))
+            )
         });
     }
 
@@ -125,7 +131,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory key = string.concat(".factory.", _factoryName, ".guardian_safe");
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".guardian_safe"));
         return vm.parseTomlAddress(toml, key);
     }
 
@@ -138,7 +144,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory key = string.concat(".factory.", _factoryName, ".deployer_safe");
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".deployer_safe"));
         return vm.parseTomlAddress(toml, key);
     }
 
@@ -155,10 +161,12 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory prefix = string.concat(".factory.", _factoryName);
+        string memory prefix = string(abi.encodePacked(".factory.", _factoryName));
 
-        guardianModuleAddress = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_executor_module"));
-        deployerModuleAddress = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_executor_module"));
+        guardianModuleAddress =
+            vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_executor_module")));
+        deployerModuleAddress =
+            vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_executor_module")));
 
         require(guardianModuleAddress != address(0), "Guardian Safe Executor Module address not set in deployment.toml");
         require(deployerModuleAddress != address(0), "Deployer Safe Executor Module address not set in deployment.toml");
@@ -173,7 +181,7 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         );
 
         string memory toml = _toml();
-        string memory key = string.concat(".factory.", _factoryName, ".batched_transaction");
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".batched_transaction"));
         batchedTransactionAddress = vm.parseTomlAddress(toml, key);
 
         require(batchedTransactionAddress != address(0), "BatchedTransaction address not set in deployment.toml");
@@ -185,19 +193,19 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     function getGuardianSafeConfig() internal returns (address[] memory ownerAddresses, uint256 threshold) {
         string memory toml = _toml();
         string memory env = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string.concat(".safe.", env);
+        string memory prefix = string(abi.encodePacked(".safe.", env));
 
-        threshold = vm.parseTomlUint(toml, string.concat(prefix, ".guardian_safe_threshold"));
+        threshold = vm.parseTomlUint(toml, string(abi.encodePacked(prefix, ".guardian_safe_threshold")));
 
         // For production, we have 3 owners; for non-production, we have 1 owner
         if (_isProductionChain()) {
             ownerAddresses = new address[](3);
-            ownerAddresses[0] = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_owner_1"));
-            ownerAddresses[1] = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_owner_2"));
-            ownerAddresses[2] = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_owner_3"));
+            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_owner_1")));
+            ownerAddresses[1] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_owner_2")));
+            ownerAddresses[2] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_owner_3")));
         } else {
             ownerAddresses = new address[](1);
-            ownerAddresses[0] = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_safe_owner_1"));
+            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_owner_1")));
         }
     }
 
@@ -207,19 +215,19 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     function getDeployerSafeConfig() internal returns (address[] memory ownerAddresses, uint256 threshold) {
         string memory toml = _toml();
         string memory env = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string.concat(".safe.", env);
+        string memory prefix = string(abi.encodePacked(".safe.", env));
 
-        threshold = vm.parseTomlUint(toml, string.concat(prefix, ".deployer_safe_threshold"));
+        threshold = vm.parseTomlUint(toml, string(abi.encodePacked(prefix, ".deployer_safe_threshold")));
 
         // For production, we have 3 owners; for non-production, we have 1 owner
         if (_isProductionChain()) {
             ownerAddresses = new address[](3);
-            ownerAddresses[0] = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_owner_1"));
-            ownerAddresses[1] = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_owner_2"));
-            ownerAddresses[2] = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_owner_3"));
+            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_1")));
+            ownerAddresses[1] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_2")));
+            ownerAddresses[2] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_3")));
         } else {
             ownerAddresses = new address[](1);
-            ownerAddresses[0] = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_safe_owner_1"));
+            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_1")));
         }
     }
 
@@ -229,10 +237,10 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
     function getExpectedExecutorEOAAddresses() internal returns (address guardianExecutor, address deployerExecutor) {
         string memory toml = _toml();
         string memory env = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string.concat(".safe.", env);
+        string memory prefix = string(abi.encodePacked(".safe.", env));
 
-        guardianExecutor = vm.parseTomlAddress(toml, string.concat(prefix, ".guardian_executor_eoa"));
-        deployerExecutor = vm.parseTomlAddress(toml, string.concat(prefix, ".deployer_executor_eoa"));
+        guardianExecutor = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_executor_eoa")));
+        deployerExecutor = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_executor_eoa")));
 
         // Validate addresses are set for production chains
         if (_isProductionChain()) {
