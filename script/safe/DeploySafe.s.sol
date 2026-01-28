@@ -62,29 +62,12 @@ contract DeploySafe is BaseDeployScript {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
-        // Initialize and validate the factory (stores address/name for use throughout)
-        validateAndInitializeFactoryOrRevert(factoryAddress);
+        // Common deployment initialization (factory validation, confirmations, header logging)
+        validateAndInitializeDeploymentOrRevert(factoryAddress, "DeploySafe");
 
-        // Warn and confirm when targeting production chains
-        warnAndConfirmIfProductionChain("DeploySafe");
-
-        // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("DeploySafe");
-
-        // Prevent using the production Den Factory deployer for this script
-        validateNotProductionDenFactoryDeployerOrRevert();
-
-        // Get the Guardian Safe configuration from deployment.toml based on current chain
+        // Get Safe configurations (after init since they read from TOML)
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig();
-
-        // Get the Deployer Safe configuration from deployment.toml based on current chain
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig();
-
-        // Log the deployment header
-        logDeploymentHeader();
-        Logger.logKeyValue("Deployer EOA", msg.sender);
-        Logger.logKeyValue("Mode", "Safe 1.3.0 Infrastructure Deployment");
-        Logger.logEmptyLine();
 
         // Start broadcasting transactions
         vm.startBroadcast();

@@ -285,18 +285,33 @@ abstract contract BaseDeployScript is Script {
         Logger.logCheckPass("Deployer is not production Den Factory deployer");
     }
 
-    /// @dev Logs deployment summary header with factory and chain info
-    ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
-    function logDeploymentHeader() internal {
-        require(
-            _factoryAddress != address(0), "Factory not initialized - call validateAndInitializeFactoryOrRevert() first"
-        );
+    // ==================== Deployment Initialization ====================
+    // Single entry point for common deployment setup sequence
+    // ==============================================================================
 
+    /// @dev Common deployment initialization sequence - validates factory, confirms broadcast, and logs header
+    /// @param factoryAddress The CREATE2 factory to validate and use
+    /// @param scriptName Human-readable script name for logging/confirmation prompts
+    function validateAndInitializeDeploymentOrRevert(address factoryAddress, string memory scriptName) internal {
+        // 1. Initialize and validate factory
+        validateAndInitializeFactoryOrRevert(factoryAddress);
+
+        // 2. Warn and confirm if on production chain
+        warnAndConfirmIfProductionChain(scriptName);
+
+        // 3. Confirm broadcast/dry run
+        confirmBroadcastOrDryRun(scriptName);
+
+        // 4. Ensure not using production deployer
+        validateNotProductionDenFactoryDeployerOrRevert();
+
+        // 5. Log standard deployment header
         Logger.logBoxHeader("Den Multi-layer Security (MLS) Wallet - Contract Deployment");
         Logger.logKeyValue("Chain ID", _getChainId());
         Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
         Logger.logKeyValue("Factory Type", _factoryDisplayName);
         Logger.logBoxFooter();
+        Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
     }
 

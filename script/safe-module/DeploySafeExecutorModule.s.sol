@@ -46,37 +46,22 @@ contract DeploySafeExecutorModule is BaseDeployScript {
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
     function run(address factoryAddress, string calldata safeType, address executorAddress) external {
-        // Initialize and validate the factory (stores address/name for use throughout)
-        validateAndInitializeFactoryOrRevert(factoryAddress);
+        // Common deployment initialization (factory validation, confirmations, header logging)
+        validateAndInitializeDeploymentOrRevert(factoryAddress, "DeploySafeExecutorModule");
 
-        // Validate safeType is "guardian" or "deployer"
+        // Script-specific validations
         bool isGuardian = _isGuardianSafeType(safeType);
-
-        // Validate executor address matches expected configuration
         require(executorAddress != address(0), "Executor address cannot be zero");
         _validateExecutorAddressOrRevert(isGuardian, executorAddress);
-
-        // Get the Safe address for this safeType
         address safeAddress = _getSafeAddress(isGuardian);
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed at expected address");
-
-        // Get and verify BatchedTransaction address
         address batchedTransaction = getExpectedBatchedTransactionAddress();
         require(
             Create2Utils.isContractDeployedAtAddress(batchedTransaction),
             "BatchedTransaction not deployed at expected address"
         );
 
-        // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("DeploySafeExecutorModule");
-
-        // Prevent using the production Den Factory deployer for this script
-        validateNotProductionDenFactoryDeployerOrRevert();
-
-        // Log the deployment header
-        Logger.logBoxHeader("Safe Executor Module Deployment");
-        Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
-        Logger.logKeyValue("Deployer EOA", msg.sender);
+        // Script-specific logging (standard header already logged by validateAndInitializeDeploymentOrRevert)
         Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
         Logger.logKeyValue("Safe Executor EOA", executorAddress);

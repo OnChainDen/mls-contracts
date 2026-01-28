@@ -81,37 +81,15 @@ contract DeployContracts is BaseDeployScript {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
-        // Initialize and validate the factory (stores address/name for use throughout)
-        validateAndInitializeFactoryOrRevert(factoryAddress);
+        // Common deployment initialization (factory validation, confirmations, header logging)
+        validateAndInitializeDeploymentOrRevert(factoryAddress, "DeployContracts");
 
-        // Warn and confirm when targeting production chains
-        warnAndConfirmIfProductionChain("DeployContracts");
-
-        // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("DeployContracts");
-
-        // Validate that --libraries flag was used with correct addresses
+        // Script-specific validations
         _validateLibrariesLinkedOrRevert();
-
-        // Validate libraries are deployed at expected addresses
         _validateLibrariesDeployedOrRevert();
-
-        // Validate Safe infrastructure is deployed at expected addresses
         _validateSafeInfrastructureDeployedOrRevert();
-
-        // Validate Guardian and Deployer Safes are deployed
         _validateSafeMultisigsDeployedOrRevert();
-
-        // Get the expected Deployer Safe address (needed for factory and whitelist deployment)
         address deployerSafeAddress = getExpectedDeployerSafeAddress();
-
-        // Prevent using the production Den Factory deployer for this script
-        validateNotProductionDenFactoryDeployerOrRevert();
-
-        // Log the deployment header
-        logDeploymentHeader();
-        Logger.logKeyValue("Deployer EOA", msg.sender);
-        Logger.logEmptyLine();
 
         // Start broadcasting transactions
         vm.startBroadcast();

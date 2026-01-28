@@ -39,20 +39,8 @@ contract DeployBatchedTransaction is BaseDeployScript {
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
      */
     function run(address factoryAddress) external {
-        // Initialize and validate the factory (stores address/name for use throughout)
-        validateAndInitializeFactoryOrRevert(factoryAddress);
-
-        // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("DeployBatchedTransaction");
-
-        // Prevent using the production Den Factory deployer for this script
-        validateNotProductionDenFactoryDeployerOrRevert();
-
-        // Log the deployment header
-        Logger.logBoxHeader("BatchedTransaction Deployment");
-        Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
-        Logger.logKeyValue("Deployer EOA", msg.sender);
-        Logger.logEmptyLine();
+        // Common deployment initialization (factory validation, confirmations, header logging)
+        validateAndInitializeDeploymentOrRevert(factoryAddress, "DeployBatchedTransaction");
 
         // Start broadcasting transactions
         vm.startBroadcast();

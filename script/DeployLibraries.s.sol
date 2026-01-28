@@ -51,20 +51,10 @@ contract DeployLibraries is BaseDeployScript {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployIndependentLibs(address factoryAddress) external {
-        // Initialize and validate the factory (stores address/name for use throughout)
-        validateAndInitializeFactoryOrRevert(factoryAddress);
-
-        // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("DeployLibraries (Stage 1: Independent)");
-
-        // Prevent using the production Den Factory deployer for this script
-        validateNotProductionDenFactoryDeployerOrRevert();
-
-        // Log the deployment header
-        logDeploymentHeader();
-        Logger.logKeyValue("Deployer EOA", msg.sender);
-        Logger.logKeyValue("Mode", "Stage 1: Independent Libraries (Policy, Admin)");
-        Logger.logEmptyLine();
+        // Common deployment initialization (factory validation, confirmations, header logging)
+        validateAndInitializeDeploymentOrRevert(
+            factoryAddress, "DeployLibraries - Stage 1: Independent (Policy, Admin)"
+        );
 
         // Start broadcasting transactions
         vm.startBroadcast();
@@ -86,26 +76,14 @@ contract DeployLibraries is BaseDeployScript {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployDependentLibs(address factoryAddress) external {
-        // Initialize and validate the factory (stores address/name for use throughout)
-        validateAndInitializeFactoryOrRevert(factoryAddress);
+        // Common deployment initialization (factory validation, confirmations, header logging)
+        validateAndInitializeDeploymentOrRevert(
+            factoryAddress, "DeployLibraries - Stage 2: Dependent (Init, AccountSig)"
+        );
 
-        // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("DeployLibraries (Stage 2: Dependent)");
-
-        // Prevent using the production Den Factory deployer for this script
-        validateNotProductionDenFactoryDeployerOrRevert();
-
-        // Validate that independent libraries are deployed
+        // Script-specific validations
         _validateIndependentLibrariesDeployedOrRevert();
-
-        // Validate that libraries are correctly linked via --libraries flag
         _validateDependentLibrariesLinkedOrRevert();
-
-        // Log the deployment header
-        logDeploymentHeader();
-        Logger.logKeyValue("Deployer EOA", msg.sender);
-        Logger.logKeyValue("Mode", "Stage 2: Dependent Libraries (Init, AccountSig)");
-        Logger.logEmptyLine();
 
         // Start broadcasting transactions
         vm.startBroadcast();
