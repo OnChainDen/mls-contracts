@@ -75,8 +75,7 @@ contract DeployLibraries is BaseDeployScript {
         // Stop broadcasting transactions
         vm.stopBroadcast();
 
-        // Log deployment completion
-        Logger.logDeploymentComplete();
+        // Log deployed addresses
         _logIndependentLibraryAddresses(libs);
     }
 
@@ -117,8 +116,7 @@ contract DeployLibraries is BaseDeployScript {
         // Stop broadcasting transactions
         vm.stopBroadcast();
 
-        // Log deployment completion
-        Logger.logDeploymentComplete();
+        // Log deployed addresses
         _logDependentLibraryAddresses(libs);
     }
 
@@ -298,20 +296,18 @@ contract DeployLibraries is BaseDeployScript {
     /// @dev Logs independent library addresses in a formatted summary
     /// @param libs Struct containing deployed independent library addresses
     function _logIndependentLibraryAddresses(IndependentLibraries memory libs) internal pure {
-        Logger.logBoxHeader("Deployed Independent Library Addresses");
+        Logger.logBoxHeader(unicode"✅ Deployed Independent Library Addresses");
         Logger.logKeyValue("LibOrganizationPolicy", libs.policyAddress);
         Logger.logKeyValue("LibOrganizationAdmin", libs.adminAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
     /// @dev Logs dependent library addresses in a formatted summary
     /// @param libs Struct containing deployed dependent library addresses
     function _logDependentLibraryAddresses(DependentLibraries memory libs) internal pure {
-        Logger.logBoxHeader("Deployed Dependent Library Addresses");
+        Logger.logBoxHeader(unicode"✅ Deployed Dependent Library Addresses");
         Logger.logKeyValue("LibOrganizationInitialization", libs.initializationAddress);
         Logger.logKeyValue("LibOrganizationAccountSignature", libs.accountSignatureAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 }

@@ -135,8 +135,7 @@ contract DeployContracts is BaseDeployScript {
             whitelistProxyAddress: whitelistProxyAddress
         });
 
-        // Log deployment completion and print deployed addresses
-        Logger.logDeploymentComplete();
+        // Log deployed addresses
         _logDeployedAddresses(contracts);
     }
 
@@ -206,8 +205,6 @@ contract DeployContracts is BaseDeployScript {
 
         address whitelistProxyAddress = Create2Utils.computeAddress(factoryAddress, WHITELIST_PROXY_SALT, proxyBytecode);
         Logger.logKeyValue("ImplementationWhitelistProxy", whitelistProxyAddress);
-
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
@@ -499,7 +496,7 @@ contract DeployContracts is BaseDeployScript {
         address guardianSafe = getExpectedGuardianSafeAddress();
         address deployerSafe = getExpectedDeployerSafeAddress();
 
-        Logger.logBoxHeader("Deployed Contract Addresses");
+        Logger.logBoxHeader(unicode"✅ Deployed Contract Addresses");
         Logger.logIndented("Safe Infrastructure (pre-deployed):");
         Logger.logKeyValue("  GnosisSafe Singleton", safeInfra.singletonAddress);
         Logger.logKeyValue("  GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
@@ -523,7 +520,6 @@ contract DeployContracts is BaseDeployScript {
         Logger.logEmptyLine();
         Logger.logIndented("Platform Proxies:");
         Logger.logKeyValue("  WhitelistProxy", contracts.whitelistProxyAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 }

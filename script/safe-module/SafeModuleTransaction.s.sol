@@ -194,8 +194,6 @@ contract SafeModuleTransaction is BaseDeployScript {
                 Logger.logKeyValue("  ", owners[i]);
             }
         }
-
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
@@ -292,8 +290,6 @@ contract SafeModuleTransaction is BaseDeployScript {
         }
 
         vm.stopBroadcast();
-
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 

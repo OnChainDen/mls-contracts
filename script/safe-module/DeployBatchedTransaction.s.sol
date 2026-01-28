@@ -64,10 +64,8 @@ contract DeployBatchedTransaction is BaseDeployScript {
         vm.stopBroadcast();
 
         // Log the result
-        Logger.logDeploymentComplete();
-        Logger.logBoxHeader("Deployed Address");
+        Logger.logBoxHeader(unicode"✅ Deployed Address");
         Logger.logKeyValue("BatchedTransaction", batchedTransactionAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
@@ -90,7 +88,6 @@ contract DeployBatchedTransaction is BaseDeployScript {
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logEmptyLine();
         Logger.logKeyValue("BatchedTransaction", expectedAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 

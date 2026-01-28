@@ -93,10 +93,8 @@ contract DeploySafeExecutorModule is BaseDeployScript {
         vm.stopBroadcast();
 
         // Log the result
-        Logger.logDeploymentComplete();
-        Logger.logBoxHeader("Deployed Module Address");
+        Logger.logBoxHeader(unicode"✅ Deployed Module Address");
         Logger.logKeyValue("SafeExecutorModule", moduleAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
 
         // Log next steps
@@ -142,7 +140,6 @@ contract DeploySafeExecutorModule is BaseDeployScript {
         Logger.logKeyValue("BatchedTransaction", batchedTransactionAddress);
         Logger.logEmptyLine();
         Logger.logKeyValue("SafeExecutorModule", expectedAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
@@ -244,7 +241,6 @@ contract DeploySafeExecutorModule is BaseDeployScript {
         Logger.logEmptyLine();
         Logger.logIndented(string(abi.encodePacked("Safe: ", StringUtils.toHexString(safeAddress))));
         Logger.logIndented(string(abi.encodePacked("Module: ", StringUtils.toHexString(moduleAddress))));
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 }

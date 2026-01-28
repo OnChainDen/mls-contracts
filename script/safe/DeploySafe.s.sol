@@ -107,8 +107,7 @@ contract DeploySafe is BaseDeployScript {
         // Build the complete deployed contracts struct for logging
         DeployedContracts memory contracts = DeployedContracts({safeInfra: safeInfra, safes: safes});
 
-        // Log deployment completion and print deployed addresses
-        Logger.logDeploymentComplete();
+        // Log deployed addresses
         _logDeployedAddresses(contracts);
     }
 
@@ -432,7 +431,7 @@ contract DeploySafe is BaseDeployScript {
     /// @dev Logs all deployed contract addresses in a formatted summary
     /// @param contracts Complete set of deployed contract addresses
     function _logDeployedAddresses(DeployedContracts memory contracts) internal pure {
-        Logger.logBoxHeader("Deployed Safe 1.3.0 Contract Addresses");
+        Logger.logBoxHeader(unicode"✅ Deployed Safe 1.3.0 Contract Addresses");
         Logger.logIndented("Safe Infrastructure:");
         Logger.logKeyValue("  GnosisSafe Singleton", contracts.safeInfra.singletonAddress);
         Logger.logKeyValue("  GnosisSafeProxyFactory", contracts.safeInfra.proxyFactoryAddress);
@@ -445,7 +444,6 @@ contract DeploySafe is BaseDeployScript {
         Logger.logIndented("Safe Multisigs:");
         Logger.logKeyValue("  Guardian Safe", contracts.safes.guardianSafeAddress);
         Logger.logKeyValue("  Deployer Safe", contracts.safes.deployerSafeAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
@@ -465,7 +463,6 @@ contract DeploySafe is BaseDeployScript {
         Logger.logIndented("Safe Multisigs:");
         Logger.logKeyValue("  Guardian Safe", contracts.safes.guardianSafeAddress);
         Logger.logKeyValue("  Deployer Safe", contracts.safes.deployerSafeAddress);
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 }
