@@ -2,13 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
 import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
@@ -41,7 +38,7 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeploySafeExecutorModule is Script {
+contract DeploySafeExecutorModule is BaseDeployScript {
     /**
      * @notice Main entry point - deploys a SafeExecutorModule via CREATE2
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
@@ -49,8 +46,8 @@ contract DeploySafeExecutorModule is Script {
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
     function run(address factoryAddress, string calldata safeType, address executorAddress) external {
-        // Validate the provided CREATE2 factory is a known factory and is deployed
-        Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
+        // Initialize and validate the factory (stores address/name for use throughout)
+        validateAndInitializeFactoryOrRevert(factoryAddress);
 
         // Validate safeType is "guardian" or "deployer"
         bool isGuardian = _isGuardianSafeType(safeType);
@@ -60,26 +57,26 @@ contract DeploySafeExecutorModule is Script {
         _validateExecutorAddressOrRevert(block.chainid, isGuardian, executorAddress);
 
         // Get the Safe address for this safeType
-        address safeAddress = _getSafeAddress(factoryAddress, isGuardian);
+        address safeAddress = _getSafeAddress(isGuardian);
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed at expected address");
 
         // Get and verify BatchedTransaction address
-        address batchedTransaction = _getBatchedTransactionAddress(factoryAddress);
+        address batchedTransaction = getExpectedBatchedTransactionAddress();
         require(
             Create2Utils.isContractDeployedAtAddress(batchedTransaction),
             "BatchedTransaction not deployed at expected address"
         );
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafeExecutorModule");
+        confirmBroadcastOrDryRun("DeploySafeExecutorModule");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         Logger.logBoxHeader("Safe Executor Module Deployment");
         Logger.logKeyValue("Chain ID", block.chainid);
-        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Safe Type", safeType);
         Logger.logKeyValue("Safe Address", safeAddress);
@@ -91,8 +88,7 @@ contract DeploySafeExecutorModule is Script {
         vm.startBroadcast();
 
         // Deploy the module
-        address moduleAddress =
-            _deployModule(factoryAddress, isGuardian, safeAddress, executorAddress, batchedTransaction);
+        address moduleAddress = _deployModule(isGuardian, safeAddress, executorAddress, batchedTransaction);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -152,26 +148,22 @@ contract DeploySafeExecutorModule is Script {
     }
 
     /// @dev Deploys the SafeExecutorModule via CREATE2
-    /// @param factoryAddress The CREATE2 factory address
     /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
     /// @param safeAddress The Safe address
     /// @param executorAddress The Safe Executor EOA address
     /// @param batchedTransaction The BatchedTransaction address
     /// @return moduleAddress The deployed module address
-    function _deployModule(
-        address factoryAddress,
-        bool isGuardian,
-        address safeAddress,
-        address executorAddress,
-        address batchedTransaction
-    ) internal returns (address moduleAddress) {
+    function _deployModule(bool isGuardian, address safeAddress, address executorAddress, address batchedTransaction)
+        internal
+        returns (address moduleAddress)
+    {
         bytes32 salt = _getSalt(isGuardian);
         bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
         string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
 
         Logger.logSection("SafeExecutorModule (CREATE2)");
 
-        (moduleAddress,) = Create2Utils.deployIfNotExists(factoryAddress, salt, initCode, name);
+        (moduleAddress,) = Create2Utils.deployIfNotExists(_factoryAddress, salt, initCode, name);
 
         return moduleAddress;
     }
@@ -180,9 +172,8 @@ contract DeploySafeExecutorModule is Script {
     /// @param chainId The target chain ID
     /// @param isGuardian True if validating for Guardian Safe, false for Deployer Safe
     /// @param executorAddress The executor address to validate
-    function _validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal view {
-        (address expectedGuardian, address expectedDeployer) =
-            DeploymentConfig.getExpectedExecutorEOAAddresses(vm, chainId);
+    function _validateExecutorAddressOrRevert(uint256 chainId, bool isGuardian, address executorAddress) internal {
+        (address expectedGuardian, address expectedDeployer) = getExpectedExecutorEOAAddresses(chainId);
 
         address expected = isGuardian ? expectedGuardian : expectedDeployer;
         require(executorAddress == expected, "Invalid executor address for target");
@@ -202,22 +193,14 @@ contract DeploySafeExecutorModule is Script {
         revert("Invalid safeType - must be 'guardian' or 'deployer'");
     }
 
-    /// @dev Gets the Safe address for the given safeType and factory
-    /// @param factoryAddress The CREATE2 factory address
+    /// @dev Gets the Safe address for the given safeType
     /// @param isGuardian True for Guardian Safe, false for Deployer Safe
     /// @return safeAddress The Safe address
-    function _getSafeAddress(address factoryAddress, bool isGuardian) internal view returns (address safeAddress) {
+    function _getSafeAddress(bool isGuardian) internal returns (address safeAddress) {
         if (isGuardian) {
-            return DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
+            return getExpectedGuardianSafeAddress();
         }
-        return DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
-    }
-
-    /// @dev Gets the BatchedTransaction address for the given factory
-    /// @param factoryAddress The CREATE2 factory address
-    /// @return batchedTransaction The BatchedTransaction address
-    function _getBatchedTransactionAddress(address factoryAddress) internal view returns (address batchedTransaction) {
-        return DeploymentConfig.getExpectedBatchedTransactionAddress(vm, factoryAddress);
+        return getExpectedDeployerSafeAddress();
     }
 
     /// @dev Gets the salt for the given safeType
@@ -225,9 +208,9 @@ contract DeploySafeExecutorModule is Script {
     /// @return salt The CREATE2 salt
     function _getSalt(bool isGuardian) internal pure returns (bytes32 salt) {
         if (isGuardian) {
-            return DeploymentConfig.GUARDIAN_SAFE_EXECUTOR_MODULE_SALT;
+            return GUARDIAN_SAFE_EXECUTOR_MODULE_SALT;
         }
-        return DeploymentConfig.DEPLOYER_SAFE_EXECUTOR_MODULE_SALT;
+        return DEPLOYER_SAFE_EXECUTOR_MODULE_SALT;
     }
 
     /// @dev Constructs the init code for the module deployment

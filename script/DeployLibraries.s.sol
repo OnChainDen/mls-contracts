@@ -2,17 +2,14 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {DependentLibraries, IndependentLibraries, PlatformLibraries} from "script/libraries/Types.sol";
 
 /**
@@ -46,7 +43,7 @@ import {DependentLibraries, IndependentLibraries, PlatformLibraries} from "scrip
  *
  * @author Den Technologies Inc
  */
-contract DeployLibraries is Script {
+contract DeployLibraries is BaseDeployScript {
     /**
      * @notice Stage 1: Deploy independent libraries (Policy and Admin)
      * @dev These libraries have no dependencies on other platform libraries.
@@ -54,17 +51,17 @@ contract DeployLibraries is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployIndependentLibs(address factoryAddress) external {
-        // Validate the provided CREATE2 factory is a known factory and is deployed
-        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
+        // Initialize and validate the factory (stores address/name for use throughout)
+        validateAndInitializeFactoryOrRevert(factoryAddress);
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries (Stage 1: Independent)");
+        confirmBroadcastOrDryRun("DeployLibraries (Stage 1: Independent)");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
-        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, block.chainid);
+        logDeploymentHeader();
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Stage 1: Independent Libraries (Policy, Admin)");
         Logger.logEmptyLine();
@@ -73,7 +70,7 @@ contract DeployLibraries is Script {
         vm.startBroadcast();
 
         // Deploy independent libraries (Policy and Admin)
-        IndependentLibraries memory libs = _deployIndependentLibraries(factoryAddress);
+        IndependentLibraries memory libs = _deployIndependentLibraries();
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -90,23 +87,23 @@ contract DeployLibraries is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function runDeployDependentLibs(address factoryAddress) external {
-        // Validate the provided CREATE2 factory is a known factory and is deployed
-        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
+        // Initialize and validate the factory (stores address/name for use throughout)
+        validateAndInitializeFactoryOrRevert(factoryAddress);
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployLibraries (Stage 2: Dependent)");
+        confirmBroadcastOrDryRun("DeployLibraries (Stage 2: Dependent)");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Validate that independent libraries are deployed
-        _validateIndependentLibrariesDeployedOrRevert(factoryAddress);
+        _validateIndependentLibrariesDeployedOrRevert();
 
         // Validate that libraries are correctly linked via --libraries flag
-        _validateDependentLibrariesLinkedOrRevert(factoryAddress);
+        _validateDependentLibrariesLinkedOrRevert();
 
         // Log the deployment header
-        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, block.chainid);
+        logDeploymentHeader();
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Stage 2: Dependent Libraries (Init, AccountSig)");
         Logger.logEmptyLine();
@@ -115,7 +112,7 @@ contract DeployLibraries is Script {
         vm.startBroadcast();
 
         // Deploy dependent libraries (Init and AccountSig)
-        DependentLibraries memory libs = _deployDependentLibraries(factoryAddress);
+        DependentLibraries memory libs = _deployDependentLibraries();
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -142,15 +139,11 @@ contract DeployLibraries is Script {
         // Compute and log the expected independent library addresses
         Logger.logKeyValue(
             "LibOrganizationPolicy",
-            Create2Utils.computeAddress(
-                factoryAddress, DeploymentConfig.LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode
-            )
+            Create2Utils.computeAddress(factoryAddress, LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode)
         );
         Logger.logKeyValue(
             "LibOrganizationAdmin",
-            Create2Utils.computeAddress(
-                factoryAddress, DeploymentConfig.LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode
-            )
+            Create2Utils.computeAddress(factoryAddress, LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode)
         );
         Logger.logEmptyLine();
     }
@@ -175,73 +168,62 @@ contract DeployLibraries is Script {
         Logger.logKeyValue(
             "LibOrganizationInitialization",
             Create2Utils.computeAddress(
-                factoryAddress, DeploymentConfig.LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
+                factoryAddress, LIB_ORG_INIT_SALT, type(LibOrganizationInitialization).creationCode
             )
         );
         Logger.logKeyValue(
             "LibOrganizationAccountSignature",
             Create2Utils.computeAddress(
-                factoryAddress,
-                DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
-                type(LibOrganizationAccountSignature).creationCode
+                factoryAddress, LIB_ORG_ACCOUNT_SIG_SALT, type(LibOrganizationAccountSignature).creationCode
             )
         );
         Logger.logEmptyLine();
     }
 
     /// @dev Deploys independent platform libraries (Policy and Admin) via CREATE2
-    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return libs Struct containing deployed independent library addresses
-    function _deployIndependentLibraries(address factoryAddress) internal returns (IndependentLibraries memory libs) {
+    function _deployIndependentLibraries() internal returns (IndependentLibraries memory libs) {
         Logger.logSection("Independent Libraries (CREATE2)");
 
         // Deploy LibOrganizationPolicy
         (libs.policyAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_POLICY_SALT,
-            type(LibOrganizationPolicy).creationCode,
-            "LibOrganizationPolicy"
+            _factoryAddress, LIB_ORG_POLICY_SALT, type(LibOrganizationPolicy).creationCode, "LibOrganizationPolicy"
         );
 
         // Deploy LibOrganizationAdmin
         (libs.adminAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ADMIN_SALT,
-            type(LibOrganizationAdmin).creationCode,
-            "LibOrganizationAdmin"
+            _factoryAddress, LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode, "LibOrganizationAdmin"
         );
     }
 
     /// @dev Deploys dependent platform libraries (Init and AccountSig) via CREATE2
-    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return libs Struct containing deployed dependent library addresses
-    function _deployDependentLibraries(address factoryAddress) internal returns (DependentLibraries memory libs) {
+    function _deployDependentLibraries() internal returns (DependentLibraries memory libs) {
         Logger.logSection("Dependent Libraries (CREATE2)");
 
         // Deploy LibOrganizationInitialization (depends on Admin being linked)
         (libs.initializationAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_INIT_SALT,
+            _factoryAddress,
+            LIB_ORG_INIT_SALT,
             type(LibOrganizationInitialization).creationCode,
             "LibOrganizationInitialization"
         );
 
         // Deploy LibOrganizationAccountSignature (depends on Policy being linked)
         (libs.accountSignatureAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.LIB_ORG_ACCOUNT_SIG_SALT,
+            _factoryAddress,
+            LIB_ORG_ACCOUNT_SIG_SALT,
             type(LibOrganizationAccountSignature).creationCode,
             "LibOrganizationAccountSignature"
         );
     }
 
     /// @dev Validates that independent libraries (Policy and Admin) are deployed
-    /// @param factoryAddress Address of the CREATE2 factory (determines expected addresses)
-    function _validateIndependentLibrariesDeployedOrRevert(address factoryAddress) internal view {
+    function _validateIndependentLibrariesDeployedOrRevert() internal {
         Logger.logSection("Verify Independent Libraries Deployed");
 
         // Get expected addresses from deployment.toml (not computed, to avoid --libraries affecting bytecode)
-        PlatformLibraries memory expected = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
+        PlatformLibraries memory expected = getExpectedLibraryAddresses();
 
         bool allDeployed = true;
 
@@ -274,12 +256,11 @@ contract DeployLibraries is Script {
 
     /// @dev Validates that dependent libraries have the independent libraries correctly linked
     ///      Checks that the --libraries flag was used with correct addresses for Policy and Admin
-    /// @param factoryAddress Address of the CREATE2 factory (determines expected addresses)
-    function _validateDependentLibrariesLinkedOrRevert(address factoryAddress) internal view {
+    function _validateDependentLibrariesLinkedOrRevert() internal {
         Logger.logSection("Verify Libraries Linked in Bytecode");
 
         // Get expected addresses from deployment.toml (not computed, to avoid --libraries affecting computation)
-        PlatformLibraries memory expected = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
+        PlatformLibraries memory expected = getExpectedLibraryAddresses();
 
         // Get the creation code of dependent libraries
         bytes memory initInitCode = type(LibOrganizationInitialization).creationCode;

@@ -2,8 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity >=0.7.0 <0.9.0;
 
-import {Script} from "forge-std/Script.sol";
-
 // Safe 1.3.0 imports
 import {GnosisSafe} from "@safe/GnosisSafe.sol";
 import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
@@ -15,10 +13,9 @@ import {GnosisSafeProxy} from "@safe/proxies/GnosisSafeProxy.sol";
 import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
 
 // Shared script utilities
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
@@ -47,7 +44,7 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeploySafe is Script {
+contract DeploySafe is BaseDeployScript {
     /// @dev Struct containing addresses for the deployed Safe multisig wallets
     struct SafeMultisigs {
         address guardianSafeAddress;
@@ -65,31 +62,29 @@ contract DeploySafe is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
-        // Validate the provided CREATE2 factory is a known factory and is deployed
-        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
+        // Initialize and validate the factory (stores address/name for use throughout)
+        validateAndInitializeFactoryOrRevert(factoryAddress);
 
         // Warn and confirm when targeting production chains
-        ScriptUtils.warnAndConfirmIfProductionChain(vm, "DeploySafe");
+        warnAndConfirmIfProductionChain("DeploySafe");
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeploySafe");
+        confirmBroadcastOrDryRun("DeploySafe");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Get chain ID using assembly for 0.7.x compatibility
-        uint256 chainId = ScriptUtils.getChainId();
+        uint256 chainId = _getChainId();
 
         // Get the Guardian Safe configuration from deployment.toml based on chain ID
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) =
-            DeploymentConfig.getGuardianSafeConfig(vm, chainId);
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(chainId);
 
         // Get the Deployer Safe configuration from deployment.toml based on chain ID
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
-            DeploymentConfig.getDeployerSafeConfig(vm, chainId);
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(chainId);
 
         // Log the deployment header
-        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, chainId);
+        logDeploymentHeader();
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logKeyValue("Mode", "Safe 1.3.0 Infrastructure Deployment");
         Logger.logEmptyLine();
@@ -98,7 +93,7 @@ contract DeploySafe is Script {
         vm.startBroadcast();
 
         // Deploy Safe Infrastructure
-        SafeInfrastructure memory safeInfra = _deploySafeInfrastructure(factoryAddress);
+        SafeInfrastructure memory safeInfra = _deploySafeInfrastructure();
 
         // Deploy our two Safe Multisigs (Deployer and Guardian Safes)
         SafeMultisigs memory safes = _deploySafeMultisigs({
@@ -121,56 +116,49 @@ contract DeploySafe is Script {
     }
 
     /// @dev Deploys all Safe 1.3.0 infrastructure contracts via CREATE2 if not already deployed
-    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return safeInfra Struct containing all deployed Safe infrastructure addresses
-    function _deploySafeInfrastructure(address factoryAddress) internal returns (SafeInfrastructure memory safeInfra) {
+    function _deploySafeInfrastructure() internal returns (SafeInfrastructure memory safeInfra) {
         Logger.logSection("Safe 1.3.0 Infrastructure (CREATE2)");
 
         // Deploy Safe Singleton (master copy) - GnosisSafe for 1.3.0
         (safeInfra.singletonAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress, DeploymentConfig.SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode, "GnosisSafe Singleton"
+            _factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode, "GnosisSafe Singleton"
         );
 
         // Deploy Safe Proxy Factory - GnosisSafeProxyFactory for 1.3.0
         (safeInfra.proxyFactoryAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.SAFE_PROXY_FACTORY_SALT,
+            _factoryAddress,
+            SAFE_PROXY_FACTORY_SALT,
             type(GnosisSafeProxyFactory).creationCode,
             "GnosisSafeProxyFactory"
         );
 
         // Deploy Compatibility Fallback Handler
         (safeInfra.fallbackHandlerAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.SAFE_FALLBACK_HANDLER_SALT,
+            _factoryAddress,
+            SAFE_FALLBACK_HANDLER_SALT,
             type(CompatibilityFallbackHandler).creationCode,
             "CompatibilityFallbackHandler"
         );
 
         // Deploy MultiSend
         (safeInfra.multiSendAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
+            _factoryAddress, SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
         );
 
         // Deploy MultiSendCallOnly
         (safeInfra.multiSendCallOnlyAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.SAFE_MULTISEND_CALL_ONLY_SALT,
-            type(MultiSendCallOnly).creationCode,
-            "MultiSendCallOnly"
+            _factoryAddress, SAFE_MULTISEND_CALL_ONLY_SALT, type(MultiSendCallOnly).creationCode, "MultiSendCallOnly"
         );
 
         // Deploy CreateCall
         (safeInfra.createCallAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
+            _factoryAddress, SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
         );
 
         // Deploy SimulateTxAccessor
         (safeInfra.simulateTxAccessorAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.SAFE_SIMULATE_TX_ACCESSOR_SALT,
-            type(SimulateTxAccessor).creationCode,
-            "SimulateTxAccessor"
+            _factoryAddress, SAFE_SIMULATE_TX_ACCESSOR_SALT, type(SimulateTxAccessor).creationCode, "SimulateTxAccessor"
         );
     }
 
@@ -195,7 +183,7 @@ contract DeploySafe is Script {
             safeInfra: safeInfra,
             ownerAddresses: guardianOwnerAddresses,
             threshold: guardianThreshold,
-            salt: DeploymentConfig.GUARDIAN_SAFE_SALT,
+            salt: GUARDIAN_SAFE_SALT,
             name: "Guardian Safe"
         });
 
@@ -204,7 +192,7 @@ contract DeploySafe is Script {
             safeInfra: safeInfra,
             ownerAddresses: deployerOwnerAddresses,
             threshold: deployerThreshold,
-            salt: DeploymentConfig.DEPLOYER_SAFE_SALT,
+            salt: DEPLOYER_SAFE_SALT,
             name: "Deployer Safe"
         });
     }
@@ -285,7 +273,7 @@ contract DeploySafe is Script {
             keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(safeInfra.singletonAddress))));
 
         // Use our custom CREATE2 address computation (0.7.x compatible)
-        return ScriptUtils.computeCreate2Address(computedSalt, initCodeHash, safeInfra.proxyFactoryAddress);
+        return Create2Utils.computeCreate2Address(computedSalt, initCodeHash, safeInfra.proxyFactoryAddress);
     }
 
     /**
@@ -293,20 +281,18 @@ contract DeploySafe is Script {
      * @dev Use this to preview addresses before deployment. Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      */
-    function computeAddresses(address factoryAddress) external view {
+    function computeAddresses(address factoryAddress) external {
         // Validate the provided CREATE2 factory address
         require(factoryAddress != address(0), "Factory address cannot be zero");
 
         // Get chain ID using assembly for 0.7.x compatibility
-        uint256 chainId = ScriptUtils.getChainId();
+        uint256 chainId = _getChainId();
 
         // Get the Guardian Safe configuration from deployment.toml based on chain ID
-        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) =
-            DeploymentConfig.getGuardianSafeConfig(vm, chainId);
+        (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(chainId);
 
         // Get the Deployer Safe configuration from deployment.toml based on chain ID
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) =
-            DeploymentConfig.getDeployerSafeConfig(vm, chainId);
+        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(chainId);
 
         // Log header
         Logger.logBoxHeader("Computed Safe 1.3.0 Addresses");
@@ -344,44 +330,41 @@ contract DeploySafe is Script {
         Logger.logSection("Safe 1.3.0 Infrastructure");
 
         // Compute Safe Singleton address
-        safeInfra.singletonAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode
-        );
+        safeInfra.singletonAddress =
+            Create2Utils.computeAddress(factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode);
         Logger.logKeyValue("GnosisSafe Singleton", safeInfra.singletonAddress);
 
         // Compute Safe Proxy Factory address
         safeInfra.proxyFactoryAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_PROXY_FACTORY_SALT, type(GnosisSafeProxyFactory).creationCode
+            factoryAddress, SAFE_PROXY_FACTORY_SALT, type(GnosisSafeProxyFactory).creationCode
         );
         Logger.logKeyValue("GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
 
         // Compute Compatibility Fallback Handler address
         safeInfra.fallbackHandlerAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_FALLBACK_HANDLER_SALT, type(CompatibilityFallbackHandler).creationCode
+            factoryAddress, SAFE_FALLBACK_HANDLER_SALT, type(CompatibilityFallbackHandler).creationCode
         );
         Logger.logKeyValue("CompatibilityFallbackHandler", safeInfra.fallbackHandlerAddress);
 
         // Compute MultiSend address
-        safeInfra.multiSendAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_MULTISEND_SALT, type(MultiSend).creationCode
-        );
+        safeInfra.multiSendAddress =
+            Create2Utils.computeAddress(factoryAddress, SAFE_MULTISEND_SALT, type(MultiSend).creationCode);
         Logger.logKeyValue("MultiSend", safeInfra.multiSendAddress);
 
         // Compute MultiSendCallOnly address
         safeInfra.multiSendCallOnlyAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_MULTISEND_CALL_ONLY_SALT, type(MultiSendCallOnly).creationCode
+            factoryAddress, SAFE_MULTISEND_CALL_ONLY_SALT, type(MultiSendCallOnly).creationCode
         );
         Logger.logKeyValue("MultiSendCallOnly", safeInfra.multiSendCallOnlyAddress);
 
         // Compute CreateCall address
-        safeInfra.createCallAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode
-        );
+        safeInfra.createCallAddress =
+            Create2Utils.computeAddress(factoryAddress, SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode);
         Logger.logKeyValue("CreateCall", safeInfra.createCallAddress);
 
         // Compute SimulateTxAccessor address
         safeInfra.simulateTxAccessorAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.SAFE_SIMULATE_TX_ACCESSOR_SALT, type(SimulateTxAccessor).creationCode
+            factoryAddress, SAFE_SIMULATE_TX_ACCESSOR_SALT, type(SimulateTxAccessor).creationCode
         );
         Logger.logKeyValue("SimulateTxAccessor", safeInfra.simulateTxAccessorAddress);
     }
@@ -399,7 +382,7 @@ contract DeploySafe is Script {
         uint256 guardianThreshold,
         address[] memory deployerOwnerAddresses,
         uint256 deployerThreshold
-    ) internal view returns (SafeMultisigs memory safes) {
+    ) internal pure returns (SafeMultisigs memory safes) {
         Logger.logSection("Safe Multisigs");
 
         // Compute Guardian Safe address
@@ -407,7 +390,7 @@ contract DeploySafe is Script {
             safeInfra: safeInfra,
             ownerAddresses: guardianOwnerAddresses,
             threshold: guardianThreshold,
-            salt: DeploymentConfig.GUARDIAN_SAFE_SALT
+            salt: GUARDIAN_SAFE_SALT
         });
         Logger.logKeyValue("Guardian Safe", safes.guardianSafeAddress);
 
@@ -416,7 +399,7 @@ contract DeploySafe is Script {
             safeInfra: safeInfra,
             ownerAddresses: deployerOwnerAddresses,
             threshold: deployerThreshold,
-            salt: DeploymentConfig.DEPLOYER_SAFE_SALT
+            salt: DEPLOYER_SAFE_SALT
         });
         Logger.logKeyValue("Deployer Safe", safes.deployerSafeAddress);
     }
@@ -432,7 +415,7 @@ contract DeploySafe is Script {
         address[] memory ownerAddresses,
         uint256 threshold,
         bytes32 salt
-    ) internal view returns (address safeAddress) {
+    ) internal pure returns (address safeAddress) {
         // Encode the initializer for GnosisSafe.setup()
         bytes memory initializer = abi.encodeWithSelector(
             GnosisSafe.setup.selector,

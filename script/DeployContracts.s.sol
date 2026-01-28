@@ -2,8 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {
     ImplementationWhitelistImplementation
@@ -11,11 +9,10 @@ import {
 import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
@@ -62,7 +59,7 @@ import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol"
  *
  * @author Den Technologies Inc
  */
-contract DeployContracts is Script {
+contract DeployContracts is BaseDeployScript {
     /// @dev Struct containing addresses for the deployed platform implementation contracts
     struct PlatformImplementations {
         address organizationAddress;
@@ -84,36 +81,35 @@ contract DeployContracts is Script {
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
-        // Validate the provided CREATE2 factory is a known factory and is deployed
-        string memory factoryName = Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
+        // Initialize and validate the factory (stores address/name for use throughout)
+        validateAndInitializeFactoryOrRevert(factoryAddress);
 
         // Warn and confirm when targeting production chains
-        ScriptUtils.warnAndConfirmIfProductionChain(vm, "DeployContracts");
+        warnAndConfirmIfProductionChain("DeployContracts");
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployContracts");
+        confirmBroadcastOrDryRun("DeployContracts");
 
         // Validate that --libraries flag was used with correct addresses
-        _validateLibrariesLinkedOrRevert(factoryAddress);
+        _validateLibrariesLinkedOrRevert();
 
         // Validate libraries are deployed at expected addresses
-        _validateLibrariesDeployedOrRevert(factoryAddress);
+        _validateLibrariesDeployedOrRevert();
 
         // Validate Safe infrastructure is deployed at expected addresses
-        _validateSafeInfrastructureDeployedOrRevert(factoryAddress);
+        _validateSafeInfrastructureDeployedOrRevert();
 
         // Validate Guardian and Deployer Safes are deployed
-        _validateSafeMultisigsDeployedOrRevert(factoryAddress);
+        _validateSafeMultisigsDeployedOrRevert();
 
         // Get the expected Deployer Safe address (needed for factory and whitelist deployment)
-        address deployerSafeAddress = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
+        address deployerSafeAddress = getExpectedDeployerSafeAddress();
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
-        // This includes the factory type, chain ID, and deployer EOA address
-        Create2Utils.logDeploymentHeader(factoryAddress, factoryName, ScriptUtils.getChainId());
+        logDeploymentHeader();
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
 
@@ -121,14 +117,13 @@ contract DeployContracts is Script {
         vm.startBroadcast();
 
         // Deploy Implementation Contracts (OrganizationImpl, AccountImpl, WhitelistImpl)
-        PlatformImplementations memory implementationContracts = _deployImplementationContracts(factoryAddress);
+        PlatformImplementations memory implementationContracts = _deployImplementationContracts();
 
         // Deploy Factory Contracts (OrganizationFactory)
-        address organizationFactoryAddress = _deployOrganizationFactory(factoryAddress, deployerSafeAddress);
+        address organizationFactoryAddress = _deployOrganizationFactory(deployerSafeAddress);
 
         // Deploy ImplementationWhitelistProxy (depends on implementationContracts, deployer safe)
-        address whitelistProxyAddress =
-            _deployWhitelistProxy(factoryAddress, implementationContracts, deployerSafeAddress);
+        address whitelistProxyAddress = _deployWhitelistProxy(implementationContracts, deployerSafeAddress);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -142,12 +137,12 @@ contract DeployContracts is Script {
 
         // Log deployment completion and print deployed addresses
         Logger.logDeploymentComplete();
-        _logDeployedAddresses(contracts, factoryAddress);
+        _logDeployedAddresses(contracts);
     }
 
     /**
      * @notice Compute and print platform contract addresses without deploying
-     * @dev Use this to preview addresses before deployment or for updating DeploymentConfig.sol.
+     * @dev Use this to preview addresses before deployment or for updating deployment.toml.
      *      Does not require RPC connection.
      *      IMPORTANT: This function must be called with the correct --libraries flags to ensure
      *      the library addresses are linked at compile time. The bash script compute_all_addresses.sh
@@ -170,20 +165,16 @@ contract DeployContracts is Script {
         Logger.logSection("Implementation Contracts");
 
         address whitelistImplAddress = Create2Utils.computeAddress(
-            factoryAddress,
-            DeploymentConfig.WHITELIST_IMPL_SALT,
-            type(ImplementationWhitelistImplementation).creationCode
+            factoryAddress, WHITELIST_IMPL_SALT, type(ImplementationWhitelistImplementation).creationCode
         );
         Logger.logKeyValue("ImplementationWhitelistImplementation", whitelistImplAddress);
 
-        address orgImplAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.ORG_IMPL_SALT, type(OrganizationImplementation).creationCode
-        );
+        address orgImplAddress =
+            Create2Utils.computeAddress(factoryAddress, ORG_IMPL_SALT, type(OrganizationImplementation).creationCode);
         Logger.logKeyValue("OrganizationImplementation", orgImplAddress);
 
-        address accountImplAddress = Create2Utils.computeAddress(
-            factoryAddress, DeploymentConfig.ACCOUNT_IMPL_SALT, type(AccountImplementation).creationCode
-        );
+        address accountImplAddress =
+            Create2Utils.computeAddress(factoryAddress, ACCOUNT_IMPL_SALT, type(AccountImplementation).creationCode);
         Logger.logKeyValue("AccountImplementation", accountImplAddress);
 
         // Compute OrganizationFactory address (depends on deployerSafeAddress constructor arg)
@@ -191,8 +182,7 @@ contract DeployContracts is Script {
 
         bytes memory orgFactoryInitCode =
             abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
-        address orgFactoryAddress =
-            Create2Utils.computeAddress(factoryAddress, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode);
+        address orgFactoryAddress = Create2Utils.computeAddress(factoryAddress, ORG_FACTORY_SALT, orgFactoryInitCode);
         Logger.logKeyValue("OrganizationFactory", orgFactoryAddress);
 
         // Compute ImplementationWhitelistProxy address
@@ -214,8 +204,7 @@ contract DeployContracts is Script {
             type(ImplementationWhitelistProxy).creationCode, abi.encode(whitelistImplAddress, initData)
         );
 
-        address whitelistProxyAddress =
-            Create2Utils.computeAddress(factoryAddress, DeploymentConfig.WHITELIST_PROXY_SALT, proxyBytecode);
+        address whitelistProxyAddress = Create2Utils.computeAddress(factoryAddress, WHITELIST_PROXY_SALT, proxyBytecode);
         Logger.logKeyValue("ImplementationWhitelistProxy", whitelistProxyAddress);
 
         Logger.logEmptyLine();
@@ -223,9 +212,8 @@ contract DeployContracts is Script {
     }
 
     /// @dev Deploys all implementation contracts via CREATE2
-    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @return implementationContracts Struct containing all deployed implementation addresses
-    function _deployImplementationContracts(address factoryAddress)
+    function _deployImplementationContracts()
         internal
         returns (PlatformImplementations memory implementationContracts)
     {
@@ -233,8 +221,8 @@ contract DeployContracts is Script {
 
         // Deploy ImplementationWhitelistImplementation
         (implementationContracts.whitelistAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.WHITELIST_IMPL_SALT,
+            _factoryAddress,
+            WHITELIST_IMPL_SALT,
             type(ImplementationWhitelistImplementation).creationCode,
             "ImplementationWhitelistImplementation"
         );
@@ -242,26 +230,19 @@ contract DeployContracts is Script {
         // Deploy OrganizationImplementation
         // IMPORTANT: This script must be run with --libraries flag for deterministic deployment
         (implementationContracts.organizationAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.ORG_IMPL_SALT,
-            type(OrganizationImplementation).creationCode,
-            "OrganizationImplementation"
+            _factoryAddress, ORG_IMPL_SALT, type(OrganizationImplementation).creationCode, "OrganizationImplementation"
         );
 
         // Deploy AccountImplementation
         (implementationContracts.accountAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress,
-            DeploymentConfig.ACCOUNT_IMPL_SALT,
-            type(AccountImplementation).creationCode,
-            "AccountImplementation"
+            _factoryAddress, ACCOUNT_IMPL_SALT, type(AccountImplementation).creationCode, "AccountImplementation"
         );
     }
 
     /// @dev Deploys the OrganizationFactory via CREATE2
-    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @param deployerSafeAddress Address of the Deployer Safe to authorize as factory deployer
     /// @return organizationFactoryAddress Address of the deployed OrganizationFactory
-    function _deployOrganizationFactory(address factoryAddress, address deployerSafeAddress)
+    function _deployOrganizationFactory(address deployerSafeAddress)
         internal
         returns (address organizationFactoryAddress)
     {
@@ -272,20 +253,18 @@ contract DeployContracts is Script {
             abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
 
         (organizationFactoryAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress, DeploymentConfig.ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
+            _factoryAddress, ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
         );
     }
 
     /// @dev Deploys the ImplementationWhitelistProxy via CREATE2 with atomic initialization
-    /// @param factoryAddress Address of the CREATE2 factory to use for deployments
     /// @param implementationContracts Implementation contract addresses
     /// @param deployerSafeAddress Address of the Deployer Safe (owner of the whitelist)
     /// @return whitelistProxyAddress Address of the deployed whitelist proxy
-    function _deployWhitelistProxy(
-        address factoryAddress,
-        PlatformImplementations memory implementationContracts,
-        address deployerSafeAddress
-    ) internal returns (address whitelistProxyAddress) {
+    function _deployWhitelistProxy(PlatformImplementations memory implementationContracts, address deployerSafeAddress)
+        internal
+        returns (address whitelistProxyAddress)
+    {
         Logger.logSection("ImplementationWhitelistProxy");
 
         // Construct arrays of implementation addresses to whitelist
@@ -308,17 +287,16 @@ contract DeployContracts is Script {
 
         // Deploy the whitelist proxy using CREATE2
         (whitelistProxyAddress,) = Create2Utils.deployIfNotExists(
-            factoryAddress, DeploymentConfig.WHITELIST_PROXY_SALT, proxyBytecode, "ImplementationWhitelistProxy"
+            _factoryAddress, WHITELIST_PROXY_SALT, proxyBytecode, "ImplementationWhitelistProxy"
         );
     }
 
     /// @dev Verifies that platform libraries are deployed at the expected addresses from deployment.toml
-    /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
-    function _validateLibrariesDeployedOrRevert(address factoryAddress) internal view {
+    function _validateLibrariesDeployedOrRevert() internal {
         Logger.logSection("Verify Library Addresses");
 
         // Get expected library addresses from deployment.toml (based on which factory was used)
-        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
+        PlatformLibraries memory expectedLibAddresses = getExpectedLibraryAddresses();
 
         bool allDeployed = true;
 
@@ -365,13 +343,11 @@ contract DeployContracts is Script {
     }
 
     /// @dev Verifies that Safe infrastructure is deployed at the expected addresses from deployment.toml
-    /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
-    function _validateSafeInfrastructureDeployedOrRevert(address factoryAddress) internal view {
+    function _validateSafeInfrastructureDeployedOrRevert() internal {
         Logger.logSection("Verify Safe 1.3.0 Infrastructure");
 
         // Get expected Safe infrastructure addresses from deployment.toml
-        SafeInfrastructure memory expectedSafeInfra =
-            DeploymentConfig.getExpectedSafeInfrastructureAddresses(vm, factoryAddress);
+        SafeInfrastructure memory expectedSafeInfra = getExpectedSafeInfrastructureAddresses();
 
         bool allDeployed = true;
 
@@ -448,13 +424,12 @@ contract DeployContracts is Script {
     }
 
     /// @dev Verifies that Guardian and Deployer Safes are deployed at the expected addresses from deployment.toml
-    /// @param factoryAddress Address of the CREATE2 factory used for deployment (determines expected addresses)
-    function _validateSafeMultisigsDeployedOrRevert(address factoryAddress) internal view {
+    function _validateSafeMultisigsDeployedOrRevert() internal {
         Logger.logSection("Verify Safe Multisigs");
 
         // Get expected Safe addresses from deployment.toml
-        address expectedGuardianSafe = DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
-        address expectedDeployerSafe = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
+        address expectedGuardianSafe = getExpectedGuardianSafeAddress();
+        address expectedDeployerSafe = getExpectedDeployerSafeAddress();
 
         bool allDeployed = true;
 
@@ -487,15 +462,14 @@ contract DeployContracts is Script {
 
     /// @dev Validates that external libraries are properly linked via --libraries flag
     ///      Uses expected addresses from deployment.toml to verify the correct addresses are embedded
-    /// @param factoryAddress Address of the CREATE2 factory (determines which addresses to check for)
-    function _validateLibrariesLinkedOrRevert(address factoryAddress) internal view {
+    function _validateLibrariesLinkedOrRevert() internal {
         // Get the creation code of OrganizationImplementation
         // If libraries aren't linked via --libraries flag, the creation code will have
         // placeholder bytes instead of the actual library addresses
         bytes memory initCode = type(OrganizationImplementation).creationCode;
 
         // Get expected library addresses from deployment.toml (based on which factory was used)
-        PlatformLibraries memory expectedLibAddresses = DeploymentConfig.getExpectedLibraryAddresses(vm, factoryAddress);
+        PlatformLibraries memory expectedLibAddresses = getExpectedLibraryAddresses();
 
         // Verify each expected library address appears in the creation code
         // If --libraries flag wasn't used (or used with wrong addresses), these won't be in the bytecode
@@ -519,13 +493,11 @@ contract DeployContracts is Script {
 
     /// @dev Logs all deployed contract addresses in a formatted summary
     /// @param contracts Complete set of deployed contract addresses
-    /// @param factoryAddress The CREATE2 factory used for deployment (to look up Safe addresses)
-    function _logDeployedAddresses(DeployedContracts memory contracts, address factoryAddress) internal view {
+    function _logDeployedAddresses(DeployedContracts memory contracts) internal {
         // Get Safe addresses from deployment.toml for logging
-        SafeInfrastructure memory safeInfra =
-            DeploymentConfig.getExpectedSafeInfrastructureAddresses(vm, factoryAddress);
-        address guardianSafe = DeploymentConfig.getExpectedGuardianSafeAddress(vm, factoryAddress);
-        address deployerSafe = DeploymentConfig.getExpectedDeployerSafeAddress(vm, factoryAddress);
+        SafeInfrastructure memory safeInfra = getExpectedSafeInfrastructureAddresses();
+        address guardianSafe = getExpectedGuardianSafeAddress();
+        address deployerSafe = getExpectedDeployerSafeAddress();
 
         Logger.logBoxHeader("Deployed Contract Addresses");
         Logger.logIndented("Safe Infrastructure (pre-deployed):");

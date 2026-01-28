@@ -2,13 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
 import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
 /**
  * @title DeployBatchedTransaction
@@ -36,25 +33,25 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeployBatchedTransaction is Script {
+contract DeployBatchedTransaction is BaseDeployScript {
     /**
      * @notice Main entry point - deploys BatchedTransaction via CREATE2
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
      */
     function run(address factoryAddress) external {
-        // Validate the provided CREATE2 factory is a known factory and is deployed
-        Create2Utils.validateKnownFactoryOrRevert(vm, factoryAddress);
+        // Initialize and validate the factory (stores address/name for use throughout)
+        validateAndInitializeFactoryOrRevert(factoryAddress);
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployBatchedTransaction");
+        confirmBroadcastOrDryRun("DeployBatchedTransaction");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         Logger.logBoxHeader("BatchedTransaction Deployment");
         Logger.logKeyValue("Chain ID", block.chainid);
-        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("CREATE2 Factory", _factoryAddress);
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
 
@@ -62,7 +59,7 @@ contract DeployBatchedTransaction is Script {
         vm.startBroadcast();
 
         // Deploy BatchedTransaction
-        address batchedTransactionAddress = _deploy(factoryAddress);
+        address batchedTransactionAddress = _deploy();
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -86,7 +83,7 @@ contract DeployBatchedTransaction is Script {
 
         // Compute the address
         bytes memory initCode = type(BatchedTransaction).creationCode;
-        bytes32 salt = DeploymentConfig.BATCHED_TRANSACTION_SALT;
+        bytes32 salt = BATCHED_TRANSACTION_SALT;
         address expectedAddress = Create2Utils.computeAddress(factoryAddress, salt, initCode);
 
         // Log the computed address
@@ -99,16 +96,15 @@ contract DeployBatchedTransaction is Script {
     }
 
     /// @dev Deploys BatchedTransaction via CREATE2
-    /// @param factoryAddress The CREATE2 factory address
     /// @return batchedTransactionAddress The deployed contract address
-    function _deploy(address factoryAddress) internal returns (address batchedTransactionAddress) {
-        bytes32 salt = DeploymentConfig.BATCHED_TRANSACTION_SALT;
+    function _deploy() internal returns (address batchedTransactionAddress) {
+        bytes32 salt = BATCHED_TRANSACTION_SALT;
         bytes memory initCode = type(BatchedTransaction).creationCode;
 
         Logger.logSection("BatchedTransaction (CREATE2)");
 
         (batchedTransactionAddress,) =
-            Create2Utils.deployIfNotExists(factoryAddress, salt, initCode, "BatchedTransaction");
+            Create2Utils.deployIfNotExists(_factoryAddress, salt, initCode, "BatchedTransaction");
 
         return batchedTransactionAddress;
     }

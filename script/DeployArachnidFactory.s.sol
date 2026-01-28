@@ -2,12 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
 /**
  * @title DeployArachnidFactory
@@ -33,7 +30,7 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeployArachnidFactory is Script {
+contract DeployArachnidFactory is BaseDeployScript {
     /// @dev Deployer address that will deploy the factory (derived from pre-signed tx)
     /// This is a constant because it's derived from the pre-signed transaction and cannot change.
     address internal constant _EXPECTED_DEPLOYER_ADDRESS = 0x3fAB184622Dc19b6109349B94811493BF2a45362;
@@ -72,13 +69,13 @@ contract DeployArachnidFactory is Script {
      */
     function run() external {
         // Read expected factory address from deployment.toml
-        address expectedFactoryAddress = DeploymentConfig.getFactoryAddress(vm, DeploymentConfig.FACTORY_ARACHNID);
+        address expectedFactoryAddress = getFactoryAddress(FACTORY_ARACHNID);
 
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
+        confirmBroadcastOrDryRun("DeployArachnidFactory");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
@@ -113,7 +110,7 @@ contract DeployArachnidFactory is Script {
     /// @dev Can be called separately to fund the deployer before running the main script.
     function fundDeployer() external {
         // Prevent using the production Den Factory deployer for funding
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the funding details
         Logger.logEmptyLine();
