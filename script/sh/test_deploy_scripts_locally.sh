@@ -13,10 +13,20 @@
 set -e  # Stop on first error
 
 # =============================================================================
+# Source Shared Configuration
+# =============================================================================
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/deployment_config.sh"
+
+# Validate prerequisites (deployment.toml exists, yq available)
+validate_prerequisites
+
+# =============================================================================
 # Argument Validation
 # =============================================================================
 FACTORY="$1"
 
+# For this script, only arachnid and den-nonprod are valid (local testing)
 if [[ -z "$FACTORY" ]]; then
     echo "Error: Factory argument required"
     echo "Usage: $0 <arachnid|den-nonprod>"
@@ -36,11 +46,11 @@ fi
 # =============================================================================
 # Foundry managed accounts and their addresses:
 #   test-deployer              - 0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3 (default for deployments)
-#   test-den-factory-deployer  - 0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328 (for Den factory deployment)
-#   test-guardian-safe-owner   - 0x22002e8661a780d61ef4c86f4a9ffa843a6fea20 (guardian Safe owner)
-#   test-deployer-safe-owner   - 0x8da06ab9bbb0736d36c92e10b1d6e23a890fd32f (deployer Safe owner)
-#   test-guardian-executor     - 0x66fb51bf8c7a973a278578a2e381fb5e89796de1 (guardian module executor)
-#   test-deployer-executor     - 0xbd7df30e88c5c7fd54f2ac77a1302581d577e0fd (deployer module executor)
+#   test-den-factory-deployer  - (read from deployment.toml factory_deployer)
+#   test-guardian-safe-owner   - (read from deployment.toml)
+#   test-deployer-safe-owner   - (read from deployment.toml)
+#   test-guardian-executor     - (read from deployment.toml)
+#   test-deployer-executor     - (read from deployment.toml)
 
 PORT="8545"
 RPC_URL="http://127.0.0.1:$PORT"
@@ -51,19 +61,26 @@ DEN_FACTORY_DEPLOYER_ACCOUNT="test-den-factory-deployer"
 GUARDIAN_SAFE_OWNER_ACCOUNT="test-guardian-safe-owner"
 DEPLOYER_SAFE_OWNER_ACCOUNT="test-deployer-safe-owner"
 
-# EOA addresses
+# EOA addresses - some hardcoded (foundry test accounts), some from deployment.toml
 DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
-DEN_FACTORY_DEPLOYER_ADDRESS="0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328"
-GUARDIAN_SAFE_OWNER_ADDRESS="0x22002e8661a780d61ef4c86f4a9ffa843a6fea20"
-DEPLOYER_SAFE_OWNER_ADDRESS="0x8da06ab9bbb0736d36c92e10b1d6e23a890fd32f"
-GUARDIAN_EXECUTOR_ADDRESS="0x66fb51bf8c7a973a278578a2e381fb5e89796de1"
-DEPLOYER_EXECUTOR_ADDRESS="0xbd7df30e88c5c7fd54f2ac77a1302581d577e0fd"
+DEN_FACTORY_DEPLOYER_ADDRESS=$(get_factory_deployer "den-nonprod")
+
+# Read Safe owner and executor addresses from deployment.toml (nonprod)
+# Note: get_* functions exit with error if value not found, so no need for separate validation
+GUARDIAN_SAFE_OWNER_ADDRESS=$(get_guardian_safe_owner "nonprod")
+DEPLOYER_SAFE_OWNER_ADDRESS=$(get_deployer_safe_owner "nonprod")
+GUARDIAN_EXECUTOR_ADDRESS=$(get_guardian_executor "nonprod")
+DEPLOYER_EXECUTOR_ADDRESS=$(get_deployer_executor "nonprod")
 
 echo "============================================================================="
 echo "Local Deployment Test: $FACTORY"
 echo "============================================================================="
 echo "  RPC URL: $RPC_URL"
 echo "  Deployer Account: $DEPLOYER_ACCOUNT ($DEPLOYER_ADDRESS)"
+echo "  Guardian Safe Owner: $GUARDIAN_SAFE_OWNER_ADDRESS"
+echo "  Deployer Safe Owner: $DEPLOYER_SAFE_OWNER_ADDRESS"
+echo "  Guardian Executor: $GUARDIAN_EXECUTOR_ADDRESS"
+echo "  Deployer Executor: $DEPLOYER_EXECUTOR_ADDRESS"
 echo "============================================================================="
 
 # =============================================================================

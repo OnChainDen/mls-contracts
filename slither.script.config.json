@@ -8,7 +8,10 @@
     "naming-convention",
     "solc-version",
     "unused-return",
-    "too-many-digits"
+    "too-many-digits",
+    "unused-state",
+    "dead-code",
+    "assembly"
   ],
   "filter_paths": "(test|lib)",
   "exclude_dependencies": true

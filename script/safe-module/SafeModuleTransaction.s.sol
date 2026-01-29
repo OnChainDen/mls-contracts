@@ -2,12 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /// @notice Minimal interface for Safe v1.3.0 functions needed by this script
@@ -78,7 +75,7 @@ interface IGnosisSafe {
  *
  * @author Den Technologies Inc
  */
-contract SafeModuleTransaction is Script {
+contract SafeModuleTransaction is BaseDeployScript {
     /**
      * @notice Approve and optionally execute adding a module to a Safe
      * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
@@ -86,8 +83,11 @@ contract SafeModuleTransaction is Script {
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
     function addModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
+        // Initialize and validate the factory
+        validateAndInitializeFactoryOrRevert(factoryAddress);
+
         // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, safeType);
+        (address safeAddress, address moduleAddress) = _getAddresses(safeType);
 
         // Validate the Safe and module are deployed
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
@@ -110,8 +110,11 @@ contract SafeModuleTransaction is Script {
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
     function removeModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
+        // Initialize and validate the factory
+        validateAndInitializeFactoryOrRevert(factoryAddress);
+
         // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, safeType);
+        (address safeAddress, address moduleAddress) = _getAddresses(safeType);
 
         // Validate the Safe is deployed
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
@@ -135,9 +138,12 @@ contract SafeModuleTransaction is Script {
      * @param safeType "guardian" or "deployer"
      * @param action "add" or "remove"
      */
-    function checkStatus(address factoryAddress, string calldata safeType, string calldata action) external view {
+    function checkStatus(address factoryAddress, string calldata safeType, string calldata action) external {
+        // Initialize and validate the factory
+        validateAndInitializeFactoryOrRevert(factoryAddress);
+
         // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(factoryAddress, safeType);
+        (address safeAddress, address moduleAddress) = _getAddresses(safeType);
 
         // Build the transaction data
         // slither-disable-next-line uninitialized-local
@@ -188,8 +194,6 @@ contract SafeModuleTransaction is Script {
                 Logger.logKeyValue("  ", owners[i]);
             }
         }
-
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
@@ -203,7 +207,7 @@ contract SafeModuleTransaction is Script {
         bool executeIfReady
     ) internal {
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "SafeModuleTransaction");
+        confirmBroadcastOrDryRun("SafeModuleTransaction");
 
         // Get the transaction hash
         bytes32 txHash = _getTransactionHash(safeAddress, txData);
@@ -286,29 +290,22 @@ contract SafeModuleTransaction is Script {
         }
 
         vm.stopBroadcast();
-
-        Logger.logEmptyLine();
         Logger.logBoxFooter();
     }
 
-    /// @dev Get Safe and module addresses from DeploymentConfig
-    function _getAddresses(address factoryAddress, string calldata safeType)
-        internal
-        pure
-        returns (address safeAddress, address moduleAddress)
-    {
+    /// @dev Get Safe and module addresses from deployment.toml
+    function _getAddresses(string calldata safeType) internal returns (address safeAddress, address moduleAddress) {
         bool isGuardian = keccak256(bytes(safeType)) == keccak256("guardian");
         bool isDeployer = keccak256(bytes(safeType)) == keccak256("deployer");
         require(isGuardian || isDeployer, "Invalid safeType - must be 'guardian' or 'deployer'");
 
         if (isGuardian) {
-            safeAddress = DeploymentConfig.getExpectedGuardianSafeAddress(factoryAddress);
+            safeAddress = getExpectedGuardianSafeAddress();
         } else {
-            safeAddress = DeploymentConfig.getExpectedDeployerSafeAddress(factoryAddress);
+            safeAddress = getExpectedDeployerSafeAddress();
         }
 
-        (address guardianModule, address deployerModule) =
-            DeploymentConfig.getExpectedSafeExecutorModuleAddresses(factoryAddress);
+        (address guardianModule, address deployerModule) = getExpectedSafeExecutorModuleAddresses();
         moduleAddress = isGuardian ? guardianModule : deployerModule;
     }
 

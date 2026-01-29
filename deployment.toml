@@ -1,0 +1,238 @@
+# ==============================================================================
+# Deployment Configuration
+# ==============================================================================
+# Single source of truth for all deterministic deployment addresses.
+#
+# [factory.*]         - Addresses that depend on which CREATE2 factory is used
+# [factory.*.env.*]   - Environment-dependent addresses (prod vs nonprod Safe configs)
+# [safe.*]            - Safe multisig configs (owners, thresholds, executor EOAs)
+#
+# IMPORTANT: When updating addresses, also update compute_all_addresses.sh
+# to verify computed addresses match these values.
+# ==============================================================================
+
+# ==============================================================================
+# FACTORY-DEPENDENT ADDRESSES
+# ==============================================================================
+# These addresses are computed using CREATE2 and differ based on which
+# factory is used for deployment.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Arachnid Deterministic Deployment Proxy
+# ------------------------------------------------------------------------------
+# The Arachnid factory is deployed on most EVM chains at the same address.
+# See: https://github.com/Arachnid/deterministic-deployment-proxy
+# ------------------------------------------------------------------------------
+[factory.arachnid]
+# Factory
+factory = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
+factory_deployer = "0x3fAB184622Dc19b6109349B94811493BF2a45362"
+
+# Platform Libraries (environment-independent)
+lib_org_policy = "0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA"
+lib_org_admin = "0x6A87f1102404F4e36080732E535AD1F90cEde41B"
+lib_org_init = "0xbcAD4381C92c350f590111EDe66E83f0584E42F9"
+lib_org_account_sig = "0xEdd0540b7109196ac93CD64970FEc869a7011aCF"
+
+# Platform Implementation Contracts (environment-independent)
+whitelist_impl = "0x3FaB63b5B065831117FB6Eac0221904E16A05324"
+org_impl = "0x42Db2497b30db9C01bb063678f3384A239Ed9A99"
+account_impl = "0x9Cb25743E07A337F505fE6d239d70146bC8d4eD3"
+
+# Safe 1.3.0 Infrastructure (environment-independent)
+safe_singleton = "0x7A26cf6987d32BCa2Feda46910b4c79Bbf3FB174"
+safe_proxy_factory = "0x04acB79cD2c208Fc4B983d92971A41F709532Ff5"
+safe_fallback_handler = "0xBF32F3DCE01B6c67E454066f8969Deee79D74a55"
+safe_multisend = "0xe0487528D742Bd9e6295AE6f3873175f032ba8f3"
+safe_multisend_call_only = "0x5f7fd4Bd58C7777F7C777Cd4C19cF68Fc0A17Dc4"
+safe_create_call = "0x7880435e91818C84bfAdC2f454B8A92942f7AcbD"
+safe_simulate_tx_accessor = "0x205CeDEBdB936D473031f6140d50C11aeC948773"
+
+# BatchedTransaction (environment-independent)
+batched_transaction = "0xbaFA880487F37868903cd04d642a16CB3Ab54449"
+
+# Environment: nonprod (1-of-1 Safe with test executors)
+# Addresses that depend on the nonprod deployer Safe
+[factory.arachnid.env.nonprod]
+guardian_safe = "0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305"
+deployer_safe = "0x84246979f1678Cc3c5949106B958275aA15B807e"
+org_factory = "0x5e484DF0e6D1De01920e562E7a01c969cB0Cb7BE"
+whitelist_proxy = "0x8DA1681dD433be70Ec3783E5B5efF6CeC341c108"
+guardian_safe_executor_module = "0x1cB6C223a9b7c52F0B2CAdD4d4Cf8FFb0D25bC66"
+deployer_safe_executor_module = "0xc2503A2F2Bb2DaDB1Ca5Ec56B44ae5C3F6751c2F"
+
+# Environment: prod (2-of-3 Safe with production executors)
+# Module addresses NOT_COMPUTED until production executor EOAs are set
+[factory.arachnid.env.prod]
+guardian_safe = "0xFDa614353A1E28110f6240097b74FAb86B1666e5"
+deployer_safe = "0x2669AE29f7cE3e1282D6e1dda02D29538b3390B0"
+org_factory = "0x07B196bDcd05b29F3c7f632B015327dF79221540"
+whitelist_proxy = "0x62189FC56357D9e747693c3977dd86B129Ab38e0"
+guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
+deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
+
+# ------------------------------------------------------------------------------
+# Den Singleton Factory (Non-Production)
+# ------------------------------------------------------------------------------
+# Used for local development and testnet deployments.
+# Deployed from NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0.
+# ------------------------------------------------------------------------------
+[factory.den-nonprod]
+# Factory
+factory = "0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5"
+factory_deployer = "0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328"
+
+# Platform Libraries (environment-independent)
+lib_org_policy = "0x58fC18a42DDd82725471bcE76bb5d9D6509A0641"
+lib_org_admin = "0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1"
+lib_org_init = "0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e"
+lib_org_account_sig = "0x8F8c7526cb63885061c4d922e66D7d8589ac045c"
+
+# Platform Implementation Contracts (environment-independent)
+whitelist_impl = "0x53839FD22C8525acBC608f5a388fEcC4694957E7"
+org_impl = "0x6D8EbbD134241bEf464686299F3FDCc2f564d89a"
+account_impl = "0xa1CceDe53008f1e5d2ADc01bE735d647c48A94be"
+
+# Safe 1.3.0 Infrastructure (environment-independent)
+safe_singleton = "0x9732b61234C43C49B98812E09D81D433b7789b25"
+safe_proxy_factory = "0x400F1f8fC868476bAb030909F049a70074570c7e"
+safe_fallback_handler = "0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0"
+safe_multisend = "0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479"
+safe_multisend_call_only = "0x1D6535926E595Bb84Fc4d548E6d3615212EDa92C"
+safe_create_call = "0x619B2299DD5C77DF72AE1a8a70885D89E423B382"
+safe_simulate_tx_accessor = "0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d"
+
+# BatchedTransaction (environment-independent)
+batched_transaction = "0x0cedE35f7bac439D35e261E386315c62C17d6Ec1"
+
+# Environment: nonprod (1-of-1 Safe with test executors)
+# Addresses that depend on the nonprod deployer Safe
+[factory.den-nonprod.env.nonprod]
+guardian_safe = "0x4fbeF24b88228A6639409150214bb5A798930fA9"
+deployer_safe = "0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f"
+org_factory = "0xFd47FE7f256BCA728d78D953f2817b29F193dAd3"
+whitelist_proxy = "0xd1981BfD5842d57d893b72fC0Ec1F89a5b188221"
+guardian_safe_executor_module = "0xe5e4B8F410a13ce70dbFAB36409ab9f2F6577EFA"
+deployer_safe_executor_module = "0x6dAc957D9d5F5ea2214d45f3aEe58309Ae7b2C62"
+
+# Environment: prod (2-of-3 Safe with production executors)
+# Module addresses NOT_COMPUTED until production executor EOAs are set
+[factory.den-nonprod.env.prod]
+guardian_safe = "0xdB9d134E6207436AbAD0FD7eE580Dd60bC004458"
+deployer_safe = "0xA9Ab89FF5714c4e08d46B85577529D813834Fa0c"
+org_factory = "0x5d56E6f68fD5bdc425f07913fdC1bA25578d6520"
+whitelist_proxy = "0x6d140cE6a15226543Ac24aa57367784ed8adC8Cf"
+guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
+deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
+
+# ------------------------------------------------------------------------------
+# Den Singleton Factory (Production)
+# ------------------------------------------------------------------------------
+# Used for mainnet deployments.
+# TODO: Deploy from PROD_DEN_FACTORY_DEPLOYER_ADDRESS at nonce 0, then update.
+# ------------------------------------------------------------------------------
+[factory.den-prod]
+# Factory
+# TODO: Update after deploying Den Singleton Factory from prod deployer
+factory = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
+factory_deployer = "0x0000000000000000000000000000000000000000"
+
+# Platform Libraries (environment-independent)
+# TODO: Update after deploying libraries via prod Den Singleton Factory
+lib_org_policy = "0x0000000000000000000000000000000000000000"
+lib_org_admin = "0x0000000000000000000000000000000000000000"
+lib_org_init = "0x0000000000000000000000000000000000000000"
+lib_org_account_sig = "0x0000000000000000000000000000000000000000"
+
+# Platform Implementation Contracts (environment-independent)
+# TODO: Update after deploying platform contracts via prod Den Singleton Factory
+whitelist_impl = "0x0000000000000000000000000000000000000000"
+org_impl = "0x0000000000000000000000000000000000000000"
+account_impl = "0x0000000000000000000000000000000000000000"
+
+# Safe 1.3.0 Infrastructure (environment-independent)
+# TODO: Update after deploying Safe 1.3.0 via prod Den Singleton Factory
+safe_singleton = "0x0000000000000000000000000000000000000000"
+safe_proxy_factory = "0x0000000000000000000000000000000000000000"
+safe_fallback_handler = "0x0000000000000000000000000000000000000000"
+safe_multisend = "0x0000000000000000000000000000000000000000"
+safe_multisend_call_only = "0x0000000000000000000000000000000000000000"
+safe_create_call = "0x0000000000000000000000000000000000000000"
+safe_simulate_tx_accessor = "0x0000000000000000000000000000000000000000"
+
+# BatchedTransaction (environment-independent)
+# TODO: Update after deploying BatchedTransaction via prod Den Singleton Factory
+batched_transaction = "0x0000000000000000000000000000000000000000"
+
+# Environment: nonprod (1-of-1 Safe with test executors)
+# TODO: Compute addresses after deploying prod Den Singleton Factory
+[factory.den-prod.env.nonprod]
+guardian_safe = "0x0000000000000000000000000000000000000000"
+deployer_safe = "0x0000000000000000000000000000000000000000"
+org_factory = "0x0000000000000000000000000000000000000000"
+whitelist_proxy = "0x0000000000000000000000000000000000000000"
+guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
+deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
+
+# Environment: prod (2-of-3 Safe with production executors)
+# TODO: Compute addresses after setting production Safe owners and executor EOAs
+[factory.den-prod.env.prod]
+guardian_safe = "0x0000000000000000000000000000000000000000"
+deployer_safe = "0x0000000000000000000000000000000000000000"
+org_factory = "0x0000000000000000000000000000000000000000"
+whitelist_proxy = "0x0000000000000000000000000000000000000000"
+guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
+deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
+
+# ==============================================================================
+# SAFE MULTISIG CONFIGURATIONS
+# ==============================================================================
+# These are environment-dependent (prod vs non-prod), not factory-dependent.
+# Used for Safe owner addresses, thresholds, and executor EOAs.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Non-Production Safe Configuration
+# ------------------------------------------------------------------------------
+# For local development and testnet deployments.
+# Uses single-owner Safes for simplicity.
+# ------------------------------------------------------------------------------
+[safe.nonprod]
+# Guardian Safe config (1-of-1)
+guardian_safe_threshold = 1
+guardian_safe_owner_1 = "0x22002e8661A780d61EF4c86F4a9fFa843A6fea20"
+
+# Deployer Safe config (1-of-1)
+deployer_safe_threshold = 1
+deployer_safe_owner_1 = "0x8DA06Ab9bBb0736d36c92E10B1d6e23A890FD32F"
+
+# Safe Executor EOAs (authorized to execute via modules)
+# For local/testnet testing, use the test-guardian-executor and test-deployer-executor foundry accounts
+guardian_executor_eoa = "0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1"
+deployer_executor_eoa = "0xBd7DF30E88C5C7fD54F2Ac77a1302581d577E0Fd"
+
+# ------------------------------------------------------------------------------
+# Production Safe Configuration
+# ------------------------------------------------------------------------------
+# For mainnet deployments.
+# Uses multi-owner Safes with 2-of-3 threshold.
+# TODO: Update owner addresses before mainnet deployment.
+# ------------------------------------------------------------------------------
+[safe.prod]
+# Guardian Safe config (2-of-3)
+guardian_safe_threshold = 2
+guardian_safe_owner_1 = "0x1111111111111111111111111111111111111111"
+guardian_safe_owner_2 = "0x2222222222222222222222222222222222222222"
+guardian_safe_owner_3 = "0x6666666666666666666666666666666666666666"
+
+# Deployer Safe config (2-of-3)
+deployer_safe_threshold = 2
+deployer_safe_owner_1 = "0x3333333333333333333333333333333333333333"
+deployer_safe_owner_2 = "0x4444444444444444444444444444444444444444"
+deployer_safe_owner_3 = "0x5555555555555555555555555555555555555555"
+
+# Safe Executor EOAs (authorized to execute via modules)
+# TODO: Update with production Safe Executor EOA addresses before mainnet deployment
+guardian_executor_eoa = "0x0000000000000000000000000000000000000000"
+deployer_executor_eoa = "0x0000000000000000000000000000000000000000"

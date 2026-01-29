@@ -96,7 +96,7 @@ library Logger {
     /// @dev Logs a box header with a title
     /// @param title The title to display in the header
     function logBoxHeader(string memory title) internal pure {
-        console.log("");
+        logEmptyLine();
         console.log("================================================================================");
         console.log("  %s", title);
         console.log("================================================================================");
@@ -114,6 +114,7 @@ library Logger {
 
     /// @dev Logs a box footer (closing line)
     function logBoxFooter() internal pure {
+        logEmptyLine();
         console.log("================================================================================");
     }
 
@@ -164,15 +165,6 @@ library Logger {
         console.log("");
         console.log("  Next step: Set the factory address in your environment:");
         console.log("    export %s=%s", envVarName, deployedAddress);
-        console.log("");
-    }
-
-    /// @dev Logs deployment completion message
-    function logDeploymentComplete() internal pure {
-        console.log("");
-        console.log("================================================================================");
-        console.log(unicode"  ✅ Deployment Complete!");
-        console.log("================================================================================");
         console.log("");
     }
 }
