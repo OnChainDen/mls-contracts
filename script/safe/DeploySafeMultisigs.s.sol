@@ -4,7 +4,6 @@ pragma solidity 0.7.6;
 
 // Safe 1.3.0 imports
 import {GnosisSafe} from "@safe/GnosisSafe.sol";
-import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
 import {GnosisSafeProxy} from "@safe/proxies/GnosisSafeProxy.sol";
 import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
 
@@ -160,7 +159,12 @@ contract DeploySafeMultisigs is BaseDeployScript {
         uint256 saltNonce = uint256(salt);
 
         // Compute expected address using GnosisSafeProxyFactory's CREATE2 formula
-        safeAddress = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
+        safeAddress = _computeSafeProxyAddress({
+            singletonAddress: safeInfra.singletonAddress,
+            proxyFactoryAddress: safeInfra.proxyFactoryAddress,
+            initializer: initializer,
+            saltNonce: saltNonce
+        });
 
         // Check if already deployed
         if (Create2Utils.isContractDeployedAtAddress(safeAddress)) {
@@ -180,15 +184,17 @@ contract DeploySafeMultisigs is BaseDeployScript {
     }
 
     /// @dev Computes the deterministic address of a Safe proxy before deployment
-    /// @param safeInfra Safe infrastructure addresses needed for address computation
+    /// @param singletonAddress Address of the GnosisSafe singleton (master copy)
+    /// @param proxyFactoryAddress Address of the GnosisSafeProxyFactory
     /// @param initializer Encoded GnosisSafe.setup() call data
     /// @param saltNonce Nonce used for salt computation
     /// @return The predicted Safe proxy address
-    function _computeSafeProxyAddress(SafeInfrastructure memory safeInfra, bytes memory initializer, uint256 saltNonce)
-        private
-        pure
-        returns (address)
-    {
+    function _computeSafeProxyAddress(
+        address singletonAddress,
+        address proxyFactoryAddress,
+        bytes memory initializer,
+        uint256 saltNonce
+    ) private pure returns (address) {
         // GnosisSafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
         bytes32 computedSalt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
 
@@ -198,23 +204,27 @@ contract DeploySafeMultisigs is BaseDeployScript {
         // uint256(uint160(_singleton)));
         // Using compile-time proxy creation code to avoid requiring the factory to be deployed
         bytes memory proxyCreationCode = type(GnosisSafeProxy).creationCode;
-        bytes32 initCodeHash =
-            keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(safeInfra.singletonAddress))));
+        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(singletonAddress))));
 
         // Use our custom CREATE2 address computation (0.7.x compatible)
-        return Create2Utils.computeCreate2Address(computedSalt, initCodeHash, safeInfra.proxyFactoryAddress);
+        return Create2Utils.computeCreate2Address(computedSalt, initCodeHash, proxyFactoryAddress);
     }
 
     /**
      * @notice Computes and displays expected Safe multisig addresses for a specific variant without deploying
      * @dev Use this to preview addresses before deployment. Does not require RPC connection.
-     * @param factoryAddress Address of the CREATE2 factory to use for address computation
+     *      Infrastructure addresses should be obtained from DeploySafeInfrastructure.computeAddresses().
+     * @param singletonAddress Address of the GnosisSafe singleton (master copy)
+     * @param proxyFactoryAddress Address of the GnosisSafeProxyFactory
+     * @param fallbackHandlerAddress Address of the CompatibilityFallbackHandler
      * @param safeVariant The Safe configuration variant to use ("prod" or "nonprod")
      */
-    function computeAddresses(address factoryAddress, string calldata safeVariant) external {
-        // Validate the provided CREATE2 factory address
-        require(factoryAddress != address(0), "Factory address cannot be zero");
-
+    function computeAddresses(
+        address singletonAddress,
+        address proxyFactoryAddress,
+        address fallbackHandlerAddress,
+        string calldata safeVariant
+    ) external {
         // Validate the safeVariant
         bytes32 variantHash = keccak256(bytes(safeVariant));
         require(
@@ -230,102 +240,51 @@ contract DeploySafeMultisigs is BaseDeployScript {
 
         // Log header
         Logger.logBoxHeader("Computed Safe Multisig Addresses");
-        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logKeyValue("Safe Variant", safeVariant);
+        Logger.logKeyValue("Singleton", singletonAddress);
+        Logger.logKeyValue("Proxy Factory", proxyFactoryAddress);
+        Logger.logKeyValue("Fallback Handler", fallbackHandlerAddress);
         Logger.logEmptyLine();
-
-        // Compute Safe Infrastructure addresses (needed for Safe proxy address computation)
-        SafeInfrastructure memory safeInfra = _computeSafeInfrastructureAddresses(factoryAddress);
-
-        // Compute Safe Multisig addresses
-        SafeMultisigs memory safes = _computeSafeMultisigAddresses({
-            safeInfra: safeInfra,
-            guardianOwnerAddresses: guardianOwnerAddresses,
-            guardianThreshold: guardianThreshold,
-            deployerOwnerAddresses: deployerOwnerAddresses,
-            deployerThreshold: deployerThreshold
-        });
-
-        // Log footer
-        Logger.logBoxFooter();
-
-        // Suppress unused variable warning
-        safes;
-    }
-
-    /// @dev Computes all Safe 1.3.0 infrastructure contract addresses without deploying (needed for proxy address
-    /// computation) @param factoryAddress Address of the CREATE2 factory to use for address computation
-    /// @return safeInfra Struct containing all computed Safe infrastructure addresses
-    function _computeSafeInfrastructureAddresses(address factoryAddress)
-        internal
-        pure
-        returns (SafeInfrastructure memory safeInfra)
-    {
-        // Compute Safe Singleton address
-        safeInfra.singletonAddress =
-            Create2Utils.computeAddress(factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode);
-
-        // Compute Safe Proxy Factory address
-        safeInfra.proxyFactoryAddress = Create2Utils.computeAddress(
-            factoryAddress, SAFE_PROXY_FACTORY_SALT, type(GnosisSafeProxyFactory).creationCode
-        );
-
-        // Compute Compatibility Fallback Handler address (needed for Safe initialization)
-        safeInfra.fallbackHandlerAddress = Create2Utils.computeAddress(
-            factoryAddress, SAFE_FALLBACK_HANDLER_SALT, type(CompatibilityFallbackHandler).creationCode
-        );
-
-        // Note: We don't need the other infrastructure addresses for multisig deployment
-        // but we set them to zero for completeness
-        safeInfra.multiSendAddress = address(0);
-        safeInfra.multiSendCallOnlyAddress = address(0);
-        safeInfra.createCallAddress = address(0);
-        safeInfra.simulateTxAccessorAddress = address(0);
-    }
-
-    /// @dev Computes Guardian and Deployer Safe multisig addresses without deploying
-    /// @param safeInfra Safe infrastructure addresses needed for address computation
-    /// @param guardianOwnerAddresses Array of owner addresses for the Guardian Safe
-    /// @param guardianThreshold Required signatures threshold for Guardian Safe
-    /// @param deployerOwnerAddresses Array of owner addresses for the Deployer Safe
-    /// @param deployerThreshold Required signatures threshold for Deployer Safe
-    /// @return safes Struct containing computed Guardian and Deployer Safe addresses
-    function _computeSafeMultisigAddresses(
-        SafeInfrastructure memory safeInfra,
-        address[] memory guardianOwnerAddresses,
-        uint256 guardianThreshold,
-        address[] memory deployerOwnerAddresses,
-        uint256 deployerThreshold
-    ) internal pure returns (SafeMultisigs memory safes) {
         Logger.logSection("Safe Multisigs");
 
         // Compute Guardian Safe address
-        safes.guardianSafeAddress = _computeSafeMultisigAddress({
-            safeInfra: safeInfra,
+        address guardianSafeAddress = _computeSafeMultisigAddress({
+            singletonAddress: singletonAddress,
+            proxyFactoryAddress: proxyFactoryAddress,
+            fallbackHandlerAddress: fallbackHandlerAddress,
             ownerAddresses: guardianOwnerAddresses,
             threshold: guardianThreshold,
             salt: GUARDIAN_SAFE_SALT
         });
-        Logger.logKeyValue("Guardian Safe", safes.guardianSafeAddress);
+        Logger.logKeyValue("Guardian Safe", guardianSafeAddress);
 
         // Compute Deployer Safe address
-        safes.deployerSafeAddress = _computeSafeMultisigAddress({
-            safeInfra: safeInfra,
+        address deployerSafeAddress = _computeSafeMultisigAddress({
+            singletonAddress: singletonAddress,
+            proxyFactoryAddress: proxyFactoryAddress,
+            fallbackHandlerAddress: fallbackHandlerAddress,
             ownerAddresses: deployerOwnerAddresses,
             threshold: deployerThreshold,
             salt: DEPLOYER_SAFE_SALT
         });
-        Logger.logKeyValue("Deployer Safe", safes.deployerSafeAddress);
+        Logger.logKeyValue("Deployer Safe", deployerSafeAddress);
+
+        // Log footer
+        Logger.logBoxFooter();
     }
 
     /// @dev Computes a Safe multisig address without deploying
-    /// @param safeInfra Safe infrastructure addresses needed for address computation
+    /// @param singletonAddress Address of the GnosisSafe singleton (master copy)
+    /// @param proxyFactoryAddress Address of the GnosisSafeProxyFactory
+    /// @param fallbackHandlerAddress Address of the CompatibilityFallbackHandler
     /// @param ownerAddresses Array of owner addresses for the Safe
     /// @param threshold Required number of signatures for transactions
     /// @param salt Salt used for deterministic address computation
     /// @return safeAddress Computed address of the Safe proxy
     function _computeSafeMultisigAddress(
-        SafeInfrastructure memory safeInfra,
+        address singletonAddress,
+        address proxyFactoryAddress,
+        address fallbackHandlerAddress,
         address[] memory ownerAddresses,
         uint256 threshold,
         bytes32 salt
@@ -337,7 +296,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
             threshold, // _threshold
             address(0), // to - no delegate call
             "", // data - no delegate call data
-            safeInfra.fallbackHandlerAddress, // fallbackHandler
+            fallbackHandlerAddress, // fallbackHandler
             address(0), // paymentToken - ETH
             0, // payment - no payment
             address(0) // paymentReceiver
@@ -347,7 +306,12 @@ contract DeploySafeMultisigs is BaseDeployScript {
         uint256 saltNonce = uint256(salt);
 
         // Compute expected address using GnosisSafeProxyFactory's CREATE2 formula
-        safeAddress = _computeSafeProxyAddress(safeInfra, initializer, saltNonce);
+        safeAddress = _computeSafeProxyAddress({
+            singletonAddress: singletonAddress,
+            proxyFactoryAddress: proxyFactoryAddress,
+            initializer: initializer,
+            saltNonce: saltNonce
+        });
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary

@@ -111,7 +111,8 @@ SAFE_SIMULATE_TX_ACCESSOR_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "Simula
 # Compute nonprod Safe multisig addresses
 print_progress "  Computing nonprod multisig addresses..."
 SAFE_MULTISIG_NONPROD_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
-    --sig "computeAddresses(address,string)" "$FACTORY_ADDRESS" "nonprod" --offline 2>&1) || {
+    --sig "computeAddresses(address,address,address,string)" \
+    "$SAFE_SINGLETON_ADDRESS" "$SAFE_PROXY_FACTORY_ADDRESS" "$SAFE_FALLBACK_HANDLER_ADDRESS" "nonprod" --offline 2>&1) || {
     clear_progress
     echo "Error: Failed to compute Safe multisig addresses (nonprod)" >&2
     echo "$SAFE_MULTISIG_NONPROD_OUTPUT" >&2
@@ -139,7 +140,8 @@ fi
 # Compute prod Safe multisig addresses
 print_progress "  Computing prod multisig addresses..."
 SAFE_MULTISIG_PROD_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
-    --sig "computeAddresses(address,string)" "$FACTORY_ADDRESS" "prod" --offline 2>&1) || {
+    --sig "computeAddresses(address,address,address,string)" \
+    "$SAFE_SINGLETON_ADDRESS" "$SAFE_PROXY_FACTORY_ADDRESS" "$SAFE_FALLBACK_HANDLER_ADDRESS" "prod" --offline 2>&1) || {
     clear_progress
     echo "Error: Failed to compute Safe multisig addresses (prod)" >&2
     echo "$SAFE_MULTISIG_PROD_OUTPUT" >&2
