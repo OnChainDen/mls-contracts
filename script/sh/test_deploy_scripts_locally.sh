@@ -58,7 +58,6 @@ RPC_URL="http://127.0.0.1:$PORT"
 DEPLOYER_ACCOUNT="test-deployer"
 DEN_FACTORY_DEPLOYER_ACCOUNT="test-den-factory-deployer"
 GUARDIAN_SAFE_OWNER_ACCOUNT="test-guardian-safe-owner"
-ADMIN_SAFE_OWNER_ACCOUNT="test-admin-safe-owner"
 
 # EOA addresses - some hardcoded (foundry test accounts), some from deployment.toml
 DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
