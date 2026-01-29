@@ -47,6 +47,8 @@ sepolia = "https://rpc.ankr.com/eth_sepolia"
 arbitrum-sepolia = "https://rpc.ankr.com/arbitrum_sepolia"
 base-sepolia = "https://rpc.ankr.com/base_sepolia"
 optimism-sepolia = "https://rpc.ankr.com/optimism_sepolia"
+local = "localhost:8545"
+stage = "https://virtual.base.us-east.rpc.tenderly.co/${STAGE_TENDERLY_VIRTUAL_TESTNET_API_KEY}"
 
 # ==============================================================================
 # CI PROFILE (For Continuous Integration)
