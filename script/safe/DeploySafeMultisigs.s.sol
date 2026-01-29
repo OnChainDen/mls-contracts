@@ -2,10 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.7.6;
 
-// Safe 1.3.0 imports
-import {GnosisSafe} from "@safe/GnosisSafe.sol";
-import {GnosisSafeProxy} from "@safe/proxies/GnosisSafeProxy.sol";
-import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
+// Safe 1.4.1 imports (renamed from Gnosis* to Safe*)
+import {Safe} from "@safe/Safe.sol";
+import {SafeProxy} from "@safe/proxies/SafeProxy.sol";
+import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
 
 // Shared script utilities
 import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
@@ -131,7 +131,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
         });
     }
 
-    /// @dev Deploys a Safe multisig wallet using GnosisSafeProxyFactory
+    /// @dev Deploys a Safe multisig wallet using SafeProxyFactory
     /// @param safeInfra Safe infrastructure addresses needed for Safe deployment
     /// @param ownerAddresses Array of owner addresses for the Safe
     /// @param threshold Required number of signatures for transactions
@@ -153,12 +153,12 @@ contract DeploySafeMultisigs is BaseDeployScript {
             return expectedAddress;
         }
 
-        // Encode the initializer for GnosisSafe.setup()
-        // GnosisSafe.setup signature:
+        // Encode the initializer for Safe.setup() (inherited by SafeL2)
+        // Safe.setup signature:
         //   setup(address[] calldata _owners, uint256 _threshold, address to, bytes calldata data,
         //         address fallbackHandler, address paymentToken, uint256 payment, address payable paymentReceiver)
         bytes memory initializer = abi.encodeWithSelector(
-            GnosisSafe.setup.selector,
+            Safe.setup.selector,
             ownerAddresses, // _owners
             threshold, // _threshold
             address(0), // to - no delegate call
@@ -172,9 +172,9 @@ contract DeploySafeMultisigs is BaseDeployScript {
         // Compute the salt nonce
         uint256 saltNonce = uint256(salt);
 
-        // Deploy the Safe using GnosisSafeProxyFactory.createProxyWithNonce
+        // Deploy the Safe using SafeProxyFactory.createProxyWithNonce
         safeAddress = address(
-            GnosisSafeProxyFactory(safeInfra.proxyFactoryAddress)
+            SafeProxyFactory(safeInfra.proxyFactoryAddress)
                 .createProxyWithNonce(safeInfra.singletonAddress, initializer, saltNonce)
         );
         Logger.logDeployed(name, safeAddress);
@@ -187,8 +187,8 @@ contract DeploySafeMultisigs is BaseDeployScript {
      * @notice Computes and displays expected Safe multisig addresses for a specific variant without deploying
      * @dev Use this to preview addresses before deployment. Does not require RPC connection.
      *      Infrastructure addresses should be obtained from DeploySafeInfrastructure.computeAddresses().
-     * @param singletonAddress Address of the GnosisSafe singleton (master copy)
-     * @param proxyFactoryAddress Address of the GnosisSafeProxyFactory
+     * @param singletonAddress Address of the SafeL2 singleton (master copy)
+     * @param proxyFactoryAddress Address of the SafeProxyFactory
      * @param fallbackHandlerAddress Address of the CompatibilityFallbackHandler
      * @param safeVariant The Safe configuration variant to use ("prod" or "nonprod")
      */
@@ -247,8 +247,8 @@ contract DeploySafeMultisigs is BaseDeployScript {
     }
 
     /// @dev Computes a Safe multisig address without deploying
-    /// @param singletonAddress Address of the GnosisSafe singleton (master copy)
-    /// @param proxyFactoryAddress Address of the GnosisSafeProxyFactory
+    /// @param singletonAddress Address of the SafeL2 singleton (master copy)
+    /// @param proxyFactoryAddress Address of the SafeProxyFactory
     /// @param fallbackHandlerAddress Address of the CompatibilityFallbackHandler
     /// @param ownerAddresses Array of owner addresses for the Safe
     /// @param threshold Required number of signatures for transactions
@@ -262,9 +262,9 @@ contract DeploySafeMultisigs is BaseDeployScript {
         uint256 threshold,
         bytes32 salt
     ) internal pure returns (address safeAddress) {
-        // Encode the initializer for GnosisSafe.setup()
+        // Encode the initializer for Safe.setup() (inherited by SafeL2)
         bytes memory initializer = abi.encodeWithSelector(
-            GnosisSafe.setup.selector,
+            Safe.setup.selector,
             ownerAddresses, // _owners
             threshold, // _threshold
             address(0), // to - no delegate call
@@ -278,15 +278,15 @@ contract DeploySafeMultisigs is BaseDeployScript {
         // Compute the salt nonce
         uint256 saltNonce = uint256(salt);
 
-        // Compute expected address using GnosisSafeProxyFactory's CREATE2 formula
-        // GnosisSafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
+        // Compute expected address using SafeProxyFactory's CREATE2 formula
+        // SafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
         bytes32 computedSalt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
 
         // Compute init code hash: proxyCreationCode + singleton address (as uint256)
-        // This matches GnosisSafeProxyFactory.deployProxyWithNonce() which does:
-        // bytes memory deploymentData = abi.encodePacked(type(GnosisSafeProxy).creationCode,
+        // This matches SafeProxyFactory.deployProxy() which does:
+        // bytes memory deploymentData = abi.encodePacked(type(SafeProxy).creationCode,
         // uint256(uint160(_singleton)));
-        bytes memory proxyCreationCode = type(GnosisSafeProxy).creationCode;
+        bytes memory proxyCreationCode = type(SafeProxy).creationCode;
         bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(singletonAddress))));
 
         // Use our custom CREATE2 address computation (0.7.x compatible)

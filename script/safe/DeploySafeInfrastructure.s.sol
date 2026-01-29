@@ -2,14 +2,14 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.7.6;
 
-// Safe 1.3.0 imports
-import {GnosisSafe} from "@safe/GnosisSafe.sol";
+// Safe 1.4.1 imports (renamed from Gnosis* to Safe*)
+import {SafeL2} from "@safe/SafeL2.sol";
 import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
 import {CreateCall} from "@safe/libraries/CreateCall.sol";
 import {MultiSend} from "@safe/libraries/MultiSend.sol";
 import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
-import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
+import {SafeProxyFactory} from "@safe/proxies/SafeProxyFactory.sol";
 
 // Shared script utilities
 import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
@@ -19,9 +19,9 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeploySafeInfrastructure
- * @notice Deploys Safe 1.3.0 infrastructure contracts (singleton, proxy factory, handlers, libraries)
+ * @notice Deploys Safe 1.4.1 infrastructure contracts (singleton, proxy factory, handlers, libraries)
  * @dev This script deploys Safe infrastructure contracts using Solidity 0.7.6 for deterministic
- *      addresses that match official Safe 1.3.0 deployments.
+ *      addresses that match official Safe 1.4.1 deployments.
  *
  *      IMPORTANT: This script must be compiled with the [profile.safe] foundry profile:
  *        FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeInfrastructure.s.sol:DeploySafeInfrastructure \
@@ -31,8 +31,8 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
  *          -vvvv
  *
  *      This script deploys the following infrastructure contracts:
- *      - GnosisSafe singleton (master copy)
- *      - GnosisSafeProxyFactory
+ *      - SafeL2 singleton (master copy) - L2 version emits events for indexing
+ *      - SafeProxyFactory
  *      - CompatibilityFallbackHandler
  *      - MultiSend
  *      - MultiSendCallOnly
@@ -73,22 +73,22 @@ contract DeploySafeInfrastructure is BaseDeployScript {
         _logDeployedAddresses(safeInfra);
     }
 
-    /// @dev Deploys all Safe 1.3.0 infrastructure contracts via CREATE2 if not already deployed
+    /// @dev Deploys all Safe 1.4.1 infrastructure contracts via CREATE2 if not already deployed
     /// @return safeInfra Struct containing all deployed Safe infrastructure addresses
     function _deploySafeInfrastructure() internal returns (SafeInfrastructure memory safeInfra) {
-        Logger.logSection("Safe 1.3.0 Infrastructure (CREATE2)");
+        Logger.logSection("Safe 1.4.1 Infrastructure (CREATE2)");
 
-        // Deploy Safe Singleton (master copy) - GnosisSafe for 1.3.0
+        // Deploy Safe Singleton (master copy) - SafeL2 for 1.4.1 (emits events for indexing)
         (safeInfra.singletonAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode, "GnosisSafe Singleton"
+            _factoryAddress, SAFE_SINGLETON_SALT, type(SafeL2).creationCode, "SafeL2 Singleton"
         );
 
-        // Deploy Safe Proxy Factory - GnosisSafeProxyFactory for 1.3.0
+        // Deploy Safe Proxy Factory - SafeProxyFactory for 1.4.1
         (safeInfra.proxyFactoryAddress,) = Create2Utils.deployIfNotExists(
             _factoryAddress,
             SAFE_PROXY_FACTORY_SALT,
-            type(GnosisSafeProxyFactory).creationCode,
-            "GnosisSafeProxyFactory"
+            type(SafeProxyFactory).creationCode,
+            "SafeProxyFactory"
         );
 
         // Deploy Compatibility Fallback Handler
@@ -130,7 +130,7 @@ contract DeploySafeInfrastructure is BaseDeployScript {
         require(factoryAddress != address(0), "Factory address cannot be zero");
 
         // Log header
-        Logger.logBoxHeader("Computed Safe 1.3.0 Infrastructure Addresses");
+        Logger.logBoxHeader("Computed Safe 1.4.1 Infrastructure Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logEmptyLine();
 
@@ -144,7 +144,7 @@ contract DeploySafeInfrastructure is BaseDeployScript {
         safeInfra;
     }
 
-    /// @dev Computes all Safe 1.3.0 infrastructure contract addresses without deploying
+    /// @dev Computes all Safe 1.4.1 infrastructure contract addresses without deploying
     /// @param factoryAddress Address of the CREATE2 factory to use for address computation
     /// @return safeInfra Struct containing all computed Safe infrastructure addresses
     function _computeSafeInfrastructureAddresses(address factoryAddress)
@@ -152,18 +152,18 @@ contract DeploySafeInfrastructure is BaseDeployScript {
         pure
         returns (SafeInfrastructure memory safeInfra)
     {
-        Logger.logSection("Safe 1.3.0 Infrastructure");
+        Logger.logSection("Safe 1.4.1 Infrastructure");
 
         // Compute Safe Singleton address
         safeInfra.singletonAddress =
-            Create2Utils.computeAddress(factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode);
-        Logger.logKeyValue("GnosisSafe Singleton", safeInfra.singletonAddress);
+            Create2Utils.computeAddress(factoryAddress, SAFE_SINGLETON_SALT, type(SafeL2).creationCode);
+        Logger.logKeyValue("SafeL2 Singleton", safeInfra.singletonAddress);
 
         // Compute Safe Proxy Factory address
         safeInfra.proxyFactoryAddress = Create2Utils.computeAddress(
-            factoryAddress, SAFE_PROXY_FACTORY_SALT, type(GnosisSafeProxyFactory).creationCode
+            factoryAddress, SAFE_PROXY_FACTORY_SALT, type(SafeProxyFactory).creationCode
         );
-        Logger.logKeyValue("GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
+        Logger.logKeyValue("SafeProxyFactory", safeInfra.proxyFactoryAddress);
 
         // Compute Compatibility Fallback Handler address
         safeInfra.fallbackHandlerAddress = Create2Utils.computeAddress(
@@ -197,9 +197,9 @@ contract DeploySafeInfrastructure is BaseDeployScript {
     /// @dev Logs all deployed contract addresses in a formatted summary
     /// @param safeInfra Deployed Safe infrastructure addresses
     function _logDeployedAddresses(SafeInfrastructure memory safeInfra) internal pure {
-        Logger.logBoxHeader(unicode"✅ Deployed Safe 1.3.0 Infrastructure Addresses");
-        Logger.logKeyValue("GnosisSafe Singleton", safeInfra.singletonAddress);
-        Logger.logKeyValue("GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
+        Logger.logBoxHeader(unicode"✅ Deployed Safe 1.4.1 Infrastructure Addresses");
+        Logger.logKeyValue("SafeL2 Singleton", safeInfra.singletonAddress);
+        Logger.logKeyValue("SafeProxyFactory", safeInfra.proxyFactoryAddress);
         Logger.logKeyValue("FallbackHandler", safeInfra.fallbackHandlerAddress);
         Logger.logKeyValue("MultiSend", safeInfra.multiSendAddress);
         Logger.logKeyValue("MultiSendCallOnly", safeInfra.multiSendCallOnlyAddress);

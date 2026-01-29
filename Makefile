@@ -18,7 +18,7 @@
 # CREATE2 factory deployment
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
-# Safe 1.3.0 deployment
+# Safe 1.4.1 deployment
 .PHONY: deploy-safe-infra deploy-safe-infra-dry-run deploy-safe-multisigs deploy-safe-multisigs-dry-run
 
 # Guardian Safe Executor Module
@@ -57,8 +57,8 @@ help:
 	@echo "  install        Install dependencies"
 	@echo "  update         Update dependencies"
 	@echo ""
-	@echo "Safe 1.3.0 Deployment:"
-	@echo "  deploy-safe-infra              Deploy Safe 1.3.0 infrastructure contracts"
+	@echo "Safe 1.4.1 Deployment:"
+	@echo "  deploy-safe-infra              Deploy Safe 1.4.1 infrastructure contracts"
 	@echo "  deploy-safe-infra-dry-run      Simulate Safe infrastructure deployment (no broadcast)"
 	@echo "  deploy-safe-multisigs          Deploy Guardian and Admin Safe multisigs"
 	@echo "  deploy-safe-multisigs-dry-run  Simulate Safe multisig deployment (no broadcast)"
@@ -384,10 +384,10 @@ deploy-den-factory: validate-signer-vars
 		$(VERBOSITY)
 
 # ==============================================================================
-# Safe 1.3.0 Deployment Commands
+# Safe 1.4.1 Deployment Commands
 # ==============================================================================
 #
-# Safe 1.3.0 deployment is split into two steps for security:
+# Safe 1.4.1 deployment is split into two steps for security:
 # 1. deploy-safe-infra: Deploys infrastructure (singleton, proxy factory, handlers)
 # 2. deploy-safe-multisigs: Deploys Guardian and Admin Safes (verifies infra first)
 #
@@ -399,7 +399,7 @@ deploy-den-factory: validate-signer-vars
 # IMPORTANT: Safe deployment only needs to be done ONCE per chain per factory.
 # After deployment, update addresses in deployment.toml.
 
-# Deploy Safe Infrastructure: Deploys Safe 1.3.0 infrastructure contracts
+# Deploy Safe Infrastructure: Deploys Safe 1.4.1 infrastructure contracts
 # IMPORTANT: This uses FOUNDRY_PROFILE=safe which compiles with Solidity 0.7.6.
 # Run this BEFORE deploy-safe-multisigs.
 #
@@ -407,7 +407,7 @@ deploy-den-factory: validate-signer-vars
 #   make deploy-safe-infra NETWORK=sepolia ACCOUNT=my-deployer
 #   make deploy-safe-infra FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
 deploy-safe-infra: validate-signer-vars
-	@echo "Deploying Safe 1.3.0 infrastructure..."
+	@echo "Deploying Safe 1.4.1 infrastructure..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Profile: safe (Solidity 0.7.6)"
@@ -423,7 +423,7 @@ deploy-safe-infra: validate-signer-vars
 # Example:
 #   make deploy-safe-infra-dry-run NETWORK=sepolia
 deploy-safe-infra-dry-run:
-	@echo "Simulating Safe 1.3.0 infrastructure deployment (dry-run)..."
+	@echo "Simulating Safe 1.4.1 infrastructure deployment (dry-run)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Profile: safe (Solidity 0.7.6)"

@@ -7,7 +7,7 @@ import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
 
-/// @notice Minimal interface for Safe v1.3.0 functions needed by this script
+/// @notice Minimal interface for Safe v1.4.1 functions needed by this script
 /// @dev We define this locally rather than importing from the Safe library to avoid
 ///      Slither parsing errors that occur when analyzing cross-version Solidity imports.
 interface IGnosisSafe {
