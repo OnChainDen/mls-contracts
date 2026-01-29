@@ -204,7 +204,7 @@ abstract contract BaseDeployScript is DeploymentConfig {
     /// @dev Verifies that Safe infrastructure is deployed at the expected addresses from deployment.toml
     ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
     function validateSafeInfrastructureDeployedOrRevert() internal {
-        Logger.logSection("Verify Safe 1.3.0 Infrastructure");
+        Logger.logSection("Verify Safe 1.4.1 Infrastructure");
 
         // Get expected Safe infrastructure addresses from deployment.toml
         SafeInfrastructure memory expectedSafeInfra = getExpectedSafeInfrastructureAddresses();
@@ -213,20 +213,20 @@ abstract contract BaseDeployScript is DeploymentConfig {
 
         // Check if Safe singleton is deployed
         if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.singletonAddress)) {
-            Logger.logFail("GnosisSafe Singleton NOT DEPLOYED at expected address");
+            Logger.logFail("SafeL2 Singleton NOT DEPLOYED at expected address");
             Logger.logKeyValue("  Expected", expectedSafeInfra.singletonAddress);
             allDeployed = false;
         } else {
-            Logger.logPass("GnosisSafe Singleton deployed at expected address");
+            Logger.logPass("SafeL2 Singleton deployed at expected address");
         }
 
         // Check if Safe proxy factory is deployed
         if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.proxyFactoryAddress)) {
-            Logger.logFail("GnosisSafeProxyFactory NOT DEPLOYED at expected address");
+            Logger.logFail("SafeProxyFactory NOT DEPLOYED at expected address");
             Logger.logKeyValue("  Expected", expectedSafeInfra.proxyFactoryAddress);
             allDeployed = false;
         } else {
-            Logger.logPass("GnosisSafeProxyFactory deployed at expected address");
+            Logger.logPass("SafeProxyFactory deployed at expected address");
         }
 
         // Check if fallback handler is deployed

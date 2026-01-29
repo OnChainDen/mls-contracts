@@ -29,7 +29,7 @@ interface ISafe {
  *      The Safe Executor EOA is immutable - to rotate, deploy a new module instance
  *      and have Safe owners swap modules via multisig transaction.
  *
- *      Safe v1.3.0 emits ExecutionFromModuleSuccess/ExecutionFromModuleFailure
+ *      Safe v1.4.1 emits ExecutionFromModuleSuccess/ExecutionFromModuleFailure
  *      events when transactions are executed via modules, so this contract does
  *      not emit additional events.
  *

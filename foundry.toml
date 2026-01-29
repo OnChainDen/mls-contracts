@@ -10,7 +10,7 @@ cache_path = "cache"
 solc = "0.8.33"
 evm_version = "paris"
 ignored_error_codes = [2424]  # Suppress deprecated memory-safe-assembly natspec warning from forge-std
-# Skip Safe 1.3.0 contracts (use FOUNDRY_PROFILE=safe to compile them with Solidity 0.7.6)
+# Skip Safe 1.4.1 contracts (use FOUNDRY_PROFILE=safe to compile them with Solidity 0.7.6)
 skip = ["lib/safe-smart-account/**", "script/safe/**"]
 optimizer = true
 optimizer_runs = 200
@@ -58,7 +58,7 @@ fuzz = { runs = 256  }
 invariant = { runs = 256 }
 
 # ==============================================================================
-# SAFE 1.3.0 DEPLOYMENT PROFILE
+# SAFE 1.4.1 DEPLOYMENT PROFILE
 # Uses Solidity 0.7.6 for deterministic Safe deployments matching official bytecode
 # ==============================================================================
 [profile.safe]
@@ -67,11 +67,10 @@ out = "out-safe"               # Separate output directory to avoid conflicts
 libs = ["lib"]
 test = "script/safe"           # No tests for Safe profile
 cache_path = "cache-safe"      # Separate cache to avoid conflicts
-solc = "0.7.6"                 # Safe 1.3.0 official compiler version
-evm_version = "istanbul"       # Safe 1.3.0 was deployed targeting Istanbul
-optimizer = true
-optimizer_runs = 200
-via_ir = false                 # Safe 1.3.0 was compiled without IR pipeline
+solc = "0.7.6"                 # Safe 1.4.1 official compiler version
+evm_version = "istanbul"       # Safe 1.4.1 was deployed targeting Istanbul
+optimizer = false              # Official Safe deployments don't use optimizer
+via_ir = false                 # Safe 1.4.1 was compiled without IR pipeline
 fs_permissions = [{ access = "read-write", path = "./"}]
 # Skip 0.8.33 files that are incompatible with Solidity 0.7.6
 skip = ["script/Deploy*.s.sol", "script/libraries/Array*.sol", "script/libraries/Linked*.sol", "test/**", "src/**"]

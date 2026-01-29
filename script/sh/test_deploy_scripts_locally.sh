@@ -130,7 +130,7 @@ fi
 #   Step 4a: Infrastructure (singleton, proxy factory, handlers)
 #   Step 4b: Multisigs (Guardian and Admin Safes) - verifies infra first
 echo ""
-echo "[Step 4a] Deploying Safe 1.3.0 infrastructure..."
+echo "[Step 4a] Deploying Safe 1.4.1 infrastructure..."
 make deploy-safe-infra ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 echo ""

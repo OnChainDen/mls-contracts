@@ -15,7 +15,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Networks](#networks)
    - [Signers](#signers)
    - [Factories](#factories)
-4. [Safe 1.3.0 Deployment](#safe-130-deployment)
+4. [Safe 1.4.1 Deployment](#safe-141-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
 5. [BatchedTransaction Contract](#batchedtransaction-contract)
@@ -233,20 +233,20 @@ The `FACTORY` variable specifies which CREATE2 factory to use. Default is `arach
 
 ---
 
-## Safe 1.3.0 Deployment
+## Safe 1.4.1 Deployment
 
 The platform uses Safe (Gnosis Safe) multisig wallets for the **Guardian Safe** and **Admin Safe**. These Safes must be deployed before deploying the platform contracts.
 
 ### Why Safe Uses a Separate Profile
 
-Safe 1.3.0 contracts were originally compiled with **Solidity 0.7.6**, and their official deployments use this compiler version. To ensure our Safe deployments produce **identical bytecode** (and therefore identical CREATE2 addresses) to the official Safe deployments, we compile Safe contracts with the same settings.
+Safe 1.4.1 contracts were originally compiled with **Solidity 0.7.6**, and their official deployments use this compiler version. To ensure our Safe deployments produce **identical bytecode** (and therefore identical CREATE2 addresses) to the official Safe deployments, we compile Safe contracts with the same settings.
 
 However, our platform contracts use **Solidity 0.8.33**. Since Foundry can only use one Solidity version per compilation, we maintain a **separate Foundry profile** for Safe deployment:
 
 | Profile | Solidity Version | EVM Target | Purpose |
 |---------|------------------|------------|---------|
 | `default` | 0.8.33 | Paris | Platform contracts and libraries |
-| `safe` | 0.7.6 | Istanbul | Safe 1.3.0 infrastructure and multisigs |
+| `safe` | 0.7.6 | Istanbul | Safe 1.4.1 infrastructure and multisigs |
 
 The Safe profile is defined in `foundry.toml` under `[profile.safe]`.
 
@@ -598,7 +598,7 @@ make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 # -----------------------------------------------------------------------------
 # Step 4: Deploy Safe infrastructure and multisigs
 # -----------------------------------------------------------------------------
-# Safe 1.3.0 must be deployed BEFORE platform contracts.
+# Safe 1.4.1 must be deployed BEFORE platform contracts.
 # This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
 # Safe deployment is split into two steps for security:
 #   - Step 4a: Infrastructure (singleton, proxy factory, handlers)
@@ -693,7 +693,7 @@ make deploy-den-factory ACCOUNT=$DEN_DEPLOYER_ACCOUNT
 # -----------------------------------------------------------------------------
 # Step 4: Deploy Safe infrastructure and multisigs
 # -----------------------------------------------------------------------------
-# Safe 1.3.0 must be deployed BEFORE platform contracts.
+# Safe 1.4.1 must be deployed BEFORE platform contracts.
 # This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
 # Safe deployment is split into two steps for security:
 #   - Step 4a: Infrastructure (singleton, proxy factory, handlers)
@@ -840,7 +840,7 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
 | `make fund-den-deployer` | Fund a Den factory deployer (requires `DEN_DEPLOYER_ADDRESS`) |
 | `make deploy-den-factory` | Deploy the Den Singleton Factory |
-| `make deploy-safe-infra` | Deploy Safe 1.3.0 infrastructure contracts |
+| `make deploy-safe-infra` | Deploy Safe 1.4.1 infrastructure contracts |
 | `make deploy-safe-infra-dry-run` | Simulate Safe infrastructure deployment (no broadcast) |
 | `make deploy-safe-multisigs` | Deploy Guardian and Admin Safe multisigs |
 | `make deploy-safe-multisigs-dry-run` | Simulate Safe multisig deployment (no broadcast) |

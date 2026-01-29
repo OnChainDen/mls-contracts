@@ -98,8 +98,8 @@ SAFE_INFRA_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeInfr
 }
 
 # Extract Safe infrastructure addresses
-SAFE_SINGLETON_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "GnosisSafe Singleton")
-SAFE_PROXY_FACTORY_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "GnosisSafeProxyFactory")
+SAFE_SINGLETON_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "SafeL2 Singleton")
+SAFE_PROXY_FACTORY_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "SafeProxyFactory")
 SAFE_FALLBACK_HANDLER_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "CompatibilityFallbackHandler")
 SAFE_MULTISEND_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "MultiSend")
 SAFE_MULTISEND_CALL_ONLY_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "MultiSendCallOnly")
@@ -353,7 +353,7 @@ print_toml "whitelist_impl" "${WHITELIST_IMPL_ADDRESS:-NOT_COMPUTED}"
 print_toml "org_impl" "${ORG_IMPL_ADDRESS:-NOT_COMPUTED}"
 print_toml "account_impl" "${ACCOUNT_IMPL_ADDRESS:-NOT_COMPUTED}"
 echo ""
-echo "# Safe 1.3.0 Infrastructure (environment-independent)"
+echo "# Safe 1.4.1 Infrastructure (environment-independent)"
 print_toml "safe_singleton" "${SAFE_SINGLETON_ADDRESS:-NOT_COMPUTED}"
 print_toml "safe_proxy_factory" "${SAFE_PROXY_FACTORY_ADDRESS:-NOT_COMPUTED}"
 print_toml "safe_fallback_handler" "${SAFE_FALLBACK_HANDLER_ADDRESS:-NOT_COMPUTED}"

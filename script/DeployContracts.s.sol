@@ -19,7 +19,7 @@ import {LinkedLibraryInfo, PlatformLibraries, SafeInfrastructure} from "script/l
  * @title DeployContracts
  * @notice Deploys all platform contracts (implementations, factories, proxies)
  * @dev This script must be run AFTER:
- *      1. DeploySafeInfrastructure.s.sol and DeploySafeMultisigs.s.sol (Safe 1.3.0) - requires FOUNDRY_PROFILE=safe
+ *      1. DeploySafeInfrastructure.s.sol and DeploySafeMultisigs.s.sol (Safe 1.4.1) - requires FOUNDRY_PROFILE=safe
  *      2. DeployLibraries.s.sol (platform libraries)
  *
  *      This script expects Safe infrastructure and Safe multisigs to already be deployed.
