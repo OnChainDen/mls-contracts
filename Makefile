@@ -60,7 +60,7 @@ help:
 	@echo "Safe 1.3.0 Deployment:"
 	@echo "  deploy-safe-infra              Deploy Safe 1.3.0 infrastructure contracts"
 	@echo "  deploy-safe-infra-dry-run      Simulate Safe infrastructure deployment (no broadcast)"
-	@echo "  deploy-safe-multisigs          Deploy Guardian and Deployer Safe multisigs"
+	@echo "  deploy-safe-multisigs          Deploy Guardian and Admin Safe multisigs"
 	@echo "  deploy-safe-multisigs-dry-run  Simulate Safe multisig deployment (no broadcast)"
 	@echo ""
 	@echo "Guardian Safe Executor Module:"
@@ -389,7 +389,7 @@ deploy-den-factory: validate-signer-vars
 #
 # Safe 1.3.0 deployment is split into two steps for security:
 # 1. deploy-safe-infra: Deploys infrastructure (singleton, proxy factory, handlers)
-# 2. deploy-safe-multisigs: Deploys Guardian and Deployer Safes (verifies infra first)
+# 2. deploy-safe-multisigs: Deploys Guardian and Admin Safes (verifies infra first)
 #
 # This two-step process prevents deploying Safe proxies without the Singleton,
 # which could allow attackers to frontrun initialization.
@@ -432,7 +432,7 @@ deploy-safe-infra-dry-run:
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
 
-# Deploy Safe Multisigs: Deploys Guardian and Deployer Safe multisig wallets
+# Deploy Safe Multisigs: Deploys Guardian and Admin Safe multisig wallets
 # IMPORTANT: Safe infrastructure must be deployed first (use deploy-safe-infra).
 # This script verifies that the Safe Singleton is deployed before proceeding.
 #
@@ -440,7 +440,7 @@ deploy-safe-infra-dry-run:
 #   make deploy-safe-multisigs NETWORK=sepolia ACCOUNT=my-deployer
 #   make deploy-safe-multisigs FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
 deploy-safe-multisigs: validate-signer-vars
-	@echo "Deploying Safe multisigs (Guardian and Deployer Safes)..."
+	@echo "Deploying Safe multisigs (Guardian and Admin Safes)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Profile: safe (Solidity 0.7.6)"

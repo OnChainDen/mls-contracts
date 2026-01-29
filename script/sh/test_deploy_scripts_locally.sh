@@ -128,13 +128,13 @@ fi
 # =============================================================================
 # Safe deployment is split into two steps for security:
 #   Step 4a: Infrastructure (singleton, proxy factory, handlers)
-#   Step 4b: Multisigs (Guardian and Deployer Safes) - verifies infra first
+#   Step 4b: Multisigs (Guardian and Admin Safes) - verifies infra first
 echo ""
 echo "[Step 4a] Deploying Safe 1.3.0 infrastructure..."
 make deploy-safe-infra ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 echo ""
-echo "[Step 4b] Deploying Safe multisigs (Guardian and Deployer Safes)..."
+echo "[Step 4b] Deploying Safe multisigs (Guardian and Admin Safes)..."
 make deploy-safe-multisigs ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
