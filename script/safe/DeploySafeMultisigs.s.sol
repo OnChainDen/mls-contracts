@@ -106,12 +106,17 @@ contract DeploySafeMultisigs is BaseDeployScript {
     ) internal returns (SafeMultisigs memory safes) {
         Logger.logSection("Safe Multisigs");
 
+        // Get expected addresses from deployment.toml
+        address expectedGuardianSafe = getExpectedGuardianSafeAddress();
+        address expectedAdminSafe = getExpectedAdminSafeAddress();
+
         // Deploy Guardian Safe
         safes.guardianSafeAddress = _deploySafeMultisig({
             safeInfra: safeInfra,
             ownerAddresses: guardianOwnerAddresses,
             threshold: guardianThreshold,
             salt: GUARDIAN_SAFE_SALT,
+            expectedAddress: expectedGuardianSafe,
             name: "Guardian Safe"
         });
 
@@ -121,6 +126,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
             ownerAddresses: adminOwnerAddresses,
             threshold: adminThreshold,
             salt: ADMIN_SAFE_SALT,
+            expectedAddress: expectedAdminSafe,
             name: "Admin Safe"
         });
     }
@@ -130,6 +136,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
     /// @param ownerAddresses Array of owner addresses for the Safe
     /// @param threshold Required number of signatures for transactions
     /// @param salt Salt used for deterministic address computation
+    /// @param expectedAddress Expected address from deployment.toml
     /// @param name Human-readable name for logging purposes
     /// @return safeAddress Address of the deployed Safe proxy
     function _deploySafeMultisig(
@@ -137,8 +144,15 @@ contract DeploySafeMultisigs is BaseDeployScript {
         address[] memory ownerAddresses,
         uint256 threshold,
         bytes32 salt,
+        address expectedAddress,
         string memory name
     ) internal returns (address safeAddress) {
+        // Check if already deployed at expected address
+        if (Create2Utils.isContractDeployedAtAddress(expectedAddress)) {
+            Logger.logDeploymentSkipped(name, expectedAddress);
+            return expectedAddress;
+        }
+
         // Encode the initializer for GnosisSafe.setup()
         // GnosisSafe.setup signature:
         //   setup(address[] calldata _owners, uint256 _threshold, address to, bytes calldata data,
@@ -158,56 +172,15 @@ contract DeploySafeMultisigs is BaseDeployScript {
         // Compute the salt nonce
         uint256 saltNonce = uint256(salt);
 
-        // Compute expected address using GnosisSafeProxyFactory's CREATE2 formula
-        safeAddress = _computeSafeProxyAddress({
-            singletonAddress: safeInfra.singletonAddress,
-            proxyFactoryAddress: safeInfra.proxyFactoryAddress,
-            initializer: initializer,
-            saltNonce: saltNonce
-        });
-
-        // Check if already deployed
-        if (Create2Utils.isContractDeployedAtAddress(safeAddress)) {
-            Logger.logDeploymentSkipped(name, safeAddress);
-            return safeAddress;
-        }
-
         // Deploy the Safe using GnosisSafeProxyFactory.createProxyWithNonce
-        address deployedAtAddress = address(
+        safeAddress = address(
             GnosisSafeProxyFactory(safeInfra.proxyFactoryAddress)
                 .createProxyWithNonce(safeInfra.singletonAddress, initializer, saltNonce)
         );
-        Logger.logDeployed(name, deployedAtAddress);
+        Logger.logDeployed(name, safeAddress);
 
-        // Verify deployment matches expected address
-        require(deployedAtAddress == safeAddress, "Safe deployed at unexpected address");
-    }
-
-    /// @dev Computes the deterministic address of a Safe proxy before deployment
-    /// @param singletonAddress Address of the GnosisSafe singleton (master copy)
-    /// @param proxyFactoryAddress Address of the GnosisSafeProxyFactory
-    /// @param initializer Encoded GnosisSafe.setup() call data
-    /// @param saltNonce Nonce used for salt computation
-    /// @return The predicted Safe proxy address
-    function _computeSafeProxyAddress(
-        address singletonAddress,
-        address proxyFactoryAddress,
-        bytes memory initializer,
-        uint256 saltNonce
-    ) private pure returns (address) {
-        // GnosisSafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
-        bytes32 computedSalt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
-
-        // Compute init code hash: proxyCreationCode + singleton address (as uint256)
-        // This matches GnosisSafeProxyFactory.deployProxyWithNonce() which does:
-        // bytes memory deploymentData = abi.encodePacked(type(GnosisSafeProxy).creationCode,
-        // uint256(uint160(_singleton)));
-        // Using compile-time proxy creation code to avoid requiring the factory to be deployed
-        bytes memory proxyCreationCode = type(GnosisSafeProxy).creationCode;
-        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(singletonAddress))));
-
-        // Use our custom CREATE2 address computation (0.7.x compatible)
-        return Create2Utils.computeCreate2Address(computedSalt, initCodeHash, proxyFactoryAddress);
+        // Verify deployment matches expected address from deployment.toml
+        require(safeAddress == expectedAddress, "Safe deployed at unexpected address - check deployment.toml");
     }
 
     /**
@@ -306,12 +279,18 @@ contract DeploySafeMultisigs is BaseDeployScript {
         uint256 saltNonce = uint256(salt);
 
         // Compute expected address using GnosisSafeProxyFactory's CREATE2 formula
-        safeAddress = _computeSafeProxyAddress({
-            singletonAddress: singletonAddress,
-            proxyFactoryAddress: proxyFactoryAddress,
-            initializer: initializer,
-            saltNonce: saltNonce
-        });
+        // GnosisSafeProxyFactory computes salt as: keccak256(abi.encodePacked(keccak256(initializer), saltNonce))
+        bytes32 computedSalt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
+
+        // Compute init code hash: proxyCreationCode + singleton address (as uint256)
+        // This matches GnosisSafeProxyFactory.deployProxyWithNonce() which does:
+        // bytes memory deploymentData = abi.encodePacked(type(GnosisSafeProxy).creationCode,
+        // uint256(uint160(_singleton)));
+        bytes memory proxyCreationCode = type(GnosisSafeProxy).creationCode;
+        bytes32 initCodeHash = keccak256(abi.encodePacked(proxyCreationCode, uint256(uint160(singletonAddress))));
+
+        // Use our custom CREATE2 address computation (0.7.x compatible)
+        safeAddress = Create2Utils.computeCreate2Address(computedSalt, initCodeHash, proxyFactoryAddress);
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary
