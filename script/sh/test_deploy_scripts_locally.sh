@@ -50,7 +50,6 @@ fi
 #   test-guardian-safe-owner   - (read from deployment.toml)
 #   test-admin-safe-owner      - (read from deployment.toml)
 #   test-guardian-executor     - (read from deployment.toml)
-#   test-admin-executor        - (read from deployment.toml)
 
 PORT="8545"
 RPC_URL="http://127.0.0.1:$PORT"
@@ -70,7 +69,6 @@ DEN_FACTORY_DEPLOYER_ADDRESS=$(get_factory_deployer "den-nonprod")
 GUARDIAN_SAFE_OWNER_ADDRESS=$(get_guardian_safe_owner "nonprod")
 ADMIN_SAFE_OWNER_ADDRESS=$(get_admin_safe_owner "nonprod")
 GUARDIAN_EXECUTOR_ADDRESS=$(get_guardian_executor "nonprod")
-ADMIN_EXECUTOR_ADDRESS=$(get_admin_executor "nonprod")
 
 echo "============================================================================="
 echo "Local Deployment Test: $FACTORY"
@@ -80,7 +78,6 @@ echo "  Deployer Account: $DEPLOYER_ACCOUNT ($DEPLOYER_ADDRESS)"
 echo "  Guardian Safe Owner: $GUARDIAN_SAFE_OWNER_ADDRESS"
 echo "  Admin Safe Owner: $ADMIN_SAFE_OWNER_ADDRESS"
 echo "  Guardian Executor: $GUARDIAN_EXECUTOR_ADDRESS"
-echo "  Admin Executor: $ADMIN_EXECUTOR_ADDRESS"
 echo "============================================================================="
 
 # =============================================================================
@@ -106,7 +103,7 @@ echo ""
 echo "[Step 2] Funding EOAs..."
 
 # Fund all test accounts with max balance
-for addr in $DEPLOYER_ADDRESS $DEN_FACTORY_DEPLOYER_ADDRESS $GUARDIAN_SAFE_OWNER_ADDRESS $ADMIN_SAFE_OWNER_ADDRESS $GUARDIAN_EXECUTOR_ADDRESS $ADMIN_EXECUTOR_ADDRESS; do
+for addr in $DEPLOYER_ADDRESS $DEN_FACTORY_DEPLOYER_ADDRESS $GUARDIAN_SAFE_OWNER_ADDRESS $ADMIN_SAFE_OWNER_ADDRESS $GUARDIAN_EXECUTOR_ADDRESS; do
     cast rpc anvil_setBalance $addr 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
     echo "  Funded $addr"
 done
@@ -163,34 +160,25 @@ echo "[Step 6.5] Deploying BatchedTransaction..."
 make deploy-batched-transaction ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
-# Step 7: Deploy Safe Executor Modules
+# Step 7: Deploy Guardian Safe Executor Module
 # =============================================================================
 echo ""
-echo "[Step 7] Deploying Safe Executor Modules..."
+echo "[Step 7] Deploying Guardian Safe Executor Module..."
 
-echo "  Deploying guardian Safe Executor Module (executor: $GUARDIAN_EXECUTOR_ADDRESS)..."
-make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=$GUARDIAN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
-
-echo "  Deploying admin Safe Executor Module (executor: $ADMIN_EXECUTOR_ADDRESS)..."
-make deploy-safe-module SAFE_TYPE=admin EXECUTOR=$ADMIN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+echo "  Deploying Guardian Safe Executor Module (executor: $GUARDIAN_EXECUTOR_ADDRESS)..."
+make deploy-guardian-safe-module EXECUTOR=$GUARDIAN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
-# Step 8: Add Modules to Safes (Local Testing Only)
+# Step 8: Add Module to Guardian Safe (Local Testing Only)
 # =============================================================================
 echo ""
-echo "[Step 8] Adding modules to Safes..."
-echo "  Note: This requires Safe owner signatures. Using the Safe owner accounts."
+echo "[Step 8] Adding module to Guardian Safe..."
+echo "  Note: This requires Guardian Safe owner signatures. Using the Guardian Safe owner account."
 
-# Add module to guardian Safe (using guardian Safe owner account)
-echo "  Adding module to guardian Safe..."
-make safe-add-module SAFE_TYPE=guardian ACCOUNT=$GUARDIAN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
-    echo "  Warning: Failed to add module to guardian Safe (may need multi-sig approval)"
-}
-
-# Add module to admin Safe (using admin Safe owner account)
-echo "  Adding module to admin Safe..."
-make safe-add-module SAFE_TYPE=admin ACCOUNT=$ADMIN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
-    echo "  Warning: Failed to add module to admin Safe (may need multi-sig approval)"
+# Add module to Guardian Safe (using Guardian Safe owner account)
+echo "  Adding module to Guardian Safe..."
+make guardian-safe-add-module ACCOUNT=$GUARDIAN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
+    echo "  Warning: Failed to add module to Guardian Safe (may need multi-sig approval)"
 }
 
 # =============================================================================

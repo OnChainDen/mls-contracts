@@ -49,11 +49,9 @@ validate_factory "$FACTORY"
 # Read factory address from deployment.toml
 FACTORY_ADDRESS=$(get_factory_address "$FACTORY")
 
-# Read executor EOA addresses for both prod and nonprod configurations
+# Read Guardian executor EOA addresses for both prod and nonprod configurations
 GUARDIAN_EXECUTOR_NONPROD=$(get_guardian_executor "nonprod")
-ADMIN_EXECUTOR_NONPROD=$(get_admin_executor "nonprod")
 GUARDIAN_EXECUTOR_PROD=$(get_guardian_executor "prod")
-ADMIN_EXECUTOR_PROD=$(get_admin_executor "prod")
 
 # Helper to check if an address is zero
 ZERO_ADDRESS="0x0000000000000000000000000000000000000000"
@@ -287,54 +285,32 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Step 5: Compute Safe Executor Module Addresses (for both prod and nonprod)
+# Step 5: Compute Guardian Safe Executor Module Addresses (for both prod and nonprod)
 # -----------------------------------------------------------------------------
-print_progress "  Computing Safe Executor Module addresses (nonprod)..."
+print_progress "  Computing Guardian Safe Executor Module addresses (nonprod)..."
 
 # Nonprod Guardian module
-GUARDIAN_MODULE_NONPROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-    --sig "computeAddress(address,string,address,address,address)" \
-    "$FACTORY_ADDRESS" "guardian" "$GUARDIAN_EXECUTOR_NONPROD" "$GUARDIAN_SAFE_NONPROD" "$BATCHED_TRANSACTION_ADDRESS" \
+GUARDIAN_MODULE_NONPROD_OUTPUT=$(forge script script/safe-module/DeployGuardianSafeModule.s.sol:DeployGuardianSafeModule \
+    --sig "computeAddress(address,address,address,address)" \
+    "$FACTORY_ADDRESS" "$GUARDIAN_EXECUTOR_NONPROD" "$GUARDIAN_SAFE_NONPROD" "$BATCHED_TRANSACTION_ADDRESS" \
     --offline 2>&1) || {
     echo "Warning: Failed to compute Guardian module address (nonprod)" >&2
 }
 GUARDIAN_MODULE_NONPROD=$(extract_address "$GUARDIAN_MODULE_NONPROD_OUTPUT" "SafeExecutorModule")
 
-# Nonprod Admin module
-ADMIN_MODULE_NONPROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-    --sig "computeAddress(address,string,address,address,address)" \
-    "$FACTORY_ADDRESS" "admin" "$ADMIN_EXECUTOR_NONPROD" "$ADMIN_SAFE_NONPROD" "$BATCHED_TRANSACTION_ADDRESS" \
-    --offline 2>&1) || {
-    echo "Warning: Failed to compute Admin module address (nonprod)" >&2
-}
-ADMIN_MODULE_NONPROD=$(extract_address "$ADMIN_MODULE_NONPROD_OUTPUT" "SafeExecutorModule")
-
-print_progress "  Computing Safe Executor Module addresses (prod)..."
+print_progress "  Computing Guardian Safe Executor Module addresses (prod)..."
 
 # Prod Guardian module - skip if executor or safe is zero
 if [[ "$GUARDIAN_EXECUTOR_PROD" == "$ZERO_ADDRESS" || "$GUARDIAN_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
     GUARDIAN_MODULE_PROD=""
 else
-    GUARDIAN_MODULE_PROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-        --sig "computeAddress(address,string,address,address,address)" \
-        "$FACTORY_ADDRESS" "guardian" "$GUARDIAN_EXECUTOR_PROD" "$GUARDIAN_SAFE_PROD" "$BATCHED_TRANSACTION_ADDRESS" \
+    GUARDIAN_MODULE_PROD_OUTPUT=$(forge script script/safe-module/DeployGuardianSafeModule.s.sol:DeployGuardianSafeModule \
+        --sig "computeAddress(address,address,address,address)" \
+        "$FACTORY_ADDRESS" "$GUARDIAN_EXECUTOR_PROD" "$GUARDIAN_SAFE_PROD" "$BATCHED_TRANSACTION_ADDRESS" \
         --offline 2>&1) || {
         echo "Warning: Failed to compute Guardian module address (prod)" >&2
     }
     GUARDIAN_MODULE_PROD=$(extract_address "$GUARDIAN_MODULE_PROD_OUTPUT" "SafeExecutorModule")
-fi
-
-# Prod Admin module - skip if executor or safe is zero
-if [[ "$ADMIN_EXECUTOR_PROD" == "$ZERO_ADDRESS" || "$ADMIN_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
-    ADMIN_MODULE_PROD=""
-else
-    ADMIN_MODULE_PROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-        --sig "computeAddress(address,string,address,address,address)" \
-        "$FACTORY_ADDRESS" "admin" "$ADMIN_EXECUTOR_PROD" "$ADMIN_SAFE_PROD" "$BATCHED_TRANSACTION_ADDRESS" \
-        --offline 2>&1) || {
-        echo "Warning: Failed to compute Admin module address (prod)" >&2
-    }
-    ADMIN_MODULE_PROD=$(extract_address "$ADMIN_MODULE_PROD_OUTPUT" "SafeExecutorModule")
 fi
 
 # =============================================================================
@@ -385,7 +361,6 @@ print_toml "admin_safe" "${ADMIN_SAFE_NONPROD:-NOT_COMPUTED}"
 print_toml "org_factory" "${ORG_FACTORY_NONPROD:-NOT_COMPUTED}"
 print_toml "whitelist_proxy" "${WHITELIST_PROXY_NONPROD:-NOT_COMPUTED}"
 print_toml "guardian_safe_executor_module" "${GUARDIAN_MODULE_NONPROD:-NOT_COMPUTED}"
-print_toml "admin_safe_executor_module" "${ADMIN_MODULE_NONPROD:-NOT_COMPUTED}"
 echo ""
 echo "# Environment: prod"
 echo "# Addresses that depend on the prod guardian/admin Safes"
@@ -395,4 +370,3 @@ print_toml "admin_safe" "${ADMIN_SAFE_PROD:-NOT_COMPUTED}"
 print_toml "org_factory" "${ORG_FACTORY_PROD:-NOT_COMPUTED}"
 print_toml "whitelist_proxy" "${WHITELIST_PROXY_PROD:-NOT_COMPUTED}"
 print_toml "guardian_safe_executor_module" "${GUARDIAN_MODULE_PROD:-NOT_COMPUTED}"
-print_toml "admin_safe_executor_module" "${ADMIN_MODULE_PROD:-NOT_COMPUTED}"

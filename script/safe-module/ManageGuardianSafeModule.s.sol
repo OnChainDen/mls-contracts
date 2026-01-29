@@ -50,48 +50,46 @@ interface IGnosisSafe {
 }
 
 /**
- * @title SafeModuleTransaction
- * @notice Script for Safe owners to approve and execute module add/remove transactions
+ * @title ManageGuardianSafeModule
+ * @notice Script for Guardian Safe owners to approve and execute module add/remove transactions
  * @dev Uses onchain approvals (approveHash) instead of offchain signatures.
  *
- *      For adding a module:
- *        forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
- *          --sig "addModule(address,string,bool)" <FACTORY_ADDRESS> <SAFE_TYPE> <EXECUTE_IF_READY> \
+ *      For adding the module:
+ *        forge script script/safe-module/ManageGuardianSafeModule.s.sol:ManageGuardianSafeModule \
+ *          --sig "addModule(address,bool)" <FACTORY_ADDRESS> <EXECUTE_IF_READY> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
  *
- *      For removing a module:
- *        forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
- *          --sig "removeModule(address,string,bool)" <FACTORY_ADDRESS> <SAFE_TYPE> <EXECUTE_IF_READY> \
+ *      For removing the module:
+ *        forge script script/safe-module/ManageGuardianSafeModule.s.sol:ManageGuardianSafeModule \
+ *          --sig "removeModule(address,bool)" <FACTORY_ADDRESS> <EXECUTE_IF_READY> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
  *
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory used for deployment (to lookup addresses)
- *        - SAFE_TYPE: "guardian" or "admin" - which Safe to modify
  *        - EXECUTE_IF_READY: true to execute if threshold is met after approval
  *
  * @author Den Technologies Inc
  */
-contract SafeModuleTransaction is BaseDeployScript {
+contract ManageGuardianSafeModule is BaseDeployScript {
     /**
-     * @notice Approve and optionally execute adding a module to a Safe
-     * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
-     * @param safeType "guardian" or "admin" - which Safe to modify
+     * @notice Approve and optionally execute adding the module to the Guardian Safe
+     * @param factoryAddress The CREATE2 factory address (to lookup Guardian Safe/module addresses)
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
-    function addModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
+    function addModule(address factoryAddress, bool executeIfReady) external {
         // Initialize and validate the factory
         validateAndInitializeFactoryOrRevert(factoryAddress);
 
-        // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(safeType);
+        // Get Guardian Safe and module addresses
+        (address safeAddress, address moduleAddress) = _getAddresses();
 
         // Validate the Safe and module are deployed
-        require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
-        require(Create2Utils.isContractDeployedAtAddress(moduleAddress), "Module not deployed");
+        require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Guardian Safe not deployed");
+        require(Create2Utils.isContractDeployedAtAddress(moduleAddress), "Guardian Safe module not deployed");
 
         // Check module is not already enabled
         require(!IGnosisSafe(safeAddress).isModuleEnabled(moduleAddress), "Module already enabled");
@@ -100,24 +98,23 @@ contract SafeModuleTransaction is BaseDeployScript {
         bytes memory txData = abi.encodeWithSelector(IGnosisSafe.enableModule.selector, moduleAddress);
 
         // Process the transaction
-        _processTransaction(safeAddress, moduleAddress, txData, safeType, "ADD", executeIfReady);
+        _processTransaction(safeAddress, moduleAddress, txData, "ADD", executeIfReady);
     }
 
     /**
-     * @notice Approve and optionally execute removing a module from a Safe
-     * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
-     * @param safeType "guardian" or "admin" - which Safe to modify
+     * @notice Approve and optionally execute removing the module from the Guardian Safe
+     * @param factoryAddress The CREATE2 factory address (to lookup Guardian Safe/module addresses)
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
-    function removeModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
+    function removeModule(address factoryAddress, bool executeIfReady) external {
         // Initialize and validate the factory
         validateAndInitializeFactoryOrRevert(factoryAddress);
 
-        // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(safeType);
+        // Get Guardian Safe and module addresses
+        (address safeAddress, address moduleAddress) = _getAddresses();
 
         // Validate the Safe is deployed
-        require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Safe not deployed");
+        require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Guardian Safe not deployed");
 
         // Check module is currently enabled
         require(IGnosisSafe(safeAddress).isModuleEnabled(moduleAddress), "Module not enabled");
@@ -129,21 +126,20 @@ contract SafeModuleTransaction is BaseDeployScript {
         bytes memory txData = abi.encodeWithSelector(IGnosisSafe.disableModule.selector, prevModule, moduleAddress);
 
         // Process the transaction
-        _processTransaction(safeAddress, moduleAddress, txData, safeType, "REMOVE", executeIfReady);
+        _processTransaction(safeAddress, moduleAddress, txData, "REMOVE", executeIfReady);
     }
 
     /**
-     * @notice Check the approval status for a module transaction
+     * @notice Check the approval status for a module transaction on the Guardian Safe
      * @param factoryAddress The CREATE2 factory address
-     * @param safeType "guardian" or "admin"
      * @param action "add" or "remove"
      */
-    function checkStatus(address factoryAddress, string calldata safeType, string calldata action) external {
+    function checkStatus(address factoryAddress, string calldata action) external {
         // Initialize and validate the factory
         validateAndInitializeFactoryOrRevert(factoryAddress);
 
-        // Get Safe and module addresses
-        (address safeAddress, address moduleAddress) = _getAddresses(safeType);
+        // Get Guardian Safe and module addresses
+        (address safeAddress, address moduleAddress) = _getAddresses();
 
         // Build the transaction data
         // slither-disable-next-line uninitialized-local
@@ -166,8 +162,8 @@ contract SafeModuleTransaction is BaseDeployScript {
         uint256 approvalCount = _countApprovals(safeAddress, txHash, owners);
 
         // Log status
-        Logger.logBoxHeader("Module Transaction Status");
-        Logger.logKeyValue("Safe", safeAddress);
+        Logger.logBoxHeader("Guardian Safe Module Transaction Status");
+        Logger.logKeyValue("Guardian Safe", safeAddress);
         Logger.logKeyValue("Module", moduleAddress);
         Logger.logKeyValue("Action", action);
         Logger.logKeyValue("Threshold", threshold);
@@ -202,12 +198,11 @@ contract SafeModuleTransaction is BaseDeployScript {
         address safeAddress,
         address moduleAddress,
         bytes memory txData,
-        string calldata safeType,
         string memory action,
         bool executeIfReady
     ) internal {
         // Prompt for confirmation when running with --broadcast
-        confirmBroadcastOrDryRun("SafeModuleTransaction");
+        confirmBroadcastOrDryRun("ManageGuardianSafeModule");
 
         // Get the transaction hash
         bytes32 txHash = _getTransactionHash(safeAddress, txData);
@@ -217,9 +212,8 @@ contract SafeModuleTransaction is BaseDeployScript {
         address[] memory owners = IGnosisSafe(safeAddress).getOwners();
 
         // Log header
-        Logger.logBoxHeader(string(abi.encodePacked("Safe Module Transaction - ", action)));
-        Logger.logKeyValue("Safe Type", safeType);
-        Logger.logKeyValue("Safe", safeAddress);
+        Logger.logBoxHeader(string(abi.encodePacked("Guardian Safe Module Transaction - ", action)));
+        Logger.logKeyValue("Guardian Safe", safeAddress);
         Logger.logKeyValue("Module", moduleAddress);
         Logger.logKeyValue("Threshold", threshold);
         Logger.logEmptyLine();
@@ -232,7 +226,7 @@ contract SafeModuleTransaction is BaseDeployScript {
                 break;
             }
         }
-        require(isOwner, "Sender is not a Safe owner");
+        require(isOwner, "Sender is not a Guardian Safe owner");
 
         // Check if sender has already approved
         bool alreadyApproved = IGnosisSafe(safeAddress).approvedHashes(msg.sender, txHash) == 1;
@@ -293,25 +287,15 @@ contract SafeModuleTransaction is BaseDeployScript {
         Logger.logBoxFooter();
     }
 
-    /// @dev Get Safe and module addresses from deployment.toml
-    function _getAddresses(string calldata safeType) internal returns (address safeAddress, address moduleAddress) {
-        bool isGuardian = keccak256(bytes(safeType)) == keccak256("guardian");
-        bool isAdmin = keccak256(bytes(safeType)) == keccak256("admin");
-        require(isGuardian || isAdmin, "Invalid safeType - must be 'guardian' or 'admin'");
-
-        if (isGuardian) {
-            safeAddress = getExpectedGuardianSafeAddress();
-        } else {
-            safeAddress = getExpectedAdminSafeAddress();
-        }
-
-        (address guardianModule, address adminModule) = getExpectedSafeExecutorModuleAddresses();
-        moduleAddress = isGuardian ? guardianModule : adminModule;
+    /// @dev Get Guardian Safe and module addresses from deployment.toml
+    function _getAddresses() internal returns (address safeAddress, address moduleAddress) {
+        safeAddress = getExpectedGuardianSafeAddress();
+        moduleAddress = getExpectedGuardianSafeModuleAddress();
     }
 
     /// @dev Find the previous module in the linked list (needed for disableModule).
-    ///      This function only checks the first page of 100 modules. Our Guardian and Admin
-    ///      Safes will never have more than a handful of modules, so pagination is unnecessary.
+    ///      This function only checks the first page of 100 modules. The Guardian Safe
+    ///      will never have more than a handful of modules, so pagination is unnecessary.
     function _findPrevModule(address safeAddress, address moduleAddress) internal view returns (address prevModule) {
         // SENTINEL_MODULES = address(0x1)
         address SENTINEL = address(0x1);
@@ -324,7 +308,7 @@ contract SafeModuleTransaction is BaseDeployScript {
             }
             prevModule = modules[i];
         }
-        revert("Module not found in Safe");
+        revert("Module not found in Guardian Safe");
     }
 
     /// @dev Get the Safe transaction hash

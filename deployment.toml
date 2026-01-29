@@ -60,7 +60,6 @@ admin_safe = "0x84246979f1678Cc3c5949106B958275aA15B807e"
 org_factory = "0x5e484DF0e6D1De01920e562E7a01c969cB0Cb7BE"
 whitelist_proxy = "0x8DA1681dD433be70Ec3783E5B5efF6CeC341c108"
 guardian_safe_executor_module = "0x1cB6C223a9b7c52F0B2CAdD4d4Cf8FFb0D25bC66"
-admin_safe_executor_module = "0xc2503A2F2Bb2DaDB1Ca5Ec56B44ae5C3F6751c2F"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # Module addresses NOT_COMPUTED until production executor EOAs are set
@@ -70,7 +69,6 @@ admin_safe = "0x2669AE29f7cE3e1282D6e1dda02D29538b3390B0"
 org_factory = "0x07B196bDcd05b29F3c7f632B015327dF79221540"
 whitelist_proxy = "0x62189FC56357D9e747693c3977dd86B129Ab38e0"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-admin_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
 # Den Singleton Factory (Non-Production)
@@ -114,7 +112,6 @@ admin_safe = "0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f"
 org_factory = "0xFd47FE7f256BCA728d78D953f2817b29F193dAd3"
 whitelist_proxy = "0xd1981BfD5842d57d893b72fC0Ec1F89a5b188221"
 guardian_safe_executor_module = "0xe5e4B8F410a13ce70dbFAB36409ab9f2F6577EFA"
-admin_safe_executor_module = "0x6dAc957D9d5F5ea2214d45f3aEe58309Ae7b2C62"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # Module addresses NOT_COMPUTED until production executor EOAs are set
@@ -124,7 +121,6 @@ admin_safe = "0xA9Ab89FF5714c4e08d46B85577529D813834Fa0c"
 org_factory = "0x5d56E6f68fD5bdc425f07913fdC1bA25578d6520"
 whitelist_proxy = "0x6d140cE6a15226543Ac24aa57367784ed8adC8Cf"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-admin_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
 # Den Singleton Factory (Production)
@@ -173,7 +169,6 @@ admin_safe = "0x0000000000000000000000000000000000000000"
 org_factory = "0x0000000000000000000000000000000000000000"
 whitelist_proxy = "0x0000000000000000000000000000000000000000"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-admin_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # TODO: Compute addresses after setting production Safe owners and executor EOAs
@@ -183,7 +178,6 @@ admin_safe = "0x0000000000000000000000000000000000000000"
 org_factory = "0x0000000000000000000000000000000000000000"
 whitelist_proxy = "0x0000000000000000000000000000000000000000"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-admin_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ==============================================================================
 # SAFE MULTISIG CONFIGURATIONS
@@ -207,10 +201,9 @@ guardian_safe_owner_1 = "0x22002e8661A780d61EF4c86F4a9fFa843A6fea20"
 admin_safe_threshold = 1
 admin_safe_owner_1 = "0x8DA06Ab9bBb0736d36c92E10B1d6e23A890FD32F"
 
-# Safe Executor EOAs (authorized to execute via modules)
-# For local/testnet testing, use the test-guardian-executor and test-admin-executor foundry accounts
+# Guardian Executor EOA (authorized to execute via Guardian Safe module)
+# For local/testnet testing, use the test-guardian-executor foundry account
 guardian_executor_eoa = "0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1"
-admin_executor_eoa = "0xBd7DF30E88C5C7fD54F2Ac77a1302581d577E0Fd"
 
 # ------------------------------------------------------------------------------
 # Production Safe Configuration
@@ -232,7 +225,6 @@ admin_safe_owner_1 = "0x3333333333333333333333333333333333333333"
 admin_safe_owner_2 = "0x4444444444444444444444444444444444444444"
 admin_safe_owner_3 = "0x5555555555555555555555555555555555555555"
 
-# Safe Executor EOAs (authorized to execute via modules)
-# TODO: Update with production Safe Executor EOA addresses before mainnet deployment
+# Guardian Executor EOA (authorized to execute via Guardian Safe module)
+# TODO: Update with production Guardian Executor EOA address before mainnet deployment
 guardian_executor_eoa = "0x0000000000000000000000000000000000000000"
-admin_executor_eoa = "0x0000000000000000000000000000000000000000"

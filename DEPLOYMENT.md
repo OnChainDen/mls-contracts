@@ -422,53 +422,41 @@ To rotate the Safe Executor EOA, deploy a new module instance and have Safe owne
 
 ### Module Deployment Commands
 
-#### Deploy a Module
+#### Deploy the Guardian Safe Module
 
-Deploy a SafeExecutorModule for a Safe:
+Deploy a SafeExecutorModule for the Guardian Safe:
 
 ```bash
 # Deploy module for Guardian Safe
-make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy module for Admin Safe
-make deploy-safe-module TARGET=admin EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
+make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress NETWORK=sepolia ACCOUNT=my-deployer
 
 # Deploy using Den non-prod factory
-make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy with Ledger
+make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
 ```
 
 The script validates:
-1. The executor address matches the expected address in `DeploymentConfig.sol`
-2. The target Safe is deployed at the expected address
+1. The executor address matches the expected address in `deployment.toml`
+2. The Guardian Safe is deployed at the expected address
 3. The `BatchedTransaction` contract is deployed at the expected address
 4. The CREATE2 factory is deployed
 
-#### Compute Module Address
+### Adding the Module to the Guardian Safe
 
-Preview the expected module address without deploying:
+After deploying the module, Guardian Safe owners must approve adding it. This is a multisig operation that requires threshold approvals.
 
-```bash
-# Compute address for Guardian Safe module
-make compute-module-address TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia
+#### Approve Adding the Module
 
-# Compute address for Admin Safe module with Den non-prod factory
-make compute-module-address TARGET=admin EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=mainnet
-```
-
-### Adding a Module to a Safe
-
-After deploying a module, Safe owners must approve adding it to the Safe. This is a multisig operation that requires threshold approvals.
-
-#### Approve Adding a Module
-
-Each Safe owner runs this command to submit their approval:
+Each Guardian Safe owner runs this command to submit their approval:
 
 ```bash
 # Approve adding module to Guardian Safe (execute if threshold is met)
-make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
 
 # Approve without auto-executing (just submit approval)
-make safe-add-module TARGET=admin EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
+make guardian-safe-add-module EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
 ```
 
 When `EXECUTE=true` and the approval threshold is met, the transaction is automatically executed.
@@ -479,31 +467,31 @@ Check how many approvals exist for a module transaction:
 
 ```bash
 # Check status for adding Guardian module
-make check-safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
+make check-guardian-module-status ACTION=add NETWORK=sepolia
 
-# Check status for removing Admin module
-make check-safe-module-status TARGET=admin ACTION=remove NETWORK=mainnet
+# Check status for removing Guardian module
+make check-guardian-module-status ACTION=remove NETWORK=mainnet
 ```
 
-#### Remove a Module
+#### Remove the Module
 
-If you need to remove a module (e.g., to rotate the authorized executor):
+If you need to remove the module (e.g., to rotate the authorized executor):
 
 ```bash
 # Approve removing module from Guardian Safe
-make safe-remove-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+make guardian-safe-remove-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
 ```
 
 ### Module Deployment Workflow
 
-The typical workflow for deploying and enabling a module is:
+The typical workflow for deploying and enabling the module is:
 
 ```
 1. Deploy the module
-   └── make deploy-safe-module TARGET=guardian EXECUTOR=0x... ...
+   └── make deploy-guardian-safe-module EXECUTOR=0x... ...
 
-2. Each Safe owner approves adding the module
-   └── make safe-add-module TARGET=guardian EXECUTE=true ...
+2. Each Guardian Safe owner approves adding the module
+   └── make guardian-safe-add-module EXECUTE=true ...
    └── (repeat for each owner until threshold is met)
 
 3. Module is now active and the executor can use it
@@ -513,13 +501,13 @@ To rotate an executor:
 
 ```
 1. Deploy a new module with the new executor address
-   └── make deploy-safe-module TARGET=guardian EXECUTOR=0xNewExecutor ...
+   └── make deploy-guardian-safe-module EXECUTOR=0xNewExecutor ...
 
-2. Safe owners approve adding the new module
-   └── make safe-add-module TARGET=guardian EXECUTE=true ...
+2. Guardian Safe owners approve adding the new module
+   └── make guardian-safe-add-module EXECUTE=true ...
 
-3. Safe owners approve removing the old module
-   └── make safe-remove-module TARGET=guardian EXECUTE=true ...
+3. Guardian Safe owners approve removing the old module
+   └── make guardian-safe-remove-module EXECUTE=true ...
 ```
 
 ---
@@ -820,11 +808,10 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
 | `make deploy-batched-transaction` | Deploy BatchedTransaction contract |
 | `make compute-batched-transaction-address` | Preview expected BatchedTransaction address |
-| `make deploy-safe-module` | Deploy SafeExecutorModule for a Safe |
-| `make compute-module-address` | Preview expected module address |
-| `make safe-add-module` | Approve adding a module to a Safe |
-| `make safe-remove-module` | Approve removing a module from a Safe |
-| `make check-safe-module-status` | Check approval status for a module transaction |
+| `make deploy-guardian-safe-module` | Deploy SafeExecutorModule for the Guardian Safe |
+| `make guardian-safe-add-module` | Approve adding the module to Guardian Safe |
+| `make guardian-safe-remove-module` | Approve removing the module from Guardian Safe |
+| `make check-guardian-module-status` | Check approval status for Guardian Safe module transaction |
 | `make check-factory` | Check if a CREATE2 factory exists |
 | `make check-all-factories` | Check all factories on a network |
 | `make compute-addresses` | Compute all CREATE2 addresses for a specific factory |

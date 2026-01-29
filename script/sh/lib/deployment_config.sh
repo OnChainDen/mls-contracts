@@ -158,13 +158,6 @@ get_guardian_executor() {
     get_config ".safe.$env.guardian_executor_eoa"
 }
 
-# Get admin executor EOA address
-# Usage: get_admin_executor "nonprod"
-get_admin_executor() {
-    local env="$1"
-    get_config ".safe.$env.admin_executor_eoa"
-}
-
 # Get guardian Safe owner address (first owner)
 # Usage: get_guardian_safe_owner "nonprod"
 get_guardian_safe_owner() {
@@ -221,14 +214,6 @@ get_guardian_module_address() {
     local factory="$1"
     local env="$2"
     get_config ".factory[\"$factory\"].env.$env.guardian_safe_executor_module"
-}
-
-# Get admin module address for a factory/env combination
-# Usage: get_admin_module_address "arachnid" "nonprod"
-get_admin_module_address() {
-    local factory="$1"
-    local env="$2"
-    get_config ".factory[\"$factory\"].env.$env.admin_safe_executor_module"
 }
 
 # =============================================================================
