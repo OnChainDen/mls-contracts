@@ -12,8 +12,8 @@
 # 3. Computes library addresses
 # 4. Computes BatchedTransaction address
 # 5. Computes platform implementation addresses (environment-independent)
-# 6. Computes platform contract addresses for both prod and nonprod deployer Safes
-#    (org_factory and whitelist_proxy depend on the deployer Safe address)
+# 6. Computes platform contract addresses for both prod and nonprod configurations
+#    (org_factory depends on guardian Safe, whitelist_proxy depends on deployer Safe)
 # 7. Computes Safe module addresses for both prod and nonprod configurations
 #
 # Output is in TOML format to facilitate easy comparison with deployment.toml.
@@ -241,8 +241,8 @@ fi
 # -----------------------------------------------------------------------------
 # Step 4: Compute Platform Contract Addresses (for both nonprod and prod)
 # -----------------------------------------------------------------------------
-# org_factory and whitelist_proxy depend on the deployer Safe address, so we
-# compute them separately for each environment.
+# org_factory depends on guardian Safe, whitelist_proxy depends on deployer Safe,
+# so we compute them separately for each environment.
 # Implementation contracts are environment-independent.
 
 # Build --libraries flags using computed library addresses
@@ -251,10 +251,10 @@ LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_AD
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_INIT_PATH}:${LIB_ORG_INIT_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${LIB_ORG_ACCOUNT_SIG_ADDRESS}"
 
-# Compute platform contracts with NONPROD deployer safe
+# Compute platform contracts with NONPROD guardian and deployer safes
 print_progress "  Computing platform contract addresses (nonprod)..."
 CONTRACTS_OUTPUT_NONPROD=$(forge script script/DeployContracts.s.sol:DeployContracts \
-    --sig "computeAddresses(address,address)" "$FACTORY_ADDRESS" "$DEPLOYER_SAFE_NONPROD" \
+    --sig "computeAddresses(address,address,address)" "$FACTORY_ADDRESS" "$GUARDIAN_SAFE_NONPROD" "$DEPLOYER_SAFE_NONPROD" \
     $LIBRARIES_FLAGS --offline 2>&1) || {
     clear_progress
     echo "Error: Failed to compute platform contract addresses (nonprod)" >&2
@@ -267,18 +267,18 @@ WHITELIST_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "Implementa
 ORG_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "OrganizationImplementation")
 ACCOUNT_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "AccountImplementation")
 
-# Extract nonprod-specific addresses (depend on deployer safe)
+# Extract nonprod-specific addresses (org_factory depends on guardian safe, whitelist_proxy on deployer safe)
 ORG_FACTORY_NONPROD=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "OrganizationFactory")
 WHITELIST_PROXY_NONPROD=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "ImplementationWhitelistProxy")
 
-# Compute platform contracts with PROD deployer safe (skip if prod deployer safe is zero)
+# Compute platform contracts with PROD guardian and deployer safes (skip if either is zero)
 print_progress "  Computing platform contract addresses (prod)..."
-if [[ "$DEPLOYER_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
+if [[ "$GUARDIAN_SAFE_PROD" == "$ZERO_ADDRESS" || "$DEPLOYER_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
     ORG_FACTORY_PROD=""
     WHITELIST_PROXY_PROD=""
 else
     CONTRACTS_OUTPUT_PROD=$(forge script script/DeployContracts.s.sol:DeployContracts \
-        --sig "computeAddresses(address,address)" "$FACTORY_ADDRESS" "$DEPLOYER_SAFE_PROD" \
+        --sig "computeAddresses(address,address,address)" "$FACTORY_ADDRESS" "$GUARDIAN_SAFE_PROD" "$DEPLOYER_SAFE_PROD" \
         $LIBRARIES_FLAGS --offline 2>&1) || {
         echo "Warning: Failed to compute platform contract addresses (prod)" >&2
     }
@@ -378,7 +378,7 @@ echo "# BatchedTransaction (environment-independent)"
 print_toml "batched_transaction" "${BATCHED_TRANSACTION_ADDRESS:-NOT_COMPUTED}"
 echo ""
 echo "# Environment: nonprod"
-echo "# Addresses that depend on the nonprod deployer Safe"
+echo "# Addresses that depend on the nonprod guardian/deployer Safes"
 echo "[factory.\"$FACTORY\".env.nonprod]"
 print_toml "guardian_safe" "${GUARDIAN_SAFE_NONPROD:-NOT_COMPUTED}"
 print_toml "deployer_safe" "${DEPLOYER_SAFE_NONPROD:-NOT_COMPUTED}"
@@ -388,7 +388,7 @@ print_toml "guardian_safe_executor_module" "${GUARDIAN_MODULE_NONPROD:-NOT_COMPU
 print_toml "deployer_safe_executor_module" "${DEPLOYER_MODULE_NONPROD:-NOT_COMPUTED}"
 echo ""
 echo "# Environment: prod"
-echo "# Addresses that depend on the prod deployer Safe"
+echo "# Addresses that depend on the prod guardian/deployer Safes"
 echo "[factory.\"$FACTORY\".env.prod]"
 print_toml "guardian_safe" "${GUARDIAN_SAFE_PROD:-NOT_COMPUTED}"
 print_toml "deployer_safe" "${DEPLOYER_SAFE_PROD:-NOT_COMPUTED}"

@@ -88,6 +88,7 @@ contract DeployContracts is BaseDeployScript {
         _validateLinkedLibrariesOrRevert();
         _validateSafeInfrastructureDeployedOrRevert();
         _validateSafeMultisigsDeployedOrRevert();
+        address guardianSafeAddress = getExpectedGuardianSafeAddress();
         address deployerSafeAddress = getExpectedDeployerSafeAddress();
 
         // Start broadcasting transactions
@@ -97,7 +98,7 @@ contract DeployContracts is BaseDeployScript {
         PlatformImplementations memory implementationContracts = _deployImplementationContracts();
 
         // Deploy Factory Contracts (OrganizationFactory)
-        address organizationFactoryAddress = _deployOrganizationFactory(deployerSafeAddress);
+        address organizationFactoryAddress = _deployOrganizationFactory(guardianSafeAddress);
 
         // Deploy ImplementationWhitelistProxy (depends on implementationContracts, deployer safe)
         address whitelistProxyAddress = _deployWhitelistProxy(implementationContracts, deployerSafeAddress);
@@ -124,16 +125,22 @@ contract DeployContracts is BaseDeployScript {
      *      the library addresses are linked at compile time. The bash script compute_all_addresses.sh
      *      handles this by first computing library addresses and passing them via --libraries.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
-     * @param deployerSafeAddress Address of the Deployer Safe (computed by DeploySafe.s.sol)
+     * @param guardianSafeAddress Address of the Guardian Safe (owner of OrganizationFactory)
+     * @param deployerSafeAddress Address of the Deployer Safe (owner of ImplementationWhitelistProxy)
      */
-    function computeAddresses(address factoryAddress, address deployerSafeAddress) external pure {
+    function computeAddresses(address factoryAddress, address guardianSafeAddress, address deployerSafeAddress)
+        external
+        pure
+    {
         // Validate inputs
         require(factoryAddress != address(0), "Factory address cannot be zero");
+        require(guardianSafeAddress != address(0), "Guardian Safe address cannot be zero");
         require(deployerSafeAddress != address(0), "Deployer Safe address cannot be zero");
 
         // Log header
         Logger.logBoxHeader("Computed Platform Contract Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
+        Logger.logKeyValue("Guardian Safe", guardianSafeAddress);
         Logger.logKeyValue("Deployer Safe", deployerSafeAddress);
         Logger.logEmptyLine();
 
@@ -153,11 +160,11 @@ contract DeployContracts is BaseDeployScript {
             Create2Utils.computeAddress(factoryAddress, ACCOUNT_IMPL_SALT, type(AccountImplementation).creationCode);
         Logger.logKeyValue("AccountImplementation", accountImplAddress);
 
-        // Compute OrganizationFactory address (depends on deployerSafeAddress constructor arg)
+        // Compute OrganizationFactory address (depends on guardianSafeAddress constructor arg)
         Logger.logSection("Factory Contracts");
 
         bytes memory orgFactoryInitCode =
-            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
+            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(guardianSafeAddress));
         address orgFactoryAddress = Create2Utils.computeAddress(factoryAddress, ORG_FACTORY_SALT, orgFactoryInitCode);
         Logger.logKeyValue("OrganizationFactory", orgFactoryAddress);
 
@@ -214,17 +221,17 @@ contract DeployContracts is BaseDeployScript {
     }
 
     /// @dev Deploys the OrganizationFactory via CREATE2
-    /// @param deployerSafeAddress Address of the Deployer Safe to authorize as factory deployer
+    /// @param guardianSafeAddress Address of the Guardian Safe to authorize as factory deployer
     /// @return organizationFactoryAddress Address of the deployed OrganizationFactory
-    function _deployOrganizationFactory(address deployerSafeAddress)
+    function _deployOrganizationFactory(address guardianSafeAddress)
         internal
         returns (address organizationFactoryAddress)
     {
         Logger.logSection("Factory Contracts");
 
-        // Deploy OrganizationFactory with deployerSafeAddress as the deployer
+        // Deploy OrganizationFactory with guardianSafeAddress as the deployer
         bytes memory orgFactoryInitCode =
-            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
+            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(guardianSafeAddress));
 
         (organizationFactoryAddress,) = Create2Utils.deployIfNotExists(
             _factoryAddress, ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
