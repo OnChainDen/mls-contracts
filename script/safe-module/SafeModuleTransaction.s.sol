@@ -70,7 +70,7 @@ interface IGnosisSafe {
  *
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory used for deployment (to lookup addresses)
- *        - SAFE_TYPE: "guardian" or "deployer" - which Safe to modify
+ *        - SAFE_TYPE: "guardian" or "admin" - which Safe to modify
  *        - EXECUTE_IF_READY: true to execute if threshold is met after approval
  *
  * @author Den Technologies Inc
@@ -79,7 +79,7 @@ contract SafeModuleTransaction is BaseDeployScript {
     /**
      * @notice Approve and optionally execute adding a module to a Safe
      * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
-     * @param safeType "guardian" or "deployer" - which Safe to modify
+     * @param safeType "guardian" or "admin" - which Safe to modify
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
     function addModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
@@ -106,7 +106,7 @@ contract SafeModuleTransaction is BaseDeployScript {
     /**
      * @notice Approve and optionally execute removing a module from a Safe
      * @param factoryAddress The CREATE2 factory address (to lookup Safe/module addresses)
-     * @param safeType "guardian" or "deployer" - which Safe to modify
+     * @param safeType "guardian" or "admin" - which Safe to modify
      * @param executeIfReady If true, execute the transaction if threshold is met after approval
      */
     function removeModule(address factoryAddress, string calldata safeType, bool executeIfReady) external {
@@ -135,7 +135,7 @@ contract SafeModuleTransaction is BaseDeployScript {
     /**
      * @notice Check the approval status for a module transaction
      * @param factoryAddress The CREATE2 factory address
-     * @param safeType "guardian" or "deployer"
+     * @param safeType "guardian" or "admin"
      * @param action "add" or "remove"
      */
     function checkStatus(address factoryAddress, string calldata safeType, string calldata action) external {
@@ -296,21 +296,21 @@ contract SafeModuleTransaction is BaseDeployScript {
     /// @dev Get Safe and module addresses from deployment.toml
     function _getAddresses(string calldata safeType) internal returns (address safeAddress, address moduleAddress) {
         bool isGuardian = keccak256(bytes(safeType)) == keccak256("guardian");
-        bool isDeployer = keccak256(bytes(safeType)) == keccak256("deployer");
-        require(isGuardian || isDeployer, "Invalid safeType - must be 'guardian' or 'deployer'");
+        bool isAdmin = keccak256(bytes(safeType)) == keccak256("admin");
+        require(isGuardian || isAdmin, "Invalid safeType - must be 'guardian' or 'admin'");
 
         if (isGuardian) {
             safeAddress = getExpectedGuardianSafeAddress();
         } else {
-            safeAddress = getExpectedDeployerSafeAddress();
+            safeAddress = getExpectedAdminSafeAddress();
         }
 
-        (address guardianModule, address deployerModule) = getExpectedSafeExecutorModuleAddresses();
-        moduleAddress = isGuardian ? guardianModule : deployerModule;
+        (address guardianModule, address adminModule) = getExpectedSafeExecutorModuleAddresses();
+        moduleAddress = isGuardian ? guardianModule : adminModule;
     }
 
     /// @dev Find the previous module in the linked list (needed for disableModule).
-    ///      This function only checks the first page of 100 modules. Our Guardian and Deployer
+    ///      This function only checks the first page of 100 modules. Our Guardian and Admin
     ///      Safes will never have more than a handful of modules, so pagination is unnecessary.
     function _findPrevModule(address safeAddress, address moduleAddress) internal view returns (address prevModule) {
         // SENTINEL_MODULES = address(0x1)

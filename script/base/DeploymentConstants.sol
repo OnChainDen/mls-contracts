@@ -39,8 +39,8 @@ abstract contract DeploymentConstants {
     /// @dev Salt for Guardian Safe (used as Organization guardian)
     bytes32 internal constant GUARDIAN_SAFE_SALT = keccak256("den.mls-wallet.safe.guardian.v1");
 
-    /// @dev Salt for Deployer Safe (used as factory deployer)
-    bytes32 internal constant DEPLOYER_SAFE_SALT = keccak256("den.mls-wallet.safe.deployer.v1");
+    /// @dev Salt for Admin Safe (used as whitelist admin)
+    bytes32 internal constant ADMIN_SAFE_SALT = keccak256("den.mls-wallet.safe.deployer.v1");
 
     /// @dev Salt for LibOrganizationPolicy library deployment
     bytes32 internal constant LIB_ORG_POLICY_SALT = keccak256("den.mls-wallet.organization.lib.policy.v1");
@@ -74,8 +74,8 @@ abstract contract DeploymentConstants {
     bytes32 internal constant GUARDIAN_SAFE_EXECUTOR_MODULE_SALT =
         keccak256("den.mls-wallet.safe-module.eoa-executor.guardian.v1");
 
-    /// @dev Salt for Deployer Safe Executor Module deployment
-    bytes32 internal constant DEPLOYER_SAFE_EXECUTOR_MODULE_SALT =
+    /// @dev Salt for Admin Safe Executor Module deployment
+    bytes32 internal constant ADMIN_SAFE_EXECUTOR_MODULE_SALT =
         keccak256("den.mls-wallet.safe-module.eoa-executor.deployer.v1");
 
     /// @dev Salt for BatchedTransaction deployment

@@ -235,7 +235,7 @@ The `FACTORY` variable specifies which CREATE2 factory to use. Default is `arach
 
 ## Safe 1.3.0 Deployment
 
-The platform uses Safe (Gnosis Safe) multisig wallets for the **Guardian Safe** and **Deployer Safe**. These Safes must be deployed before deploying the platform contracts.
+The platform uses Safe (Gnosis Safe) multisig wallets for the **Guardian Safe** and **Admin Safe**. These Safes must be deployed before deploying the platform contracts.
 
 ### Why Safe Uses a Separate Profile
 
@@ -272,7 +272,7 @@ make deploy-safe NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
 
 This deploys:
 - **Safe Infrastructure**: GnosisSafe singleton, GnosisSafeProxyFactory, CompatibilityFallbackHandler, MultiSend, MultiSendCallOnly, CreateCall, SimulateTxAccessor
-- **Safe Multisigs**: Guardian Safe and Deployer Safe (configured per chain in `DeploymentConfig.sol`)
+- **Safe Multisigs**: Guardian Safe and Admin Safe (configured per chain in `DeploymentConfig.sol`)
 
 #### Preview Safe Addresses (Dry Run)
 
@@ -430,8 +430,8 @@ Deploy a SafeExecutorModule for a Safe:
 # Deploy module for Guardian Safe
 make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia ACCOUNT=my-deployer
 
-# Deploy module for Deployer Safe
-make deploy-safe-module TARGET=deployer EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
+# Deploy module for Admin Safe
+make deploy-safe-module TARGET=admin EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
 
 # Deploy using Den non-prod factory
 make deploy-safe-module TARGET=guardian EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
@@ -451,8 +451,8 @@ Preview the expected module address without deploying:
 # Compute address for Guardian Safe module
 make compute-module-address TARGET=guardian EXECUTOR=0xYourExecutorAddress NETWORK=sepolia
 
-# Compute address for Deployer Safe module with Den non-prod factory
-make compute-module-address TARGET=deployer EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=mainnet
+# Compute address for Admin Safe module with Den non-prod factory
+make compute-module-address TARGET=admin EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=mainnet
 ```
 
 ### Adding a Module to a Safe
@@ -468,7 +468,7 @@ Each Safe owner runs this command to submit their approval:
 make safe-add-module TARGET=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
 
 # Approve without auto-executing (just submit approval)
-make safe-add-module TARGET=deployer EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
+make safe-add-module TARGET=admin EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
 ```
 
 When `EXECUTE=true` and the approval threshold is met, the transaction is automatically executed.
@@ -481,8 +481,8 @@ Check how many approvals exist for a module transaction:
 # Check status for adding Guardian module
 make check-safe-module-status TARGET=guardian ACTION=add NETWORK=sepolia
 
-# Check status for removing Deployer module
-make check-safe-module-status TARGET=deployer ACTION=remove NETWORK=mainnet
+# Check status for removing Admin module
+make check-safe-module-status TARGET=admin ACTION=remove NETWORK=mainnet
 ```
 
 #### Remove a Module

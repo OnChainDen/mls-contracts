@@ -10,7 +10,7 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title DeploySafeExecutorModule
- * @notice Deploys a SafeExecutorModule for the Guardian or Deployer Safe via CREATE2
+ * @notice Deploys a SafeExecutorModule for the Guardian or Admin Safe via CREATE2
  * @dev This script deploys a minimal Safe module that allows a designated EOA (the "Safe Executor EOA")
  *      to execute contract calls on behalf of a Safe multisig.
  *
@@ -23,13 +23,13 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  *
  *      Where:
  *        - FACTORY_ADDRESS: The CREATE2 factory to use (Arachnid or Den Singleton Factory)
- *        - SAFE_TYPE: "guardian" or "deployer" - which Safe to deploy the module for
+ *        - SAFE_TYPE: "guardian" or "admin" - which Safe to deploy the module for
  *        - EXECUTOR_ADDRESS: The Safe Executor EOA that will be authorized to execute transactions
  *
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
  *      2. Verifies the provided CREATE2 factory is deployed
- *      3. Verifies the safeType is valid ("guardian" or "deployer")
+ *      3. Verifies the safeType is valid ("guardian" or "admin")
  *      4. Verifies the executor address matches the expected address in deployment.toml
  *      5. Verifies the Safe is deployed at the expected address
  *      6. Verifies the BatchedTransaction is deployed at the expected address
@@ -42,7 +42,7 @@ contract DeploySafeExecutorModule is BaseDeployScript {
     /**
      * @notice Main entry point - deploys a SafeExecutorModule via CREATE2
      * @param factoryAddress Address of the CREATE2 factory to use for deployment
-     * @param safeType "guardian" or "deployer" - which Safe to deploy the module for
+     * @param safeType "guardian" or "admin" - which Safe to deploy the module for
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      */
     function run(address factoryAddress, string calldata safeType, address executorAddress) external {
@@ -90,7 +90,7 @@ contract DeploySafeExecutorModule is BaseDeployScript {
      * @notice Compute and print module address without deploying
      * @dev Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
-     * @param safeType "guardian" or "deployer" - which Safe to compute the module address for
+     * @param safeType "guardian" or "admin" - which Safe to compute the module address for
      * @param executorAddress The Safe Executor EOA that will be authorized to execute transactions
      * @param safeAddress The Safe address (computed by DeploySafe.s.sol)
      * @param batchedTransactionAddress The BatchedTransaction address (computed by DeployBatchedTransaction.s.sol)
@@ -129,7 +129,7 @@ contract DeploySafeExecutorModule is BaseDeployScript {
     }
 
     /// @dev Deploys the SafeExecutorModule via CREATE2
-    /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
+    /// @param isGuardian True for Guardian Safe module, false for Admin Safe module
     /// @param safeAddress The Safe address
     /// @param executorAddress The Safe Executor EOA address
     /// @param batchedTransaction The BatchedTransaction address
@@ -140,7 +140,7 @@ contract DeploySafeExecutorModule is BaseDeployScript {
     {
         bytes32 salt = _getSalt(isGuardian);
         bytes memory initCode = _getInitCode(safeAddress, executorAddress, batchedTransaction);
-        string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Deployer SafeExecutorModule";
+        string memory name = isGuardian ? "Guardian SafeExecutorModule" : "Admin SafeExecutorModule";
 
         Logger.logSection("SafeExecutorModule (CREATE2)");
 
@@ -150,47 +150,47 @@ contract DeploySafeExecutorModule is BaseDeployScript {
     }
 
     /// @dev Validates that the provided executor address matches the expected address for the target
-    /// @param isGuardian True if validating for Guardian Safe, false for Deployer Safe
+    /// @param isGuardian True if validating for Guardian Safe, false for Admin Safe
     /// @param executorAddress The executor address to validate
     function _validateExecutorAddressOrRevert(bool isGuardian, address executorAddress) internal {
-        (address expectedGuardian, address expectedDeployer) = getExpectedExecutorEOAAddresses();
+        (address expectedGuardian, address expectedAdmin) = getExpectedExecutorEOAAddresses();
 
-        address expected = isGuardian ? expectedGuardian : expectedDeployer;
+        address expected = isGuardian ? expectedGuardian : expectedAdmin;
         require(executorAddress == expected, "Invalid executor address for target");
     }
 
     /// @dev Validates and parses the safeType string
-    /// @param safeType The safeType string ("guardian" or "deployer")
-    /// @return isGuardian True if safeType is "guardian", false if "deployer"
+    /// @param safeType The safeType string ("guardian" or "admin")
+    /// @return isGuardian True if safeType is "guardian", false if "admin"
     function _isGuardianSafeType(string calldata safeType) internal pure returns (bool isGuardian) {
         bytes32 safeTypeHash = keccak256(bytes(safeType));
         if (safeTypeHash == keccak256("guardian")) {
             return true;
         }
-        if (safeTypeHash == keccak256("deployer")) {
+        if (safeTypeHash == keccak256("admin")) {
             return false;
         }
-        revert("Invalid safeType - must be 'guardian' or 'deployer'");
+        revert("Invalid safeType - must be 'guardian' or 'admin'");
     }
 
     /// @dev Gets the Safe address for the given safeType
-    /// @param isGuardian True for Guardian Safe, false for Deployer Safe
+    /// @param isGuardian True for Guardian Safe, false for Admin Safe
     /// @return safeAddress The Safe address
     function _getSafeAddress(bool isGuardian) internal returns (address safeAddress) {
         if (isGuardian) {
             return getExpectedGuardianSafeAddress();
         }
-        return getExpectedDeployerSafeAddress();
+        return getExpectedAdminSafeAddress();
     }
 
     /// @dev Gets the salt for the given safeType
-    /// @param isGuardian True for Guardian Safe module, false for Deployer Safe module
+    /// @param isGuardian True for Guardian Safe module, false for Admin Safe module
     /// @return salt The CREATE2 salt
     function _getSalt(bool isGuardian) internal pure returns (bytes32 salt) {
         if (isGuardian) {
             return GUARDIAN_SAFE_EXECUTOR_MODULE_SALT;
         }
-        return DEPLOYER_SAFE_EXECUTOR_MODULE_SALT;
+        return ADMIN_SAFE_EXECUTOR_MODULE_SALT;
     }
 
     /// @dev Constructs the init code for the module deployment
@@ -209,7 +209,7 @@ contract DeploySafeExecutorModule is BaseDeployScript {
     }
 
     /// @dev Logs the next steps after deployment
-    /// @param safeType The safeType ("guardian" or "deployer")
+    /// @param safeType The safeType ("guardian" or "admin")
     /// @param safeAddress The Safe address
     /// @param moduleAddress The deployed module address
     function _logNextSteps(string calldata safeType, address safeAddress, address moduleAddress) internal pure {

@@ -99,7 +99,7 @@ help:
 	@echo "  FACTORY   CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)"
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
-	@echo "  SAFE_TYPE Safe type: guardian or deployer (for module commands)"
+	@echo "  SAFE_TYPE Safe type: guardian or admin (for module commands)"
 	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
 	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
 	@echo "  ACTION    Action to check status for: add or remove (for check-safe-module-status)"
@@ -467,10 +467,10 @@ deploy-batched-transaction: validate-signer-vars
 #
 # Example:
 #   make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
-#   make deploy-safe-module SAFE_TYPE=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+#   make deploy-safe-module SAFE_TYPE=admin EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
 deploy-safe-module: validate-signer-vars
 ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=admin)
 endif
 ifndef EXECUTOR
 	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
@@ -493,10 +493,10 @@ endif
 #
 # Example:
 #   make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
-#   make safe-add-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+#   make safe-add-module SAFE_TYPE=admin EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
 safe-add-module: validate-signer-vars
 ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=admin)
 endif
 ifndef EXECUTE
 	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
@@ -519,10 +519,10 @@ endif
 #
 # Example:
 #   make safe-remove-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
-#   make safe-remove-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+#   make safe-remove-module SAFE_TYPE=admin EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
 safe-remove-module: validate-signer-vars
 ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=admin)
 endif
 ifndef EXECUTE
 	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
@@ -544,10 +544,10 @@ endif
 #
 # Example:
 #   make check-safe-module-status SAFE_TYPE=guardian ACTION=add NETWORK=sepolia
-#   make check-safe-module-status SAFE_TYPE=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
+#   make check-safe-module-status SAFE_TYPE=admin ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
 check-safe-module-status:
 ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
+	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=admin)
 endif
 ifndef ACTION
 	$(error ACTION is required. Set ACTION=add or ACTION=remove)

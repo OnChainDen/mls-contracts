@@ -48,9 +48,9 @@ fi
 #   test-deployer              - 0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3 (default for deployments)
 #   test-den-factory-deployer  - (read from deployment.toml factory_deployer)
 #   test-guardian-safe-owner   - (read from deployment.toml)
-#   test-deployer-safe-owner   - (read from deployment.toml)
+#   test-admin-safe-owner      - (read from deployment.toml)
 #   test-guardian-executor     - (read from deployment.toml)
-#   test-deployer-executor     - (read from deployment.toml)
+#   test-admin-executor        - (read from deployment.toml)
 
 PORT="8545"
 RPC_URL="http://127.0.0.1:$PORT"
@@ -59,7 +59,7 @@ RPC_URL="http://127.0.0.1:$PORT"
 DEPLOYER_ACCOUNT="test-deployer"
 DEN_FACTORY_DEPLOYER_ACCOUNT="test-den-factory-deployer"
 GUARDIAN_SAFE_OWNER_ACCOUNT="test-guardian-safe-owner"
-DEPLOYER_SAFE_OWNER_ACCOUNT="test-deployer-safe-owner"
+ADMIN_SAFE_OWNER_ACCOUNT="test-admin-safe-owner"
 
 # EOA addresses - some hardcoded (foundry test accounts), some from deployment.toml
 DEPLOYER_ADDRESS="0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3"
@@ -68,9 +68,9 @@ DEN_FACTORY_DEPLOYER_ADDRESS=$(get_factory_deployer "den-nonprod")
 # Read Safe owner and executor addresses from deployment.toml (nonprod)
 # Note: get_* functions exit with error if value not found, so no need for separate validation
 GUARDIAN_SAFE_OWNER_ADDRESS=$(get_guardian_safe_owner "nonprod")
-DEPLOYER_SAFE_OWNER_ADDRESS=$(get_deployer_safe_owner "nonprod")
+ADMIN_SAFE_OWNER_ADDRESS=$(get_admin_safe_owner "nonprod")
 GUARDIAN_EXECUTOR_ADDRESS=$(get_guardian_executor "nonprod")
-DEPLOYER_EXECUTOR_ADDRESS=$(get_deployer_executor "nonprod")
+ADMIN_EXECUTOR_ADDRESS=$(get_admin_executor "nonprod")
 
 echo "============================================================================="
 echo "Local Deployment Test: $FACTORY"
@@ -78,9 +78,9 @@ echo "==========================================================================
 echo "  RPC URL: $RPC_URL"
 echo "  Deployer Account: $DEPLOYER_ACCOUNT ($DEPLOYER_ADDRESS)"
 echo "  Guardian Safe Owner: $GUARDIAN_SAFE_OWNER_ADDRESS"
-echo "  Deployer Safe Owner: $DEPLOYER_SAFE_OWNER_ADDRESS"
+echo "  Admin Safe Owner: $ADMIN_SAFE_OWNER_ADDRESS"
 echo "  Guardian Executor: $GUARDIAN_EXECUTOR_ADDRESS"
-echo "  Deployer Executor: $DEPLOYER_EXECUTOR_ADDRESS"
+echo "  Admin Executor: $ADMIN_EXECUTOR_ADDRESS"
 echo "============================================================================="
 
 # =============================================================================
@@ -106,7 +106,7 @@ echo ""
 echo "[Step 2] Funding EOAs..."
 
 # Fund all test accounts with max balance
-for addr in $DEPLOYER_ADDRESS $DEN_FACTORY_DEPLOYER_ADDRESS $GUARDIAN_SAFE_OWNER_ADDRESS $DEPLOYER_SAFE_OWNER_ADDRESS $GUARDIAN_EXECUTOR_ADDRESS $DEPLOYER_EXECUTOR_ADDRESS; do
+for addr in $DEPLOYER_ADDRESS $DEN_FACTORY_DEPLOYER_ADDRESS $GUARDIAN_SAFE_OWNER_ADDRESS $ADMIN_SAFE_OWNER_ADDRESS $GUARDIAN_EXECUTOR_ADDRESS $ADMIN_EXECUTOR_ADDRESS; do
     cast rpc anvil_setBalance $addr 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
     echo "  Funded $addr"
 done
@@ -171,8 +171,8 @@ echo "[Step 7] Deploying Safe Executor Modules..."
 echo "  Deploying guardian Safe Executor Module (executor: $GUARDIAN_EXECUTOR_ADDRESS)..."
 make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=$GUARDIAN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
-echo "  Deploying deployer Safe Executor Module (executor: $DEPLOYER_EXECUTOR_ADDRESS)..."
-make deploy-safe-module SAFE_TYPE=deployer EXECUTOR=$DEPLOYER_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
+echo "  Deploying admin Safe Executor Module (executor: $ADMIN_EXECUTOR_ADDRESS)..."
+make deploy-safe-module SAFE_TYPE=admin EXECUTOR=$ADMIN_EXECUTOR_ADDRESS ACCOUNT=$DEPLOYER_ACCOUNT FACTORY=$FACTORY
 
 # =============================================================================
 # Step 8: Add Modules to Safes (Local Testing Only)
@@ -187,10 +187,10 @@ make safe-add-module SAFE_TYPE=guardian ACCOUNT=$GUARDIAN_SAFE_OWNER_ACCOUNT FAC
     echo "  Warning: Failed to add module to guardian Safe (may need multi-sig approval)"
 }
 
-# Add module to deployer Safe (using deployer Safe owner account)
-echo "  Adding module to deployer Safe..."
-make safe-add-module SAFE_TYPE=deployer ACCOUNT=$DEPLOYER_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
-    echo "  Warning: Failed to add module to deployer Safe (may need multi-sig approval)"
+# Add module to admin Safe (using admin Safe owner account)
+echo "  Adding module to admin Safe..."
+make safe-add-module SAFE_TYPE=admin ACCOUNT=$ADMIN_SAFE_OWNER_ACCOUNT FACTORY=$FACTORY EXECUTE=true || {
+    echo "  Warning: Failed to add module to admin Safe (may need multi-sig approval)"
 }
 
 # =============================================================================
