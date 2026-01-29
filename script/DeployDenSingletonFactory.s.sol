@@ -2,12 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
@@ -25,7 +22,7 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeployDenSingletonFactory is Script {
+contract DeployDenSingletonFactory is BaseDeployScript {
     /// @dev Gas price for the deployment transaction (125 gwei - works on most chains)
     uint256 internal constant _DEPLOYMENT_GAS_PRICE = 125_000_000_000;
 
@@ -40,25 +37,27 @@ contract DeployDenSingletonFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
+        // Read expected factory addresses from deployment.toml
+        address arachnidFactoryAddress = getFactoryAddress(FACTORY_ARACHNID);
+        address denProdFactoryAddress = getFactoryAddress(FACTORY_DEN_PROD);
+        address denNonprodFactoryAddress = getFactoryAddress(FACTORY_DEN_NONPROD);
+        address prodDeployerAddress = getFactoryDeployerAddress(FACTORY_DEN_PROD);
+
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployDenSingletonFactory");
+        confirmBroadcastOrDryRun("DeployDenSingletonFactory");
 
         // Log the deployment header
         Logger.logBoxHeader("Den Singleton Factory - Factory Deployment");
 
         // Validate that the Arachnid factory is not already deployed
         // We should not be deploying the Den Singleton Factory if the Arachnid factory is already deployed.
-        Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS, "Arachnid factory"
-        );
+        Create2Utils.validateFactoryNotDeployedOrRevert(arachnidFactoryAddress, "Arachnid factory");
 
-        // Validate that the Den Singleton Factory is not already deployed
-        Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS, "Den Singleton Factory"
-        );
+        // Validate that the Den Singleton Factory (prod) is not already deployed
+        Create2Utils.validateFactoryNotDeployedOrRevert(denProdFactoryAddress, "Den Singleton Factory (prod)");
 
         // Warn and require confirmation for production and non-production deployers
-        bool isProductionDeployer = _warnAndConfirmDeployerAddress();
+        bool isProductionDeployer = _warnAndConfirmDeployerAddress(denProdFactoryAddress, prodDeployerAddress);
 
         // Validate that the deployer nonce is exactly 0
         _warnAndConfirmIfDeployerNonceNotZero();
@@ -79,17 +78,17 @@ contract DeployDenSingletonFactory is Script {
         // Case: Production deployer
         // Check that the factory was deployed at the expected production address
         if (isProductionDeployer) {
-            if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)) {
+            if (!Create2Utils.isContractDeployedAtAddress(denProdFactoryAddress)) {
                 Logger.logFail("ERROR: Factory was not deployed at the expected production address!");
-                Logger.logKeyValue("Expected", DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS);
+                Logger.logKeyValue("Expected", denProdFactoryAddress);
                 Logger.logKeyValue("Got", deployedAtAddress);
                 revert("Factory deployment failed");
             }
-        } else if (!Create2Utils.isContractDeployedAtAddress(DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS)) {
+        } else if (!Create2Utils.isContractDeployedAtAddress(denNonprodFactoryAddress)) {
             // Case: Non-production deployer
             // Check that the factory was deployed at the expected non-production address
             Logger.logFail("ERROR: Factory was not deployed at the expected non-production address!");
-            Logger.logKeyValue("Expected", DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS);
+            Logger.logKeyValue("Expected", denNonprodFactoryAddress);
             Logger.logKeyValue("Got", deployedAtAddress);
             revert("Factory deployment failed");
         }
@@ -103,7 +102,7 @@ contract DeployDenSingletonFactory is Script {
     /// @param targetDeployerAddress The deployer address to fund
     function fundDeployer(address targetDeployerAddress) external {
         // Prevent using the production Den Factory deployer for funding
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         require(targetDeployerAddress != address(0), "Target deployer address cannot be zero");
 
@@ -168,14 +167,19 @@ contract DeployDenSingletonFactory is Script {
             )
         );
 
-        ScriptUtils.promptForConfirmationOrRevert(vm, context);
+        _promptForConfirmationOrRevert(context);
     }
 
     /// @dev Warns and prompts for confirmation of the deployer address
+    /// @param expectedProdFactoryAddress The expected production factory address (from deployment.toml)
+    /// @param prodDeployerAddress The production deployer address (from deployment.toml)
     /// @return isProductionDeployer True if the deployer is the production deployer
-    function _warnAndConfirmDeployerAddress() internal returns (bool isProductionDeployer) {
+    function _warnAndConfirmDeployerAddress(address expectedProdFactoryAddress, address prodDeployerAddress)
+        internal
+        returns (bool isProductionDeployer)
+    {
         // Case: Deployer address matches production address
-        if (msg.sender == DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS) {
+        if (msg.sender == prodDeployerAddress) {
             // Build context for prompt - embedded because console.log output is buffered
             // solhint-disable-next-line func-named-parameters
             string memory context = string(
@@ -185,11 +189,11 @@ contract DeployDenSingletonFactory is Script {
                     "  Deployer: ",
                     StringUtils.toHexString(msg.sender),
                     "\n  Expected factory: ",
-                    StringUtils.toHexString(DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS)
+                    StringUtils.toHexString(expectedProdFactoryAddress)
                 )
             );
 
-            ScriptUtils.promptForConfirmationOrRevert(vm, context);
+            _promptForConfirmationOrRevert(context);
             Logger.logCheckPass("Production deployer confirmed");
             return true;
         }
@@ -204,11 +208,11 @@ contract DeployDenSingletonFactory is Script {
                 "  Deployer: ",
                 StringUtils.toHexString(msg.sender),
                 "\n  Production deployer: ",
-                StringUtils.toHexString(DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS)
+                StringUtils.toHexString(prodDeployerAddress)
             )
         );
 
-        ScriptUtils.promptForConfirmationOrRevert(vm, nonProdContext);
+        _promptForConfirmationOrRevert(nonProdContext);
         Logger.logCheckPass("Non-production deployer confirmed");
         return false;
     }

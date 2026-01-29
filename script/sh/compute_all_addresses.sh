@@ -8,97 +8,62 @@
 #
 # This script handles the dependency chain correctly:
 # 1. Computes Safe infrastructure addresses first
-# 2. Computes library addresses
-# 3. Uses computed library addresses to compile platform contracts (via --libraries)
-# 4. Computes platform contract addresses (needs Deployer Safe address from step 1)
-# 5. Computes Safe module addresses
+# 2. Computes Safe multisig addresses for both prod and nonprod configurations
+# 3. Computes library addresses
+# 4. Computes BatchedTransaction address
+# 5. Computes platform implementation addresses (environment-independent)
+# 6. Computes platform contract addresses for both prod and nonprod deployer Safes
+#    (org_factory and whitelist_proxy depend on the deployer Safe address)
+# 7. Computes Safe module addresses for both prod and nonprod configurations
+#
+# Output is in TOML format to facilitate easy comparison with deployment.toml.
+# Includes both [factory.X.env.nonprod] and [factory.X.env.prod] sections.
 #
 # Usage:
 #   ./compute_all_addresses.sh <factory>
 #
 # Where <factory> is one of:
-#   - arachnid     (0x4e59b44847b379578588920cA78FbF26c0B4956C)
-#   - den-nonprod  (0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5)
-#   - den-prod     (0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7)
+#   - arachnid
+#   - den-nonprod
+#   - den-prod
 #
 # =============================================================================
 
 set -e  # Stop on first error
 
 # =============================================================================
-# Configuration
+# Source Shared Configuration
 # =============================================================================
-ARACHNID_FACTORY_ADDRESS="0x4e59b44847b379578588920cA78FbF26c0B4956C"
-DEN_NONPROD_FACTORY_ADDRESS="0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5"
-DEN_PROD_FACTORY_ADDRESS="0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/deployment_config.sh"
 
-# Library paths for --libraries flag
-LIB_ORG_POLICY_PATH="src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy"
-LIB_ORG_ADMIN_PATH="src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin"
-LIB_ORG_INIT_PATH="src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization"
-LIB_ORG_ACCOUNT_SIG_PATH="src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature"
-
-# Executor EOA addresses (from DeploymentConfig.sol)
-# Non-prod addresses (used for local/testnet)
-GUARDIAN_EXECUTOR_ADDRESS="0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1"
-DEPLOYER_EXECUTOR_ADDRESS="0xBd7DF30E88C5C7fD54F2Ac77a1302581d577E0Fd"
+# Validate prerequisites (deployment.toml exists, yq available)
+validate_prerequisites
 
 # =============================================================================
 # Argument Validation
 # =============================================================================
 FACTORY="$1"
+validate_factory "$FACTORY"
 
-if [[ -z "$FACTORY" ]]; then
-    echo "Error: Factory argument required"
-    echo "Usage: $0 <arachnid|den-nonprod|den-prod>"
-    exit 1
-fi
+# Read factory address from deployment.toml
+FACTORY_ADDRESS=$(get_factory_address "$FACTORY")
 
-case "$FACTORY" in
-    arachnid)
-        FACTORY_ADDRESS="$ARACHNID_FACTORY_ADDRESS"
-        ;;
-    den-nonprod)
-        FACTORY_ADDRESS="$DEN_NONPROD_FACTORY_ADDRESS"
-        ;;
-    den-prod)
-        FACTORY_ADDRESS="$DEN_PROD_FACTORY_ADDRESS"
-        ;;
-    *)
-        echo "Error: Invalid factory '$FACTORY'"
-        echo "Usage: $0 <arachnid|den-nonprod|den-prod>"
-        exit 1
-        ;;
-esac
+# Read executor EOA addresses for both prod and nonprod configurations
+GUARDIAN_EXECUTOR_NONPROD=$(get_guardian_executor "nonprod")
+DEPLOYER_EXECUTOR_NONPROD=$(get_deployer_executor "nonprod")
+GUARDIAN_EXECUTOR_PROD=$(get_guardian_executor "prod")
+DEPLOYER_EXECUTOR_PROD=$(get_deployer_executor "prod")
 
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-# Extract an address from forge script output given a key pattern
-# Usage: extract_address "output" "KeyName"
-# Returns: address (0x...) or empty string if not found
-extract_address() {
-    local output="$1"
-    local key="$2"
-    # Match lines like "  KeyName: 0x..." or "  KeyName [STATUS]: 0x..."
-    # Use grep -o to extract just the address part (more portable than sed with \s)
-    echo "$output" | grep -E "^[[:space:]]+${key}([[:space:]]+\[.*\])?:[[:space:]]+0x[a-fA-F0-9]{40}" | head -1 | grep -oE "0x[a-fA-F0-9]{40}"
-}
-
-# Print a key-value pair aligned for easy copying
-print_address() {
-    local key="$1"
-    local value="$2"
-    printf "  %-45s = %s\n" "$key" "$value"
-}
+# Helper to check if an address is zero
+ZERO_ADDRESS="0x0000000000000000000000000000000000000000"
 
 # Track number of progress lines printed (for clearing later)
 PROGRESS_LINES=0
 
 # Print a progress message and track line count
 print_progress() {
-    echo "$1"
+    echo "$1" >&2
     PROGRESS_LINES=$((PROGRESS_LINES + 1))
 }
 
@@ -106,7 +71,7 @@ print_progress() {
 clear_progress() {
     if [[ $PROGRESS_LINES -gt 0 ]]; then
         # Move cursor up N lines and clear from cursor to end of screen
-        printf "\033[%dA\033[J" "$PROGRESS_LINES"
+        printf "\033[%dA\033[J" "$PROGRESS_LINES" >&2
     fi
 }
 
@@ -114,47 +79,78 @@ clear_progress() {
 # Main Execution
 # =============================================================================
 
-# Print the header first (this stays)
-echo ""
-echo "================================================================================"
-echo "  Computed Addresses for $FACTORY ($FACTORY_ADDRESS)"
-echo "================================================================================"
-echo ""
+# Print the header to stderr (progress)
+echo "" >&2
+echo "================================================================================" >&2
+echo "  Computing addresses for $FACTORY ($FACTORY_ADDRESS)" >&2
+echo "================================================================================" >&2
+echo "" >&2
 
 # -----------------------------------------------------------------------------
-# Step 1: Compute Safe Infrastructure Addresses
+# Step 1: Compute Safe Infrastructure and Multisig Addresses
 # -----------------------------------------------------------------------------
-print_progress "  Computing Safe infrastructure addresses..."
-SAFE_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
-    --sig "computeAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
+# Compute Safe infrastructure (same for all variants) and multisigs for nonprod
+print_progress "  Computing Safe infrastructure and nonprod multisig addresses..."
+SAFE_OUTPUT_NONPROD=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+    --sig "computeAddresses(address,string)" "$FACTORY_ADDRESS" "nonprod" --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute Safe addresses"
-    echo "$SAFE_OUTPUT"
+    echo "Error: Failed to compute Safe addresses (nonprod)" >&2
+    echo "$SAFE_OUTPUT_NONPROD" >&2
     exit 1
 }
 
-# Extract Safe addresses
-SAFE_SINGLETON_ADDRESS=$(extract_address "$SAFE_OUTPUT" "GnosisSafe Singleton")
-SAFE_PROXY_FACTORY_ADDRESS=$(extract_address "$SAFE_OUTPUT" "GnosisSafeProxyFactory")
-SAFE_FALLBACK_HANDLER_ADDRESS=$(extract_address "$SAFE_OUTPUT" "CompatibilityFallbackHandler")
-SAFE_MULTISEND_ADDRESS=$(extract_address "$SAFE_OUTPUT" "MultiSend")
-SAFE_MULTISEND_CALL_ONLY_ADDRESS=$(extract_address "$SAFE_OUTPUT" "MultiSendCallOnly")
-SAFE_CREATE_CALL_ADDRESS=$(extract_address "$SAFE_OUTPUT" "CreateCall")
-SAFE_SIMULATE_TX_ACCESSOR_ADDRESS=$(extract_address "$SAFE_OUTPUT" "SimulateTxAccessor")
-GUARDIAN_SAFE_ADDRESS=$(extract_address "$SAFE_OUTPUT" "Guardian Safe")
-DEPLOYER_SAFE_ADDRESS=$(extract_address "$SAFE_OUTPUT" "Deployer Safe")
+# Extract Safe infrastructure addresses (same for all variants)
+SAFE_SINGLETON_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "GnosisSafe Singleton")
+SAFE_PROXY_FACTORY_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "GnosisSafeProxyFactory")
+SAFE_FALLBACK_HANDLER_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "CompatibilityFallbackHandler")
+SAFE_MULTISEND_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "MultiSend")
+SAFE_MULTISEND_CALL_ONLY_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "MultiSendCallOnly")
+SAFE_CREATE_CALL_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "CreateCall")
+SAFE_SIMULATE_TX_ACCESSOR_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "SimulateTxAccessor")
 
-# Verify we got the critical addresses
-if [[ -z "$GUARDIAN_SAFE_ADDRESS" ]]; then
+# Extract nonprod Safe multisig addresses
+GUARDIAN_SAFE_NONPROD=$(extract_address "$SAFE_OUTPUT_NONPROD" "Guardian Safe")
+DEPLOYER_SAFE_NONPROD=$(extract_address "$SAFE_OUTPUT_NONPROD" "Deployer Safe")
+
+# Verify we got the critical nonprod addresses
+if [[ -z "$GUARDIAN_SAFE_NONPROD" ]]; then
     clear_progress
-    echo "Error: Failed to extract Guardian Safe address from output"
-    echo "$SAFE_OUTPUT"
+    echo "Error: Failed to extract Guardian Safe (nonprod) address from output"
+    echo "$SAFE_OUTPUT_NONPROD"
     exit 1
 fi
-if [[ -z "$DEPLOYER_SAFE_ADDRESS" ]]; then
+if [[ -z "$DEPLOYER_SAFE_NONPROD" ]]; then
     clear_progress
-    echo "Error: Failed to extract Deployer Safe address from output"
-    echo "$SAFE_OUTPUT"
+    echo "Error: Failed to extract Deployer Safe (nonprod) address from output" >&2
+    echo "$SAFE_OUTPUT_NONPROD" >&2
+    exit 1
+fi
+
+# Compute prod Safe multisig addresses
+print_progress "  Computing prod multisig addresses..."
+SAFE_OUTPUT_PROD=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+    --sig "computeAddresses(address,string)" "$FACTORY_ADDRESS" "prod" --offline 2>&1) || {
+    clear_progress
+    echo "Error: Failed to compute Safe addresses (prod)" >&2
+    echo "$SAFE_OUTPUT_PROD" >&2
+    exit 1
+}
+
+# Extract prod Safe multisig addresses
+GUARDIAN_SAFE_PROD=$(extract_address "$SAFE_OUTPUT_PROD" "Guardian Safe")
+DEPLOYER_SAFE_PROD=$(extract_address "$SAFE_OUTPUT_PROD" "Deployer Safe")
+
+# Verify we got the critical prod addresses
+if [[ -z "$GUARDIAN_SAFE_PROD" ]]; then
+    clear_progress
+    echo "Error: Failed to extract Guardian Safe (prod) address from output"
+    echo "$SAFE_OUTPUT_PROD"
+    exit 1
+fi
+if [[ -z "$DEPLOYER_SAFE_PROD" ]]; then
+    clear_progress
+    echo "Error: Failed to extract Deployer Safe (prod) address from output" >&2
+    echo "$SAFE_OUTPUT_PROD" >&2
     exit 1
 fi
 
@@ -175,8 +171,8 @@ print_progress "  Computing independent library addresses (Policy, Admin)..."
 LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeIndependentAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute independent library addresses"
-    echo "$LIB_OUTPUT_INDEPENDENT"
+    echo "Error: Failed to compute independent library addresses" >&2
+    echo "$LIB_OUTPUT_INDEPENDENT" >&2
     exit 1
 }
 
@@ -186,8 +182,8 @@ LIB_ORG_ADMIN_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizati
 
 if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" ]]; then
     clear_progress
-    echo "Error: Failed to extract independent library addresses from output"
-    echo "$LIB_OUTPUT_INDEPENDENT"
+    echo "Error: Failed to extract independent library addresses from output" >&2
+    echo "$LIB_OUTPUT_INDEPENDENT" >&2
     exit 1
 fi
 
@@ -204,8 +200,8 @@ LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries
     --sig "computeDependentAddresses(address)" "$FACTORY_ADDRESS" \
     $DEP_LIBRARIES_FLAGS --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute dependent library addresses"
-    echo "$LIB_OUTPUT_DEPENDENT"
+    echo "Error: Failed to compute dependent library addresses" >&2
+    echo "$LIB_OUTPUT_DEPENDENT" >&2
     exit 1
 }
 
@@ -215,8 +211,8 @@ LIB_ORG_ACCOUNT_SIG_ADDRESS=$(extract_address "$LIB_OUTPUT_DEPENDENT" "LibOrgani
 
 if [[ -z "$LIB_ORG_INIT_ADDRESS" || -z "$LIB_ORG_ACCOUNT_SIG_ADDRESS" ]]; then
     clear_progress
-    echo "Error: Failed to extract dependent library addresses from output"
-    echo "$LIB_OUTPUT_DEPENDENT"
+    echo "Error: Failed to extract dependent library addresses from output" >&2
+    echo "$LIB_OUTPUT_DEPENDENT" >&2
     exit 1
 fi
 
@@ -227,8 +223,8 @@ print_progress "  Computing BatchedTransaction address..."
 BATCHED_OUTPUT=$(forge script script/safe-module/DeployBatchedTransaction.s.sol:DeployBatchedTransaction \
     --sig "computeAddress(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute BatchedTransaction address"
-    echo "$BATCHED_OUTPUT"
+    echo "Error: Failed to compute BatchedTransaction address" >&2
+    echo "$BATCHED_OUTPUT" >&2
     exit 1
 }
 
@@ -237,15 +233,17 @@ BATCHED_TRANSACTION_ADDRESS=$(extract_address "$BATCHED_OUTPUT" "BatchedTransact
 
 if [[ -z "$BATCHED_TRANSACTION_ADDRESS" ]]; then
     clear_progress
-    echo "Error: Failed to extract BatchedTransaction address from output"
-    echo "$BATCHED_OUTPUT"
+    echo "Error: Failed to extract BatchedTransaction address from output" >&2
+    echo "$BATCHED_OUTPUT" >&2
     exit 1
 fi
 
 # -----------------------------------------------------------------------------
-# Step 4: Compute Platform Contract Addresses
+# Step 4: Compute Platform Contract Addresses (for both nonprod and prod)
 # -----------------------------------------------------------------------------
-print_progress "  Computing platform contract addresses..."
+# org_factory and whitelist_proxy depend on the deployer Safe address, so we
+# compute them separately for each environment.
+# Implementation contracts are environment-independent.
 
 # Build --libraries flags using computed library addresses
 LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
@@ -253,87 +251,148 @@ LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_AD
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_INIT_PATH}:${LIB_ORG_INIT_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${LIB_ORG_ACCOUNT_SIG_ADDRESS}"
 
-# Run DeployContracts.computeAddresses with computed library addresses and deployer safe
-CONTRACTS_OUTPUT=$(forge script script/DeployContracts.s.sol:DeployContracts \
-    --sig "computeAddresses(address,address)" "$FACTORY_ADDRESS" "$DEPLOYER_SAFE_ADDRESS" \
+# Compute platform contracts with NONPROD deployer safe
+print_progress "  Computing platform contract addresses (nonprod)..."
+CONTRACTS_OUTPUT_NONPROD=$(forge script script/DeployContracts.s.sol:DeployContracts \
+    --sig "computeAddresses(address,address)" "$FACTORY_ADDRESS" "$DEPLOYER_SAFE_NONPROD" \
     $LIBRARIES_FLAGS --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute platform contract addresses"
-    echo "$CONTRACTS_OUTPUT"
+    echo "Error: Failed to compute platform contract addresses (nonprod)" >&2
+    echo "$CONTRACTS_OUTPUT_NONPROD" >&2
     exit 1
 }
 
-# Extract platform contract addresses
-WHITELIST_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "ImplementationWhitelistImplementation")
-ORG_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "OrganizationImplementation")
-ACCOUNT_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "AccountImplementation")
-ORG_FACTORY_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "OrganizationFactory")
-WHITELIST_PROXY_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT" "ImplementationWhitelistProxy")
+# Extract implementation addresses (same for both envs - only depends on factory)
+WHITELIST_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "ImplementationWhitelistImplementation")
+ORG_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "OrganizationImplementation")
+ACCOUNT_IMPL_ADDRESS=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "AccountImplementation")
+
+# Extract nonprod-specific addresses (depend on deployer safe)
+ORG_FACTORY_NONPROD=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "OrganizationFactory")
+WHITELIST_PROXY_NONPROD=$(extract_address "$CONTRACTS_OUTPUT_NONPROD" "ImplementationWhitelistProxy")
+
+# Compute platform contracts with PROD deployer safe (skip if prod deployer safe is zero)
+print_progress "  Computing platform contract addresses (prod)..."
+if [[ "$DEPLOYER_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
+    ORG_FACTORY_PROD=""
+    WHITELIST_PROXY_PROD=""
+else
+    CONTRACTS_OUTPUT_PROD=$(forge script script/DeployContracts.s.sol:DeployContracts \
+        --sig "computeAddresses(address,address)" "$FACTORY_ADDRESS" "$DEPLOYER_SAFE_PROD" \
+        $LIBRARIES_FLAGS --offline 2>&1) || {
+        echo "Warning: Failed to compute platform contract addresses (prod)" >&2
+    }
+    ORG_FACTORY_PROD=$(extract_address "$CONTRACTS_OUTPUT_PROD" "OrganizationFactory")
+    WHITELIST_PROXY_PROD=$(extract_address "$CONTRACTS_OUTPUT_PROD" "ImplementationWhitelistProxy")
+fi
 
 # -----------------------------------------------------------------------------
-# Step 5: Compute Safe Executor Module Addresses
+# Step 5: Compute Safe Executor Module Addresses (for both prod and nonprod)
 # -----------------------------------------------------------------------------
-print_progress "  Computing Safe Executor Module addresses..."
+print_progress "  Computing Safe Executor Module addresses (nonprod)..."
 
-# Guardian module - use the overloaded function that accepts Safe and BatchedTransaction addresses
-# This ensures we use the computed addresses, not hardcoded ones from DeploymentConfig
-GUARDIAN_MODULE_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
+# Nonprod Guardian module
+GUARDIAN_MODULE_NONPROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
     --sig "computeAddress(address,string,address,address,address)" \
-    "$FACTORY_ADDRESS" "guardian" "$GUARDIAN_EXECUTOR_ADDRESS" "$GUARDIAN_SAFE_ADDRESS" "$BATCHED_TRANSACTION_ADDRESS" \
+    "$FACTORY_ADDRESS" "guardian" "$GUARDIAN_EXECUTOR_NONPROD" "$GUARDIAN_SAFE_NONPROD" "$BATCHED_TRANSACTION_ADDRESS" \
     --offline 2>&1) || {
-    echo "Warning: Failed to compute Guardian module address (may need different executor address)"
+    echo "Warning: Failed to compute Guardian module address (nonprod)" >&2
 }
-GUARDIAN_MODULE_ADDRESS=$(extract_address "$GUARDIAN_MODULE_OUTPUT" "SafeExecutorModule")
+GUARDIAN_MODULE_NONPROD=$(extract_address "$GUARDIAN_MODULE_NONPROD_OUTPUT" "SafeExecutorModule")
 
-# Deployer module - use the overloaded function that accepts Safe and BatchedTransaction addresses
-DEPLOYER_MODULE_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
+# Nonprod Deployer module
+DEPLOYER_MODULE_NONPROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
     --sig "computeAddress(address,string,address,address,address)" \
-    "$FACTORY_ADDRESS" "deployer" "$DEPLOYER_EXECUTOR_ADDRESS" "$DEPLOYER_SAFE_ADDRESS" "$BATCHED_TRANSACTION_ADDRESS" \
+    "$FACTORY_ADDRESS" "deployer" "$DEPLOYER_EXECUTOR_NONPROD" "$DEPLOYER_SAFE_NONPROD" "$BATCHED_TRANSACTION_ADDRESS" \
     --offline 2>&1) || {
-    echo "Warning: Failed to compute Deployer module address (may need different executor address)"
+    echo "Warning: Failed to compute Deployer module address (nonprod)" >&2
 }
-DEPLOYER_MODULE_ADDRESS=$(extract_address "$DEPLOYER_MODULE_OUTPUT" "SafeExecutorModule")
+DEPLOYER_MODULE_NONPROD=$(extract_address "$DEPLOYER_MODULE_NONPROD_OUTPUT" "SafeExecutorModule")
+
+print_progress "  Computing Safe Executor Module addresses (prod)..."
+
+# Prod Guardian module - skip if executor or safe is zero
+if [[ "$GUARDIAN_EXECUTOR_PROD" == "$ZERO_ADDRESS" || "$GUARDIAN_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
+    GUARDIAN_MODULE_PROD=""
+else
+    GUARDIAN_MODULE_PROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
+        --sig "computeAddress(address,string,address,address,address)" \
+        "$FACTORY_ADDRESS" "guardian" "$GUARDIAN_EXECUTOR_PROD" "$GUARDIAN_SAFE_PROD" "$BATCHED_TRANSACTION_ADDRESS" \
+        --offline 2>&1) || {
+        echo "Warning: Failed to compute Guardian module address (prod)" >&2
+    }
+    GUARDIAN_MODULE_PROD=$(extract_address "$GUARDIAN_MODULE_PROD_OUTPUT" "SafeExecutorModule")
+fi
+
+# Prod Deployer module - skip if executor or safe is zero
+if [[ "$DEPLOYER_EXECUTOR_PROD" == "$ZERO_ADDRESS" || "$DEPLOYER_SAFE_PROD" == "$ZERO_ADDRESS" ]]; then
+    DEPLOYER_MODULE_PROD=""
+else
+    DEPLOYER_MODULE_PROD_OUTPUT=$(forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
+        --sig "computeAddress(address,string,address,address,address)" \
+        "$FACTORY_ADDRESS" "deployer" "$DEPLOYER_EXECUTOR_PROD" "$DEPLOYER_SAFE_PROD" "$BATCHED_TRANSACTION_ADDRESS" \
+        --offline 2>&1) || {
+        echo "Warning: Failed to compute Deployer module address (prod)" >&2
+    }
+    DEPLOYER_MODULE_PROD=$(extract_address "$DEPLOYER_MODULE_PROD_OUTPUT" "SafeExecutorModule")
+fi
 
 # =============================================================================
-# Output Results (clear progress first)
+# Output Results in TOML format (clear progress first)
 # =============================================================================
 
 # Clear the progress lines
 clear_progress
 
-# Print the final results
-echo "--- Safe 1.3.0 Infrastructure ---"
-print_address "SAFE_SINGLETON_ADDRESS" "${SAFE_SINGLETON_ADDRESS:-NOT_COMPUTED}"
-print_address "SAFE_PROXY_FACTORY_ADDRESS" "${SAFE_PROXY_FACTORY_ADDRESS:-NOT_COMPUTED}"
-print_address "SAFE_FALLBACK_HANDLER_ADDRESS" "${SAFE_FALLBACK_HANDLER_ADDRESS:-NOT_COMPUTED}"
-print_address "SAFE_MULTISEND_ADDRESS" "${SAFE_MULTISEND_ADDRESS:-NOT_COMPUTED}"
-print_address "SAFE_MULTISEND_CALL_ONLY_ADDRESS" "${SAFE_MULTISEND_CALL_ONLY_ADDRESS:-NOT_COMPUTED}"
-print_address "SAFE_CREATE_CALL_ADDRESS" "${SAFE_CREATE_CALL_ADDRESS:-NOT_COMPUTED}"
-print_address "SAFE_SIMULATE_TX_ACCESSOR_ADDRESS" "${SAFE_SIMULATE_TX_ACCESSOR_ADDRESS:-NOT_COMPUTED}"
-print_address "GUARDIAN_SAFE_ADDRESS" "${GUARDIAN_SAFE_ADDRESS:-NOT_COMPUTED}"
-print_address "DEPLOYER_SAFE_ADDRESS" "${DEPLOYER_SAFE_ADDRESS:-NOT_COMPUTED}"
+# Print the TOML output to stdout
+echo "# Computed addresses for $FACTORY ($FACTORY_ADDRESS)"
+echo "# Generated by compute_all_addresses.sh"
+echo "#"
+echo "# Compare with deployment.toml to verify correctness."
 echo ""
-
-echo "--- Platform Libraries ---"
-print_address "LIB_ORG_POLICY_ADDRESS" "${LIB_ORG_POLICY_ADDRESS:-NOT_COMPUTED}"
-print_address "LIB_ORG_ADMIN_ADDRESS" "${LIB_ORG_ADMIN_ADDRESS:-NOT_COMPUTED}"
-print_address "LIB_ORG_INIT_ADDRESS" "${LIB_ORG_INIT_ADDRESS:-NOT_COMPUTED}"
-print_address "LIB_ORG_ACCOUNT_SIG_ADDRESS" "${LIB_ORG_ACCOUNT_SIG_ADDRESS:-NOT_COMPUTED}"
+echo "[factory.\"$FACTORY\"]"
+print_toml "factory" "$FACTORY_ADDRESS"
+print_toml "factory_deployer" "$(get_factory_deployer "$FACTORY")"
 echo ""
-
-echo "--- Platform Contracts ---"
-print_address "WHITELIST_IMPL_ADDRESS" "${WHITELIST_IMPL_ADDRESS:-NOT_COMPUTED}"
-print_address "ORG_IMPL_ADDRESS" "${ORG_IMPL_ADDRESS:-NOT_COMPUTED}"
-print_address "ACCOUNT_IMPL_ADDRESS" "${ACCOUNT_IMPL_ADDRESS:-NOT_COMPUTED}"
-print_address "ORG_FACTORY_ADDRESS" "${ORG_FACTORY_ADDRESS:-NOT_COMPUTED}"
-print_address "WHITELIST_PROXY_ADDRESS" "${WHITELIST_PROXY_ADDRESS:-NOT_COMPUTED}"
+echo "# Platform Libraries (environment-independent)"
+print_toml "lib_org_policy" "${LIB_ORG_POLICY_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_admin" "${LIB_ORG_ADMIN_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_init" "${LIB_ORG_INIT_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_account_sig" "${LIB_ORG_ACCOUNT_SIG_ADDRESS:-NOT_COMPUTED}"
 echo ""
-
-echo "--- BatchedTransaction ---"
-print_address "BATCHED_TRANSACTION_ADDRESS" "${BATCHED_TRANSACTION_ADDRESS:-NOT_COMPUTED}"
+echo "# Platform Implementation Contracts (environment-independent)"
+print_toml "whitelist_impl" "${WHITELIST_IMPL_ADDRESS:-NOT_COMPUTED}"
+print_toml "org_impl" "${ORG_IMPL_ADDRESS:-NOT_COMPUTED}"
+print_toml "account_impl" "${ACCOUNT_IMPL_ADDRESS:-NOT_COMPUTED}"
 echo ""
-
-echo "--- Safe Executor Modules ---"
-print_address "GUARDIAN_MODULE_ADDRESS" "${GUARDIAN_MODULE_ADDRESS:-NOT_COMPUTED}"
-print_address "DEPLOYER_MODULE_ADDRESS" "${DEPLOYER_MODULE_ADDRESS:-NOT_COMPUTED}"
+echo "# Safe 1.3.0 Infrastructure (environment-independent)"
+print_toml "safe_singleton" "${SAFE_SINGLETON_ADDRESS:-NOT_COMPUTED}"
+print_toml "safe_proxy_factory" "${SAFE_PROXY_FACTORY_ADDRESS:-NOT_COMPUTED}"
+print_toml "safe_fallback_handler" "${SAFE_FALLBACK_HANDLER_ADDRESS:-NOT_COMPUTED}"
+print_toml "safe_multisend" "${SAFE_MULTISEND_ADDRESS:-NOT_COMPUTED}"
+print_toml "safe_multisend_call_only" "${SAFE_MULTISEND_CALL_ONLY_ADDRESS:-NOT_COMPUTED}"
+print_toml "safe_create_call" "${SAFE_CREATE_CALL_ADDRESS:-NOT_COMPUTED}"
+print_toml "safe_simulate_tx_accessor" "${SAFE_SIMULATE_TX_ACCESSOR_ADDRESS:-NOT_COMPUTED}"
 echo ""
+echo "# BatchedTransaction (environment-independent)"
+print_toml "batched_transaction" "${BATCHED_TRANSACTION_ADDRESS:-NOT_COMPUTED}"
+echo ""
+echo "# Environment: nonprod"
+echo "# Addresses that depend on the nonprod deployer Safe"
+echo "[factory.\"$FACTORY\".env.nonprod]"
+print_toml "guardian_safe" "${GUARDIAN_SAFE_NONPROD:-NOT_COMPUTED}"
+print_toml "deployer_safe" "${DEPLOYER_SAFE_NONPROD:-NOT_COMPUTED}"
+print_toml "org_factory" "${ORG_FACTORY_NONPROD:-NOT_COMPUTED}"
+print_toml "whitelist_proxy" "${WHITELIST_PROXY_NONPROD:-NOT_COMPUTED}"
+print_toml "guardian_safe_executor_module" "${GUARDIAN_MODULE_NONPROD:-NOT_COMPUTED}"
+print_toml "deployer_safe_executor_module" "${DEPLOYER_MODULE_NONPROD:-NOT_COMPUTED}"
+echo ""
+echo "# Environment: prod"
+echo "# Addresses that depend on the prod deployer Safe"
+echo "[factory.\"$FACTORY\".env.prod]"
+print_toml "guardian_safe" "${GUARDIAN_SAFE_PROD:-NOT_COMPUTED}"
+print_toml "deployer_safe" "${DEPLOYER_SAFE_PROD:-NOT_COMPUTED}"
+print_toml "org_factory" "${ORG_FACTORY_PROD:-NOT_COMPUTED}"
+print_toml "whitelist_proxy" "${WHITELIST_PROXY_PROD:-NOT_COMPUTED}"
+print_toml "guardian_safe_executor_module" "${GUARDIAN_MODULE_PROD:-NOT_COMPUTED}"
+print_toml "deployer_safe_executor_module" "${DEPLOYER_MODULE_PROD:-NOT_COMPUTED}"

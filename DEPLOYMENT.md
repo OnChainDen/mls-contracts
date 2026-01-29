@@ -836,65 +836,24 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 |----------|---------|
 | Arachnid Factory | `0x4e59b44847b379578588920cA78FbF26c0B4956C` |
 | Arachnid Deployer (for funding) | `0x3fAB184622Dc19b6109349B94811493BF2a45362` |
-| Den Non-Prod Factory | `0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db` |
-| Den Non-Prod Deployer | `0x22002e8661A780d61EF4c86F4a9fFa843A6fea20` |
-| Den Prod Factory | *Not yet available* |
-| Den Prod Deployer | *Not yet available* |
 
-### Library Addresses by Factory
+### Deployed Contract Addresses
 
-**Arachnid Factory (`FACTORY=arachnid`):**
+All deployed contract addresses (libraries, Safe infrastructure, platform contracts) are stored in the **`deployment.toml`** configuration file at the repository root.
 
-| Library | Address |
-|---------|---------|
-| LibOrganizationPolicy | `0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA` |
-| LibOrganizationAdmin | `0x6A87f1102404F4e36080732E535AD1F90cEde41B` |
-| LibOrganizationInitialization | `0xbcAD4381C92c350f590111EDe66E83f0584E42F9` |
-| LibOrganizationAccountSignature | `0xEdd0540b7109196ac93CD64970FEc869a7011aCF` |
+The file is organized by factory (`[factory.arachnid]`, `[factory.den-nonprod]`, `[factory.den-prod]`), with each section containing all contract addresses for that factory.
 
-**Den Non-Prod Factory (`FACTORY=den-nonprod`):**
+```bash
+# View all addresses for a specific factory
+grep -A 50 '\[factory.arachnid\]' deployment.toml
+```
 
-| Library | Address |
-|---------|---------|
-| LibOrganizationPolicy | `0x58fC18a42DDd82725471bcE76bb5d9D6509A0641` |
-| LibOrganizationAdmin | `0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1` |
-| LibOrganizationInitialization | `0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e` |
-| LibOrganizationAccountSignature | `0x8F8c7526cb63885061c4d922e66D7d8589ac045c` |
+To compute expected addresses before deployment, use:
 
-**Den Prod Factory (`FACTORY=den-prod`):**
+```bash
+# Compute all addresses for all factories
+make compute-all-addresses
 
-*Library addresses not yet available. Update this section after deploying libraries via the production Den Singleton Factory.*
-
-### Safe Addresses by Factory
-
-**Arachnid Factory (`FACTORY=arachnid`):**
-
-| Contract | Address |
-|----------|---------|
-| GnosisSafe Singleton | `0x7A26cf6987d32BCa2Feda46910b4c79Bbf3FB174` |
-| GnosisSafeProxyFactory | `0x04acB79cD2c208Fc4B983d92971A41F709532Ff5` |
-| CompatibilityFallbackHandler | `0xBF32F3DCE01B6c67E454066f8969Deee79D74a55` |
-| MultiSend | `0xe0487528D742Bd9e6295AE6f3873175f032ba8f3` |
-| MultiSendCallOnly | `0xD5c219A054E9fBceD9D9493f546a7B4995101e4B` |
-| CreateCall | `0x7880435e91818C84bfAdC2f454B8A92942f7AcbD` |
-| SimulateTxAccessor | `0x205CeDEBdB936D473031f6140d50C11aeC948773` |
-| Guardian Safe | `0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305` |
-| Deployer Safe | `0x84246979f1678Cc3c5949106B958275aA15B807e` |
-
-**Den Non-Prod Factory (`FACTORY=den-nonprod`):**
-
-| Contract | Address |
-|----------|---------|
-| GnosisSafe Singleton | `0x9732b61234C43C49B98812E09D81D433b7789b25` |
-| GnosisSafeProxyFactory | `0x400F1f8fC868476bAb030909F049a70074570c7e` |
-| CompatibilityFallbackHandler | `0x8b3bECaE33adA395Ff4bf79Bd399541478201bf0` |
-| MultiSend | `0xB8e5fF9E2Ee305f90623fD4b1F4728bF669bf479` |
-| MultiSendCallOnly | `0x73D5641c3d1E6c53bDa6D06231Cbd7b3A43F391B` |
-| CreateCall | `0x619B2299DD5C77DF72AE1a8a70885D89E423B382` |
-| SimulateTxAccessor | `0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d` |
-| Guardian Safe | `0x4fbeF24b88228A6639409150214bb5A798930fA9` |
-| Deployer Safe | `0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f` |
-
-**Den Prod Factory (`FACTORY=den-prod`):**
-
-*Safe addresses not yet available. Update this section after deploying Safe via the production Den Singleton Factory.*
+# Compute addresses for a specific factory
+make compute-addresses FACTORY=arachnid
+```

@@ -2,16 +2,14 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity >=0.7.0 <0.9.0;
 
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /**
  * @title Create2Utils
  * @notice Helper library for deterministic CREATE2 deployments
- * @dev Abstracts differences between Arachnid and Den Singleton Factory.
- *      Provides utilities for computing addresses, checking deployment status, and deploying.
+ * @dev Provides pure utilities for computing addresses, checking deployment status, and deploying.
+ *      All config-dependent functions (factory validation, logging headers) are in BaseDeployScript.
  *
  *      This library uses a floating pragma (>=0.7.0 <0.9.0) to allow reuse by both
  *      platform scripts (0.8.33) and Safe deployment scripts (0.7.6).
@@ -19,6 +17,39 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
  * @author Den Technologies Inc
  */
 library Create2Utils {
+    // ==================== CREATE2 Address Computation ====================
+    // These replace OpenZeppelin's Create2 library for 0.7.x compatibility
+    // ==============================================================================
+
+    /// @dev Computes the address of a contract deployed using CREATE2
+    /// @param salt The salt used for deployment
+    /// @param initCodeHash The keccak256 hash of the contract's init code
+    /// @param deployer The address of the CREATE2 factory
+    /// @return The computed address
+    function computeCreate2Address(bytes32 salt, bytes32 initCodeHash, address deployer)
+        internal
+        pure
+        returns (address)
+    {
+        return address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deployer, salt, initCodeHash)))));
+    }
+
+    /// @dev Computes the CREATE2 address for a contract deployment
+    /// @param factoryAddress The CREATE2 factory address
+    /// @param salt The deployment salt
+    /// @param initCode The contract creation bytecode (including constructor args)
+    /// @return The predicted deployment address
+    function computeAddress(address factoryAddress, bytes32 salt, bytes memory initCode)
+        internal
+        pure
+        returns (address)
+    {
+        return computeCreate2Address(salt, keccak256(initCode), factoryAddress);
+    }
+
+    // ==================== Deployment Functions ====================
+    // ==============================================================================
+
     /// @dev Deploys a contract using CREATE2 if not already deployed
     ///      Handles differences between Arachnid and Den Singleton Factory parameter ordering
     /// @param factoryAddress The CREATE2 factory address
@@ -68,6 +99,9 @@ library Create2Utils {
         return size > 0;
     }
 
+    // ==================== Validation Functions ====================
+    // ==============================================================================
+
     /// @dev Validates that a factory is NOT deployed at the given address, reverts if it is
     /// @param factoryAddress The factory address to check
     /// @param factoryName Human-readable name for logging
@@ -116,62 +150,15 @@ library Create2Utils {
         revert("Deployer has insufficient ETH");
     }
 
-    /// @dev Validates that the deployer is NOT the production Den Factory deployer
-    function validateNotProductionDenFactoryDeployerOrRevert() internal view {
-        // Log the check start
-        Logger.logCheckStart("Checking deployer is not production Den Factory deployer...");
-
-        // Case: Deployer is the production Den Factory deployer
-        if (msg.sender == DeploymentConfig.PROD_DEN_FACTORY_DEPLOYER_ADDRESS) {
-            Logger.logCheckFail("Deployer is the production Den Factory deployer");
-            Logger.logCheckDetail("This EOA should ONLY be used by DeployDenSingletonFactory.");
-            Logger.logCheckDetail("Use a different deployer for this script.");
-            revert("Cannot use production Den Factory deployer for this script");
-        }
-
-        // Case: Deployer is not the production Den Factory deployer
-        Logger.logCheckPass("Deployer is not production Den Factory deployer");
-    }
-
-    /// @dev Computes the CREATE2 address for a contract deployment
-    /// @param factoryAddress The CREATE2 factory address
-    /// @param salt The deployment salt
-    /// @param initCode The contract creation bytecode (including constructor args)
-    /// @return The predicted deployment address
-    function computeAddress(address factoryAddress, bytes32 salt, bytes memory initCode)
-        internal
-        pure
-        returns (address)
-    {
-        return ScriptUtils.computeCreate2Address(salt, keccak256(initCode), factoryAddress);
-    }
-
-    /// @dev Logs deployment summary header with factory and chain info
-    /// @param factoryAddress The factory being used
-    /// @param chainId The chain ID
-    function logDeploymentHeader(address factoryAddress, uint256 chainId) internal pure {
-        Logger.logBoxHeader("Den Multi-layer Security (MLS) Wallet - Contract Deployment");
-        Logger.logKeyValue("Chain ID", chainId);
-        Logger.logKeyValue("CREATE2 Factory", factoryAddress);
-
-        if (factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Arachnid Deterministic Deployment Proxy");
-        } else if (factoryAddress == DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Den Singleton Factory (Production)");
-        } else if (factoryAddress == DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS) {
-            Logger.logKeyValue("Factory Type", "Den Singleton Factory (Non-Production)");
-        } else {
-            Logger.logKeyValue("Factory Type", "Custom");
-        }
-
-        Logger.logBoxFooter();
-        Logger.logEmptyLine();
-    }
+    // ==================== Private Functions ====================
+    // ==============================================================================
 
     /// @dev Deploys using a minimal CREATE2 factory
     ///      All supported factories (Arachnid, Den Singleton Factory) expect raw calldata: salt (32 bytes) + initCode
     ///      They return the deployed address as raw 20 bytes (not ABI-encoded)
-    /// @param factoryAddress The CREATE2 factory address
+    ///      IMPORTANT: Callers must validate the factory address using
+    /// BaseDeployScript.validateAndInitializeFactoryOrRevert() first @param factoryAddress The CREATE2 factory address
+    /// (must be validated by caller)
     /// @param salt The deployment salt
     /// @param initCode The contract creation bytecode
     /// @return deployedAtAddress The deployed contract address
@@ -179,14 +166,6 @@ library Create2Utils {
         private
         returns (address deployedAtAddress)
     {
-        // Validate factory address upfront
-        require(
-            factoryAddress == DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS
-                || factoryAddress == DeploymentConfig.PROD_DEN_SINGLETON_FACTORY_ADDRESS
-                || factoryAddress == DeploymentConfig.NON_PROD_DEN_SINGLETON_FACTORY_ADDRESS,
-            "Invalid factory address"
-        );
-
         // All supported factories are minimal CREATE2 factories that expect raw calldata: salt (32 bytes) + initCode
         // They do NOT have function selectors - data is sent directly via low-level call
         // solhint-disable-next-line avoid-low-level-calls

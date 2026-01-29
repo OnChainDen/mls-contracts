@@ -82,42 +82,6 @@ remappings = [
 ]
 
 # ==============================================================================
-# LINKING PROFILES (Compilation Strategies)
-# These profiles inherit settings from [profile.default] but override libraries.
-# ==============================================================================
-
-# --- Strategy: Arachnid Factory ---
-[profile.arachnid]
-libraries = [
-    # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x6A87f1102404F4e36080732E535AD1F90cEde41B",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xbcAD4381C92c350f590111EDe66E83f0584E42F9",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0xEdd0540b7109196ac93CD64970FEc869a7011aCF"
-]
-
-# --- Strategy: Den Singleton Factory (Prod) ---
-[profile.den-prod]
-libraries = [
-    # TODO: Update platform library addresses after deploying libraries via prod Den factory
-    # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x0000000000000000000000000000000000000000",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0x0000000000000000000000000000000000000000",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0x0000000000000000000000000000000000000000",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x0000000000000000000000000000000000000000"
-]
-
-# --- Strategy: Den Singleton Factory (Non-Prod) ---
-[profile.den-nonprod]
-libraries = [
-    # TODO: Update platform library addresses after making changes to library source code
-    "src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy:0x58fC18a42DDd82725471bcE76bb5d9D6509A0641",
-    "src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin:0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1",
-    "src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization:0xc7a2d6Df882c7f734f19Ce155E5558A0960bf81e",
-    "src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature:0x8F8c7526cb63885061c4d922e66D7d8589ac045c"
-]
-
-# ==============================================================================
 # LINTING CONFIGURATION
 # ==============================================================================
 [lint]

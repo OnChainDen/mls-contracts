@@ -2,12 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Script} from "forge-std/Script.sol";
-
-import {DeploymentConfig} from "script/config/DeploymentConfig.sol";
+import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
-import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
 
 /**
  * @title DeployArachnidFactory
@@ -33,11 +30,9 @@ import {ScriptUtils} from "script/libraries/ScriptUtils.sol";
  *
  * @author Den Technologies Inc
  */
-contract DeployArachnidFactory is Script {
-    /// @dev Expected factory address after deployment (deterministic via keyless CREATE)
-    address internal constant _EXPECTED_FACTORY_ADDRESS = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-
+contract DeployArachnidFactory is BaseDeployScript {
     /// @dev Deployer address that will deploy the factory (derived from pre-signed tx)
+    /// This is a constant because it's derived from the pre-signed transaction and cannot change.
     address internal constant _EXPECTED_DEPLOYER_ADDRESS = 0x3fAB184622Dc19b6109349B94811493BF2a45362;
 
     /// @dev Gas price used in the pre-signed transaction (100 gwei)
@@ -73,19 +68,20 @@ contract DeployArachnidFactory is Script {
      * @dev Runs comprehensive safety checks before allowing deployment
      */
     function run() external {
+        // Read expected factory address from deployment.toml
+        address expectedFactoryAddress = getFactoryAddress(FACTORY_ARACHNID);
+
         // Prompt for confirmation when running with --broadcast
-        ScriptUtils.confirmBroadcastOrDryRun(vm, "DeployArachnidFactory");
+        confirmBroadcastOrDryRun("DeployArachnidFactory");
 
         // Prevent using the production Den Factory deployer for this script
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the deployment header
         Logger.logBoxHeader("Arachnid Deterministic Deployment Proxy - Factory Deployment");
 
         // Validate that the Arachnid factory is not already deployed
-        Create2Utils.validateFactoryNotDeployedOrRevert(
-            DeploymentConfig.ARACHNID_CREATE2_FACTORY_ADDRESS, "Arachnid factory"
-        );
+        Create2Utils.validateFactoryNotDeployedOrRevert(expectedFactoryAddress, "Arachnid factory");
 
         // Validate that the deployer has sufficient ETH balance
         Create2Utils.validateDeployerHasSufficientEthOrRevert(
@@ -96,10 +92,10 @@ contract DeployArachnidFactory is Script {
         Logger.logSection("DEPLOYING ARACHNID FACTORY");
 
         // Broadcast the pre-signed transaction that deploys the factory
-        _broadcastPresignedTransaction();
+        _broadcastPresignedTransaction(expectedFactoryAddress);
 
         // Verify deployment
-        if (!Create2Utils.isContractDeployedAtAddress(_EXPECTED_FACTORY_ADDRESS)) {
+        if (!Create2Utils.isContractDeployedAtAddress(expectedFactoryAddress)) {
             Logger.logFail("ERROR: Factory deployment failed!");
             Logger.logIndented("This chain may enforce EIP-155 replay protection.");
             Logger.logIndented("Use DeployDenSingletonFactory.s.sol instead.");
@@ -107,14 +103,14 @@ contract DeployArachnidFactory is Script {
         }
 
         // Log success
-        Logger.logDeploymentSuccess("Arachnid Factory", _EXPECTED_FACTORY_ADDRESS, "CREATE2_FACTORY_ADDRESS");
+        Logger.logDeploymentSuccess("Arachnid Factory", expectedFactoryAddress, "CREATE2_FACTORY_ADDRESS");
     }
 
     /// @notice Funds the Arachnid factory deployer address with ETH
     /// @dev Can be called separately to fund the deployer before running the main script.
     function fundDeployer() external {
         // Prevent using the production Den Factory deployer for funding
-        Create2Utils.validateNotProductionDenFactoryDeployerOrRevert();
+        validateNotProductionDenFactoryDeployerOrRevert();
 
         // Log the funding details
         Logger.logEmptyLine();
@@ -133,11 +129,12 @@ contract DeployArachnidFactory is Script {
     }
 
     /// @dev Broadcasts the pre-signed transaction to deploy the factory
-    function _broadcastPresignedTransaction() internal {
+    /// @param expectedFactoryAddress The expected factory address (from deployment.toml)
+    function _broadcastPresignedTransaction(address expectedFactoryAddress) internal {
         // Log the broadcasting details
         Logger.logIndented("Broadcasting pre-signed transaction...");
         Logger.logKeyValue("Deployer", _EXPECTED_DEPLOYER_ADDRESS);
-        Logger.logKeyValue("Expected factory address", _EXPECTED_FACTORY_ADDRESS);
+        Logger.logKeyValue("Expected factory address", expectedFactoryAddress);
         Logger.logEmptyLine();
 
         // Broadcast the pre-signed transaction that deploys the factory

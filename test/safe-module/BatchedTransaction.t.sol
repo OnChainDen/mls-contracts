@@ -234,6 +234,8 @@ contract BatchedTransactionTest is Test {
         // Create data of the specified length
         bytes memory data = new bytes(dataLength);
         for (uint256 i = 0; i < dataLength; i++) {
+            // casting to uint8 is safe because i % 256 is always in range [0, 255]
+            // forge-lint: disable-next-line(unsafe-typecast)
             data[i] = bytes1(uint8(i % 256));
         }
 

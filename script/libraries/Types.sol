@@ -38,3 +38,9 @@ struct SafeInfrastructure {
     address createCallAddress;
     address simulateTxAccessorAddress;
 }
+
+/// @dev Info for validating a linked library
+struct LinkedLibraryInfo {
+    address expectedAddress;
+    string name;
+}

@@ -7,6 +7,7 @@
 #   - Slither >= 0.10.0
 #   - Node.js >= 18 (for solhint)
 #   - solhint (npm install -g solhint)
+#   - yq >= 4.0 (for TOML parsing: brew install yq)
 #
 # ==============================================================================
 
@@ -196,6 +197,9 @@ gas-report:
 # Deployment Configuration
 # ==============================================================================
 #
+# All deployment addresses are read from deployment.toml using yq.
+# This is the single source of truth for all hardcoded addresses.
+#
 # Configuration Variables (override via command line):
 #   NETWORK  - Target network: local, mainnet, polygon, arbitrum, optimism, base (default: local)
 #   SIGNER   - Signing method: account or ledger (default: account)
@@ -219,57 +223,37 @@ HD_PATH ?= m/44'/60'/0'/0/0
 VERBOSITY ?= -vvvv
 
 # ------------------------------------------------------------------------------
-# CREATE2 Factory Addresses
+# Validate FACTORY value (must be done before generating variables)
 # ------------------------------------------------------------------------------
-ARACHNID_FACTORY_ADDRESS := 0x4e59b44847b379578588920cA78FbF26c0B4956C
-# TODO: Fill in after deploying Den Singleton Factory from prod deployer
-DEN_PROD_FACTORY_ADDRESS := 0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7
-DEN_NONPROD_FACTORY_ADDRESS := 0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5
-
-# Arachnid deployer address (for funding)
-ARACHNID_DEPLOYER_ADDRESS := 0x3fAB184622Dc19b6109349B94811493BF2a45362
-
-# ------------------------------------------------------------------------------
-# Library Addresses (for staged library deployment)
-# These are the independent library addresses (Policy, Admin) used when deploying
-# dependent libraries (Init, AccountSig). Must match DeploymentConfig.sol.
-# ------------------------------------------------------------------------------
-# Library paths (same for all factories)
-LIB_ORG_POLICY_PATH := src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy
-LIB_ORG_ADMIN_PATH := src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin
-
-# Arachnid factory library addresses
-ARACHNID_LIB_ORG_POLICY_ADDRESS := 0xbee682DF6DaA28F5c25184d63dECb266F2fE06AA
-ARACHNID_LIB_ORG_ADMIN_ADDRESS := 0x6A87f1102404F4e36080732E535AD1F90cEde41B
-
-# Den Production factory library addresses (TODO: Update after deployment)
-DEN_PROD_LIB_ORG_POLICY_ADDRESS := 0x0000000000000000000000000000000000000000
-DEN_PROD_LIB_ORG_ADMIN_ADDRESS := 0x0000000000000000000000000000000000000000
-
-# Den Non-Production factory library addresses
-DEN_NONPROD_LIB_ORG_POLICY_ADDRESS := 0x58fC18a42DDd82725471bcE76bb5d9D6509A0641
-DEN_NONPROD_LIB_ORG_ADMIN_ADDRESS := 0xcbdf61F785503E7EE8DEABDe8d77dEe33789bdC1
-
-# ------------------------------------------------------------------------------
-# Factory Address and Library Selection (based on FACTORY variable)
-# Library addresses for contract deployment are configured in foundry.toml profiles.
-# For staged library deployment, addresses are selected below.
-# ------------------------------------------------------------------------------
-ifeq ($(FACTORY),arachnid)
-    FACTORY_ADDRESS := $(ARACHNID_FACTORY_ADDRESS)
-    LIB_ORG_POLICY_ADDRESS := $(ARACHNID_LIB_ORG_POLICY_ADDRESS)
-    LIB_ORG_ADMIN_ADDRESS := $(ARACHNID_LIB_ORG_ADMIN_ADDRESS)
-else ifeq ($(FACTORY),den-prod)
-    FACTORY_ADDRESS := $(DEN_PROD_FACTORY_ADDRESS)
-    LIB_ORG_POLICY_ADDRESS := $(DEN_PROD_LIB_ORG_POLICY_ADDRESS)
-    LIB_ORG_ADMIN_ADDRESS := $(DEN_PROD_LIB_ORG_ADMIN_ADDRESS)
-else ifeq ($(FACTORY),den-nonprod)
-    FACTORY_ADDRESS := $(DEN_NONPROD_FACTORY_ADDRESS)
-    LIB_ORG_POLICY_ADDRESS := $(DEN_NONPROD_LIB_ORG_POLICY_ADDRESS)
-    LIB_ORG_ADMIN_ADDRESS := $(DEN_NONPROD_LIB_ORG_ADMIN_ADDRESS)
-else
+ifneq ($(FACTORY),arachnid)
+ifneq ($(FACTORY),den-prod)
+ifneq ($(FACTORY),den-nonprod)
     $(error Invalid FACTORY value '$(FACTORY)'. Use: arachnid, den-prod, or den-nonprod)
 endif
+endif
+endif
+
+# ------------------------------------------------------------------------------
+# Generated Deployment Variables (from deployment.toml)
+# ------------------------------------------------------------------------------
+# This include file is auto-generated from deployment.toml via the shared config library.
+# It provides: FACTORY_ADDRESS, library addresses, library paths, and linking flags.
+# Regenerates when deployment.toml or config scripts change, or when FACTORY changes.
+-include .make-deploy-vars.mk
+
+# Check if the FACTORY in the generated file matches current FACTORY
+# If not, we need to regenerate even if file timestamps are current
+CURRENT_FACTORY_IN_FILE := $(shell grep -m1 'Factory:' .make-deploy-vars.mk 2>/dev/null | cut -d' ' -f3)
+ifneq ($(CURRENT_FACTORY_IN_FILE),$(FACTORY))
+    # Force regeneration by making the file depend on a phony target
+    .make-deploy-vars.mk: FORCE
+endif
+
+.make-deploy-vars.mk: deployment.toml script/sh/lib/generate_make_vars.sh script/sh/lib/deployment_config.sh
+	@./script/sh/lib/generate_make_vars.sh $(FACTORY) > $@
+
+.PHONY: FORCE
+FORCE:
 
 # ------------------------------------------------------------------------------
 # RPC URL Resolution (based on NETWORK variable)
@@ -406,7 +390,7 @@ deploy-den-factory: validate-signer-vars
 # Uses Solidity 0.7.6 via FOUNDRY_PROFILE=safe for deterministic addresses.
 #
 # IMPORTANT: Safe deployment only needs to be done ONCE per chain per factory.
-# After deployment, addresses are hardcoded in DeploymentConfig.sol.
+# After deployment, update addresses in deployment.toml.
 
 # Deploy Safe: Deploys Safe 1.3.0 infrastructure (singleton, proxy factory, handlers, multisigs)
 # IMPORTANT: This uses FOUNDRY_PROFILE=safe which compiles with Solidity 0.7.6.
@@ -614,8 +598,7 @@ deploy-dependent-libs: validate-signer-vars
 	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
-		--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
-		--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
+		$(INDEPENDENT_LIBRARIES_FLAGS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
@@ -634,7 +617,7 @@ deploy-libraries: deploy-independent-libs deploy-dependent-libs
 
 # Deploy Contracts: Deploys all platform contracts with library linking
 # IMPORTANT: Libraries must be deployed first (use deploy-libraries).
-# Uses FOUNDRY_PROFILE to link libraries from foundry.toml profiles.
+# Uses --libraries flags with addresses from deployment.toml.
 #
 # Example:
 #   make deploy-contracts NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
@@ -643,9 +626,10 @@ deploy-contracts: validate-signer-vars
 	@echo "Deploying platform contracts with library linking..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
-	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployContracts.s.sol:DeployContracts \
+	@echo "  Libraries: from deployment.toml"
+	forge script script/DeployContracts.s.sol:DeployContracts \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
+		$(ALL_LIBRARIES_FLAGS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
@@ -693,8 +677,7 @@ deploy-dependent-libs-dry-run:
 	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
-		--libraries $(LIB_ORG_POLICY_PATH):$(LIB_ORG_POLICY_ADDRESS) \
-		--libraries $(LIB_ORG_ADMIN_PATH):$(LIB_ORG_ADMIN_ADDRESS) \
+		$(INDEPENDENT_LIBRARIES_FLAGS) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
 
@@ -715,9 +698,10 @@ deploy-contracts-dry-run:
 	@echo "Simulating contract deployment (dry-run)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Profile: $(FACTORY) (library addresses from foundry.toml)"
-	FOUNDRY_PROFILE=$(FACTORY) forge script script/DeployContracts.s.sol:DeployContracts \
+	@echo "  Libraries: from deployment.toml"
+	forge script script/DeployContracts.s.sol:DeployContracts \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
+		$(ALL_LIBRARIES_FLAGS) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
 
