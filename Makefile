@@ -19,7 +19,7 @@
 .PHONY: fund-arachnid-deployer deploy-arachnid-factory fund-den-deployer deploy-den-factory
 
 # Safe 1.3.0 deployment
-.PHONY: deploy-safe deploy-safe-dry-run
+.PHONY: deploy-safe-infra deploy-safe-infra-dry-run deploy-safe-multisigs deploy-safe-multisigs-dry-run
 
 # Guardian Safe Executor Module
 .PHONY: deploy-batched-transaction
@@ -58,8 +58,10 @@ help:
 	@echo "  update         Update dependencies"
 	@echo ""
 	@echo "Safe 1.3.0 Deployment:"
-	@echo "  deploy-safe               Deploy Safe 1.3.0 infrastructure (requires FOUNDRY_PROFILE=safe)"
-	@echo "  deploy-safe-dry-run       Simulate Safe deployment (no broadcast)"
+	@echo "  deploy-safe-infra              Deploy Safe 1.3.0 infrastructure contracts"
+	@echo "  deploy-safe-infra-dry-run      Simulate Safe infrastructure deployment (no broadcast)"
+	@echo "  deploy-safe-multisigs          Deploy Guardian and Admin Safe multisigs"
+	@echo "  deploy-safe-multisigs-dry-run  Simulate Safe multisig deployment (no broadcast)"
 	@echo ""
 	@echo "Guardian Safe Executor Module:"
 	@echo "  deploy-batched-transaction        Deploy BatchedTransaction contract"
@@ -385,40 +387,80 @@ deploy-den-factory: validate-signer-vars
 # Safe 1.3.0 Deployment Commands
 # ==============================================================================
 #
-# Safe 1.3.0 infrastructure must be deployed BEFORE platform contracts.
+# Safe 1.3.0 deployment is split into two steps for security:
+# 1. deploy-safe-infra: Deploys infrastructure (singleton, proxy factory, handlers)
+# 2. deploy-safe-multisigs: Deploys Guardian and Admin Safes (verifies infra first)
+#
+# This two-step process prevents deploying Safe proxies without the Singleton,
+# which could allow attackers to frontrun initialization.
+#
 # Uses Solidity 0.7.6 via FOUNDRY_PROFILE=safe for deterministic addresses.
 #
 # IMPORTANT: Safe deployment only needs to be done ONCE per chain per factory.
 # After deployment, update addresses in deployment.toml.
 
-# Deploy Safe: Deploys Safe 1.3.0 infrastructure (singleton, proxy factory, handlers, multisigs)
+# Deploy Safe Infrastructure: Deploys Safe 1.3.0 infrastructure contracts
 # IMPORTANT: This uses FOUNDRY_PROFILE=safe which compiles with Solidity 0.7.6.
+# Run this BEFORE deploy-safe-multisigs.
 #
 # Example:
-#   make deploy-safe NETWORK=sepolia ACCOUNT=my-deployer
-#   make deploy-safe FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
-deploy-safe: validate-signer-vars
+#   make deploy-safe-infra NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-safe-infra FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-safe-infra: validate-signer-vars
 	@echo "Deploying Safe 1.3.0 infrastructure..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Profile: safe (Solidity 0.7.6)"
-	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeInfrastructure.s.sol:DeploySafeInfrastructure \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
-# Deploy Safe Dry-Run: Simulates Safe deployment without broadcasting
+# Deploy Safe Infrastructure Dry-Run: Simulates Safe infrastructure deployment without broadcasting
 #
 # Example:
-#   make deploy-safe-dry-run NETWORK=sepolia
-deploy-safe-dry-run:
-	@echo "Simulating Safe 1.3.0 deployment (dry-run)..."
+#   make deploy-safe-infra-dry-run NETWORK=sepolia
+deploy-safe-infra-dry-run:
+	@echo "Simulating Safe 1.3.0 infrastructure deployment (dry-run)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Profile: safe (Solidity 0.7.6)"
-	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeInfrastructure.s.sol:DeploySafeInfrastructure \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(VERBOSITY)
+
+# Deploy Safe Multisigs: Deploys Guardian and Admin Safe multisig wallets
+# IMPORTANT: Safe infrastructure must be deployed first (use deploy-safe-infra).
+# This script verifies that the Safe Singleton is deployed before proceeding.
+#
+# Example:
+#   make deploy-safe-multisigs NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-safe-multisigs FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
+deploy-safe-multisigs: validate-signer-vars
+	@echo "Deploying Safe multisigs (Guardian and Admin Safes)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Profile: safe (Solidity 0.7.6)"
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
+		--sig "run(address)" $(FACTORY_ADDRESS) \
+		--rpc-url $(RPC_URL) \
+		$(SIGNER_FLAGS) \
+		--broadcast \
+		$(VERBOSITY)
+
+# Deploy Safe Multisigs Dry-Run: Simulates Safe multisig deployment without broadcasting
+#
+# Example:
+#   make deploy-safe-multisigs-dry-run NETWORK=sepolia
+deploy-safe-multisigs-dry-run:
+	@echo "Simulating Safe multisig deployment (dry-run)..."
+	@echo "  Network: $(NETWORK)"
+	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
+	@echo "  Profile: safe (Solidity 0.7.6)"
+	FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
 		--sig "run(address)" $(FACTORY_ADDRESS) \
 		--rpc-url $(RPC_URL) \
 		$(VERBOSITY)
@@ -619,13 +661,13 @@ deploy-contracts: validate-signer-vars
 		$(VERBOSITY)
 
 # Deploy Platform: Full deployment of Safe, libraries, and contracts
-# This is a convenience target that runs deploy-safe, deploy-libraries, then deploy-contracts.
+# This is a convenience target that runs deploy-safe-infra, deploy-safe-multisigs, deploy-libraries, then deploy-contracts.
 # Safe deployment is idempotent (skips already deployed contracts).
 #
 # Example:
 #   make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
 #   make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
-deploy-platform: deploy-safe deploy-libraries deploy-contracts
+deploy-platform: deploy-safe-infra deploy-safe-multisigs deploy-libraries deploy-contracts
 	@echo "Platform deployment complete!"
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY)"

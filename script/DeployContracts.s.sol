@@ -19,7 +19,7 @@ import {LinkedLibraryInfo, PlatformLibraries, SafeInfrastructure} from "script/l
  * @title DeployContracts
  * @notice Deploys all platform contracts (implementations, factories, proxies)
  * @dev This script must be run AFTER:
- *      1. DeploySafe.s.sol (Safe 1.3.0 infrastructure) - requires FOUNDRY_PROFILE=safe
+ *      1. DeploySafeInfrastructure.s.sol and DeploySafeMultisigs.s.sol (Safe 1.3.0) - requires FOUNDRY_PROFILE=safe
  *      2. DeployLibraries.s.sol (platform libraries)
  *
  *      This script expects Safe infrastructure and Safe multisigs to already be deployed.
@@ -77,7 +77,8 @@ contract DeployContracts is BaseDeployScript {
     /**
      * @notice Main entry point for the deployment script
      * @dev IMPORTANT: Run with --libraries flags pointing to CREATE2-deployed library addresses
-     *      IMPORTANT: Safe infrastructure must be deployed first using DeploySafe.s.sol
+     *      IMPORTANT: Safe infrastructure must be deployed first using DeploySafeInfrastructure.s.sol
+     *      and DeploySafeMultisigs.s.sol
      * @param factoryAddress Address of the CREATE2 factory to use for deployments
      */
     function run(address factoryAddress) external {
@@ -86,7 +87,7 @@ contract DeployContracts is BaseDeployScript {
 
         // Script-specific validations
         _validateLinkedLibrariesOrRevert();
-        _validateSafeInfrastructureDeployedOrRevert();
+        validateSafeInfrastructureDeployedOrRevert();
         _validateSafeMultisigsDeployedOrRevert();
         address guardianSafeAddress = getExpectedGuardianSafeAddress();
         address adminSafeAddress = getExpectedAdminSafeAddress();
@@ -272,87 +273,6 @@ contract DeployContracts is BaseDeployScript {
         );
     }
 
-    /// @dev Verifies that Safe infrastructure is deployed at the expected addresses from deployment.toml
-    function _validateSafeInfrastructureDeployedOrRevert() internal {
-        Logger.logSection("Verify Safe 1.3.0 Infrastructure");
-
-        // Get expected Safe infrastructure addresses from deployment.toml
-        SafeInfrastructure memory expectedSafeInfra = getExpectedSafeInfrastructureAddresses();
-
-        bool allDeployed = true;
-
-        // Check if Safe singleton is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.singletonAddress)) {
-            Logger.logFail("GnosisSafe Singleton NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.singletonAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("GnosisSafe Singleton deployed at expected address");
-        }
-
-        // Check if Safe proxy factory is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.proxyFactoryAddress)) {
-            Logger.logFail("GnosisSafeProxyFactory NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.proxyFactoryAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("GnosisSafeProxyFactory deployed at expected address");
-        }
-
-        // Check if fallback handler is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.fallbackHandlerAddress)) {
-            Logger.logFail("CompatibilityFallbackHandler NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.fallbackHandlerAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("CompatibilityFallbackHandler deployed at expected address");
-        }
-
-        // Check if MultiSend is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.multiSendAddress)) {
-            Logger.logFail("MultiSend NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.multiSendAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("MultiSend deployed at expected address");
-        }
-
-        // Check if MultiSendCallOnly is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.multiSendCallOnlyAddress)) {
-            Logger.logFail("MultiSendCallOnly NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.multiSendCallOnlyAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("MultiSendCallOnly deployed at expected address");
-        }
-
-        // Check if CreateCall is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.createCallAddress)) {
-            Logger.logFail("CreateCall NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.createCallAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("CreateCall deployed at expected address");
-        }
-
-        // Check if SimulateTxAccessor is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.simulateTxAccessorAddress)) {
-            Logger.logFail("SimulateTxAccessor NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedSafeInfra.simulateTxAccessorAddress);
-            allDeployed = false;
-        } else {
-            Logger.logPass("SimulateTxAccessor deployed at expected address");
-        }
-
-        if (!allDeployed) {
-            Logger.logEmptyLine();
-            Logger.logWarn("WARNING: Safe infrastructure is not deployed!");
-            Logger.logIndented("Run DeploySafe.s.sol first (FOUNDRY_PROFILE=safe), then re-run this script.");
-            Logger.logEmptyLine();
-            revert("Safe infrastructure is not deployed at expected addresses");
-        }
-    }
-
     /// @dev Verifies that Guardian and Admin Safes are deployed at the expected addresses from deployment.toml
     function _validateSafeMultisigsDeployedOrRevert() internal {
         Logger.logSection("Verify Safe Multisigs");
@@ -384,7 +304,7 @@ contract DeployContracts is BaseDeployScript {
         if (!allDeployed) {
             Logger.logEmptyLine();
             Logger.logWarn("WARNING: Safe multisigs are not deployed!");
-            Logger.logIndented("Run DeploySafe.s.sol first (FOUNDRY_PROFILE=safe), then re-run this script.");
+            Logger.logIndented("Run DeploySafeMultisigs.s.sol first (FOUNDRY_PROFILE=safe), then re-run this script.");
             Logger.logEmptyLine();
             revert("Safe multisigs are not deployed at expected addresses");
         }

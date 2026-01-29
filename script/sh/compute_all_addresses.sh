@@ -87,68 +87,80 @@ echo "" >&2
 # -----------------------------------------------------------------------------
 # Step 1: Compute Safe Infrastructure and Multisig Addresses
 # -----------------------------------------------------------------------------
-# Compute Safe infrastructure (same for all variants) and multisigs for nonprod
-print_progress "  Computing Safe infrastructure and nonprod multisig addresses..."
-SAFE_OUTPUT_NONPROD=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
-    --sig "computeAddresses(address,string)" "$FACTORY_ADDRESS" "nonprod" --offline 2>&1) || {
+# Compute Safe infrastructure addresses (same for all variants)
+print_progress "  Computing Safe infrastructure addresses..."
+SAFE_INFRA_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeInfrastructure.s.sol:DeploySafeInfrastructure \
+    --sig "computeAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute Safe addresses (nonprod)" >&2
-    echo "$SAFE_OUTPUT_NONPROD" >&2
+    echo "Error: Failed to compute Safe infrastructure addresses" >&2
+    echo "$SAFE_INFRA_OUTPUT" >&2
     exit 1
 }
 
-# Extract Safe infrastructure addresses (same for all variants)
-SAFE_SINGLETON_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "GnosisSafe Singleton")
-SAFE_PROXY_FACTORY_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "GnosisSafeProxyFactory")
-SAFE_FALLBACK_HANDLER_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "CompatibilityFallbackHandler")
-SAFE_MULTISEND_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "MultiSend")
-SAFE_MULTISEND_CALL_ONLY_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "MultiSendCallOnly")
-SAFE_CREATE_CALL_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "CreateCall")
-SAFE_SIMULATE_TX_ACCESSOR_ADDRESS=$(extract_address "$SAFE_OUTPUT_NONPROD" "SimulateTxAccessor")
+# Extract Safe infrastructure addresses
+SAFE_SINGLETON_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "GnosisSafe Singleton")
+SAFE_PROXY_FACTORY_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "GnosisSafeProxyFactory")
+SAFE_FALLBACK_HANDLER_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "CompatibilityFallbackHandler")
+SAFE_MULTISEND_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "MultiSend")
+SAFE_MULTISEND_CALL_ONLY_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "MultiSendCallOnly")
+SAFE_CREATE_CALL_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "CreateCall")
+SAFE_SIMULATE_TX_ACCESSOR_ADDRESS=$(extract_address "$SAFE_INFRA_OUTPUT" "SimulateTxAccessor")
+
+# Compute nonprod Safe multisig addresses
+print_progress "  Computing nonprod multisig addresses..."
+SAFE_MULTISIG_NONPROD_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
+    --sig "computeAddresses(address,address,address,string)" \
+    "$SAFE_SINGLETON_ADDRESS" "$SAFE_PROXY_FACTORY_ADDRESS" "$SAFE_FALLBACK_HANDLER_ADDRESS" "nonprod" --offline 2>&1) || {
+    clear_progress
+    echo "Error: Failed to compute Safe multisig addresses (nonprod)" >&2
+    echo "$SAFE_MULTISIG_NONPROD_OUTPUT" >&2
+    exit 1
+}
 
 # Extract nonprod Safe multisig addresses
-GUARDIAN_SAFE_NONPROD=$(extract_address "$SAFE_OUTPUT_NONPROD" "Guardian Safe")
-ADMIN_SAFE_NONPROD=$(extract_address "$SAFE_OUTPUT_NONPROD" "Admin Safe")
+GUARDIAN_SAFE_NONPROD=$(extract_address "$SAFE_MULTISIG_NONPROD_OUTPUT" "Guardian Safe")
+ADMIN_SAFE_NONPROD=$(extract_address "$SAFE_MULTISIG_NONPROD_OUTPUT" "Admin Safe")
 
 # Verify we got the critical nonprod addresses
 if [[ -z "$GUARDIAN_SAFE_NONPROD" ]]; then
     clear_progress
     echo "Error: Failed to extract Guardian Safe (nonprod) address from output"
-    echo "$SAFE_OUTPUT_NONPROD"
+    echo "$SAFE_MULTISIG_NONPROD_OUTPUT"
     exit 1
 fi
 if [[ -z "$ADMIN_SAFE_NONPROD" ]]; then
     clear_progress
     echo "Error: Failed to extract Admin Safe (nonprod) address from output" >&2
-    echo "$SAFE_OUTPUT_NONPROD" >&2
+    echo "$SAFE_MULTISIG_NONPROD_OUTPUT" >&2
     exit 1
 fi
 
 # Compute prod Safe multisig addresses
 print_progress "  Computing prod multisig addresses..."
-SAFE_OUTPUT_PROD=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
-    --sig "computeAddresses(address,string)" "$FACTORY_ADDRESS" "prod" --offline 2>&1) || {
+SAFE_MULTISIG_PROD_OUTPUT=$(FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
+    --sig "computeAddresses(address,address,address,string)" \
+    "$SAFE_SINGLETON_ADDRESS" "$SAFE_PROXY_FACTORY_ADDRESS" "$SAFE_FALLBACK_HANDLER_ADDRESS" "prod" --offline 2>&1) || {
     clear_progress
-    echo "Error: Failed to compute Safe addresses (prod)" >&2
-    echo "$SAFE_OUTPUT_PROD" >&2
+    echo "Error: Failed to compute Safe multisig addresses (prod)" >&2
+    echo "$SAFE_MULTISIG_PROD_OUTPUT" >&2
     exit 1
 }
 
 # Extract prod Safe multisig addresses
-GUARDIAN_SAFE_PROD=$(extract_address "$SAFE_OUTPUT_PROD" "Guardian Safe")
-ADMIN_SAFE_PROD=$(extract_address "$SAFE_OUTPUT_PROD" "Admin Safe")
+GUARDIAN_SAFE_PROD=$(extract_address "$SAFE_MULTISIG_PROD_OUTPUT" "Guardian Safe")
+ADMIN_SAFE_PROD=$(extract_address "$SAFE_MULTISIG_PROD_OUTPUT" "Admin Safe")
 
 # Verify we got the critical prod addresses
 if [[ -z "$GUARDIAN_SAFE_PROD" ]]; then
     clear_progress
     echo "Error: Failed to extract Guardian Safe (prod) address from output"
-    echo "$SAFE_OUTPUT_PROD"
+    echo "$SAFE_MULTISIG_PROD_OUTPUT"
     exit 1
 fi
 if [[ -z "$ADMIN_SAFE_PROD" ]]; then
     clear_progress
     echo "Error: Failed to extract Admin Safe (prod) address from output" >&2
-    echo "$SAFE_OUTPUT_PROD" >&2
+    echo "$SAFE_MULTISIG_PROD_OUTPUT" >&2
     exit 1
 fi
 
