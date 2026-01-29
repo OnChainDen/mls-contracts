@@ -9,8 +9,8 @@ import {StringUtils} from "script/libraries/StringUtils.sol";
 
 /// @notice Minimal interface for Safe v1.4.1 functions needed by this script
 /// @dev We define this locally rather than importing from the Safe library to avoid
-///      Slither parsing errors that occur when analyzing cross-version Solidity imports.
-interface IGnosisSafe {
+///      compiler version mismatch (Safe uses Solidity 0.7.6, this script uses 0.8.33).
+interface ISafe {
     function isModuleEnabled(address module) external view returns (bool);
     function enableModule(address module) external;
     function disableModule(address prevModule, address module) external;
@@ -92,10 +92,10 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         require(Create2Utils.isContractDeployedAtAddress(moduleAddress), "Guardian Safe module not deployed");
 
         // Check module is not already enabled
-        require(!IGnosisSafe(safeAddress).isModuleEnabled(moduleAddress), "Module already enabled");
+        require(!ISafe(safeAddress).isModuleEnabled(moduleAddress), "Module already enabled");
 
         // Build the transaction data for enableModule
-        bytes memory txData = abi.encodeWithSelector(IGnosisSafe.enableModule.selector, moduleAddress);
+        bytes memory txData = abi.encodeWithSelector(ISafe.enableModule.selector, moduleAddress);
 
         // Process the transaction
         _processTransaction(safeAddress, moduleAddress, txData, "ADD", executeIfReady);
@@ -117,13 +117,13 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         require(Create2Utils.isContractDeployedAtAddress(safeAddress), "Guardian Safe not deployed");
 
         // Check module is currently enabled
-        require(IGnosisSafe(safeAddress).isModuleEnabled(moduleAddress), "Module not enabled");
+        require(ISafe(safeAddress).isModuleEnabled(moduleAddress), "Module not enabled");
 
         // Find the previous module in the linked list
         address prevModule = _findPrevModule(safeAddress, moduleAddress);
 
         // Build the transaction data for disableModule
-        bytes memory txData = abi.encodeWithSelector(IGnosisSafe.disableModule.selector, prevModule, moduleAddress);
+        bytes memory txData = abi.encodeWithSelector(ISafe.disableModule.selector, prevModule, moduleAddress);
 
         // Process the transaction
         _processTransaction(safeAddress, moduleAddress, txData, "REMOVE", executeIfReady);
@@ -145,10 +145,10 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         // slither-disable-next-line uninitialized-local
         bytes memory txData;
         if (keccak256(bytes(action)) == keccak256("add")) {
-            txData = abi.encodeWithSelector(IGnosisSafe.enableModule.selector, moduleAddress);
+            txData = abi.encodeWithSelector(ISafe.enableModule.selector, moduleAddress);
         } else if (keccak256(bytes(action)) == keccak256("remove")) {
             address prevModule = _findPrevModule(safeAddress, moduleAddress);
-            txData = abi.encodeWithSelector(IGnosisSafe.disableModule.selector, prevModule, moduleAddress);
+            txData = abi.encodeWithSelector(ISafe.disableModule.selector, prevModule, moduleAddress);
         } else {
             revert("Invalid action - must be 'add' or 'remove'");
         }
@@ -157,8 +157,8 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         bytes32 txHash = _getTransactionHash(safeAddress, txData);
 
         // Get approval info
-        uint256 threshold = IGnosisSafe(safeAddress).getThreshold();
-        address[] memory owners = IGnosisSafe(safeAddress).getOwners();
+        uint256 threshold = ISafe(safeAddress).getThreshold();
+        address[] memory owners = ISafe(safeAddress).getOwners();
         uint256 approvalCount = _countApprovals(safeAddress, txHash, owners);
 
         // Log status
@@ -186,7 +186,7 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         Logger.logIndented("Owners who have approved:");
         for (uint256 i = 0; i < owners.length; i++) {
             // slither-disable-next-line calls-loop
-            if (IGnosisSafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
+            if (ISafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
                 Logger.logKeyValue("  ", owners[i]);
             }
         }
@@ -208,8 +208,8 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         bytes32 txHash = _getTransactionHash(safeAddress, txData);
 
         // Get threshold and current approvals
-        uint256 threshold = IGnosisSafe(safeAddress).getThreshold();
-        address[] memory owners = IGnosisSafe(safeAddress).getOwners();
+        uint256 threshold = ISafe(safeAddress).getThreshold();
+        address[] memory owners = ISafe(safeAddress).getOwners();
 
         // Log header
         Logger.logBoxHeader(string(abi.encodePacked("Guardian Safe Module Transaction - ", action)));
@@ -229,14 +229,14 @@ contract ManageGuardianSafeModule is BaseDeployScript {
         require(isOwner, "Sender is not a Guardian Safe owner");
 
         // Check if sender has already approved
-        bool alreadyApproved = IGnosisSafe(safeAddress).approvedHashes(msg.sender, txHash) == 1;
+        bool alreadyApproved = ISafe(safeAddress).approvedHashes(msg.sender, txHash) == 1;
 
         vm.startBroadcast();
 
         // Approve if not already done
         if (!alreadyApproved) {
             Logger.logIndented("Submitting approval...");
-            IGnosisSafe(safeAddress).approveHash(txHash);
+            ISafe(safeAddress).approveHash(txHash);
             Logger.logIndented("Approval submitted successfully");
         } else {
             Logger.logIndented("Already approved by this owner");
@@ -256,7 +256,7 @@ contract ManageGuardianSafeModule is BaseDeployScript {
             bytes memory signatures = _buildApprovedSignatures(safeAddress, txHash, owners, threshold);
 
             // Execute the transaction
-            bool success = IGnosisSafe(safeAddress)
+            bool success = ISafe(safeAddress)
                 .execTransaction(
                     safeAddress, // to (call the Safe itself)
                     0, // value
@@ -299,7 +299,7 @@ contract ManageGuardianSafeModule is BaseDeployScript {
     function _findPrevModule(address safeAddress, address moduleAddress) internal view returns (address prevModule) {
         // SENTINEL_MODULES = address(0x1)
         address SENTINEL = address(0x1);
-        (address[] memory modules,) = IGnosisSafe(safeAddress).getModulesPaginated(SENTINEL, 100);
+        (address[] memory modules,) = ISafe(safeAddress).getModulesPaginated(SENTINEL, 100);
 
         prevModule = SENTINEL;
         for (uint256 i = 0; i < modules.length; i++) {
@@ -313,8 +313,8 @@ contract ManageGuardianSafeModule is BaseDeployScript {
 
     /// @dev Get the Safe transaction hash
     function _getTransactionHash(address safeAddress, bytes memory txData) internal view returns (bytes32) {
-        uint256 safeNonce = IGnosisSafe(safeAddress).nonce();
-        return IGnosisSafe(safeAddress)
+        uint256 safeNonce = ISafe(safeAddress).nonce();
+        return ISafe(safeAddress)
             .getTransactionHash(
                 safeAddress, // to (call the Safe itself for module management)
                 0, // value
@@ -337,7 +337,7 @@ contract ManageGuardianSafeModule is BaseDeployScript {
     {
         for (uint256 i = 0; i < owners.length; i++) {
             // slither-disable-next-line calls-loop
-            if (IGnosisSafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
+            if (ISafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
                 count++;
             }
         }
@@ -355,7 +355,7 @@ contract ManageGuardianSafeModule is BaseDeployScript {
 
         for (uint256 i = 0; i < owners.length && approverCount < threshold; i++) {
             // slither-disable-next-line calls-loop
-            if (IGnosisSafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
+            if (ISafe(safeAddress).approvedHashes(owners[i], txHash) == 1) {
                 approvers[approverCount] = owners[i];
                 approverCount++;
             }
