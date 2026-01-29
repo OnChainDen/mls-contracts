@@ -57,7 +57,7 @@ batched_transaction = "0xbaFA880487F37868903cd04d642a16CB3Ab54449"
 [factory.arachnid.env.nonprod]
 guardian_safe = "0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305"
 admin_safe = "0x84246979f1678Cc3c5949106B958275aA15B807e"
-org_factory = "0x5e484DF0e6D1De01920e562E7a01c969cB0Cb7BE"
+org_factory = "0xd27E88B7C428e506Db4A21C8331a1080BDB00849"
 whitelist_proxy = "0x8DA1681dD433be70Ec3783E5B5efF6CeC341c108"
 guardian_safe_executor_module = "0x1cB6C223a9b7c52F0B2CAdD4d4Cf8FFb0D25bC66"
 
@@ -66,7 +66,7 @@ guardian_safe_executor_module = "0x1cB6C223a9b7c52F0B2CAdD4d4Cf8FFb0D25bC66"
 [factory.arachnid.env.prod]
 guardian_safe = "0xFDa614353A1E28110f6240097b74FAb86B1666e5"
 admin_safe = "0x2669AE29f7cE3e1282D6e1dda02D29538b3390B0"
-org_factory = "0x07B196bDcd05b29F3c7f632B015327dF79221540"
+org_factory = "0x3286681A7C5D41A510b9e3eB262DAc00D14c02e8"
 whitelist_proxy = "0x62189FC56357D9e747693c3977dd86B129Ab38e0"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
@@ -109,7 +109,7 @@ batched_transaction = "0x0cedE35f7bac439D35e261E386315c62C17d6Ec1"
 [factory.den-nonprod.env.nonprod]
 guardian_safe = "0x4fbeF24b88228A6639409150214bb5A798930fA9"
 admin_safe = "0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f"
-org_factory = "0xFd47FE7f256BCA728d78D953f2817b29F193dAd3"
+org_factory = "0x13Ed4cC4B6B70acB3b27389bf23BFc20bfAA0Bd8"
 whitelist_proxy = "0xd1981BfD5842d57d893b72fC0Ec1F89a5b188221"
 guardian_safe_executor_module = "0xe5e4B8F410a13ce70dbFAB36409ab9f2F6577EFA"
 
@@ -118,7 +118,7 @@ guardian_safe_executor_module = "0xe5e4B8F410a13ce70dbFAB36409ab9f2F6577EFA"
 [factory.den-nonprod.env.prod]
 guardian_safe = "0xdB9d134E6207436AbAD0FD7eE580Dd60bC004458"
 admin_safe = "0xA9Ab89FF5714c4e08d46B85577529D813834Fa0c"
-org_factory = "0x5d56E6f68fD5bdc425f07913fdC1bA25578d6520"
+org_factory = "0x68f961bcf673F2DA9Ad54338d6a603d25B90964e"
 whitelist_proxy = "0x6d140cE6a15226543Ac24aa57367784ed8adC8Cf"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
