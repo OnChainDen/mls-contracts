@@ -335,7 +335,7 @@ Safe deployment only needs to happen **once per chain per factory**. After the f
 
 The full deployment order is:
 
-```
+```text
 1. Deploy CREATE2 Factory (if not already deployed)
    └── make deploy-arachnid-factory  OR  make deploy-den-factory
 
