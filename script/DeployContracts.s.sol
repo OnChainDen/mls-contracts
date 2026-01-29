@@ -30,7 +30,7 @@ import {LinkedLibraryInfo, PlatformLibraries, SafeInfrastructure} from "script/l
  *      This script will revert if:
  *      - Libraries are not deployed at expected addresses
  *      - Safe infrastructure is not deployed at expected addresses
- *      - Guardian and Deployer Safes are not deployed
+ *      - Guardian and Admin Safes are not deployed
  *
  *      Expected addresses are read from deployment.toml based on which CREATE2 factory is used.
  *
@@ -54,7 +54,7 @@ import {LinkedLibraryInfo, PlatformLibraries, SafeInfrastructure} from "script/l
  *      4. Validates that --libraries flag was used with correct addresses
  *      5. Validates that libraries are deployed at expected addresses
  *      6. Validates that Safe infrastructure is deployed at expected addresses
- *      7. Validates that Guardian and Deployer Safes are deployed
+ *      7. Validates that Guardian and Admin Safes are deployed
  *      8. Requires interactive confirmation when broadcasting
  *
  * @author Den Technologies Inc
@@ -88,7 +88,8 @@ contract DeployContracts is BaseDeployScript {
         _validateLinkedLibrariesOrRevert();
         _validateSafeInfrastructureDeployedOrRevert();
         _validateSafeMultisigsDeployedOrRevert();
-        address deployerSafeAddress = getExpectedDeployerSafeAddress();
+        address guardianSafeAddress = getExpectedGuardianSafeAddress();
+        address adminSafeAddress = getExpectedAdminSafeAddress();
 
         // Start broadcasting transactions
         vm.startBroadcast();
@@ -97,10 +98,10 @@ contract DeployContracts is BaseDeployScript {
         PlatformImplementations memory implementationContracts = _deployImplementationContracts();
 
         // Deploy Factory Contracts (OrganizationFactory)
-        address organizationFactoryAddress = _deployOrganizationFactory(deployerSafeAddress);
+        address organizationFactoryAddress = _deployOrganizationFactory(guardianSafeAddress);
 
-        // Deploy ImplementationWhitelistProxy (depends on implementationContracts, deployer safe)
-        address whitelistProxyAddress = _deployWhitelistProxy(implementationContracts, deployerSafeAddress);
+        // Deploy ImplementationWhitelistProxy (depends on implementationContracts, admin safe)
+        address whitelistProxyAddress = _deployWhitelistProxy(implementationContracts, adminSafeAddress);
 
         // Stop broadcasting transactions
         vm.stopBroadcast();
@@ -124,17 +125,23 @@ contract DeployContracts is BaseDeployScript {
      *      the library addresses are linked at compile time. The bash script compute_all_addresses.sh
      *      handles this by first computing library addresses and passing them via --libraries.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
-     * @param deployerSafeAddress Address of the Deployer Safe (computed by DeploySafe.s.sol)
+     * @param guardianSafeAddress Address of the Guardian Safe (owner of OrganizationFactory)
+     * @param adminSafeAddress Address of the Admin Safe (owner of ImplementationWhitelistProxy)
      */
-    function computeAddresses(address factoryAddress, address deployerSafeAddress) external pure {
+    function computeAddresses(address factoryAddress, address guardianSafeAddress, address adminSafeAddress)
+        external
+        pure
+    {
         // Validate inputs
         require(factoryAddress != address(0), "Factory address cannot be zero");
-        require(deployerSafeAddress != address(0), "Deployer Safe address cannot be zero");
+        require(guardianSafeAddress != address(0), "Guardian Safe address cannot be zero");
+        require(adminSafeAddress != address(0), "Admin Safe address cannot be zero");
 
         // Log header
         Logger.logBoxHeader("Computed Platform Contract Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
-        Logger.logKeyValue("Deployer Safe", deployerSafeAddress);
+        Logger.logKeyValue("Guardian Safe", guardianSafeAddress);
+        Logger.logKeyValue("Admin Safe", adminSafeAddress);
         Logger.logEmptyLine();
 
         // Compute implementation addresses
@@ -153,16 +160,16 @@ contract DeployContracts is BaseDeployScript {
             Create2Utils.computeAddress(factoryAddress, ACCOUNT_IMPL_SALT, type(AccountImplementation).creationCode);
         Logger.logKeyValue("AccountImplementation", accountImplAddress);
 
-        // Compute OrganizationFactory address (depends on deployerSafeAddress constructor arg)
+        // Compute OrganizationFactory address (depends on guardianSafeAddress constructor arg)
         Logger.logSection("Factory Contracts");
 
         bytes memory orgFactoryInitCode =
-            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
+            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(guardianSafeAddress));
         address orgFactoryAddress = Create2Utils.computeAddress(factoryAddress, ORG_FACTORY_SALT, orgFactoryInitCode);
         Logger.logKeyValue("OrganizationFactory", orgFactoryAddress);
 
         // Compute ImplementationWhitelistProxy address
-        // (depends on whitelistImplAddress, orgImplAddress, accountImplAddress, deployerSafeAddress)
+        // (depends on whitelistImplAddress, orgImplAddress, accountImplAddress, adminSafeAddress)
         Logger.logSection("Proxy Contracts");
 
         // Build the same init data that _deployWhitelistProxy uses
@@ -173,7 +180,7 @@ contract DeployContracts is BaseDeployScript {
 
         bytes memory initData = abi.encodeCall(
             ImplementationWhitelistImplementation.initialize,
-            (deployerSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
+            (adminSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
         );
 
         bytes memory proxyBytecode = abi.encodePacked(
@@ -214,17 +221,17 @@ contract DeployContracts is BaseDeployScript {
     }
 
     /// @dev Deploys the OrganizationFactory via CREATE2
-    /// @param deployerSafeAddress Address of the Deployer Safe to authorize as factory deployer
+    /// @param guardianSafeAddress Address of the Guardian Safe to authorize as factory deployer
     /// @return organizationFactoryAddress Address of the deployed OrganizationFactory
-    function _deployOrganizationFactory(address deployerSafeAddress)
+    function _deployOrganizationFactory(address guardianSafeAddress)
         internal
         returns (address organizationFactoryAddress)
     {
         Logger.logSection("Factory Contracts");
 
-        // Deploy OrganizationFactory with deployerSafeAddress as the deployer
+        // Deploy OrganizationFactory with guardianSafeAddress as the deployer
         bytes memory orgFactoryInitCode =
-            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(deployerSafeAddress));
+            abi.encodePacked(type(OrganizationFactory).creationCode, abi.encode(guardianSafeAddress));
 
         (organizationFactoryAddress,) = Create2Utils.deployIfNotExists(
             _factoryAddress, ORG_FACTORY_SALT, orgFactoryInitCode, "OrganizationFactory"
@@ -233,9 +240,9 @@ contract DeployContracts is BaseDeployScript {
 
     /// @dev Deploys the ImplementationWhitelistProxy via CREATE2 with atomic initialization
     /// @param implementationContracts Implementation contract addresses
-    /// @param deployerSafeAddress Address of the Deployer Safe (owner of the whitelist)
+    /// @param adminSafeAddress Address of the Admin Safe (owner of the whitelist)
     /// @return whitelistProxyAddress Address of the deployed whitelist proxy
-    function _deployWhitelistProxy(PlatformImplementations memory implementationContracts, address deployerSafeAddress)
+    function _deployWhitelistProxy(PlatformImplementations memory implementationContracts, address adminSafeAddress)
         internal
         returns (address whitelistProxyAddress)
     {
@@ -250,7 +257,7 @@ contract DeployContracts is BaseDeployScript {
         // Encode the initialization data for the whitelist proxy
         bytes memory initData = abi.encodeCall(
             ImplementationWhitelistImplementation.initialize,
-            (deployerSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
+            (adminSafeAddress, organizationImplementationAddresses, accountImplementationAddresses)
         );
 
         // Construct the proxy bytecode for the whitelist proxy
@@ -346,13 +353,13 @@ contract DeployContracts is BaseDeployScript {
         }
     }
 
-    /// @dev Verifies that Guardian and Deployer Safes are deployed at the expected addresses from deployment.toml
+    /// @dev Verifies that Guardian and Admin Safes are deployed at the expected addresses from deployment.toml
     function _validateSafeMultisigsDeployedOrRevert() internal {
         Logger.logSection("Verify Safe Multisigs");
 
         // Get expected Safe addresses from deployment.toml
         address expectedGuardianSafe = getExpectedGuardianSafeAddress();
-        address expectedDeployerSafe = getExpectedDeployerSafeAddress();
+        address expectedAdminSafe = getExpectedAdminSafeAddress();
 
         bool allDeployed = true;
 
@@ -365,13 +372,13 @@ contract DeployContracts is BaseDeployScript {
             Logger.logPass("Guardian Safe deployed at expected address");
         }
 
-        // Check if Deployer Safe is deployed
-        if (!Create2Utils.isContractDeployedAtAddress(expectedDeployerSafe)) {
-            Logger.logFail("Deployer Safe NOT DEPLOYED at expected address");
-            Logger.logKeyValue("  Expected", expectedDeployerSafe);
+        // Check if Admin Safe is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedAdminSafe)) {
+            Logger.logFail("Admin Safe NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedAdminSafe);
             allDeployed = false;
         } else {
-            Logger.logPass("Deployer Safe deployed at expected address");
+            Logger.logPass("Admin Safe deployed at expected address");
         }
 
         if (!allDeployed) {
@@ -413,7 +420,7 @@ contract DeployContracts is BaseDeployScript {
         // Get Safe addresses from deployment.toml for logging
         SafeInfrastructure memory safeInfra = getExpectedSafeInfrastructureAddresses();
         address guardianSafe = getExpectedGuardianSafeAddress();
-        address deployerSafe = getExpectedDeployerSafeAddress();
+        address adminSafe = getExpectedAdminSafeAddress();
 
         Logger.logBoxHeader(unicode"✅ Deployed Contract Addresses");
         Logger.logIndented("Safe Infrastructure (pre-deployed):");
@@ -427,7 +434,7 @@ contract DeployContracts is BaseDeployScript {
         Logger.logEmptyLine();
         Logger.logIndented("Safe Multisigs (pre-deployed):");
         Logger.logKeyValue("  Guardian Safe", guardianSafe);
-        Logger.logKeyValue("  Deployer Safe", deployerSafe);
+        Logger.logKeyValue("  Admin Safe", adminSafe);
         Logger.logEmptyLine();
         Logger.logIndented("Platform Implementations:");
         Logger.logKeyValue("  OrganizationImplementation", contracts.implementations.organizationAddress);

@@ -888,7 +888,7 @@ All platform contracts are deployed **deterministically** using CREATE2, ensurin
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for:
 - Signer setup (Foundry keystore or Ledger)
 - Step-by-step deployment commands
-- Guardian/Deployer Safe configuration
+- Guardian/Admin Safe configuration
 - Library linking requirements
 - Troubleshooting guide
 

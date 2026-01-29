@@ -158,13 +158,6 @@ get_guardian_executor() {
     get_config ".safe.$env.guardian_executor_eoa"
 }
 
-# Get deployer executor EOA address
-# Usage: get_deployer_executor "nonprod"
-get_deployer_executor() {
-    local env="$1"
-    get_config ".safe.$env.deployer_executor_eoa"
-}
-
 # Get guardian Safe owner address (first owner)
 # Usage: get_guardian_safe_owner "nonprod"
 get_guardian_safe_owner() {
@@ -172,11 +165,11 @@ get_guardian_safe_owner() {
     get_config ".safe.$env.guardian_safe_owner_1"
 }
 
-# Get deployer Safe owner address (first owner)
-# Usage: get_deployer_safe_owner "nonprod"
-get_deployer_safe_owner() {
+# Get admin Safe owner address (first owner)
+# Usage: get_admin_safe_owner "nonprod"
+get_admin_safe_owner() {
     local env="$1"
-    get_config ".safe.$env.deployer_safe_owner_1"
+    get_config ".safe.$env.admin_safe_owner_1"
 }
 
 # =============================================================================
@@ -191,12 +184,12 @@ get_guardian_safe_address() {
     get_config ".factory[\"$factory\"].env.$env.guardian_safe"
 }
 
-# Get deployer Safe address for a factory/env combination
-# Usage: get_deployer_safe_address "arachnid" "nonprod"
-get_deployer_safe_address() {
+# Get admin Safe address for a factory/env combination
+# Usage: get_admin_safe_address "arachnid" "nonprod"
+get_admin_safe_address() {
     local factory="$1"
     local env="$2"
-    get_config ".factory[\"$factory\"].env.$env.deployer_safe"
+    get_config ".factory[\"$factory\"].env.$env.admin_safe"
 }
 
 # Get OrganizationFactory address for a factory/env combination
@@ -221,14 +214,6 @@ get_guardian_module_address() {
     local factory="$1"
     local env="$2"
     get_config ".factory[\"$factory\"].env.$env.guardian_safe_executor_module"
-}
-
-# Get deployer module address for a factory/env combination
-# Usage: get_deployer_module_address "arachnid" "nonprod"
-get_deployer_module_address() {
-    local factory="$1"
-    local env="$2"
-    get_config ".factory[\"$factory\"].env.$env.deployer_safe_executor_module"
 }
 
 # =============================================================================
