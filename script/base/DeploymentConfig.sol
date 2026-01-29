@@ -136,17 +136,17 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         return vm.parseTomlAddress(toml, key);
     }
 
-    /// @dev Returns expected Deployer Safe address based on the initialized factory and chain (prod vs nonprod)
+    /// @dev Returns expected Admin Safe address based on the initialized factory and chain (prod vs nonprod)
     ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
-    /// @return deployerSafeAddress The expected Deployer Safe address
-    function getExpectedDeployerSafeAddress() internal returns (address deployerSafeAddress) {
+    /// @return adminSafeAddress The expected Admin Safe address
+    function getExpectedAdminSafeAddress() internal returns (address adminSafeAddress) {
         require(
             _factoryAddress != address(0), "Factory not initialized - call validateAndInitializeFactoryOrRevert() first"
         );
 
         string memory toml = _toml();
         string memory variant = _isProductionChain() ? "prod" : "nonprod";
-        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".deployer_safe"));
+        string memory key = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".admin_safe"));
         return vm.parseTomlAddress(toml, key);
     }
 
@@ -178,29 +178,22 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         return vm.parseTomlAddress(toml, key);
     }
 
-    /// @dev Returns expected Safe Executor Module addresses based on the initialized factory and chain (prod vs
-    /// nonprod) NOTE: validateAndInitializeFactoryOrRevert() must be called first
+    /// @dev Returns expected Guardian Safe Executor Module address based on the initialized factory and chain
+    ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
     /// @return guardianModuleAddress Expected Guardian Safe Executor Module address
-    /// @return deployerModuleAddress Expected Deployer Safe Executor Module address
-    function getExpectedSafeExecutorModuleAddresses()
-        internal
-        returns (address guardianModuleAddress, address deployerModuleAddress)
-    {
+    function getExpectedGuardianSafeModuleAddress() internal returns (address guardianModuleAddress) {
         require(
             _factoryAddress != address(0), "Factory not initialized - call validateAndInitializeFactoryOrRevert() first"
         );
 
         string memory toml = _toml();
         string memory variant = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string(abi.encodePacked(".factory.", _factoryName, ".env.", variant));
+        string memory key =
+            string(abi.encodePacked(".factory.", _factoryName, ".env.", variant, ".guardian_safe_executor_module"));
 
-        guardianModuleAddress =
-            vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_safe_executor_module")));
-        deployerModuleAddress =
-            vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_executor_module")));
+        guardianModuleAddress = vm.parseTomlAddress(toml, key);
 
         require(guardianModuleAddress != address(0), "Guardian Safe Executor Module address not set in deployment.toml");
-        require(deployerModuleAddress != address(0), "Deployer Safe Executor Module address not set in deployment.toml");
     }
 
     /// @dev Returns expected BatchedTransaction address based on the initialized factory
@@ -244,47 +237,44 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         }
     }
 
-    /// @dev Returns Deployer Safe configuration for a specific variant
+    /// @dev Returns Admin Safe configuration for a specific variant
     /// @param variant The Safe variant ("prod" or "nonprod")
-    /// @return ownerAddresses Array of owner addresses for the Deployer Safe
+    /// @return ownerAddresses Array of owner addresses for the Admin Safe
     /// @return threshold Required number of signatures
-    function getDeployerSafeConfig(string memory variant)
+    function getAdminSafeConfig(string memory variant)
         internal
         returns (address[] memory ownerAddresses, uint256 threshold)
     {
         string memory toml = _toml();
         string memory prefix = string(abi.encodePacked(".safe.", variant));
 
-        threshold = vm.parseTomlUint(toml, string(abi.encodePacked(prefix, ".deployer_safe_threshold")));
+        threshold = vm.parseTomlUint(toml, string(abi.encodePacked(prefix, ".admin_safe_threshold")));
 
         // Check if this is prod variant (has 3 owners) or nonprod (has 1 owner)
         bool isProd = keccak256(bytes(variant)) == keccak256(bytes("prod"));
         if (isProd) {
             ownerAddresses = new address[](3);
-            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_1")));
-            ownerAddresses[1] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_2")));
-            ownerAddresses[2] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_3")));
+            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".admin_safe_owner_1")));
+            ownerAddresses[1] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".admin_safe_owner_2")));
+            ownerAddresses[2] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".admin_safe_owner_3")));
         } else {
             ownerAddresses = new address[](1);
-            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_safe_owner_1")));
+            ownerAddresses[0] = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".admin_safe_owner_1")));
         }
     }
 
-    /// @dev Returns the expected Safe Executor EOA addresses based on current chain (prod vs nonprod)
-    /// @return guardianExecutor Expected Safe Executor EOA address for Guardian Safe module
-    /// @return deployerExecutor Expected Safe Executor EOA address for Deployer Safe module
-    function getExpectedExecutorEOAAddresses() internal returns (address guardianExecutor, address deployerExecutor) {
+    /// @dev Returns the expected Guardian Executor EOA address based on current chain (prod vs nonprod)
+    /// @return guardianExecutor Expected Guardian Executor EOA address for Guardian Safe module
+    function getExpectedGuardianExecutorEOAAddress() internal returns (address guardianExecutor) {
         string memory toml = _toml();
         string memory env = _isProductionChain() ? "prod" : "nonprod";
-        string memory prefix = string(abi.encodePacked(".safe.", env));
+        string memory key = string(abi.encodePacked(".safe.", env, ".guardian_executor_eoa"));
 
-        guardianExecutor = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".guardian_executor_eoa")));
-        deployerExecutor = vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".deployer_executor_eoa")));
+        guardianExecutor = vm.parseTomlAddress(toml, key);
 
-        // Validate addresses are set for production chains
+        // Validate address is set for production chains
         if (_isProductionChain()) {
             require(guardianExecutor != address(0), "Guardian Executor EOA not set in deployment.toml for production");
-            require(deployerExecutor != address(0), "Deployer Executor EOA not set in deployment.toml for production");
         }
     }
 }

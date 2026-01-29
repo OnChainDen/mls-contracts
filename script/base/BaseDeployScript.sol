@@ -30,6 +30,9 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
  * @author Den Technologies Inc
  */
 abstract contract BaseDeployScript is DeploymentConfig {
+    /// @dev Foundry's default sender address, used when --sender flag is not provided
+    address internal constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
+
     /// @dev Initializes the factory by validating it against known factories and storing the address/name
     /// @param factoryAddress The CREATE2 factory address to use for deployments
     function validateAndInitializeFactoryOrRevert(address factoryAddress) internal {
@@ -134,8 +137,28 @@ abstract contract BaseDeployScript is DeploymentConfig {
         }
     }
 
+    /// @dev Validates that the --sender flag was explicitly set (not using Foundry's default)
+    function validateSenderFlagSetOrRevert() internal view {
+        Logger.logCheckStart("Checking --sender flag is set...");
+
+        if (msg.sender == FOUNDRY_DEFAULT_SENDER) {
+            Logger.logCheckFail("Using Foundry's default sender address");
+            Logger.logCheckDetail("You must use the --sender flag to specify the deployer address.");
+            Logger.logCheckDetail("Example: --sender 0xYourDeployerAddress");
+            revert("Must use --sender flag to specify deployer address");
+        }
+
+        Logger.logCheckPass("--sender flag is set");
+    }
+
     /// @dev Validates that the deployer is NOT the production Den Factory deployer
+    /// @notice This check relies on msg.sender which is set by the --sender CLI flag.
+    ///         It does NOT automatically reflect the --private-key or --account being used.
+    ///         Ensure --sender matches the actual signing key for this check to be meaningful.
     function validateNotProductionDenFactoryDeployerOrRevert() internal {
+        // First ensure --sender flag was explicitly set
+        validateSenderFlagSetOrRevert();
+
         Logger.logCheckStart("Checking deployer is not production Den Factory deployer...");
 
         // Read production deployer from TOML

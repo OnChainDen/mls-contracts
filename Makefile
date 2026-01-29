@@ -21,9 +21,9 @@
 # Safe 1.3.0 deployment
 .PHONY: deploy-safe-infra deploy-safe-infra-dry-run deploy-safe-multisigs deploy-safe-multisigs-dry-run
 
-# Safe Executor Module
+# Guardian Safe Executor Module
 .PHONY: deploy-batched-transaction
-.PHONY: deploy-safe-module safe-add-module safe-remove-module check-safe-module-status
+.PHONY: deploy-guardian-safe-module guardian-safe-add-module guardian-safe-remove-module check-guardian-module-status
 
 # Platform deployment
 .PHONY: deploy-independent-libs deploy-dependent-libs deploy-libraries deploy-contracts deploy-platform validate-signer-vars
@@ -63,12 +63,12 @@ help:
 	@echo "  deploy-safe-multisigs          Deploy Guardian and Deployer Safe multisigs"
 	@echo "  deploy-safe-multisigs-dry-run  Simulate Safe multisig deployment (no broadcast)"
 	@echo ""
-	@echo "Safe Executor Module:"
+	@echo "Guardian Safe Executor Module:"
 	@echo "  deploy-batched-transaction        Deploy BatchedTransaction contract"
-	@echo "  deploy-safe-module                Deploy SafeExecutorModule for a Safe"
-	@echo "  safe-add-module                   Approve adding a module to a Safe (Safe owner operation)"
-	@echo "  safe-remove-module                Approve removing a module from a Safe (Safe owner operation)"
-	@echo "  check-safe-module-status          Check approval status for a module transaction"
+	@echo "  deploy-guardian-safe-module       Deploy SafeExecutorModule for the Guardian Safe"
+	@echo "  guardian-safe-add-module          Approve adding the module to Guardian Safe (owner operation)"
+	@echo "  guardian-safe-remove-module       Approve removing the module from Guardian Safe (owner operation)"
+	@echo "  check-guardian-module-status      Check approval status for Guardian Safe module transaction"
 	@echo ""
 	@echo "Platform Deployment:"
 	@echo "  deploy-independent-libs   Deploy independent libraries (Policy, Admin) via CREATE2"
@@ -101,17 +101,16 @@ help:
 	@echo "  FACTORY   CREATE2 factory: arachnid, den-prod, den-nonprod (default: arachnid)"
 	@echo "  HD_PATH   Ledger HD derivation path (default: m/44'/60'/0'/0/0)"
 	@echo "  VERBOSITY Forge verbosity level (default: $(VERBOSITY))"
-	@echo "  SAFE_TYPE Safe type: guardian or deployer (for module commands)"
-	@echo "  EXECUTOR  Authorized EOA address for module (for deploy-safe-module)"
-	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for safe-add/remove-module)"
-	@echo "  ACTION    Action to check status for: add or remove (for check-safe-module-status)"
+	@echo "  EXECUTOR  Guardian Executor EOA address (for deploy-guardian-safe-module)"
+	@echo "  EXECUTE   Execute transaction if threshold met: true or false (for guardian-safe-add/remove-module)"
+	@echo "  ACTION    Action to check status for: add or remove (for check-guardian-module-status)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer"
 	@echo "  make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x..."
 	@echo "  make check-all-factories NETWORK=mainnet"
-	@echo "  make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
-	@echo "  make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
+	@echo "  make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer"
+	@echo "  make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner"
 
 # ==============================================================================
 # Core Commands
@@ -494,113 +493,97 @@ deploy-batched-transaction: validate-signer-vars
 		$(VERBOSITY)
 
 # ==============================================================================
-# Safe Executor Module Commands
+# Guardian Safe Executor Module Commands
 # ==============================================================================
 #
-# The SafeExecutorModule allows a designated EOA (the "Safe Executor EOA") to execute
-# contract calls on behalf of a Safe multisig. These commands handle deployment and
-# Safe owner operations for adding/removing the module.
+# The SafeExecutorModule allows a designated EOA (the "Guardian Executor EOA") to execute
+# contract calls on behalf of the Guardian Safe multisig. These commands handle deployment
+# and Guardian Safe owner operations for adding/removing the module.
 #
-# IMPORTANT: BatchedTransaction must be deployed BEFORE deploying SafeExecutorModules.
-# After module deployment, Safe owners must approve adding the module via safe-add-module.
+# IMPORTANT: BatchedTransaction must be deployed BEFORE deploying the Guardian SafeExecutorModule.
+# After module deployment, Guardian Safe owners must approve adding the module via guardian-safe-add-module.
 
-# Deploy Safe Module: Deploys the SafeExecutorModule for a Safe via CREATE2
-# The Safe must be deployed first. The Safe Executor EOA address is validated against DeploymentConfig.
+# Deploy Guardian Safe Module: Deploys the SafeExecutorModule for the Guardian Safe via CREATE2
+# The Guardian Safe must be deployed first. The Guardian Executor EOA address is validated against deployment.toml.
 #
 # Example:
-#   make deploy-safe-module SAFE_TYPE=guardian EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
-#   make deploy-safe-module SAFE_TYPE=deployer EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
-deploy-safe-module: validate-signer-vars
-ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
-endif
+#   make deploy-guardian-safe-module EXECUTOR=0x1234... NETWORK=sepolia ACCOUNT=my-deployer
+#   make deploy-guardian-safe-module EXECUTOR=0x5678... FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+deploy-guardian-safe-module: validate-signer-vars
 ifndef EXECUTOR
-	$(error EXECUTOR is required. Set EXECUTOR=<safe-executor-eoa-address>)
+	$(error EXECUTOR is required. Set EXECUTOR=<guardian-executor-eoa-address>)
 endif
-	@echo "Deploying SafeExecutorModule..."
+	@echo "Deploying Guardian SafeExecutorModule..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Safe Type: $(SAFE_TYPE)"
-	@echo "  Safe Executor EOA: $(EXECUTOR)"
-	forge script script/safe-module/DeploySafeExecutorModule.s.sol:DeploySafeExecutorModule \
-		--sig "run(address,string,address)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTOR) \
+	@echo "  Guardian Executor EOA: $(EXECUTOR)"
+	forge script script/safe-module/DeployGuardianSafeModule.s.sol:DeployGuardianSafeModule \
+		--sig "run(address,address)" $(FACTORY_ADDRESS) $(EXECUTOR) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
-# Add Module to Safe: Approve adding a module to a Safe (Safe owner operation)
-# Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# Add Module to Guardian Safe: Approve adding the module to Guardian Safe (owner operation)
+# Each Guardian Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
 # the transaction is automatically executed.
 #
 # Example:
-#   make safe-add-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
-#   make safe-add-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
-safe-add-module: validate-signer-vars
-ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
-endif
+#   make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make guardian-safe-add-module EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+guardian-safe-add-module: validate-signer-vars
 ifndef EXECUTE
 	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
 endif
-	@echo "Adding module to Safe (approve transaction)..."
+	@echo "Adding module to Guardian Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Execute if ready: $(EXECUTE)"
-	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
-		--sig "addModule(address,string,bool)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTE) \
+	forge script script/safe-module/ManageGuardianSafeModule.s.sol:ManageGuardianSafeModule \
+		--sig "addModule(address,bool)" $(FACTORY_ADDRESS) $(EXECUTE) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
-# Remove Module from Safe: Approve removing a module from a Safe (Safe owner operation)
-# Each Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
+# Remove Module from Guardian Safe: Approve removing the module from Guardian Safe (owner operation)
+# Each Guardian Safe owner runs this command to approve. When threshold is met and EXECUTE=true,
 # the transaction is automatically executed.
 #
 # Example:
-#   make safe-remove-module SAFE_TYPE=guardian EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
-#   make safe-remove-module SAFE_TYPE=deployer EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
-safe-remove-module: validate-signer-vars
-ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
-endif
+#   make guardian-safe-remove-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+#   make guardian-safe-remove-module EXECUTE=false FACTORY=den-nonprod NETWORK=mainnet SIGNER=ledger SENDER=0x...
+guardian-safe-remove-module: validate-signer-vars
 ifndef EXECUTE
 	$(error EXECUTE is required. Set EXECUTE=true or EXECUTE=false)
 endif
-	@echo "Removing module from Safe (approve transaction)..."
+	@echo "Removing module from Guardian Safe (approve transaction)..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Execute if ready: $(EXECUTE)"
-	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
-		--sig "removeModule(address,string,bool)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(EXECUTE) \
+	forge script script/safe-module/ManageGuardianSafeModule.s.sol:ManageGuardianSafeModule \
+		--sig "removeModule(address,bool)" $(FACTORY_ADDRESS) $(EXECUTE) \
 		--rpc-url $(RPC_URL) \
 		$(SIGNER_FLAGS) \
 		--broadcast \
 		$(VERBOSITY)
 
-# Check Module Status: Check approval status for a module transaction
+# Check Guardian Module Status: Check approval status for a Guardian Safe module transaction
 # Shows how many approvals exist and who has approved.
 #
 # Example:
-#   make check-safe-module-status SAFE_TYPE=guardian ACTION=add NETWORK=sepolia
-#   make check-safe-module-status SAFE_TYPE=deployer ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
-check-safe-module-status:
-ifndef SAFE_TYPE
-	$(error SAFE_TYPE is required. Set SAFE_TYPE=guardian or SAFE_TYPE=deployer)
-endif
+#   make check-guardian-module-status ACTION=add NETWORK=sepolia
+#   make check-guardian-module-status ACTION=remove FACTORY=den-nonprod NETWORK=mainnet
+check-guardian-module-status:
 ifndef ACTION
 	$(error ACTION is required. Set ACTION=add or ACTION=remove)
 endif
-	@echo "Checking module transaction status..."
+	@echo "Checking Guardian Safe module transaction status..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
-	@echo "  Safe Type: $(SAFE_TYPE)"
 	@echo "  Action: $(ACTION)"
-	forge script script/safe-module/SafeModuleTransaction.s.sol:SafeModuleTransaction \
-		--sig "checkStatus(address,string,string)" $(FACTORY_ADDRESS) $(SAFE_TYPE) $(ACTION) \
+	forge script script/safe-module/ManageGuardianSafeModule.s.sol:ManageGuardianSafeModule \
+		--sig "checkStatus(address,string)" $(FACTORY_ADDRESS) $(ACTION) \
 		--rpc-url $(RPC_URL)
 
 # ==============================================================================

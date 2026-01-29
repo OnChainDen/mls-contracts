@@ -15,7 +15,7 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title DeploySafeMultisigs
- * @notice Deploys Safe multisig wallets (Guardian and Deployer Safes)
+ * @notice Deploys Safe multisig wallets (Guardian and Admin Safes)
  * @dev This script deploys Safe multisig proxies using Solidity 0.7.6 for deterministic addresses.
  *
  *      IMPORTANT: This script must be compiled with the [profile.safe] foundry profile:
@@ -31,7 +31,7 @@ import {SafeInfrastructure} from "script/libraries/Types.sol";
  *
  *      This script deploys the following multisig wallets:
  *      - Guardian Safe (security operations multisig)
- *      - Deployer Safe (deployment operations multisig)
+ *      - Admin Safe (whitelist admin operations multisig)
  *
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
@@ -47,7 +47,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
     /// @dev Struct containing addresses for the deployed Safe multisig wallets
     struct SafeMultisigs {
         address guardianSafeAddress;
-        address deployerSafeAddress;
+        address adminSafeAddress;
     }
 
     /**
@@ -66,7 +66,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
 
         // Get Safe configurations (after init since they read from TOML)
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(variant);
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(variant);
+        (address[] memory adminOwnerAddresses, uint256 adminThreshold) = getAdminSafeConfig(variant);
 
         // Get Safe infrastructure addresses from deployment.toml
         SafeInfrastructure memory safeInfra = getExpectedSafeInfrastructureAddresses();
@@ -74,13 +74,13 @@ contract DeploySafeMultisigs is BaseDeployScript {
         // Start broadcasting transactions
         vm.startBroadcast();
 
-        // Deploy our two Safe Multisigs (Deployer and Guardian Safes)
+        // Deploy our two Safe Multisigs (Admin and Guardian Safes)
         SafeMultisigs memory safes = _deploySafeMultisigs({
             safeInfra: safeInfra,
             guardianOwnerAddresses: guardianOwnerAddresses,
             guardianThreshold: guardianThreshold,
-            deployerOwnerAddresses: deployerOwnerAddresses,
-            deployerThreshold: deployerThreshold
+            adminOwnerAddresses: adminOwnerAddresses,
+            adminThreshold: adminThreshold
         });
 
         // Stop broadcasting transactions
@@ -90,19 +90,19 @@ contract DeploySafeMultisigs is BaseDeployScript {
         _logDeployedAddresses(safes);
     }
 
-    /// @dev Deploys Guardian and Deployer Safe multisig wallets
+    /// @dev Deploys Guardian and Admin Safe multisig wallets
     /// @param safeInfra Safe infrastructure addresses needed for Safe deployment
     /// @param guardianOwnerAddresses Array of owner addresses for the Guardian Safe
     /// @param guardianThreshold Required signatures threshold for Guardian Safe
-    /// @param deployerOwnerAddresses Array of owner addresses for the Deployer Safe
-    /// @param deployerThreshold Required signatures threshold for Deployer Safe
-    /// @return safes Struct containing deployed Guardian and Deployer Safe addresses
+    /// @param adminOwnerAddresses Array of owner addresses for the Admin Safe
+    /// @param adminThreshold Required signatures threshold for Admin Safe
+    /// @return safes Struct containing deployed Guardian and Admin Safe addresses
     function _deploySafeMultisigs(
         SafeInfrastructure memory safeInfra,
         address[] memory guardianOwnerAddresses,
         uint256 guardianThreshold,
-        address[] memory deployerOwnerAddresses,
-        uint256 deployerThreshold
+        address[] memory adminOwnerAddresses,
+        uint256 adminThreshold
     ) internal returns (SafeMultisigs memory safes) {
         Logger.logSection("Safe Multisigs");
 
@@ -115,13 +115,13 @@ contract DeploySafeMultisigs is BaseDeployScript {
             name: "Guardian Safe"
         });
 
-        // Deploy Deployer Safe
-        safes.deployerSafeAddress = _deploySafeMultisig({
+        // Deploy Admin Safe
+        safes.adminSafeAddress = _deploySafeMultisig({
             safeInfra: safeInfra,
-            ownerAddresses: deployerOwnerAddresses,
-            threshold: deployerThreshold,
-            salt: DEPLOYER_SAFE_SALT,
-            name: "Deployer Safe"
+            ownerAddresses: adminOwnerAddresses,
+            threshold: adminThreshold,
+            salt: ADMIN_SAFE_SALT,
+            name: "Admin Safe"
         });
     }
 
@@ -235,8 +235,8 @@ contract DeploySafeMultisigs is BaseDeployScript {
         // Get the Guardian Safe configuration for the specified variant
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(safeVariant);
 
-        // Get the Deployer Safe configuration for the specified variant
-        (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(safeVariant);
+        // Get the Admin Safe configuration for the specified variant
+        (address[] memory adminOwnerAddresses, uint256 adminThreshold) = getAdminSafeConfig(safeVariant);
 
         // Log header
         Logger.logBoxHeader("Computed Safe Multisig Addresses");
@@ -258,16 +258,16 @@ contract DeploySafeMultisigs is BaseDeployScript {
         });
         Logger.logKeyValue("Guardian Safe", guardianSafeAddress);
 
-        // Compute Deployer Safe address
-        address deployerSafeAddress = _computeSafeMultisigAddress({
+        // Compute Admin Safe address
+        address adminSafeAddress = _computeSafeMultisigAddress({
             singletonAddress: singletonAddress,
             proxyFactoryAddress: proxyFactoryAddress,
             fallbackHandlerAddress: fallbackHandlerAddress,
-            ownerAddresses: deployerOwnerAddresses,
-            threshold: deployerThreshold,
-            salt: DEPLOYER_SAFE_SALT
+            ownerAddresses: adminOwnerAddresses,
+            threshold: adminThreshold,
+            salt: ADMIN_SAFE_SALT
         });
-        Logger.logKeyValue("Deployer Safe", deployerSafeAddress);
+        Logger.logKeyValue("Admin Safe", adminSafeAddress);
 
         // Log footer
         Logger.logBoxFooter();
@@ -319,7 +319,7 @@ contract DeploySafeMultisigs is BaseDeployScript {
     function _logDeployedAddresses(SafeMultisigs memory safes) internal pure {
         Logger.logBoxHeader(unicode"✅ Deployed Safe Multisig Addresses");
         Logger.logKeyValue("Guardian Safe", safes.guardianSafeAddress);
-        Logger.logKeyValue("Deployer Safe", safes.deployerSafeAddress);
+        Logger.logKeyValue("Admin Safe", safes.adminSafeAddress);
         Logger.logBoxFooter();
     }
 }

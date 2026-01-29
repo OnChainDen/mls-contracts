@@ -53,24 +53,22 @@ safe_simulate_tx_accessor = "0x205CeDEBdB936D473031f6140d50C11aeC948773"
 batched_transaction = "0xbaFA880487F37868903cd04d642a16CB3Ab54449"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
-# Addresses that depend on the nonprod deployer Safe
+# Addresses that depend on the nonprod admin Safe
 [factory.arachnid.env.nonprod]
 guardian_safe = "0xcB37Ec72D614D916ae192BFFAF23Ca6389eA9305"
-deployer_safe = "0x84246979f1678Cc3c5949106B958275aA15B807e"
-org_factory = "0x5e484DF0e6D1De01920e562E7a01c969cB0Cb7BE"
+admin_safe = "0x84246979f1678Cc3c5949106B958275aA15B807e"
+org_factory = "0xd27E88B7C428e506Db4A21C8331a1080BDB00849"
 whitelist_proxy = "0x8DA1681dD433be70Ec3783E5B5efF6CeC341c108"
 guardian_safe_executor_module = "0x1cB6C223a9b7c52F0B2CAdD4d4Cf8FFb0D25bC66"
-deployer_safe_executor_module = "0xc2503A2F2Bb2DaDB1Ca5Ec56B44ae5C3F6751c2F"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # Module addresses NOT_COMPUTED until production executor EOAs are set
 [factory.arachnid.env.prod]
 guardian_safe = "0xFDa614353A1E28110f6240097b74FAb86B1666e5"
-deployer_safe = "0x2669AE29f7cE3e1282D6e1dda02D29538b3390B0"
-org_factory = "0x07B196bDcd05b29F3c7f632B015327dF79221540"
+admin_safe = "0x2669AE29f7cE3e1282D6e1dda02D29538b3390B0"
+org_factory = "0x3286681A7C5D41A510b9e3eB262DAc00D14c02e8"
 whitelist_proxy = "0x62189FC56357D9e747693c3977dd86B129Ab38e0"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
 # Den Singleton Factory (Non-Production)
@@ -107,24 +105,22 @@ safe_simulate_tx_accessor = "0x767D3350DDf498A3DBBBf7B1c30b1D97F217864d"
 batched_transaction = "0x0cedE35f7bac439D35e261E386315c62C17d6Ec1"
 
 # Environment: nonprod (1-of-1 Safe with test executors)
-# Addresses that depend on the nonprod deployer Safe
+# Addresses that depend on the nonprod admin Safe
 [factory.den-nonprod.env.nonprod]
 guardian_safe = "0x4fbeF24b88228A6639409150214bb5A798930fA9"
-deployer_safe = "0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f"
-org_factory = "0xFd47FE7f256BCA728d78D953f2817b29F193dAd3"
+admin_safe = "0xa33BeF869E492fA1EE3aAC88E3ceFE2Fa9dAc04f"
+org_factory = "0x13Ed4cC4B6B70acB3b27389bf23BFc20bfAA0Bd8"
 whitelist_proxy = "0xd1981BfD5842d57d893b72fC0Ec1F89a5b188221"
 guardian_safe_executor_module = "0xe5e4B8F410a13ce70dbFAB36409ab9f2F6577EFA"
-deployer_safe_executor_module = "0x6dAc957D9d5F5ea2214d45f3aEe58309Ae7b2C62"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # Module addresses NOT_COMPUTED until production executor EOAs are set
 [factory.den-nonprod.env.prod]
 guardian_safe = "0xdB9d134E6207436AbAD0FD7eE580Dd60bC004458"
-deployer_safe = "0xA9Ab89FF5714c4e08d46B85577529D813834Fa0c"
-org_factory = "0x5d56E6f68fD5bdc425f07913fdC1bA25578d6520"
+admin_safe = "0xA9Ab89FF5714c4e08d46B85577529D813834Fa0c"
+org_factory = "0x68f961bcf673F2DA9Ad54338d6a603d25B90964e"
 whitelist_proxy = "0x6d140cE6a15226543Ac24aa57367784ed8adC8Cf"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
 # Den Singleton Factory (Production)
@@ -169,21 +165,19 @@ batched_transaction = "0x0000000000000000000000000000000000000000"
 # TODO: Compute addresses after deploying prod Den Singleton Factory
 [factory.den-prod.env.nonprod]
 guardian_safe = "0x0000000000000000000000000000000000000000"
-deployer_safe = "0x0000000000000000000000000000000000000000"
+admin_safe = "0x0000000000000000000000000000000000000000"
 org_factory = "0x0000000000000000000000000000000000000000"
 whitelist_proxy = "0x0000000000000000000000000000000000000000"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # TODO: Compute addresses after setting production Safe owners and executor EOAs
 [factory.den-prod.env.prod]
 guardian_safe = "0x0000000000000000000000000000000000000000"
-deployer_safe = "0x0000000000000000000000000000000000000000"
+admin_safe = "0x0000000000000000000000000000000000000000"
 org_factory = "0x0000000000000000000000000000000000000000"
 whitelist_proxy = "0x0000000000000000000000000000000000000000"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
-deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ==============================================================================
 # SAFE MULTISIG CONFIGURATIONS
@@ -203,14 +197,13 @@ deployer_safe_executor_module = "0x0000000000000000000000000000000000000000"
 guardian_safe_threshold = 1
 guardian_safe_owner_1 = "0x22002e8661A780d61EF4c86F4a9fFa843A6fea20"
 
-# Deployer Safe config (1-of-1)
-deployer_safe_threshold = 1
-deployer_safe_owner_1 = "0x8DA06Ab9bBb0736d36c92E10B1d6e23A890FD32F"
+# Admin Safe config (1-of-1)
+admin_safe_threshold = 1
+admin_safe_owner_1 = "0x8DA06Ab9bBb0736d36c92E10B1d6e23A890FD32F"
 
-# Safe Executor EOAs (authorized to execute via modules)
-# For local/testnet testing, use the test-guardian-executor and test-deployer-executor foundry accounts
+# Guardian Executor EOA (authorized to execute via Guardian Safe module)
+# For local/testnet testing, use the test-guardian-executor foundry account
 guardian_executor_eoa = "0x66FB51BF8C7a973a278578A2E381Fb5e89796DE1"
-deployer_executor_eoa = "0xBd7DF30E88C5C7fD54F2Ac77a1302581d577E0Fd"
 
 # ------------------------------------------------------------------------------
 # Production Safe Configuration
@@ -226,13 +219,12 @@ guardian_safe_owner_1 = "0x1111111111111111111111111111111111111111"
 guardian_safe_owner_2 = "0x2222222222222222222222222222222222222222"
 guardian_safe_owner_3 = "0x6666666666666666666666666666666666666666"
 
-# Deployer Safe config (2-of-3)
-deployer_safe_threshold = 2
-deployer_safe_owner_1 = "0x3333333333333333333333333333333333333333"
-deployer_safe_owner_2 = "0x4444444444444444444444444444444444444444"
-deployer_safe_owner_3 = "0x5555555555555555555555555555555555555555"
+# Admin Safe config (2-of-3)
+admin_safe_threshold = 2
+admin_safe_owner_1 = "0x3333333333333333333333333333333333333333"
+admin_safe_owner_2 = "0x4444444444444444444444444444444444444444"
+admin_safe_owner_3 = "0x5555555555555555555555555555555555555555"
 
-# Safe Executor EOAs (authorized to execute via modules)
-# TODO: Update with production Safe Executor EOA addresses before mainnet deployment
+# Guardian Executor EOA (authorized to execute via Guardian Safe module)
+# TODO: Update with production Guardian Executor EOA address before mainnet deployment
 guardian_executor_eoa = "0x0000000000000000000000000000000000000000"
-deployer_executor_eoa = "0x0000000000000000000000000000000000000000"
