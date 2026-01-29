@@ -8,6 +8,7 @@ import {DeploymentConfig} from "script/base/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
+import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
  * @title BaseDeployScript
@@ -175,5 +176,89 @@ abstract contract BaseDeployScript is DeploymentConfig {
         Logger.logBoxFooter();
         Logger.logKeyValue("Deployer EOA", msg.sender);
         Logger.logEmptyLine();
+    }
+
+    /// @dev Verifies that Safe infrastructure is deployed at the expected addresses from deployment.toml
+    ///      NOTE: validateAndInitializeFactoryOrRevert() must be called first
+    function validateSafeInfrastructureDeployedOrRevert() internal {
+        Logger.logSection("Verify Safe 1.3.0 Infrastructure");
+
+        // Get expected Safe infrastructure addresses from deployment.toml
+        SafeInfrastructure memory expectedSafeInfra = getExpectedSafeInfrastructureAddresses();
+
+        bool allDeployed = true;
+
+        // Check if Safe singleton is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.singletonAddress)) {
+            Logger.logFail("GnosisSafe Singleton NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.singletonAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("GnosisSafe Singleton deployed at expected address");
+        }
+
+        // Check if Safe proxy factory is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.proxyFactoryAddress)) {
+            Logger.logFail("GnosisSafeProxyFactory NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.proxyFactoryAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("GnosisSafeProxyFactory deployed at expected address");
+        }
+
+        // Check if fallback handler is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.fallbackHandlerAddress)) {
+            Logger.logFail("CompatibilityFallbackHandler NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.fallbackHandlerAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("CompatibilityFallbackHandler deployed at expected address");
+        }
+
+        // Check if MultiSend is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.multiSendAddress)) {
+            Logger.logFail("MultiSend NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.multiSendAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("MultiSend deployed at expected address");
+        }
+
+        // Check if MultiSendCallOnly is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.multiSendCallOnlyAddress)) {
+            Logger.logFail("MultiSendCallOnly NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.multiSendCallOnlyAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("MultiSendCallOnly deployed at expected address");
+        }
+
+        // Check if CreateCall is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.createCallAddress)) {
+            Logger.logFail("CreateCall NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.createCallAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("CreateCall deployed at expected address");
+        }
+
+        // Check if SimulateTxAccessor is deployed
+        if (!Create2Utils.isContractDeployedAtAddress(expectedSafeInfra.simulateTxAccessorAddress)) {
+            Logger.logFail("SimulateTxAccessor NOT DEPLOYED at expected address");
+            Logger.logKeyValue("  Expected", expectedSafeInfra.simulateTxAccessorAddress);
+            allDeployed = false;
+        } else {
+            Logger.logPass("SimulateTxAccessor deployed at expected address");
+        }
+
+        if (!allDeployed) {
+            Logger.logEmptyLine();
+            Logger.logWarn("WARNING: Safe infrastructure is not deployed!");
+            Logger.logIndented(
+                "Run DeploySafeInfrastructure.s.sol first (FOUNDRY_PROFILE=safe), then re-run this script."
+            );
+            Logger.logEmptyLine();
+            revert("Safe infrastructure is not deployed at expected addresses");
+        }
     }
 }

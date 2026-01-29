@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity 0.7.6;
 
 // Safe 1.3.0 imports
 import {GnosisSafe} from "@safe/GnosisSafe.sol";
-import {SimulateTxAccessor} from "@safe/accessors/SimulateTxAccessor.sol";
 import {CompatibilityFallbackHandler} from "@safe/handler/CompatibilityFallbackHandler.sol";
-import {CreateCall} from "@safe/libraries/CreateCall.sol";
-import {MultiSend} from "@safe/libraries/MultiSend.sol";
-import {MultiSendCallOnly} from "@safe/libraries/MultiSendCallOnly.sol";
 import {GnosisSafeProxy} from "@safe/proxies/GnosisSafeProxy.sol";
 import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
 
@@ -19,42 +15,40 @@ import {Logger} from "script/libraries/Logger.sol";
 import {SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**
- * @title DeploySafe
- * @notice Deploys Safe 1.3.0 infrastructure and Safe multisig wallets (Guardian and Deployer Safes)
- * @dev This script deploys Safe contracts using Solidity 0.7.6 for deterministic addresses that
- *      match official Safe 1.3.0 deployments.
+ * @title DeploySafeMultisigs
+ * @notice Deploys Safe multisig wallets (Guardian and Deployer Safes)
+ * @dev This script deploys Safe multisig proxies using Solidity 0.7.6 for deterministic addresses.
  *
  *      IMPORTANT: This script must be compiled with the [profile.safe] foundry profile:
- *        FOUNDRY_PROFILE=safe forge script script/safe/DeploySafe.s.sol:DeploySafe \
+ *        FOUNDRY_PROFILE=safe forge script script/safe/DeploySafeMultisigs.s.sol:DeploySafeMultisigs \
  *          --sig "run(address)" <CREATE2_FACTORY_ADDRESS> \
  *          --rpc-url $RPC_URL \
  *          --broadcast \
  *          -vvvv
  *
- *      This script deploys the following contracts:
- *      1. Safe Infrastructure (GnosisSafe singleton, proxy factory, handlers, libraries)
- *      2. Safe Multisigs (Guardian Safe, Deployer Safe)
+ *      PREREQUISITE: Safe infrastructure must be deployed first using DeploySafeInfrastructure.s.sol.
+ *      This script will verify that the Safe Singleton is deployed before attempting to deploy
+ *      multisig proxies.
+ *
+ *      This script deploys the following multisig wallets:
+ *      - Guardian Safe (security operations multisig)
+ *      - Deployer Safe (deployment operations multisig)
  *
  *      SAFETY CHECKS:
  *      1. Verifies the provided CREATE2 factory is a known factory from deployment.toml
  *      2. Verifies the provided CREATE2 factory is deployed
  *      3. Verifies that the deployer is not the production Den Factory deployer
- *      4. Warns and requires confirmation when targeting production chains
- *      5. Requires interactive confirmation when broadcasting
+ *      4. Verifies that Safe infrastructure is deployed at expected addresses
+ *      5. Warns and requires confirmation when targeting production chains
+ *      6. Requires interactive confirmation when broadcasting
  *
  * @author Den Technologies Inc
  */
-contract DeploySafe is BaseDeployScript {
+contract DeploySafeMultisigs is BaseDeployScript {
     /// @dev Struct containing addresses for the deployed Safe multisig wallets
     struct SafeMultisigs {
         address guardianSafeAddress;
         address deployerSafeAddress;
-    }
-
-    /// @dev Struct containing all deployed contract addresses
-    struct DeployedContracts {
-        SafeInfrastructure safeInfra;
-        SafeMultisigs safes;
     }
 
     /**
@@ -63,7 +57,10 @@ contract DeploySafe is BaseDeployScript {
      */
     function run(address factoryAddress) external {
         // Common deployment initialization (factory validation, confirmations, header logging)
-        validateAndInitializeDeploymentOrRevert(factoryAddress, "DeploySafe");
+        validateAndInitializeDeploymentOrRevert(factoryAddress, "DeploySafeMultisigs");
+
+        // Verify Safe infrastructure is deployed (CRITICAL for security)
+        validateSafeInfrastructureDeployedOrRevert();
 
         // Determine variant based on chain (prod for production chains, nonprod otherwise)
         string memory variant = _isProductionChain() ? "prod" : "nonprod";
@@ -72,11 +69,11 @@ contract DeploySafe is BaseDeployScript {
         (address[] memory guardianOwnerAddresses, uint256 guardianThreshold) = getGuardianSafeConfig(variant);
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(variant);
 
+        // Get Safe infrastructure addresses from deployment.toml
+        SafeInfrastructure memory safeInfra = getExpectedSafeInfrastructureAddresses();
+
         // Start broadcasting transactions
         vm.startBroadcast();
-
-        // Deploy Safe Infrastructure
-        SafeInfrastructure memory safeInfra = _deploySafeInfrastructure();
 
         // Deploy our two Safe Multisigs (Deployer and Guardian Safes)
         SafeMultisigs memory safes = _deploySafeMultisigs({
@@ -90,58 +87,8 @@ contract DeploySafe is BaseDeployScript {
         // Stop broadcasting transactions
         vm.stopBroadcast();
 
-        // Build the complete deployed contracts struct for logging
-        DeployedContracts memory contracts = DeployedContracts({safeInfra: safeInfra, safes: safes});
-
         // Log deployed addresses
-        _logDeployedAddresses(contracts);
-    }
-
-    /// @dev Deploys all Safe 1.3.0 infrastructure contracts via CREATE2 if not already deployed
-    /// @return safeInfra Struct containing all deployed Safe infrastructure addresses
-    function _deploySafeInfrastructure() internal returns (SafeInfrastructure memory safeInfra) {
-        Logger.logSection("Safe 1.3.0 Infrastructure (CREATE2)");
-
-        // Deploy Safe Singleton (master copy) - GnosisSafe for 1.3.0
-        (safeInfra.singletonAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode, "GnosisSafe Singleton"
-        );
-
-        // Deploy Safe Proxy Factory - GnosisSafeProxyFactory for 1.3.0
-        (safeInfra.proxyFactoryAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress,
-            SAFE_PROXY_FACTORY_SALT,
-            type(GnosisSafeProxyFactory).creationCode,
-            "GnosisSafeProxyFactory"
-        );
-
-        // Deploy Compatibility Fallback Handler
-        (safeInfra.fallbackHandlerAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress,
-            SAFE_FALLBACK_HANDLER_SALT,
-            type(CompatibilityFallbackHandler).creationCode,
-            "CompatibilityFallbackHandler"
-        );
-
-        // Deploy MultiSend
-        (safeInfra.multiSendAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress, SAFE_MULTISEND_SALT, type(MultiSend).creationCode, "MultiSend"
-        );
-
-        // Deploy MultiSendCallOnly
-        (safeInfra.multiSendCallOnlyAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress, SAFE_MULTISEND_CALL_ONLY_SALT, type(MultiSendCallOnly).creationCode, "MultiSendCallOnly"
-        );
-
-        // Deploy CreateCall
-        (safeInfra.createCallAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress, SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode, "CreateCall"
-        );
-
-        // Deploy SimulateTxAccessor
-        (safeInfra.simulateTxAccessorAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress, SAFE_SIMULATE_TX_ACCESSOR_SALT, type(SimulateTxAccessor).creationCode, "SimulateTxAccessor"
-        );
+        _logDeployedAddresses(safes);
     }
 
     /// @dev Deploys Guardian and Deployer Safe multisig wallets
@@ -259,7 +206,7 @@ contract DeploySafe is BaseDeployScript {
     }
 
     /**
-     * @notice Computes and displays expected Safe addresses for a specific variant without deploying
+     * @notice Computes and displays expected Safe multisig addresses for a specific variant without deploying
      * @dev Use this to preview addresses before deployment. Does not require RPC connection.
      * @param factoryAddress Address of the CREATE2 factory to use for address computation
      * @param safeVariant The Safe configuration variant to use ("prod" or "nonprod")
@@ -282,12 +229,12 @@ contract DeploySafe is BaseDeployScript {
         (address[] memory deployerOwnerAddresses, uint256 deployerThreshold) = getDeployerSafeConfig(safeVariant);
 
         // Log header
-        Logger.logBoxHeader("Computed Safe 1.3.0 Addresses");
+        Logger.logBoxHeader("Computed Safe Multisig Addresses");
         Logger.logKeyValue("CREATE2 Factory", factoryAddress);
         Logger.logKeyValue("Safe Variant", safeVariant);
         Logger.logEmptyLine();
 
-        // Compute Safe Infrastructure addresses
+        // Compute Safe Infrastructure addresses (needed for Safe proxy address computation)
         SafeInfrastructure memory safeInfra = _computeSafeInfrastructureAddresses(factoryAddress);
 
         // Compute Safe Multisig addresses
@@ -299,61 +246,41 @@ contract DeploySafe is BaseDeployScript {
             deployerThreshold: deployerThreshold
         });
 
-        // Build the complete contracts struct for logging
-        DeployedContracts memory contracts = DeployedContracts({safeInfra: safeInfra, safes: safes});
+        // Log footer
+        Logger.logBoxFooter();
 
-        // Log computed addresses summary
-        _logComputedAddresses(contracts);
+        // Suppress unused variable warning
+        safes;
     }
 
-    /// @dev Computes all Safe 1.3.0 infrastructure contract addresses without deploying
-    /// @param factoryAddress Address of the CREATE2 factory to use for address computation
+    /// @dev Computes all Safe 1.3.0 infrastructure contract addresses without deploying (needed for proxy address
+    /// computation) @param factoryAddress Address of the CREATE2 factory to use for address computation
     /// @return safeInfra Struct containing all computed Safe infrastructure addresses
     function _computeSafeInfrastructureAddresses(address factoryAddress)
         internal
         pure
         returns (SafeInfrastructure memory safeInfra)
     {
-        Logger.logSection("Safe 1.3.0 Infrastructure");
-
         // Compute Safe Singleton address
         safeInfra.singletonAddress =
             Create2Utils.computeAddress(factoryAddress, SAFE_SINGLETON_SALT, type(GnosisSafe).creationCode);
-        Logger.logKeyValue("GnosisSafe Singleton", safeInfra.singletonAddress);
 
         // Compute Safe Proxy Factory address
         safeInfra.proxyFactoryAddress = Create2Utils.computeAddress(
             factoryAddress, SAFE_PROXY_FACTORY_SALT, type(GnosisSafeProxyFactory).creationCode
         );
-        Logger.logKeyValue("GnosisSafeProxyFactory", safeInfra.proxyFactoryAddress);
 
-        // Compute Compatibility Fallback Handler address
+        // Compute Compatibility Fallback Handler address (needed for Safe initialization)
         safeInfra.fallbackHandlerAddress = Create2Utils.computeAddress(
             factoryAddress, SAFE_FALLBACK_HANDLER_SALT, type(CompatibilityFallbackHandler).creationCode
         );
-        Logger.logKeyValue("CompatibilityFallbackHandler", safeInfra.fallbackHandlerAddress);
 
-        // Compute MultiSend address
-        safeInfra.multiSendAddress =
-            Create2Utils.computeAddress(factoryAddress, SAFE_MULTISEND_SALT, type(MultiSend).creationCode);
-        Logger.logKeyValue("MultiSend", safeInfra.multiSendAddress);
-
-        // Compute MultiSendCallOnly address
-        safeInfra.multiSendCallOnlyAddress = Create2Utils.computeAddress(
-            factoryAddress, SAFE_MULTISEND_CALL_ONLY_SALT, type(MultiSendCallOnly).creationCode
-        );
-        Logger.logKeyValue("MultiSendCallOnly", safeInfra.multiSendCallOnlyAddress);
-
-        // Compute CreateCall address
-        safeInfra.createCallAddress =
-            Create2Utils.computeAddress(factoryAddress, SAFE_CREATE_CALL_SALT, type(CreateCall).creationCode);
-        Logger.logKeyValue("CreateCall", safeInfra.createCallAddress);
-
-        // Compute SimulateTxAccessor address
-        safeInfra.simulateTxAccessorAddress = Create2Utils.computeAddress(
-            factoryAddress, SAFE_SIMULATE_TX_ACCESSOR_SALT, type(SimulateTxAccessor).creationCode
-        );
-        Logger.logKeyValue("SimulateTxAccessor", safeInfra.simulateTxAccessorAddress);
+        // Note: We don't need the other infrastructure addresses for multisig deployment
+        // but we set them to zero for completeness
+        safeInfra.multiSendAddress = address(0);
+        safeInfra.multiSendCallOnlyAddress = address(0);
+        safeInfra.createCallAddress = address(0);
+        safeInfra.simulateTxAccessorAddress = address(0);
     }
 
     /// @dev Computes Guardian and Deployer Safe multisig addresses without deploying
@@ -424,40 +351,11 @@ contract DeploySafe is BaseDeployScript {
     }
 
     /// @dev Logs all deployed contract addresses in a formatted summary
-    /// @param contracts Complete set of deployed contract addresses
-    function _logDeployedAddresses(DeployedContracts memory contracts) internal pure {
-        Logger.logBoxHeader(unicode"✅ Deployed Safe 1.3.0 Contract Addresses");
-        Logger.logIndented("Safe Infrastructure:");
-        Logger.logKeyValue("  GnosisSafe Singleton", contracts.safeInfra.singletonAddress);
-        Logger.logKeyValue("  GnosisSafeProxyFactory", contracts.safeInfra.proxyFactoryAddress);
-        Logger.logKeyValue("  FallbackHandler", contracts.safeInfra.fallbackHandlerAddress);
-        Logger.logKeyValue("  MultiSend", contracts.safeInfra.multiSendAddress);
-        Logger.logKeyValue("  MultiSendCallOnly", contracts.safeInfra.multiSendCallOnlyAddress);
-        Logger.logKeyValue("  CreateCall", contracts.safeInfra.createCallAddress);
-        Logger.logKeyValue("  SimulateTxAccessor", contracts.safeInfra.simulateTxAccessorAddress);
-        Logger.logEmptyLine();
-        Logger.logIndented("Safe Multisigs:");
-        Logger.logKeyValue("  Guardian Safe", contracts.safes.guardianSafeAddress);
-        Logger.logKeyValue("  Deployer Safe", contracts.safes.deployerSafeAddress);
-        Logger.logBoxFooter();
-    }
-
-    /// @dev Logs all computed contract addresses in a formatted summary
-    /// @param contracts Complete set of computed contract addresses
-    function _logComputedAddresses(DeployedContracts memory contracts) internal pure {
-        Logger.logBoxHeader("Computed Safe 1.3.0 Contract Addresses");
-        Logger.logIndented("Safe Infrastructure:");
-        Logger.logKeyValue("  GnosisSafe Singleton", contracts.safeInfra.singletonAddress);
-        Logger.logKeyValue("  GnosisSafeProxyFactory", contracts.safeInfra.proxyFactoryAddress);
-        Logger.logKeyValue("  FallbackHandler", contracts.safeInfra.fallbackHandlerAddress);
-        Logger.logKeyValue("  MultiSend", contracts.safeInfra.multiSendAddress);
-        Logger.logKeyValue("  MultiSendCallOnly", contracts.safeInfra.multiSendCallOnlyAddress);
-        Logger.logKeyValue("  CreateCall", contracts.safeInfra.createCallAddress);
-        Logger.logKeyValue("  SimulateTxAccessor", contracts.safeInfra.simulateTxAccessorAddress);
-        Logger.logEmptyLine();
-        Logger.logIndented("Safe Multisigs:");
-        Logger.logKeyValue("  Guardian Safe", contracts.safes.guardianSafeAddress);
-        Logger.logKeyValue("  Deployer Safe", contracts.safes.deployerSafeAddress);
+    /// @param safes Deployed Safe multisig addresses
+    function _logDeployedAddresses(SafeMultisigs memory safes) internal pure {
+        Logger.logBoxHeader(unicode"✅ Deployed Safe Multisig Addresses");
+        Logger.logKeyValue("Guardian Safe", safes.guardianSafeAddress);
+        Logger.logKeyValue("Deployer Safe", safes.deployerSafeAddress);
         Logger.logBoxFooter();
     }
 }

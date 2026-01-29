@@ -252,33 +252,65 @@ The Safe profile is defined in `foundry.toml` under `[profile.safe]`.
 
 ### Safe Deployment Commands
 
-Safe deployment uses the `FOUNDRY_PROFILE=safe` environment variable internally, so you don't need to set it manually.
+Safe deployment is split into **two separate steps** for security. This prevents deploying Safe proxy wallets if the Safe Singleton (implementation) deployment fails, which could allow attackers to frontrun initialization.
 
-#### Deploy Safe Infrastructure and Multisigs
+#### Step 1: Deploy Safe Infrastructure
 
 ```bash
-# Deploy Safe to a local Anvil instance
-make deploy-safe ACCOUNT=my-deployer
+# Deploy Safe infrastructure to a local Anvil instance
+make deploy-safe-infra ACCOUNT=my-deployer
 
-# Deploy Safe to Sepolia testnet
-make deploy-safe NETWORK=sepolia ACCOUNT=my-deployer
+# Deploy Safe infrastructure to Sepolia testnet
+make deploy-safe-infra NETWORK=sepolia ACCOUNT=my-deployer
 
-# Deploy Safe using Den non-prod factory
-make deploy-safe FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+# Deploy Safe infrastructure using Den non-prod factory
+make deploy-safe-infra FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
 
-# Deploy Safe using a Ledger
-make deploy-safe NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+# Deploy Safe infrastructure using a Ledger
+make deploy-safe-infra NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
 ```
 
-This deploys:
-- **Safe Infrastructure**: GnosisSafe singleton, GnosisSafeProxyFactory, CompatibilityFallbackHandler, MultiSend, MultiSendCallOnly, CreateCall, SimulateTxAccessor
-- **Safe Multisigs**: Guardian Safe and Deployer Safe (configured per chain in `DeploymentConfig.sol`)
+This deploys the Safe infrastructure contracts:
+- GnosisSafe singleton (master copy)
+- GnosisSafeProxyFactory
+- CompatibilityFallbackHandler
+- MultiSend
+- MultiSendCallOnly
+- CreateCall
+- SimulateTxAccessor
+
+#### Step 2: Deploy Safe Multisigs
+
+After infrastructure is deployed, deploy the Guardian and Deployer Safe multisigs:
+
+```bash
+# Deploy Safe multisigs to a local Anvil instance
+make deploy-safe-multisigs ACCOUNT=my-deployer
+
+# Deploy Safe multisigs to Sepolia testnet
+make deploy-safe-multisigs NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy Safe multisigs using Den non-prod factory
+make deploy-safe-multisigs FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy Safe multisigs using a Ledger
+make deploy-safe-multisigs NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+```
+
+This script:
+1. **Verifies** that Safe infrastructure is deployed at expected addresses
+2. Deploys the Guardian Safe and Deployer Safe multisig proxies
+
+> **Security Note**: The multisig deployment script will **fail** if Safe infrastructure is not deployed. This prevents the dangerous scenario where Safe proxies are deployed without the Singleton, which would allow attackers to call `setup()` and take control of the multisigs.
 
 #### Preview Safe Addresses (Dry Run)
 
 ```bash
-# Simulate deployment without broadcasting transactions
-make deploy-safe-dry-run NETWORK=sepolia
+# Simulate infrastructure deployment without broadcasting
+make deploy-safe-infra-dry-run NETWORK=sepolia
+
+# Simulate multisig deployment without broadcasting
+make deploy-safe-multisigs-dry-run NETWORK=sepolia
 ```
 
 #### Compute Expected Safe Addresses
@@ -287,19 +319,19 @@ Preview the expected Safe addresses without deploying. This is useful for verify
 
 ```bash
 # Compute addresses for Arachnid factory
-make compute-safe-addresses NETWORK=sepolia
+make compute-addresses FACTORY=arachnid
 
 # Compute addresses for Den non-prod factory
-make compute-safe-addresses FACTORY=den-nonprod NETWORK=mainnet
+make compute-addresses FACTORY=den-nonprod
 ```
 
 ### Safe Deployment Workflow
 
 Safe deployment only needs to happen **once per chain per factory**. After the first deployment:
 
-1. The deployed addresses are **hardcoded** in `DeploymentConfig.sol`
+1. The deployed addresses are **hardcoded** in `deployment.toml`
 2. The `DeployContracts.s.sol` script **verifies** that Safes are deployed before proceeding
-3. Running `deploy-safe` again will **skip** already-deployed contracts (idempotent)
+3. Running deploy commands again will **skip** already-deployed contracts (idempotent)
 
 The full deployment order is:
 
@@ -307,8 +339,11 @@ The full deployment order is:
 1. Deploy CREATE2 Factory (if not already deployed)
    └── make deploy-arachnid-factory  OR  make deploy-den-factory
 
-2. Deploy Safe Infrastructure and Multisigs
-   └── make deploy-safe
+2a. Deploy Safe Infrastructure
+    └── make deploy-safe-infra
+
+2b. Deploy Safe Multisigs (verifies infra is deployed first)
+    └── make deploy-safe-multisigs
 
 3. Deploy Platform Libraries (two stages due to inter-library dependencies)
    ├── Stage 1: make deploy-independent-libs  (Policy, Admin)
@@ -319,7 +354,7 @@ The full deployment order is:
    └── make deploy-contracts
 ```
 
-Or use the convenience target that runs steps 2-4:
+Or use the convenience target that runs steps 2a-4:
 
 ```bash
 make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
@@ -577,9 +612,12 @@ make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 # -----------------------------------------------------------------------------
 # Safe 1.3.0 must be deployed BEFORE platform contracts.
 # This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
-# Safe deployment is idempotent - it will skip already deployed contracts.
+# Safe deployment is split into two steps for security:
+#   - Step 4a: Infrastructure (singleton, proxy factory, handlers)
+#   - Step 4b: Multisigs (verifies infra is deployed first)
 
-make deploy-safe ACCOUNT=$ACCOUNT
+make deploy-safe-infra ACCOUNT=$ACCOUNT
+make deploy-safe-multisigs ACCOUNT=$ACCOUNT
 
 # -----------------------------------------------------------------------------
 # Step 5: Deploy platform libraries (two stages)
@@ -669,9 +707,13 @@ make deploy-den-factory ACCOUNT=$DEN_DEPLOYER_ACCOUNT
 # -----------------------------------------------------------------------------
 # Safe 1.3.0 must be deployed BEFORE platform contracts.
 # This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
+# Safe deployment is split into two steps for security:
+#   - Step 4a: Infrastructure (singleton, proxy factory, handlers)
+#   - Step 4b: Multisigs (verifies infra is deployed first)
 # IMPORTANT: Use FACTORY=den-nonprod to target the correct factory address.
 
-make deploy-safe ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-safe-infra ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+make deploy-safe-multisigs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
 
 # -----------------------------------------------------------------------------
 # Step 5: Deploy platform libraries (two stages)
@@ -810,9 +852,10 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
 | `make fund-den-deployer` | Fund a Den factory deployer (requires `DEN_DEPLOYER_ADDRESS`) |
 | `make deploy-den-factory` | Deploy the Den Singleton Factory |
-| `make deploy-safe` | Deploy Safe 1.3.0 infrastructure and multisigs |
-| `make deploy-safe-dry-run` | Simulate Safe deployment (no broadcast) |
-| `make compute-safe-addresses` | Preview expected Safe addresses |
+| `make deploy-safe-infra` | Deploy Safe 1.3.0 infrastructure contracts |
+| `make deploy-safe-infra-dry-run` | Simulate Safe infrastructure deployment (no broadcast) |
+| `make deploy-safe-multisigs` | Deploy Guardian and Deployer Safe multisigs |
+| `make deploy-safe-multisigs-dry-run` | Simulate Safe multisig deployment (no broadcast) |
 | `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin) via CREATE2 |
 | `make deploy-dependent-libs` | Deploy dependent libraries (Init, AccountSig) via CREATE2 |
 | `make deploy-libraries` | Deploy all platform libraries (runs both stages) |
