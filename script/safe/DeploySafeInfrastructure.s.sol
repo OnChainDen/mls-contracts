@@ -85,10 +85,7 @@ contract DeploySafeInfrastructure is BaseDeployScript {
 
         // Deploy Safe Proxy Factory - SafeProxyFactory for 1.4.1
         (safeInfra.proxyFactoryAddress,) = Create2Utils.deployIfNotExists(
-            _factoryAddress,
-            SAFE_PROXY_FACTORY_SALT,
-            type(SafeProxyFactory).creationCode,
-            "SafeProxyFactory"
+            _factoryAddress, SAFE_PROXY_FACTORY_SALT, type(SafeProxyFactory).creationCode, "SafeProxyFactory"
         );
 
         // Deploy Compatibility Fallback Handler
@@ -160,9 +157,8 @@ contract DeploySafeInfrastructure is BaseDeployScript {
         Logger.logKeyValue("SafeL2 Singleton", safeInfra.singletonAddress);
 
         // Compute Safe Proxy Factory address
-        safeInfra.proxyFactoryAddress = Create2Utils.computeAddress(
-            factoryAddress, SAFE_PROXY_FACTORY_SALT, type(SafeProxyFactory).creationCode
-        );
+        safeInfra.proxyFactoryAddress =
+            Create2Utils.computeAddress(factoryAddress, SAFE_PROXY_FACTORY_SALT, type(SafeProxyFactory).creationCode);
         Logger.logKeyValue("SafeProxyFactory", safeInfra.proxyFactoryAddress);
 
         // Compute Compatibility Fallback Handler address
