@@ -13,7 +13,7 @@ import {GnosisSafeProxy} from "@safe/proxies/GnosisSafeProxy.sol";
 import {GnosisSafeProxyFactory} from "@safe/proxies/GnosisSafeProxyFactory.sol";
 
 // Shared script utilities
-import {BaseDeployScript} from "script/BaseDeployScript.sol";
+import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {SafeInfrastructure} from "script/libraries/Types.sol";

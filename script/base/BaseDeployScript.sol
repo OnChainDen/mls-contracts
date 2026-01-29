@@ -4,8 +4,8 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import {VmSafe} from "forge-std/Script.sol";
 
+import {DeploymentConfig} from "script/base/DeploymentConfig.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
-import {DeploymentConfig} from "script/libraries/DeploymentConfig.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
 

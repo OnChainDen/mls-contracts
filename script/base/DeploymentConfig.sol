@@ -4,8 +4,8 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import {Script} from "forge-std/Script.sol";
 
-import {DeploymentConstants} from "script/libraries/DeploymentConstants.sol";
-import {FactoryState} from "script/libraries/FactoryState.sol";
+import {DeploymentConstants} from "script/base/DeploymentConstants.sol";
+import {FactoryState} from "script/base/FactoryState.sol";
 import {PlatformLibraries, SafeInfrastructure} from "script/libraries/Types.sol";
 
 /**

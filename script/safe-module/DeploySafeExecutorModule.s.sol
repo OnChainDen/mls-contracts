@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
-import {BaseDeployScript} from "script/BaseDeployScript.sol";
+import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {Logger} from "script/libraries/Logger.sol";
 import {StringUtils} from "script/libraries/StringUtils.sol";
