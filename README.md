@@ -20,12 +20,14 @@ Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custo
 6. [Architecture](#architecture)
 7. [Core Contracts](#core-contracts)
 8. [Security Model](#security-model)
-9. [Disaster Recovery](#disaster-recovery)
-10. [Policies](#policies)
-11. [Cross-chain Deployment](#cross-chain-deployment)
-12. [File Structure](#file-structure)
-13. [Deployment](#deployment)
-14. [API](#api)
+9. [Signatures](#signatures)
+10. [Disaster Recovery](#disaster-recovery)
+11. [Policies](#policies)
+12. [Cross-chain Deployment](#cross-chain-deployment)
+13. [File Structure](#file-structure)
+14. [Deployment](#deployment)
+15. [API](#api)
+16. [Known Limitations](#known-limitations)
 
 ---
 
@@ -100,38 +102,27 @@ Admin operations modify organizational state and require admin threshold signatu
 
 ### Approving Admin Operations
 
-![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
 Steps to approve an Admin Operation:
 1. **Admins sign an approval message** (need more than a threshold amount of signatures)
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract**
 4. **Organization contract performs validations and updates state** (checks that `msg.sender` is the Guardian, validates admin signatures)
+![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
 
 ### Rejecting Admin Operations (Workflow)
 
 The rejection workflow is nearly identical to the approval workflow. The key differences are:
-- Admins sign a **rejection** message (with `isApproval=false`) instead of an approval message
-- Guardian calls `rejectAdminOperation()` instead of the operation-specific function
+1. Admins sign a **rejection** message (with `isApproval=false`) instead of an approval message
+2. Guardian calls `rejectAdminOperation()` instead of the operation-specific function
 
-![Rejecting Admin Operation](docs/images/RejectingAdminOperation.svg)
 Steps to reject an Admin Operation:
 1. **Admins sign a rejection message** (need more than a threshold amount of signatures)
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract** (calls `rejectAdminOperation()`)
 4. **Organization contract performs validations and consumes nonce** (checks that `msg.sender` is the Guardian, validates admin signatures, emits `AdminOperationRejected` event)
 
-### EIP-712 Typed Data
-
-All admin operations use EIP-712 typed data signing:
-
-```solidity
-// Domain
-EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
-// name: "MLSWalletOrganization", version: "1"
-
-// Message
-AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)
-```
+![Rejecting Admin Operation](docs/images/RejectingAdminOperation.svg)
+See [Signatures](#signatures) for EIP-712 message format and encoding details.
 
 ---
 
@@ -200,6 +191,8 @@ When `isTransactionAllowedByPolicy()` is called, it validates:
 
 **Important:** The `policyId` is **explicitly provided** by the caller. There is no "first match" ordering - the caller specifies exactly which policy should authorize the transaction.
 
+For signature formats and message types, see [Signatures](#signatures).
+
 Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransaction.sol`
 
 ---
@@ -212,8 +205,8 @@ Accounts support ERC-1271 signature validation for smart contract interactions (
 
 1. **External Call** — Third party calls `Account.isValidSignature(hash, signature)` (`AccountImplementation.sol:54`)
 2. **Delegation** — Account delegates to `Organization.isValidSignatureForAccount(account, hash, signature)`
-3. **Signature Type Detection** — First byte determines type:
-   - `0x00` = Recovery signature (bypasses policy checks)
+3. **Signature Type Detection** — First byte determines validation path (see [Signatures](#signatures) for encoding details):
+   - `0x00` = Recovery signature (see [Disaster Recovery](#disaster-recovery))
    - `0x01` = Policy-based signature (normal flow)
 
 ### Policy-Based Signature Validation (Type 0x01)
@@ -229,12 +222,6 @@ Validation steps:
    - Source account must be allowed
    - Initiator must be authorized
 5. **Approval check (ManualApproval policies)** - Verify threshold approvals
-
-### Recovery Signature Validation (Type 0x00)
-
-- Only valid if recovery is BOTH supported AND enabled
-- Bypasses all Guardian and policy checks
-- Validates that recovery address signed the hash
 
 **Important Limitation:** Time-based policy limits are NOT supported for ERC-1271 signatures because `isValidSignature` is a `view` function (cannot modify storage to track usage).
 
@@ -386,38 +373,7 @@ The Guardian is Den's offchain service that:
 
 This prevents instant Guardian hijacking and allows time to detect malicious changes.
 
-### Signature Validation
-
-Supports both EOA and ERC-1271 (smart contract) signatures via a unified format:
-
-**EOA Signatures (v = 27 or 28):**
-```
-| v (1 byte) | r (32 bytes) | s (32 bytes) |
-Total: 65 bytes
-```
-
-**ERC-1271 Smart Contract Signatures (v = 0):**
-```
-| v=0 (1 byte) | signer address (20 bytes) | signature length (2 bytes) | signature data (N bytes) |
-Total: 23 + N bytes
-```
-
-Implementation: `src/libraries/SignatureUtils.sol`
-
-### Replay Protection
-
-Uses **non-sequential nonces** computed from transaction parameters:
-
-```solidity
-nonce = computeNonce(operationType, operationData, salt)
-      = keccak256(abi.encode(operationType, keccak256(operationData), salt))
-```
-
-- Same transaction data + same salt = same nonce (replayable → blocked)
-- Same transaction data + different salt = different nonce (allowed)
-- Nonces are consumed before external calls (CEI pattern)
-
-Implementation: `src/organization/libraries/LibOrganizationSignatures.sol`
+See [Signatures](#signatures) for signature validation formats, EIP-712 message types, and replay protection details.
 
 ### Upgrade Authorization
 
@@ -448,6 +404,165 @@ function upgradeToAndCallWithAuthorization(
 ```
 
 Direct calls to inherited `upgradeToAndCall()` revert with `UnauthorizedUpgrade()`.
+
+---
+
+## Signatures
+
+All operations in MLS Wallet require cryptographic signatures for authorization. This section consolidates all signing schemes, message formats, and validation mechanisms.
+
+### EIP-712 Domain
+
+All typed data signing uses a shared domain separator:
+
+| Field | Value |
+|-------|-------|
+| name | `MLSWalletOrganization` |
+| version | `1` |
+| chainId | Current chain ID |
+| verifyingContract | Organization contract address |
+
+File: `LibOrganizationEIP712.sol`
+
+### Signed Message Types
+
+#### Admin Operations
+
+```solidity
+AdminOperation(
+    uint8 operationType,
+    bytes operationData,
+    uint256 salt,
+    uint256 expirationTimestamp,
+    bool isApproval,
+    uint256 chainId,
+    address organization
+)
+```
+
+- `isApproval=true` for approvals, `false` for rejections
+- `operationType` maps to `OperationType` enum
+- `operationData` is operation-specific encoded parameters
+
+#### Account Transactions (Initiator)
+
+```solidity
+InitiateAccountTransaction(
+    address organization,
+    address account,
+    address to,
+    uint256 value,
+    bytes data,
+    uint256 salt,
+    uint256 expirationTimestamp,
+    uint256 policyId,
+    bool isApproval,
+    uint256 chainId
+)
+```
+
+#### Account Transactions (Reviewer)
+
+```solidity
+ReviewAccountTransaction(
+    address organization,
+    address account,
+    address to,
+    uint256 value,
+    bytes data,
+    uint256 salt,
+    uint256 expirationTimestamp,
+    uint256 policyId,
+    bool isApproval,
+    uint256 chainId,
+    bytes initiatorSignature
+)
+```
+
+**Security Note:** Reviewer signatures include the `initiatorSignature` to cryptographically bind approvals to a specific transaction initiation. This prevents approval replay across different initiators.
+
+#### ERC-1271 Signatures (Initiator)
+
+```solidity
+InitiateSignatureValidation(
+    address organization,
+    address account,
+    bytes32 hash,
+    uint256 policyId,
+    uint256 expirationTimestamp,
+    uint256 chainId
+)
+```
+
+#### ERC-1271 Signatures (Reviewer)
+
+```solidity
+ReviewSignatureValidation(
+    address organization,
+    address account,
+    bytes32 hash,
+    uint256 policyId,
+    uint256 expirationTimestamp,
+    uint256 chainId,
+    bytes initiatorSignature
+)
+```
+
+File: `LibOrganizationEIP712.sol`
+
+### Signature Encoding
+
+MLS Wallet accepts signatures from both EOAs and smart contracts (ERC-1271):
+
+#### EOA Signatures (65 bytes)
+
+```
+┌─────────┬──────────────┬──────────────┐
+│ v (1B)  │   r (32B)    │   s (32B)    │
+└─────────┴──────────────┴──────────────┘
+```
+
+`v` = 27 or 28
+
+#### ERC-1271 Smart Contract Signatures
+
+```
+┌─────────┬────────────────┬─────────────────┬────────────────┐
+│ v=0 (1B)│ signer (20B)   │ sig length (2B) │ sig data (NB)  │
+└─────────┴────────────────┴─────────────────┴────────────────┘
+```
+
+When `v=0`, the signature is forwarded to the signer address for ERC-1271 validation.
+
+File: `SignatureUtils.sol`
+
+### Nonce & Replay Protection
+
+Uses **non-sequential nonces** computed deterministically from operation parameters:
+
+```solidity
+nonce = keccak256(abi.encode(operationType, keccak256(operationData), salt))
+```
+
+| Property | Implication |
+|----------|-------------|
+| Same data + same salt | Same nonce → replay blocked |
+| Same data + different salt | Different nonce → allowed |
+| Cross-chain | `chainId` in message prevents cross-chain replay |
+| CEI pattern | Nonce consumed BEFORE external calls |
+
+File: `LibOrganizationSignatures.sol`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `SignatureUtils.sol` | EOA + ERC-1271 signature validation |
+| `LibOrganizationSignatures.sol` | Nonce computation and consumption |
+| `LibOrganizationEIP712.sol` | Domain separator, type hashes |
+| `LibOrganizationAdmin.sol` | Admin signature validation |
+| `LibOrganizationAccountTransaction.sol` | Transaction signature validation |
+| `LibOrganizationAccountSignature.sol` | ERC-1271 signature validation |
 
 ---
 
@@ -542,6 +657,36 @@ Files: `OrganizationTxRecoveryBase.sol`, `LibOrganizationTxRecovery.sol`
 | Nonce/policyId | Computed | Set to 0 |
 | Authorization | Guardian + policy | Recovery address only |
 | Timelock | None | Required to enable |
+
+---
+
+### Recovery Signatures (ERC-1271)
+
+When transaction recovery is enabled, ERC-1271 signature validation supports a recovery path that bypasses Guardian and policy checks.
+
+**Signature Format:**
+
+```
+┌───────────────┬─────────────────────────────┐
+│ 0x00 (1 byte) │ recovery address signature  │
+└───────────────┴─────────────────────────────┘
+```
+
+**Validation:**
+1. Check `isRecoverySupportedForTransactionsAndERC1271 == true`
+2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
+3. Verify signature is from `transactionAndERC1271RecoveryAddress`
+
+**Compared to Policy-Based (0x01):**
+
+| Aspect | Recovery (0x00) | Policy-Based (0x01) |
+|--------|-----------------|---------------------|
+| Guardian required | No | Yes |
+| Policy checks | Bypassed | Enforced |
+| Expiration | None | Required |
+| Use case | Emergency access | Normal operations |
+
+File: `LibOrganizationAccountSignature.sol:79`
 
 ---
 
