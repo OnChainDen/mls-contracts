@@ -14,12 +14,12 @@ Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custo
    - [Three Layers of Security](#three-layers-of-security)
    - [Key Abstractions](#key-abstractions)
    - [Types of Operations](#types-of-operations)
-3. [Architecture](#architecture)
-4. [Core Contracts](#core-contracts)
-5. [Security Model](#security-model)
-6. [Account Transactions](#account-transactions)
-7. [Account Signatures (ERC-1271)](#account-signatures-erc-1271)
-8. [Admin Operations](#admin-operations)
+3. [Admin Operations](#admin-operations)
+4. [Account Transactions](#account-transactions)
+5. [Account Signatures (ERC-1271)](#account-signatures-erc-1271)
+6. [Architecture](#architecture)
+7. [Core Contracts](#core-contracts)
+8. [Security Model](#security-model)
 9. [Disaster Recovery](#disaster-recovery)
 10. [Policies](#policies)
 11. [Cross-chain Deployment](#cross-chain-deployment)
@@ -64,6 +64,8 @@ MLS Wallet uses three independent security layers. Each layer validates transact
 | **Admin** | Privileged Member(s) or Group that can modify Organization configuration. Changes require threshold signatures. |
 | **Policy** | "If-then" rule defining what transactions are allowed, by whom, and how often. Stored as merkle tree leaves. |
 
+![Organizations and Accounts](docs/images/OrganizationsAndAccounts.svg)
+
 ### Types of Operations
 
 MLS Wallet supports three distinct operation types, each with its own workflow:
@@ -73,6 +75,169 @@ MLS Wallet supports three distinct operation types, each with its own workflow:
 | **Admin Operations** | Modify Organization state (members, groups, policies, admins) | `Organization.*` functions | Yes |
 | **Account Transactions** | Execute transactions from Accounts (transfers, DeFi, etc.) | `Organization.executeAccountTransaction()` | Yes |
 | **Account Signatures** | ERC-1271 signature validation for smart contract interactions | `Account.isValidSignature()` | No (stateless) |
+
+---
+
+## Admin Operations
+
+Admin operations modify organizational state and require admin threshold signatures.
+
+### Admin Operation Types
+
+| Operation | Description | Files |
+|-----------|-------------|-------|
+| `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
+| `ModifyMembers` | Update members merkle root | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
+| `ModifyGroups` | Update groups merkle root | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
+| `ModifyPolicies` | Update policies merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
+| `UpdateGuardian` | Initiate/finalize Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
+| `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
+| `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
+| `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
+
+### Approving Admin Operations (Workflow)
+
+![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
+
+1. **Admins sign an approval message** (need more than a threshold amount of signatures)
+2. **Guardian collects the signatures**
+3. **Guardian sends the signatures to the Organization contract**
+4. **Organization contract performs validations and updates state** (checks that `msg.sender` is the Guardian, validates admin signatures)
+
+### Rejecting Admin Operations (Workflow)
+
+The rejection workflow is nearly identical to the approval workflow. The key differences are:
+- Admins sign a **rejection** message (with `isApproval=false`) instead of an approval message
+- Guardian calls `rejectAdminOperation()` instead of the operation-specific function
+
+![Rejecting Admin Operation](docs/images/RejectingAdminOperation.svg)
+
+1. **Admins sign a rejection message** (need more than a threshold amount of signatures)
+2. **Guardian collects the signatures**
+3. **Guardian sends the signatures to the Organization contract** (calls `rejectAdminOperation()`)
+4. **Organization contract performs validations and consumes nonce** (checks that `msg.sender` is the Guardian, validates admin signatures, emits `AdminOperationRejected` event)
+
+**Key Point:** Rejection requires the SAME authorization level as approval (threshold signatures). This prevents unauthorized actors from blocking legitimate operations.
+
+### EIP-712 Typed Data
+
+All admin operations use EIP-712 typed data signing:
+
+```solidity
+// Domain
+EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+// name: "MLSWalletOrganization", version: "1"
+
+// Message
+AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)
+```
+
+---
+
+## Account Transactions
+
+Account transactions execute operations (transfers, DeFi interactions, etc.) from Accounts. Both approval and rejection flows are supported.
+
+### Approval Workflow
+
+1. **Initiate** — Initiator signs transaction data (EIP-712 typed data with `isApproval=true`)
+   - Parameters: `account`, `to`, `value`, `data`, `salt`, `expirationTimestamp`, `policyId`
+2. **Review** (if ManualApproval policy) — Reviewers sign the review hash (includes initiator signature to bind approvals)
+3. **Guardian Validation** — Guardian service validates policy compliance off-chain
+4. **Execute** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
+5. **On-chain Validation** (`OrganizationAccountTransactionBase.sol:22`)
+   - Guardian check (`onlyGuardian` modifier)
+   - Account ownership verification (`validateIsAccountDeployedByOrgOrRevert`)
+   - Nonce computation and consumption (replay protection)
+   - Expiration check (`block.timestamp <= expirationTimestamp`)
+   - Initiator signature verification and recovery
+   - Policy validation via merkle proofs (`isTransactionAllowedByPolicy`)
+   - Manual approval validation if required (`areApprovalsValid`)
+   - Time-based limit check and update
+6. **Execution** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
+   - Account performs low-level CALL to destination
+
+### Rejection Workflow
+
+Rejection allows authorized parties to invalidate a pending transaction by consuming its nonce.
+
+1. **Initiate** — Same initiator signature as approval (proves the transaction exists)
+2. **Rejection Authorization**
+   - *AutoApprove Policy*: Requires a separate rejection signature from an authorized initiator (signs with `isApproval=false`)
+   - *ManualApproval Policy*: Requires threshold rejection signatures from approvers (reviewers sign with `isApproval=false`)
+3. **Guardian Validation** — Guardian validates rejection authorization
+4. **Execute** — Guardian calls `Organization.rejectAccountTransaction()` with signatures and proofs
+5. **On-chain Validation** (`OrganizationAccountTransactionBase.sol:78`)
+   - Same validations as approval (Guardian, account, nonce, expiration, policy)
+   - Rejection authorization validation based on policy type
+   - Nonce consumed (prevents future execution or re-rejection)
+6. **Event** — `AccountTransactionRejected` emitted (no transaction executed on Account)
+
+### Approval vs Rejection Comparison
+
+| Aspect | Approval | Rejection |
+|--------|----------|-----------|
+| Transaction execution | Yes | No (event only) |
+| AutoApprove policy | Initiator signature only | Initiator + rejection signature |
+| ManualApproval policy | Threshold approvals | Threshold rejections (same count) |
+| Time-based limits | Updated | Not affected |
+| Nonce | Consumed | Consumed (same nonce) |
+
+**Key Point:** Rejection requires the SAME authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
+
+### Policy Validation Details
+
+When `isTransactionAllowedByPolicy()` is called, it validates:
+
+1. **Policy exists** - Merkle proof against `policiesRoot`
+2. **Source account allowed** - Either `anySourceAccount=true` or account in policy's source accounts tree
+3. **Initiator authorized** - Member/group membership verified via merkle proofs
+4. **Transaction type matches** - TokenTransfers, ContractInteractions, or Any
+5. **Destination allowed** - Either any destination or merkle-verified custom list
+6. **Token/amount constraints** - For token transfers
+7. **Function/parameter constraints** - For contract interactions
+
+**Important:** The `policyId` is **explicitly provided** by the caller. There is no "first match" ordering - the caller specifies exactly which policy should authorize the transaction.
+
+Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransaction.sol`
+
+---
+
+## Account Signatures (ERC-1271)
+
+Accounts support ERC-1271 signature validation for smart contract interactions (e.g., Permit2, CoW Protocol, off-chain order books).
+
+### Workflow
+
+1. **External Call** — Third party calls `Account.isValidSignature(hash, signature)` (`AccountImplementation.sol:54`)
+2. **Delegation** — Account delegates to `Organization.isValidSignatureForAccount(account, hash, signature)`
+3. **Signature Type Detection** — First byte determines type:
+   - `0x00` = Recovery signature (bypasses policy checks)
+   - `0x01` = Policy-based signature (normal flow)
+
+### Policy-Based Signature Validation (Type 0x01)
+
+Signature format: `0x01 | ABI(policyId, expiration, initiatorSig, reviewSigs, guardianSig, proofs)`
+
+Validation steps:
+1. **Expiration check** - Signature must not be expired
+2. **Initiator signature** - Verify initiator signed the hash
+3. **Guardian signature** - Verify Guardian signed the review hash
+4. **Policy check** - Policy must exist and apply to this signature:
+   - `TransactionType.Signatures` required
+   - Source account must be allowed
+   - Initiator must be authorized
+5. **Approval check (ManualApproval policies)** - Verify threshold approvals
+
+### Recovery Signature Validation (Type 0x00)
+
+- Only valid if recovery is BOTH supported AND enabled
+- Bypasses all Guardian and policy checks
+- Validates that recovery address signed the hash
+
+**Important Limitation:** Time-based policy limits are NOT supported for ERC-1271 signatures because `isValidSignature` is a `view` function (cannot modify storage to track usage).
+
+Files: `AccountImplementation.sol:54-62`, `LibOrganizationAccountSignature.sol`
 
 ---
 
@@ -282,218 +447,6 @@ function upgradeToAndCallWithAuthorization(
 ```
 
 Direct calls to inherited `upgradeToAndCall()` revert with `UnauthorizedUpgrade()`.
-
----
-
-## Account Transactions
-
-Account transactions execute operations (transfers, DeFi interactions, etc.) from Accounts. Both approval and rejection flows are supported.
-
-### Approval Workflow
-
-```
-1. INITIATE
-   └── Initiator signs transaction data (EIP-712 typed data with isApproval=true)
-       Parameters: account, to, value, data, salt, expirationTimestamp, policyId
-
-2. REVIEW (if ManualApproval policy)
-   └── Reviewers sign the review hash (includes initiator signature to bind approvals)
-
-3. GUARDIAN VALIDATION
-   └── Guardian service validates policy compliance off-chain
-
-4. EXECUTE
-   └── Guardian calls Organization.executeAccountTransaction() with all signatures and proofs
-
-5. ON-CHAIN VALIDATION (OrganizationAccountTransactionBase.sol:22)
-   ├── Guardian check (onlyGuardian modifier)
-   ├── Account ownership verification (validateIsAccountDeployedByOrgOrRevert)
-   ├── Nonce computation and consumption (replay protection)
-   ├── Expiration check (block.timestamp <= expirationTimestamp)
-   ├── Initiator signature verification and recovery
-   ├── Policy validation via merkle proofs (isTransactionAllowedByPolicy)
-   ├── Manual approval validation if required (areApprovalsValid)
-   └── Time-based limit check and update
-
-6. EXECUTION
-   └── Organization calls Account.executeTransaction(to, value, data, nonce, policyId)
-       └── Account performs low-level CALL to destination
-```
-
-### Rejection Workflow
-
-Rejection allows authorized parties to invalidate a pending transaction by consuming its nonce.
-
-```
-1. INITIATE
-   └── Same initiator signature as approval (proves the transaction exists)
-
-2. REJECTION AUTHORIZATION
-   ├── AutoApprove Policy: Requires a separate rejection signature from an authorized initiator
-   │   └── Initiator signs with isApproval=false
-   └── ManualApproval Policy: Requires threshold rejection signatures from approvers
-       └── Reviewers sign with isApproval=false
-
-3. GUARDIAN VALIDATION
-   └── Guardian validates rejection authorization
-
-4. EXECUTE
-   └── Guardian calls Organization.rejectAccountTransaction() with signatures and proofs
-
-5. ON-CHAIN VALIDATION (OrganizationAccountTransactionBase.sol:78)
-   ├── Same validations as approval (Guardian, account, nonce, expiration, policy)
-   ├── Rejection authorization validation based on policy type
-   └── Nonce consumed (prevents future execution or re-rejection)
-
-6. EVENT
-   └── AccountTransactionRejected emitted (no transaction executed on Account)
-```
-
-### Approval vs Rejection Comparison
-
-| Aspect | Approval | Rejection |
-|--------|----------|-----------|
-| Transaction execution | Yes | No (event only) |
-| AutoApprove policy | Initiator signature only | Initiator + rejection signature |
-| ManualApproval policy | Threshold approvals | Threshold rejections (same count) |
-| Time-based limits | Updated | Not affected |
-| Nonce | Consumed | Consumed (same nonce) |
-
-**Key Point:** Rejection requires the SAME authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
-
-### Policy Validation Details
-
-When `isTransactionAllowedByPolicy()` is called, it validates:
-
-1. **Policy exists** - Merkle proof against `policiesRoot`
-2. **Source account allowed** - Either `anySourceAccount=true` or account in policy's source accounts tree
-3. **Initiator authorized** - Member/group membership verified via merkle proofs
-4. **Transaction type matches** - TokenTransfers, ContractInteractions, or Any
-5. **Destination allowed** - Either any destination or merkle-verified custom list
-6. **Token/amount constraints** - For token transfers
-7. **Function/parameter constraints** - For contract interactions
-
-**Important:** The `policyId` is **explicitly provided** by the caller. There is no "first match" ordering - the caller specifies exactly which policy should authorize the transaction.
-
-Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransaction.sol`
-
----
-
-## Account Signatures (ERC-1271)
-
-Accounts support ERC-1271 signature validation for smart contract interactions (e.g., Permit2, CoW Protocol, off-chain order books).
-
-### Workflow
-
-```
-1. EXTERNAL CALL
-   └── Third party calls Account.isValidSignature(hash, signature)
-       └── AccountImplementation.sol:54
-
-2. DELEGATION
-   └── Account delegates to Organization.isValidSignatureForAccount(account, hash, signature)
-
-3. SIGNATURE TYPE DETECTION
-   └── First byte determines type:
-       ├── 0x00 = Recovery signature (bypasses policy checks)
-       └── 0x01 = Policy-based signature (normal flow)
-```
-
-### Policy-Based Signature Validation (Type 0x01)
-
-Signature format: `0x01 | ABI(policyId, expiration, initiatorSig, reviewSigs, guardianSig, proofs)`
-
-Validation steps:
-1. **Expiration check** - Signature must not be expired
-2. **Initiator signature** - Verify initiator signed the hash
-3. **Guardian signature** - Verify Guardian signed the review hash
-4. **Policy check** - Policy must exist and apply to this signature:
-   - `TransactionType.Signatures` required
-   - Source account must be allowed
-   - Initiator must be authorized
-5. **Approval check (ManualApproval policies)** - Verify threshold approvals
-
-### Recovery Signature Validation (Type 0x00)
-
-- Only valid if recovery is BOTH supported AND enabled
-- Bypasses all Guardian and policy checks
-- Validates that recovery address signed the hash
-
-**Important Limitation:** Time-based policy limits are NOT supported for ERC-1271 signatures because `isValidSignature` is a `view` function (cannot modify storage to track usage).
-
-Files: `AccountImplementation.sol:54-62`, `LibOrganizationAccountSignature.sol`
-
----
-
-## Admin Operations
-
-Admin operations modify organizational state and require admin threshold signatures.
-
-### Operation Types
-
-| Operation | Description | Files |
-|-----------|-------------|-------|
-| `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
-| `ModifyMembers` | Update members merkle root | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
-| `ModifyGroups` | Update groups merkle root | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
-| `ModifyPolicies` | Update policies merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
-| `UpdateGuardian` | Initiate/finalize Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
-| `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
-| `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
-| `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
-
-### Approval Workflow
-
-```
-1. PROPOSE
-   └── Admin(s) sign the operation data (EIP-712 typed data with isApproval=true)
-
-2. COLLECT SIGNATURES
-   └── Gather threshold number of admin signatures
-
-3. EXECUTE
-   └── Guardian calls the appropriate function with signatures and merkle proofs
-
-4. ON-CHAIN VALIDATION (OrganizationAdminBase.sol)
-   ├── Guardian check (onlyGuardian modifier)
-   ├── Admin signature verification against threshold
-   ├── Nonce computation and consumption
-   └── Execute state change
-```
-
-### Rejection Workflow
-
-```
-1. PROPOSE REJECTION
-   └── Admin(s) sign the operation data with isApproval=false
-
-2. COLLECT SIGNATURES
-   └── Gather threshold number of admin rejection signatures
-
-3. EXECUTE REJECTION
-   └── Guardian calls rejectAdminOperation() with signatures
-
-4. ON-CHAIN VALIDATION (OrganizationAdminBase.sol:52)
-   ├── Guardian check
-   ├── Admin rejection signatures verified
-   ├── Nonce consumed
-   └── AdminOperationRejected event emitted
-```
-
-**Key Point:** Rejection requires the SAME authorization level as approval (threshold signatures). This prevents unauthorized actors from blocking legitimate operations.
-
-### EIP-712 Typed Data
-
-All admin operations use EIP-712 typed data signing:
-
-```solidity
-// Domain
-EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
-// name: "MLSWalletOrganization", version: "1"
-
-// Message
-AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)
-```
 
 ---
 
