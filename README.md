@@ -43,7 +43,9 @@ MLS Wallet stores organization assets in smart contracts governed by **policies*
 
 ### Three Layers of Security
 
-MLS Wallet uses three independent security layers. Each layer validates transactions independently - an attacker would need to compromise all three simultaneously to execute unauthorized transactions.
+MLS Wallet uses three independent security layers. Each layer validates transactions independently. An attacker would need to compromise all three simultaneously to execute unauthorized transactions.
+
+![Three Security Layers](docs/images/MLSWalletSecurityLayersDiagram.svg)
 
 | Layer | Location | Purpose |
 |-------|----------|---------|
@@ -51,9 +53,11 @@ MLS Wallet uses three independent security layers. Each layer validates transact
 | **Guardian Service** | Off-chain server | Independent policy validation; confirms all required approvals present |
 | **Smart Contracts** | On-chain | Final enforcement; blocks malicious transactions at blockchain level |
 
-![Three Security Layers](docs/images/MLSWalletSecurityLayersDiagram.svg)
 
 ### Key Abstractions
+Organizations, along with their Members, Groups, Admins, and Policies are represented onchain by an Organization smart contract. Organizations store their assets in Accounts, which are separate smart contracts.
+
+![Organizations and Accounts](docs/images/OrganizationsAndAccounts.svg)
 
 | Abstraction | Description |
 |-------------|-------------|
@@ -64,9 +68,8 @@ MLS Wallet uses three independent security layers. Each layer validates transact
 | **Admin** | Privileged Member(s) or Group that can modify Organization configuration. Changes require threshold signatures. |
 | **Policy** | "If-then" rule defining what transactions are allowed, by whom, and how often. Stored as merkle tree leaves. |
 
-![Organizations and Accounts](docs/images/OrganizationsAndAccounts.svg)
 
-### Types of Operations
+### Operations (Overview)
 
 MLS Wallet supports three distinct operation types, each with its own workflow:
 
@@ -95,10 +98,10 @@ Admin operations modify organizational state and require admin threshold signatu
 | `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
 | `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
 
-### Approving Admin Operations (Workflow)
+### Approving Admin Operations
 
 ![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
-
+Steps to approve an Admin Operation:
 1. **Admins sign an approval message** (need more than a threshold amount of signatures)
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract**
@@ -111,13 +114,11 @@ The rejection workflow is nearly identical to the approval workflow. The key dif
 - Guardian calls `rejectAdminOperation()` instead of the operation-specific function
 
 ![Rejecting Admin Operation](docs/images/RejectingAdminOperation.svg)
-
+Steps to reject an Admin Operation:
 1. **Admins sign a rejection message** (need more than a threshold amount of signatures)
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract** (calls `rejectAdminOperation()`)
 4. **Organization contract performs validations and consumes nonce** (checks that `msg.sender` is the Guardian, validates admin signatures, emits `AdminOperationRejected` event)
-
-**Key Point:** Rejection requires the SAME authorization level as approval (threshold signatures). This prevents unauthorized actors from blocking legitimate operations.
 
 ### EIP-712 Typed Data
 
