@@ -100,26 +100,29 @@ Admin operations modify organizational state and require admin threshold signatu
 | `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
 | `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
 
+### Who can approve or reject Admin Operations?
+Only Members who are "Admins" according to the Organization contract can approve or reject Admin Operations.
+
 ### Approving Admin Operations
 
 Steps to approve an Admin Operation:
-1. **Admins sign an approval message** (need more than a threshold amount of signatures)
+1. **Admins sign an approval message** – Needs more than a threshold amount of signatures
 2. **Guardian collects the signatures**
 3. **Guardian sends the signatures to the Organization contract**
-4. **Organization contract performs validations and updates state** (checks that `msg.sender` is the Guardian, validates admin signatures)
+4. **Organization contract performs validations and updates state** – Checks that `msg.sender` is the Guardian, validates admin signatures
 ![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
 
-### Rejecting Admin Operations (Workflow)
+### Rejecting Admin Operations
 
 The rejection workflow is nearly identical to the approval workflow. The key differences are:
 1. Admins sign a **rejection** message (with `isApproval=false`) instead of an approval message
 2. Guardian calls `rejectAdminOperation()` instead of the operation-specific function
 
 Steps to reject an Admin Operation:
-1. **Admins sign a rejection message** (need more than a threshold amount of signatures)
+1. **Admins sign a rejection message**  – Needs more than a threshold amount of signatures
 2. **Guardian collects the signatures**
-3. **Guardian sends the signatures to the Organization contract** (calls `rejectAdminOperation()`)
-4. **Organization contract performs validations and consumes nonce** (checks that `msg.sender` is the Guardian, validates admin signatures, emits `AdminOperationRejected` event)
+3. **Guardian sends the signatures to the Organization contract** – Calls `rejectAdminOperation()`
+4. **Organization contract performs validations and consumes nonce** – Checks that `msg.sender` is the Guardian, validates admin signatures
 
 ![Rejecting Admin Operation](docs/images/RejectingAdminOperation.svg)
 See [Signatures](#signatures) for EIP-712 message format and encoding details.
@@ -128,54 +131,60 @@ See [Signatures](#signatures) for EIP-712 message format and encoding details.
 
 ## Account Transactions
 
-Account transactions execute operations (transfers, DeFi interactions, etc.) from Accounts. Both approval and rejection flows are supported.
+### Overview
+Account Transactions execute operations from Accounts (transfers, DeFi interactions, etc.) and only support `call` operations (`delegatecall` is not supported).
 
-### Approval Workflow
+Account Transactions must be created using a Policy. The Policy defines what types of transactions are allowed. If an Account Transaction is created using a Policy that does not allow the transaction, it is rejected.
 
-1. **Initiate** — Initiator signs transaction data (EIP-712 typed data with `isApproval=true`)
+### Who can approve or reject an Account Transaction?
+The Policy that's used to create the transaction dictates who can approve or reject the transaction:
+* If the Policy is an **AutoApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can **initiate and execute the transaction.**
+  - Only Members that are specified by the Policy as **initiators** can **reject the transaction.**
+  - _Note: AutoApproval policies don't require separate approval signatures from reviewers to be executed. They just need one valid Initiator signature._
+* If the Policy is a **ManualApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
+  - Only Members that are specified by the Policy as **reviewers** can **approve and execute the transaction.**
+  - Only Members that are specified by the Policy as **reviewers** can **reject the transaction and burn the nonce.**
+  - _Note: The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it._
+
+**Key Point:** Rejection requires the same authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
+
+### Approving (Executing) Account Transactions
+
+1. **Initiator signs a message approving the transaction** — A Member (the "Initiator") signs transaction data (EIP-712 typed data with `isApproval=true`).
    - Parameters: `account`, `to`, `value`, `data`, `salt`, `expirationTimestamp`, `policyId`
-2. **Review** (if ManualApproval policy) — Reviewers sign the review hash (includes initiator signature to bind approvals)
-3. **Guardian Validation** — Guardian service validates policy compliance off-chain
-4. **Execute** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
-5. **On-chain Validation** (`OrganizationAccountTransactionBase.sol:22`)
-   - Guardian check (`onlyGuardian` modifier)
-   - Account ownership verification (`validateIsAccountDeployedByOrgOrRevert`)
-   - Nonce computation and consumption (replay protection)
-   - Expiration check (`block.timestamp <= expirationTimestamp`)
-   - Initiator signature verification and recovery
-   - Policy validation via merkle proofs (`isTransactionAllowedByPolicy`)
-   - Manual approval validation if required (`areApprovalsValid`)
-   - Time-based limit check and update
-6. **Execution** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
-   - Account performs low-level CALL to destination
+2. **Reviewers sign a message approving the transaction** (if ManualApproval policy) — Reviewers sign the review hash (includes initiator signature to bind approvals). 
+    - This step is skipped if the policy is an AutoApproval policy.
+3. **Guardian collects the signatures**
+4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction is allowed by the policy provided and validates initiator and reviewer signatures.
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked
+    - This all happens offchain before submitting the transactions and signatures to the Organization smart contract.
+4. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
+5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked
+6. **Organization contract forwards transaction to the Account contract** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
+7. **Account contract executes the transaction** – Account contract checks that `msg.sender` is its associated Organization contract and then executes the transaction
 
-### Rejection Workflow
+![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
 
-Rejection allows authorized parties to invalidate a pending transaction by consuming its nonce.
+### Rejecting Account Transactions
+> [!IMPORTANT]
+> An Initiator must have already signed a message to initiate the transaction that is being rejected
 
-1. **Initiate** — Same initiator signature as approval (proves the transaction exists)
-2. **Rejection Authorization**
-   - *AutoApprove Policy*: Requires a separate rejection signature from an authorized initiator (signs with `isApproval=false`)
-   - *ManualApproval Policy*: Requires threshold rejection signatures from approvers (reviewers sign with `isApproval=false`)
-3. **Guardian Validation** — Guardian validates rejection authorization
-4. **Execute** — Guardian calls `Organization.rejectAccountTransaction()` with signatures and proofs
-5. **On-chain Validation** (`OrganizationAccountTransactionBase.sol:78`)
-   - Same validations as approval (Guardian, account, nonce, expiration, policy)
-   - Rejection authorization validation based on policy type
-   - Nonce consumed (prevents future execution or re-rejection)
-6. **Event** — `AccountTransactionRejected` emitted (no transaction executed on Account)
+1. **(Prerequisite) Initiator has already signed a message to initiate the transaction** — The original initiator signature for the transaction that's being rejected must be passed along
+2. **Authorized Members sign a message rejecting the transaction** – See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+3. **Guardian collects the signatures**
+4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction would have been allowed by the policy provided and validates initiator and rejection signatures.
+    - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
+    - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
+    - This all happens offchain before submitting the transactions and signatures to the Organization smart contract.
+5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction would have been allowed by the policy provided, and validates initiator and rejection signatures
+    - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
+    - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
+6. **Organization contract burns the nonce for the transaction** — Organization burns the nonce for the transaction, making it impossible to use existing initiator and approval signatures to execute the transaction
 
-### Approval vs Rejection Comparison
-
-| Aspect | Approval | Rejection |
-|--------|----------|-----------|
-| Transaction execution | Yes | No (event only) |
-| AutoApprove policy | Initiator signature only | Initiator + rejection signature |
-| ManualApproval policy | Threshold approvals | Threshold rejections (same count) |
-| Time-based limits | Updated | Not affected |
-| Nonce | Consumed | Consumed (same nonce) |
-
-**Key Point:** Rejection requires the SAME authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
+![Rejecting Account Transaction](docs/images/RejectingAccountTransaction.svg)
 
 ### Policy Validation Details
 
@@ -189,7 +198,7 @@ When `isTransactionAllowedByPolicy()` is called, it validates:
 6. **Token/amount constraints** - For token transfers
 7. **Function/parameter constraints** - For contract interactions
 
-**Important:** The `policyId` is **explicitly provided** by the caller. There is no "first match" ordering - the caller specifies exactly which policy should authorize the transaction.
+**Important:** The `policyId` is **explicitly provided** by the caller.
 
 For signature formats and message types, see [Signatures](#signatures).
 
