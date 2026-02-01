@@ -131,10 +131,15 @@ See [Signatures](#signatures) for EIP-712 message format and encoding details.
 
 ## Account Transactions
 
-### Overview
-Account Transactions execute operations from Accounts (transfers, DeFi interactions, etc.) and only support `call` operations (`delegatecall` is not supported).
+### What is an Account Transaction?
+Account Transactions are versitile onchain transactions sent from Accounts. Account Transctions can be token transfers, DeFi operations, or any other smart contract interaction. 
 
+For security, Account Transactions only support `call` operations, and `delegatecall` operations are strictly forbidden.
+
+### Using Policies to Create Account Transactions
 Account Transactions must be created using a Policy. The Policy defines what types of transactions are allowed. If an Account Transaction is created using a Policy that does not allow the transaction, it is rejected.
+
+The Policy that's used to create an Account Transaction determines which Members of the Organization (if any) must approve the transaction before it can be executed.
 
 ### Who can approve or reject an Account Transaction?
 The Policy that's used to create the transaction dictates who can approve or reject the transaction:
@@ -154,12 +159,11 @@ The Policy that's used to create the transaction dictates who can approve or rej
 
 1. **Initiator signs a message approving the transaction** — A Member (the "Initiator") signs transaction data (EIP-712 typed data with `isApproval=true`).
    - Parameters: `account`, `to`, `value`, `data`, `salt`, `expirationTimestamp`, `policyId`
-2. **Reviewers sign a message approving the transaction** (if ManualApproval policy) — Reviewers sign the review hash (includes initiator signature to bind approvals). 
-    - This step is skipped if the policy is an AutoApproval policy.
+2. **Reviewers sign a message approving the transaction** (if ManualApproval policy) — This step is skipped if the policy is an AutoApproval policy.
 3. **Guardian collects the signatures**
 4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction is allowed by the policy provided and validates initiator and reviewer signatures.
     - If the policy is an AutoApproval policy, reviewer signatures are not checked
-    - This all happens offchain before submitting the transactions and signatures to the Organization smart contract.
+    - _Note: This happens offchain before submitting the transactions and signatures to the Organization smart contract._
 4. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
 5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
     - If the policy is an AutoApproval policy, reviewer signatures are not checked
@@ -178,7 +182,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
 4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction would have been allowed by the policy provided and validates initiator and rejection signatures.
     - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
     - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
-    - This all happens offchain before submitting the transactions and signatures to the Organization smart contract.
+    - _Note: This happens offchain before submitting the transactions and signatures to the Organization smart contract._
 5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction would have been allowed by the policy provided, and validates initiator and rejection signatures
     - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
     - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
