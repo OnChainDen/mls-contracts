@@ -489,6 +489,97 @@ Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`
 
 ## Architecture
 
+### Factory Patterns
+
+MLS Wallet uses a two-tier factory system to deploy Organizations and Accounts at deterministic addresses across chains.
+
+#### OrganizationFactory
+
+Organizations are deployed via the `OrganizationFactory` contract using CREATE2:
+
+| File | Purpose |
+|------|---------|
+| `OrganizationFactory.sol` | Factory contract for deploying OrganizationProxy contracts |
+
+**Key Characteristics:**
+- **Authorized deployer only** — Only the `DEPLOYER_ADDRESS` (set in the constructor) can deploy new Organizations (in production this is the Guardian)
+- **Implementation whitelist validation** — The implementation address must be whitelisted before deployment
+- **Atomic deployment + initialization** — The proxy is deployed and initialized in a single transaction to prevent front-running
+- **Address pre-computation** — Use `computeOrganizationAddress(salt, implementation, whitelist)` to compute the address before deployment
+
+See: `OrganizationFactory.sol`
+
+---
+
+#### Organization as Account Factory
+
+Each Organization acts as a factory for its own Accounts. Accounts are deployed as BeaconProxies where the Organization itself serves as the beacon.
+
+| File | Purpose |
+|------|---------|
+| `OrganizationAccountFactoryBase.sol` | Base contract with account deployment logic |
+| `LibOrganizationAccountFactory.sol` | Library for CREATE2 account deployment |
+
+
+**Key Characteristics:**
+- **Guardian-protected** — Only the Guardian can call `deployAccount()`
+- **Admin authorization required** — Requires Admin signatures meeting the configured threshold
+- **Organization tracks deployed accounts** — Each Organization maintains a mapping of accounts it deployed
+- **Beacon pattern** — The Organization implements `IBeacon.implementation()` and all Accounts under an Organization share the same implementation
+- **Address pre-computation** — Use `computeAccountAddress(salt)` on the Organization to compute the address before deployment
+
+See: `OrganizationAccountFactoryBase.sol`, `LibOrganizationAccountFactory.sol`
+
+---
+
+#### CREATE2 and Deterministic Addresses
+
+Both Organizations and Accounts use CREATE2 for deployment, ensuring **identical addresses across all EVM-compatible chains**.
+
+**How it works:**
+
+```
+address = keccak256(0xff ++ deployerAddress ++ salt ++ keccak256(bytecode))[12:]
+```
+
+| Factor | Organizations | Accounts |
+|--------|---------------|----------|
+| **Deployer** | OrganizationFactory | Organization contract |
+| **Salt** | User-provided `bytes32` | User-provided `bytes32` |
+| **Bytecode** | OrganizationProxy + constructor args | AccountProxy + constructor args |
+
+**Cross-chain deployment requirements:**
+
+To achieve the same Organization address on multiple chains:
+1. Deploy `OrganizationFactory` at the same address on each chain
+2. Use the same `salt`
+3. Use the same `implementationAddress` and `whitelistAddress`
+
+To achieve the same Account address on multiple chains:
+1. Deploy the Organization at the same address on each chain (see above)
+2. Use the same `salt` when calling `deployAccount()`
+
+---
+
+#### Implementation Whitelist Validation
+
+**Both Organizations and Accounts can only be deployed (or upgraded) using implementation contracts that are whitelisted.**
+
+| Contract Type | Validated During |
+|---------------|------------------|
+| Organization | `OrganizationFactory.deployOrganization()` and `Organization.upgradeToAndCallWithAuthorization()` |
+| Account | `Organization.setAccountImplementation()` |
+
+
+This design ensures that:
+- **Den controls which implementations are allowed** — The whitelist is owned by a Safe multisig that Den controls
+- **Protection against malicious upgrades** — Even if an Organization's Guardian and Admins are compromised, they cannot deploy or upgrade to a malicious implementation
+- **Separate whitelists per contract type** — Organization and Account implementations are tracked independently
+
+See: `ImplementationWhitelistImplementation.sol`, `IImplementationWhitelist.sol`
+
+---
+
 ### Upgradeability (Proxy Patterns)
 
 Most contracts in MLS Wallet are upgradeable. This section explains the proxy patterns used, how upgrades work, and how they are secured.
