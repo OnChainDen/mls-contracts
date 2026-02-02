@@ -13,7 +13,8 @@ Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custo
 2. [Core Concepts](#core-concepts)
    - [Three Layers of Security](#three-layers-of-security)
    - [Key Abstractions](#key-abstractions)
-   - [Types of Operations](#types-of-operations)
+   - [Operations (Overview)](#operations-overview)
+   - [Disaster Recovery (Overview)](#disaster-recovery-overview)
 3. [Admin Operations](#admin-operations)
 4. [Account Transactions](#account-transactions)
 5. [Account Signatures (ERC-1271)](#account-signatures-erc-1271)
@@ -81,6 +82,17 @@ MLS Wallet supports three distinct operation types, each with its own workflow:
 | **Account Transactions** | Execute transactions from Accounts (transfers, DeFi, etc.) | `Organization.executeAccountTransaction()` | Yes |
 | **Account Signatures** | ERC-1271 signature validation for smart contract interactions | `Account.isValidSignature()` | No (stateless) |
 
+### Disaster Recovery (Overview)
+
+MLS Wallet provides two independent recovery mechanisms to handle Guardian compromise or unavailability:
+
+| Recovery Type | Purpose | Entry Point | Timelock Required |
+|---------------|---------|-------------|-------------------|
+| **Guardian Recovery** | Replace compromised or unavailable Guardian | `Organization.initiateRecoveryGuardianUpdate()` | Yes (3-step process) |
+| **Transaction Recovery** | Execute transactions and ERC-1271 signatures without Guardian | `Organization.executeRecoveryAccountTransaction()` | Yes (to enable) |
+
+Both mechanisms use separate privileged addresses (`guardianRecoveryAddress` and `transactionAndERC1271RecoveryAddress`) configured at Organization initialization. For detailed flows and scenarios, see [Disaster Recovery](#disaster-recovery).
+
 ---
 
 ## Admin Operations
@@ -143,30 +155,21 @@ Example policies:
 All Account Transactions and Account Signatures must be created using a Policy. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
 
 ### Policy Types
+There are two types of policies:
+1. **Auto-approval policies**
 
-| Policy Type | Signatures Required | Who Can Reject? |
-|-------------|---------------------|-----------------|
-| **Auto-approval** | 1 initiator signature only | Any valid initiator |
-| **Manual approval** | 1 initiator + threshold of reviewers | Reviewers only |
+    If an Account Transaction or Account Signature is governed by an Auto-approval policy, then it only requires one signature from a Member ("initiator") to initiate it. 
+    
+    Any valid initiator can also reject an Account Transaction, without requiring additional signatures from other Members (Account Signatures cannot be rejected).
 
-#### Auto-approval Policies
+2. **Manual approval policies**
 
-A single signature from an authorized initiator is sufficient to execute the transaction or approve the signature.
+    If an Account Transaction or Account Signature is governed by a Manual approval policy, then in order for it to be approved, it must be:
+    - initiated by an authorized Member (the "initiator")
+    - approved by a Member or Group (the "reviewers")
 
-| Action | Who Can Do It |
-|--------|---------------|
-| Initiate & Execute | Any authorized initiator |
-| Reject (Account Transactions only) | Any authorized initiator |
-
-#### Manual Approval Policies
-
-Requires an initiator signature plus a threshold of reviewer approvals.
-
-| Action | Who Can Do It |
-|--------|---------------|
-| Initiate | Any authorized initiator |
-| Approve & Execute | Reviewers (threshold required) |
-| Reject (Account Transactions only) | Reviewers (threshold required) |
+    
+    The same reviewers who are allowed to approve an Account Transaction are also authorized to reject it (Account Signatures cannot be rejected).
 
 > **Notes:**
 > - The policy specifies which Members (or Groups) can be initiators and reviewers
