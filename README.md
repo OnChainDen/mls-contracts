@@ -143,162 +143,128 @@ Example policies:
 All Account Transactions and Account Signatures must be created using a Policy. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
 
 ### Policy Types
-There are two types of policies:
-1. **Auto-approval policies**
 
-    If an Account Transaction or Account Signature is governed by an Auto-approval policy, then it only requires one signature from a Member ("initiator") to initiate it. 
-    
-    Any valid initiator can also reject an Account Transaction, without requiring additional signatures from other Members (Account Signatures cannot be rejected).
+| Policy Type | Signatures Required | Who Can Reject? |
+|-------------|---------------------|-----------------|
+| **Auto-approval** | 1 initiator signature only | Any valid initiator |
+| **Manual approval** | 1 initiator + threshold of reviewers | Reviewers only |
 
-    _Note:_
-    1. The policy specifies which Members can be the initiator. 
-    2. If the initiator of a policy is set a Group, then any member of the group can initiate the Account Transaction or Account Signature without 
+#### Auto-approval Policies
 
-2. **Manual approval policies**
+A single signature from an authorized initiator is sufficient to execute the transaction or approve the signature.
 
-    If an Account Transaction or Account Signature is governed by a Manual approval policy, then in order for it to be approved, it must be:
-    - initiated by an authorized Member (the "initiator")
-    - approved by a Member or Group (the "reviewers")
+| Action | Who Can Do It |
+|--------|---------------|
+| Initiate & Execute | Any authorized initiator |
+| Reject (Account Transactions only) | Any authorized initiator |
 
-    
-    The same reviewers who are allowed to approve an Account Transaction are also authorized to reject it (Account Signatures cannot be rejected).
+#### Manual Approval Policies
 
-    _Note:_
-    1. The policiy specifies which Members can be the initiator and which Members can be reviewers. 
-    2. If the initiator of a policy is set a Group, then any member of the group can initiate the Account Transaction or Account Signature. 
-    3. If the reviewer(s) is set to a Group, then the policy must also specify a threshold number of signatures from the reviewers required to approve or reject the operation.
-    4. Account Transactions can only be rejected if there was already a valid signature from an initiator to initiate it.
+Requires an initiator signature plus a threshold of reviewer approvals.
 
+| Action | Who Can Do It |
+|--------|---------------|
+| Initiate | Any authorized initiator |
+| Approve & Execute | Reviewers (threshold required) |
+| Reject (Account Transactions only) | Reviewers (threshold required) |
+
+> **Notes:**
+> - The policy specifies which Members (or Groups) can be initiators and reviewers
+> - If the initiator is a Group, any member of that Group can initiate
+> - If reviewers are a Group, the policy must specify a threshold
+> - Rejection requires a valid initiator signature to have been provided first
+> - Account Signatures cannot be rejected (stateless `view` function)
 
 
 ### Policy Configuration Fields
-Policies have the following configurable fields that can be used to determine which types of transactions they govern:
 
-- **Source Account**
+Policies define which transactions they govern using the following fields:
 
-    The account which the Account Transaction can sent from, or the account which the Account Signature is allowed to sign an ERC-1271 signature from.
-    This value can bet set to "any source account" or a custom user-defined list of accounts.
+#### Core Fields (All Policies)
 
-- **Transaction Initiator**
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Source Account** | Which Account(s) this policy applies to | `Any source account` · Custom list of accounts |
+| **Transaction Initiator** | Who can initiate transactions under this policy | `Any Member` · Specific Member · Specific Group* |
+| **Transaction Type** | What kind of operation this policy governs | `Any` · `Token transfers` · `Contract interactions` · `Account Signature` |
 
-    The Member or Group allowed to initiate the transaction.
+*\* If set to a Group, any member of that Group can initiate.*
 
-    This field can be set to one of the following values:
-    - "Any Member"
-    - A specific Member
-    - A specific Group
+---
 
-    If the Transaction Initiator is a Group, then any Member of the Group is allowed to initiate the Account Transaction or Account Signature.
+#### Token Transfer Fields
 
+*Available when Transaction Type = "Token transfers"*
 
-- **Transaction Type** 
-    
-    This field can be set to one of the following values:
-    - "Any type of transaction"
-    - "Token transfers"
-    - "Contract interactions"
-    - "Account Signature"
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Token** | Which token can be transferred | `Any token` · Specific token (e.g., USDC) |
+| **Token Transfer Recipient** | Where tokens can be sent | `Any recipient` · `Any whitelisted address` · `Any non-whitelisted address` · Custom address list |
+| **Token Amount Threshold** | Maximum amount per transaction | Numeric value (policy applies to amounts ≤ this value) |
 
-- **Token** *(only available if  Transaction Type is "Token transfers")*
+---
 
-    The token being transfered in the transaction.
+#### Contract Interaction Fields
 
-    This can be either "any token" or a specific token, e.g. USDC.
+*Available when Transaction Type = "Contract interactions"*
 
-- **Token Transfer Recipient** *(only available if  Transaction Type is "Token transfers")*
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Contracts** | Which contracts can be called | `Any contract` · `Any whitelisted contract` · `Any non-whitelisted contract` · Custom contract list |
+| **Functions** | Which functions can be called | `Any function` · Custom function list |
+| **Function Arguments** | Parameter constraints for allowed functions | See [Parameter Constraints](#parameter-constraints) below |
 
-    To whom the token is being sent to.
+---
 
-    This value can be one of the following:
-    - "Any recipient"
-    - "Any whitelisted address"
-    - "Any non-whitelisted address"
-    - Any address in a custom list defined by the user
-    
-- **Token Amount Threshold** *(only available if  Transaction Type is "Token transfers")*
+#### Parameter Constraints
 
-    A threshold value for the amount of the token being transferred.
+*Available when Transaction Type = "Contract interactions" and a custom function list is specified*
 
-    If this value is set, then the policy only applies to transactions that are transferring an amount *less than or equal* to this value.
+Parameter constraints provide fine-grained control over what values can be passed to function arguments.
 
-- **Contracts** *(only available if  Transaction Type is "Contract interactions")*
+**Supported Parameter Types:**
 
-    The contract that the transaction is interacting with.
+| Type | Description |
+|------|-------------|
+| `Uint` | Unsigned integers (uint8 to uint256) |
+| `Int` | Signed integers (int8 to int256) |
+| `Address` | Ethereum addresses (20 bytes) |
+| `Bool` | Boolean values |
+| `FixedBytes` | Fixed-size bytes (bytes1 to bytes32) |
+| `Bytes` | Dynamic bytes |
+| `String` | Dynamic strings |
+| `Array` | Dynamic arrays |
+| `Struct` | Tuples/struct types |
 
-    This value can be one of the following:
-    - "Any contract"
-    - "Any whitelisted contract"
-    - "Any non-whitelisted contract"
-    - Any contract in a custom list defined by the user
-    
+**Constraint Types:**
 
-- **Functions** *(only available if Transaction Type is "Contract interactions")*
+| Constraint | Description | Validation Logic |
+|------------|-------------|------------------|
+| `Any` | Wildcard - no constraint | No validation performed |
+| `Exact` | Must match exactly | Direct comparison; `Bytes`/`String` use keccak256 hash comparison |
+| `Range` | Must be within bounds | `value >= min && value <= max` (inclusive) |
+| `OneOf` | Must be in allowed set | Merkle proof verification against root of allowed values |
 
-    The function being called in the contract interaction.
+**Compatibility Matrix:**
 
-    This value can be one of the following:
-    - "Any function"
-    - Any function in a custom list defined by the user
+| Parameter Type | `Any` | `Exact` | `Range` | `OneOf` |
+|----------------|:-----:|:-------:|:-------:|:-------:|
+| `Uint`         | ✓ | ✓ | ✓ | ✗ |
+| `Int`          | ✓ | ✓ | ✓ | ✗ |
+| `Address`      | ✓ | ✓ | ✗ | ✓ |
+| `Bool`         | ✓ | ✓ | ✗ | ✗ |
+| `FixedBytes`   | ✓ | ✓ | ✗ | ✗ |
+| `Bytes`        | ✓ | ✓ | ✗ | ✗ |
+| `String`       | ✓ | ✓ | ✗ | ✗ |
+| `Array`        | ✓ | ✗ | ✗ | ✗ |
+| `Struct`       | ✓ | ✗ | ✗ | ✗ |
 
-    If a custom list of functions is provided, each function can optionally have **parameter constraints** specified. See the [Function Arguments](#function-arguments) section below for details on configuring parameter constraints.
+> **Notes:**
+> - Constraints are applied sequentially in the order parameters appear in the function signature
+> - Parameters without defined constraints accept any value
+> - `Array` and `Struct` only support `Any` due to complex ABI encoding
 
-- **Function Arguments** *(only available if Transaction Type is "Contract interactions" and a custom list of functions is specified)*
-
-    When specifying allowed functions for a contract interaction policy, you can optionally define constraints on function parameters. Parameter constraints allow fine-grained control over what values can be passed to specific function arguments.
-
-    **Supported Parameter Types:**
-
-    | Type | Description |
-    |------|-------------|
-    | `Uint` | Unsigned integers (uint8 to uint256) |
-    | `Int` | Signed integers (int8 to int256) |
-    | `Address` | Ethereum addresses (20 bytes) |
-    | `Bool` | Boolean values |
-    | `FixedBytes` | Fixed-size bytes (bytes1 to bytes32) |
-    | `Bytes` | Dynamic bytes |
-    | `String` | Dynamic strings |
-    | `Array` | Dynamic arrays |
-    | `Struct` | Tuples/struct types |
-
-    **Constraint Types:**
-
-    | Constraint | Description |
-    |------------|-------------|
-    | `Any` | Any value is accepted (wildcard - no constraint enforced) |
-    | `Exact` | Value must exactly match a specified value |
-    | `Range` | Value must be within min/max bounds (inclusive) |
-    | `OneOf` | Value must be one of the allowed values in a list |
-
-    **Constraint Compatibility by Parameter Type:**
-
-    Not all constraint types are supported for all parameter types:
-
-    | Parameter Type | Any | Exact | Range | OneOf |
-    |----------------|-----|-------|-------|-------|
-    | `Uint`         | Yes | Yes   | Yes   | No    |
-    | `Int`          | Yes | Yes   | Yes   | No    |
-    | `Address`      | Yes | Yes   | No    | Yes   |
-    | `Bool`         | Yes | Yes   | No    | No    |
-    | `FixedBytes`   | Yes | Yes   | No    | No    |
-    | `Bytes`        | Yes | Yes   | No    | No    |
-    | `String`       | Yes | Yes   | No    | No    |
-    | `Array`        | Yes | No    | No    | No    |
-    | `Struct`       | Yes | No    | No    | No    |
-
-    **Constraint Behavior Details:**
-
-    - **Any**: No validation is performed. The parameter can have any value.
-    - **Exact**: Direct value comparison. For `Bytes` and `String` types, uses hash comparison (keccak256 of the actual value compared against the expected hash).
-    - **Range**: For `Uint`, checks `value >= min && value <= max`. For `Int`, same logic with signed integer comparison.
-    - **OneOf**: Only supported for `Address` type. Uses merkle tree verification where the comparison data contains a merkle root of allowed addresses, and a proof is provided to verify the address is in the allowed set.
-
-    **Important Notes:**
-
-    - Constraints are applied sequentially to function parameters in the order they appear in the function signature.
-    - Not all parameters need constraints defined. Any parameter without a constraint accepts any value.
-    - `Array` and `Struct` types only support the `Any` constraint due to their complex ABI encoding.
-
-    See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` for implementation details.
+See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` for implementation details.
 
 ### Policy Rate Limits
 
