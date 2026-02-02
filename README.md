@@ -814,38 +814,6 @@ This prevents instant Guardian hijacking and allows time to detect malicious cha
 
 See [Signatures](#signatures) for signature validation formats, EIP-712 message types, and replay protection details.
 
-### Upgrade Authorization
-
-Organization upgrades require all three protections:
-
-1. **Guardian call** - Only Guardian can call `upgradeToAndCallWithAuthorization()`
-2. **Admin signatures** - Threshold of admin signatures required
-3. **Whitelist validation** - New implementation must be whitelisted
-
-```solidity
-function upgradeToAndCallWithAuthorization(
-    address newImplementation,
-    bytes calldata data,
-    AdminAuthParams calldata authParams
-) external onlyGuardian {
-    // 1. Validate admin authorization
-    LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert(...);
-
-    // 2. Validate implementation against whitelist
-    IImplementationWhitelist(whitelistAddress)
-        .validateIsImplementationWhitelistedOrRevert(ContractType.Organization, newImplementation);
-
-    // 3. Set authorization flag and perform upgrade
-    LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = true;
-    upgradeToAndCall(newImplementation, data);
-    LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = false;
-}
-```
-
-Direct calls to inherited `upgradeToAndCall()` revert with `UnauthorizedUpgrade()`.
-
----
-
 ## Signatures
 
 All operations in MLS Wallet require cryptographic signatures for authorization. This section consolidates all signing schemes, message formats, and validation mechanisms.
