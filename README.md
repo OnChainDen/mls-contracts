@@ -232,7 +232,7 @@ Policies have the following configurable fields that can be used to determine wh
     - Any contract in a custom list defined by the user
     
 
-- **Functions** *(only available if  Transaction Type is "Contract interactions")*
+- **Functions** *(only available if Transaction Type is "Contract interactions")*
 
     The function being called in the contract interaction.
 
@@ -240,7 +240,65 @@ Policies have the following configurable fields that can be used to determine wh
     - "Any function"
     - Any function in a custom list defined by the user
 
-    If a custom list of function is provided, each function can optionally have function arguments specified. If a function argument is specified, a policy will only match transactions that call the function with the specified argument. Not all arguments are required to be defined. If an argument is provided a value, than any value can be used to match the transaction.
+    If a custom list of functions is provided, each function can optionally have **parameter constraints** specified. See the [Function Arguments](#function-arguments) section below for details on configuring parameter constraints.
+
+- **Function Arguments** *(only available if Transaction Type is "Contract interactions" and a custom list of functions is specified)*
+
+    When specifying allowed functions for a contract interaction policy, you can optionally define constraints on function parameters. Parameter constraints allow fine-grained control over what values can be passed to specific function arguments.
+
+    **Supported Parameter Types:**
+
+    | Type | Description |
+    |------|-------------|
+    | `Uint` | Unsigned integers (uint8 to uint256) |
+    | `Int` | Signed integers (int8 to int256) |
+    | `Address` | Ethereum addresses (20 bytes) |
+    | `Bool` | Boolean values |
+    | `FixedBytes` | Fixed-size bytes (bytes1 to bytes32) |
+    | `Bytes` | Dynamic bytes |
+    | `String` | Dynamic strings |
+    | `Array` | Dynamic arrays |
+    | `Struct` | Tuples/struct types |
+
+    **Constraint Types:**
+
+    | Constraint | Description |
+    |------------|-------------|
+    | `Any` | Any value is accepted (wildcard - no constraint enforced) |
+    | `Exact` | Value must exactly match a specified value |
+    | `Range` | Value must be within min/max bounds (inclusive) |
+    | `OneOf` | Value must be one of the allowed values in a list |
+
+    **Constraint Compatibility by Parameter Type:**
+
+    Not all constraint types are supported for all parameter types:
+
+    | Parameter Type | Any | Exact | Range | OneOf |
+    |----------------|-----|-------|-------|-------|
+    | `Uint`         | Yes | Yes   | Yes   | No    |
+    | `Int`          | Yes | Yes   | Yes   | No    |
+    | `Address`      | Yes | Yes   | No    | Yes   |
+    | `Bool`         | Yes | Yes   | No    | No    |
+    | `FixedBytes`   | Yes | Yes   | No    | No    |
+    | `Bytes`        | Yes | Yes   | No    | No    |
+    | `String`       | Yes | Yes   | No    | No    |
+    | `Array`        | Yes | No    | No    | No    |
+    | `Struct`       | Yes | No    | No    | No    |
+
+    **Constraint Behavior Details:**
+
+    - **Any**: No validation is performed. The parameter can have any value.
+    - **Exact**: Direct value comparison. For `Bytes` and `String` types, uses hash comparison (keccak256 of the actual value compared against the expected hash).
+    - **Range**: For `Uint`, checks `value >= min && value <= max`. For `Int`, same logic with signed integer comparison.
+    - **OneOf**: Only supported for `Address` type. Uses merkle tree verification where the comparison data contains a merkle root of allowed addresses, and a proof is provided to verify the address is in the allowed set.
+
+    **Important Notes:**
+
+    - Constraints are applied sequentially to function parameters in the order they appear in the function signature.
+    - Not all parameters need constraints defined. Any parameter without a constraint accepts any value.
+    - `Array` and `Struct` types only support the `Any` constraint due to their complex ABI encoding.
+
+    See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` for implementation details.
 
 ### Policy limitations
 Policies can be limited to either a single transaction at a time, or multiple transactions within a time interval.
