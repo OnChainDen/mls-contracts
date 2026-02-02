@@ -300,10 +300,49 @@ Policies have the following configurable fields that can be used to determine wh
 
     See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` for implementation details.
 
-### Policy limitations
-Policies can be limited to either a single transaction at a time, or multiple transactions within a time interval.
+### Policy Rate Limits
 
-For example, a time-based limitation on a Policy can be used to craft a policy that only allows a certain amount of tokens to be transfered every month.
+Policies can have rate limiting configured to control how frequently they can be used. This enables scenarios like daily spending limits.
+
+**Limitation Types:**
+
+| Type | Description |
+|------|-------------|
+| `None` | No limitation - the policy can be used for unlimited transactions |
+| `TimeInterval` | Time-based rate limiting - usage resets after a configurable time window |
+
+**Time Interval Configuration** *(only applicable when limitation type is `TimeInterval`)*
+
+When using time-based rate limiting, the following parameters can be configured:
+
+- **Time Interval (Hours)**: The duration of the time window in hours (e.g., 24 for daily limits, 168 for weekly limits, 720 for monthly limits). Usage tracking resets at the start of each new time window.
+
+- **Interval Limit**: The maximum allowed usage within each time window. For token transfer policies, this is the cumulative token amount. For contract interaction policies, this is the number of times the contract can be called during the time interval.
+
+**Scoping Options:**
+
+Time-based limits can be scoped in different ways for each of these dimensions:
+
+| Scope Dimension | `AcrossAll` | `PerEntity` |
+|-----------------|-------------|-------------|
+| **Initiator** | Single shared limit across all initiators | Separate limit tracked per initiator |
+| **Source Account** | Single shared limit across all source accounts | Separate limit tracked per source account |
+| **Destination** | Single shared limit across all destinations | Separate limit tracked per destination |
+
+**Example configurations:**
+
+- *"$10,000/day per initiator"*: Set `initiatorScope = PerEntity`, `sourceScope = AcrossAll`, `destinationScope = AcrossAll`. Each initiator has their own $10,000 daily limit.
+
+- *"$50,000/month total from Treasury account"*: Set `initiatorScope = AcrossAll`, `sourceScope = PerEntity`, `destinationScope = AcrossAll`. The Treasury account has a shared $50,000 monthly limit regardless of who initiates or where funds go.
+
+- *"5 transactions/day to each whitelisted address"*: Set `initiatorScope = AcrossAll`, `sourceScope = AcrossAll`, `destinationScope = PerEntity`. Each destination address has its own limit of 5 transactions per day.
+
+**Usage Tracking:**
+
+- For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
+- For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
+
+See `src/types/PolicyTypes.sol` (specifically `PolicyLimitation`, `TimeIntervalScope`, and `TimeLimitConfig`) and `src/organization/libraries/policy/LibPolicyTimeBasedLimits.sol` for implementation details.
 
 ![User interface for editing a Policy's limitation](docs/images/MLSWalletDemoPolicyLimitationsScreenshot.png)
 *The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
