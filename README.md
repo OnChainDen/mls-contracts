@@ -162,13 +162,13 @@ The Policy that's used to create the transaction dictates who can approve or rej
 2. **Reviewers sign a message approving the transaction** (if ManualApproval policy) — This step is skipped if the policy is an AutoApproval policy.
 3. **Guardian collects the signatures**
 4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction is allowed by the policy provided and validates initiator and reviewer signatures.
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked –  only the initiator signature is checked
     - _Note: This happens offchain before submitting the transactions and signatures to the Organization smart contract._
-4. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
-5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked
-6. **Organization contract forwards transaction to the Account contract** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
-7. **Account contract executes the transaction** – Account contract checks that `msg.sender` is its associated Organization contract and then executes the transaction
+5. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
+6. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked s- only the initiator signature is checked
+7. **Organization contract forwards transaction to the Account contract** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
+8. **Account contract executes the transaction** – Account contract checks that `msg.sender` is its associated Organization contract and then executes the transaction
 
 ![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
 
@@ -192,7 +192,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
 
 ### Policy Validation Details
 
-When `isTransactionAllowedByPolicy()` is called, it validates:
+When an Account Transaction is validated against a Policy, the policy engine validates:
 
 1. **Policy exists** - Merkle proof against `policiesRoot`
 2. **Source account allowed** - Either `anySourceAccount=true` or account in policy's source accounts tree
@@ -202,8 +202,6 @@ When `isTransactionAllowedByPolicy()` is called, it validates:
 6. **Token/amount constraints** - For token transfers
 7. **Function/parameter constraints** - For contract interactions
 
-**Important:** The `policyId` is **explicitly provided** by the caller.
-
 For signature formats and message types, see [Signatures](#signatures).
 
 Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransaction.sol`
@@ -212,33 +210,83 @@ Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransact
 
 ## Account Signatures (ERC-1271)
 
-Accounts support ERC-1271 signature validation for smart contract interactions (e.g., Permit2, CoW Protocol, off-chain order books).
+### What is an Account Signature?
 
-### Workflow
+Account Signatures are ERC-1271 signature validations that allow Accounts to "sign" messages. Account Signatures enable Accounts to interact with protocols that require signature verification, such as:
+- **Permit2** — Gasless token approvals
+- **CoW Protocol** — Off-chain order signing
+- **Off-chain order books** — DEX limit orders
 
-1. **External Call** — Third party calls `Account.isValidSignature(hash, signature)` (`AccountImplementation.sol:54`)
-2. **Delegation** — Account delegates to `Organization.isValidSignatureForAccount(account, hash, signature)`
-3. **Signature Type Detection** — First byte determines validation path (see [Signatures](#signatures) for encoding details):
-   - `0x00` = Recovery signature (see [Disaster Recovery](#disaster-recovery))
-   - `0x01` = Policy-based signature (normal flow)
+In many ways, Account Signatures are similar to Account Transactions:
+- They must be created using a Policy
+- They must be initiated by a member authorized by the Policy
+- They need additional approval signatures to be valid if the Policy is a ManualApproval policy.
 
-### Policy-Based Signature Validation (Type 0x01)
+However, there are some keys differences:
+- The entry point for Account Signatures is the Account contract itself (`Account.isValidSignature()`), not the Organization contract. 
+    - Third parties call the Account directly to verify signatures. 
+    - This is required to be compliant with the ERC-1271 standard.
+- Account Signatures can't be rejected.
 
-Signature format: `0x01 | ABI(policyId, expiration, initiatorSig, reviewSigs, guardianSig, proofs)`
+### Using Policies to Create Account Signatures
 
-Validation steps:
-1. **Expiration check** - Signature must not be expired
-2. **Initiator signature** - Verify initiator signed the hash
-3. **Guardian signature** - Verify Guardian signed the review hash
-4. **Policy check** - Policy must exist and apply to this signature:
-   - `TransactionType.Signatures` required
-   - Source account must be allowed
-   - Initiator must be authorized
-5. **Approval check (ManualApproval policies)** - Verify threshold approvals
+Like Account Transactions, Account Signatures must be authorized using a Policy. The Policy defines:
+- Which Members can initiate the signature
+- Whether additional reviewer approvals are required and how many
+- Which Accounts the policy applies to
 
-**Important Limitation:** Time-based policy limits are NOT supported for ERC-1271 signatures because `isValidSignature` is a `view` function (cannot modify storage to track usage).
+**Important:** The Policy must be configured to be a `TransactionType.Signatures` policy. Policies configured for `TokenTransfers` or `ContractInteractions` cannot be used for Account Signatures.
 
-Files: `AccountImplementation.sol:54-62`, `LibOrganizationAccountSignature.sol`
+### Who can approve an Account Signature?
+
+The Policy used to create the signature dictates who can approve it:
+
+* If the Policy is an **AutoApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can create and approve the signature.
+  - _Note: AutoApproval policies don't require separate approval signatures from reviewers._
+
+* If the Policy is a **ManualApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can initiate the signature.
+  - Only Members that are specified by the Policy as **reviewers** can approve the signature.
+  - The threshold number of reviewer approvals must be met.
+
+> [!NOTE]
+> Unlike Account Transactions, Account Signatures **cannot be rejected**. This is because `isValidSignature()` is a `view` function that cannot modify state (no nonce to burn).
+
+### Approving Account Signatures
+
+1. **Initiator signs a message** — A Member (the "Initiator") signs the message hash being validated (EIP-712 typed data).
+   - Parameters: `account`, `hash`, `policyId`, `expirationTimestamp`
+2. **Reviewers sign a message** (if ManualApproval policy) — This step is skipped if the policy is an AutoApproval policy.
+3. **Guardian collects the signatures**
+4. **Guardian validates the signature against the policy** — Guardian service validates that the signature is allowed by the policy provided and validates initiator and reviewer signatures.
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked –  only the initiator signature is checked
+    - _Note: This happens offchain before the Guardian signs the review hash._
+5. **Guardian signs a message** — Guardian service signs the review hash.
+   - _Note: Unlike Account Transactions where Guardian calls the function, here the Guardian provides a signature._
+6. **Guardian sends all signatures to third party** — All signatures and proofs are ABI-encoded and packed together, and then sent to the third party that wants to validate the ERC-1271 signature
+7. **Third party calls `isValidSignature()` on Account contract using signatures from Guardian** — The packed signature sent from the Guardian to the third party is passed to the Account.
+8. **Account delegates to Organization contract** — Account calls `Organization.isValidSignatureForAccount()` passing along all the signatures
+9. **Organization contract validates all signatures and policy** — Checks expiration, initiator, guardian, policy authorization, and reviewer approvals.
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked
+10. **Account Contract returns ERC-1271 Magic values** — Returns `0x1626ba7e` for valid, `0xffffffff` for invalid.
+
+![Approving Account Signature](docs/images/ApprovingAccountSignature.svg)
+
+### Policy Validation Details
+
+When validating a signature, the same policy checks are performed as Account Transactions:
+
+1. **Policy exists** — Merkle proof against `policiesRoot`
+2. **Transaction type matches** — Must be `TransactionType.Signatures`
+3. **Source account allowed** — Either `anySourceAccount=true` or account in policy's source accounts tree
+4. **Initiator authorized** — Member/group membership verified via merkle proofs
+
+For signature formats and message types, see [Signatures](#signatures).
+
+For recovery signatures (type `0x00`), see [Disaster Recovery](#disaster-recovery).
+
+Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`, `LibOrganizationAccountSignature.sol`
 
 ---
 
