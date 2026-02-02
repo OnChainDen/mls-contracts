@@ -489,6 +489,58 @@ Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`
 
 ## Architecture
 
+### Core Contracts
+
+#### Organization (`src/organization/`)
+
+The Organization contract is the central hub that:
+- Stores all organizational state (members, groups, policies, admin configuration)
+- Validates and executes transactions on behalf of Accounts
+- Acts as a Beacon for Account proxies
+- Enforces Guardian protection on all external functions
+
+**Key files:**
+| File | Purpose |
+|------|---------|
+| `OrganizationProxy.sol` | ERC-1967 UUPS proxy |
+| `OrganizationImplementation.sol` | Main implementation, inherits all base contracts |
+| `OrganizationFactory.sol` | CREATE2 deployment for deterministic addresses |
+| `base/*.sol` | Modular base contracts (Admin, Members, Groups, Policy, etc.) |
+| `libraries/*.sol` | Business logic libraries |
+| `libraries/storage/*.sol` | EIP-7201 namespaced storage libraries |
+
+#### Account (`src/account/`)
+
+The Account contract is a thin wrapper that:
+- Holds organization assets (ETH, tokens)
+- Executes transactions only when called by its Organization
+- Delegates ERC-1271 signature validation to the Organization
+
+**Key files:**
+| File | Purpose |
+|------|---------|
+| `AccountProxy.sol` | BeaconProxy (Organization is the beacon) |
+| `AccountImplementation.sol` | Simple execution logic |
+
+#### Implementation Whitelist (`src/implementation-whitelist/`)
+
+A separate contract that maintains a whitelist of approved implementation addresses. Used to validate upgrades:
+- Prevents malicious implementation swaps
+- Controlled independently from individual Organizations
+
+#### Organization Factory (`src/organization/OrganizationFactory.sol`)
+
+A factory contract that deploys Organization contracts at deterministic addresses using CREATE2:
+- Enables same Organization address across all EVM-compatible chains
+- Validates implementation against the whitelist before deployment
+- Atomically deploys and initializes Organizations in a single transaction
+
+**Key files:**
+| File | Purpose |
+|------|---------|
+| `OrganizationFactory.sol` | CREATE2 deployment for deterministic addresses |
+
+---
 ### Factory Patterns
 
 MLS Wallet uses a two-tier factory system to deploy Organizations and Accounts at deterministic addresses across chains.
@@ -702,88 +754,7 @@ See: `src/organization/libraries/storage/`, `src/account/libraries/storage/`, `s
 
 ---
 
-#### Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     OrganizationFactory                          │
-│  (CREATE2 deployment, deterministic addresses across chains)     │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     OrganizationProxy                            │
-│                    (ERC-1967 UUPS Proxy)                         │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │              OrganizationImplementation                    │  │
-│  │  • Implements IBeacon (returns Account implementation)     │  │
-│  │  • Stores: membersRoot, groupsRoot, policiesRoot, admin    │  │
-│  │  • Validates transactions, manages policies                │  │
-│  │  • Guardian-protected external functions                   │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-           │                                        │
-           │ (upgrades validated against)           │ (deploys & manages)
-           ▼                                        ▼
-┌──────────────────────────┐          ┌──────────────────────┐   ┌──────────────────────┐
-│ ImplementationWhitelist  │          │    AccountProxy      │   │    AccountProxy      │
-│  (ERC-1967 UUPS Proxy)   │          │   (BeaconProxy)      │   │   (BeaconProxy)      │
-│  Owned by Den Safe       │          │  beacon = Org addr   │   │  beacon = Org addr   │
-└──────────────────────────┘          └──────────────────────┘   └──────────────────────┘
-                                                │                           │
-                                                └───────────┬───────────────┘
-                                                            ▼
-                                      ┌──────────────────────────────────────────────────┐
-                                      │              AccountImplementation               │
-                                      │  (Shared implementation via Beacon pattern)      │
-                                      │  • Holds assets (ETH, ERC-20 tokens)             │
-                                      │  • Executes transactions when called by Org      │
-                                      │  • ERC-1271 validation delegated to Org          │
-                                      └──────────────────────────────────────────────────┘
-```
-
----
-
-## Core Contracts
-
-### Organization (`src/organization/`)
-
-The Organization contract is the central hub that:
-- Stores all organizational state (members, groups, policies, admin configuration)
-- Validates and executes transactions on behalf of Accounts
-- Acts as a Beacon for Account proxies
-- Enforces Guardian protection on all external functions
-
-**Key files:**
-| File | Purpose |
-|------|---------|
-| `OrganizationProxy.sol` | ERC-1967 UUPS proxy |
-| `OrganizationImplementation.sol` | Main implementation, inherits all base contracts |
-| `OrganizationFactory.sol` | CREATE2 deployment for deterministic addresses |
-| `base/*.sol` | Modular base contracts (Admin, Members, Groups, Policy, etc.) |
-| `libraries/*.sol` | Business logic libraries |
-| `libraries/storage/*.sol` | EIP-7201 namespaced storage libraries |
-
-### Account (`src/account/`)
-
-The Account contract is a thin wrapper that:
-- Holds organization assets (ETH, tokens)
-- Executes transactions only when called by its Organization
-- Delegates ERC-1271 signature validation to the Organization
-
-**Key files:**
-| File | Purpose |
-|------|---------|
-| `AccountProxy.sol` | BeaconProxy (Organization is the beacon) |
-| `AccountImplementation.sol` | Simple execution logic |
-
-### Implementation Whitelist (`src/implementation-whitelist/`)
-
-A separate contract that maintains a whitelist of approved implementation addresses. Used to validate upgrades:
-- Prevents malicious implementation swaps
-- Controlled independently from individual Organizations
-
----
 
 ## Security Model
 
