@@ -128,6 +128,137 @@ Steps to reject an Admin Operation:
 See [Signatures](#signatures) for EIP-712 message format and encoding details.
 
 ---
+## Policies
+Policies are "if-then" rules that dictate:
+- Which Account Transactions can be executed and who can initiate, approve, or reject them.
+- Which Account Signatures (ERC-1271) can be approved and who can initiate and approve them.
+
+Example policies:
+- "if a transaction is sending more than $10,000, then require approval from 2 out of 3 members of the Finance team"
+- "if a transaction is sending less than $10,000, then require approval from 1 out of 3 members of the Finance team"
+- "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
+- "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team
+
+
+All Account Transactions and Account Signatures must be created using a Policy. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
+
+### Policy types
+There are two types of policies:
+1. **Auto-approval policies**
+
+    If an Account Transaction or Account Signature is governed by an Auto-approval policy, then it only requires one signature from a Member ("initiator") to initiate it. 
+    
+    Any valid initiator can also reject an Account Transaction, without requiring additional signatures from other Members (Account Signatures cannot be rejected).
+
+    _Note:_
+    1. The policy specifies which Members can be the initiator. 
+    2. If the initiator of a policy is set a Group, then any member of the group can initiate the Account Transaction or Account Signature without 
+
+2. **Manual approval policies**
+
+    If an Account Transaction or Account Signature is governed by a Manual approval policy, then in order for it to be approved, it must be:
+    - initiated by an authorized Member (the "initiator")
+    - approved by a Member or Group (the "reviewers")
+
+    
+    The same reviewers who are allowed to approve an Account Transaction are also authorized to reject it (Account Signatures cannot be rejected).
+
+    _Note:_
+    1. The policiy specifies which Members can be the initiator and which Members can be reviewers. 
+    2. If the initiator of a policy is set a Group, then any member of the group can initiate the Account Transaction or Account Signature. 
+    3. If the reviewer(s) is set to a Group, then the policy must also specify a threshold number of signatures from the reviewers required to approve or reject the operation.
+    4. Account Transactions can only be rejected if there was already a valid signature from an initiator to initiate it.
+
+
+
+### Policy filters for matching transactions
+Policies have the following configurable fields that can be used to determine which types of transactions they govern:
+
+- **Source Account**
+
+    The account which the Account Transaction can sent from, or the account which the Account Signature is allowed to sign an ERC-1271 signature from.
+    This value can bet set to "any source account" or a custom user-defined list of accounts.
+
+- **Transaction Initiator**
+
+    The Member or Group allowed to initiate the transaction.
+
+    This field can be set to one of the following values:
+    - "Any Member"
+    - A specific Member
+    - A specific Group
+
+    If the Transaction Initiator is a Group, then any Member of the Group is allowed to initiate the Account Transaction or Account Signature.
+
+
+- **Transaction Type** 
+    
+    This field can be set to one of the following values:
+    - "Any type of transaction"
+    - "Token transfers"
+    - "Contract interactions"
+    - "Account Signature"
+
+- **Token** *(only available if  Transaction Type is "Token transfers")*
+
+    The token being transfered in the transaction.
+
+    This can be either "any token" or a specific token, e.g. USDC.
+
+- **Token Transfer Recipient** *(only available if  Transaction Type is "Token transfers")*
+
+    To whom the token is being sent to.
+
+    This value can be one of the following:
+    - "Any recipient"
+    - "Any whitelisted address"
+    - "Any non-whitelisted address"
+    - Any address in a custom list defined by the user
+    
+- **Token Amount Threshold** *(only available if  Transaction Type is "Token transfers")*
+
+    A threshold value for the amount of the token being transferred.
+
+    If this value is set, then the policy only applies to transactions that are transferring an amount *less than or equal* to this value.
+
+- **Contracts** *(only available if  Transaction Type is "Contract interactions")*
+
+    The contract that the transaction is interacting with.
+
+    This value can be one of the following:
+    - "Any contract"
+    - "Any whitelisted contract"
+    - "Any non-whitelisted contract"
+    - Any contract in a custom list defined by the user
+    
+
+- **Functions** *(only available if  Transaction Type is "Contract interactions")*
+
+    The function being called in the contract interaction.
+
+    This value can be one of the following:
+    - "Any function"
+    - Any function in a custom list defined by the user
+
+    If a custom list of function is provided, each function can optionally have function arguments specified. If a function argument is specified, a policy will only match transactions that call the function with the specified argument. Not all arguments are required to be defined. If an argument is provided a value, than any value can be used to match the transaction.
+
+### Policy limitations
+Policies can be limited to either a single transaction at a time, or multiple transactions within a time interval.
+
+For example, a time-based limitation on a Policy can be used to craft a policy that only allows a certain amount of tokens to be transfered every month.
+
+![User interface for editing a Policy's limitation](docs/images/MLSWalletDemoPolicyLimitationsScreenshot.png)
+*The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
+
+### Demo of Policies
+We highly recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
+
+To view a demo of Multi-layer Security (MLS) Wallet's user interface for modifying Policies, visit:
+https://mls-wallet-demo.onchainden.com/policies
+
+To view the demo, please request a username and password from the Den team.
+
+---
 
 ## Account Transactions
 
