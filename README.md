@@ -489,18 +489,129 @@ Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`
 
 ## Architecture
 
-### Proxy Patterns
+### Upgradeability (Proxy Patterns)
 
-**Organization**: ERC-1967 UUPS Proxy
-- `OrganizationProxy.sol` → `OrganizationImplementation.sol`
-- Upgrades require: Guardian call + Admin threshold signatures + Implementation whitelist validation
-- Uses EIP-7201 namespaced storage to prevent slot collisions during upgrades
+Most contracts in MLS Wallet are upgradeable. This section explains the proxy patterns used, how upgrades work, and how they are secured.
 
-**Account**: Beacon Proxy (Organization as Beacon)
-- `AccountProxy.sol` → `AccountImplementation.sol`
-- Organization contract implements `IBeacon.implementation()`
-- All Accounts under an Organization share the same implementation
-- Account upgrades happen automatically when Organization updates the beacon implementation
+#### Organization Upgrades
+
+Each Organization is an **ERC-1967 UUPS Proxy**.
+
+| File | Purpose |
+|------|---------|
+| `OrganizationProxy.sol` | Proxy contract |
+| `OrganizationImplementation.sol` | Implementation contract |
+
+**Upgrade Requirements:**
+1. **Guardian must execute** — Only the Guardian can call `upgradeToAndCallWithAuthorization()`
+2. **Admin signatures** — Requires Admin signatures meeting the configured threshold
+3. **Whitelisted implementation** — The new implementation must be whitelisted in the `ImplementationWhitelist` contract
+
+See: `OrganizationImplementation.sol:67-103`
+
+---
+
+#### Account Upgrades
+
+Accounts use a **Beacon Proxy** pattern where the associated Organization acts as the Beacon.
+
+| File | Purpose |
+|------|---------|
+| `AccountProxy.sol` | Beacon Proxy contract |
+| `AccountImplementation.sol` | Implementation contract |
+
+**Key Characteristics:**
+- The Organization implements `IBeacon.implementation()` and returns the current `AccountImplementation` address
+- **All Accounts under an Organization are upgraded at once** — there is no way to upgrade individual Accounts
+- Individual Accounts do not control their own upgrades; upgrades are managed entirely through the Organization
+
+**Upgrade Requirements:**
+1. **Guardian must execute** — Only the Guardian can call `setAccountImplementation()` *on the Organization contract*
+2. **Admin signatures** — Requires Admin signatures meeting the configured threshold
+3. **Whitelisted implementation** — The new implementation must be whitelisted in the `ImplementationWhitelist` contract
+
+See: `OrganizationAccountFactoryBase.sol:49-75`
+
+---
+
+#### Implementation Whitelist
+
+All upgrades for Organizations and Accounts can only target implementation contracts that have been whitelisted by the **ImplementationWhitelist** contract.
+
+| File | Purpose |
+|------|---------|
+| `ImplementationWhitelistProxy.sol` | Proxy contract |
+| `ImplementationWhitelistImplementation.sol` | Implementation contract |
+
+**Key Characteristics:**
+- The `ImplementationWhitelist` contract is itself an **ERC-1967 UUPS Proxy**
+- Owned by a Safe multisig that Den controls
+- The Safe can add/remove implementations from the whitelist and upgrade the whitelist contract itself
+- Maintains separate whitelists for Organization implementations and Account implementations
+
+This design ensures that even if an Organization's Guardian and Admins are compromised, they cannot upgrade to a malicious implementation that Den has not approved.
+
+See: `ImplementationWhitelistImplementation.sol`, `LibImplementationWhitelistStorage.sol`
+
+---
+
+#### Storage Pattern (EIP-7201)
+
+All upgradeable contracts (Organizations, Accounts, and the ImplementationWhitelist) use **EIP-7201 namespaced storage slots** to prevent storage collisions during upgrades.
+
+We use a **storage library pattern** throughout our contracts. Each storage domain has a dedicated library (`Lib*Storage.sol`) that:
+1. Defines a `Layout` struct containing the storage variables
+2. Computes a unique storage slot using the EIP-7201 formula
+3. Provides a `layout()` function that returns a reference to the storage at that slot
+
+**Storage Libraries:**
+
+| Library | Purpose |
+|---------|---------|
+| `LibOrganizationAdminStorage.sol` | Admin configuration |
+| `LibOrganizationMembersStorage.sol` | Members merkle root |
+| `LibOrganizationGroupsStorage.sol` | Groups merkle root |
+| `LibOrganizationPolicyStorage.sol` | Policies merkle root and time-based limits |
+| `LibOrganizationGuardianStorage.sol` | Guardian address and pending updates |
+| `LibOrganizationSignaturesStorage.sol` | Used nonces |
+| `LibOrganizationAccountFactoryStorage.sol` | Deployed accounts and account implementation address |
+| `LibOrganizationUpgradeStorage.sol` | Whitelist address and upgrade authorization flag |
+| `LibOrganizationRecoveryStorage.sol` | Recovery configuration and state |
+| `LibOrganizationDeployerAddressStorage.sol` | Factory address for initialization authorization |
+| `LibAccountOrganizationAddressStorage.sol` | Reads Organization address from beacon slot |
+| `LibImplementationWhitelistStorage.sol` | Whitelisted implementations |
+
+**Example:**
+
+```solidity
+// LibOrganizationMembersStorage.sol
+library LibOrganizationMembersStorage {
+    struct Layout {
+        bytes32 membersRoot;
+    }
+
+    // EIP-7201 namespaced storage slot
+    // Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.members")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant STORAGE_LOCATION = 0xb80799cfa22e7d42bb36b2b397b5d0bd56930d54ee4f345397b8ece603c6f300;
+
+    function layout() internal pure returns (Layout storage _layout) {
+        assembly {
+            _layout.slot := STORAGE_LOCATION
+        }
+    }
+}
+```
+
+This pattern ensures that:
+- Storage slots are deterministic and collision-resistant
+- New state variables can be added in future upgrades without overwriting existing data
+- Each contract domain has isolated, well-documented storage
+
+See: `src/organization/libraries/storage/`, `src/account/libraries/storage/`, `src/implementation-whitelist/libraries/storage/`
+
+---
+
+#### Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -520,45 +631,24 @@ Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`
 │  │  • Guardian-protected external functions                   │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
-                              │
-          ┌───────────────────┴───────────────────┐
-          ▼                                       ▼
-┌──────────────────────┐              ┌──────────────────────┐
-│    AccountProxy      │              │    AccountProxy      │
-│   (BeaconProxy)      │              │   (BeaconProxy)      │
-│  beacon = Org addr   │              │  beacon = Org addr   │
-└──────────────────────┘              └──────────────────────┘
-          │                                       │
-          ▼                                       ▼
-┌──────────────────────────────────────────────────────────────┐
-│                   AccountImplementation                       │
-│  (Shared implementation via Beacon pattern)                   │
-│  • Holds assets (ETH, ERC-20 tokens)                          │
-│  • Executes transactions only when called by Organization     │
-│  • ERC-1271 signature validation delegated to Organization    │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Storage Pattern (EIP-7201)
-
-All state is stored using EIP-7201 namespaced storage to prevent slot collisions during upgrades:
-
-```solidity
-// Example: LibOrganizationMembersStorage.sol
-library LibOrganizationMembersStorage {
-    struct Layout {
-        bytes32 membersRoot;
-    }
-
-    // Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.members")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 internal constant STORAGE_LOCATION = 0xb80799cfa22e7d42bb36b2b397b5d0bd56930d54ee4f345397b8ece603c6f300;
-
-    function layout() internal pure returns (Layout storage _layout) {
-        assembly {
-            _layout.slot := STORAGE_LOCATION
-        }
-    }
-}
+           │                                        │
+           │ (upgrades validated against)           │ (deploys & manages)
+           ▼                                        ▼
+┌──────────────────────────┐          ┌──────────────────────┐   ┌──────────────────────┐
+│ ImplementationWhitelist  │          │    AccountProxy      │   │    AccountProxy      │
+│  (ERC-1967 UUPS Proxy)   │          │   (BeaconProxy)      │   │   (BeaconProxy)      │
+│  Owned by Den Safe       │          │  beacon = Org addr   │   │  beacon = Org addr   │
+└──────────────────────────┘          └──────────────────────┘   └──────────────────────┘
+                                                │                           │
+                                                └───────────┬───────────────┘
+                                                            ▼
+                                      ┌──────────────────────────────────────────────────┐
+                                      │              AccountImplementation               │
+                                      │  (Shared implementation via Beacon pattern)      │
+                                      │  • Holds assets (ETH, ERC-20 tokens)             │
+                                      │  • Executes transactions when called by Org      │
+                                      │  • ERC-1271 validation delegated to Org          │
+                                      └──────────────────────────────────────────────────┘
 ```
 
 ---
