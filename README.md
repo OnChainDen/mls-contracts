@@ -142,7 +142,7 @@ Example policies:
 
 All Account Transactions and Account Signatures must be created using a Policy. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
 
-### Policy types
+### Policy Types
 There are two types of policies:
 1. **Auto-approval policies**
 
@@ -171,7 +171,7 @@ There are two types of policies:
 
 
 
-### Policy filters for matching transactions
+### Policy Configuration Fields
 Policies have the following configurable fields that can be used to determine which types of transactions they govern:
 
 - **Source Account**
@@ -1025,22 +1025,6 @@ struct PolicyConfig {
 ```
 
 See: `src/types/PolicyTypes.sol`
-
-### Policy Types
-
-| Type | Behavior |
-|------|----------|
-| `AutoApprove` | Transaction proceeds with just initiator signature |
-| `RequireManualApproval` | Requires threshold approvals from designated approvers |
-
-### Policy Matching
-
-**The caller explicitly specifies which `policyId` to use.** The contract verifies:
-1. The policy exists (merkle proof)
-2. The policy applies to this transaction (filters match)
-3. Required signatures are provided
-
-There is no ordered list of policies - the policy ID is part of the transaction parameters.
 
 ### Time-Based Limits
 
