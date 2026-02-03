@@ -507,7 +507,7 @@ A key architectural decision in MLS Wallet is the use of **Merkle trees** to sto
 | Admins | `adminsRoot` | Flat tree of admin addresses (must also be in Members) |
 | Policies | `policiesRoot` | Multi-level nested (up to 4 levels deep) |
 
-For detailed documentation on the Merkle tree architecture, including nested structures, leaf computation, and how proofs are passed to function calls, see **[MERKLETREE_ARCHITECTURE.md](./MERKLETREE_ARCHITECTURE.md)**.
+For detailed documentation on the Merkle tree architecture, including nested structures, leaf computation, and how proofs are passed to function calls, see **[MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md)**.
 
 ---
 
@@ -1469,9 +1469,9 @@ File: `LibOrganizationAccountSignature.sol:79`
 
 ## Deployment
 
-For detailed deployment instructions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+For detailed deployment instructions, see **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.
 
-[DEPLOYMENT.md](./DEPLOYMENT.md) includes:
+[DEPLOYMENT.md](./docs/DEPLOYMENT.md) includes:
 - Signer setup (Foundry keystore or Ledger)
 - Step-by-step deployment commands
 - Guardian/Admin Safe configuration
