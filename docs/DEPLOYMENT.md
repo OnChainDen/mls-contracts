@@ -14,9 +14,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Project Setup](#project-setup)
    - [Signer Setup](#signer-setup)
 4. [Deployment Order](#deployment-order)
-5. [Deployment Examples](#deployment-examples)
-   - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
-   - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
+5. [Deployment Example (Arachnid Factory)](#deployment-example-arachnid-factory)
 6. [Verifying Deployments](#verifying-deployments)
 7. [Troubleshooting](#troubleshooting)
 8. [Make Reference](#make-reference)
@@ -437,190 +435,46 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 
 ---
 
-## Deployment Examples
-
-### Example 1: Deploy via Arachnid Factory
+## Deployment Example (Arachnid Factory)
 
 This example deploys the full platform to a local Anvil instance using the Arachnid factory.
 
 ```bash
 #!/bin/bash
-# =============================================================================
-# Example: Full deployment using Arachnid Deterministic Deployer
-# =============================================================================
-
-# Configuration
 PORT="8545"
 RPC_URL="http://127.0.0.1:$PORT"
-ACCOUNT="my-deployer"  # Name of your Foundry keystore account
+ACCOUNT="my-deployer"  # Foundry keystore account name
+EXECUTOR="0x66fb51bf8c7a973a278578a2e381fb5e89796de1"  # Guardian Executor EOA
 
-# -----------------------------------------------------------------------------
-# Step 1: Start local Anvil instance
-# -----------------------------------------------------------------------------
-# Uses default chain ID 31337 (local development)
-# --disable-default-create2-deployer: Don't deploy Anvil's default CREATE2 factory
-#   (we want to deploy Arachnid ourselves to match production behavior)
-pkill anvil  # Kill any existing Anvil instances
-anvil --disable-default-create2-deployer -p $PORT &
-
-# Wait for Anvil to start
-sleep 3
-
-# -----------------------------------------------------------------------------
-# Step 2: Fund the deployer account
-# -----------------------------------------------------------------------------
-# Get the deployer address from our Foundry keystore
-SENDER=$(cast wallet address --account $ACCOUNT)
-
-# Fund the deployer with ETH (Anvil-specific RPC call)
-cast rpc anvil_setBalance $SENDER 0xffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
-
-# -----------------------------------------------------------------------------
-# Step 3: Fund and deploy the Arachnid factory
-# -----------------------------------------------------------------------------
-# The Arachnid factory uses a pre-signed keyless transaction.
-# We first fund the pre-determined deployer address, then broadcast the pre-signed tx.
-
-make fund-arachnid-deployer ACCOUNT=$ACCOUNT
-
-make deploy-arachnid-factory ACCOUNT=$ACCOUNT
-
-# -----------------------------------------------------------------------------
-# Step 4: Deploy Safe infrastructure and multisigs
-# -----------------------------------------------------------------------------
-# Safe 1.4.1 must be deployed BEFORE platform contracts.
-# This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
-# Safe deployment is split into two steps for security:
-#   - Step 4a: Infrastructure (singleton, proxy factory, handlers)
-#   - Step 4b: Multisigs (verifies infra is deployed first)
-
-make deploy-safe-infra ACCOUNT=$ACCOUNT
-make deploy-safe-multisigs ACCOUNT=$ACCOUNT
-
-# -----------------------------------------------------------------------------
-# Step 5: Deploy platform libraries (two stages)
-# -----------------------------------------------------------------------------
-# FACTORY=arachnid is the default, so we don't need to specify it
-# Libraries must be deployed in two stages due to inter-library dependencies:
-#   Stage 1: Independent libraries (Policy, Admin) - no dependencies
-#   Stage 2: Dependent libraries (Init, AccountSig) - depend on Policy/Admin
-
-make deploy-independent-libs ACCOUNT=$ACCOUNT
-make deploy-dependent-libs ACCOUNT=$ACCOUNT
-
-# Or use the convenience target that runs both stages:
-# make deploy-libraries ACCOUNT=$ACCOUNT
-
-# -----------------------------------------------------------------------------
-# Step 6: Deploy platform contracts
-# -----------------------------------------------------------------------------
-# Contracts are deployed with library linking via FOUNDRY_PROFILE
-
-make deploy-contracts ACCOUNT=$ACCOUNT
-
-# Or use the convenience target (includes Safe deployment + both library stages):
-# make deploy-platform ACCOUNT=$ACCOUNT
-
-# -----------------------------------------------------------------------------
-# Deployment complete!
-# -----------------------------------------------------------------------------
-echo "Deployment complete. Contracts deployed via Arachnid factory."
-```
-
-### Example 2: Deploy via Den Singleton Factory
-
-This example deploys to a local Anvil instance using the Den Singleton Factory. Use this approach when deploying to chains that don't support the Arachnid pre-signed transaction.
-
-```bash
-#!/bin/bash
-# =============================================================================
-# Example: Full deployment using Den Singleton Factory (Non-Production)
-# =============================================================================
-# Use this when the target chain enforces strict EIP-155 and rejects
-# the Arachnid keyless transaction.
-
-# Configuration
-PORT="8545"
-RPC_URL="http://127.0.0.1:$PORT"
-
-# IMPORTANT: For Den Singleton Factory, you need TWO accounts:
-# 1. A funder account (any account with ETH to fund the deployer)
-# 2. The specific Den factory deployer account (MUST be at nonce 0)
-FUNDER_ACCOUNT="my-deployer"
-
-# The Den factory deployer for non-production environments
-# This MUST match NON_PROD_DEN_FACTORY_DEPLOYER_ADDRESS in DeploymentConfig.sol
-DEN_DEPLOYER_ACCOUNT="den-nonprod-deployer"
-DEN_DEPLOYER_ADDRESS="0x22002e8661A780d61EF4c86F4a9fFa843A6fea20"
-
-# -----------------------------------------------------------------------------
-# Step 1: Start local Anvil instance
-# -----------------------------------------------------------------------------
-# Uses default chain ID 31337 (local development)
+# 1. Start Anvil (disable default CREATE2 factory to match production)
 pkill anvil
 anvil --disable-default-create2-deployer -p $PORT &
-
 sleep 3
 
-# -----------------------------------------------------------------------------
-# Step 2: Fund accounts
-# -----------------------------------------------------------------------------
-# Fund the funder account
-FUNDER_ADDRESS=$(cast wallet address --account $FUNDER_ACCOUNT)
-cast rpc anvil_setBalance $FUNDER_ADDRESS 0xffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
+# 2. Fund deployer
+SENDER=$(cast wallet address --account $ACCOUNT)
+cast rpc anvil_setBalance $SENDER 0xffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
 
-# Fund the Den factory deployer account
-cast rpc anvil_setBalance $DEN_DEPLOYER_ADDRESS 0xffffffffffffffffffffffffffffffff --rpc-url $RPC_URL
+# 3. Deploy Arachnid CREATE2 factory
+make fund-arachnid-deployer ACCOUNT=$ACCOUNT
+make deploy-arachnid-factory ACCOUNT=$ACCOUNT
 
-# -----------------------------------------------------------------------------
-# Step 3: Deploy the Den Singleton Factory
-# -----------------------------------------------------------------------------
-# CRITICAL: This must be run from the Den deployer account at nonce 0!
-# The deployment script will verify the nonce is 0 and fail if not.
+# 4. Deploy platform (Safe infra + multisigs + libraries + contracts)
+make deploy-platform ACCOUNT=$ACCOUNT
 
-make deploy-den-factory ACCOUNT=$DEN_DEPLOYER_ACCOUNT
+# 5. Deploy BatchedTransaction (required before SafeExecutorModule)
+make deploy-batched-transaction ACCOUNT=$ACCOUNT
 
-# -----------------------------------------------------------------------------
-# Step 4: Deploy Safe infrastructure and multisigs
-# -----------------------------------------------------------------------------
-# Safe 1.4.1 must be deployed BEFORE platform contracts.
-# This uses FOUNDRY_PROFILE=safe internally (Solidity 0.7.6).
-# Safe deployment is split into two steps for security:
-#   - Step 4a: Infrastructure (singleton, proxy factory, handlers)
-#   - Step 4b: Multisigs (verifies infra is deployed first)
-# IMPORTANT: Use FACTORY=den-nonprod to target the correct factory address.
+# 6. Deploy Guardian Safe Executor Module
+make deploy-guardian-safe-module EXECUTOR=$EXECUTOR ACCOUNT=$ACCOUNT
 
-make deploy-safe-infra ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
-make deploy-safe-multisigs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
+# 7. Add module to Guardian Safe (each owner runs this; executes when threshold met)
+make guardian-safe-add-module EXECUTE=true ACCOUNT=guardian-safe-owner
 
-# -----------------------------------------------------------------------------
-# Step 5: Deploy platform libraries (two stages)
-# -----------------------------------------------------------------------------
-# IMPORTANT: Use FACTORY=den-nonprod to:
-# - Target the correct factory address
-# - Use the correct library addresses (library addresses differ per factory)
-#
-# Libraries must be deployed in two stages due to inter-library dependencies
-
-make deploy-independent-libs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
-make deploy-dependent-libs ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
-
-# Or use the convenience target that runs both stages:
-# make deploy-libraries ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
-
-# -----------------------------------------------------------------------------
-# Step 6: Deploy platform contracts
-# -----------------------------------------------------------------------------
-make deploy-contracts ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
-
-# Or use the convenience target (includes Safe deployment + both library stages):
-# make deploy-platform ACCOUNT=$FUNDER_ACCOUNT FACTORY=den-nonprod
-
-# -----------------------------------------------------------------------------
-# Deployment complete!
-# -----------------------------------------------------------------------------
-echo "Deployment complete. Contracts deployed via Den Singleton Factory (non-prod)."
+echo "Deployment complete."
 ```
+
+> **Note:** For Den Singleton Factory deployments (chains that reject Arachnid's pre-signed transaction), use `FACTORY=den-nonprod` with all make targets and deploy the factory via `make deploy-den-factory`.
 
 ---
 
