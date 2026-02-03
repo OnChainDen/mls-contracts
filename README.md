@@ -54,7 +54,7 @@ MLS Wallet stores organization assets in smart contracts governed by **policies*
 
 - **Policy-based authorization**: Fine-grained control over transaction types, amounts, recipients, and approval requirements
 - **Multiple redundant security layers**: Mobile wallet, offchain Guardian service, and onchain smart contracts independently validate every transaction
-- **Merkle-based storage**: Policies, members, and groups stored as merkle trees (only roots on-chain) for gas efficiency
+- **Merkle-based storage**: Policies, members, and groups stored as merkle trees (only roots onchain) for gas efficiency
 
 ---
 
@@ -69,8 +69,8 @@ MLS Wallet uses three independent security layers. Each layer validates transact
 | Layer | Location | Purpose |
 |-------|----------|---------|
 | **Signing Client** | Mobile wallet / SDK | Policy validation before signing; prevents invalid transactions from being created |
-| **Guardian Service** | Off-chain server | Independent policy validation; confirms all required approvals present |
-| **Smart Contracts** | On-chain | Final enforcement; blocks malicious transactions at blockchain level |
+| **Guardian Service** | Offchain server | Independent policy validation; confirms all required approvals present |
+| **Smart Contracts** | Onchain | Final enforcement; blocks malicious transactions at blockchain level |
 
 
 ### Key Abstractions
@@ -80,7 +80,7 @@ Organizations, along with their Members, Groups, Admins, and Policies are repres
 
 | Abstraction | Description |
 |-------------|-------------|
-| **Organization** | The on-chain representation of a business entity. Stores all state (members, groups, policies, admin config). Does NOT hold funds. |
+| **Organization** | The onchain representation of a business entity. Stores all state (members, groups, policies, admin config). Does NOT hold funds. |
 | **Account** | Smart contract wallet that holds assets. Owned by an Organization. Executes transactions only when called by its Organization. |
 | **Member** | A person or API identity belonging to an Organization. Identified by an address (EOA or smart contract). |
 | **Group** | A collection of Members organized by function (e.g., "Finance Team"). Used for approval thresholds. |
@@ -427,8 +427,8 @@ Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransact
 
 Account Signatures are ERC-1271 signature validations that allow Accounts to "sign" messages. Account Signatures enable Accounts to interact with protocols that require signature verification, such as:
 - **Permit2** — Gasless token approvals
-- **CoW Protocol** — Off-chain order signing
-- **Off-chain order books** — DEX limit orders
+- **CoW Protocol** — Offchain order signing
+- **Offchain order books** — DEX limit orders
 
 In many ways, Account Signatures are similar to Account Transactions:
 - They must be created using a Policy
@@ -507,7 +507,7 @@ Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`
 
 ### Merkle-Based Storage
 
-A key architectural decision in MLS Wallet is the use of **Merkle trees** to store Members, Groups, Admins, and Policies. Instead of storing data directly on-chain (which would be prohibitively expensive for large organizations), only 32-byte Merkle roots are stored. The full data lives off-chain (on IPFS), and callers provide Merkle proofs to verify membership.
+A key architectural decision in MLS Wallet is the use of **Merkle trees** to store Members, Groups, Admins, and Policies. Instead of storing data directly onchain (which would be prohibitively expensive for large organizations), only 32-byte Merkle roots are stored. The full data lives offchain (on IPFS), and callers provide Merkle proofs to verify membership.
 
 **Why this matters:**
 - **Gas efficiency** — Modifying 1,000 members costs the same as modifying 10 (~20K gas for one `SSTORE`)
@@ -794,7 +794,7 @@ See: `src/organization/libraries/storage/`, `src/account/libraries/storage/`, `s
 
 ## Guardian Protection
 
-The Guardian is an offchain service operated by Den that validates transactions independently before submitting them on-chain. It serves as a critical redundant security layer—even if vulnerabilities exist in the client or smart contracts, the Guardian provides an independent check.
+The Guardian is an offchain service operated by Den that validates transactions independently before submitting them onchain. It serves as a critical redundant security layer—even if vulnerabilities exist in the client or smart contracts, the Guardian provides an independent check.
 
 **Key concepts:**
 - Most Organization functions are protected by the `onlyGuardian` modifier
