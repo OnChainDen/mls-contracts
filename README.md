@@ -345,7 +345,7 @@ To view the demo, please request a username and password from the Den team.
 ## Account Transactions
 
 ### What is an Account Transaction?
-Account Transactions are versitile onchain transactions sent from Accounts. Account Transctions can be token transfers, DeFi operations, or any other smart contract interaction. 
+Account Transactions are versatile onchain transactions sent from Accounts. Account Transactions can be token transfers, DeFi operations, or any other smart contract interaction. 
 
 For security, Account Transactions only support `call` operations, and `delegatecall` operations are strictly forbidden.
 
@@ -375,13 +375,13 @@ The Policy that's used to create the transaction dictates who can approve or rej
 2. **Reviewers sign a message approving the transaction** (if ManualApproval policy) — This step is skipped if the policy is an AutoApproval policy.
 3. **Guardian collects the signatures**
 4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction is allowed by the policy provided and validates initiator and reviewer signatures.
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked –  only the initiator signature is checked
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked — only the initiator signature is checked
     - _Note: This happens offchain before submitting the transactions and signatures to the Organization smart contract._
 5. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
-6. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked s- only the initiator signature is checked
+6. **Organization contract performs all validations** — Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
+    - If the policy is an AutoApproval policy, reviewer signatures are not checked — only the initiator signature is checked
 7. **Organization contract forwards transaction to the Account contract** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
-8. **Account contract executes the transaction** – Account contract checks that `msg.sender` is its associated Organization contract and then executes the transaction
+8. **Account contract executes the transaction** — Account contract checks that `msg.sender` is its associated Organization contract and then executes the transaction
 
 ![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
 
