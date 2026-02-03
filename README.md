@@ -179,6 +179,8 @@ There are two types of policies:
     
     Any valid initiator can also reject an Account Transaction, without requiring additional signatures from other Members (Account Signatures cannot be rejected).
 
+    See [Core Fields (All Policies)](#core-fields-all-policies) to learn more about initiators.
+
 2. **Manual approval policies**
 
     If an Account Transaction or Account Signature is governed by a Manual approval policy, then in order for it to be approved, it must be:
