@@ -79,7 +79,7 @@ brew install jq yq
 ```
 
 ### 2. Install Git Submodules (Foundry Dependencies)
-Run the full setup suite to ensure a clean setup, install dependenices, and build the project:
+Run the full setup suite to ensure a clean environment, install dependencies, and build the project:
 
 ```bash
 make all
@@ -153,7 +153,7 @@ This script will:
 > For production deployment, refer to the script to see the deployment order, and run the same Makefile targets with different networks, accounts (Ledgers), and other configuration as needed.
 
 > [!WARNING]
-> If you do not have access to the EOAs that the `script/sh/test_deploy_scripts_locally.sh` script expects, you'll need to import accounts with the same names and update the expected addressess in `deployment.toml` to deploy locally.
+> If you do not have access to the EOAs that the `script/sh/test_deploy_scripts_locally.sh` script expects, you'll need to import accounts with the same names and update the expected addresses in `deployment.toml` to deploy locally.
 
 
 
@@ -216,7 +216,7 @@ Deploys the Guardian Safe and Admin Safe proxy wallets.
 make deploy-safe-multisigs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. This prevents deploying Safe proxies without the Singleton, which would allow attackers to frontrun initialization.
+> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. This prevents deploying Safe proxies without the Singleton, which would allow attackers to front-run initialization.
 
 ---
 
@@ -369,7 +369,7 @@ echo "Deployment complete."
 To deploy contracts using a ledger: 
 1. connect your Ledger and unlock it
 2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `makefile` deployment targets
-3. Optionally set `HD_PATH=YourDeriviationPath` for `makefile` deployment targets to use a different deriviation path (The default HD path is `m/44'/60'/0'/0/0`)
+3. Optionally set `HD_PATH=YourDerivationPath` for `makefile` deployment targets to use a different derivation path (The default HD path is `m/44'/60'/0'/0/0`)
 
 Example:
 

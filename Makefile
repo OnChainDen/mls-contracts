@@ -392,7 +392,7 @@ deploy-den-factory: validate-signer-vars
 # 2. deploy-safe-multisigs: Deploys Guardian and Admin Safes (verifies infra first)
 #
 # This two-step process prevents deploying Safe proxies without the Singleton,
-# which could allow attackers to frontrun initialization.
+# which could allow attackers to front-run initialization.
 #
 # Uses Solidity 0.7.6 via FOUNDRY_PROFILE=safe for deterministic addresses.
 #
