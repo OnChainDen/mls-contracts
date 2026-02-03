@@ -1034,6 +1034,30 @@ Files: `LibOrganizationEIP712.sol`
 
 ---
 
+### Signature Expiration (Optional)
+
+All signed messages include an **`expirationTimestamp`** field that can optionally specify when the signature becomes invalid:
+
+```solidity
+AdminOperation(
+    ...
+    uint256 expirationTimestamp,  // Signature expires after this timestamp
+    ...
+)
+```
+
+- If `block.timestamp > expirationTimestamp`, the signature is rejected
+- Signers choose the expiration based on their security requirements (e.g., 1 hour, 24 hours, 1 week)
+
+**Making signatures indefinite:** To create a signature that never expires, set `expirationTimestamp` to `type(uint256).max`. Since this value is far in the future (~10^77 years), the expiration check will always pass.
+
+**Use cases for expiration:**
+- **Time-sensitive approvals** — Ensure a transaction approval can't be executed days after it was signed when circumstances may have changed
+- **Limiting exposure** — If a signature is leaked but hasn't been used, it will eventually expire
+- **Coordinated operations** — Ensure all parties sign within a reasonable timeframe
+
+---
+
 ### Replay Protection & Non-Sequential Nonces
 
 MLS Wallet uses a **salt-based, non-sequential nonce** system that provides replay protection while enabling flexible operation execution.
