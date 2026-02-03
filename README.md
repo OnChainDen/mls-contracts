@@ -790,12 +790,14 @@ The following functions require `msg.sender` to be the Guardian:
 
 | Category | Functions |
 |----------|-----------|
-| **Admin Operations** | `modifyAdmins()`, `rejectAdminOperation()` |
+| **Admin Management** | `modifyAdmins()`, `rejectAdminOperation()` |
 | **State Management** | `modifyMembers()`, `modifyGroups()`, `modifyPolicies()` |
 | **Guardian Updates (Normal)** | `initiateGuardianUpdate()`, `finalizeGuardianUpdate()`, `cancelGuardianUpdate()` |
 | **Account Operations** | `deployAccount()`, `setAccountImplementation()` |
 | **Account Transactions** | `executeAccountTransaction()`, `rejectAccountTransaction()` |
 | **Upgrades** | `upgradeToAndCallWithAuthorization()` |
+
+In the case of ERC-1271 Account Signatures, any `msg.sender` can call `isValidSignature` on the Account contract, but a signed message from the Guardian must be provided as part of the packed `signature` function parameters. 
 
 #### Exceptions (Functions Protected by Other Modifiers)
 
@@ -817,9 +819,9 @@ Files: `OrganizationModifiers.sol`, `LibOrganizationGuardian.sol`
 
 The Guardian address is not a simple EOA—it is a **Safe multisig** with a custom module that enables automated operations while maintaining security.
 
-#### Why a Safe Multisig?
+#### Why a Safe Multisig with a custom module?
 
-Using a Safe multisig as the Guardian provides several benefits:
+Using a Safe multisig with a custom module as the Guardian provides several benefits:
 - **Key rotation** — If the automated signing key is compromised, Safe owners can remove the compromised module
 - **Multi-party control** — Multiple signers control the underlying Safe, preventing single points of failure
 - **Auditability** — All transactions are logged and can be traced
@@ -833,9 +835,9 @@ The Guardian Safe has a custom module (`SafeExecutorModule`) installed that allo
 | Restriction | Purpose |
 |-------------|---------|
 | **No calls to the Safe itself** | Prevents the Authorized Executor from modifying Safe owners, modules, or threshold |
-| **No ETH value transfers** | Value is hardcoded to 0, preventing ETH draining |
 | **Only CALL operations** | DelegateCall is only allowed to `BatchedTransaction` (see below) |
 | **Immutable Authorized Executor** | To rotate the executor, Safe owners must deploy a new module and swap it via multisig |
+| **No ETH value transfers** | Value is hardcoded to 0, preventing ETH draining. This is an extra precaution and gas optimization, as no tokens are expected to be held by the Safe anyway |
 
 **Security benefit:** If the Authorized Executor's private key is compromised, the attacker:
 - ✅ Can execute transactions as the Guardian (call Organization functions)
@@ -955,6 +957,8 @@ If the Guardian is compromised or unavailable, the Guardian can also be updated 
 For details on the disaster recovery flow, see [Disaster Recovery](#disaster-recovery).
 
 Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.sol`
+
+---
 
 ## Signatures
 
