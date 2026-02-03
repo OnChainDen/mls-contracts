@@ -59,7 +59,7 @@ guardian_safe = "0x673fCe0337Bc55B7D2ade293Ef9C71371D9555C4"
 admin_safe = "0x0999652E086de106439f1a22dEa6bF39C2d53d97"
 org_factory = "0x55FCAeD55495302ccF66dF67A9D910bB82Ddea25"
 whitelist_proxy = "0xcA7684E39e2197742B778bD65B7334C10a18e694"
-guardian_safe_executor_module = "0xd3a67dbE18444BD9101FAE80291Bd0A95F06AE23"
+guardian_safe_executor_module = "0x4BA8Ae89E50fC6DB693819A5465E42f640da3c9b"
 
 # Environment: prod (2-of-3 Safe with production executors)
 # Module addresses NOT_COMPUTED until production executor EOAs are set
