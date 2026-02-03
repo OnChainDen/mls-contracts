@@ -948,7 +948,6 @@ An Organization's Guardian can be updated through a **timelocked 3-step process*
 
 Files: `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol`
 
----
 
 ### Updating the Guardian via Disaster Recovery
 
@@ -962,22 +961,229 @@ Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.
 
 ## Signatures
 
-All operations in MLS Wallet require cryptographic signatures for authorization. This section consolidates all signing schemes, message formats, and validation mechanisms.
+All operations in MLS Wallet require cryptographic signatures for authorization. This section covers signature encoding, typed data signing, and replay protection.
 
-### EIP-712 Domain
+---
 
-All typed data signing uses a shared domain separator:
+### Signature Encoding Format
+
+MLS Wallet uses a **hybrid signature format** that supports both EOA (Externally Owned Account) and ERC-1271 smart contract signers. This format is used **everywhere signatures are validated**:
+
+- **Organization Member signatures** — Initiator and reviewer signatures for Account Transactions and Account Signatures
+- **Admin signatures** — For Admin Operations that require admin authorization
+- **Guardian signatures** — For ERC-1271 Account Signature validation
+- **Recovery address signatures** — For Disaster Recovery ERC-1271 Account Signatures
+
+#### EOA Signatures (65 bytes)
+
+Standard ECDSA signatures with `v`, `r`, `s` components:
+
+```
+┌─────────┬──────────────┬──────────────┐
+│ v (1B)  │   r (32B)    │   s (32B)    │
+└─────────┴──────────────┴──────────────┘
+```
+
+- `v` must be `27` or `28`
+- Signatures with `s` in the upper half of the curve order are rejected (malleability protection)
+
+#### ERC-1271 Smart Contract Signatures (23 + N bytes)
+
+When the signer is a smart contract (e.g., a Safe multisig), the signature format includes the signer address and an inner signature that will be validated by that contract:
+
+```
+┌─────────┬────────────────┬─────────────────┬────────────────┐
+│ v=0 (1B)│ signer (20B)   │ sig length (2B) │ sig data (NB)  │
+└─────────┴────────────────┴─────────────────┴────────────────┘
+```
+
+- When `v = 0`, the system recognizes this as a contract signature
+- The `signer` address is extracted and called via `IERC1271.isValidSignature(hash, sigData)`
+- The inner `sig data` is passed to the signer contract for validation
+
+**Example use case:** An Organization Admin is a Safe multisig. When the Safe signs an admin operation, the signature is encoded with `v=0`, the Safe's address, and the Safe's signature data.
+
+Files: `SignatureUtils.sol`
+
+---
+
+### EIP-712 Typed Data Domain
+
+All typed data signing in MLS Wallet uses EIP-712 with a shared domain separator:
 
 | Field | Value |
 |-------|-------|
-| name | `MLSWalletOrganization` |
-| version | `1` |
-| chainId | Current chain ID |
-| verifyingContract | Organization contract address |
+| **name** | `MLSWalletOrganization` |
+| **version** | `1` |
+| **chainId** | `block.chainid` (current chain) |
+| **verifyingContract** | Organization contract address |
 
-File: `LibOrganizationEIP712.sol`
+```solidity
+keccak256(abi.encode(
+    EIP712_DOMAIN_TYPEHASH,
+    keccak256("MLSWalletOrganization"),
+    keccak256("1"),
+    block.chainid,
+    address(this)  // Organization address
+))
+```
 
-### Signed Message Types
+This domain is used for all EIP-712 typed data hashes across the system.
+
+Files: `LibOrganizationEIP712.sol`
+
+---
+
+### Replay Protection & Non-Sequential Nonces
+
+MLS Wallet uses a **salt-based, non-sequential nonce** system that provides replay protection while enabling flexible operation execution.
+
+#### How Nonces Work
+
+Each signed message includes a **`salt`** — a unique value chosen by the signer. The nonce is computed deterministically:
+
+```solidity
+nonce = keccak256(abi.encode(
+    address(this),           // Organization address
+    operationType,           // Type of operation
+    keccak256(operationData), // Hashed operation data
+    salt                     // User-provided salt
+))
+```
+
+When an operation is executed or rejected, its nonce is **burned** (marked as used) and cannot be reused.
+
+#### Why Sign a Salt?
+
+The salt is critical for enabling **repeated operations**. Without the salt:
+
+- If the nonce was derived only from the operation data, executing the same operation twice (e.g., transferring 100 USDC to the same address) would be impossible
+- The second attempt would fail because the nonce would already be burned from the first execution
+
+With the salt:
+
+- Different salts produce different nonces, even for identical operation data
+- Users can execute the same operation multiple times by using different salts
+- This is not a replay attack — each execution requires fresh signatures with a new salt
+
+#### Comparison to Traditional Multisigs
+
+Most multisigs (like Safe) use **sequential nonces** (0, 1, 2, 3...). This creates **blocking**:
+
+| System | Nonce Type | Behavior |
+|--------|------------|----------|
+| **Safe** | Sequential | Transaction #5 cannot execute until #0-4 complete |
+| **MLS Wallet** | Salt-based | Any operation can execute independently |
+
+MLS Wallet's approach allows parallel operations — approvals for different transactions don't block each other.
+
+#### Cross-Chain Replay Protection
+
+All EIP-712 typed data structs include `chainId` as a signed field:
+
+```solidity
+InitiateAccountTransaction(
+    ...
+    uint256 chainId  // ← Prevents cross-chain replay
+)
+```
+
+A signature created for Chain A (e.g., Ethereum mainnet) cannot be replayed on Chain B (e.g., Arbitrum) because the `chainId` differs, producing a different message hash.
+
+#### Check-Effects-Interactions (CEI) Pattern
+
+Nonces are consumed **before** any external calls to prevent reentrancy attacks:
+
+```solidity
+// 1. CHECKS: Compute and validate nonce
+uint256 nonce = LibOrganizationSignatures.computeNonce(...);
+
+// 2. EFFECTS: Consume nonce BEFORE external call
+LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
+
+// 3. INTERACTIONS: External call (e.g., execute transaction on Account)
+IAccount(account).executeTransaction(...);
+```
+
+This ensures that even if the external call triggers a reentrant call back to the Organization, the nonce is already consumed and the replay attempt fails.
+
+Files: `LibOrganizationSignatures.sol`, `LibOrganizationSignaturesStorage.sol`
+
+---
+
+### ERC-1271 Account Signature Format
+
+When validating ERC-1271 signatures on an Account (`Account.isValidSignature(hash, signature)`), the `signature` parameter uses a **type-prefixed format**:
+
+```
+┌───────────────┬────────────────────────────────┐
+│ type (1 byte) │ signature data (variable)      │
+└───────────────┴────────────────────────────────┘
+```
+
+#### Type `0x01`: Policy-Based Signatures (Normal Flow)
+
+Standard Account Signatures that go through Guardian and policy validation:
+
+```
+┌────────┬──────────────────────────────────────────────────────────────┐
+│ 0x01   │ ABI-encoded policy data and signatures                       │
+└────────┴──────────────────────────────────────────────────────────────┘
+```
+
+The signature data is ABI-encoded with these fields:
+
+```solidity
+abi.encode(
+    uint256 policyId,              // Policy authorizing this signature
+    uint256 expirationTimestamp,   // When the signature request expires
+    bytes initiatorSignature,      // Initiator's EIP-712 signature
+    bytes reviewSignatures,        // Reviewer signatures (if manual approval policy)
+    bytes guardianSignature,       // Guardian's approval signature
+    ValidationProofs proofs        // Merkle proofs for policy and member validation
+)
+```
+
+**Validation flow:**
+1. Check expiration timestamp
+2. Validate initiator signature against `InitiateSignatureValidation` hash
+3. Validate Guardian signature against `ReviewSignatureValidation` hash
+4. Verify policy exists and applies to the account
+5. Verify initiator is authorized by policy
+6. For `RequireManualApproval` policies: validate reviewer signatures meet threshold
+
+#### Type `0x00`: Recovery Signatures (Disaster Recovery)
+
+Disaster Recovery Account Signatures that bypass Guardian and policy checks:
+
+```
+┌────────┬──────────────────────────────────────────────────────────────┐
+│ 0x00   │ Raw signature from transactionAndERC1271RecoveryAddress      │
+└────────┴──────────────────────────────────────────────────────────────┘
+```
+
+The signature data is simply the raw signature (65 bytes for EOA, or 23+N bytes for ERC-1271) from the recovery address signing the message hash directly.
+
+**Validation flow:**
+1. Check `isRecoverySupportedForTransactionsAndERC1271 == true`
+2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
+3. Validate signature is from `transactionAndERC1271RecoveryAddress`
+
+**Key differences:**
+
+| Aspect | Policy-Based (`0x01`) | Recovery (`0x00`) |
+|--------|----------------------|-------------------|
+| Guardian required | Yes | No |
+| Policy checks | Full validation | Bypassed |
+| Expiration | Required | None |
+| Merkle proofs | Required | None |
+| Use case | Normal operations | Emergency access |
+
+Files: `LibOrganizationAccountSignature.sol`, `LibOrganizationTxRecovery.sol`
+
+---
+
+### Signed Message Types Reference
 
 #### Admin Operations
 
@@ -993,12 +1199,9 @@ AdminOperation(
 )
 ```
 
-- `isApproval=true` for approvals, `false` for rejections
-- `operationType` maps to `OperationType` enum
-- `operationData` is operation-specific encoded parameters
+#### Account Transactions
 
-#### Account Transactions (Initiator)
-
+**Initiator signature:**
 ```solidity
 InitiateAccountTransaction(
     address organization,
@@ -1014,8 +1217,7 @@ InitiateAccountTransaction(
 )
 ```
 
-#### Account Transactions (Reviewer)
-
+**Reviewer signature:**
 ```solidity
 ReviewAccountTransaction(
     address organization,
@@ -1028,14 +1230,13 @@ ReviewAccountTransaction(
     uint256 policyId,
     bool isApproval,
     uint256 chainId,
-    bytes initiatorSignature
+    bytes initiatorSignature  // Binds approval to specific initiation
 )
 ```
 
-**Security Note:** Reviewer signatures include the `initiatorSignature` to cryptographically bind approvals to a specific transaction initiation. This prevents approval replay across different initiators.
+#### Account Signatures (ERC-1271)
 
-#### ERC-1271 Signatures (Initiator)
-
+**Initiator signature:**
 ```solidity
 InitiateSignatureValidation(
     address organization,
@@ -1047,8 +1248,7 @@ InitiateSignatureValidation(
 )
 ```
 
-#### ERC-1271 Signatures (Reviewer)
-
+**Reviewer/Guardian signature:**
 ```solidity
 ReviewSignatureValidation(
     address organization,
@@ -1057,65 +1257,23 @@ ReviewSignatureValidation(
     uint256 policyId,
     uint256 expirationTimestamp,
     uint256 chainId,
-    bytes initiatorSignature
+    bytes initiatorSignature  // Binds approval to specific initiation
 )
 ```
 
-File: `LibOrganizationEIP712.sol`
-
-### Signature Encoding
-
-MLS Wallet accepts signatures from both EOAs and smart contracts (ERC-1271):
-
-#### EOA Signatures (65 bytes)
-
-```
-┌─────────┬──────────────┬──────────────┐
-│ v (1B)  │   r (32B)    │   s (32B)    │
-└─────────┴──────────────┴──────────────┘
-```
-
-`v` = 27 or 28
-
-#### ERC-1271 Smart Contract Signatures
-
-```
-┌─────────┬────────────────┬─────────────────┬────────────────┐
-│ v=0 (1B)│ signer (20B)   │ sig length (2B) │ sig data (NB)  │
-└─────────┴────────────────┴─────────────────┴────────────────┘
-```
-
-When `v=0`, the signature is forwarded to the signer address for ERC-1271 validation.
-
-File: `SignatureUtils.sol`
-
-### Nonce & Replay Protection
-
-Uses **non-sequential nonces** computed deterministically from operation parameters:
-
-```solidity
-nonce = keccak256(abi.encode(operationType, keccak256(operationData), salt))
-```
-
-| Property | Implication |
-|----------|-------------|
-| Same data + same salt | Same nonce → replay blocked |
-| Same data + different salt | Different nonce → allowed |
-| Cross-chain | `chainId` in message prevents cross-chain replay |
-| CEI pattern | Nonce consumed BEFORE external calls |
-
-File: `LibOrganizationSignatures.sol`
+---
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
-| `SignatureUtils.sol` | EOA + ERC-1271 signature validation |
+| `SignatureUtils.sol` | Hybrid EOA + ERC-1271 signature validation |
 | `LibOrganizationSignatures.sol` | Nonce computation and consumption |
-| `LibOrganizationEIP712.sol` | Domain separator, type hashes |
+| `LibOrganizationEIP712.sol` | EIP-712 domain separator and type hashes |
 | `LibOrganizationAdmin.sol` | Admin signature validation |
 | `LibOrganizationAccountTransaction.sol` | Transaction signature validation |
-| `LibOrganizationAccountSignature.sol` | ERC-1271 signature validation |
+| `LibOrganizationAccountSignature.sol` | ERC-1271 signature validation and encoding |
+| `LibOrganizationTxRecovery.sol` | Recovery signature validation |
 
 ---
 
