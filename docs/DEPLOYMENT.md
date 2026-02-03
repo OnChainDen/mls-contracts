@@ -4,34 +4,145 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
 
 ## Table of Contents
 
-1. [Core Concepts](#core-concepts)
+1. [Deployment Quickstart Guide](#deployment-quickstart-guide)
+2. [Core Concepts](#core-concepts)
    - [CREATE2 Deterministic Deployment](#create2-deterministic-deployment)
    - [Library Linking](#library-linking)
    - [Two-Stage Library Deployment](#two-stage-library-deployment)
-2. [Prerequisites](#prerequisites)
+3. [Prerequisites](#prerequisites)
    - [Required Tools](#required-tools)
    - [Project Setup](#project-setup)
    - [Signer Setup](#signer-setup)
-3. [Configuration](#configuration)
+4. [Configuration](#configuration)
    - [Networks](#networks)
    - [Signers](#signers)
    - [Factories](#factories)
-4. [Safe 1.4.1 Deployment](#safe-141-deployment)
+5. [Safe 1.4.1 Deployment](#safe-141-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
-5. [BatchedTransaction Contract](#batchedtransaction-contract)
+6. [BatchedTransaction Contract](#batchedtransaction-contract)
    - [Why BatchedTransaction?](#why-batchedtransaction)
    - [Transaction Encoding Format](#transaction-encoding-format)
    - [BatchedTransaction Deployment Commands](#batchedtransaction-deployment-commands)
-6. [Safe Executor Module](#safe-executor-module)
+7. [Safe Executor Module](#safe-executor-module)
    - [Module Overview](#module-overview)
    - [Module Deployment Commands](#module-deployment-commands)
    - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
-7. [Deployment Examples](#deployment-examples)
+8. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-8. [Verifying Deployments](#verifying-deployments)
-9. [Troubleshooting](#troubleshooting)
+9. [Verifying Deployments](#verifying-deployments)
+10. [Troubleshooting](#troubleshooting)
+
+---
+
+## Deployment Quickstart Guide
+
+This quickstart guide walks you through deploying the platform locally for development and testing.
+
+### Prerequisites
+
+Before starting, ensure you have the following installed:
+- Node.js >= 18 
+- Python 3 (for Slither)
+
+### 1. Install Dependencies
+
+Install the required tools (macOS example):
+
+```bash
+# Install Foundry (includes forge and cast)
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install solhint globally
+npm install -g solhint
+
+# Install Slither (requires Python 3)
+pip3 install slither-analyzer
+
+# Install jq and yq
+brew install jq yq
+```
+
+### 2. Install Git Submodules (Foundry Dependencies)
+Run the full setup suite to ensure a clean setup, install dependenices, and build the project:
+
+```bash
+make all
+```
+
+
+
+### 3. Verify Project Setup
+
+Run the full check suite to verify everything is set up correctly:
+
+```bash
+make check
+```
+
+This runs formatting, linting, static analysis, and the test suite.
+
+### 4. Set Up Foundry Managed Accounts
+
+If testing locally or in a staging environment, you need to set up Foundry managed accounts.
+
+The `test_deploy_scripts_locally.sh` script expects these accounts to be imported into Foundry's keystore:
+
+| Index | Account Name | Address |
+|-------|--------------|---------|
+| 0 | `test-deployer` | `0x901cab5fdb93571f0f6cd6d643f8b2532f00d2a3` |
+| 1 | `test-den-factory-deployer` | `0xfda43c00ba0589bb10bc3b75c3d8e1046e73e328` |
+| 2 | `test-guardian-safe-owner` | `0x22002e8661a780d61ef4c86f4a9ffa843a6fea20` |
+| 3 | `test-admin-safe-owner` | `0x8da06ab9bbb0736d36c92e10b1d6e23a890fd32f` |
+| 4 | `test-guardian-executor` | `0x66fb51bf8c7a973a278578a2e381fb5e89796de1` |
+
+
+> [!IMPORTANT]
+> 1Password has setup instructions for setting up these EOAs to use during development and testing for the Den team.
+
+To import accounts from a mnemonic, use the `cast wallet import` command from Foundry: 
+
+```bash
+# Import each account at the appropriate derivation index
+cast wallet import test-deployer --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 0
+cast wallet import test-den-factory-deployer --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 1
+cast wallet import test-guardian-safe-owner --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 2
+cast wallet import test-admin-safe-owner --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 3
+cast wallet import test-guardian-executor --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 4
+```
+
+### 5. Run Local Deployment
+
+Deploy locally using the test deployment script:
+
+```bash
+# Deploy using the Arachnid factory
+script/sh/test_deploy_scripts_locally.sh arachnid
+
+# Or deploy using the Den non-prod factory
+script/sh/test_deploy_scripts_locally.sh den-nonprod
+```
+
+This script will:
+1. Start a local Anvil instance
+2. Fund the test accounts
+3. Deploy the CREATE2 factory
+4. Deploy Safe infrastructure and multisigs
+5. Deploy platform libraries (in two stages)
+6. Deploy platform contracts
+7. Deploy BatchedTransaction
+8. Deploy the Guardian Safe Executor Module
+9. Add the module to the Guardian Safe
+
+> [!IMPORTANT]
+> For production deployment, refer to the script to see the deployment order, and run the same Makefile targets with different networks, accounts (Ledgers), and other configuration as needed.
+
+> [!WARNING]
+> If you do not have access to the EOAs that the `script/sh/test_deploy_scripts_locally.sh` script expects, you'll need to import accounts with the same names and update the expected addressess in `deployment.toml` to deploy locally.
+
+
 
 ---
 
