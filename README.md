@@ -221,7 +221,7 @@ Policies define which transactions they govern using the following fields:
 | Field | Description | Allowed Values |
 |-------|-------------|----------------|
 | **Token** | Which token can be transferred | `Any token` · Specific token (e.g., USDC) |
-| **Token Transfer Recipient** | Where tokens can be sent | `Any recipient` · `Any whitelisted address` · `Any non-whitelisted address` · Custom address list |
+| **Token Transfer Recipient** | Where tokens can be sent | `Any recipient` · Custom address list |
 | **Token Amount Threshold** | Maximum amount per transaction | Numeric value (policy applies to amounts ≤ this value) |
 
 ---
@@ -232,7 +232,7 @@ Policies define which transactions they govern using the following fields:
 
 | Field | Description | Allowed Values |
 |-------|-------------|----------------|
-| **Contracts** | Which contracts can be called | `Any contract` · `Any whitelisted contract` · `Any non-whitelisted contract` · Custom contract list |
+| **Contracts** | Which contracts can be called | `Any contract` · Custom contract list |
 | **Functions** | Which functions can be called | `Any function` · Custom function list |
 | **Function Arguments** | Parameter constraints for allowed functions | See [Parameter Constraints](#parameter-constraints) below |
 
