@@ -489,6 +489,28 @@ Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`
 
 ## Architecture
 
+### Merkle-Based Storage
+
+A key architectural decision in MLS Wallet is the use of **Merkle trees** to store Members, Groups, Admins, and Policies. Instead of storing data directly on-chain (which would be prohibitively expensive for large organizations), only 32-byte Merkle roots are stored. The full data lives off-chain (on IPFS), and callers provide Merkle proofs to verify membership.
+
+**Why this matters:**
+- **Gas efficiency** — Modifying 1,000 members costs the same as modifying 10 (~20K gas for one `SSTORE`)
+- **Scalability** — Organizations can have thousands of members and complex policies without gas costs scaling linearly
+- **Complex policies** — Policies can reference large lists of source accounts, destinations, and functions with parameter constraints
+
+**What's stored as Merkle trees:**
+
+| Data | Root Storage | Structure |
+|------|--------------|-----------|
+| Members | `membersRoot` | Flat tree of member addresses |
+| Groups | `groupsRoot` | Nested: each group has its own members sub-tree |
+| Admins | `adminsRoot` | Flat tree of admin addresses (must also be in Members) |
+| Policies | `policiesRoot` | Multi-level nested (up to 4 levels deep) |
+
+For detailed documentation on the Merkle tree architecture, including nested structures, leaf computation, and how proofs are passed to function calls, see **[MERKLETREE_ARCHITECTURE.md](./MERKLETREE_ARCHITECTURE.md)**.
+
+---
+
 ### Core Contracts
 
 #### Organization (`src/organization/`)
