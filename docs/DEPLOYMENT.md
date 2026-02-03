@@ -47,6 +47,15 @@ address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
 
 This means: **Same salt + same factory + same bytecode = same address on every chain**.
 
+### CREATE2 Factories
+In order to ensure all contracts are deployed at the same addresses across chains, all contracts must be deployed using a CREATE2 Factory that's deployed at the same address across all chains.
+
+In most cases we'll use the  [Arachnid Deterministic Deployer](#arachnid-deterministic-deployer-preferred) factory, as it's designed to be deployable at the same address across most chains.
+
+On rare occasion, a chain may not support the Arachnid Deterministic Deployer. In those cases, we fall back to using the [Den Singleton Factory](#den-singleton-factory-fallback), which is deployed via CREATE using a heavily guarded EOA to ensure deployment at the same address across chains.
+
+This means that in production, we have two separate sets of addresses for all contracts: one for Arachnid and one for Den Singleton Factory. 
+
 #### Arachnid Deterministic Deployer (Preferred)
 
 The [Arachnid Deterministic Deployment Proxy](https://github.com/Arachnid/deterministic-deployment-proxy) is available on most EVM chains and is our preferred factory. It is automatically included in OP Stack chains and is by default deployed to Arbitrum Orbit chains, although Orbit chains can optionally choose to not include it in their initial state.
@@ -64,7 +73,9 @@ The Den Singleton Factory is functionally identical to the Arachnid factory, but
 
 ##### Production vs Non-Production Deployers
 
-We maintain **separate EOAs** for production and non-production environments. This means the Den Singleton Factory address will be **different** in prod vs non-prod environments.
+We maintain **two separate EOAs** for deploying the Den Singleton Factory: one for production environments and one for non-production environments. This is done to prevent risk of accidentally burning the deployer EOA's nonce 0 during development. 
+
+This means the Den Singleton Factory address will be **different** in prod vs non-prod environments.
 
 | Environment | Deployer EOA | Factory Address |
 |-------------|--------------|-----------------|
@@ -75,14 +86,24 @@ We maintain **separate EOAs** for production and non-production environments. Th
 
 ---
 
-### Library Linking
+### External Libraries & Library Linking
 
-Some of our libraries use `public` functions, which Solidity compiles as **external libraries** that are called via `DELEGATECALL`. These libraries must be:
+The EVM enforces a strict limit on the bytecode size of smart contracts. 
 
-1. **Deployed first** via CREATE2 (to get deterministic addresses)
-2. **Linked at compile time** when deploying contracts that depend on them
+To circumvent this limitation, some of the libraries used by `OrganizationImplementation.sol` have `public` functions and are deployed as separate contracts onchain. 
 
-The four platform libraries that require linking are:
+The Solidity compiler compiles these libraries as **external libraries**, and inserts `DELEGATECALL` operations into the bytecode of contracts that use those external libraries. 
+
+These external libraries must be:
+
+1. **Deployed before contracts/libraries that use them** via CREATE2 (to get deterministic addresses)
+2. **Linked at compile time** when deploying contracts/libraries that depend on them
+
+Note that our external libraries can be broken down into two groups:
+- **Independent libraries** – External libraries that do not rely on any other external libraries
+- **Dependent libraries** – External libraries that rely on other external libraries (must be deployed after their dependencies) 
+
+The four external libraries that require linking are:
 
 | Library | Purpose | Dependencies |
 |---------|---------|--------------|
@@ -114,6 +135,8 @@ These libraries have no dependencies on other platform libraries. They can be de
 These libraries depend on the independent libraries being linked into their bytecode:
 - `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`
 - `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
+
+They must be deployed with a `--libraries` flag that informs the compiler to link the external libraries they're dependent on.
 
 When compiling dependent libraries, the Solidity compiler embeds the addresses of the libraries they depend on directly into their bytecode. This means the CREATE2 address of a dependent library is affected by the addresses of its dependencies.
 
