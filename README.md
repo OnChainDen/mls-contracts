@@ -165,6 +165,7 @@ Example policies:
 - "if a transaction is sending more than $10,000, then require approval from 2 out of 3 members of the Finance team"
 - "if a transaction is sending less than $10,000, then require approval from 1 out of 3 members of the Finance team"
 - "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
+- "if a transaction is calling the `approve` function on the USDC contract, then require approval from 2 out of 3 of the Finance team"
 - "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team"
 
 
