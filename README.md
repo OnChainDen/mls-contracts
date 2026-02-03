@@ -359,12 +359,12 @@ The Policy that's used to create the transaction dictates who can approve or rej
 * If the Policy is an **AutoApproval Policy**:
   - Only Members that are specified by the Policy as **initiators** can **initiate and execute the transaction.**
   - Only Members that are specified by the Policy as **initiators** can **reject the transaction.**
-  - _Note: AutoApproval policies don't require separate approval signatures from reviewers to be executed. They just need one valid Initiator signature._
+  - **Note:** AutoApproval policies don't require separate approval signatures from reviewers to be executed. They just need one valid Initiator signature.
 * If the Policy is a **ManualApproval Policy**:
   - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
   - Only Members that are specified by the Policy as **reviewers** can **approve and execute the transaction.**
   - Only Members that are specified by the Policy as **reviewers** can **reject the transaction and burn the nonce.**
-  - _Note: The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it._
+  - **Note:** The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it.
 
 **Key Point:** Rejection requires the same authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
 
@@ -376,7 +376,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
 3. **Guardian collects the signatures**
 4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction is allowed by the policy provided and validates initiator and reviewer signatures.
     - If the policy is an AutoApproval policy, reviewer signatures are not checked — only the initiator signature is checked
-    - _Note: This happens offchain before submitting the transactions and signatures to the Organization smart contract._
+    - **Note:** This happens offchain before submitting the transactions and signatures to the Organization smart contract.
 5. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
 6. **Organization contract performs all validations** — Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
     - If the policy is an AutoApproval policy, reviewer signatures are not checked — only the initiator signature is checked
@@ -395,7 +395,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
 4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction would have been allowed by the policy provided and validates initiator and rejection signatures.
     - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
     - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
-    - _Note: This happens offchain before submitting the transactions and signatures to the Organization smart contract._
+    - **Note:** This happens offchain before submitting the transactions and signatures to the Organization smart contract.
 5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction would have been allowed by the policy provided, and validates initiator and rejection signatures
     - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
     - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
@@ -456,7 +456,7 @@ The Policy used to create the signature dictates who can approve it:
 
 * If the Policy is an **AutoApproval Policy**:
   - Only Members that are specified by the Policy as **initiators** can create and approve the signature.
-  - _Note: AutoApproval policies don't require separate approval signatures from reviewers._
+  - **Note:** AutoApproval policies don't require separate approval signatures from reviewers.
 
 * If the Policy is a **ManualApproval Policy**:
   - Only Members that are specified by the Policy as **initiators** can initiate the signature.
@@ -474,9 +474,9 @@ The Policy used to create the signature dictates who can approve it:
 3. **Guardian collects the signatures**
 4. **Guardian validates the signature against the policy** — Guardian service validates that the signature is allowed by the policy provided and validates initiator and reviewer signatures.
     - If the policy is an AutoApproval policy, reviewer signatures are not checked –  only the initiator signature is checked
-    - _Note: This happens offchain before the Guardian signs the review hash._
+    - **Note:** This happens offchain before the Guardian signs the review hash.
 5. **Guardian signs a message** — Guardian service signs the review hash.
-   - _Note: Unlike Account Transactions where Guardian calls the function, here the Guardian provides a signature._
+   - **Note:** Unlike Account Transactions where Guardian calls the function, here the Guardian provides a signature.
 6. **Guardian sends all signatures to third party** — All signatures and proofs are ABI-encoded and packed together, and then sent to the third party that wants to validate the ERC-1271 signature
 7. **Third party calls `isValidSignature()` on Account contract using signatures from Guardian** — The packed signature sent from the Guardian to the third party is passed to the Account.
 8. **Account delegates to Organization contract** — Account calls `Organization.isValidSignatureForAccount()` passing along all the signatures
@@ -538,6 +538,7 @@ The Organization contract is the central hub that:
 - Enforces Guardian protection on all external functions
 
 **Key files:**
+
 | File | Purpose |
 |------|---------|
 | `OrganizationProxy.sol` | ERC-1967 UUPS proxy |
@@ -555,6 +556,7 @@ The Account contract is a thin wrapper that:
 - Delegates ERC-1271 signature validation to the Organization
 
 **Key files:**
+
 | File | Purpose |
 |------|---------|
 | `AccountProxy.sol` | BeaconProxy (Organization is the beacon) |
@@ -574,11 +576,13 @@ A factory contract that deploys Organization contracts at deterministic addresse
 - Atomically deploys and initializes Organizations in a single transaction
 
 **Key files:**
+
 | File | Purpose |
 |------|---------|
 | `OrganizationFactory.sol` | CREATE2 deployment for deterministic addresses |
 
 ---
+
 ### Factory Patterns
 
 MLS Wallet uses a two-tier factory system to deploy Organizations and Accounts at deterministic addresses across chains.
@@ -628,7 +632,7 @@ Both Organizations and Accounts use CREATE2 for deployment, ensuring **identical
 
 **How it works:**
 
-```
+```text
 address = keccak256(0xff ++ deployerAddress ++ salt ++ keccak256(bytecode))[12:]
 ```
 
