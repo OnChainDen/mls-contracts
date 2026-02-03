@@ -10,6 +10,7 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Two-Stage Library Deployment](#two-stage-library-deployment)
 2. [Prerequisites](#prerequisites)
    - [Required Tools](#required-tools)
+   - [Project Setup](#project-setup)
    - [Signer Setup](#signer-setup)
 3. [Configuration](#configuration)
    - [Networks](#networks)
@@ -167,14 +168,104 @@ The library addresses depend on which CREATE2 factory is used. Our Makefile hand
 
 ### Required Tools
 
-- [Foundry](https://getfoundry.sh) (`forge` and `cast`)
-- `jq` for JSON parsing: `brew install jq` (macOS) or `apt install jq` (Linux)
+The following tools are required to deploy and interact with the contracts:
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Foundry](https://getfoundry.sh) | >= 0.2.0 | Smart contract development (`forge`, `cast`) |
+| [Node.js](https://nodejs.org) | >= 18 | Required for solhint |
+| [solhint](https://protofire.github.io/solhint/) | Latest | Solidity linter |
+| [Slither](https://github.com/crytic/slither) | >= 0.10.0 | Static analysis |
+| [jq](https://jqlang.github.io/jq/) | Latest | JSON parsing |
+| [yq](https://github.com/mikefarah/yq) | >= 4.0 | TOML parsing |
+
+#### macOS Installation
+_Note: assumes you already have `node` and Python 3 installed._
+```bash
+# Install Foundry (includes forge and cast)
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install solhint globally
+npm install -g solhint
+
+# Install Slither (requires Python 3)
+pip3 install slither-analyzer
+
+# Install jq and yq
+brew install jq yq
+```
+
+#### Linux (Ubuntu/Debian) Installation
+_Note: assumes you already have `node` and Python 3 installed._
+
+```bash
+# Install Foundry (includes forge and cast)
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install solhint globally
+npm install -g solhint
+
+# Install Slither (requires Python 3)
+pip3 install slither-analyzer
+
+# Install jq and yq
+sudo apt install -y jq
+sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+sudo chmod +x /usr/local/bin/yq
+```
+
+#### Verify Installations
+
+```bash
+# Verify all tools are installed correctly
+forge --version    # Should show forge 0.2.x or higher
+cast --version     # Should show cast 0.2.x or higher
+node --version     # Should show v18.x or higher
+solhint --version  # Should show solhint version
+slither --version  # Should show 0.10.x or higher
+jq --version       # Should show jq version
+yq --version       # Should show yq version 4.x or higher
+```
+
+### Project Setup
+
+After installing the required tools, set up the project by running these commands in the project's root directory:
+
+
+
+```bash
+# Install git submodules (Foundry dependencies)
+forge install
+
+# Build the contracts to verify everything is set up correctly
+forge build
+```
+
+Alternatively, use the Makefile for a complete clean setup:
+
+```bash
+# Full clean setup: removes old artifacts, reinstalls dependencies, and builds
+make all
+```
+
+This runs: `clean` → `remove` → `install` → `update` → `build`
+
+#### Verify Project Setup
+
+```bash
+# Run the full check suite (format, lint, analyze, test)
+make check
+```
 
 ### Signer Setup
 
-The deployment scripts support two signing methods: **Foundry managed accounts** and **Ledger hardware wallets**.
+The Makefile deployment targets support two signing methods: 
+1. **Foundry managed accounts** – Used during development
+2. **Ledger hardware wallets** – Used in production
 
-#### Option A: Foundry Managed Account (Recommended for dev/staging)
+#### Foundry Managed Accounts (used during development)
 
 Import a wallet from a mnemonic seed phrase into Foundry's encrypted keystore:
 
@@ -198,9 +289,9 @@ To get the address of an imported account:
 cast wallet address --account my-deployer
 ```
 
-#### Option B: Ledger Hardware Wallet (Recommended for production)
+#### Ledger Hardware Wallets (used in production)
 
-No setup required—just connect your Ledger and unlock it.
+No setup required — just connect your Ledger and unlock it.
 
 The default HD path is `m/44'/60'/0'/0/0`. To use a different derivation path, set `HD_PATH`:
 
