@@ -1,6 +1,6 @@
 # Multi-layer Security (MLS) Wallet Smart Contracts
 
-Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custodial custody solution for organizations.
+Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custodial wallet infrastructure for organizations, supporting both internal operations and Wallet-as-a-Service (WaaS) implementations.
 
 This README.md documents information specific to the smart contracts for MLS Wallet. 
 
