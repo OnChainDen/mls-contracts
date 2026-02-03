@@ -29,6 +29,18 @@ Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custo
 10. [Disaster Recovery](#disaster-recovery)
 11. [Deployment](#deployment)
 
+### Supplementary Documentation
+
+For detailed deep-dives on specific topics, see the following documents in the `docs/` directory:
+
+| Document | Description |
+|----------|-------------|
+| [MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md) | Detailed explanation of Merkle tree storage, nested structures, and proof verification |
+| [GUARDIAN_PROTECTION.md](./docs/GUARDIAN_PROTECTION.md) | Guardian architecture, SafeExecutorModule, BatchedTransaction, and update flows |
+| [SIGNATURES.md](./docs/SIGNATURES.md) | Signature encoding formats, EIP-712, nonces, and signed message types |
+| [DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md) | Guardian recovery and transaction recovery mechanisms |
+| [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Step-by-step deployment instructions and configuration |
+
 ---
 
 ## Overview
