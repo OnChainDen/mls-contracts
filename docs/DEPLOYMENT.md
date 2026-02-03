@@ -145,135 +145,6 @@ This script will:
 
 ---
 
-### CREATE2 Deterministic Deployment
-
-All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. This is critical for cross-chain operations.
-
-The CREATE2 address formula is:
-```
-address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
-```
-
-This means: **Same salt + same factory + same bytecode = same address on every chain**.
-
----
-
-## CREATE2 Factories
-In order to ensure all contracts are deployed at the same addresses across chains, all contracts must be deployed using a CREATE2 Factory that's deployed at the same address across all chains.
-
-In most cases we'll use the  [Arachnid Deterministic Deployer](#arachnid-deterministic-deployer-preferred) factory, as it's designed to be deployable at the same address across most chains.
-
-On rare occasion, a chain may not support the Arachnid Deterministic Deployer. In those cases, we fall back to using the [Den Singleton Factory](#den-singleton-factory-fallback), which is deployed via CREATE using a heavily guarded EOA to ensure deployment at the same address across chains.
-
-This means that in production, we have two separate sets of addresses for all contracts: one for Arachnid and one for Den Singleton Factory. 
-
-### Arachnid Deterministic Deployer (Preferred)
-
-The [Arachnid Deterministic Deployment Proxy](https://github.com/Arachnid/deterministic-deployment-proxy) is available on most EVM chains and is our preferred factory. It is automatically included in OP Stack chains and is by default deployed to Arbitrum Orbit chains, although Orbit chains can optionally choose to not include it in their initial state.
-
-- **Factory Address:** `0x4e59b44847b379578588920cA78FbF26c0B4956C`
-- **How it works:** Uses a pre-signed keyless transaction (Nick's Method) to deploy the factory at a deterministic address without requiring a specific EOA.
-
-### Den Singleton Factory (Fallback)
-
-Some chains enforce strict **EIP-155 replay protection** and reject the pre-signed keyless transaction used by Arachnid. For these chains, we deploy the **Den Singleton Factory** instead.
-
-The Den Singleton Factory is functionally identical to the Arachnid factory, but is deployed by a specific EOA at **nonce 0** rather than via a pre-signed transaction.
-
-> **CRITICAL:** Because the Den Singleton Factory must be deployed at nonce 0, you must **never accidentally use or burn the nonce** on the deployer EOA. Our deployment scripts have safeguards to prevent this.
-
-#### Production vs Non-Production Deployers
-
-We maintain **two separate EOAs** for deploying the Den Singleton Factory: one for production environments and one for non-production environments. This is done to prevent risk of accidentally burning the deployer EOA's nonce 0 during development. 
-
-This means the Den Singleton Factory address will be **different** in prod vs non-prod environments.
-
-| Environment | Deployer EOA | Factory Address |
-|-------------|--------------|-----------------|
-| **Non-Production** | `0x22002e8661A780d61EF4c86F4a9fFa843A6fea20` | `0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db` |
-| **Production** | *Not yet available - update this doc when ready* | *Not yet available* |
-
-> **Important:** When deploying the Den Singleton Factory, you **must** use the correct deployer EOA for your environment. The non-prod deployer should only be used on testnets and local development chains.
-
----
-
-## External Libraries & Library Linking
-
-The EVM enforces a strict limit on the bytecode size of smart contracts. 
-
-To circumvent this limitation, some of the libraries used by `OrganizationImplementation.sol` have `public` functions and are deployed as separate contracts onchain. 
-
-The Solidity compiler compiles these libraries as **external libraries**, and inserts `DELEGATECALL` operations into the bytecode of contracts that use those external libraries. 
-
-These external libraries must be:
-
-1. **Deployed before contracts/libraries that use them** via CREATE2 (to get deterministic addresses)
-2. **Linked at compile time** when deploying contracts/libraries that depend on them
-
-Note that our external libraries can be broken down into two groups:
-- **Independent libraries** – External libraries that do not rely on any other external libraries
-- **Dependent libraries** – External libraries that rely on other external libraries (must be deployed after their dependencies) 
-
-The four external libraries that require linking are:
-
-| Library | Purpose | Dependencies |
-|---------|---------|--------------|
-| `LibOrganizationPolicy` | Policy validation and enforcement | None (independent) |
-| `LibOrganizationAdmin` | Admin operations | None (independent) |
-| `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
-| `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
-
-### Why Linking Matters
-
-Without explicit library linking:
-- Foundry auto-deploys libraries using regular `CREATE` (nonce-dependent)
-- Library addresses differ across chains
-- Contracts that reference libraries have different bytecode on each chain
-
-With explicit library linking:
-- Libraries are deployed via CREATE2 with deterministic addresses
-- The compiler links to these known addresses
-- Contract bytecode is identical across all chains
-
-### Two-Stage Library Deployment
-
-Due to inter-library dependencies, libraries must be deployed in **two stages**:
-
-**Stage 1 - Independent Libraries (Policy and Admin):**
-These libraries have no dependencies on other platform libraries. They can be deployed without any `--libraries` flags.
-
-**Stage 2 - Dependent Libraries (Init and AccountSig):**
-These libraries depend on the independent libraries being linked into their bytecode:
-- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`
-- `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
-
-They must be deployed with a `--libraries` flag that informs the compiler to link the external libraries they're dependent on.
-
-When compiling dependent libraries, the Solidity compiler embeds the addresses of the libraries they depend on directly into their bytecode. This means the CREATE2 address of a dependent library is affected by the addresses of its dependencies.
-
-**Why this matters for CREATE2:**
-
-The CREATE2 address formula is:
-```
-address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
-```
-
-If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flag, the Admin address is embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
-
-The Makefile handles this automatically with the `deploy-libraries` target (which runs both stages), or you can run them separately:
-
-```bash
-# Deploy independent libraries (Policy, Admin)
-make deploy-independent-libs ACCOUNT=my-deployer
-
-# Deploy dependent libraries (Init, AccountSig) - requires --libraries flags
-make deploy-dependent-libs ACCOUNT=my-deployer
-```
-
-The library addresses depend on which CREATE2 factory is used. Our Makefile handles this automatically via Foundry profiles configured in `foundry.toml`.
-
-
----
 
 ## Deployment Order
 
@@ -285,7 +156,8 @@ When testing deployment locally, the `script/sh/test_deploy_scripts_locally.sh` 
 
 ### Step 1: Deploy CREATE2 Factory
 
-All contracts are deployed via CREATE2 to ensure deterministic addresses across chains. Deploy the appropriate factory based on chain support.
+All contracts are deployed via CREATE2 to ensure deterministic addresses across chains. Deploy the appropriate factory based on chain support. See [CREATE2 Deterministic Deployment](#create2-deterministic-deployment) to learn more.
+
 
 **For most chains (Arachnid factory):**
 
@@ -294,6 +166,7 @@ All contracts are deployed via CREATE2 to ensure deterministic addresses across 
 make fund-arachnid-deployer ACCOUNT=my-deployer
 make deploy-arachnid-factory ACCOUNT=my-deployer
 ```
+To learn more about the Arachnid factory, see [Arachnid Deterministic Deployer (Preferred)](#arachnid-deterministic-deployer-preferred).
 
 **For chains that reject Arachnid's pre-signed transaction (Den factory):**
 
@@ -303,7 +176,9 @@ make fund-den-deployer DEN_DEPLOYER_ADDRESS=0x22002e8661A780d61EF4c86F4a9fFa843A
 make deploy-den-factory ACCOUNT=den-nonprod-deployer
 ```
 
-> The Den factory deployer must be at nonce 0. Use `cast nonce <address>` to verify before deploying.
+> The [Den factory](#den-singleton-factory-fallback) deployer must be at nonce 0. Use `cast nonce <address>` to verify before deploying.
+
+To learn more about the Den Singleton Factory see [Den Singleton factory](#den-singleton-factory-fallback).
 
 ---
 
@@ -350,6 +225,8 @@ make deploy-dependent-libs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
 > **Under the hood:** Passes `--libraries` flags to link the independent library addresses into the bytecode. This is required because the Solidity compiler embeds dependency addresses directly into dependent library bytecode, affecting their CREATE2 addresses.
+>
+> See [External Libraries & Library Linking](#external-libraries--library-linking) to learn more.
 
 ---
 
@@ -362,6 +239,8 @@ make deploy-contracts ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
 > **Under the hood:** Passes `--libraries` flags for all four external libraries to ensure contracts are compiled with the correct linked addresses.
+>
+> See [External Libraries & Library Linking](#external-libraries--library-linking) to learn more.
 
 ---
 
@@ -619,22 +498,133 @@ When updating `deployment.toml`:
 
 ---
 
-## Troubleshooting
+## CREATE2 Deterministic Deployment
 
-| Issue | Solution |
-|-------|----------|
-| `Factory address cannot be zero` | Pass the CREATE2 factory address as an argument: `--sig "run(address)" <factory-address>` |
-| `CREATE2 factory not deployed` | Run factory deployment first, or use `make check-factory` to verify |
-| `Deployer nonce is not 0` | The Den Singleton Factory cannot be deployed at its deterministic address on this chain. Use Arachnid factory instead. |
-| `Already deployed` messages | Normal—the script skips contracts that already exist at their deterministic addresses |
-| Library address mismatch | Ensure you're using the correct `FACTORY` value. Each factory has different library addresses. |
-| `ACCOUNT is required` | Set `ACCOUNT=<keystore-name>` when using `SIGNER=account` |
-| `SENDER is required` | Set `SENDER=<your-address>` when using `SIGNER=ledger` |
-| `Invalid FACTORY value` | Use one of: `arachnid`, `den-prod`, `den-nonprod` |
-| Den factory library addresses are 0x0 | Library addresses for Den prod are not yet configured. Update `foundry.toml` after deploying. |
-| `Safe multisigs not deployed` | Run `make deploy-safe` before `make deploy-contracts`. Safe infrastructure must be deployed first. |
-| Safe compilation errors with 0.8.x | Safe deployment uses `FOUNDRY_PROFILE=safe` (Solidity 0.7.6). Use `make deploy-safe`, not direct `forge script`. |
-| Safe addresses differ from expected | Each CREATE2 factory produces different addresses. Ensure you're using the correct `FACTORY` value. |
+All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. This is critical for cross-chain operations.
+
+The CREATE2 address formula is:
+```
+address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
+```
+
+This means: **Same salt + same factory + same bytecode = same address on every chain**.
+
+---
+
+## CREATE2 Factories
+In order to ensure all contracts are deployed at the same addresses across chains, all contracts must be deployed using a CREATE2 Factory that's deployed at the same address across all chains.
+
+In most cases we'll use the  [Arachnid Deterministic Deployer](#arachnid-deterministic-deployer-preferred) factory, as it's designed to be deployable at the same address across most chains.
+
+On rare occasion, a chain may not support the Arachnid Deterministic Deployer. In those cases, we fall back to using the [Den Singleton Factory](#den-singleton-factory-fallback), which is deployed via CREATE using a heavily guarded EOA to ensure deployment at the same address across chains.
+
+This means that in production, we have two separate sets of addresses for all contracts: one for Arachnid and one for Den Singleton Factory. 
+
+### Arachnid Deterministic Deployer (Preferred)
+
+The [Arachnid Deterministic Deployment Proxy](https://github.com/Arachnid/deterministic-deployment-proxy) is available on most EVM chains and is our preferred factory. It is automatically included in OP Stack chains and is by default deployed to Arbitrum Orbit chains, although Orbit chains can optionally choose to not include it in their initial state.
+
+- **Factory Address:** `0x4e59b44847b379578588920cA78FbF26c0B4956C`
+- **How it works:** Uses a pre-signed keyless transaction (Nick's Method) to deploy the factory at a deterministic address without requiring a specific EOA.
+
+### Den Singleton Factory (Fallback)
+
+Some chains enforce strict **EIP-155 replay protection** and reject the pre-signed keyless transaction used by Arachnid. For these chains, we deploy the **Den Singleton Factory** instead.
+
+The Den Singleton Factory is functionally identical to the Arachnid factory, but is deployed by a specific EOA at **nonce 0** rather than via a pre-signed transaction.
+
+> **CRITICAL:** Because the Den Singleton Factory must be deployed at nonce 0, you must **never accidentally use or burn the nonce** on the deployer EOA. Our deployment scripts have safeguards to prevent this.
+
+#### Production vs Non-Production Deployers
+
+We maintain **two separate EOAs** for deploying the Den Singleton Factory: one for production environments and one for non-production environments. This is done to prevent risk of accidentally burning the deployer EOA's nonce 0 during development. 
+
+This means the Den Singleton Factory address will be **different** in prod vs non-prod environments.
+
+| Environment | Deployer EOA | Factory Address |
+|-------------|--------------|-----------------|
+| **Non-Production** | `0x22002e8661A780d61EF4c86F4a9fFa843A6fea20` | `0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db` |
+| **Production** | *Not yet available - update this doc when ready* | *Not yet available* |
+
+> **Important:** When deploying the Den Singleton Factory, you **must** use the correct deployer EOA for your environment. The non-prod deployer should only be used on testnets and local development chains.
+
+---
+
+## External Libraries & Library Linking
+
+The EVM enforces a strict limit on the bytecode size of smart contracts. 
+
+To circumvent this limitation, some of the libraries used by `OrganizationImplementation.sol` have `public` functions and are deployed as separate contracts onchain. 
+
+The Solidity compiler compiles these libraries as **external libraries**, and inserts `DELEGATECALL` operations into the bytecode of contracts that use those external libraries. 
+
+These external libraries must be:
+
+1. **Deployed before contracts/libraries that use them** via CREATE2 (to get deterministic addresses)
+2. **Linked at compile time** when deploying contracts/libraries that depend on them
+
+Note that our external libraries can be broken down into two groups:
+- **Independent libraries** – External libraries that do not rely on any other external libraries
+- **Dependent libraries** – External libraries that rely on other external libraries (must be deployed after their dependencies) 
+
+The four external libraries that require linking are:
+
+| Library | Purpose | Dependencies |
+|---------|---------|--------------|
+| `LibOrganizationPolicy` | Policy validation and enforcement | None (independent) |
+| `LibOrganizationAdmin` | Admin operations | None (independent) |
+| `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
+| `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
+
+### Why Linking Matters
+
+Without explicit library linking:
+- Foundry auto-deploys libraries using regular `CREATE` (nonce-dependent)
+- Library addresses differ across chains
+- Contracts that reference libraries have different bytecode on each chain
+
+With explicit library linking:
+- Libraries are deployed via CREATE2 with deterministic addresses
+- The compiler links to these known addresses
+- Contract bytecode is identical across all chains
+
+### Two-Stage Library Deployment
+
+Due to inter-library dependencies, libraries must be deployed in **two stages**:
+
+**Stage 1 - Independent Libraries (Policy and Admin):**
+These libraries have no dependencies on other platform libraries. They can be deployed without any `--libraries` flags.
+
+**Stage 2 - Dependent Libraries (Init and AccountSig):**
+These libraries depend on the independent libraries being linked into their bytecode:
+- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`
+- `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
+
+They must be deployed with a `--libraries` flag that informs the compiler to link the external libraries they're dependent on.
+
+When compiling dependent libraries, the Solidity compiler embeds the addresses of the libraries they depend on directly into their bytecode. This means the CREATE2 address of a dependent library is affected by the addresses of its dependencies.
+
+**Why this matters for CREATE2:**
+
+The CREATE2 address formula is:
+```
+address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
+```
+
+If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flag, the Admin address is embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
+
+The Makefile handles this automatically with the `deploy-libraries` target (which runs both stages), or you can run them separately:
+
+```bash
+# Deploy independent libraries (Policy, Admin)
+make deploy-independent-libs ACCOUNT=my-deployer
+
+# Deploy dependent libraries (Init, AccountSig) - requires --libraries flags
+make deploy-dependent-libs ACCOUNT=my-deployer
+```
+
+The library addresses depend on which CREATE2 factory is used. Our Makefile handles this automatically via Foundry profiles configured in `foundry.toml`.
+
 
 ---
 
