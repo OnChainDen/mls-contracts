@@ -963,7 +963,6 @@ Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.
 
 All operations in MLS Wallet require cryptographic signatures for authorization. This section covers signature encoding, typed data signing, and replay protection.
 
----
 
 ### Signature Encoding Format
 
@@ -1446,98 +1445,11 @@ File: `LibOrganizationAccountSignature.sol:79`
 
 ---
 
-## Policies
-
-### Policy Structure
-
-Policies are stored as merkle tree leaves. Full policy data is provided in calldata and verified:
-
-```solidity
-struct Policy {
-    PolicyConfig config;   // Rules configuration
-    PolicyRoots roots;     // Merkle roots for address/function lists
-}
-
-struct PolicyConfig {
-    TransactionType transactionType;     // Any, TokenTransfers, ContractInteractions, Signatures
-    bool anySourceAccount;               // If false, check sourceAccountsRoot
-    bool anyFunction;                    // If false, check allowedFunctionsRoot
-    DestinationType destinationType;     // Any or CustomList
-    ApprovalConfig approval;             // PolicyType, approver, threshold
-    InitiatorConfig initiator;           // Who can initiate
-    TokenFilter token;                   // Token address and amount constraints
-    TimeLimitConfig timeLimit;           // Rate limiting
-}
-```
-
-See: `src/types/PolicyTypes.sol`
-
-### Time-Based Limits
-
-Policies can enforce rate limits:
-
-```solidity
-enum PolicyLimitation {
-    None,              // No limit
-    SingleTransaction, // One-time use
-    TimeInterval       // Resets after time period
-}
-```
-
-For `TimeInterval`, usage is tracked per:
-- Initiator (AcrossAll or PerEntity)
-- Source account (AcrossAll or PerEntity)
-- Destination (AcrossAll or PerEntity)
-
-Implementation: `src/organization/libraries/policy/LibPolicyTimeBasedLimits.sol`
-
----
-
-## Cross-chain Deployment
-
-Organizations and Accounts are deployed at **deterministic addresses** using CREATE2:
-
-```solidity
-// OrganizationFactory.sol
-function deployOrganization(
-    bytes32 salt,
-    address implementationAddress,
-    address whitelistAddress,
-    InitializationParams calldata initParams
-) external returns (address organizationAddress) {
-    // CREATE2 deployment
-    organizationAddress = Create2.deploy(0, salt, bytecode);
-
-    // Atomic initialization
-    OrganizationImplementation(organizationAddress).initialize(initParams);
-}
-```
-
-Same salt + same bytecode = same address on any EVM chain.
-
----
-
 ## Deployment
 
 For detailed deployment instructions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
 
-### Quick Overview
-
-All platform contracts are deployed **deterministically** using CREATE2:
-
-1. **Deploy CREATE2 Factory** (if not already deployed on the chain)
-2. **Deploy Platform Libraries** via CREATE2
-3. **Deploy Contracts** with library linking
-
-### Local Testing
-
-```bash
-./test_deploy_scripts_locally.sh
-```
-
-### Production Deployment
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for:
+[DEPLOYMENT.md](./DEPLOYMENT.md) includes:
 - Signer setup (Foundry keystore or Ledger)
 - Step-by-step deployment commands
 - Guardian/Admin Safe configuration
