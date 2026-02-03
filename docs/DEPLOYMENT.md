@@ -25,7 +25,13 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Guardian Safe Executor Module](#guardian-safe-executor-module)
    - [Platform Deployment](#platform-deployment)
    - [Utilities](#utilities)
-9. [Contract Addresses](#contract-addresses)
+9. [Expected Contract Addresses](#expected-contract-addresses)
+   - [deployment.toml Overview](#deploymenttoml-overview)
+   - [How deployment.toml Is Used](#how-deploymenttoml-is-used)
+   - [Computing Expected Addresses](#computing-expected-addresses)
+   - [How Address Computation Works](#how-address-computation-works)
+   - [Address Dependencies](#address-dependencies)
+   - [Updating Addresses](#updating-addresses)
 
 ---
 
@@ -266,20 +272,6 @@ make deploy-dependent-libs ACCOUNT=my-deployer
 
 The library addresses depend on which CREATE2 factory is used. Our Makefile handles this automatically via Foundry profiles configured in `foundry.toml`.
 
----
-
-## Ledger Hardware Wallets (used in production)
-
-To deploy contracts using a ledger: 
-1. connect your Ledger and unlock it
-2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `makefile` deployment targets
-3. Optionally set `HD_PATH=YourDeriviationPath` for `makefile` deployment targets to use a different deriviation path (The default HD path is `m/44'/60'/0'/0/0`)
-
-Example:
-
-```bash
-make deploy-libraries SIGNER=ledger SENDER=0xYourLedgerAddress HD_PATH="m/44'/60'/1'/0/0"
-```
 
 ---
 
@@ -476,82 +468,154 @@ echo "Deployment complete."
 
 > **Note:** For Den Singleton Factory deployments (chains that reject Arachnid's pre-signed transaction), use `FACTORY=den-nonprod` with all make targets and deploy the factory via `make deploy-den-factory`.
 
+
 ---
 
-## Verifying Deployments
+## Deploying with Ledger Hardware Wallets (production)
 
-### Compute All Expected Addresses
+To deploy contracts using a ledger: 
+1. connect your Ledger and unlock it
+2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `makefile` deployment targets
+3. Optionally set `HD_PATH=YourDeriviationPath` for `makefile` deployment targets to use a different deriviation path (The default HD path is `m/44'/60'/0'/0/0`)
 
-Before deploying, you can preview all expected CREATE2 addresses for all contracts across all three factories:
+Example:
 
 ```bash
-# Compute addresses for all factories (arachnid, den-nonprod, den-prod)
-make compute-all-addresses
+make deploy-libraries SIGNER=ledger SENDER=0xYourLedgerAddress HD_PATH="m/44'/60'/1'/0/0"
+```
 
-# Compute addresses for a specific factory
+---
+
+
+## Expected Contract Addresses
+
+All contract addresses in this project are deterministic, meaning they can be computed before deployment. The `deployment.toml` file serves as the **single source of truth** for all expected addresses.
+
+### deployment.toml Overview
+
+The `deployment.toml` file at the project root contains:
+
+| Section | Description |
+|---------|-------------|
+| `[factory.*]` | CREATE2 factory addresses and factory-dependent contract addresses (libraries, implementations, Safe infrastructure) |
+| `[factory.*.env.*]` | Environment-dependent addresses (prod vs nonprod Safe multisigs, org factory, whitelist proxy, executor modules) |
+| `[safe.*]` | Safe multisig configurations (owner addresses, thresholds, executor EOAs) |
+
+The file is organized by CREATE2 factory because contract addresses differ based on which factory is used:
+
+```toml
+[factory.arachnid]           # Addresses when using Arachnid factory
+[factory.arachnid.env.nonprod]  # Nonprod-specific addresses (1-of-1 Safes)
+[factory.arachnid.env.prod]     # Prod-specific addresses (2-of-3 Safes)
+
+[factory.den-nonprod]        # Addresses when using Den non-prod factory
+[factory.den-nonprod.env.nonprod]
+[factory.den-nonprod.env.prod]
+
+[factory.den-prod]           # Addresses when using Den prod factory (not yet deployed)
+...
+```
+
+### How deployment.toml Is Used
+
+The `deployment.toml` file is consumed by multiple parts of the deployment system:
+
+**1. Makefile**
+
+The Makefile reads addresses from `deployment.toml` to:
+- Generate `--libraries` flags for library linking
+- Validate that the correct CREATE2 factory is being used
+- Pass expected Safe addresses to deployment scripts
+
+```bash
+# Example: deploy-dependent-libs uses library addresses from deployment.toml
+make deploy-dependent-libs FACTORY=arachnid ACCOUNT=my-deployer
+# → Reads lib_org_policy and lib_org_admin addresses for --libraries flags
+```
+
+**2. Test Deployment Script (`script/sh/test_deploy_scripts_locally.sh`)**
+
+The local test script reads from `deployment.toml` to:
+- Get the Den factory deployer address for non-prod deployments
+- Get Safe owner addresses for multisig deployment
+- Get the Guardian Executor EOA address for module deployment
+
+**3. Solidity Deployment Scripts**
+
+The deployment scripts use `deployment.toml` to validate deployments. For example, when deploying the Guardian Safe Executor Module, the script:
+- Reads the expected Guardian Safe address from `deployment.toml`
+- Reads the expected Guardian Executor EOA from `deployment.toml`
+- Reads the expected BatchedTransaction address from `deployment.toml`
+- **Reverts if any address doesn't match** what's in the config file
+
+This ensures all deployments are consistent with the expected deterministic addresses.
+
+### Computing Expected Addresses
+
+Use the `make compute-all-addresses` target to compute all expected CREATE2 addresses for all factories:
+
+```bash
+make compute-all-addresses
+```
+
+This command:
+1. Computes addresses for the **Arachnid** factory
+2. Computes addresses for the **Den non-prod** factory
+3. Computes addresses for the **Den prod** factory
+
+Output is in TOML format for easy comparison with `deployment.toml`.
+
+To compute addresses for a specific factory:
+
+```bash
 make compute-addresses FACTORY=arachnid
 make compute-addresses FACTORY=den-nonprod
+make compute-addresses FACTORY=den-prod
 ```
 
-This runs the `compute_all_addresses.sh` script which orchestrates calls to all deployment scripts' `computeAddresses()` functions, handles library linking correctly, and outputs all expected addresses in a formatted table.
+### How Address Computation Works
 
-### Check Factory Deployment
+The `compute_all_addresses.sh` script orchestrates address computation by:
 
-Verify which CREATE2 factories are deployed on a network:
+1. **Reading factory deployer addresses from `deployment.toml`** — For the Den Singleton Factories (prod and non-prod), the factory address is derived from the deployer EOA at nonce 0. If you change the `factory_deployer` address in `deployment.toml`, all downstream addresses change.
 
-```bash
-# Check all factories on a network
-make check-all-factories NETWORK=sepolia
+2. **Computing addresses in dependency order:**
+   - Safe infrastructure (singleton, proxy factory, handlers)
+   - Safe multisigs (Guardian and Admin Safes for both prod and nonprod)
+   - Independent libraries (Policy, Admin)
+   - Dependent libraries (Init, AccountSig) — computed with `--libraries` flags
+   - Platform implementations (Organization, Account, Whitelist)
+   - Platform contracts (OrganizationFactory, WhitelistProxy) — depends on Safe addresses
+   - Guardian Safe Executor Modules — depends on Safe and BatchedTransaction addresses
 
-# Check a specific factory
-make check-factory FACTORY=arachnid NETWORK=mainnet
-```
+3. **Outputting TOML format** — Compare the output with `deployment.toml` to verify correctness.
 
-### Check Contract Deployment
+### Address Dependencies
 
-Use `cast code` to verify a contract is deployed at an address:
+Understanding which addresses depend on what is critical:
 
-```bash
-# Check if bytecode exists at an address (returns "0x" if not deployed)
-cast code 0x4e59b44847b379578588920cA78FbF26c0B4956C --rpc-url $RPC_URL
+| Address | Dependencies |
+|---------|--------------|
+| Factory | Factory deployer EOA (for Den factories) |
+| Libraries (Policy, Admin) | Factory only |
+| Libraries (Init, AccountSig) | Factory + independent library addresses |
+| Safe infrastructure | Factory only |
+| Safe multisigs | Factory + Safe proxy factory + Safe owner addresses |
+| Platform implementations | Factory + all library addresses |
+| OrganizationFactory | Factory + libraries + Guardian Safe address |
+| WhitelistProxy | Factory + libraries + Admin Safe address |
+| Guardian Executor Module | Factory + Guardian Safe + BatchedTransaction + Executor EOA |
 
-# Check Arachnid factory on mainnet
-cast code 0x4e59b44847b379578588920cA78FbF26c0B4956C --rpc-url mainnet
+> **Key insight:** If the Den factory deployer EOA changes, **all** contract addresses for that factory change. This is why we maintain separate deployer EOAs for production and non-production environments.
 
-# Check Den non-prod factory on sepolia
-cast code 0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db --rpc-url sepolia
-```
+### Updating Addresses
 
-### Compute Expected Library Addresses
+When updating `deployment.toml`:
 
-Before deploying, compute the expected library addresses for a factory:
-
-```bash
-# Compute addresses for Arachnid factory
-make compute-lib-addresses FACTORY=arachnid NETWORK=mainnet
-
-# Compute addresses for all factories
-make compute-all-lib-addresses NETWORK=sepolia
-```
-
-### Verify a Specific Contract
-
-Verify a contract on Etherscan:
-
-```bash
-make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=OrganizationImplementation NETWORK=mainnet
-```
-
-### Check Deployer Nonce (Den Factory Only)
-
-Before deploying the Den Singleton Factory, verify the deployer nonce is 0:
-
-```bash
-# Check nonce of the non-prod Den deployer
-cast nonce 0x22002e8661A780d61EF4c86F4a9fFa843A6fea20 --rpc-url $RPC_URL
-```
-
-If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its deterministic address on this chain. Use the Arachnid factory instead (if supported), or contact the team.
+1. Run `make compute-all-addresses` to generate the expected addresses
+2. Compare the output with your changes
+3. Ensure all dependent addresses are updated (e.g., changing Safe owners affects SafeExecutorModule addresses)
+4. Run the test deployment locally to verify: `script/sh/test_deploy_scripts_locally.sh arachnid`
 
 ---
 
@@ -705,36 +769,4 @@ make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
 
 # Verify a contract on Etherscan
 make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=OrganizationImplementation NETWORK=mainnet
-```
-
----
-
-## Contract Addresses
-
-### Key Addresses
-
-| Resource | Address |
-|----------|---------|
-| Arachnid Factory | `0x4e59b44847b379578588920cA78FbF26c0B4956C` |
-| Arachnid Deployer (for funding) | `0x3fAB184622Dc19b6109349B94811493BF2a45362` |
-
-### Deployed Contract Addresses
-
-All deployed contract addresses (libraries, Safe infrastructure, platform contracts) are stored in the **`deployment.toml`** configuration file at the repository root.
-
-The file is organized by factory (`[factory.arachnid]`, `[factory.den-nonprod]`, `[factory.den-prod]`), with each section containing all contract addresses for that factory.
-
-```bash
-# View all addresses for a specific factory
-grep -A 50 '\[factory.arachnid\]' deployment.toml
-```
-
-To compute expected addresses before deployment, use:
-
-```bash
-# Compute all addresses for all factories
-make compute-all-addresses
-
-# Compute addresses for a specific factory
-make compute-addresses FACTORY=arachnid
 ```
