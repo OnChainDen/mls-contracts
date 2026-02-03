@@ -13,26 +13,31 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Required Tools](#required-tools)
    - [Project Setup](#project-setup)
    - [Signer Setup](#signer-setup)
-4. [Configuration](#configuration)
-   - [Networks](#networks)
-   - [Signers](#signers)
-   - [Factories](#factories)
-5. [Safe 1.4.1 Deployment](#safe-141-deployment)
+4. [Safe 1.4.1 Deployment](#safe-141-deployment)
    - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
    - [Safe Deployment Commands](#safe-deployment-commands)
-6. [BatchedTransaction Contract](#batchedtransaction-contract)
+5. [BatchedTransaction Contract](#batchedtransaction-contract)
    - [Why BatchedTransaction?](#why-batchedtransaction)
    - [Transaction Encoding Format](#transaction-encoding-format)
    - [BatchedTransaction Deployment Commands](#batchedtransaction-deployment-commands)
-7. [Safe Executor Module](#safe-executor-module)
+6. [Safe Executor Module](#safe-executor-module)
    - [Module Overview](#module-overview)
    - [Module Deployment Commands](#module-deployment-commands)
    - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
-8. [Deployment Examples](#deployment-examples)
+7. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-9. [Verifying Deployments](#verifying-deployments)
-10. [Troubleshooting](#troubleshooting)
+8. [Verifying Deployments](#verifying-deployments)
+9. [Troubleshooting](#troubleshooting)
+10. [Make Reference](#make-reference)
+    - [Configuration Variables](#configuration-variables)
+    - [Core Commands](#core-commands)
+    - [CREATE2 Factory Deployment](#create2-factory-deployment)
+    - [Safe 1.4.1 Deployment](#safe-141-deployment-1)
+    - [Guardian Safe Executor Module](#guardian-safe-executor-module)
+    - [Platform Deployment](#platform-deployment)
+    - [Utilities](#utilities)
+11. [Contract Addresses](#contract-addresses)
 
 ---
 
@@ -146,8 +151,6 @@ This script will:
 
 ---
 
-## Core Concepts
-
 ### CREATE2 Deterministic Deployment
 
 All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. This is critical for cross-chain operations.
@@ -159,7 +162,9 @@ address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
 
 This means: **Same salt + same factory + same bytecode = same address on every chain**.
 
-### CREATE2 Factories
+---
+
+## CREATE2 Factories
 In order to ensure all contracts are deployed at the same addresses across chains, all contracts must be deployed using a CREATE2 Factory that's deployed at the same address across all chains.
 
 In most cases we'll use the  [Arachnid Deterministic Deployer](#arachnid-deterministic-deployer-preferred) factory, as it's designed to be deployable at the same address across most chains.
@@ -168,14 +173,14 @@ On rare occasion, a chain may not support the Arachnid Deterministic Deployer. I
 
 This means that in production, we have two separate sets of addresses for all contracts: one for Arachnid and one for Den Singleton Factory. 
 
-#### Arachnid Deterministic Deployer (Preferred)
+### Arachnid Deterministic Deployer (Preferred)
 
 The [Arachnid Deterministic Deployment Proxy](https://github.com/Arachnid/deterministic-deployment-proxy) is available on most EVM chains and is our preferred factory. It is automatically included in OP Stack chains and is by default deployed to Arbitrum Orbit chains, although Orbit chains can optionally choose to not include it in their initial state.
 
 - **Factory Address:** `0x4e59b44847b379578588920cA78FbF26c0B4956C`
 - **How it works:** Uses a pre-signed keyless transaction (Nick's Method) to deploy the factory at a deterministic address without requiring a specific EOA.
 
-#### Den Singleton Factory (Fallback)
+### Den Singleton Factory (Fallback)
 
 Some chains enforce strict **EIP-155 replay protection** and reject the pre-signed keyless transaction used by Arachnid. For these chains, we deploy the **Den Singleton Factory** instead.
 
@@ -183,7 +188,7 @@ The Den Singleton Factory is functionally identical to the Arachnid factory, but
 
 > **CRITICAL:** Because the Den Singleton Factory must be deployed at nonce 0, you must **never accidentally use or burn the nonce** on the deployer EOA. Our deployment scripts have safeguards to prevent this.
 
-##### Production vs Non-Production Deployers
+#### Production vs Non-Production Deployers
 
 We maintain **two separate EOAs** for deploying the Den Singleton Factory: one for production environments and one for non-production environments. This is done to prevent risk of accidentally burning the deployer EOA's nonce 0 during development. 
 
@@ -198,7 +203,7 @@ This means the Den Singleton Factory address will be **different** in prod vs no
 
 ---
 
-### External Libraries & Library Linking
+## External Libraries & Library Linking
 
 The EVM enforces a strict limit on the bytecode size of smart contracts. 
 
@@ -224,7 +229,7 @@ The four external libraries that require linking are:
 | `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
 | `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
 
-#### Why Linking Matters
+### Why Linking Matters
 
 Without explicit library linking:
 - Foundry auto-deploys libraries using regular `CREATE` (nonce-dependent)
@@ -236,7 +241,7 @@ With explicit library linking:
 - The compiler links to these known addresses
 - Contract bytecode is identical across all chains
 
-#### Two-Stage Library Deployment
+### Two-Stage Library Deployment
 
 Due to inter-library dependencies, libraries must be deployed in **two stages**:
 
@@ -275,186 +280,18 @@ The library addresses depend on which CREATE2 factory is used. Our Makefile hand
 
 ---
 
-## Prerequisites
+## Ledger Hardware Wallets (used in production)
 
-### Required Tools
+To deploy contracts using a ledger: 
+1. connect your Ledger and unlock it
+2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `makefile` deployment targets
+3. Optionally set `HD_PATH=YourDeriviationPath` for `makefile` deployment targets to use a different deriviation path (The default HD path is `m/44'/60'/0'/0/0`)
 
-The following tools are required to deploy and interact with the contracts:
-
-| Tool | Version | Purpose |
-|------|---------|---------|
-| [Foundry](https://getfoundry.sh) | >= 0.2.0 | Smart contract development (`forge`, `cast`) |
-| [Node.js](https://nodejs.org) | >= 18 | Required for solhint |
-| [solhint](https://protofire.github.io/solhint/) | Latest | Solidity linter |
-| [Slither](https://github.com/crytic/slither) | >= 0.10.0 | Static analysis |
-| [jq](https://jqlang.github.io/jq/) | Latest | JSON parsing |
-| [yq](https://github.com/mikefarah/yq) | >= 4.0 | TOML parsing |
-
-#### macOS Installation
-_Note: assumes you already have `node` and Python 3 installed._
-```bash
-# Install Foundry (includes forge and cast)
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-# Install solhint globally
-npm install -g solhint
-
-# Install Slither (requires Python 3)
-pip3 install slither-analyzer
-
-# Install jq and yq
-brew install jq yq
-```
-
-#### Linux (Ubuntu/Debian) Installation
-_Note: assumes you already have `node` and Python 3 installed._
-
-```bash
-# Install Foundry (includes forge and cast)
-curl -L https://foundry.paradigm.xyz | bash
-foundryup
-
-# Install solhint globally
-npm install -g solhint
-
-# Install Slither (requires Python 3)
-pip3 install slither-analyzer
-
-# Install jq and yq
-sudo apt install -y jq
-sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-sudo chmod +x /usr/local/bin/yq
-```
-
-#### Verify Installations
-
-```bash
-# Verify all tools are installed correctly
-forge --version    # Should show forge 0.2.x or higher
-cast --version     # Should show cast 0.2.x or higher
-node --version     # Should show v18.x or higher
-solhint --version  # Should show solhint version
-slither --version  # Should show 0.10.x or higher
-jq --version       # Should show jq version
-yq --version       # Should show yq version 4.x or higher
-```
-
-### Project Setup
-
-After installing the required tools, set up the project by running these commands in the project's root directory:
-
-
-
-```bash
-# Install git submodules (Foundry dependencies)
-forge install
-
-# Build the contracts to verify everything is set up correctly
-forge build
-```
-
-Alternatively, use the Makefile for a complete clean setup:
-
-```bash
-# Full clean setup: removes old artifacts, reinstalls dependencies, and builds
-make all
-```
-
-This runs: `clean` → `remove` → `install` → `update` → `build`
-
-#### Verify Project Setup
-
-```bash
-# Run the full check suite (format, lint, analyze, test)
-make check
-```
-
-### Signer Setup
-
-The Makefile deployment targets support two signing methods: 
-1. **Foundry managed accounts** – Used during development
-2. **Ledger hardware wallets** – Used in production
-
-#### Foundry Managed Accounts (used during development)
-
-Import a wallet from a mnemonic seed phrase into Foundry's encrypted keystore:
-
-```bash
-# Import from mnemonic at a specific derivation index (e.g., index 0)
-cast wallet import my-deployer --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 0
-
-# You'll be prompted to create a password to encrypt the keystore
-
-# Example: Import the non-prod Den factory deployer at index 3
-cast wallet import den-nonprod-deployer --mnemonic "your twelve word mnemonic phrase here" --mnemonic-index 3
-```
-
-To list your imported accounts:
-```bash
-cast wallet list
-```
-
-To get the address of an imported account:
-```bash
-cast wallet address --account my-deployer
-```
-
-#### Ledger Hardware Wallets (used in production)
-
-No setup required — just connect your Ledger and unlock it.
-
-The default HD path is `m/44'/60'/0'/0/0`. To use a different derivation path, set `HD_PATH`:
+Example:
 
 ```bash
 make deploy-libraries SIGNER=ledger SENDER=0xYourLedgerAddress HD_PATH="m/44'/60'/1'/0/0"
 ```
-
----
-
-## Configuration
-
-The Makefile supports several configuration variables that control deployment behavior.
-
-### Networks
-
-The `NETWORK` variable specifies the target network. Default is `local` (Anvil on port 8545).
-
-| Value | Description |
-|-------|-------------|
-| `local` | Local Anvil instance at `http://127.0.0.1:8545` |
-| `mainnet` | Ethereum Mainnet |
-| `sepolia` | Ethereum Sepolia testnet |
-| `polygon` | Polygon Mainnet |
-| `arbitrum` | Arbitrum One |
-| `optimism` | Optimism Mainnet |
-| `base` | Base Mainnet |
-
-You can also pass a custom RPC URL directly:
-```bash
-make deploy-libraries NETWORK=https://my-custom-rpc.example.com
-```
-
-### Signers
-
-The `SIGNER` variable specifies the signing method. Default is `account`.
-
-| Value | Description | Required Variables |
-|-------|-------------|-------------------|
-| `account` | Foundry managed keystore | `ACCOUNT` (name of imported account) |
-| `ledger` | Ledger hardware wallet | `SENDER` (your Ledger address), optionally `HD_PATH` |
-
-When using `SIGNER=account`, the `SENDER` address is automatically derived from your keystore account (you'll be prompted for your password).
-
-### Factories
-
-The `FACTORY` variable specifies which CREATE2 factory to use. Default is `arachnid`.
-
-| Value | Factory Address | Use Case |
-|-------|-----------------|----------|
-| `arachnid` | `0x4e59b44847b379578588920cA78FbF26c0B4956C` | Most chains (preferred) |
-| `den-nonprod` | `0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db` | Non-prod chains that don't support Arachnid |
-| `den-prod` | *Not yet available* | Production chains that don't support Arachnid |
 
 ---
 
@@ -1055,9 +892,65 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 
 ---
 
-## Quick Reference
+## Make Reference
 
-### Make Commands
+This section provides a complete reference for all Makefile commands and configuration options.
+
+Run `make help` to see the full list of available commands and examples.
+
+### Configuration Variables
+
+All deployment commands support the following configuration variables:
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `NETWORK` | Target network (local, mainnet, sepolia, polygon, arbitrum, optimism, base) or custom RPC URL | `local` | `NETWORK=sepolia` |
+| `SIGNER` | Signing method: `account` (Foundry keystore) or `ledger` (hardware wallet) | `account` | `SIGNER=ledger` |
+| `ACCOUNT` | Foundry keystore account name (required for `SIGNER=account`) | - | `ACCOUNT=my-deployer` |
+| `SENDER` | EOA address (auto-derived from `ACCOUNT`, required for `SIGNER=ledger`) | - | `SENDER=0x1234...` |
+| `FACTORY` | CREATE2 factory: `arachnid`, `den-prod`, or `den-nonprod` | `arachnid` | `FACTORY=den-nonprod` |
+| `HD_PATH` | Ledger HD derivation path | `m/44'/60'/0'/0/0` | `HD_PATH="m/44'/60'/1'/0/0"` |
+| `VERBOSITY` | Forge verbosity level | `-vvvv` | `VERBOSITY=-vvv` |
+| `EXECUTOR` | Guardian Executor EOA address (for `deploy-guardian-safe-module`) | - | `EXECUTOR=0x5678...` |
+| `EXECUTE` | Execute transaction if threshold met: `true` or `false` | - | `EXECUTE=true` |
+| `ACTION` | Action to check status for: `add` or `remove` (for `check-guardian-module-status`) | - | `ACTION=add` |
+
+**Factory Addresses:**
+
+| Value | Factory Address | Use Case |
+|-------|-----------------|----------|
+| `arachnid` | `0x4e59b44847b379578588920cA78FbF26c0B4956C` | Most chains (preferred) |
+| `den-nonprod` | `0xC6123B1C95825f98939C76c8cBCEFDBB1C0D94db` | Non-prod chains that don't support Arachnid |
+| `den-prod` | *Not yet available* | Production chains that don't support Arachnid |
+
+You can pass a custom RPC URL directly via `NETWORK`:
+
+```bash
+make deploy-libraries NETWORK=https://my-custom-rpc.example.com ACCOUNT=my-deployer
+```
+
+### Core Commands
+
+| Command | Description |
+|---------|-------------|
+| `make all` | Clean, reinstall dependencies, and build (default) |
+| `make build` | Compile contracts |
+| `make test` | Run tests |
+| `make check` | Run all checks (format, lint, analyze, sizes, test) |
+| `make format` | Fix code formatting |
+| `make lint` | Check code style (no fixes) |
+| `make check-headers` | Verify SPDX license and copyright headers |
+| `make analyze` | Run Slither static analysis |
+| `make sizes` | Show contract sizes |
+| `make coverage` | Generate test coverage report |
+| `make snapshot` | Generate gas snapshot |
+| `make gas-report` | Run tests with gas reporting |
+| `make clean` | Remove build artifacts |
+| `make remove` | Remove dependencies (lib/) |
+| `make install` | Install dependencies |
+| `make update` | Update dependencies |
+
+### CREATE2 Factory Deployment
 
 | Command | Description |
 |---------|-------------|
@@ -1065,25 +958,76 @@ If the nonce is not 0, the Den Singleton Factory **cannot** be deployed at its d
 | `make deploy-arachnid-factory` | Deploy the Arachnid CREATE2 factory |
 | `make fund-den-deployer` | Fund a Den factory deployer (requires `DEN_DEPLOYER_ADDRESS`) |
 | `make deploy-den-factory` | Deploy the Den Singleton Factory |
+
+### Safe 1.4.1 Deployment
+
+| Command | Description |
+|---------|-------------|
 | `make deploy-safe-infra` | Deploy Safe 1.4.1 infrastructure contracts |
 | `make deploy-safe-infra-dry-run` | Simulate Safe infrastructure deployment (no broadcast) |
 | `make deploy-safe-multisigs` | Deploy Guardian and Admin Safe multisigs |
 | `make deploy-safe-multisigs-dry-run` | Simulate Safe multisig deployment (no broadcast) |
+
+### Guardian Safe Executor Module
+
+| Command | Description |
+|---------|-------------|
+| `make deploy-batched-transaction` | Deploy BatchedTransaction contract |
+| `make deploy-guardian-safe-module` | Deploy SafeExecutorModule for the Guardian Safe (requires `EXECUTOR`) |
+| `make guardian-safe-add-module` | Approve adding the module to Guardian Safe (requires `EXECUTE`) |
+| `make guardian-safe-remove-module` | Approve removing the module from Guardian Safe (requires `EXECUTE`) |
+| `make check-guardian-module-status` | Check approval status for Guardian Safe module transaction (requires `ACTION`) |
+
+### Platform Deployment
+
+| Command | Description |
+|---------|-------------|
 | `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin) via CREATE2 |
 | `make deploy-dependent-libs` | Deploy dependent libraries (Init, AccountSig) via CREATE2 |
 | `make deploy-libraries` | Deploy all platform libraries (runs both stages) |
-| `make deploy-contracts` | Deploy all contracts with library linking |
-| `make deploy-platform` | Full deployment (Safe + libraries + contracts) |
-| `make deploy-batched-transaction` | Deploy BatchedTransaction contract |
-| `make compute-batched-transaction-address` | Preview expected BatchedTransaction address |
-| `make deploy-guardian-safe-module` | Deploy SafeExecutorModule for the Guardian Safe |
-| `make guardian-safe-add-module` | Approve adding the module to Guardian Safe |
-| `make guardian-safe-remove-module` | Approve removing the module from Guardian Safe |
-| `make check-guardian-module-status` | Check approval status for Guardian Safe module transaction |
-| `make check-factory` | Check if a CREATE2 factory exists |
+| `make deploy-contracts` | Deploy platform contracts with library linking |
+| `make deploy-platform` | Full deployment (Safe infra + multisigs + libraries + contracts) |
+| `make deploy-independent-libs-dry-run` | Simulate independent library deployment (no broadcast) |
+| `make deploy-dependent-libs-dry-run` | Simulate dependent library deployment (no broadcast) |
+| `make deploy-libraries-dry-run` | Simulate all library deployment (no broadcast) |
+| `make deploy-contracts-dry-run` | Simulate contract deployment (no broadcast) |
+| `make deploy-platform-dry-run` | Simulate full platform deployment (no broadcast) |
+
+### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `make check-factory` | Check if a factory is deployed |
 | `make check-all-factories` | Check all factories on a network |
-| `make compute-addresses` | Compute all CREATE2 addresses for a specific factory |
-| `make compute-all-addresses` | Compute all CREATE2 addresses for all three factories |
+| `make compute-addresses` | Compute all CREATE2 addresses for a factory |
+| `make compute-all-addresses` | Compute all CREATE2 addresses for all factories |
+| `make verify` | Verify a contract on Etherscan (requires `CONTRACT_ADDRESS`, `CONTRACT_NAME`) |
+
+**Examples:**
+
+```bash
+# Deploy libraries to Sepolia using a Foundry keystore account
+make deploy-libraries NETWORK=sepolia ACCOUNT=my-deployer
+
+# Deploy full platform to mainnet using Ledger
+make deploy-platform FACTORY=arachnid NETWORK=mainnet SIGNER=ledger SENDER=0x...
+
+# Check all factories on mainnet
+make check-all-factories NETWORK=mainnet
+
+# Deploy Guardian Safe module
+make deploy-guardian-safe-module EXECUTOR=0x... NETWORK=sepolia ACCOUNT=my-deployer
+
+# Approve adding Guardian module (Safe owner operation)
+make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner
+
+# Verify a contract on Etherscan
+make verify CONTRACT_ADDRESS=0x1234... CONTRACT_NAME=OrganizationImplementation NETWORK=mainnet
+```
+
+---
+
+## Contract Addresses
 
 ### Key Addresses
 
