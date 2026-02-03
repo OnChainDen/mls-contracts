@@ -165,7 +165,7 @@ Example policies:
 - "if a transaction is sending more than $10,000, then require approval from 2 out of 3 members of the Finance team"
 - "if a transaction is sending less than $10,000, then require approval from 1 out of 3 members of the Finance team"
 - "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
-- "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team
+- "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team"
 
 
 All Account Transactions and Account Signatures must be created using a Policy. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
@@ -435,7 +435,7 @@ In many ways, Account Signatures are similar to Account Transactions:
 - They must be initiated by a member authorized by the Policy
 - They need additional approval signatures to be valid if the Policy is a ManualApproval policy.
 
-However, there are some keys differences:
+However, there are some key differences:
 - The entry point for Account Signatures is the Account contract itself (`Account.isValidSignature()`), not the Organization contract. 
     - Third parties call the Account directly to verify signatures. 
     - This is required to be compliant with the ERC-1271 standard.

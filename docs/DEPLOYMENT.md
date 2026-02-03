@@ -151,7 +151,7 @@ This script will:
 
 > [!IMPORTANT]
 > For production deployment, refer to the script to see the deployment order, and run the same Makefile targets with different networks, accounts (Ledgers), and other configuration as needed.
-
+>
 > [!WARNING]
 > If you do not have access to the EOAs that the `script/sh/test_deploy_scripts_locally.sh` script expects, you'll need to import accounts with the same names and update the expected addresses in `deployment.toml` to deploy locally.
 
