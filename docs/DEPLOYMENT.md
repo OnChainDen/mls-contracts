@@ -13,31 +13,21 @@ This guide covers deploying the Multi-layer Security (MLS) Wallet platform contr
    - [Required Tools](#required-tools)
    - [Project Setup](#project-setup)
    - [Signer Setup](#signer-setup)
-4. [Safe 1.4.1 Deployment](#safe-141-deployment)
-   - [Why Safe Uses a Separate Profile](#why-safe-uses-a-separate-profile)
-   - [Safe Deployment Commands](#safe-deployment-commands)
-5. [BatchedTransaction Contract](#batchedtransaction-contract)
-   - [Why BatchedTransaction?](#why-batchedtransaction)
-   - [Transaction Encoding Format](#transaction-encoding-format)
-   - [BatchedTransaction Deployment Commands](#batchedtransaction-deployment-commands)
-6. [Safe Executor Module](#safe-executor-module)
-   - [Module Overview](#module-overview)
-   - [Module Deployment Commands](#module-deployment-commands)
-   - [Adding a Module to a Safe](#adding-a-module-to-a-safe)
-7. [Deployment Examples](#deployment-examples)
+4. [Deployment Order](#deployment-order)
+5. [Deployment Examples](#deployment-examples)
    - [Example 1: Deploy via Arachnid Factory](#example-1-deploy-via-arachnid-factory)
    - [Example 2: Deploy via Den Singleton Factory](#example-2-deploy-via-den-singleton-factory)
-8. [Verifying Deployments](#verifying-deployments)
-9. [Troubleshooting](#troubleshooting)
-10. [Make Reference](#make-reference)
-    - [Configuration Variables](#configuration-variables)
-    - [Core Commands](#core-commands)
-    - [CREATE2 Factory Deployment](#create2-factory-deployment)
-    - [Safe 1.4.1 Deployment](#safe-141-deployment-1)
-    - [Guardian Safe Executor Module](#guardian-safe-executor-module)
-    - [Platform Deployment](#platform-deployment)
-    - [Utilities](#utilities)
-11. [Contract Addresses](#contract-addresses)
+6. [Verifying Deployments](#verifying-deployments)
+7. [Troubleshooting](#troubleshooting)
+8. [Make Reference](#make-reference)
+   - [Configuration Variables](#configuration-variables)
+   - [Core Commands](#core-commands)
+   - [CREATE2 Factory Deployment](#create2-factory-deployment)
+   - [Safe 1.4.1 Deployment](#safe-141-deployment-1)
+   - [Guardian Safe Executor Module](#guardian-safe-executor-module)
+   - [Platform Deployment](#platform-deployment)
+   - [Utilities](#utilities)
+9. [Contract Addresses](#contract-addresses)
 
 ---
 
@@ -295,317 +285,155 @@ make deploy-libraries SIGNER=ledger SENDER=0xYourLedgerAddress HD_PATH="m/44'/60
 
 ---
 
-## Safe 1.4.1 Deployment
+## Deployment Order
 
-The platform uses Safe (Gnosis Safe) multisig wallets for the **Guardian Safe** and **Admin Safe**. These Safes must be deployed before deploying the platform contracts.
+This section outlines the complete deployment order for all platform contracts. Each step must be completed before the next. 
 
-### Why Safe Uses a Separate Profile
+When testing deployment locally, the `script/sh/test_deploy_scripts_locally.sh` script performs all of these steps.
 
-Safe 1.4.1 contracts were originally compiled with **Solidity 0.7.6**, and their official deployments use this compiler version. To ensure our Safe deployments produce **identical bytecode** (and therefore identical CREATE2 addresses) to the official Safe deployments, we compile Safe contracts with the same settings.
+> **Note:** All deployment commands are idempotent—if a contract is already deployed at its deterministic address, the script skips it and continues.
 
-However, our platform contracts use **Solidity 0.8.33**. Since Foundry can only use one Solidity version per compilation, we maintain a **separate Foundry profile** for Safe deployment:
+### Step 1: Deploy CREATE2 Factory
 
-| Profile | Solidity Version | EVM Target | Purpose |
-|---------|------------------|------------|---------|
-| `default` | 0.8.33 | Paris | Platform contracts and libraries |
-| `safe` | 0.7.6 | Istanbul | Safe 1.4.1 infrastructure and multisigs |
+All contracts are deployed via CREATE2 to ensure deterministic addresses across chains. Deploy the appropriate factory based on chain support.
 
-The Safe profile is defined in `foundry.toml` under `[profile.safe]`.
-
-### Safe Deployment Commands
-
-Safe deployment is split into **two separate steps** for security. This prevents deploying Safe proxy wallets if the Safe Singleton (implementation) deployment fails, which could allow attackers to frontrun initialization.
-
-#### Step 1: Deploy Safe Infrastructure
+**For most chains (Arachnid factory):**
 
 ```bash
-# Deploy Safe infrastructure to a local Anvil instance
-make deploy-safe-infra ACCOUNT=my-deployer
-
-# Deploy Safe infrastructure to Sepolia testnet
-make deploy-safe-infra NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy Safe infrastructure using Den non-prod factory
-make deploy-safe-infra FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy Safe infrastructure using a Ledger
-make deploy-safe-infra NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+# Fund the Arachnid deployer, then deploy the factory
+make fund-arachnid-deployer ACCOUNT=my-deployer
+make deploy-arachnid-factory ACCOUNT=my-deployer
 ```
 
-This deploys the Safe infrastructure contracts:
-- GnosisSafe singleton (master copy)
-- GnosisSafeProxyFactory
-- CompatibilityFallbackHandler
-- MultiSend
-- MultiSendCallOnly
-- CreateCall
-- SimulateTxAccessor
-
-#### Step 2: Deploy Safe Multisigs
-
-After infrastructure is deployed, deploy the Guardian and Admin Safe multisigs:
+**For chains that reject Arachnid's pre-signed transaction (Den factory):**
 
 ```bash
-# Deploy Safe multisigs to a local Anvil instance
-make deploy-safe-multisigs ACCOUNT=my-deployer
-
-# Deploy Safe multisigs to Sepolia testnet
-make deploy-safe-multisigs NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy Safe multisigs using Den non-prod factory
-make deploy-safe-multisigs FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy Safe multisigs using a Ledger
-make deploy-safe-multisigs NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+# Fund the Den deployer, then deploy the factory
+make fund-den-deployer DEN_DEPLOYER_ADDRESS=0x22002e8661A780d61EF4c86F4a9fFa843A6fea20 ACCOUNT=my-deployer
+make deploy-den-factory ACCOUNT=den-nonprod-deployer
 ```
 
-This script:
-1. **Verifies** that Safe infrastructure is deployed at expected addresses
-2. Deploys the Guardian Safe and Admin Safe multisig proxies
+> The Den factory deployer must be at nonce 0. Use `cast nonce <address>` to verify before deploying.
 
-> **Security Note**: The multisig deployment script will **fail** if Safe infrastructure is not deployed. This prevents the dangerous scenario where Safe proxies are deployed without the Singleton, which would allow attackers to call `setup()` and take control of the multisigs.
+---
 
-#### Preview Safe Addresses (Dry Run)
+### Step 2: Deploy Safe Infrastructure
+
+Deploys the Safe 1.4.1 singleton and supporting contracts (ProxyFactory, FallbackHandler, MultiSend, etc.).
 
 ```bash
-# Simulate infrastructure deployment without broadcasting
-make deploy-safe-infra-dry-run NETWORK=sepolia
-
-# Simulate multisig deployment without broadcasting
-make deploy-safe-multisigs-dry-run NETWORK=sepolia
+make deploy-safe-infra ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-#### Compute Expected Safe Addresses
+> **Under the hood:** Uses `FOUNDRY_PROFILE=safe` which compiles with Solidity 0.7.6 (matching official Safe deployments) to ensure identical bytecode and deterministic addresses.
 
-Preview the expected Safe addresses without deploying. This is useful for verifying addresses before deployment or updating configuration files.
+---
+
+### Step 3: Deploy Safe Multisigs
+
+Deploys the Guardian Safe and Admin Safe proxy wallets.
 
 ```bash
-# Compute addresses for Arachnid factory
-make compute-addresses FACTORY=arachnid
-
-# Compute addresses for Den non-prod factory
-make compute-addresses FACTORY=den-nonprod
+make deploy-safe-multisigs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-### Safe Deployment Workflow
+> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. This prevents deploying Safe proxies without the Singleton, which would allow attackers to frontrun initialization.
 
-Safe deployment only needs to happen **once per chain per factory**. After the first deployment:
+---
 
-1. The deployed addresses are **hardcoded** in `deployment.toml`
-2. The `DeployContracts.s.sol` script **verifies** that Safes are deployed before proceeding
-3. Running deploy commands again will **skip** already-deployed contracts (idempotent)
+### Step 4: Deploy Independent Libraries
 
-The full deployment order is:
-
-```text
-1. Deploy CREATE2 Factory (if not already deployed)
-   └── make deploy-arachnid-factory  OR  make deploy-den-factory
-
-2a. Deploy Safe Infrastructure
-    └── make deploy-safe-infra
-
-2b. Deploy Safe Multisigs (verifies infra is deployed first)
-    └── make deploy-safe-multisigs
-
-3. Deploy Platform Libraries (two stages due to inter-library dependencies)
-   ├── Stage 1: make deploy-independent-libs  (Policy, Admin)
-   └── Stage 2: make deploy-dependent-libs    (Init, AccountSig)
-   └── Or: make deploy-libraries              (runs both stages)
-
-4. Deploy Platform Contracts
-   └── make deploy-contracts
-```
-
-Or use the convenience target that runs steps 2a-4:
+Deploys `LibOrganizationPolicy` and `LibOrganizationAdmin`—external libraries with no dependencies on other platform libraries.
 
 ```bash
-make deploy-platform NETWORK=sepolia ACCOUNT=my-deployer
+make deploy-independent-libs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
 ---
 
-## BatchedTransaction Contract
+### Step 5: Deploy Dependent Libraries
 
-The `BatchedTransaction` contract is a security-focused alternative to `MultiSendCallOnly` that provides secure batched transaction execution when delegatecalled from a Safe.
-
-### Why BatchedTransaction?
-
-When `SafeExecutorModule` delegatecalls to a batching contract, sub-transactions can potentially:
-1. Transfer ETH via non-zero `value` fields
-2. Call the Safe address to modify owners/modules
-3. Perform other malicious operations
-
-`BatchedTransaction` addresses these vulnerabilities with:
-
-- **No value field**: ETH value is hardcoded to 0 in the encoding, preventing ETH transfers
-- **address(this) validation**: When delegatecalled, `address(this)` is the Safe, and calls to `address(this)` are blocked
-- **Efficient encoding**: `28 + N bytes` per transaction (vs `85 + N bytes` for MultiSendCallOnly)
-
-### Transaction Encoding Format
-
-Transactions are packed sequentially with no padding:
-
-```
-[to (20 bytes)][dataLength (8 bytes)][data (N bytes)][to (20 bytes)][dataLength (8 bytes)][data (N bytes)]...
-```
-
-| Field | Size | Description |
-|-------|------|-------------|
-| `to` | 20 bytes | Target contract address |
-| `dataLength` | 8 bytes | Length of calldata (uint64) |
-| `data` | N bytes | Calldata to execute |
-
-### BatchedTransaction Deployment Commands
-
-#### Deploy BatchedTransaction
+Deploys `LibOrganizationInitialization` and `LibOrganizationAccountSignature`—external libraries that depend on the independent libraries.
 
 ```bash
-# Deploy to local Anvil instance
-make deploy-batched-transaction ACCOUNT=my-deployer
-
-# Deploy to Sepolia testnet
-make deploy-batched-transaction NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy using Den non-prod factory
-make deploy-batched-transaction FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy using a Ledger
-make deploy-batched-transaction NETWORK=mainnet SIGNER=ledger SENDER=0xYourLedgerAddress
+make deploy-dependent-libs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-#### Compute Expected Address
-
-Preview the expected address without deploying:
-
-```bash
-make compute-batched-transaction-address NETWORK=sepolia
-make compute-batched-transaction-address FACTORY=den-nonprod NETWORK=mainnet
-```
-
-### Deployment Order
-
-**IMPORTANT**: BatchedTransaction must be deployed BEFORE SafeExecutorModules.
-
-```
-1. Deploy CREATE2 Factory (if not already deployed)
-2. Deploy Safe Infrastructure and Multisigs
-3. Deploy Platform Libraries
-4. Deploy Platform Contracts
-5. Deploy BatchedTransaction     ← Must be before modules
-6. Deploy SafeExecutorModules    ← Depends on BatchedTransaction
-7. Add Modules to Safes
-```
+> **Under the hood:** Passes `--libraries` flags to link the independent library addresses into the bytecode. This is required because the Solidity compiler embeds dependency addresses directly into dependent library bytecode, affecting their CREATE2 addresses.
 
 ---
 
-## Safe Executor Module
+### Step 6: Deploy Platform Contracts
 
-The Safe Executor Module allows a designated EOA (the "Safe Executor EOA") to execute contract calls on behalf of a Safe multisig without requiring multisig signatures for every transaction.
-
-### Module Overview
-
-The `SafeExecutorModule` is a minimal Safe module with the following properties:
-
-- **Single Safe Executor EOA**: Only one EOA can execute transactions via the module
-- **Immutable configuration**: The Safe Executor EOA cannot be changed after deployment
-- **Restricted operations**:
-  - Uses `CALL` for all targets, except `DELEGATECALL` is allowed ONLY to `BatchedTransaction`
-  - No ETH transfers (value must always be zero)
-  - No calls to the Safe itself (prevents ownership/module modifications)
-
-The `DELEGATECALL` exception for `BatchedTransaction` enables batching multiple calls into a single transaction, which is essential for complex operations that need to be atomic.
-
-To rotate the Safe Executor EOA, deploy a new module instance and have Safe owners swap modules via multisig transaction.
-
-### Module Deployment Commands
-
-#### Deploy the Guardian Safe Module
-
-Deploy a SafeExecutorModule for the Guardian Safe:
+Deploys all platform contracts (`OrganizationImplementation`, `AccountImplementation`, `ImplementationWhitelist`, etc.).
 
 ```bash
-# Deploy module for Guardian Safe
-make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy using Den non-prod factory
-make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress FACTORY=den-nonprod NETWORK=sepolia ACCOUNT=my-deployer
-
-# Deploy with Ledger
-make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress NETWORK=mainnet SIGNER=ledger SENDER=0x...
+make deploy-contracts ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-The script validates:
-1. The executor address matches the expected address in `deployment.toml`
-2. The Guardian Safe is deployed at the expected address
-3. The `BatchedTransaction` contract is deployed at the expected address
-4. The CREATE2 factory is deployed
+> **Under the hood:** Passes `--libraries` flags for all four external libraries to ensure contracts are compiled with the correct linked addresses.
 
-### Adding the Module to the Guardian Safe
+---
 
-After deploying the module, Guardian Safe owners must approve adding it. This is a multisig operation that requires threshold approvals.
+### Step 7: Deploy BatchedTransaction
 
-#### Approve Adding the Module
-
-Each Guardian Safe owner runs this command to submit their approval:
+Deploys the `BatchedTransaction` contract, a security-focused batched transaction executor.
 
 ```bash
-# Approve adding module to Guardian Safe (execute if threshold is met)
-make guardian-safe-add-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
+make deploy-batched-transaction ACCOUNT=my-deployer FACTORY=arachnid
+```
 
-# Approve without auto-executing (just submit approval)
-make guardian-safe-add-module EXECUTE=false NETWORK=mainnet SIGNER=ledger SENDER=0x...
+> **Must be deployed before Step 8.** The SafeExecutorModule references BatchedTransaction as the only allowed DELEGATECALL target.
+
+---
+
+### Step 8: Deploy Guardian Safe Executor Module
+
+Deploys the `SafeExecutorModule` for the Guardian Safe, allowing a designated EOA to execute transactions on behalf of the Safe.
+
+```bash
+make deploy-guardian-safe-module EXECUTOR=0xYourExecutorAddress ACCOUNT=my-deployer FACTORY=arachnid
+```
+
+The `EXECUTOR` address must match the expected Guardian Executor EOA in `deployment.toml`.
+
+---
+
+### Step 9: Add Module to Guardian Safe
+
+Guardian Safe owners must approve adding the module. This is a multisig operation requiring threshold approvals.
+
+```bash
+# Each Guardian Safe owner runs this command
+make guardian-safe-add-module EXECUTE=true ACCOUNT=guardian-safe-owner FACTORY=arachnid
 ```
 
 When `EXECUTE=true` and the approval threshold is met, the transaction is automatically executed.
 
-#### Check Approval Status
+---
 
-Check how many approvals exist for a module transaction:
+### Full Deployment Quick Reference
 
-```bash
-# Check status for adding Guardian module
-make check-guardian-module-status ACTION=add NETWORK=sepolia
+| Step | Command | Notes |
+|------|---------|-------|
+| 1 | `make deploy-arachnid-factory` | Or `deploy-den-factory` for unsupported chains |
+| 2 | `make deploy-safe-infra` | Uses Solidity 0.7.6 profile |
+| 3 | `make deploy-safe-multisigs` | Verifies infrastructure first |
+| 4 | `make deploy-independent-libs` | Policy, Admin libraries |
+| 5 | `make deploy-dependent-libs` | Init, AccountSig libraries (with linking) |
+| 6 | `make deploy-contracts` | Platform contracts (with linking) |
+| 7 | `make deploy-batched-transaction` | Before SafeExecutorModule |
+| 8 | `make deploy-guardian-safe-module` | Requires `EXECUTOR=` |
+| 9 | `make guardian-safe-add-module` | Owner multisig operation |
 
-# Check status for removing Guardian module
-make check-guardian-module-status ACTION=remove NETWORK=mainnet
-```
+**Convenience targets:**
 
-#### Remove the Module
+| Target | Steps | What it deploys |
+|--------|-------|-----------------|
+| `make deploy-libraries` | 4, 5 | All four external libraries (Policy, Admin, Init, AccountSig) |
+| `make deploy-platform` | 2, 3, 4, 5, 6 | Safe infrastructure, Safe multisigs, all libraries, and platform contracts |
 
-If you need to remove the module (e.g., to rotate the authorized executor):
-
-```bash
-# Approve removing module from Guardian Safe
-make guardian-safe-remove-module EXECUTE=true NETWORK=sepolia ACCOUNT=safe-owner-1
-```
-
-### Module Deployment Workflow
-
-The typical workflow for deploying and enabling the module is:
-
-```
-1. Deploy the module
-   └── make deploy-guardian-safe-module EXECUTOR=0x... ...
-
-2. Each Guardian Safe owner approves adding the module
-   └── make guardian-safe-add-module EXECUTE=true ...
-   └── (repeat for each owner until threshold is met)
-
-3. Module is now active and the executor can use it
-```
-
-To rotate an executor:
-
-```
-1. Deploy a new module with the new executor address
-   └── make deploy-guardian-safe-module EXECUTOR=0xNewExecutor ...
-
-2. Guardian Safe owners approve adding the new module
-   └── make guardian-safe-add-module EXECUTE=true ...
-
-3. Guardian Safe owners approve removing the old module
-   └── make guardian-safe-remove-module EXECUTE=true ...
-```
+> **Note:** Convenience targets do not include Steps 1, 7, 8, or 9. The CREATE2 factory (Step 1) only needs to be deployed once per chain. BatchedTransaction (Step 7), Guardian module (Step 8), and module approval (Step 9) are typically done separately after the core platform is deployed.
 
 ---
 
