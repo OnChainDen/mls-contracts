@@ -87,10 +87,10 @@ interface IOrganizationAccountTransaction {
     error InvalidInitiatorSignature();
 
     /**
-     * @notice Thrown when a time-based limit is exceeded
+     * @notice Thrown when a rate limit is exceeded
      * @param policyId The policy ID that exceeded the limit
      */
-    error TimeBasedLimitExceeded(uint256 policyId);
+    error RateLimitExceeded(uint256 policyId);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions

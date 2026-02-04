@@ -11,7 +11,7 @@ pragma solidity 0.8.33;
  *      - Who must approve them (approvers)
  *      - What types of transactions are allowed (transfers, interactions, signatures)
  *      - Which accounts, destinations, and functions are permitted
- *      - Optional time-based and amount-based limits
+ *      - Optional rate limits and amount-based limits
  *
  *      Policies are stored as leaves in a merkle tree (only the root is stored on-chain).
  *      Full policy data is provided in calldata and verified via merkle proofs.
@@ -63,19 +63,19 @@ enum DestinationType {
  * @dev Defines rate limiting behavior for a policy.
  *      Controls how transaction frequency/amounts are limited.
  */
-enum PolicyLimitation {
+enum RateLimitType {
     None, // No limit on transactions
     SingleTransaction, // Only one transaction allowed (useful for one-time approvals)
     TimeInterval // Limit resets after a time period (e.g., daily/weekly limits)
 }
 
 /**
- * @dev Defines how time-based limits are scoped across entities.
- *      When tracking usage for time-based limits, determines if limits are:
+ * @dev Defines how rate limits are scoped across entities.
+ *      When tracking usage for rate limits, determines if limits are:
  *      - Shared across all entities (AcrossAll)
  *      - Tracked separately per entity (PerEntity)
  */
-enum TimeIntervalScope {
+enum RateLimitScope {
     AcrossAll, // Single shared limit across all accounts/destinations/initiators
     PerEntity // Separate limit tracked per account/destination/initiator
 }
@@ -201,22 +201,22 @@ struct TokenFilter {
 }
 
 /**
- * @dev Time-based limit configuration - defines rate limiting rules.
+ * @dev Rate limit configuration - defines rate limiting rules.
  *      Controls how frequently transactions can occur and cumulative limits.
- * @param limitation The type of limitation (None, SingleTransaction, TimeInterval)
+ * @param limitType The type of rate limit (None, SingleTransaction, TimeInterval)
  * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
  * @param timeIntervalLimit Maximum cumulative amount/count per time window
  * @param initiatorScope How limits are scoped per initiator
  * @param sourceScope How limits are scoped per source account
  * @param destinationScope How limits are scoped per destination address
  */
-struct TimeLimitConfig {
-    PolicyLimitation limitation;
+struct RateLimitConfig {
+    RateLimitType limitType;
     uint16 timeIntervalHours;
     uint256 timeIntervalLimit;
-    TimeIntervalScope initiatorScope;
-    TimeIntervalScope sourceScope;
-    TimeIntervalScope destinationScope;
+    RateLimitScope initiatorScope;
+    RateLimitScope sourceScope;
+    RateLimitScope destinationScope;
 }
 
 /**
@@ -230,7 +230,7 @@ struct TimeLimitConfig {
  * @param approval Approval requirements configuration
  * @param initiator Initiator authorization configuration
  * @param token Token and amount constraints
- * @param timeLimit Rate limiting configuration
+ * @param rateLimit Rate limiting configuration
  */
 struct PolicyConfig {
     TransactionType transactionType;
@@ -240,7 +240,7 @@ struct PolicyConfig {
     ApprovalConfig approval;
     InitiatorConfig initiator;
     TokenFilter token;
-    TimeLimitConfig timeLimit;
+    RateLimitConfig rateLimit;
 }
 
 /**

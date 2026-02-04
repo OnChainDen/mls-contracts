@@ -305,16 +305,16 @@ See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicy
 
 Policies can have rate limiting configured to control how frequently they can be used. This enables scenarios like daily spending limits.
 
-**Limitation Types:**
+**Rate Limit Types:**
 
 | Type | Description |
 |------|-------------|
-| `None` | No limitation - the policy can be used for unlimited transactions |
-| `TimeInterval` | Time-based rate limiting - usage resets after a configurable time window |
+| `None` | No rate limit - the policy can be used for unlimited transactions |
+| `TimeInterval` | Rate limiting - usage resets after a configurable time window |
 
-**Time Interval Configuration** *(only applicable when limitation type is `TimeInterval`)*
+**Time Interval Configuration** *(only applicable when rate limit type is `TimeInterval`)*
 
-When using time-based rate limiting, the following parameters can be configured:
+When using rate limiting, the following parameters can be configured:
 
 - **Time Interval (Hours)**: The duration of the time window in hours (e.g., 24 for daily limits, 168 for weekly limits, 720 for monthly limits). Usage tracking resets at the start of each new time window.
 
@@ -322,7 +322,7 @@ When using time-based rate limiting, the following parameters can be configured:
 
 **Scoping Options:**
 
-Time-based limits can be scoped in different ways for each of these dimensions:
+Rate limits can be scoped in different ways for each of these dimensions:
 
 | Scope Dimension | `AcrossAll` | `PerEntity` |
 |-----------------|-------------|-------------|
@@ -343,10 +343,10 @@ Time-based limits can be scoped in different ways for each of these dimensions:
 - For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
 - For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
 
-See `src/types/PolicyTypes.sol` (specifically `PolicyLimitation`, `TimeIntervalScope`, and `TimeLimitConfig`) and `src/organization/libraries/policy/LibPolicyTimeBasedLimits.sol` for implementation details.
+See `src/types/PolicyTypes.sol` (specifically `RateLimitType`, `RateLimitScope`, and `RateLimitConfig`) and `src/organization/libraries/policy/LibPolicyRateLimits.sol` for implementation details.
 
-![User interface for editing a Policy's limitation](docs/images/MLSWalletDemoPolicyLimitationsScreenshot.png)
-*The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
+![User interface for editing a Policy's rate limit](docs/images/MLSWalletDemoPolicyRateLimitsScreenshot.png)
+*The user interface for editing a Policy's rate limit in the Multi-layer Security (MLS) Wallet web application*
 
 ### Demo of Policies
 > [!WARNING]
@@ -806,7 +806,7 @@ We use a **storage library pattern** throughout our contracts. Each storage doma
 | `LibOrganizationAdminStorage.sol` | Admin configuration |
 | `LibOrganizationMembersStorage.sol` | Members merkle root |
 | `LibOrganizationGroupsStorage.sol` | Groups merkle root |
-| `LibOrganizationPolicyStorage.sol` | Policies merkle root and time-based limits |
+| `LibOrganizationPolicyStorage.sol` | Policies merkle root and rate limits |
 | `LibOrganizationGuardianStorage.sol` | Guardian address and pending updates |
 | `LibOrganizationSignaturesStorage.sol` | Used nonces |
 | `LibOrganizationAccountFactoryStorage.sol` | Deployed accounts and account implementation address |

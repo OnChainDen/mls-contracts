@@ -161,7 +161,7 @@ Policies are the most data-rich structures in MLS Wallet. A single policy can re
 
 Each policy consists of:
 
-1. **PolicyConfig** — Configuration flags and nested structs (approval requirements, initiator config, token filters, time limits)
+1. **PolicyConfig** — Configuration flags and nested structs (approval requirements, initiator config, token filters, rate limits)
 2. **PolicyRoots** — Three Merkle roots for lists that can grow arbitrarily large
 
 ```solidity
@@ -239,7 +239,7 @@ Organization
         │   ├── ApprovalConfig (policyType, approverType, threshold)
         │   ├── InitiatorConfig (anyInitiator, initiatorType, member/group)
         │   ├── TokenFilter (anyToken, tokenAddress, amountThreshold)
-        │   └── TimeLimitConfig (limitation, interval, scopes)
+        │   └── RateLimitConfig (limitType, interval, scopes)
         └── PolicyRoots
             ├── sourceAccountsRoot
             │   └── Address leaves (if !anySourceAccount)

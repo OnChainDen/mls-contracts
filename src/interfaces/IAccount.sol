@@ -79,6 +79,6 @@ interface IAccount is IERC1271 {
 
     // Note: isValidSignature is inherited from IERC1271
     // Implementation delegates signature validation to the associated Organization contract.
-    // Time-based policy limits are NOT supported for ERC-1271 signatures because the standard
+    // Rate limits are NOT supported for ERC-1271 signatures because the standard
     // requires isValidSignature to be a view function (cannot modify storage to track usage).
 }

@@ -7,7 +7,7 @@ import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
-import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
+import {Policy, PolicyType, RateLimitType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Organization Account Transaction
@@ -18,7 +18,7 @@ import {Policy, PolicyLimitation, PolicyType, TransactionType, ValidationProofs}
  *      2. A valid policy exists and applies to this transaction
  *      3. The initiator is authorized by the policy
  *      4. Required approvals have been collected (for manual approval policies)
- *      5. Time-based limits are not exceeded
+ *      5. Rate limits are not exceeded
  *
  *      Policies are verified via merkle proofs. Policy data is provided in calldata
  *      and verified against the organization's policy merkle root.
@@ -55,7 +55,7 @@ library LibOrganizationAccountTransaction {
      *      2. Validates the initiator signature
      *      3. Checks that the policy applies to this transaction
      *      4. Routes to appropriate approval flow based on policy type
-     *      5. Updates time-based limits if applicable
+     *      5. Updates rate limits if applicable
      *      Reverts on validation failure.
      * @param account The source account executing the transaction
      * @param to The destination address
@@ -130,10 +130,8 @@ library LibOrganizationAccountTransaction {
             });
         }
 
-        // Update time-based limits if applicable (for all policy types)
-        _validateAndUpdateTimeBasedLimitOrRevert({
-            params: params, data: data, initiator: initiator, policy: proofs.policy
-        });
+        // Update rate limits if applicable (for all policy types)
+        _validateAndUpdateRateLimitOrRevert({params: params, data: data, initiator: initiator, policy: proofs.policy});
     }
 
     /**
@@ -228,8 +226,8 @@ library LibOrganizationAccountTransaction {
     }
 
     /**
-     * @dev Validates and updates time-based limits for approved transactions.
-     *      Only applies if the policy has TimeInterval limitation.
+     * @dev Validates and updates rate limits for approved transactions.
+     *      Only applies if the policy has TimeInterval rate limit.
      *      For token transfers, tracks the transfer amount.
      *      For other transactions, tracks count (usage = 1).
      *      Reverts if the limit would be exceeded.
@@ -238,14 +236,14 @@ library LibOrganizationAccountTransaction {
      * @param initiator The initiator's address
      * @param policy The policy being used
      */
-    function _validateAndUpdateTimeBasedLimitOrRevert(
+    function _validateAndUpdateRateLimitOrRevert(
         TxParams memory params,
         bytes calldata data,
         address initiator,
         Policy calldata policy
     ) private {
-        // Only process if policy has time-based limits
-        if (policy.config.timeLimit.limitation != PolicyLimitation.TimeInterval) {
+        // Only process if policy has rate limits configured
+        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) {
             return;
         }
 
@@ -261,7 +259,7 @@ library LibOrganizationAccountTransaction {
         }
 
         // Check limit and update usage tracking
-        bool withinLimit = LibOrganizationPolicy.checkAndUpdateTimeBasedLimit({
+        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit({
             policyId: params.policyId,
             policy: policy,
             account: params.account,
@@ -271,7 +269,7 @@ library LibOrganizationAccountTransaction {
         });
 
         if (!withinLimit) {
-            revert IOrganizationAccountTransaction.TimeBasedLimitExceeded(params.policyId);
+            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
         }
     }
 

@@ -3,21 +3,21 @@
 pragma solidity 0.8.33;
 
 import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
-import {Policy, PolicyLimitation, TimeIntervalScope} from "types/PolicyTypes.sol";
+import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
 
 /**
- * @title Lib Policy Time Based Limits
- * @dev Library for time-based policy limit tracking and validation.
- *      Handles checking and updating time-based usage limits for policies.
+ * @title Lib Policy Rate Limits
+ * @dev Library for policy rate limit tracking and validation.
+ *      Handles checking and updating usage limits for policies.
  *      Time windows are calculated as fixed intervals based on block.timestamp.
  * @author Den Technologies Inc
  */
-library LibPolicyTimeBasedLimits {
+library LibPolicyRateLimits {
     /// @dev Number of seconds in one hour, used for time window calculations
     uint256 private constant SECONDS_PER_HOUR = 3600;
 
     /**
-     * @dev Checks and updates time-based usage limits.
+     * @dev Checks and updates rate limit usage.
      *      Checks if the usage amount would exceed the limit for the current time window.
      *      If within limit, updates the usage and returns true.
      *      If exceeding limit, returns false without updating.
@@ -29,7 +29,7 @@ library LibPolicyTimeBasedLimits {
      * @param usageAmount The amount to add to usage (transfer amount or 1 for non-transfers)
      * @return withinLimit True if within limit (and usage was updated), false otherwise
      */
-    function checkAndUpdateTimeBasedLimit(
+    function checkAndUpdateRateLimit(
         uint256 policyId,
         Policy memory policy,
         address account,
@@ -37,11 +37,11 @@ library LibPolicyTimeBasedLimits {
         address initiator,
         uint256 usageAmount
     ) internal returns (bool withinLimit) {
-        // Skip check if no time-based limitation
-        if (policy.config.timeLimit.limitation != PolicyLimitation.TimeInterval) return true;
+        // Skip check if no rate limit configured
+        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) return true;
 
         // Skip if time interval is not configured (0 hours)
-        if (policy.config.timeLimit.timeIntervalHours == 0) return true;
+        if (policy.config.rateLimit.timeIntervalHours == 0) return true;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
@@ -53,7 +53,7 @@ library LibPolicyTimeBasedLimits {
         uint256 currentUsage = policyLayout.policyUsage[usageKey][timeWindow];
 
         // Check if adding usageAmount would exceed the limit
-        if (currentUsage + usageAmount > policy.config.timeLimit.timeIntervalLimit) return false;
+        if (currentUsage + usageAmount > policy.config.rateLimit.timeIntervalLimit) return false;
 
         // Update usage
         policyLayout.policyUsage[usageKey][timeWindow] = currentUsage + usageAmount;
@@ -69,7 +69,7 @@ library LibPolicyTimeBasedLimits {
      */
     function computeTimeWindow(Policy memory policy) internal view returns (uint256) {
         // Uses fixed time windows based on timeIntervalHours
-        uint16 hours_ = policy.config.timeLimit.timeIntervalHours;
+        uint16 hours_ = policy.config.rateLimit.timeIntervalHours;
 
         // Avoid division by zero
         if (hours_ == 0) return 0;
@@ -78,7 +78,7 @@ library LibPolicyTimeBasedLimits {
     }
 
     /**
-     * @dev Gets the current usage for a time-based policy
+     * @dev Gets the current usage for a rate-limited policy
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -93,11 +93,11 @@ library LibPolicyTimeBasedLimits {
         address destination,
         address initiator
     ) internal view returns (uint256) {
-        // Return 0 if no time-based limitation
-        if (policy.config.timeLimit.limitation != PolicyLimitation.TimeInterval) return 0;
+        // Return 0 if no rate limit configured
+        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) return 0;
 
         // Return 0 if time interval is not configured
-        if (policy.config.timeLimit.timeIntervalHours == 0) return 0;
+        if (policy.config.rateLimit.timeIntervalHours == 0) return 0;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 
@@ -110,7 +110,7 @@ library LibPolicyTimeBasedLimits {
     }
 
     /**
-     * @dev Computes the usage key for time-based limit tracking.
+     * @dev Computes the usage key for rate limit tracking.
      *      The usage key is a hash of the policy ID and scoped entities.
      *      If a scope is AcrossAll, address(0) is used for that component.
      *      If a scope is PerEntity, the actual address is used.
@@ -131,14 +131,13 @@ library LibPolicyTimeBasedLimits {
         // Determine scoped values based on policy configuration
         // When scope is AcrossAll, address(0) is used for that entity.
         // When scope is PerEntity, the actual address is used.
-        address scopedAccount =
-            policy.config.timeLimit.sourceScope == TimeIntervalScope.PerEntity ? account : address(0);
+        address scopedAccount = policy.config.rateLimit.sourceScope == RateLimitScope.PerEntity ? account : address(0);
 
         address scopedDestination =
-            policy.config.timeLimit.destinationScope == TimeIntervalScope.PerEntity ? destination : address(0);
+            policy.config.rateLimit.destinationScope == RateLimitScope.PerEntity ? destination : address(0);
 
         address scopedInitiator =
-            policy.config.timeLimit.initiatorScope == TimeIntervalScope.PerEntity ? initiator : address(0);
+            policy.config.rateLimit.initiatorScope == RateLimitScope.PerEntity ? initiator : address(0);
 
         return keccak256(abi.encode(policyId, scopedAccount, scopedDestination, scopedInitiator));
     }
