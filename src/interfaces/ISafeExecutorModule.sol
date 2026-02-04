@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+
 /**
  * @title ISafeExecutorModule
  * @notice Interface for the SafeExecutorModule contract
@@ -16,9 +18,15 @@ pragma solidity 0.8.33;
  *      The Safe Executor EOA is immutable - to rotate, deploy a new module instance
  *      and have Safe owners swap modules via multisig transaction.
  *
+ *      The module also implements ERC-1271 signature validation, allowing the
+ *      AUTHORIZED_EXECUTOR to sign messages on behalf of the Guardian Safe.
+ *      This enables ERC-1271 Account Signature validation without requiring
+ *      Safe owner signatures.
+ *
  * @author Den Technologies Inc
  */
-interface ISafeExecutorModule {
+interface ISafeExecutorModule is IERC1271 {
+    // Note: isValidSignature(bytes32,bytes) is inherited from IERC1271
     /// @notice Error thrown when caller is not the authorized executor
     /// @param caller The address that attempted to call the function
     /// @param expected The authorized executor address

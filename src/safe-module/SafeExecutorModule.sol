@@ -3,8 +3,10 @@
 pragma solidity 0.8.33;
 
 import {ISafeExecutorModule} from "../interfaces/ISafeExecutorModule.sol";
+import {SignatureUtils} from "../libraries/SignatureUtils.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
-/// @notice Minimal interface for Safe module execution
+/// @notice Minimal interface for Safe module execution and module queries
 interface ISafe {
     /// @notice Executes a transaction from a module
     /// @param to Target address
@@ -15,6 +17,11 @@ interface ISafe {
     function execTransactionFromModule(address to, uint256 value, bytes memory data, uint8 operation)
         external
         returns (bool success);
+
+    /// @notice Checks if a module is enabled on the Safe
+    /// @param module The module address to check
+    /// @return True if the module is enabled, false otherwise
+    function isModuleEnabled(address module) external view returns (bool);
 }
 
 /**
@@ -100,5 +107,30 @@ contract SafeExecutorModule is ISafeExecutorModule {
         }
 
         return success;
+    }
+
+    /// @inheritdoc IERC1271
+    /// @dev Validates that the signature was created by the AUTHORIZED_EXECUTOR.
+    ///      This allows the module to act as an ERC-1271 signer for the Guardian Safe,
+    ///      enabling ERC-1271 Account Signature validation without Safe owner signatures.
+    ///      Uses the universal signature encoding format from SignatureUtils:
+    ///      - EOA signatures: | v (1) | r (32) | s (32) | = 65 bytes
+    ///      - ERC-1271 signatures: | 0 (1) | signer (20) | length (2) | signature (N) | = 23 + N bytes
+    function isValidSignature(bytes32 hash, bytes calldata signature) external view override returns (bytes4) {
+        // Use SignatureUtils to recover the signer (supports both EOA and ERC-1271 formats)
+        (bool success, address recovered) = SignatureUtils.tryRecoverSigner(signature, hash);
+
+        // Case: Signature recovery failed
+        if (!success) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
+        // Case: Signature is from the authorized executor
+        if (recovered == AUTHORIZED_EXECUTOR) {
+            return SignatureUtils.ERC1271_MAGIC_VALUE;
+        }
+
+        // Case: Signature is not from the authorized executor
+        return SignatureUtils.ERC1271_INVALID_VALUE;
     }
 }

@@ -519,6 +519,7 @@ The Policy used to create the signature dictates who can approve it:
 5. **The Guardian signs a message.**
     - The Guardian signs a message to approve the Account Signature.
     - **Note**: Unlike Account Transactions where the Guardian calls a function, here the Guardian provides a signature.
+    - **Note**: When the Guardian is a Safe with `SafeExecutorModule`, the module's Authorized Executor signs instead of the Safe owners. See [Guardian Protection](./docs/GUARDIAN_PROTECTION.md) for details.
 6. **The Guardian sends all signatures to the third party.**
     - The Guardian packs all the signatures and proofs together into a single packed signature
     - The Guardian sends the packed signatures to the third party that wants to validate the ERC-1271 signature.
@@ -529,6 +530,7 @@ The Policy used to create the signature dictates who can approve it:
 9. **The Organization contract validates all signatures and policy onchain.**
     - The Organization contract checks expiration, initiator signature, Guardian signature, policy authorization, and reviewer approvals.
         - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+        - **Note**: Guardian signatures can come from the Guardian address directly or from an enabled module on the Guardian Safe (e.g., `SafeExecutorModule`).
 10. **The Account contract returns ERC-1271 magic values.**
     - Returns `0x1626ba7e` for valid signatures, `0xffffffff` for invalid signatures.
 

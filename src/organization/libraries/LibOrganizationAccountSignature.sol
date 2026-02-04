@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import {BytesUtils} from "libraries/BytesUtils.sol";
@@ -22,7 +21,7 @@ import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.s
  *      1. (Recovery path) If type prefix is 0x00, validates recovery signature
  *      2. (Policy path) If type prefix is 0x01, validates policy-based signature:
  *         - The signature request hasn't expired
- *         - The guardian has approved the signature request
+ *         - The guardian has approved the signature request (directly or via enabled module)
  *         - A valid policy exists for signature operations
  *         - The policy applies to the requesting account
  *         - The initiator is authorized by the policy
@@ -32,17 +31,15 @@ import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.s
  *      - 0x00 = Recovery signature (raw signature from recovery address)
  *      - 0x01 = Policy-based signature (ABI-encoded policy data and proofs)
  *
+ *      Guardian signatures can come from:
+ *      - The Guardian address directly (EOA or ERC-1271 contract)
+ *      - An enabled module on the Guardian Safe (e.g., SafeExecutorModule)
+ *        This allows the module's AUTHORIZED_EXECUTOR to sign without Safe owner signatures.
+ *
  *      Policy existence is verified via merkle proof. Policy data is provided in calldata.
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountSignature {
-    /// @dev ERC-1271 magic value returned when signature is valid.
-    /// Equals bytes4(keccak256("isValidSignature(bytes32,bytes)")) = 0x1626ba7e
-    bytes4 internal constant ERC1271_MAGIC_VALUE = IERC1271.isValidSignature.selector;
-
-    /// @dev Value returned when signature validation fails per ERC-1271 standard
-    bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
-
     /// @dev Signature type prefix for recovery signatures
     uint8 internal constant SIGNATURE_TYPE_RECOVERY = 0x00;
 
@@ -57,7 +54,7 @@ library LibOrganizationAccountSignature {
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
      * @param signature Type-prefixed signature data
-     * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
     function isValidSignature(address account, bytes32 hash, bytes memory signature)
         public
@@ -66,7 +63,7 @@ library LibOrganizationAccountSignature {
     {
         // Case: Empty signature
         if (signature.length == 0) {
-            return ERC1271_INVALID_VALUE;
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         // Extract the type prefix byte
@@ -86,7 +83,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Unknown signature type
-        return ERC1271_INVALID_VALUE;
+        return SignatureUtils.ERC1271_INVALID_VALUE;
     }
 
     /**
@@ -94,7 +91,7 @@ library LibOrganizationAccountSignature {
      *      Recovery signatures bypass all guardian and policy checks.
      * @param hash The message hash that was signed
      * @param signatureData The raw recovery signature (without type prefix)
-     * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
     function _validateRecoverySignature(bytes32 hash, bytes memory signatureData)
         private
@@ -106,15 +103,15 @@ library LibOrganizationAccountSignature {
             !LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271()
                 || !LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271()
         ) {
-            return ERC1271_INVALID_VALUE;
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         // Validate the recovery signature
         if (LibOrganizationTxRecovery.isValidRecoverySignature(hash, signatureData)) {
-            return ERC1271_MAGIC_VALUE;
+            return SignatureUtils.ERC1271_MAGIC_VALUE;
         }
 
-        return ERC1271_INVALID_VALUE;
+        return SignatureUtils.ERC1271_INVALID_VALUE;
     }
 
     /**
@@ -129,7 +126,7 @@ library LibOrganizationAccountSignature {
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
      * @param signatureData ABI-encoded signature data (without type prefix)
-     * @return magicValue ERC1271_MAGIC_VALUE if valid, ERC1271_INVALID_VALUE otherwise
+     * @return magicValue SignatureUtils.ERC1271_MAGIC_VALUE if valid, SignatureUtils.ERC1271_INVALID_VALUE otherwise
      */
     function _validatePolicyBasedSignature(address account, bytes32 hash, bytes memory signatureData)
         private
@@ -148,12 +145,12 @@ library LibOrganizationAccountSignature {
 
         // Case: Signature request has expired
         if (block.timestamp > expirationTimestamp) {
-            return ERC1271_INVALID_VALUE;
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         // Case: No initiator signature provided
         if (initiatorSignature.length == 0) {
-            return ERC1271_INVALID_VALUE;
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         // Validate initiator signature and recover the initiator signer address
@@ -161,7 +158,7 @@ library LibOrganizationAccountSignature {
         (bool initiatorValid, address initiator) =
             SignatureUtils.tryRecoverSigner(initiatorSignature, initiatorSignatureHash);
         if (!initiatorValid) {
-            return ERC1271_INVALID_VALUE;
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         // Compute review hash (used for both guardian and reviewer signature validation)
@@ -175,27 +172,21 @@ library LibOrganizationAccountSignature {
         });
 
         // Validate guardian signature against the review hash
-        {
-            address guardianAddress = LibOrganizationGuardian.getGuardian();
-
-            // Recover guardian signer and compare (returns invalid if signature is malformed)
-            (bool guardianValid, address recoveredGuardian) =
-                SignatureUtils.tryRecoverSigner(guardianSignature, reviewHash);
-            if (!guardianValid || recoveredGuardian != guardianAddress) {
-                return ERC1271_INVALID_VALUE;
-            }
+        // Accepts signatures from the Guardian directly OR an enabled module on the Guardian Safe
+        if (!_isValidGuardianSignature(guardianSignature, reviewHash)) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         // Case: Signature is not allowed by the policy
         if (!_isERC1271SignatureAllowedByPolicy(account, initiator, policyId, proofs)) {
-            return ERC1271_INVALID_VALUE;
+            return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 
         PolicyType pType = proofs.policy.config.approval.policyType;
 
         // Case: Policy is an AutoApprove approval policy (Guardian and initiator signatures are sufficient)
         if (pType == PolicyType.AutoApprove) {
-            return ERC1271_MAGIC_VALUE;
+            return SignatureUtils.ERC1271_MAGIC_VALUE;
         }
 
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
@@ -207,11 +198,48 @@ library LibOrganizationAccountSignature {
                     messageHash: reviewHash,
                     approverProofs: proofs.approverProofs
                 })) {
-                return ERC1271_MAGIC_VALUE;
+                return SignatureUtils.ERC1271_MAGIC_VALUE;
             }
         }
 
-        return ERC1271_INVALID_VALUE;
+        return SignatureUtils.ERC1271_INVALID_VALUE;
+    }
+
+    /**
+     * @dev Validates that a guardian signature is valid.
+     *      Accepts signatures from:
+     *      - The Guardian address directly (EOA or ERC-1271 contract)
+     *      - An enabled module on the Guardian Safe (e.g., SafeExecutorModule)
+     * @param guardianSignature The signature to validate
+     * @param messageHash The hash that was signed
+     * @return True if the signature is from the Guardian or an enabled module
+     */
+    function _isValidGuardianSignature(bytes memory guardianSignature, bytes32 messageHash)
+        private
+        view
+        returns (bool)
+    {
+        address guardianAddress = LibOrganizationGuardian.getGuardian();
+
+        // Recover guardian signer (returns false if signature is malformed)
+        (bool isSignatureValid, address recoveredSignerAddress) =
+            SignatureUtils.tryRecoverSigner(guardianSignature, messageHash);
+        if (!isSignatureValid) {
+            return false;
+        }
+
+        // Accept Guardian directly
+        if (recoveredSignerAddress == guardianAddress) {
+            return true;
+        }
+
+        // Check if recovered signer is an enabled module on the Guardian Safe
+        // Using low-level staticcall to avoid importing Safe interfaces and to
+        // gracefully handle non-Safe Guardian addresses (they'll return false)
+        (bool success, bytes memory result) =
+            guardianAddress.staticcall(abi.encodeWithSignature("isModuleEnabled(address)", recoveredSignerAddress));
+
+        return success && result.length >= 32 && abi.decode(result, (bool));
     }
 
     /**

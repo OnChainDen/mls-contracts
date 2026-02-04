@@ -83,12 +83,47 @@ The Guardian Safe has a custom module (`SafeExecutorModule`) installed that allo
 
 **Security benefit:** If the Authorized Executor's private key is compromised, the attacker:
 - ✅ Can execute transactions as the Guardian (call Organization functions)
+- ✅ Can sign ERC-1271 Account Signature validations
 - ❌ Cannot rotate the Safe's owners
 - ❌ Cannot remove themselves from the Safe
 - ❌ Cannot add malicious modules
 - ❌ Cannot drain ETH from the Safe (although no tokens should be held by the Safe anyway)
 
 This design allows Den to run an automated EOA in cloud infrastructure while limiting blast radius if that key is compromised.
+
+#### ERC-1271 Signature Validation
+
+The `SafeExecutorModule` implements ERC-1271 (`isValidSignature`) to enable the Authorized Executor to sign messages on behalf of the Guardian Safe. This is critical for ERC-1271 Account Signature validation, where a Guardian signature must be provided.
+
+**Why is this needed?**
+
+For ERC-1271 Account Signatures, the Guardian must sign a message approving the signature request. Without this feature:
+- The Safe's owners (cold wallets) would need to sign every Account Signature request
+- This defeats the purpose of having an automated Guardian service
+
+**How it works:**
+
+1. When `SafeExecutorModule.isValidSignature(hash, signature)` is called:
+   - The module uses `SignatureUtils.tryRecoverSigner` to recover the signer
+   - This supports the universal signature encoding format (both EOA and ERC-1271)
+   - If the recovered signer equals `AUTHORIZED_EXECUTOR`, it returns the ERC-1271 magic value (`0x1626ba7e`)
+   - Otherwise, it returns the invalid value (`0xffffffff`)
+
+2. The Organization contract accepts Guardian signatures from:
+   - The Guardian address directly (for EOA Guardians or Safes with owner signatures)
+   - Any enabled module on the Guardian Safe (validated via `Safe.isModuleEnabled()`)
+
+**Signature format for module-based Guardian signatures:**
+
+When the Authorized Executor signs for the Guardian, the signature uses the universal [Signature Encoding Format](./SIGNATURES.md#signature-encoding-format)—specifically the ERC-1271 contract signature format with the module address as the signer and the Authorized Executor's EOA signature as the inner signature.
+
+**Module rotation:**
+
+When the Authorized Executor needs to be rotated:
+1. Safe owners deploy a new `SafeExecutorModule` with a new `AUTHORIZED_EXECUTOR`
+2. Safe owners enable the new module and disable the old one via multisig transaction
+3. New signatures automatically use the new module address
+4. The Organization validates the new module is enabled—no Organization state changes required
 
 Files: `SafeExecutorModule.sol`, `ISafeExecutorModule.sol`
 
