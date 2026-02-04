@@ -619,7 +619,7 @@ A separate contract that maintains a whitelist of approved implementation addres
 #### Organization Factory (`src/organization/OrganizationFactory.sol`)
 
 A factory contract that deploys Organization contracts at deterministic addresses using CREATE2:
-- Enables same Organization address across all EVM-compatible chains
+- Enables same Organization address across all EVM-equivalent chains
 - Validates implementation against the whitelist before deployment
 - Atomically deploys and initializes Organizations in a single transaction
 
