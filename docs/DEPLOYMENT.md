@@ -162,7 +162,7 @@ This script will:
 
 ## Deployment Order
 
-This section outlines the complete deployment order for all platform contracts. Each step must be completed before the next. 
+This section outlines the complete deployment order for all contracts. Each step must be completed before the next. 
 
 When testing deployment locally, the `script/sh/test_deploy_scripts_locally.sh` script performs all of these steps.
 
@@ -216,7 +216,7 @@ Deploys the Guardian Safe and Admin Safe proxy wallets.
 make deploy-safe-multisigs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. This prevents deploying Safe proxies without the Singleton, which would allow attackers to front-run initialization.
+> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. 
 
 ---
 
@@ -366,10 +366,10 @@ echo "Deployment complete."
 
 ## Deploying with Ledger Hardware Wallets (production)
 
-To deploy contracts using a ledger: 
+To deploy contracts using a Ledger: 
 1. connect your Ledger and unlock it
-2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `makefile` deployment targets
-3. Optionally set `HD_PATH=YourDerivationPath` for `makefile` deployment targets to use a different derivation path (The default HD path is `m/44'/60'/0'/0/0`)
+2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `Makefile` deployment targets
+3. Optionally set `HD_PATH=YourDerivationPath` for `Makefile` deployment targets to use a different derivation path (The default HD path is `m/44'/60'/0'/0/0`)
 
 Example:
 
