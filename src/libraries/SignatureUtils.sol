@@ -27,6 +27,13 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  * @author Den Technologies Inc
  */
 library SignatureUtils {
+    /// @dev ERC-1271 magic value returned when signature is valid.
+    /// Equals bytes4(keccak256("isValidSignature(bytes32,bytes)")) = 0x1626ba7e
+    bytes4 internal constant ERC1271_MAGIC_VALUE = IERC1271.isValidSignature.selector;
+
+    /// @dev Value returned when signature validation fails per ERC-1271 standard
+    bytes4 internal constant ERC1271_INVALID_VALUE = 0xffffffff;
+
     /// @dev EOA signature size: v (1) + r (32) + s (32) = 65 bytes
     uint256 internal constant EOA_SIGNATURE_SIZE = 65;
 
@@ -183,8 +190,7 @@ library SignatureUtils {
     {
         (bool success, bytes memory result) =
             signer.staticcall(abi.encodeCall(IERC1271.isValidSignature, (hash, signature)));
-        return (success && result.length >= 32
-                && abi.decode(result, (bytes32)) == bytes32(IERC1271.isValidSignature.selector));
+        return (success && result.length >= 32 && abi.decode(result, (bytes4)) == ERC1271_MAGIC_VALUE);
     }
 
     /**

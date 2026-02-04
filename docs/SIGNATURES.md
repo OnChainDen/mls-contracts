@@ -9,7 +9,7 @@ MLS Wallet uses a **hybrid signature format** that supports both EOA (Externally
 
 - **Organization Member signatures** — Initiator and reviewer signatures for Account Transactions and Account Signatures
 - **Admin signatures** — For Admin Operations that require admin authorization
-- **Guardian signatures** — For ERC-1271 Account Signature validation
+- **Guardian signatures** — For ERC-1271 Account Signature validation (from Guardian directly or enabled modules)
 - **Recovery address signatures** — For Disaster Recovery ERC-1271 Account Signatures
 
 #### EOA Signatures (65 bytes)
@@ -42,6 +42,49 @@ When the signer is a smart contract (e.g., a Safe multisig), the signature forma
 **Example use case:** An Organization Admin is a Safe multisig. When the Safe signs an admin operation, the signature is encoded with `v=0`, the Safe's address, and the Safe's signature data.
 
 Files: `SignatureUtils.sol`
+
+---
+
+### Guardian Signatures for ERC-1271 Account Signatures
+
+For ERC-1271 Account Signature validation, the Guardian must sign a message approving the signature request. The Organization accepts Guardian signatures from two sources:
+
+1. **Guardian address directly** — For EOA Guardians or Safes with owner signatures
+2. **Enabled modules on the Guardian Safe** — Allows the `SafeExecutorModule`'s Authorized Executor to sign
+
+#### Why Accept Module Signatures?
+
+The Guardian is typically a Safe multisig whose owners are cold wallets used only for module rotation. Requiring owner signatures for every ERC-1271 Account Signature would be impractical. Instead, the `SafeExecutorModule` implements ERC-1271, allowing its `AUTHORIZED_EXECUTOR` to sign on behalf of the Guardian.
+
+#### Module Signature Format
+
+When the Authorized Executor signs for the Guardian, the signature uses the [ERC-1271 Smart Contract Signature format](#erc-1271-smart-contract-signatures-23--n-bytes) with the **module address** as the signer (not the Safe address). Both the outer signature and the inner signature follow the universal [Signature Encoding Format](#signature-encoding-format).
+
+- `signer` — The `SafeExecutorModule` contract address (not the Safe)
+- `sig data` — Inner signature from `AUTHORIZED_EXECUTOR` (typically a 65-byte EOA signature)
+
+#### Validation Flow
+
+```
+1. SignatureUtils extracts moduleAddress from outer signature (v=0)
+2. SignatureUtils calls module.isValidSignature(hash, innerSignature)
+3. Module uses SignatureUtils.tryRecoverSigner to recover signer from inner signature
+4. Module checks if recovered signer == AUTHORIZED_EXECUTOR
+5. Module returns magic value (0x1626ba7e) if valid
+6. Organization verifies: Safe.isModuleEnabled(moduleAddress) == true
+7. Signature is accepted
+```
+
+#### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **No cold wallet signatures** | Authorized Executor (hot wallet) signs instead of Safe owners |
+| **Automatic rotation** | Rotating the module automatically rotates the signer |
+| **No Organization changes** | Module rotation doesn't require updating Organization state |
+| **Security preserved** | Safe owners control module lifecycle via multisig |
+
+Files: `SafeExecutorModule.sol`, `LibOrganizationAccountSignature.sol`
 
 ---
 
