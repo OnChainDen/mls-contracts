@@ -169,7 +169,7 @@ Example policies:
 - "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team"
 
 
-All Account Transactions and Account Signatures must be created using a Policy. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
+When creating an Account Transaction or Account Signature, users must select a Policy that authorizes the operation. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
 
 ### Policy Types
 There are two types of policies:
