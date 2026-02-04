@@ -407,7 +407,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
     - The Guardian calls the `executeAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
 6. **The Organization contract validates the transaction + signatures onchain**
     - The Organization contract checks that `msg.sender` is the Guardian
-    - The Organization contract performs all the same validations as the Guardian in _Step 4_ above.
+    - The Organization contract performs all the same validations as the Guardian in *Step 4* above.
 7. **The Organization contract forwards transaction to the Account contract**
     - The Organization contract calls the `executeTransaction()` function on the Account Contract, passing along transaction data.
 8. **The Account contract executes the transaction**
@@ -434,7 +434,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
     - The Guardian calls the `rejectAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
 6. **The Organization contract validates the transaction + signatures onchain.**
     - The Organization contract checks that `msg.sender` is the Guardian.
-    - The Organization contract performs all the same validations as the Guardian in _Step 4_ above.
+    - The Organization contract performs all the same validations as the Guardian in *Step 4* above.
 7. **The Organization contract burns the nonce for the transaction.**
     - Burning the nonce makes it impossible to use existing initiator and approval signatures to execute the transaction.
 
