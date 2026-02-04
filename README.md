@@ -363,16 +363,18 @@ The Policy that's used to create an Account Transaction determines which Members
 ### Who can approve or reject an Account Transaction?
 The Policy that's used to create the transaction dictates who can approve or reject the transaction:
 * If the Policy is an **AutoApproval Policy**:
-  - Only Members that are specified by the Policy as **initiators** can **initiate and execute the transaction.**
+  - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
   - Only Members that are specified by the Policy as **initiators** can **reject the transaction.**
-  - **Note:** AutoApproval policies don't require separate approval signatures from reviewers to be executed. They just need one valid Initiator signature.
+
+
+  > **Note:** AutoApproval policies don't require separate approval signatures from reviewers to be executed. They just need one valid Initiator signature.
 * If the Policy is a **ManualApproval Policy**:
   - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
-  - Only Members that are specified by the Policy as **reviewers** can **approve and execute the transaction.**
+  - Only Members that are specified by the Policy as **reviewers** can **approve the transaction.**
   - Only Members that are specified by the Policy as **reviewers** can **reject the transaction and burn the nonce.**
   - **Note:** The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it.
 
-**Key Point:** Rejection requires the same authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
+> **Key Point:** Rejection requires the same authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
 
 ### Approving (Executing) Account Transactions
 
