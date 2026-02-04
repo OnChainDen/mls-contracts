@@ -79,7 +79,7 @@ interface IOrganizationPolicy {
     function policiesRoot() external view returns (bytes32);
 
     /**
-     * @notice Gets the current usage for a time-based policy within the current time window
+     * @notice Gets the current usage for a rate-limited policy within the current time window
      * @param policyId The ID of the policy
      * @param policy The policy data (from calldata)
      * @param account The source account address

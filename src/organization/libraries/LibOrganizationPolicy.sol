@@ -9,7 +9,7 @@ import {LibPolicyApproval} from "organization/libraries/policy/LibPolicyApproval
 import {LibPolicyContractInteraction} from "organization/libraries/policy/LibPolicyContractInteraction.sol";
 import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
 import {LibPolicyInitiator} from "organization/libraries/policy/LibPolicyInitiator.sol";
-import {LibPolicyTimeBasedLimits} from "organization/libraries/policy/LibPolicyTimeBasedLimits.sol";
+import {LibPolicyRateLimits} from "organization/libraries/policy/LibPolicyRateLimits.sol";
 import {LibPolicyTokenTransfer} from "organization/libraries/policy/LibPolicyTokenTransfer.sol";
 import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
 import {ApproverProofs, InitiatorProofs, Policy, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
@@ -40,8 +40,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Checks and updates time-based usage limits
-     * @dev Delegates to LibPolicyTimeBasedLimits.
+     * @notice Checks and updates rate limit usage
+     * @dev Delegates to LibPolicyRateLimits.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -50,7 +50,7 @@ library LibOrganizationPolicy {
      * @param usageAmount The amount to add to usage (transfer amount or 1 for non-transfers)
      * @return withinLimit True if within limit (and usage was updated), false otherwise
      */
-    function checkAndUpdateTimeBasedLimit(
+    function checkAndUpdateRateLimit(
         uint256 policyId,
         Policy memory policy,
         address account,
@@ -58,7 +58,7 @@ library LibOrganizationPolicy {
         address initiator,
         uint256 usageAmount
     ) public returns (bool withinLimit) {
-        return LibPolicyTimeBasedLimits.checkAndUpdateTimeBasedLimit({
+        return LibPolicyRateLimits.checkAndUpdateRateLimit({
             policyId: policyId,
             policy: policy,
             account: account,
@@ -185,17 +185,17 @@ library LibOrganizationPolicy {
 
     /**
      * @dev Computes the current time window for a policy.
-     *      Delegates to LibPolicyTimeBasedLimits.
+     *      Delegates to LibPolicyRateLimits.
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
     function computeTimeWindow(Policy memory policy) public view returns (uint256) {
-        return LibPolicyTimeBasedLimits.computeTimeWindow(policy);
+        return LibPolicyRateLimits.computeTimeWindow(policy);
     }
 
     /**
-     * @dev Gets the current usage for a time-based policy.
-     *      Delegates to LibPolicyTimeBasedLimits.
+     * @dev Gets the current usage for a rate-limited policy.
+     *      Delegates to LibPolicyRateLimits.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -210,7 +210,7 @@ library LibOrganizationPolicy {
         address destination,
         address initiator
     ) public view returns (uint256) {
-        return LibPolicyTimeBasedLimits.getCurrentUsage({
+        return LibPolicyRateLimits.getCurrentUsage({
             policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
     }
@@ -277,8 +277,8 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @notice Computes the usage key for time-based limit tracking
-     * @dev Delegates to LibPolicyTimeBasedLimits.
+     * @notice Computes the usage key for rate limit tracking
+     * @dev Delegates to LibPolicyRateLimits.
      * @param policyId The policy ID
      * @param policy The policy data
      * @param account The source account address
@@ -293,7 +293,7 @@ library LibOrganizationPolicy {
         address destination,
         address initiator
     ) public pure returns (bytes32) {
-        return LibPolicyTimeBasedLimits.computeUsageKey({
+        return LibPolicyRateLimits.computeUsageKey({
             policyId: policyId, policy: policy, account: account, destination: destination, initiator: initiator
         });
     }

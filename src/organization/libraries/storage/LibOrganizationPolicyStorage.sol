@@ -15,7 +15,7 @@ library LibOrganizationPolicyStorage {
      * @custom:storage-location erc7201:den.mls-wallet.organization.policy
      * @param policiesRoot Global merkle root containing ALL policies.
      *        Each leaf is hash(policyId, Policy struct)
-     * @param policyUsage Time-based usage tracking: usageKey => timeWindow => usedAmount/count.
+     * @param policyUsage Rate limit usage tracking: usageKey => timeWindow => usedAmount/count.
      *        usageKey is computed from policyId and scoped entities (account, destination, initiator)
      */
     struct Layout {
