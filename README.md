@@ -337,7 +337,7 @@ See `src/types/PolicyTypes.sol` (specifically `PolicyLimitation`, `TimeIntervalS
 
 ### Demo of Policies
 > [!WARNING]
-> Some parts of the demo are outdated. In places where there are conflicts between the demo and the documentation in this repository, treast the documentation in this repository as the canonical source of truth.
+> Some parts of the demo are outdated. In places where there are conflicts between the demo and the documentation in this repository, treat the documentation in this repository as the canonical source of truth.
 We recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
 
 To view a demo of Multi-layer Security (MLS) Wallet's user interface for modifying Policies, visit:
