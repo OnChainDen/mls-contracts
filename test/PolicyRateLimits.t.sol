@@ -127,16 +127,6 @@ contract PolicyRateLimitsTest is Test {
         assertTrue(withinLimit, "Should return true when no limitation");
     }
 
-    function test_checkAndUpdateRateLimit_skipIfSingleTransactionLimitation() public {
-        Policy memory policy = _createPolicy(24, 1000, RateLimitType.SingleTransaction);
-
-        bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit(
-            POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
-        );
-
-        assertTrue(withinLimit, "Should return true when SingleTransaction limitation");
-    }
-
     function test_checkAndUpdateRateLimit_skipIfZeroHours() public {
         Policy memory policy = _createPolicy(0, 1000, RateLimitType.TimeInterval);
 
@@ -284,7 +274,7 @@ contract PolicyRateLimitsTest is Test {
      *      Uses AutoApprove policy type with anyInitiator.
      * @param hours_ The time interval in hours for the limit window
      * @param limit The maximum usage allowed within the time interval
-     * @param limitType The type of rate limit (None, SingleTransaction, or TimeInterval)
+     * @param limitType The type of rate limit (None or TimeInterval)
      * @return policy The constructed policy struct
      */
     function _createPolicy(uint16 hours_, uint256 limit, RateLimitType limitType)

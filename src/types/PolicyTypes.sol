@@ -65,7 +65,6 @@ enum DestinationType {
  */
 enum RateLimitType {
     None, // No limit on transactions
-    SingleTransaction, // Only one transaction allowed (useful for one-time approvals)
     TimeInterval // Limit resets after a time period (e.g., daily/weekly limits)
 }
 
@@ -203,7 +202,7 @@ struct TokenFilter {
 /**
  * @dev Rate limit configuration - defines rate limiting rules.
  *      Controls how frequently transactions can occur and cumulative limits.
- * @param limitType The type of rate limit (None, SingleTransaction, TimeInterval)
+ * @param limitType The type of rate limit (None or TimeInterval)
  * @param timeIntervalHours Duration of the time window in hours (for TimeInterval)
  * @param timeIntervalLimit Maximum cumulative amount/count per time window
  * @param initiatorScope How limits are scoped per initiator
