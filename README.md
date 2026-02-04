@@ -372,7 +372,7 @@ The Policy that's used to create the transaction dictates who can approve or rej
   - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
   - Only Members that are specified by the Policy as **reviewers** can **approve the transaction.**
   - Only Members that are specified by the Policy as **reviewers** can **reject the transaction and burn the nonce.**
-  - **Note:** The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it.
+  > **Note:** The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it.
 
 > **Key Point:** Rejection requires the same authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
 
