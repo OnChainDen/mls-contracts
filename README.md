@@ -378,18 +378,25 @@ The Policy that's used to create the transaction dictates who can approve or rej
 
 ### Approving (Executing) Account Transactions
 
-1. **Initiator signs a message approving the transaction** — A Member (the "Initiator") signs transaction data (EIP-712 typed data with `isApproval=true`).
-   - Parameters: `account`, `to`, `value`, `data`, `salt`, `expirationTimestamp`, `policyId`
-2. **Reviewers sign a message approving the transaction** (if ManualApproval policy) — This step is skipped if the policy is an AutoApproval policy.
-3. **Guardian collects the signatures**
-4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction is allowed by the policy provided and validates initiator and reviewer signatures.
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked — only the initiator signature is checked
-    - **Note:** This happens offchain before submitting the transactions and signatures to the Organization smart contract.
-5. **Guardian sends the transaction and signatures to the Organization contract** — Guardian calls `Organization.executeAccountTransaction()` with all signatures and proofs
-6. **Organization contract performs all validations** — Checks that `msg.sender` is the Guardian, validates that the transaction is allowed by the policy provided, and validates initiator and reviewer signatures
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked — only the initiator signature is checked
-7. **Organization contract forwards transaction to the Account contract** — Organization calls `Account.executeTransaction(to, value, data, nonce, policyId)`
-8. **Account contract executes the transaction** — Account contract checks that `msg.sender` is its associated Organization contract and then executes the transaction
+1. **A Member (the "initiator") signs a message to initiate the transaction.**
+2. **Other Members (the "reviewers") sign a message to approve the transaction.** 
+    - **Note**: This step only occurs for ManualApproval policies. It's skipped for AutoApproval policies.
+3. **The Guardian collects the signatures offchain.**
+4. **The Guardian validates the transaction + signatures offchain.**
+    - The Guardian validates that the transaction is allowed by the policy.
+    - The Guardian validates the initiator signature.
+    - The Guardian validates the reviewer signatures and checks that enough are provided to meet the policy's approval threshold. 
+        - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+5. **The Guardian submits the transaction + signatures to the Organization contract**
+    - The Guardian calls the `executeAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
+6. **The Organization contract validates the transaction + signatures onchain**
+    - The Organization contract checks that `msg.sender` is the Guardian
+    - The Organization contract performs all the same validations as the Guardian in _Step 4_ above.
+7. **The Organization contract forwards transaction to the Account contract**
+    - The Organization contract calls the `executeTransaction()` function on the Account Contract, passing along transaction data.
+8. **The Account contract executes the transaction**
+    - The Account contract checks that `msg.sender` is the Organization contract that owns it.
+    - The Account contract executes the transaction.
 
 ![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
 
