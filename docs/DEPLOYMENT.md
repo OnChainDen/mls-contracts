@@ -162,7 +162,7 @@ This script will:
 
 ## Deployment Order
 
-This section outlines the complete deployment order for all platform contracts. Each step must be completed before the next. 
+This section outlines the complete deployment order for all contracts. Each step must be completed before the next. 
 
 When testing deployment locally, the `script/sh/test_deploy_scripts_locally.sh` script performs all of these steps.
 
@@ -216,7 +216,7 @@ Deploys the Guardian Safe and Admin Safe proxy wallets.
 make deploy-safe-multisigs ACCOUNT=my-deployer FACTORY=arachnid
 ```
 
-> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. This prevents deploying Safe proxies without the Singleton, which would allow attackers to front-run initialization.
+> **Under the hood:** Verifies Safe infrastructure is deployed before proceeding. 
 
 ---
 
