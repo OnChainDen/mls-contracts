@@ -676,7 +676,7 @@ See: `OrganizationAccountFactoryBase.sol`, `LibOrganizationAccountFactory.sol`
 
 #### CREATE2 and Deterministic Addresses
 
-Both Organizations and Accounts use CREATE2 for deployment, ensuring **identical addresses across all EVM-compatible chains**.
+Both Organizations and Accounts use CREATE2 for deployment, ensuring **identical addresses across all EVM-equivalent chains**.
 
 **How it works:**
 
