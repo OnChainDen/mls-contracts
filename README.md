@@ -336,12 +336,15 @@ See `src/types/PolicyTypes.sol` (specifically `PolicyLimitation`, `TimeIntervalS
 *The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
 
 ### Demo of Policies
-We highly recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
+> [!WARNING]
+> Some parts of the demo are outdated. In places where there are conflicts between the demo and the documentation in this repository, treast the documentation in this repository as the canonical source of truth.
+We recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
 
 To view a demo of Multi-layer Security (MLS) Wallet's user interface for modifying Policies, visit:
 https://mls-wallet-demo.onchainden.com/policies
 
 To view the demo, please request a username and password from the Den team.
+
 
 ---
 
