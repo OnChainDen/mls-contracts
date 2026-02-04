@@ -366,10 +366,10 @@ echo "Deployment complete."
 
 ## Deploying with Ledger Hardware Wallets (production)
 
-To deploy contracts using a ledger: 
+To deploy contracts using a Ledger: 
 1. connect your Ledger and unlock it
-2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `makefile` deployment targets
-3. Optionally set `HD_PATH=YourDerivationPath` for `makefile` deployment targets to use a different derivation path (The default HD path is `m/44'/60'/0'/0/0`)
+2. Set `SIGNER=ledger` and `SENDER=0xYourLedgerAddress` for all `Makefile` deployment targets
+3. Optionally set `HD_PATH=YourDerivationPath` for `Makefile` deployment targets to use a different derivation path (The default HD path is `m/44'/60'/0'/0/0`)
 
 Example:
 
