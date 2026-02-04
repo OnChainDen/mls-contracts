@@ -380,12 +380,15 @@ The Policy that's used to create the transaction dictates who can approve or rej
 
 1. **A Member (the "initiator") signs a message to initiate the transaction.**
 2. **Other Members (the "reviewers") sign a message to approve the transaction.** 
+    - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
     - **Note**: This step only occurs for ManualApproval policies. It's skipped for AutoApproval policies.
+
 3. **The Guardian collects the signatures offchain.**
 4. **The Guardian validates the transaction + signatures offchain.**
     - The Guardian validates that the transaction is allowed by the policy.
     - The Guardian validates the initiator signature.
     - The Guardian validates the reviewer signatures and checks that enough are provided to meet the policy's approval threshold. 
+        - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
         - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
 5. **The Guardian submits the transaction + signatures to the Organization contract**
     - The Guardian calls the `executeAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
@@ -401,20 +404,26 @@ The Policy that's used to create the transaction dictates who can approve or rej
 ![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
 
 ### Rejecting Account Transactions
-> [!IMPORTANT]
-> An Initiator must have already signed a message to initiate the transaction that is being rejected
 
-1. **(Prerequisite) Initiator has already signed a message to initiate the transaction** — The original initiator signature for the transaction that's being rejected must be passed along
-2. **Authorized Members sign a message rejecting the transaction** – See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
-3. **Guardian collects the signatures**
-4. **Guardian validates the transaction against the policy** — Guardian service validates that the transaction would have been allowed by the policy provided and validates initiator and rejection signatures.
-    - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
-    - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
-    - **Note:** This happens offchain before submitting the transactions and signatures to the Organization smart contract.
-5. **Organization contract performs all validations** – Checks that `msg.sender` is the Guardian, validates that the transaction would have been allowed by the policy provided, and validates initiator and rejection signatures
-    - If the policy is an AutoApproval policy, rejection signatures must come from Members who are allowed to initiate the transaction according to the policy.
-    - If the policy is a ManualApproval policy, rejection signatures must come from Members who are specified as "reviewers" by the policy.
-6. **Organization contract burns the nonce for the transaction** — Organization burns the nonce for the transaction, making it impossible to use existing initiator and approval signatures to execute the transaction
+1. **A Member (the "initiator") has already signed a message to initiate the transaction.**
+    - **Note**: The original initiator signature for the transaction being rejected must be passed along.
+2. **Other Members sign a message rejecting the transaction.**
+    - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+    - **Note**: Depending on the policy, the original initiator can also be authorized to sign a rejection message.
+3. **The Guardian collects the signatures offchain.**
+4. **The Guardian validates the transaction + signatures offchain.**
+    - The Guardian validates that the transaction would have been allowed by the policy.
+    - The Guardian validates the initiator signature.
+    - The Guardian validates the rejection signatures.
+        - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+
+5. **The Guardian submits the transaction + signatures to the Organization contract.**
+    - The Guardian calls the `rejectAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
+6. **The Organization contract validates the transaction + signatures onchain.**
+    - The Organization contract checks that `msg.sender` is the Guardian.
+    - The Organization contract performs all the same validations as the Guardian in _Step 4_ above.
+7. **The Organization contract burns the nonce for the transaction.**
+    - Burning the nonce makes it impossible to use existing initiator and approval signatures to execute the transaction.
 
 ![Rejecting Account Transaction](docs/images/RejectingAccountTransaction.svg)
 
@@ -483,21 +492,32 @@ The Policy used to create the signature dictates who can approve it:
 
 ### Approving Account Signatures
 
-1. **Initiator signs a message** — A Member (the "Initiator") signs the message hash being validated (EIP-712 typed data).
-   - Parameters: `account`, `hash`, `policyId`, `expirationTimestamp`
-2. **Reviewers sign a message** (if ManualApproval policy) — This step is skipped if the policy is an AutoApproval policy.
-3. **Guardian collects the signatures**
-4. **Guardian validates the signature against the policy** — Guardian service validates that the signature is allowed by the policy provided and validates initiator and reviewer signatures.
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked –  only the initiator signature is checked
-    - **Note:** This happens offchain before the Guardian signs the review hash.
-5. **Guardian signs a message** — Guardian service signs the review hash.
-   - **Note:** Unlike Account Transactions where Guardian calls the function, here the Guardian provides a signature.
-6. **Guardian sends all signatures to third party** — All signatures and proofs are ABI-encoded and packed together, and then sent to the third party that wants to validate the ERC-1271 signature
-7. **Third party calls `isValidSignature()` on Account contract using signatures from Guardian** — The packed signature sent from the Guardian to the third party is passed to the Account.
-8. **Account delegates to Organization contract** — Account calls `Organization.isValidSignatureForAccount()` passing along all the signatures
-9. **Organization contract validates all signatures and policy** — Checks expiration, initiator, guardian, policy authorization, and reviewer approvals.
-    - If the policy is an AutoApproval policy, reviewer signatures are not checked
-10. **Account Contract returns ERC-1271 Magic values** — Returns `0x1626ba7e` for valid, `0xffffffff` for invalid.
+1. **A Member (the "initiator") signs a message to initiate the Account Signature.**
+2. **Other Members (the "reviewers") sign a message to approve the signature.**
+    - See [Who can approve an Account Signature](#who-can-approve-an-account-signature)
+    - **Note**: This step only occurs for ManualApproval policies. It's skipped for AutoApproval policies.
+3. **The Guardian collects the signatures offchain.**
+4. **The Guardian validates the Account Signature + signatures offchain.**
+    - The Guardian validates that the signature is allowed by the policy.
+    - The Guardian validates the initiator signature.
+    - The Guardian validates the reviewer signatures and checks that enough are provided to meet the policy's approval threshold.
+        - See [Who can approve an Account Signature](#who-can-approve-an-account-signature)
+        - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+5. **The Guardian signs a message.**
+    - The Guardian signs a message to approve the Account Signature.
+    - **Note**: Unlike Account Transactions where the Guardian calls a function, here the Guardian provides a signature.
+6. **The Guardian sends all signatures to the third party.**
+    - The Guardian packs all the signatures and proofs together into a single packed signature
+    - The Guardian sends the packed signatures to the third party that wants to validate the ERC-1271 signature.
+7. **The third party calls `isValidSignature()` on the Account contract.**
+    - The third party passes in the packed signature as a function parameter.
+8. **The Account contract delegates to the Organization contract.**
+    - The Account contract calls `Organization.isValidSignatureForAccount()` passing along all the signatures.
+9. **The Organization contract validates all signatures and policy onchain.**
+    - The Organization contract checks expiration, initiator signature, Guardian signature, policy authorization, and reviewer approvals.
+        - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+10. **The Account contract returns ERC-1271 magic values.**
+    - Returns `0x1626ba7e` for valid signatures, `0xffffffff` for invalid signatures.
 
 ![Approving Account Signature](docs/images/ApprovingAccountSignature.svg)
 
