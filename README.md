@@ -214,6 +214,19 @@ Policies define which transactions they govern using the following fields:
 
 ---
 
+#### Manual Review Fields (ManualApproval Policies)
+
+*Available when the policy type is ManualApproval (not AutoApproval)*
+
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Reviewers** | Who can approve or reject transactions under this policy | Specific Member · Specific Group* |
+| **Reviewer Threshold** | Number of approvals required (only when Reviewers = Group) | Numeric value (must be ≤ group size) |
+
+*\* If set to a Group, the policy must specify a threshold for how many group members must approve.*
+
+---
+
 #### Token Transfer Fields
 
 *Available when Transaction Type = "Token transfers"*
