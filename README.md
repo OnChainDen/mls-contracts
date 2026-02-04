@@ -1,1075 +1,900 @@
 # Multi-layer Security (MLS) Wallet Smart Contracts
-This repository contains the smart contracts for Multi-layer Security (MLS) Wallet.
+
+Smart contracts for Multi-layer Security (MLS) Wallet - a policy-based non-custodial wallet infrastructure for organizations, supporting both internal operations and Wallet-as-a-Service (WaaS) implementations.
+
+This README.md documents information specific to the smart contracts for MLS Wallet. 
+
+In addition to this README.md and [supplemental docs](./docs/), we also recommend that you read Den's official product documentation for MLS Wallet at [https://docs.mls.onchainden.com](https://docs.mls.onchainden.com). 
 
 > [!IMPORTANT]
-> The contents of this document and this repository are confidential. Do not share without expressed written permission from the Den team.
-
-> [!WARNING]
-> The contracts in this repository are a "rough draft" whose only purpose is to reason through how Multi-layer Security (MLS) Wallet might be implemented.
->
-> **This code is not production-ready, or even audit-ready, and should not be trusted.** It is not gas-optimized, tested, or fully functional.
-
-## Multi-layer Security (MLS) Wallet Overview
-Multi-layer Security (MLS) Wallet is a new category of cryptocurrency custody. It is non-custodial and provides all the benefits of self-custody while being significantly more secure than all other forms of custody (traditional custody, self-custody, and MPC).
-
-Multi-layer Security (MLS) Wallet stores assets in a smart contract. Users interact with it via a web application and dedicated mobile wallet.
+> The contents of this document and this repository are confidential. Do not share without explicit written permission from the Den team.
 
 
+---
 
-### Policy Engine
-The heart of Multi-layer Security (MLS) Wallet is the **policy engine**. The policy engine allows users to specify rules (a.k.a. "policies") that dictate:
-1. what transactions can be executed
-2. who can execute them
-3. how often they can be executed
+## Table of Contents
 
- For example, an organization might set a policy that allows its finance team to transfer up to $100,000 in USDC per month, so long as 2 out of 3 members of the finance team approve the transaction.
+1. [Overview](#overview)
+2. [Core Concepts](#core-concepts)
+   - [Three Layers of Security](#three-layers-of-security)
+   - [Key Abstractions](#key-abstractions)
+   - [Operations (Overview)](#operations-overview)
+   - [Disaster Recovery (Overview)](#disaster-recovery-overview)
+3. [Admin Operations](#admin-operations)
+4. [Policies](#policies)
+5. [Account Transactions](#account-transactions)
+6. [Account Signatures (ERC-1271)](#account-signatures-erc-1271)
+7. [Architecture](#architecture)
+   - [Merkle-Based Storage](#merkle-based-storage)
+   - [Core Contracts](#core-contracts)
+   - [Factory Patterns](#factory-patterns)
+   - [Upgradeability (Proxy Patterns)](#upgradeability-proxy-patterns)
+8. [Guardian Protection](#guardian-protection)
+9. [Signatures](#signatures)
+10. [Disaster Recovery](#disaster-recovery)
+11. [Deployment](#deployment)
 
-Policies aren't limited to just simple token transfers, however. They can also be used to set rules for complex smart contract interactions and DeFi activities.
+### Supplementary Documentation
 
+For detailed deep-dives on specific topics, see the following documents in the `docs/` directory:
 
-### Multiple Redundant Layers of Security
-What makes Multi-layer Security (MLS) Wallet significantly more secure than all other existing forms of custody is that it uses **multiple redundant layers of security**.
+| Document | Description |
+|----------|-------------|
+| [MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md) | Detailed explanation of Merkle tree storage, nested structures, and proof verification |
+| [GUARDIAN_PROTECTION.md](./docs/GUARDIAN_PROTECTION.md) | Guardian architecture, SafeExecutorModule, BatchedTransaction, and update flows |
+| [SIGNATURES.md](./docs/SIGNATURES.md) | Signature encoding formats, EIP-712, nonces, and signed message types |
+| [DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md) | Guardian recovery and transaction recovery mechanisms |
+| [DEPLOYMENT.md](./docs/DEPLOYMENT.md) | Step-by-step deployment instructions and configuration |
 
-Each of the layers operates independantly and all layers need to be compromised simultaneously in order for funds to be stolen. In contrast, other forms of custody, such as traditional custody, self-custody, and MPC, only need a single layer of security to be compromised.
+---
 
-In Multi-layer Security (MLS) Wallet, the three redundant layers of security are:
-1. The dedicated mobile wallet
-2. The offchain "Guardian" service 
-3. The onchain smart contracts
+## Overview
 
-![Multi-layer Security (MLS) Wallet Security Layers Diagram](docs/images/MLSWalletSecurityLayersDiagram.svg)
+MLS Wallet stores organization assets in smart contracts governed by **policies** - "if-then" rules that dictate what transactions can be executed and by whom. Unlike traditional multisig wallets, MLS Wallet provides:
 
+- **Policy-based authorization**: Fine-grained control over transaction types, amounts, recipients, and approval requirements
+- **Multiple redundant security layers**: Mobile wallet, offchain Guardian service, and onchain smart contracts independently validate every transaction
+- **Merkle-based storage**: Policies, members, and groups stored as merkle trees (only roots onchain) for gas efficiency
 
-
-In order to execute a transaction, all three layers independently run the policy engine to verify that the transaction is valid.
-
-The order of operations is the following:
-1. **The dedicated mobile wallet runs the policy engine locally.** 
-
-    It will not allows users to approve a transaction if its policy engine fails to validate the transaction.
-2. **The offchain Guardian service runs the policy engine in a secure centralized server.**
-    
-    It will not approve the transaction if its policy engine fails to validate the transaction.
-3. **The smart contracts run the policy engine onchain.** 
-
-    It will not allow the transaction to execute if its policy engines fails to validate the transaction. It will also prevent the transaction from executing if any approvals are missing from the account owners or the offchain Guardian service.
+---
 
 ## Core Concepts
-There are several core concepts in Multi-layer Security (MLS) Wallet:
 
-1. **Organizations**
+### Three Layers of Security
 
-    An organization is a business or other non-individual entity that is using Multi-layer Security (MLS) Wallet.
+MLS Wallet uses three independent security layers. Each layer validates transactions independently. An attacker would need to compromise all three simultaneously to execute unauthorized transactions.
 
-2. **Members**
+![Three Security Layers](docs/images/MLSWalletSecurityLayersDiagram.svg)
 
-    Members are individuals who are a part of an Organization.
-
-3. **Groups**
-
-    Groups are collections of Members within an Organization. For example, an Organization might have a "Finance team" Group.
-
-4. **Accounts**
-    
-    Accounts are where funds are stored and where transactions are executed. An Organization can have many Accounts.
-
-5. **Policies**
-
-    Policies are rules that dictate what types of transactions can be executed and by whom.
-
-5. **Admins**
-
-    An organization's Admin is a privileged Member or Group that can modify the Organization. Specifically, Admins can manage an Organization's Members, Groups, Accounts, Policies, Whitelist, and Admins. 
-    
-    If the Admin for an Organization is set to a Group, then an Approval Threshold must also be set. The Approval Threshold dictates how many Members of the Admin Group must approve an operation. 
-    
-    Any Member of the Admin Group can *propose* a change to the Organization (e.g. adding a new Member), but the change will not take effect until enough Members in the Admin Group approve the proposed change.
-
-6. **Address Whitelists**
-
-    Address Whitelists are lists of trusted addresses. By default, transactions cannot be sent to non-whitelisted addresses, however this is a setting that Admins can change.
-
-7. **Transactions**
-
-    Transactions can send tokens, take a DeFi action, or interact with any arbitrary smart contract from an Account. A Transaction can only be executed if a Policy has been set that explicitly allows the Transaction. 
-    
-    Dependening on the Policy, the Transaction may be automatically approved, automatically rejected, or require other Members of the Organization to approve it.
+| Layer | Location | Purpose |
+|-------|----------|---------|
+| **Signing Client** | Mobile wallet / SDK | Policy validation before signing; prevents invalid transactions from being created |
+| **Guardian Service** | Offchain server | Independent policy validation; confirms all required approvals present |
+| **Smart Contracts** | Onchain | Final enforcement; blocks malicious transactions at blockchain level |
 
 
+### Key Abstractions
+Organizations, along with their Members, Groups, Admins, and Policies are represented onchain by an Organization smart contract. Organizations store their assets in Accounts, which are separate smart contracts.
 
+![Organizations and Accounts](docs/images/OrganizationsAndAccounts.svg)
+
+| Abstraction | Description |
+|-------------|-------------|
+| **Organization** | The onchain representation of a business entity. Stores all state (members, groups, policies, admin config). Does NOT hold funds. |
+| **Account** | Smart contract wallet that holds assets. Owned by an Organization. Executes transactions only when called by its Organization. |
+| **Member** | A person or API identity belonging to an Organization. Identified by an address (EOA or smart contract). |
+| **Group** | A collection of Members organized by function (e.g., "Finance Team"). Used for approval thresholds. |
+| **Admin** | Privileged Member(s) or Group that can modify Organization configuration. Changes require threshold signatures. |
+| **Policy** | "If-then" rule defining what transactions are allowed, by whom, and how often. Stored as merkle tree leaves. |
+
+
+### Operations (Overview)
+
+MLS Wallet supports three distinct operation types, each with its own workflow:
+
+| Operation Type | Purpose | Entry Point | Rejection Support |
+|----------------|---------|-------------|-------------------|
+| **Admin Operations** | Modify Organization state (members, groups, policies, admins) | `Organization.*` functions | Yes |
+| **Account Transactions** | Execute transactions from Accounts (transfers, DeFi, etc.) | `Organization.executeAccountTransaction()` | Yes |
+| **Account Signatures** | ERC-1271 signature validation for smart contract interactions | `Account.isValidSignature()` | No (stateless) |
+
+### Disaster Recovery (Overview)
+
+MLS Wallet provides two independent recovery mechanisms to handle Guardian compromise or unavailability:
+
+| Recovery Type | Purpose | Entry Point | Timelock Required |
+|---------------|---------|-------------|-------------------|
+| **Guardian Recovery** | Replace compromised or unavailable Guardian | `Organization.initiateRecoveryGuardianUpdate()` | Yes (3-step process) |
+| **Transaction Recovery** | Execute transactions and ERC-1271 signatures without Guardian | `Organization.executeRecoveryAccountTransaction()` | Yes (to enable) |
+
+Both mechanisms use separate privileged addresses (`guardianRecoveryAddress` and `transactionAndERC1271RecoveryAddress`) configured at Organization initialization. For detailed flows and scenarios, see [Disaster Recovery](#disaster-recovery).
+
+---
+
+## Admin Operations
+
+Admin operations modify organizational state and require admin threshold signatures.
+
+### Admin Operation Types
+
+| Operation | Description | Files |
+|-----------|-------------|-------|
+| `ModifyAdmins` | Change admin configuration | `OrganizationAdminBase.sol`, `LibOrganizationAdmin.sol` |
+| `ModifyMembers` | Update members merkle root | `OrganizationMembersBase.sol`, `LibOrganizationMembers.sol` |
+| `ModifyGroups` | Update groups merkle root | `OrganizationGroupsBase.sol`, `LibOrganizationGroups.sol` |
+| `ModifyPolicies` | Update policies merkle root | `OrganizationPolicyBase.sol`, `LibOrganizationPolicy.sol` |
+| `UpdateGuardian` | Initiate/finalize Guardian change | `OrganizationGuardianBase.sol`, `LibOrganizationGuardian.sol` |
+| `Upgrade` | Upgrade Organization implementation | `OrganizationImplementation.sol` |
+| `DeployAccount` | Deploy a new Account | `OrganizationAccountFactoryBase.sol` |
+| `UpgradeAccount` | Upgrade Account implementation (beacon) | `OrganizationAccountFactoryBase.sol` |
+
+### Who can approve or reject Admin Operations?
+Only Members who are "Admins" according to the Organization contract can approve or reject Admin Operations.
+
+### Approving Admin Operations
+
+Steps to approve an Admin Operation:
+1. **Admins sign an approval message** – Needs more than a threshold amount of signatures
+2. **Guardian collects the signatures**
+3. **Guardian sends the signatures to the Organization contract**
+4. **Organization contract performs validations and updates state** – Checks that `msg.sender` is the Guardian, validates admin signatures
+![Approving Admin Operation](docs/images/ApprovingAdminOperation.svg)
+
+### Rejecting Admin Operations
+
+The rejection workflow is nearly identical to the approval workflow. The key differences are:
+1. Admins sign a **rejection** message (with `isApproval=false`) instead of an approval message
+2. Guardian calls `rejectAdminOperation()` instead of the operation-specific function
+
+Steps to reject an Admin Operation:
+1. **Admins sign a rejection message**  – Needs more than a threshold amount of signatures
+2. **Guardian collects the signatures**
+3. **Guardian sends the signatures to the Organization contract** – Calls `rejectAdminOperation()`
+4. **Organization contract performs validations and consumes nonce** – Checks that `msg.sender` is the Guardian, validates admin signatures
+
+![Rejecting Admin Operation](docs/images/RejectingAdminOperation.svg)
+See [Signatures](#signatures) for EIP-712 message format and encoding details.
+
+---
 ## Policies
-Policies are "if-then" rules that dictate which transactions can be executed and by whom. 
+Policies are "if-then" rules that dictate:
+- Which Account Transactions can be executed and who can initiate, approve, or reject them.
+- Which Account Signatures (ERC-1271) can be approved and who can initiate and approve them.
 
 Example policies:
 - "if a transaction is sending more than $10,000, then require approval from 2 out of 3 members of the Finance team"
 - "if a transaction is sending less than $10,000, then require approval from 1 out of 3 members of the Finance team"
 - "if a transaction is sending less than $1,000 from the Accounts Payable Account, then automatically approve the transaction"
+- "if a transaction is calling the `approve` function on the USDC contract, then require approval from 2 out of 3 of the Finance team"
+- "if an ERC-1271 Account Signature is to be approved by our Treasury Account, then it requires approval from 2 out of 3 members of the Finance team"
 
-### Policy types
+
+When creating an Account Transaction or Account Signature, users must select a Policy that authorizes the operation. This means that by default, all Account Transactions and Account Signatures are automatically rejected, and Policies act as allow-lists for which types of Account Transactions and Account Signatures are allowed.
+
+### Policy Types
 There are two types of policies:
 1. **Auto-approval policies**
 
-    If a transaction is governed by an Auto-approval policy, then it is automatically approved and can be executed. However, Auto-approval policies still require at least one signature from any organization member to ensure that transactions cannot be executed without explicit member approval.
+    If an Account Transaction or Account Signature is governed by an Auto-approval policy, then it only requires one signature from a Member ("initiator") to initiate it. 
+    
+    Any valid initiator can also reject an Account Transaction, without requiring additional signatures from other Members (Account Signatures cannot be rejected).
+
+    See [Core Fields (All Policies)](#core-fields-all-policies) to learn more about initiators.
 
 2. **Manual approval policies**
 
-    If a transaction is governed by a Manual approval policy, then it must be manually approved by a Member or Group before it can be executed.
+    If an Account Transaction or Account Signature is governed by a Manual approval policy, then in order for it to be approved, it must be:
+    - initiated by an authorized Member (the "initiator")
+    - approved by a Member or Group (the "reviewers")
 
-    Similarly, if a transaction is governed by a Manual approval policy, then it must be manually rejected by a Member or Group before it is discarded.
-
-    Manual approval policies must specifiy a Member or Group that is responsible for manually reviewing transactions. If a Group is specified, a voting threshold must also be specified (e.g. 2 out of 3 members of the group must approve or reject).
-
-**Default behavior**: If a transaction does not match any Auto-approval or Manual approval policy, it is automatically rejected and cannot be executed.
-
-
-### Policy filters for matching transactions
-Policies have the following configurable fields that can be used to determine which types of transactions they govern:
-
-- **Source Account**
-
-    The account from which the transaction is sent. 
-    This value can bet set to "any source account" or a custom user-defined list of accounts.
-
-- **Transaction Initiator**
-
-    The Member or Group who initiated the transaction.
-
-    This field can be set to one of the following values:
-    - "Any Member"
-    - A specific Member
-    - A specific Group
-
-    If the value for the Transaction Initiator field is a group, then the policy applies to any transactions where the initiator is any of the Members in the Group.
-
-
-- **Transaction Type** 
     
-    This field can be set to one of the following values:
-    - "Any type of transaction"
-    - "Token transfers"
-    - "Contract interactions"
+    The same reviewers who are allowed to approve an Account Transaction are also authorized to reject it (Account Signatures cannot be rejected).
 
-- **Token** *(only available if  Transaction Type is "Token transfers")*
+> **Notes:**
+> - The policy specifies which Members (or Groups) can be initiators and reviewers
+> - If the initiator is a Group, any member of that Group can initiate
+> - If reviewers are a Group, the policy must specify a threshold
+> - Rejection requires a valid initiator signature to have been provided first
+> - Account Signatures cannot be rejected (stateless `view` function)
 
-    The token being transfered in the transaction.
 
-    This can be either "any token" or a specific token, e.g. USDC.
+### Policy Configuration Fields
 
-- **Token Transfer Recipient** *(only available if  Transaction Type is "Token transfers")*
+Policies define which transactions they govern using the following fields:
 
-    To whom the token is being sent to.
+#### Core Fields (All Policies)
 
-    This value can be one of the following:
-    - "Any recipient"
-    - "Any whitelisted address"
-    - "Any non-whitelisted address"
-    - Any address in a custom list defined by the user
-    
-- **Token Amount Threshold** *(only available if  Transaction Type is "Token transfers")*
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Source Account** | Which Account(s) this policy applies to | `Any source account` · Custom list of accounts |
+| **Transaction Initiator** | Who can initiate transactions under this policy | `Any Member` · Specific Member · Specific Group* |
+| **Transaction Type** | What kind of operation this policy governs | `Any` · `Token transfers` · `Contract interactions` · `Account Signature` |
 
-    A threshold value for the amount of the token being transferred.
+*\* If set to a Group, any member of that Group can initiate.*
 
-    If this value is set, then the policy only applies to transactions that are transferring an amount *less than or equal* to this value.
+---
 
-- **Contracts** *(only available if  Transaction Type is "Contract interactions")*
+#### Manual Review Fields (ManualApproval Policies)
 
-    The contract that the transaction is interacting with.
+*Available when the policy type is ManualApproval (not AutoApproval)*
 
-    This value can be one of the following:
-    - "Any contract"
-    - "Any whitelisted contract"
-    - "Any non-whitelisted contract"
-    - Any contract in a custom list defined by the user
-    
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Reviewers** | Who can approve or reject transactions under this policy | Specific Member · Specific Group* |
+| **Reviewer Threshold** | Number of approvals required (only when Reviewers = Group) | Numeric value (must be ≤ group size) |
 
-- **Functions** *(only available if  Transaction Type is "Contract interactions")*
+*\* If set to a Group, the policy must specify a threshold for how many group members must approve.*
 
-    The function being called in the contract interaction.
+---
 
-    This value can be one of the following:
-    - "Any function"
-    - Any function in a custom list defined by the user
+#### Token Transfer Fields
 
-    If a custom list of function is provided, each function can optionally have function arguments specified. If a function argument is specified, a policy will only match transactions that call the function with the specified argument. Not all arguments are required to be defined. If an argument is provided a value, than any value can be used to match the transaction.
+*Available when Transaction Type = "Token transfers"*
 
-### Policy limitations
-Policies can be limited to either a single transaction at a time, or multiple transactions within a time interval.
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Token** | Which token can be transferred | `Any token` · Specific token (e.g., USDC) |
+| **Token Transfer Recipient** | Where tokens can be sent | `Any recipient` · Custom address list |
+| **Token Amount Threshold** | Maximum amount per transaction | Numeric value (policy applies to amounts ≤ this value) |
 
-For example, a time-based limitation on a Policy can be used to craft a policy that only allows a certain amount of tokens to be transfered every month.
+---
+
+#### Contract Interaction Fields
+
+*Available when Transaction Type = "Contract interactions"*
+
+| Field | Description | Allowed Values |
+|-------|-------------|----------------|
+| **Contracts** | Which contracts can be called | `Any contract` · Custom contract list |
+| **Functions** | Which functions can be called | `Any function` · Custom function list |
+| **Function Arguments** | Parameter constraints for allowed functions | See [Parameter Constraints](#parameter-constraints) below |
+
+---
+
+#### Parameter Constraints
+
+*Available when Transaction Type = "Contract interactions" and a custom function list is specified*
+
+Parameter constraints provide fine-grained control over what values can be passed to function arguments.
+
+**Supported Parameter Types:**
+
+| Type | Description |
+|------|-------------|
+| `Uint` | Unsigned integers (uint8 to uint256) |
+| `Int` | Signed integers (int8 to int256) |
+| `Address` | Ethereum addresses (20 bytes) |
+| `Bool` | Boolean values |
+| `FixedBytes` | Fixed-size bytes (bytes1 to bytes32) |
+| `Bytes` | Dynamic bytes |
+| `String` | Dynamic strings |
+| `Array` | Dynamic arrays |
+| `Struct` | Tuples/struct types |
+
+**Constraint Types:**
+
+| Constraint | Description | Validation Logic |
+|------------|-------------|------------------|
+| `Any` | Wildcard - no constraint | No validation performed |
+| `Exact` | Must match exactly | Direct comparison; `Bytes`/`String` use keccak256 hash comparison |
+| `Range` | Must be within bounds | `value >= min && value <= max` (inclusive) |
+| `OneOf` | Must be in allowed set | Merkle proof verification against root of allowed values |
+
+**Compatibility Matrix:**
+
+| Parameter Type | `Any` | `Exact` | `Range` | `OneOf` |
+|----------------|:-----:|:-------:|:-------:|:-------:|
+| `Uint`         | ✓ | ✓ | ✓ | ✗ |
+| `Int`          | ✓ | ✓ | ✓ | ✗ |
+| `Address`      | ✓ | ✓ | ✗ | ✓ |
+| `Bool`         | ✓ | ✓ | ✗ | ✗ |
+| `FixedBytes`   | ✓ | ✓ | ✗ | ✗ |
+| `Bytes`        | ✓ | ✓ | ✗ | ✗ |
+| `String`       | ✓ | ✓ | ✗ | ✗ |
+| `Array`        | ✓ | ✗ | ✗ | ✗ |
+| `Struct`       | ✓ | ✗ | ✗ | ✗ |
+
+> **Notes:**
+> - Constraints are applied sequentially in the order parameters appear in the function signature
+> - Parameters without defined constraints accept any value
+> - `Array` and `Struct` only support `Any` due to complex ABI encoding
+
+See `src/types/PolicyTypes.sol` and `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` for implementation details.
+
+### Policy Rate Limits
+
+Policies can have rate limiting configured to control how frequently they can be used. This enables scenarios like daily spending limits.
+
+**Limitation Types:**
+
+| Type | Description |
+|------|-------------|
+| `None` | No limitation - the policy can be used for unlimited transactions |
+| `TimeInterval` | Time-based rate limiting - usage resets after a configurable time window |
+
+**Time Interval Configuration** *(only applicable when limitation type is `TimeInterval`)*
+
+When using time-based rate limiting, the following parameters can be configured:
+
+- **Time Interval (Hours)**: The duration of the time window in hours (e.g., 24 for daily limits, 168 for weekly limits, 720 for monthly limits). Usage tracking resets at the start of each new time window.
+
+- **Interval Limit**: The maximum allowed usage within each time window. For token transfer policies, this is the cumulative token amount. For contract interaction policies, this is the number of times the contract can be called during the time interval.
+
+**Scoping Options:**
+
+Time-based limits can be scoped in different ways for each of these dimensions:
+
+| Scope Dimension | `AcrossAll` | `PerEntity` |
+|-----------------|-------------|-------------|
+| **Initiator** | Single shared limit across all initiators | Separate limit tracked per initiator |
+| **Source Account** | Single shared limit across all source accounts | Separate limit tracked per source account |
+| **Destination** | Single shared limit across all destinations | Separate limit tracked per destination |
+
+**Example configurations:**
+
+- *"$10,000/day per initiator"*: Set `initiatorScope = PerEntity`, `sourceScope = AcrossAll`, `destinationScope = AcrossAll`. Each initiator has their own $10,000 daily limit.
+
+- *"$50,000/month total from Treasury account"*: Set `initiatorScope = AcrossAll`, `sourceScope = PerEntity`, `destinationScope = AcrossAll`. The Treasury account has a shared $50,000 monthly limit regardless of who initiates or where funds go.
+
+- *"5 transactions/day to each whitelisted address"*: Set `initiatorScope = AcrossAll`, `sourceScope = AcrossAll`, `destinationScope = PerEntity`. Each destination address has its own limit of 5 transactions per day.
+
+**Usage Tracking:**
+
+- For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
+- For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
+
+See `src/types/PolicyTypes.sol` (specifically `PolicyLimitation`, `TimeIntervalScope`, and `TimeLimitConfig`) and `src/organization/libraries/policy/LibPolicyTimeBasedLimits.sol` for implementation details.
 
 ![User interface for editing a Policy's limitation](docs/images/MLSWalletDemoPolicyLimitationsScreenshot.png)
 *The user interface for editing a Policy's limitation in the Multi-layer Security (MLS) Wallet web application*
 
-### Order of Policies
-The order of policies is important in determining which policy governs a transaction.
-
-Policies are defined by the user in an ordered list. The first policy that matches a transaction according to the policy's filters is the policy that governs the transaction.
-
-If no policy matches a transaction, then the transaction is automatically rejected.
-
-![User interface for reordering policies](docs/images/MLSWalletDemoPolicyOrderingScreenshot.png)
-*The user interface for re-ordering Policies in the Multi-layer Security (MLS) Wallet web application*
-
 ### Demo of Policies
-We highly recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
+> [!WARNING]
+> Some parts of the demo are outdated. In places where there are conflicts between the demo and the documentation in this repository, treat the documentation in this repository as the canonical source of truth.
+We recommend viewing the demo web application for Multi-layer Security (MLS) Wallet to understand how policies are defined from the web application.
 
 To view a demo of Multi-layer Security (MLS) Wallet's user interface for modifying Policies, visit:
 https://mls-wallet-demo.onchainden.com/policies
 
 To view the demo, please request a username and password from the Den team.
 
-## User flow for executing a transaction
-The user flow for executing a transaction is the following:
 
-1. **A Member of the Organization queues up a transaction**
+---
 
-    If the transaction does not match any policies, the Member will be unable to queue the transaction.
+## Account Transactions
 
-2. **Other Members approve the transaction in the web application**
+### What is an Account Transaction?
+Account Transactions are versatile onchain transactions sent from Accounts. Account Transactions can be token transfers, DeFi operations, or any other smart contract interaction. 
 
-    If the transaction is governed by a policy that requires manual approval by a Member or Group, then those Members must approve it in the web application.
+For security, Account Transactions only support `call` operations, and `delegatecall` operations are strictly forbidden.
 
-3. **Members approve the transaction in their dedicated mobile wallets**
+### Using Policies to Create Account Transactions
+Account Transactions must be created using a Policy. The Policy defines what types of transactions are allowed. If an Account Transaction is created using a Policy that does not allow the transaction, it is rejected.
 
-    After approving in the web application, Members must then also approve the transaction in their mobile wallets.
+The Policy that's used to create an Account Transaction determines which Members of the Organization (if any) must approve the transaction before it can be executed.
 
-    Before approving the transaction, the mobile wallet will independently run the policy engine to verify that the transaction is valid. If the policy engine fails to verify that the transaction is valid, the user will be warned and will be unable to approve the transaction.
-
-4. **After all approvals are provided, transaction can be executed via the web application**
-
-    Once all approvals are provided via both the web application and mobile wallet, the Transaction initiator or any of the reviewers can execute the transaction via the web application.
-
-    At this point, the Offchain Guardian Service will independently run the policy engine to verify that the transaction is valid. If the transaction is valid, it will submit it to the Onchain Smart Contracts, which will also independently run the policy engine onchain to verify the transaction before executing it.
+### Who can approve or reject an Account Transaction?
+The Policy that's used to create the transaction dictates who can approve or reject the transaction:
+* If the Policy is an **AutoApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
+  - Only Members that are specified by the Policy as **initiators** can **reject the transaction.**
 
 
-## Mobile Wallet
-Multi-layer Security (MLS) Wallet's dedicated mobile wallet is used by Organization Members and Admins to approve and reject transactions and other actions.
+  > **Note:** AutoApproval policies don't require separate approval signatures from reviewers to be executed. They just need one valid Initiator signature.
+* If the Policy is a **ManualApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can **initiate the transaction.**
+  - Only Members that are specified by the Policy as **reviewers** can **approve the transaction.**
+  - Only Members that are specified by the Policy as **reviewers** can **reject the transaction and burn the nonce.**
+  > **Note:** The transaction must have been initiated with a valid initiator signature in order for reviewers to approve or reject it.
 
-Under the hood, the mobile wallet securely stores a private key on a Member's mobile device. That private key is used to cryptographically sign approvals and rejections. 
+> **Key Point:** Rejection requires the same authorization level as approval. This prevents unauthorized actors from blocking legitimate transactions.
 
-The mobile wallet hosts a variety of features not found in other wallets that provide superior security and user experience.
+### Approving (Executing) Account Transactions
+
+1. **A Member (the "initiator") signs a message to initiate the transaction.**
+2. **Other Members (the "reviewers") sign a message to approve the transaction.** 
+    - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+    - **Note**: This step only occurs for ManualApproval policies. It's skipped for AutoApproval policies.
+
+3. **The Guardian collects the signatures offchain.**
+4. **The Guardian validates the transaction + signatures offchain.**
+    - The Guardian validates that the transaction is allowed by the policy.
+    - The Guardian validates the initiator signature.
+    - The Guardian validates the reviewer signatures and checks that enough are provided to meet the policy's approval threshold. 
+        - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+        - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+5. **The Guardian submits the transaction + signatures to the Organization contract**
+    - The Guardian calls the `executeAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
+6. **The Organization contract validates the transaction + signatures onchain**
+    - The Organization contract checks that `msg.sender` is the Guardian
+    - The Organization contract performs all the same validations as the Guardian in *Step 4* above.
+7. **The Organization contract forwards transaction to the Account contract**
+    - The Organization contract calls the `executeTransaction()` function on the Account Contract, passing along transaction data.
+8. **The Account contract executes the transaction**
+    - The Account contract checks that `msg.sender` is the Organization contract that owns it.
+    - The Account contract executes the transaction.
+
+![Approving Account Transaction](docs/images/ApprovingAccountTransaction.svg)
+
+### Rejecting Account Transactions
+
+1. **A Member (the "initiator") has already signed a message to initiate the transaction.**
+    - **Note**: The original initiator signature for the transaction being rejected must be passed along.
+2. **Other Members sign a message rejecting the transaction.**
+    - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+    - **Note**: Depending on the policy, the original initiator can also be authorized to sign a rejection message.
+3. **The Guardian collects the signatures offchain.**
+4. **The Guardian validates the transaction + signatures offchain.**
+    - The Guardian validates that the transaction would have been allowed by the policy.
+    - The Guardian validates the initiator signature.
+    - The Guardian validates the rejection signatures.
+        - See [Who can approve or reject an Account Transaction?](#who-can-approve-or-reject-an-account-transaction)
+
+5. **The Guardian submits the transaction + signatures to the Organization contract.**
+    - The Guardian calls the `rejectAccountTransaction()` function on the Organization contract, passing in transaction data, signatures, and proofs.
+6. **The Organization contract validates the transaction + signatures onchain.**
+    - The Organization contract checks that `msg.sender` is the Guardian.
+    - The Organization contract performs all the same validations as the Guardian in *Step 4* above.
+7. **The Organization contract burns the nonce for the transaction.**
+    - Burning the nonce makes it impossible to use existing initiator and approval signatures to execute the transaction.
+
+![Rejecting Account Transaction](docs/images/RejectingAccountTransaction.svg)
+
+### Policy Validation Details
+
+When an Account Transaction is validated against a Policy, the policy engine validates:
+
+1. **Policy exists** - Merkle proof against `policiesRoot`
+2. **Source account allowed** - Either `anySourceAccount=true` or account in policy's source accounts tree
+3. **Initiator authorized** - Member/group membership verified via merkle proofs
+4. **Transaction type matches** - TokenTransfers, ContractInteractions, or Any
+5. **Destination allowed** - Either any destination or merkle-verified custom list
+6. **Token/amount constraints** - For token transfers
+7. **Function/parameter constraints** - For contract interactions
+
+For signature formats and message types, see [Signatures](#signatures).
+
+Files: `OrganizationAccountTransactionBase.sol`, `LibOrganizationAccountTransaction.sol`
+
+---
+
+## Account Signatures (ERC-1271)
+
+### What is an Account Signature?
+
+Account Signatures are ERC-1271 signature validations that allow Accounts to "sign" messages. Account Signatures enable Accounts to interact with protocols that require signature verification, such as:
+- **Permit2** — Gasless token approvals
+- **CoW Protocol** — Offchain order signing
+- **Offchain order books** — DEX limit orders
+
+In many ways, Account Signatures are similar to Account Transactions:
+- They must be created using a Policy
+- They must be initiated by a member authorized by the Policy
+- They need additional approval signatures to be valid if the Policy is a ManualApproval policy.
+
+However, there are some key differences:
+- The entry point for Account Signatures is the Account contract itself (`Account.isValidSignature()`), not the Organization contract. 
+    - Third parties call the Account directly to verify signatures. 
+    - This is required to be compliant with the ERC-1271 standard.
+- Account Signatures can't be rejected.
+
+### Using Policies to Create Account Signatures
+
+Like Account Transactions, Account Signatures must be authorized using a Policy. The Policy defines:
+- Which Members can initiate the signature
+- Whether additional reviewer approvals are required and how many
+- Which Accounts the policy applies to
+
+**Important:** The Policy must be configured to be a `TransactionType.Signatures` policy. Policies configured for `TokenTransfers` or `ContractInteractions` cannot be used for Account Signatures.
+
+### Who can approve an Account Signature?
+
+The Policy used to create the signature dictates who can approve it:
+
+* If the Policy is an **AutoApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can create and approve the signature.
+  - **Note:** AutoApproval policies don't require separate approval signatures from reviewers.
+
+* If the Policy is a **ManualApproval Policy**:
+  - Only Members that are specified by the Policy as **initiators** can initiate the signature.
+  - Only Members that are specified by the Policy as **reviewers** can approve the signature.
+  - The threshold number of reviewer approvals must be met.
 
 > [!NOTE]
-> We plan on also providing API support down the line as an alternative to mobile signing. Most users will still use the mobile wallet, but a subset will opt for the API to programatically control their accounts.
+> Unlike Account Transactions, Account Signatures **cannot be rejected**. This is because `isValidSignature()` is a `view` function that cannot modify state (no nonce to burn).
+
+### Approving Account Signatures
 
-### Mobile Wallet Security Features
-The dedicated Multi-layer Security (MLS) Wallet mobile has a suite of security features that make it significantly more secure that other hardware and software wallets:
+1. **A Member (the "initiator") signs a message to initiate the Account Signature.**
+2. **Other Members (the "reviewers") sign a message to approve the signature.**
+    - See [Who can approve an Account Signature](#who-can-approve-an-account-signature)
+    - **Note**: This step only occurs for ManualApproval policies. It's skipped for AutoApproval policies.
+3. **The Guardian collects the signatures offchain.**
+4. **The Guardian validates the Account Signature + signatures offchain.**
+    - The Guardian validates that the signature is allowed by the policy.
+    - The Guardian validates the initiator signature.
+    - The Guardian validates the reviewer signatures and checks that enough are provided to meet the policy's approval threshold.
+        - See [Who can approve an Account Signature](#who-can-approve-an-account-signature)
+        - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+5. **The Guardian signs a message.**
+    - The Guardian signs a message to approve the Account Signature.
+    - **Note**: Unlike Account Transactions where the Guardian calls a function, here the Guardian provides a signature.
+6. **The Guardian sends all signatures to the third party.**
+    - The Guardian packs all the signatures and proofs together into a single packed signature
+    - The Guardian sends the packed signatures to the third party that wants to validate the ERC-1271 signature.
+7. **The third party calls `isValidSignature()` on the Account contract.**
+    - The third party passes in the packed signature as a function parameter.
+8. **The Account contract delegates to the Organization contract.**
+    - The Account contract calls `Organization.isValidSignatureForAccount()` passing along all the signatures.
+9. **The Organization contract validates all signatures and policy onchain.**
+    - The Organization contract checks expiration, initiator signature, Guardian signature, policy authorization, and reviewer approvals.
+        - **Note**: Reviewer signatures are only checked for ManualApproval policies (not for AutoApproval policies).
+10. **The Account contract returns ERC-1271 magic values.**
+    - Returns `0x1626ba7e` for valid signatures, `0xffffffff` for invalid signatures.
 
-1. **The mobile wallet can only be used with Multi-layer Security (MLS) Wallet to limit the attack surface.**
+![Approving Account Signature](docs/images/ApprovingAccountSignature.svg)
 
-    In other forms of custody, such a self-custody (i.e. multisignature wallets), users can manage their cryptographic private keys using any external wallet, like Metamask or Ledger. 
-    
-    Those wallets can be used to sign *any* transaction and can be used with *any* decentralized application. If the wallet is used with a malicious or compromised decentralized application, the user can be tricked into signing a malicious transaction with the same private key that manages their funds, potentially causing their funds to be stolen.
+### Policy Validation Details
 
-    By having a dedicated mobile wallet that can only be used with Multi-layer Security (MLS) Wallet, user's private keys aren't being used to interact with other potentially dangerous applications.
+When validating a signature, the same policy checks are performed as Account Transactions:
 
-2. **The mobile wallet shows users what they're *actually* approving.**
-    
-    A well known security limitation of many wallets, especially hardware wallets like Ledger, is "blind signing". Instead of displaying a human-readable explanation of what is being signed, these wallets display an obscure technical string of letter and numbers that users can't interperet.
+1. **Policy exists** — Merkle proof against `policiesRoot`
+2. **Transaction type matches** — Must be `TransactionType.Signatures`
+3. **Source account allowed** — Either `anySourceAccount=true` or account in policy's source accounts tree
+4. **Initiator authorized** — Member/group membership verified via merkle proofs
 
-    Users are therefore likely to accidentally approve malicious transactions.
+For signature formats and message types, see [Signatures](#signatures).
 
-    In contrast, Multi-layer Security (MLS) Wallet's dedicate mobile wallet decodes transactions into a human-readable format locally on the user's device, so they know exactly what the transaction they're signing will do. This makes it possible for users to easily identify and reject malicious transactions.
+For recovery signatures (type `0x00`), see [Disaster Recovery](#disaster-recovery).
 
-    ![Blind signing vs human-readable explanations](docs/images/MLSWalletMobileWalletDataDecodingDiagram.svg)
+Files: `AccountImplementation.sol:54-62`, `OrganizationAccountSignatureBase.sol`, `LibOrganizationAccountSignature.sol`
 
-3. **The mobile wallet runs the Policy Engine locally to verify that a transaction is actually valid.**
+---
 
-    This is part of Multi-layer Security (MLS) Wallet's approach of having "multiple redundant layers of security". Before a user can approve a transaction, the Policy Engine runs locally on their device to determine if the transaction is valid to prevent them from being present malicious transactions in the first place.
+## Architecture
 
-4. **The mobile wallet stores private keys in secure hardware enclaves and trusted execution environments (TEE).**
+### Merkle-Based Storage
 
-    Similar to hardware wallets, the mobile wallet secure stores private keys in Secure Enclaves and Trusted Execution Environments (TEE) which isolate the private keys and prevent other applications from accessing them at a hardware level.
+A key architectural decision in MLS Wallet is the use of **Merkle trees** to store Members, Groups, Admins, and Policies. Instead of storing data directly onchain (which would be prohibitively expensive for large organizations), only 32-byte Merkle roots are stored. The full data lives offchain (on IPFS), and callers provide Merkle proofs to verify membership.
 
-5. **The mobile wallet is harder compromise with malware.**
+**Why this matters:**
+- **Gas efficiency** — Modifying 1,000 members costs the same as modifying 10 (~20K gas for one `SSTORE`)
+- **Scalability** — Organizations can have thousands of members and complex policies without gas costs scaling linearly
+- **Complex policies** — Policies can reference large lists of source accounts, destinations, and functions with parameter constraints
 
-    Due to the locked-down and sandboxed nature of modern mobile operating systems, it is signficantly more difficult for attackers to install malware on a user's mobile device than it is on their desktop, and the scope of what the malware can accompolish is far more limited.
+**What's stored as Merkle trees:**
 
-    For example, in the Radiant Capital incident where over $50M was stolen, attackers compromised the computers used by Radiant Capital's mutlsig signers with malware. The malware intercepted transactions sent to their Ledger hardware wallets, replacing them with a malicious transaction. 
-    
-    Along with the "blind signing" limitations of their Ledger wallets, the signers were tricked into signing the malicious transaction that resulted in the theft of the organization's funds.
+| Data | Root Storage | Structure |
+|------|--------------|-----------|
+| Members | `membersRoot` | Flat tree of member addresses |
+| Groups | `groupsRoot` | Nested: each group has its own members sub-tree |
+| Admins | `adminsRoot` | Flat tree of admin addresses (must also be in Members) |
+| Policies | `policiesRoot` | Multi-level nested (up to 4 levels deep) |
 
+For detailed documentation on the Merkle tree architecture, including nested structures, leaf computation, and how proofs are passed to function calls, see **[MERKLETREE_ARCHITECTURE.md](./docs/MERKLETREE_ARCHITECTURE.md)**.
 
+---
 
-## Smart Contracts
-### Organizations and Accounts
-There are two main abstractions represented as smart contracts in Multi-layer Security (MLS) Wallet:
-1. **Organizations**
-        
-    Each real-world organization is represented onchain by a dedicated organization smart contract. That contract is a source of truth for the organization's state, such as its members, groups, policies, admins, etc. Funds are *not* stored in the organization contract.
+### Core Contracts
 
-    Note: an Organization can be deployed on multiple networks. If an Organization is deployed on multiple networks, it is expected to have the same address on each network.
+#### Organization (`src/organization/`)
 
-    *Located at `src/organization/OrganizationProxy.sol`*
+The Organization contract is the central hub that:
+- Stores all organizational state (members, groups, policies, admin configuration)
+- Validates and executes transactions on behalf of Accounts
+- Acts as a Beacon for Account proxies
+- Enforces Guardian protection on all external functions
 
-2. **Accounts**
+**Key files:**
 
-    Funds are stored in "account" smart contracts (i.e. "smart accounts" or "smart contract wallets"). Each organization can have one or more accounts. Account smart contracts interact with their corresponding organization contracts to access important information regarding the organization. For example, when executing a transaction, an account contract will fetch its  organization's policies from the organization contract.
+| File | Purpose |
+|------|---------|
+| `OrganizationProxy.sol` | ERC-1967 UUPS proxy |
+| `OrganizationImplementation.sol` | Main implementation, inherits all base contracts |
+| `OrganizationFactory.sol` | CREATE2 deployment for deterministic addresses |
+| `base/*.sol` | Modular base contracts (Admin, Members, Groups, Policy, etc.) |
+| `libraries/*.sol` | Business logic libraries |
+| `libraries/storage/*.sol` | EIP-7201 namespaced storage libraries |
 
-    Note: an Account can be deployed on multiple networks. If an Account is deployed on multiple networks, it is expected to have the same address on each network.
+#### Account (`src/account/`)
 
-    *Located at `src/account/AccountProxy.sol`*
+The Account contract is a thin wrapper that:
+- Holds organization assets (ETH, tokens)
+- Executes transactions only when called by its Organization
+- Delegates ERC-1271 signature validation to the Organization
 
+**Key files:**
 
+| File | Purpose |
+|------|---------|
+| `AccountProxy.sol` | BeaconProxy (Organization is the beacon) |
+| `AccountImplementation.sol` | Simple execution logic |
 
-![Multi-layer Security (MLS) Wallet Core Contracts Diagram](docs/images/MLSWalletCoreContractsDiagram.svg)
+#### Implementation Whitelist (`src/implementation-whitelist/`)
 
+A separate contract that maintains a whitelist of approved implementation addresses. Used to validate upgrades:
+- Prevents malicious implementation swaps
+- Controlled independently from individual Organizations
 
-### Unified Signature Format
+#### Organization Factory (`src/organization/OrganizationFactory.sol`)
 
-Multi-layer Security (MLS) Wallet supports both EOA (Externally Owned Account) signatures and ERC-1271 smart contract signatures across all signature validation points. This includes:
+A factory contract that deploys Organization contracts at deterministic addresses using CREATE2:
+- Enables same Organization address across all EVM-equivalent chains
+- Validates implementation against the whitelist before deployment
+- Atomically deploys and initializes Organizations in a single transaction
 
-- **Member approval signatures** (for manual approval policies)
-- **Admin signatures** (for organization operations)
-- **Initiator signatures** (for transactions)
-- **Guardian signatures** (for signature validation requests)
-- **Recovery address signatures** (for disaster recovery)
+**Key files:**
 
-#### Signature Format Specification
+| File | Purpose |
+|------|---------|
+| `OrganizationFactory.sol` | CREATE2 deployment for deterministic addresses |
 
-All signatures use a hybrid format where the first byte (`v` value) determines the signature type:
+---
 
-**EOA Signatures (v = 27 or 28)**
-```
-| v (1 byte) | r (32 bytes) | s (32 bytes) |
-Total: 65 bytes
-```
+### Factory Patterns
 
-**ERC-1271 Smart Contract Signatures (v = 0)**
-```
-| v=0 (1 byte) | signer address (20 bytes) | signature length (2 bytes) | signature data (N bytes) |
-Total: 23 + N bytes
-```
+MLS Wallet uses a two-tier factory system to deploy Organizations and Accounts at deterministic addresses across chains.
 
-#### Off-Chain Encoding Example
+#### OrganizationFactory
 
-```typescript
-function encodeSignatures(
-  signatures: Array<{signer: Address, signature: Bytes, isContract: boolean}>
-): Bytes {
-  const parts: Bytes[] = [];
-  
-  for (const {signer, signature, isContract} of signatures) {
-    if (isContract) {
-      // ERC-1271: | 0 | signer (20) | length (2) | signature (N) |
-      parts.push(new Uint8Array([0x00]));           // v = 0
-      parts.push(addressToBytes(signer));           // 20 bytes
-      parts.push(uint16ToBytes(signature.length));  // 2 bytes
-      parts.push(signature);                        // N bytes
-    } else {
-      // EOA: | v | r | s | (reorder from r,s,v to v,r,s)
-      const v = signature[64];
-      const r = signature.slice(0, 32);
-      const s = signature.slice(32, 64);
-      parts.push(new Uint8Array([v]));  // 1 byte
-      parts.push(r);                     // 32 bytes
-      parts.push(s);                     // 32 bytes
-    }
-  }
-  
-  return concat(parts);
-}
-```
+Organizations are deployed via the `OrganizationFactory` contract using CREATE2:
 
-#### Validation Rules
+| File | Purpose |
+|------|---------|
+| `OrganizationFactory.sol` | Factory contract for deploying OrganizationProxy contracts |
 
-1. **Ascending Order**: Signer addresses must be in strictly ascending order (for multi-signature validation)
-2. **No Zero Address**: Signatures that recover to `address(0)` are rejected
-3. **ERC-1271 Validation**: For smart contract signatures, the `isValidSignature` function is called on the embedded signer address
+**Key Characteristics:**
+- **Authorized deployer only** — Only the `DEPLOYER_ADDRESS` (set in the constructor) can deploy new Organizations (in production this is the Guardian)
+- **Implementation whitelist validation** — The implementation address must be whitelisted before deployment
+- **Atomic deployment + initialization** — The proxy is deployed and initialized in a single transaction to prevent front-running
+- **Address pre-computation** — Use `computeOrganizationAddress(salt, implementation, whitelist)` to compute the address before deployment
 
-The signature validation logic is implemented in `src/libraries/SignatureUtils.sol`.
+See: `OrganizationFactory.sol`
 
-### ERC-1271 Signature Validation
+---
 
-When calling `isValidSignature(bytes32 hash, bytes signature)` on an Account, the signature must be prefixed with a type byte that indicates the signature type:
+#### Organization as Account Factory
 
-**Signature Format**
-```
-| Type (1 byte) | Signature Data (variable) |
-```
+Each Organization acts as a factory for its own Accounts. Accounts are deployed as BeaconProxies where the Organization itself serves as the beacon.
 
-**Type Values**
+| File | Purpose |
+|------|---------|
+| `OrganizationAccountFactoryBase.sol` | Base contract with account deployment logic |
+| `LibOrganizationAccountFactory.sol` | Library for CREATE2 account deployment |
 
-| Type | Description |
-|------|-------------|
-| `0x00` | Recovery signature - raw signature from the recovery address (bypasses guardian and policy checks) |
-| `0x01` | Policy-based signature - ABI-encoded struct containing policy info and proofs |
 
-**Recovery Signature (Type `0x00`)**
+**Key Characteristics:**
+- **Guardian-protected** — Only the Guardian can call `deployAccount()`
+- **Admin authorization required** — Requires Admin signatures meeting the configured threshold
+- **Organization tracks deployed accounts** — Each Organization maintains a mapping of accounts it deployed
+- **Beacon pattern** — The Organization implements `IBeacon.implementation()` and all Accounts under an Organization share the same implementation
+- **Address pre-computation** — Use `computeAccountAddress(salt)` on the Organization to compute the address before deployment
 
-If recovery is both supported AND enabled for the organization, prepend `0x00` to a raw signature from the recovery address:
-```
-| 0x00 (1 byte) | raw EOA or ERC-1271 signature |
-```
+See: `OrganizationAccountFactoryBase.sol`, `LibOrganizationAccountFactory.sol`
 
-**Policy-Based Signature (Type `0x01`)**
+---
 
-For normal signature validation, prepend `0x01` to the ABI-encoded signature data:
-```
-| 0x01 (1 byte) | ABI-encoded(policyId, expirationTimestamp, approverSignatures, guardianSignature, proofs) |
-```
+#### CREATE2 and Deterministic Addresses
 
-**Off-Chain Encoding Example**
+Both Organizations and Accounts use CREATE2 for deployment, ensuring **identical addresses across all EVM-equivalent chains**.
 
-```typescript
-// Recovery signature
-function encodeRecoverySignature(signature: Bytes): Bytes {
-  return concat([new Uint8Array([0x00]), signature]);
-}
+**How it works:**
 
-// Policy-based signature
-function encodePolicySignature(
-  policyId: bigint,
-  expirationTimestamp: bigint,
-  approverSignatures: Bytes,
-  guardianSignature: Bytes,
-  proofs: ValidationProofs
-): Bytes {
-  const encoded = abi.encode(
-    ['uint256', 'uint256', 'bytes', 'bytes', 'tuple'],
-    [policyId, expirationTimestamp, approverSignatures, guardianSignature, proofs]
-  );
-  return concat([new Uint8Array([0x01]), encoded]);
-}
-```
-
-### Guardian protection
-Every external and public function on any Multi-layer Security (MLS) Wallet contract is protected by the Offchain Guardian.
-
-**That means that the first thing any external or public function does is check if `msg.sender` is the Offchain Guardian Service's EOA address.**
-
-This is an important component of Multi-layer Security (MLS) Wallet's philosophy of "multiple redundant layers of security". 
-
-In the unlikely scenario that an exploit is found further on in the smart contracts, a malicious actor would be unable to execute the exploit, unless they also simultaneously compromise the Offchain Guardian Service. This significantly increases the difficulty of an attack, and is a unique layer of security not provided by other custody solutions.
-
-This similarly protects against attack scenarios where an attacker compromises the mobile devices of all the transactions signers and tricks them into signing a malicious payload. The attacker would not be able to execute the malicious transaction without also simultaneoulsy compromising the Offchain Guardian Service.
-
-In the event that the Offchain Guardian Service is unavailable, users can use the Disaster Recovery mechanism to withdraw their funds out of Multi-layer Security (MLS) Wallet without the Offchain Guardian Service's involvement. 
-
-> [!WARNING]
-> At the time of this writing, the Disaster Recovery mechanism has not yet been implemented. It will be implemented at the time of public release to ensure censorship resistance.
-
-
-### Upgradability (ERC-2535 Diamond Standard)
-
-> [!WARNING]
-> We are exploring using the [ERC-1822 Universal Upgradeable Proxy Standard (UUPS)](https://eips.ethereum.org/EIPS/eip-1822) instead of the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) for upgradability due to the heavy interdepencies between the diamond cut facets in Multi-layer Security (MLS) Wallet.
-
-The smart contracts are upgradable according to the [ERC-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) by Nick Mudgen.
-
-
-Multi-layer Security (MLS) Wallet's implementation of the ERC-2535 Diamond Standard is based on Nick Mudgen's [diamond-3-hardhat](https://github.com/mudgen/diamond-3-hardhat) reference implementation, with some notable changes:
-
-1. **Facet cuts must be whitelisted.**
-
-    In order to "cut the diamond", the facet cuts (facet addresses and selectors) must be whitelisted by a separate and global whitelist. 
-
-    This is to negate attacks where users might be tricked into signing malicious payloads that cut the diamond in n efarious ways.
-
-    The whitelist is implemented by `src/diamond/FacetCutsWhitelist.sol`. It is referenced by `src/diamond/libraries/LibDiamond.sol` in the function `enforceFacetsAreWhitelisted`.
-
-2. **Diamond cuts require approval from an organization's admins.**
-
-    In order to cut a diamond, sufficient approval signatures must be provided from the organization's admins.
-
-    This is implemented in `src/diamond/facets/DiamondCutFacet.sol` in the function `diamondCut`.
-
-3. **Diamond cuts require approval the offchain Guardian service.**
-
-    In order to cut a diamond, the offchain Guardian service must also explicitly approve the action. This is part of Multi-layer Security (MLS) Wallet's **"multiple redundant layers of security"** model.
-
-    This is implemented in `src/diamond/facets/DiamondCutFacet.sol` in the function `diamondCut`.
-
-
-The implementation of the ERC-2535 Diamond Standard for Multi-layer Security (MLS) Wallet can be found in the directory `src/diamond`:
-```
-src/
-├── diamond/
-│   ├── Diamond.sol
-│   ├── FacetCutsWhitelist.sol
-│   ├── facets/
-│   │   ├── DiamondCutFacet.sol
-│   │   └── DiamondLoupeFacet.sol
-│   ├── interfaces/
-│   │   ├── IDiamondCut.sol
-│   │   ├── IDiamondLoupe.sol
-│   │   ├── IERC165.sol
-│   │   └── IFacetCutsWhitelist.sol
-│   └── libraries/
-│       └── LibDiamond.sol
+```text
+address = keccak256(0xff ++ deployerAddress ++ salt ++ keccak256(bytecode))[12:]
 ```
 
+| Factor | Organizations | Accounts |
+|--------|---------------|----------|
+| **Deployer** | OrganizationFactory | Organization contract |
+| **Salt** | User-provided `bytes32` | User-provided `bytes32` |
+| **Bytecode** | OrganizationProxy + constructor args | AccountProxy + constructor args |
 
-There are only two smart contracts in Multi-layer Security (MLS) Wallet that are upgradable:
-1. **The Organization smart contract**
-        
-    Diamond is located at `src/organization/OrganizationProxy.sol`
+**Cross-chain deployment requirements:**
 
-    Facets are located at `src/organization/facets/`
+To achieve the same Organization address on multiple chains:
+1. Deploy `OrganizationFactory` at the same address on each chain
+2. Use the same `salt`
+3. Use the same `implementationAddress` and `whitelistAddress`
 
-2. **The Account smart contract**
+To achieve the same Account address on multiple chains:
+1. Deploy the Organization at the same address on each chain (see above)
+2. Use the same `salt` when calling `deployAccount()`
 
-    Diamond is located at `src/account/AccountProxy.sol`
+---
 
-    Facets are located at `src/account/facets/`
+#### Implementation Whitelist Validation
+
+**Both Organizations and Accounts can only be deployed (or upgraded) using implementation contracts that are whitelisted.**
+
+| Contract Type | Validated During |
+|---------------|------------------|
+| Organization | `OrganizationFactory.deployOrganization()` and `Organization.upgradeToAndCallWithAuthorization()` |
+| Account | `Organization.setAccountImplementation()` |
 
 
+This design ensures that:
+- **Den controls which implementations are allowed** — The whitelist is owned by a Safe multisig that Den controls
+- **Protection against malicious upgrades** — Even if an Organization's Guardian and Admins are compromised, they cannot deploy or upgrade to a malicious implementation
+- **Separate whitelists per contract type** — Organization and Account implementations are tracked independently
 
+See: `ImplementationWhitelistImplementation.sol`, `IImplementationWhitelist.sol`
 
-### Organizations
+---
 
-Each Organization is represented as a Diamond proxy, which can be found at `src/organization/OrganizationProxy.sol`.
+### Upgradeability (Proxy Patterns)
 
-All facets for Accounts are located at `src/organization/facets/`.
+Most contracts in MLS Wallet are upgradeable. This section explains the proxy patterns used, how upgrades work, and how they are secured.
 
-#### Organization Operations
-Organizations are where organization-level concepts are stored and managed:
-1. Members
-2. Groups
-3. Admins
-4. Address Whitelists
-5. Policies
+#### Organization Upgrades
 
-Any actions that alter the state of those organization-level concepts are called "Organization Operations".
+Each Organization is an **ERC-1967 UUPS Proxy**.
 
-Organization Operations require admin approval, meaning signatures must be provided from enough admins in order to execute the operation. If the Admin for an Organization is an individual Member, only one admin signature is required. If the Admin is a Group, then enough signatures must be provided from the Members in the Group to meet the "voting threshold".
+| File | Purpose |
+|------|---------|
+| `OrganizationProxy.sol` | Proxy contract |
+| `OrganizationImplementation.sol` | Implementation contract |
 
-Each Organization Diamond is expected to use the diamond cut facet `src/organization/facets/OrganizationAdminFacet.sol`, which implements a function called `validateAdminAuthorization` that validates the admin signatures:
+**Upgrade Requirements:**
+1. **Guardian must execute** — Only the Guardian can call `upgradeToAndCallWithAuthorization()`
+2. **Admin signatures** — Requires Admin signatures meeting the configured threshold
+3. **Whitelisted implementation** — The new implementation must be whitelisted in the `ImplementationWhitelist` contract
+
+See: `OrganizationImplementation.sol:67-103`
+
+---
+
+#### Account Upgrades
+
+Accounts use a **Beacon Proxy** pattern where the associated Organization acts as the Beacon.
+
+| File | Purpose |
+|------|---------|
+| `AccountProxy.sol` | Beacon Proxy contract |
+| `AccountImplementation.sol` | Implementation contract |
+
+**Key Characteristics:**
+- The Organization implements `IBeacon.implementation()` and returns the current `AccountImplementation` address
+- **All Accounts under an Organization are upgraded at once** — there is no way to upgrade individual Accounts
+- Individual Accounts do not control their own upgrades; upgrades are managed entirely through the Organization
+
+**Upgrade Requirements:**
+1. **Guardian must execute** — Only the Guardian can call `setAccountImplementation()` *on the Organization contract*
+2. **Admin signatures** — Requires Admin signatures meeting the configured threshold
+3. **Whitelisted implementation** — The new implementation must be whitelisted in the `ImplementationWhitelist` contract
+
+See: `OrganizationAccountFactoryBase.sol:49-75`
+
+---
+
+#### Implementation Whitelist
+
+All upgrades for Organizations and Accounts can only target implementation contracts that have been whitelisted by the **ImplementationWhitelist** contract.
+
+| File | Purpose |
+|------|---------|
+| `ImplementationWhitelistProxy.sol` | Proxy contract |
+| `ImplementationWhitelistImplementation.sol` | Implementation contract |
+
+**Key Characteristics:**
+- The `ImplementationWhitelist` contract is itself an **ERC-1967 UUPS Proxy**
+- Owned by a Safe multisig that Den controls
+- The Safe can add/remove implementations from the whitelist and upgrade the whitelist contract itself
+- Maintains separate whitelists for Organization implementations and Account implementations
+
+This design ensures that even if an Organization's Guardian and Admins are compromised, they cannot upgrade to a malicious implementation that Den has not approved.
+
+See: `ImplementationWhitelistImplementation.sol`, `LibImplementationWhitelistStorage.sol`
+
+---
+
+#### Storage Pattern (EIP-7201)
+
+All upgradeable contracts (Organizations, Accounts, and the ImplementationWhitelist) use **EIP-7201 namespaced storage slots** to prevent storage collisions during upgrades.
+
+We use a **storage library pattern** throughout our contracts. Each storage domain has a dedicated library (`Lib*Storage.sol`) that:
+1. Defines a `Layout` struct containing the storage variables
+2. Computes a unique storage slot using the EIP-7201 formula
+3. Provides a `layout()` function that returns a reference to the storage at that slot
+
+**Storage Libraries:**
+
+| Library | Purpose |
+|---------|---------|
+| `LibOrganizationAdminStorage.sol` | Admin configuration |
+| `LibOrganizationMembersStorage.sol` | Members merkle root |
+| `LibOrganizationGroupsStorage.sol` | Groups merkle root |
+| `LibOrganizationPolicyStorage.sol` | Policies merkle root and time-based limits |
+| `LibOrganizationGuardianStorage.sol` | Guardian address and pending updates |
+| `LibOrganizationSignaturesStorage.sol` | Used nonces |
+| `LibOrganizationAccountFactoryStorage.sol` | Deployed accounts and account implementation address |
+| `LibOrganizationUpgradeStorage.sol` | Whitelist address and upgrade authorization flag |
+| `LibOrganizationRecoveryStorage.sol` | Recovery configuration and state |
+| `LibOrganizationDeployerAddressStorage.sol` | Factory address for initialization authorization |
+| `LibAccountOrganizationAddressStorage.sol` | Reads Organization address from beacon slot |
+| `LibImplementationWhitelistStorage.sol` | Whitelisted implementations |
+
+**Example:**
 
 ```solidity
-// src/interfaces/IAdminFacet.sol
-/**
- * @notice Enum to specify the type of admin operation being performed
- */
-enum AdminOperationType {
-    ModifyAdmins,
-    ModifyGroups,
-    ModifyMembers,
-    ModifyPolicies,
-    UpdateGuardian,
-    ModifyWhitelist,
-    DiamondCut,
-    DeployAccount
-}
-
-/**
-    * @notice Validates that the provided signatures meet the admin authorization requirements
-    * @param operationType The type of operation being performed
-    * @param operationData The ABI-encoded data of the operation
-    * @param salt A user-provided salt for nonce computation
-    * @param signatures The signatures to validate
-    */
-function validateAdminAuthorization(
-    AdminOperationType operationType,
-    bytes memory operationData,
-    uint256 salt,
-    bytes memory signatures
-)
-    external;
-``` 
-
-The `validateAdminAuthorization` function checks that the admin signatures have signed the "Admin Operation Hash", which is computed in the following way below. This hash is also essentially the "nonce" that is used up on chain to prevent signature replay attacks.
-
-Note that the function argument `operationData` is an ABI packed-encoded byte string of the relevant fields for the operation (e.g. for adding a member, it is the bytes-encoding of the member's address).
-
-```solidity
-// src/organization/libraries/LibOrganizationAdmin.sol
-/**
-    * @notice Creates a hash of the admin operation for signature verification using EIP-712 typed data
-    * @param operationType The type of operation being performed
-    * @param operationData The ABI-encoded data of the operation
-    * @param salt The user-provided salt for nonce computation
-    * @param isApproval Whether this is an approval (true) or rejection (false) signature
-    * @return The hash of the admin operation formatted for ERC-1271 signature verification
-    */
-function _getAdminOperationHash(
-    OperationType operationType,
-    bytes memory operationData,
-    uint256 salt,
-    bool isApproval
-)
-    private
-    view
-    returns (bytes32)
-{
-    // Create EIP-712 structured data hash
-    bytes32 structHash = keccak256(
-        abi.encode(
-            keccak256(
-                "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,bool isApproval,uint256 chainId,address organization)"
-            ),
-            uint8(operationType),
-            keccak256(operationData),
-            salt,
-            isApproval,
-            block.chainid,
-            address(this)
-        )
-    );
-
-    // Return EIP-712 compatible hash for ERC-1271 signature verification
-    return MessageHashUtils.toTypedDataHash(
-        keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("MLSWalletOrganization"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )
-        ),
-        structHash
-    );
-}
-```
-
-#### Files
-```
-src/organization
-├── facets
-│   ├── OrganizationAccountFactoryFacet.sol
-│   ├── OrganizationAdminFacet.sol
-│   ├── OrganizationGroupsFacet.sol
-│   ├── OrganizationGuardianFacet.sol
-│   ├── OrganizationInitializationFacet.sol
-│   ├── OrganizationMembersFacet.sol
-│   ├── OrganizationPolicyFacet.sol
-│   └── OrganizationWhitelistFacet.sol
-├── interfaces
-│   ├── IOrganizationGroupsFacet.sol
-│   ├── IOrganizationGuardianFacet.sol
-│   └── IOrganizationMembersFacet.sol
-├── OrganizationProxy.sol
-├── OrganizationFactory.sol
-├── OrganizationInit.sol
-└── OrganizationStorage.sol
-```
-
-### Accounts
-
-Each Account is represented as a Diamond proxy, which can be found at `src/account/AccountProxy.sol`.
-
-All facets for Accounts are located at `src/account/facets/`.
-
-#### Transaction execution and rejection
-
-The facet that's responsible for transaction execution and rejection on an Account is `src/account/facets/AccountTransactionFacet.sol`.
-
-It has two external functions that are responsible for transaction execution and transaction rejection:
-
-```solidity
- function executeTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 salt,
-        bytes memory signatures
-    ) external;
-
- function rejectTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        uint256 salt,
-        bytes memory signatures
-    ) external;
-```
-
-Both of these functions, like all other external or public functions in Multi-layer Security (MLS) Wallet, require `msg.sender` to be the Guardian service's EOA address.
-
-To determine who has permission to approve or reject a transaction, the `to`, `value`, and `data` function arguments are used to find the first Policy that matches the transaction. That Policy dictates who has permission to approve or reject the transaction.
-
->[!WARNING]
->The current approach to finding the first Policy that matches a transaction requires iterating through the list of policies until the first match is found.
->
->This approach is obviously very gas-intensive. It should either be heavily optimized for gas efficiency, or a replaced with a different approach overall.
-
-Note that transactions that are delegate calls are *not* allowed.
-
-
-#### Signature replay protection
-
-Most self-custody smart accounts, like Safe, use a sequential nonce to prevent signature replay attacks. This however comes with an unituitive user experience, where transactions must be executed (or rejected) in the order they were proposed.
-
-Instead, MLS Wallet uses a non-sequential nonce to prevent signature replay attacks, while providing a more intuitive user experience where transactions can be executed (or rejected) in any order.
-
-> [!WARNING]
-> The use of non-sequential nonces to prevent signature replays is still in the exploration phase, and may be replaced with a traditional sequential nonce, like in Safe smart accounts, if issues are found during consultations with audit firms.
-
-The hash that is signed by the user's wallet is a function of:
-1. The address of the Account
-2. `to`
-3. `value`
-4. `data`
-5. `salt`
-6. The chain ID
-7. A boolean which is `true` if the signature is for an approval, or `false` if it's for a rejection
-
-```solidity
-// src/account/facets/AccountTransactionFacet.sol
-function _getTransactionHash(
-    address to,
-    uint256 value,
-    bytes memory data,
-    uint256 salt,
-    bool isApproval
-)
-    internal
-    view
-    returns (bytes32)
-{
-
-    // Create EIP-712 structured data hash
-    bytes32 structHash = keccak256(
-        abi.encode(
-            keccak256(
-                "ExecuteTransaction(address account,address to,uint256 value,bytes data,uint256 salt,bool isApproval,uint256 chainId)"
-            ),
-            address(this)
-            to,
-            value,
-            keccak256(data),
-            salt,
-            isApproval,
-            block.chainid
-        )
-    );
-
-    // Return EIP-712 compatible hash for ERC-1271 signature verification
-    return MessageHashUtils.toTypedDataHash(
-        keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("MLSWalletAccount"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )
-        ),
-        structHash
-    );
-}
-```
-
-The nonce that is "burned" onchain to prevent signature replays is calculated onchain and is a function of:
-1. The address of the Account
-2. `to`
-3. `value`
-4. `data`
-5. `salt`
-6. The chain ID
-
-```solidity
-// src/account/facets/AccountTransactionFacet.sol
-function computeNonce(
-    address to,
-    uint256 value,
-    bytes calldata data,
-    uint256 salt
-)
-    public
-    view
-    returns (uint256)
-{
-    return uint256(keccak256(abi.encode(address(this), to, value, keccak256(data), salt)));
-}
-```
-
-Note the ommission of the boolean that indicates whether the signature is for an approval or a rejection.
-
-The nonce is calculated onchain and is a function of the `to`, `value`, `data` fields (as well as other fields), so the `rejectTransaction` function cannot be tricked into applying a more lenient policy to determine who is allowed to reject the transaction.
-
-The contract keeps track of which nonces have already been used in a mapping:
-```solidity
-// src/account/facets/AccountTransactionFacetStorage.sol
-library AccountTransactionFacetStorage {
-
+// LibOrganizationMembersStorage.sol
+library LibOrganizationMembersStorage {
     struct Layout {
-        // Mapping of nonces for replay protection. Each nonce can only be used once.
-        mapping(uint256 => bool) usedNonces;
+        bytes32 membersRoot;
     }
 
-    bytes32 internal constant STORAGE_SLOT = keccak256("den.mls-wallet.account.transaction.storage");
+    // EIP-7201 namespaced storage slot
+    // Formula: keccak256(abi.encode(uint256(keccak256("den.mls-wallet.organization.members")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 internal constant STORAGE_LOCATION = 0xb80799cfa22e7d42bb36b2b397b5d0bd56930d54ee4f345397b8ece603c6f300;
 
-    function layout() internal pure returns (Layout storage l) {
-        bytes32 slot = STORAGE_SLOT;
+    function layout() internal pure returns (Layout storage _layout) {
         assembly {
-            l.slot := slot
+            _layout.slot := STORAGE_LOCATION
         }
     }
 }
 ```
 
-When a transaction is executed or rejected, the `usedNonces` mapping is updated to reflect that the transaction's nonce has been used.
+This pattern ensures that:
+- Storage slots are deterministic and collision-resistant
+- New state variables can be added in future upgrades without overwriting existing data
+- Each contract domain has isolated, well-documented storage
 
-### Deterministic cross-chain deployment
-Both Organizations and Accounts can be deployed on multiple chains. When an Organization or Account is deployed on multiple chains, its corresponding contracts are expected to be deployed at the same address on each chain.
+See: `src/organization/libraries/storage/`, `src/account/libraries/storage/`, `src/implementation-whitelist/libraries/storage/`
 
-#### Deploying Organizations
+---
 
-Deploying an Organization is a two-step process:
-1. Deploying the Organization contract itself via the `CREATE2` opcode
-2. Initializing the Organization contract by calling an `initialize` function
+## Guardian Protection
 
-The two-step process is required to avoid using contructor arguments to set initial state, as constructor arguments influence the address of the deployed contract.
+The Guardian is an offchain service operated by Den that validates transactions independently before submitting them onchain. It serves as a critical redundant security layer—even if vulnerabilities exist in the client or smart contracts, the Guardian provides an independent check.
 
+**Key concepts:**
+- Most Organization functions are protected by the `onlyGuardian` modifier
+- The Guardian address is stored on each Organization and is the only address allowed to call most external functions
+- The Guardian is implemented as a Safe multisig with a custom `SafeExecutorModule` for automated operations
+- Guardian updates require a timelocked 3-step process (initiate → finalize → accept)
 
-Deploying an Organization is done via the contract `src/organization/OrganizationFactory.sol`, which has a function `deployOrganization` that uses the CREATE2 opcode to deploy an Organization at a deterministic address. This function deploys Organizations with almost no state or functionality.
+For detailed documentation on Guardian architecture, protected functions, the SafeExecutorModule, BatchedTransaction contract, and update flows, see **[GUARDIAN_PROTECTION.md](./docs/GUARDIAN_PROTECTION.md)**.
 
-Organizations are deployed with the following facets only:
-1. **DiamondCutFacet**
+---
 
-    The facet responsible for managing diamond cut facets
+## Signatures
 
-    `src/diamond/DiamondCutFacet.sol`
+All operations in MLS Wallet require cryptographic signatures for authorization. The system uses a hybrid signature format supporting both EOA (ECDSA) and ERC-1271 smart contract signers.
 
-2. **DiamondLoupFacet**
+**Key concepts:**
+- **Hybrid format**: EOA signatures (65 bytes) and ERC-1271 signatures (23+N bytes with `v=0` prefix)
+- **EIP-712 typed data**: All signatures use structured typed data with domain separator
+- **Non-sequential nonces**: Salt-based nonces enable parallel operations (unlike Safe's sequential nonces)
+- **Replay protection**: Chain ID in signed data prevents cross-chain replay attacks
+- **Expiration**: Optional timestamp-based signature expiration
 
-    The facet responsible for viewing diamond cut facets
+For detailed documentation on signature encoding formats, EIP-712 domain, nonce system, ERC-1271 account signature format, and signed message type references, see **[SIGNATURES.md](./docs/SIGNATURES.md)**.
 
-    `src/diamond/DiamondCutFacet.sol`
+---
 
-3. **OrganizationInitializationFacet**
+## Disaster Recovery
 
-    The facet responsible for later initializing the Organization contract
+MLS Wallet implements two independent recovery mechanisms to handle scenarios where the Guardian is compromised or unavailable.
 
-    `src/organization/facets/OrganizationInitializationFacet.sol`
+| Mechanism | Purpose | Recovery Address |
+|-----------|---------|------------------|
+| **Guardian Recovery** | Replace compromised/unavailable Guardian | `guardianRecoveryAddress` |
+| **Transaction Recovery** | Execute transactions without Guardian | `transactionAndERC1271RecoveryAddress` |
 
-After an Organization contract is deployed, the `deployer` (an address controlled by Den) must then initialize the contract by calling the `initialize` function on the facet `OrganizationInitializationFacet`.
+Both mechanisms use timelocked processes and separate privileged addresses configured at Organization initialization. Transaction Recovery is optional and must be explicitly enabled.
 
-This `initialize` function can only be called by the `deployer`, and does the following:
-1. Adds the remaining diamond cut facets that make the Organization functional
-2. Removes the `OrganizationInitializationFacet` dimaond cut facet
-2. Sets the admins for the organization
-3. Sets the guardian address for the organization
+For detailed documentation on recovery flows, timelocks, ERC-1271 recovery signatures, and recovery scenarios, see **[DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md)**.
 
-#### Deploying Accounts
-
-Deploying an Account is done via the Organization contract. Specifically, the Organization diamond uses a facet `src/organization/facets/OrganizationAccountFactory.sol`, which has a function `deployAccount` that uses the CREATE2 opcode to deploy an Account at a deterministic address.
-
-Unlike deploying an Organization, deploying an Account is a one-step process and no `initialize` function needs to be called.
-
-
-#### Files
-```
-src/account
-├── AccountInit.sol
-├── AccountProxy.sol
-├── facets
-│   ├── AccountAdminFacet.sol
-│   ├── AccountGuardianFacet.sol
-│   ├── AccountOrganizationAddressStorage.sol
-│   ├── AccountTransactionFacet.sol
-│   └── AccountTransactionFacetStorage.sol
-└── interfaces
-    └── INativeTokenReceivedEventEmitter.sol
-```
+---
 
 ## Deployment
 
-For detailed deployment instructions, see **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+For detailed deployment instructions, see **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)**.
 
-### Quick Overview
-
-All platform contracts are deployed **deterministically** using CREATE2, ensuring the same contract addresses across all chains. The deployment follows a 3-step process:
-
-1. **Deploy CREATE2 Factory** (if not already deployed on the chain)
-2. **Deploy Platform Libraries** via CREATE2
-3. **Deploy Contracts** with library linking
-
-### Local Testing
-
-```bash
-./test_deploy_scripts_locally.sh
-```
-
-### Production Deployment
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for:
+[DEPLOYMENT.md](./docs/DEPLOYMENT.md) includes:
 - Signer setup (Foundry keystore or Ledger)
 - Step-by-step deployment commands
 - Guardian/Admin Safe configuration
 - Library linking requirements
 - Troubleshooting guide
-
-## Questions blocking further development
-*Below are questions which are currently blocking further development of the Multi-layer Security (MLS) Wallet smart contracts. We are seeking external expert opinion to answer these questions.*
-
-**Transaction nonce questions**
-
-- Are there any unforeseen issues with using a nonce that isn’t auto-incremented, and is instead computed as a function of transaction data + a salt? See “rough draft” contracts for possible implementation
-
-**Gas optimizations**
-
-- What are low hanging fruit for gas optimizations?
-- What are the best resources for our team to learn about gas optimization best practices? Any coursed, books, guides?
-- Where can we go to see a list of things that would be better to implement in yul than in solidity for gas savings?
-- Is there an opportunity to use proofs to improve gas efficiency, particularly when executing a transaction and finding which policy matches the transaction being executed?
-- How can this be made more gas efficient?
-
-**Guardian protection**
-
-- Should the `guardianAddress` also be stored in the storage of the Account smart contracts, so that no external call to the organization needs to be made?
-- Should the check to see if `msg.sender == guardianAddress` live in the `fallback` function of the Organization and Account proxies (regardless of whether or not they’re diamond proxies or standard proxies), rather than being implemented inside of each function call in the facets / implementation contracts?
-
-**Upgradeable proxy questions**
-
-- Are there any issues with the diamond proxy architecture as currently designed?
-- Should we even be using diamond proxies? There’s a lot of interdependence between facets.
-- Should we be using the storage library of one facet in another facet to access state, or should the diamond be making external calls to itself to use public getters from the other facet?
-- Should we be using libraries to share functionality between facets, or being making external calls the contract itself to use facet functions?
-- If we shouldn’t be using diamond proxies, and instead should be using standard upgradeable proxies, how should we partition code? Libraries for functionality? Should we still use storage libraries as well?
-
-**Cross-chain deployment questions**
-
-- How can we make accounts truly cross-chain with the same addresses across chain?
-    - Problem
-        - If the constructor for the Organization contract accepts an argument for the initial admin address, then the account will always have that initial admin address when it’s deployed on a new chain. If the admin address is no longer valid or a part of the organization, this can result in frozen funds, unless the recovery mechanism is used. If the admin is compromised, then the account is compromised on the new chain.
-    - Possible solution
-        - Do not accept an argument for an initial admin address in the constructor for the Organization contract. Instead, Organization contracts are deployed with a totally empty state with no admin, and the guardian must call an `initialize` function that will initialize the contract’s state, setting state variables like the admin or admin group, policies, whitelist, etc.
-        - The CREATE2 factory contract in this case must only allow the guardian to deploy contracts, to prevent malicious actors from front running contract deployment on new chains
-        - Drawbacks
-            - Only one layer of protection against contract deployment front-run attacks (the guardian check)
-
-**Disaster recovery**
-
-- What are common patterns for disaster recovery for smart accounts?
-- How do MPC providers implement disaster recovery?
-- How do traditional custodians implement disaster recovery? Do they at all?
-- How do self-custody solutions like Safe implement disaster recovery?
-- What design for disaster recovery do you recommend for Multi-layer Security (MLS) Wallet?
-    - Additional context
-        - The approach we originally thought of
-            - We originally wanted to have organizations manage external wallets which could only be used to initiate disaster recovery. It would would look similar to a multisig transaction, but the transaction would only be able to send funds to a predetermined immutable recovery address.
-        - The problem with the original we thought of
-            - Making users manage external wallets is a very bad UX for non technical customers. This also makes it very difficult for us to onboard new customers.
-
-**Best practices**
-
-- Should we use custom errors or ordinary `require` statements with string revert messages? What are the pros and cons of both?
-- What are best practices for defining Interfaces in Solidy? Should we define an interface and interface file for every single contract?
-    - What about for every facet if we stick with the Diamond pattern?
-- Should we only ever define custom errors, events, structs and enums in interface files?
-    - If no, what is best practice for deciding where to define them?
-- When should we put logic into an external library? When should we put it into an internal library?
-
-**Compiler questions**
-
-- What version of the solidity compiler should we use? Why?
-- Should we have a fixed solidity compiler version for the contracts?
-
-**SPDX license questions**
-
-- What SPDX license should we use?
-
-# API
-## Overview
-Using the Multi-layer Security (MLS) Wallet API, an application can take any action that an ordinary member can take.
-
-The API can be used to:
-- build custom applications with custom user interfaces
-- programmatically execute transactions without human intervention
-- steamline workflows that require both manual human intervention and programatic actions
-
-... and much more.
-
-## API Members
-An application using the API is represented in its Organization as a special type of Member called an "API Member".
-
-The API Member is essentially an ordinary Member with all the same capabilities as an ordinary Member. 
-
-There are only two key differences between an API Member and an ordinary Member:
-1. An API Member must use the API to interact with the Organization, instead of the Web Application.
-2. An API Member manages its own private key (or uses the Multi-layer Security (MLS) Wallet SDK and CLI to automatically manage the private key), instead of using the Multi-layer Security (MLS) Wallet Mobile Wallet.
-
-If the API Member is given sole Admin permissions over the organization, it can be used to programatically take any action within the organization without human intervention. 
-
-
-## Programatic Actions Broken Down
-Using the API, an application can:
-- **Manage Transactions**
-
-    - Propose new Transactions
-    - Approve or reject Transactions proposed by another Member
-
-- **Manage Members**
-
-    - Propose the addition or removal of Members
-    - Approve or reject the addition or removal of Members proposed by another Member
-
-- **Manage Groups**
-
-    - Propose the creation, modification, or deletion of a Group
-    - Approve or reject the creation, modification, or deletion of a Group proposed by another Member
-
-- **Manage Policies**
-
-    - Propose the creation, modification, archival of a Policy
-    - Approve or reject the creation, modification, archival of a Policy proposed by another Member
-
-- **Manage Whitelisted Addresses**
-
-    - Propose the creation, modification, or archival of a Whitelisted Address
-    - Approve or reject the creation, modification, archival of a Whitelisted Address proposed by another Member
-
-- **Manage Organization Admin Settings**
-
-    - Propose changes to Organization Admin Settings
-    - Approve or reject changes to Organization Admin Settings proposed by another Member
-
-## Usage Guide
-### Create an API Member
-Create your API Member in the Multi-layer Security (MLS) Wallet web app:
-        
-1. Go to http://mls-wallet.onchainden.com/members.
-    
-2. Click "Add Member", then "Advanced", turn on "API Member", and click "Add".
-
-You'll be shown an API key that will be used in the next step to authenticate the CLI.
-
-### Generate the API Member's private key
-Use the CLI to setup the API Member's private key.
-
-To install the CLI:
- 
- ```bash
- npm install -i @onchainden/mls-wallet-cli
- ```
-
-Next, to generate the API Member's private key:
-```bash
-mls-wallet-cli setup
-```
-
-You'll be prompted to enter the API Member's API key from the previous step.
-
-Next, you'll be presented with the API Member's private key. Save the private key in a secure location and keep it safe as it can be used to sign critical messages on behalf of your API Member.
-
-### Get Admin approval
-If your Organization requires multiple Admins to approve changes to the Organization, you'll need to get approval from those Admins before the API Member can be used.
-
-If you have unilateral Admin permission in your Organization, then you do not require any additional approvals before proceeding.
-
-### Make your first your request
-Use the SDK to make your first request.
-
-Set environment variables:
-- `MLS_WALLET_API_KEY`: The API key from the first step
-- `MLS_WALLET_PRIVATE_KEY`: The private key generated by the CLI
-
-Then, import and use the SDK to make a request:
-```typescript
-import { MLSWalletClient } from "@onchainden/mls-wallet`
-
-const API_KEY = process.env.MLS_WALLET_API_KEY;
-const PRIVATE_KEY = process.env.MLS_WALLET_PRIVATE_KEY;
-
-const client = new MLSWalletClient({
-    apiKey:     API_KEY,        // Always required
-    privateKey: PRIVATE_KEY     // Optional: required for write access, 
-                                // but not required for read-only access
-});
-
-const policies = await client.getPolicies();
-console.log(policies)
-```
