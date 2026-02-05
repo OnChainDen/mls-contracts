@@ -86,8 +86,8 @@ library LibOrganizationInitialization {
             });
         }
 
-        // Case: Tx/ERC1271 recovery is supported
-        // Initialize tx recovery (will revert if invalid timelock duration)
+        // Case: Tx/ERC1271 recovery address is non-zero
+        // Initialize tx recovery (will revert if invalid address or timelock duration)
         if (params.transactionAndERC1271RecoveryAddress != address(0)) {
             LibOrganizationTxRecovery.initializeTxRecovery(
                 params.transactionAndERC1271RecoveryAddress, params.txRecoveryTimelockDurationSeconds
@@ -105,7 +105,6 @@ library LibOrganizationInitialization {
             groupsRoot: params.groupsRoot,
             membersIpfsCid: params.membersIpfsCid,
             groupsIpfsCid: params.groupsIpfsCid,
-            isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
             transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
             txRecoveryTimelockDurationSeconds: params.txRecoveryTimelockDurationSeconds,
             guardianRecoveryAddress: params.guardianRecoveryAddress,

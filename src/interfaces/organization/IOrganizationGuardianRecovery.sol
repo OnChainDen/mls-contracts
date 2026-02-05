@@ -141,13 +141,13 @@ interface IOrganizationGuardianRecovery {
      * @notice Initializes guardian recovery for the first time after organization deployment
      * @dev Can only be called by the guardian with admin authorization.
      *      Can only be called once - reverts if guardian recovery is already configured.
-     * @param guardianRecoveryAddress The address that will be authorized to perform guardian recovery
-     * @param guardianRecoveryTimelockDurationSeconds The timelock duration in seconds for recovery operations
+     * @param recoveryAddress The address that will be authorized to perform guardian recovery
+     * @param timelockDurationSeconds The timelock duration in seconds for recovery operations
      * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
     function initializeGuardianRecovery(
-        address guardianRecoveryAddress,
-        uint256 guardianRecoveryTimelockDurationSeconds,
+        address recoveryAddress,
+        uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
     ) external;
 

@@ -59,12 +59,12 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
 
     /// @inheritdoc IOrganizationTxRecovery
     function initializeTransactionAndERC1271Recovery(
-        address transactionAndERC1271RecoveryAddress,
-        uint256 txRecoveryTimelockDurationSeconds,
+        address recoveryAddress,
+        uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
     ) external override onlyGuardian {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
+        bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -75,17 +75,10 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         });
 
         // Initialize tx recovery (will revert if already configured or invalid timelock)
-        LibOrganizationTxRecovery.initializeTxRecovery(
-            transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
-        );
+        LibOrganizationTxRecovery.initializeTxRecovery(recoveryAddress, timelockDurationSeconds);
 
         // Emit event for post-deployment initialization
-        emit TransactionRecoveryConfigured(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function isRecoverySupportedForTransactionsAndERC1271() external view override returns (bool) {
-        return LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271();
+        emit TransactionRecoveryConfigured(recoveryAddress, timelockDurationSeconds);
     }
 
     /// @inheritdoc IOrganizationTxRecovery

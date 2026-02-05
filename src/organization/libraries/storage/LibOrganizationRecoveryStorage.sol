@@ -15,15 +15,12 @@ library LibOrganizationRecoveryStorage {
     /**
      * @dev Storage for transaction and ERC1271 signature recovery functionality.
      * @param recoveryAddress The privileged address that can execute recovery transactions and sign via recovery
-     * @param isSupported Whether recovery is supported for account transactions and ERC1271 signatures (immutable after
-     * init)
      * @param isEnabled Whether recovery is currently enabled for transactions and ERC1271
      * @param timelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
      * @param pendingEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no pending)
      */
     struct TxRecoveryState {
         address recoveryAddress;
-        bool isSupported;
         bool isEnabled;
         uint256 timelockDurationSeconds;
         uint256 pendingEnableTimestamp;

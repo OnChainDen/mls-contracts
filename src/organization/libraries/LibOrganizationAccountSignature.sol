@@ -49,7 +49,7 @@ library LibOrganizationAccountSignature {
     /**
      * @dev Validates an ERC-1271 signature for a given account.
      *      The signature must be prefixed with a type byte:
-     *      - 0x00: Recovery signature (if recovery is supported AND enabled)
+     *      - 0x00: Recovery signature (if recovery is configured and enabled)
      *      - 0x01: Policy-based signature (ABI-encoded with policy info and proofs)
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
@@ -98,11 +98,8 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4 magicValue)
     {
-        // Recovery must be both supported AND enabled
-        if (
-            !LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271()
-                || !LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271()
-        ) {
+        // Recovery must be configured and enabled
+        if (!LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271()) {
             return SignatureUtils.ERC1271_INVALID_VALUE;
         }
 

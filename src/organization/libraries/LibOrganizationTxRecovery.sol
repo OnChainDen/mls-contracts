@@ -52,22 +52,22 @@ library LibOrganizationTxRecovery {
         }
 
         // Set storage values
-        txRecoveryLayout.isSupported = true;
+        txRecoveryLayout.isEnabled = false;
         txRecoveryLayout.recoveryAddress = transactionAndERC1271RecoveryAddress;
         txRecoveryLayout.timelockDurationSeconds = txRecoveryTimelockDurationSeconds;
     }
 
     /**
      * @dev Initiates enabling transaction and ERC1271 recovery (starts timelock).
-     *      Reverts if recovery is not supported or if a request is already pending.
+     *      Reverts if recovery is not configured or if a request is already pending.
      */
     function initiateEnableTxRecovery() internal {
         LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
         LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        // Case: Recovery not supported
-        if (!txRecovery.isSupported) {
-            revert IOrganizationTxRecovery.TxRecoveryNotSupported();
+        // Case: Recovery not configured (no recovery address or timelock duration set)
+        if (txRecovery.recoveryAddress == address(0) || txRecovery.timelockDurationSeconds == 0) {
+            revert IOrganizationTxRecovery.TxRecoveryNotConfigured();
         }
 
         // Case: Already enabled
@@ -148,15 +148,15 @@ library LibOrganizationTxRecovery {
 
     /**
      * @dev Validates that a recovery account transaction is allowed.
-     *      Reverts if recovery is not both supported AND enabled.
+     *      Reverts if recovery is not configured or not enabled.
      */
     function validateRecoveryAccountTransactionAllowedOrRevert() internal view {
         LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
         LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        // Case: Recovery not supported
-        if (!txRecovery.isSupported) {
-            revert IOrganizationTxRecovery.TxRecoveryNotSupported();
+        // Case: Recovery not configured (no recovery address or timelock duration set)
+        if (txRecovery.recoveryAddress == address(0) || txRecovery.timelockDurationSeconds == 0) {
+            revert IOrganizationTxRecovery.TxRecoveryNotConfigured();
         }
 
         // Case: Recovery not enabled
@@ -198,14 +198,6 @@ library LibOrganizationTxRecovery {
         if (msg.sender != expected) {
             revert IOrganizationTxRecovery.UnauthorizedTxRecoveryAddress(msg.sender, expected);
         }
-    }
-
-    /**
-     * @dev Returns whether recovery is supported for transactions and ERC1271 signatures.
-     * @return True if supported
-     */
-    function isRecoverySupportedForTxAndERC1271() internal view returns (bool) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.isSupported;
     }
 
     /**

@@ -39,12 +39,12 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
 
     /// @inheritdoc IOrganizationGuardianRecovery
     function initializeGuardianRecovery(
-        address guardianRecoveryAddress,
-        uint256 guardianRecoveryTimelockDurationSeconds,
+        address recoveryAddress,
+        uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
     ) external override onlyGuardian {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
+        bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
         // Validate that the current admin has authorized this change (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
@@ -55,12 +55,10 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
         });
 
         // Initialize guardian recovery (will revert if already configured or invalid timelock)
-        LibOrganizationGuardianRecovery.initializeGuardianRecovery(
-            guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds
-        );
+        LibOrganizationGuardianRecovery.initializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
 
         // Emit event for post-deployment initialization
-        emit GuardianRecoveryConfigured(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
+        emit GuardianRecoveryConfigured(recoveryAddress, timelockDurationSeconds);
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery

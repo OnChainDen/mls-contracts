@@ -18,12 +18,29 @@ contract TxRecoveryTestHarness {
     // ================================
 
     function initializeTxRecovery(
-        bool isTxRecoverySupported,
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds
     ) external {
+        // Only initialize if address is non-zero (matches LibOrganizationInitialization behavior)
+        if (transactionAndERC1271RecoveryAddress != address(0)) {
+            LibOrganizationTxRecovery.initializeTxRecovery(
+                transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
+            );
+        }
+    }
+
+    function setupTxRecovery(address transactionAndERC1271RecoveryAddress, uint256 txRecoveryTimelockDurationSeconds)
+        external
+    {
+        // Simulate what OrganizationTxRecoveryBase.initializeTransactionAndERC1271Recovery does for post-deployment:
+        // Initialize (will revert if already configured, invalid address, or invalid timelock)
         LibOrganizationTxRecovery.initializeTxRecovery(
-            isTxRecoverySupported, transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
+            transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
+        );
+
+        // Emit event
+        emit IOrganizationTxRecovery.TransactionRecoveryConfigured(
+            transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
         );
     }
 
@@ -55,10 +72,6 @@ contract TxRecoveryTestHarness {
     // View Functions
     // ================================
 
-    function isRecoverySupportedForTransactionsAndERC1271() external view returns (bool) {
-        return LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271();
-    }
-
     function isRecoveryEnabledForTransactionsAndERC1271() external view returns (bool) {
         return LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271();
     }
@@ -79,16 +92,11 @@ contract TxRecoveryTestHarness {
     // Storage Direct Access (for reset in tests)
     // ================================
 
-    function setRecoverySupportedForTransactionsAndERC1271(bool supported) external {
-        LibOrganizationRecoveryStorage.layout().txRecovery.isSupported = supported;
-    }
-
     function resetRecoveryStorage() external {
         LibOrganizationRecoveryStorage.Layout storage layout = LibOrganizationRecoveryStorage.layout();
 
         // Reset tx recovery state
         layout.txRecovery.recoveryAddress = address(0);
-        layout.txRecovery.isSupported = false;
         layout.txRecovery.isEnabled = false;
         layout.txRecovery.timelockDurationSeconds = 0;
         layout.txRecovery.pendingEnableTimestamp = 0;
@@ -120,7 +128,6 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         // Initialize tx recovery configuration
         harness.initializeTxRecovery({
-            isTxRecoverySupported: true,
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
@@ -132,11 +139,6 @@ contract LibOrganizationTxRecoveryTest is Test {
 
     function test_initializeTxRecovery_setsCorrectValues() public view {
         assertEq(
-            harness.isRecoverySupportedForTransactionsAndERC1271(),
-            true,
-            "isRecoverySupportedForTransactionsAndERC1271 not set"
-        );
-        assertEq(
             harness.getTransactionAndERC1271RecoveryAddress(),
             TX_RECOVERY_ADDRESS,
             "transactionAndERC1271RecoveryAddress not set"
@@ -146,28 +148,38 @@ contract LibOrganizationTxRecoveryTest is Test {
             TIMELOCK_DURATION,
             "txRecoveryTimelockDurationSeconds not set"
         );
+        assertFalse(harness.isRecoveryEnabledForTransactionsAndERC1271(), "isEnabled should be false initially");
     }
 
-    function test_initializeTxRecovery_revertsOnZeroTxRecoveryAddressWhenSupported() public {
+    function test_initializeTxRecovery_revertsOnZeroAddress() public {
         harness.resetRecoveryStorage();
 
         vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
-        harness.initializeTxRecovery({
-            isTxRecoverySupported: true,
-            transactionAndERC1271RecoveryAddress: address(0),
-            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
-    function test_initializeTxRecovery_revertsOnNonZeroTxRecoveryAddressWhenNotSupported() public {
+    function test_initializeTxRecovery_revertsOnZeroTimelockDuration() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
-        harness.initializeTxRecovery({
-            isTxRecoverySupported: false,
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
-            txRecoveryTimelockDurationSeconds: 0
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
         });
+    }
+
+    function test_initializeTxRecovery_allowsDeferredSetup() public {
+        harness.resetRecoveryStorage();
+
+        // Initialize with zero address (defer setup)
+        harness.initializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: 0
+        });
+
+        // Verify nothing was set
+        assertEq(harness.getTransactionAndERC1271RecoveryAddress(), address(0), "Recovery address should be zero");
+        assertEq(harness.getTxRecoveryTimelockDurationSeconds(), 0, "Timelock should be zero");
     }
 
     // ================================
@@ -192,10 +204,10 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
-    function test_initiateEnableTxRecovery_revertsIfNotSupported() public {
-        harness.setRecoverySupportedForTransactionsAndERC1271(false);
+    function test_initiateEnableTxRecovery_revertsIfNotConfigured() public {
+        harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotSupported.selector);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
@@ -280,15 +292,90 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 
-    function test_validateRecoveryAccountTransactionAllowed_revertsIfNotSupported() public {
-        harness.setRecoverySupportedForTransactionsAndERC1271(false);
+    function test_validateRecoveryAccountTransactionAllowed_revertsIfNotConfigured() public {
+        harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotSupported.selector);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 
     function test_validateRecoveryAccountTransactionAllowed_revertsIfNotEnabled() public {
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        harness.validateRecoveryAccountTransactionAllowedOrRevert();
+    }
+
+    // ================================
+    // Post-Deployment Setup Tests
+    // ================================
+
+    function test_setupTxRecovery_configuresRecovery() public {
+        harness.resetRecoveryStorage();
+
+        // Setup recovery (simulates post-deployment initialization)
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        assertEq(harness.getTransactionAndERC1271RecoveryAddress(), TX_RECOVERY_ADDRESS, "Recovery address not set");
+        assertEq(harness.getTxRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Timelock duration not set");
+    }
+
+    function test_setupTxRecovery_emitsEvent() public {
+        harness.resetRecoveryStorage();
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.TransactionRecoveryConfigured(TX_RECOVERY_ADDRESS, TIMELOCK_DURATION);
+
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+    }
+
+    function test_setupTxRecovery_revertsIfAlreadyConfigured() public {
+        // Setup is already done in setUp(), so recovery is already configured
+        vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: address(0x999), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+    }
+
+    function test_setupTxRecovery_revertsOnZeroAddress() public {
+        harness.resetRecoveryStorage();
+
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+    }
+
+    function test_setupTxRecovery_revertsOnZeroTimelock() public {
+        harness.resetRecoveryStorage();
+
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
+        });
+    }
+
+    function test_setupTxRecovery_allowsEnableFlowAfterSetup() public {
+        harness.resetRecoveryStorage();
+
+        // Setup recovery (post-deployment)
+        harness.setupTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        // Now enable recovery
+        harness.initiateEnableTransactionAndERC1271Recovery();
+        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+
+        assertTrue(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery should be enabled");
+
+        // Validate recovery transaction is now allowed
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 }

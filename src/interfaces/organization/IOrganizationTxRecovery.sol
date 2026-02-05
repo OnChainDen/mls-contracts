@@ -54,9 +54,9 @@ interface IOrganizationTxRecovery {
     event TransactionRecoveryConfigured(address indexed recoveryAddress, uint256 timelockDurationSeconds);
 
     /**
-     * @notice Thrown when transaction recovery is not supported (not configured at initialization)
+     * @notice Thrown when transaction recovery is not configured (no recovery address set)
      */
-    error TxRecoveryNotSupported();
+    error TxRecoveryNotConfigured();
 
     /**
      * @notice Thrown when transaction recovery is not enabled
@@ -110,7 +110,7 @@ interface IOrganizationTxRecovery {
     /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the transaction recovery address.
-     *      Recovery must be supported for this to work.
+     *      Recovery must be configured for this to work.
      */
     function initiateEnableTransactionAndERC1271Recovery() external;
 
@@ -137,7 +137,7 @@ interface IOrganizationTxRecovery {
     /**
      * @notice Executes an account transaction via recovery (bypassing guardian and policy checks)
      * @dev Can only be called by the transaction recovery address.
-     *      Recovery must be both supported AND enabled.
+     *      Recovery must be configured and enabled.
      * @param account The account to execute the transaction from
      * @param to The destination address
      * @param value The ETH value to send
@@ -155,21 +155,15 @@ interface IOrganizationTxRecovery {
      * @notice Initializes transaction and ERC1271 recovery for the first time after organization deployment
      * @dev Can only be called by the guardian with admin authorization.
      *      Can only be called once - reverts if transaction recovery is already configured.
-     * @param transactionAndERC1271RecoveryAddress The address that will be authorized to perform recovery
-     * @param txRecoveryTimelockDurationSeconds The timelock duration in seconds for enabling recovery
+     * @param recoveryAddress The address that will be authorized to perform recovery
+     * @param timelockDurationSeconds The timelock duration in seconds for enabling recovery
      * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
     function initializeTransactionAndERC1271Recovery(
-        address transactionAndERC1271RecoveryAddress,
-        uint256 txRecoveryTimelockDurationSeconds,
+        address recoveryAddress,
+        uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
     ) external;
-
-    /**
-     * @notice Returns whether recovery is supported for transactions and ERC1271 signatures
-     * @return True if recovery is supported, false otherwise
-     */
-    function isRecoverySupportedForTransactionsAndERC1271() external view returns (bool);
 
     /**
      * @notice Returns whether recovery is enabled for transactions and ERC1271 signatures
