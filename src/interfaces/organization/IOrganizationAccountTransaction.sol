@@ -46,12 +46,6 @@ interface IOrganizationAccountTransaction {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Thrown when a transaction is rejected by policy
-     * @param reason The reason for rejection
-     */
-    error TransactionRejectedByPolicy(string reason);
-
-    /**
      * @notice Thrown when a transaction rejection is not allowed
      */
     error TransactionRejectionNotAllowed();
@@ -80,11 +74,6 @@ interface IOrganizationAccountTransaction {
      * @notice Thrown when signatures length is insufficient
      */
     error InsufficientSignaturesLength();
-
-    /**
-     * @notice Thrown when the initiator signature is invalid
-     */
-    error InvalidInitiatorSignature();
 
     /**
      * @notice Thrown when a rate limit is exceeded

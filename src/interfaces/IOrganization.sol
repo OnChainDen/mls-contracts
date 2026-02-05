@@ -49,13 +49,6 @@ interface IOrganization is
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Emitted when a transaction is rejected because of wrong chain ID
-     * @param expected The expected chain ID
-     * @param provided The provided chain ID
-     */
-    error InvalidChainId(uint256 expected, uint256 provided);
-
-    /**
      * @notice Thrown when the account implementation has not been set
      */
     error AccountImplementationNotSet();

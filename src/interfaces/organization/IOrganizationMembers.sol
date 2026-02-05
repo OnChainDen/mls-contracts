@@ -23,16 +23,6 @@ interface IOrganizationMembers {
     event MembersUpdated(bytes32 indexed newRoot, string ipfsCid);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Errors
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    /**
-     * @notice Thrown when membership verification fails
-     * @param memberAddress The address that failed verification
-     */
-    error MemberVerificationFailed(address memberAddress);
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════
 

@@ -204,16 +204,11 @@ Each policy contains up to three sub-trees via `PolicyRoots`:
 
 ### Level 3: Function Constraint Hashes
 
-For policies that restrict which functions can be called, each allowed function is stored as:
+For policies that restrict which functions can be called, each allowed function leaf contains:
+- **selector** — The 4-byte function selector
+- **constraintsHash** — Hash of the parameter constraints array
 
-```solidity
-struct FunctionLeaf {
-    bytes4 selector;          // The 4-byte function selector
-    bytes32 constraintsHash;  // Hash of parameter constraints array
-}
-```
-
-The `constraintsHash` is computed from an array of `ParameterConstraint` structs that define rules for each function parameter.
+The leaf is computed as `hash(hash(selector, constraintsHash))`, where `constraintsHash` is derived from an array of `ParameterConstraint` structs that define rules for each function parameter.
 
 ### Level 4: OneOf Address Lists
 
