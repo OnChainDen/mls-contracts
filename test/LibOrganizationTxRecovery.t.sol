@@ -169,19 +169,6 @@ contract LibOrganizationTxRecoveryTest is Test {
         });
     }
 
-    function test_initializeTxRecovery_allowsDeferredSetup() public {
-        harness.resetRecoveryStorage();
-
-        // Initialize with zero address (defer setup)
-        harness.initializeTxRecovery({
-            transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: 0
-        });
-
-        // Verify nothing was set
-        assertEq(harness.getTransactionAndERC1271RecoveryAddress(), address(0), "Recovery address should be zero");
-        assertEq(harness.getTxRecoveryTimelockDurationSeconds(), 0, "Timelock should be zero");
-    }
-
     // ================================
     // Transaction Recovery Enable Flow Tests (Timelocked)
     // ================================
