@@ -9,7 +9,29 @@ MLS Wallet implements two independent recovery mechanisms to handle scenarios wh
 | **Guardian Recovery** | Replace compromised/unavailable Guardian | Yes | `guardianRecoveryAddress` |
 | **Transaction Recovery** | Execute transactions without Guardian | Yes (to enable) | `transactionAndERC1271RecoveryAddress` |
 
-Both mechanisms use separate privileged addresses configured at Organization initialization.
+Both mechanisms use separate privileged addresses that can be configured either at Organization initialization OR after deployment (with admin authorization).
+
+---
+
+### Configuration Options
+
+Recovery mechanisms can be set up in two ways:
+
+**Option A: At Organization Initialization**
+- Pass non-zero recovery addresses and timelock durations in `InitializationParams`
+- Guardian recovery and/or transaction recovery are immediately configured
+- Zero address means the mechanism is deferred for later setup
+
+**Option B: Post-Deployment Initialization**
+- Call `initializeGuardianRecovery()` or `initializeTransactionAndERC1271Recovery()` after deployment
+- Requires Guardian to submit the transaction (`onlyGuardian` modifier)
+- Requires admin signature authorization (same as other admin operations)
+- Can only be called once per mechanism - reverts if already configured
+
+| Function | Authorization | Can Only Be Called Once |
+|----------|---------------|-------------------------|
+| `initializeGuardianRecovery(recoveryAddress, timelockDurationSeconds, authParams)` | Guardian + Admin threshold signatures | Yes |
+| `initializeTransactionAndERC1271Recovery(recoveryAddress, timelockDurationSeconds, authParams)` | Guardian + Admin threshold signatures | Yes |
 
 ---
 
@@ -54,8 +76,6 @@ Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.
 ### Transaction Recovery
 
 Allows executing transactions and validating ERC-1271 signatures without the Guardian.
-
-**Important:** Transaction recovery is OPTIONAL - configured at initialization via `isRecoverySupportedForTransactionsAndERC1271`.
 
 **Enable Flow (2-Step with Timelock):**
 
@@ -105,7 +125,7 @@ When transaction recovery is enabled, ERC-1271 signature validation supports a r
 ```
 
 **Validation:**
-1. Check `isRecoverySupportedForTransactionsAndERC1271 == true`
+1. Check transaction recovery is configured (`transactionAndERC1271RecoveryAddress != address(0)`)
 2. Check `isRecoveryEnabledForTransactionsAndERC1271 == true`
 3. Verify signature is from `transactionAndERC1271RecoveryAddress`
 
@@ -140,6 +160,13 @@ File: `LibOrganizationAccountSignature.sol:79`
 **Scenario C: Emergency Disable**
 - Call `disableTransactionAndERC1271Recovery()` immediately (no timelock)
 - Restores normal Guardian-mediated operations
+
+**Scenario D: Deferred Recovery Setup**
+1. Deploy Organization without recovery addresses configured (pass zero addresses)
+2. Later, decide to add Guardian Recovery and/or Transaction Recovery
+3. Have admins sign authorization for the setup
+4. Guardian calls `initializeGuardianRecovery()` or `initializeTransactionAndERC1271Recovery()`
+5. Recovery mechanisms are now available
 
 ---
 

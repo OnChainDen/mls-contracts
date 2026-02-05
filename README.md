@@ -107,7 +107,7 @@ MLS Wallet provides two independent recovery mechanisms to handle Guardian compr
 | **Guardian Recovery** | Replace compromised or unavailable Guardian | `Organization.initiateRecoveryGuardianUpdate()` | Yes (3-step process) |
 | **Transaction Recovery** | Execute transactions and ERC-1271 signatures without Guardian | `Organization.executeRecoveryAccountTransaction()` | Yes (to enable) |
 
-Both mechanisms use separate privileged addresses (`guardianRecoveryAddress` and `transactionAndERC1271RecoveryAddress`) configured at Organization initialization. For detailed flows and scenarios, see [Disaster Recovery](#disaster-recovery).
+Both mechanisms use separate privileged addresses (`guardianRecoveryAddress` and `transactionAndERC1271RecoveryAddress`) that can be configured either at Organization initialization OR after deployment (with admin authorization). For detailed flows and scenarios, see [Disaster Recovery](#disaster-recovery).
 
 ---
 
@@ -884,7 +884,11 @@ MLS Wallet implements two independent recovery mechanisms to handle scenarios wh
 | **Guardian Recovery** | Replace compromised/unavailable Guardian | `guardianRecoveryAddress` |
 | **Transaction Recovery** | Execute transactions without Guardian | `transactionAndERC1271RecoveryAddress` |
 
-Both mechanisms use timelocked processes and separate privileged addresses configured at Organization initialization. Transaction Recovery is optional and must be explicitly enabled.
+Both mechanisms use timelocked processes and separate privileged addresses. Recovery can be configured either:
+- **At initialization**: Pass non-zero recovery addresses and timelock durations in `InitializationParams`
+- **Post-deployment**: Call `initializeGuardianRecovery()` or `initializeTransactionAndERC1271Recovery()` with admin authorization (requires Guardian to submit + admin threshold signatures)
+
+Transaction Recovery must be explicitly enabled via a 2-step timelocked process before it can be used.
 
 For detailed documentation on recovery flows, timelocks, ERC-1271 recovery signatures, and recovery scenarios, see **[DISASTER_RECOVERY.md](./docs/DISASTER_RECOVERY.md)**.
 
