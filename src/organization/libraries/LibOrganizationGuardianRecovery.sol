@@ -22,30 +22,40 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
  */
 library LibOrganizationGuardianRecovery {
     /**
-     * @dev Initializes the guardian recovery configuration during organization initialization.
-     *      This should be called from LibOrganizationInitialization.initialize().
-     * @param guardianRecoveryAddress The guardian recovery address (must always be non-zero)
-     * @param guardianRecoveryTimelockDurationSeconds The timelock duration in seconds (must be > 0)
+     * @dev Initializes guardian recovery configuration. Used both during org initialization and post-deployment setup.
+     *      - If already configured, reverts
+     *      - Otherwise, validates address and timelock duration and writes to storage
+     *
+     *      Note: Event emission is handled by the caller (OrganizationGuardianRecoveryBase)
+     *      for post-deployment setup only.
+     * @param guardianRecoveryAddress The guardian recovery address
+     * @param guardianRecoveryTimelockDurationSeconds The timelock duration in seconds
      */
     function initializeGuardianRecovery(
         address guardianRecoveryAddress,
         uint256 guardianRecoveryTimelockDurationSeconds
     ) internal {
-        // Validate timelock duration
-        if (guardianRecoveryTimelockDurationSeconds == 0) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
-        }
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage
+            guardianRecoveryLayout = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
-        // Validate guardian recovery address (always required)
+        // Case: Guardian recovery is already configured
+        if (guardianRecoveryLayout.recoveryAddress != address(0) || guardianRecoveryLayout.timelockDurationSeconds != 0)
+        {
+            revert IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured();
+        }
+        // Case: New guardian recovery address is zero
         if (guardianRecoveryAddress == address(0)) {
             revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
         }
 
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        // Case: New guardian recovery timelock duration is zero
+        if (guardianRecoveryTimelockDurationSeconds == 0) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
+        }
 
-        guardianRecovery.recoveryAddress = guardianRecoveryAddress;
-        guardianRecovery.timelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;
+        // Set storage values
+        guardianRecoveryLayout.recoveryAddress = guardianRecoveryAddress;
+        guardianRecoveryLayout.timelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;
     }
 
     /**

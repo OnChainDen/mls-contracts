@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {AdminAuthParams} from "types/AdminTypes.sol";
+
 /**
  * @title IOrganizationTxRecovery
  * @notice Interface for transaction and ERC1271 recovery operations in Organization contracts
@@ -42,6 +44,14 @@ interface IOrganizationTxRecovery {
      */
     // solhint-disable-next-line gas-indexed-events
     event RecoveryAccountTransactionExecuted(address indexed account, address indexed to, uint256 value, bytes data);
+
+    /**
+     * @notice Emitted when transaction recovery is configured for the first time after deployment
+     * @param recoveryAddress The configured recovery address
+     * @param timelockDurationSeconds The timelock duration in seconds
+     */
+    // solhint-disable-next-line gas-indexed-events
+    event TransactionRecoveryConfigured(address indexed recoveryAddress, uint256 timelockDurationSeconds);
 
     /**
      * @notice Thrown when transaction recovery is not supported (not configured at initialization)
@@ -93,6 +103,11 @@ interface IOrganizationTxRecovery {
     error InvalidTxRecoveryTimelockDurationSeconds();
 
     /**
+     * @notice Thrown when trying to setup transaction recovery but it has already been configured
+     */
+    error TransactionRecoveryAlreadyConfigured();
+
+    /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the transaction recovery address.
      *      Recovery must be supported for this to work.
@@ -134,6 +149,20 @@ interface IOrganizationTxRecovery {
         address to, 
         uint256 value, 
         bytes calldata data
+    ) external;
+
+    /**
+     * @notice Initializes transaction and ERC1271 recovery for the first time after organization deployment
+     * @dev Can only be called by the guardian with admin authorization.
+     *      Can only be called once - reverts if transaction recovery is already configured.
+     * @param transactionAndERC1271RecoveryAddress The address that will be authorized to perform recovery
+     * @param txRecoveryTimelockDurationSeconds The timelock duration in seconds for enabling recovery
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
+     */
+    function initializeTransactionAndERC1271Recovery(
+        address transactionAndERC1271RecoveryAddress,
+        uint256 txRecoveryTimelockDurationSeconds,
+        AdminAuthParams calldata authParams
     ) external;
 
     /**

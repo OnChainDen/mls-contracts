@@ -77,18 +77,22 @@ library LibOrganizationInitialization {
             guardian: params.guardian, guardianTimelockDurationSeconds: params.guardianTimelockDurationSeconds
         });
 
-        // Initialize guardian recovery configuration (sets guardianRecoveryAddress and timelock duration)
-        LibOrganizationGuardianRecovery.initializeGuardianRecovery({
-            guardianRecoveryAddress: params.guardianRecoveryAddress,
-            guardianRecoveryTimelockDurationSeconds: params.guardianRecoveryTimelockDurationSeconds
-        });
+        // Case: Guardian recovery address is non-zero
+        // Initialize guardian recovery (will revert invalid timelock duration)
+        if (params.guardianRecoveryAddress != address(0)) {
+            LibOrganizationGuardianRecovery.initializeGuardianRecovery({
+                guardianRecoveryAddress: params.guardianRecoveryAddress,
+                guardianRecoveryTimelockDurationSeconds: params.guardianRecoveryTimelockDurationSeconds
+            });
+        }
 
-        // Initialize transaction recovery configuration (sets tx recovery support, address, and timelock duration)
-        LibOrganizationTxRecovery.initializeTxRecovery({
-            isRecoverySupportedForTransactionsAndERC1271: params.isRecoverySupportedForTransactionsAndERC1271,
-            transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
-            txRecoveryTimelockDurationSeconds: params.txRecoveryTimelockDurationSeconds
-        });
+        // Case: Tx/ERC1271 recovery is supported
+        // Initialize tx recovery (will revert if invalid timelock duration)
+        if (params.transactionAndERC1271RecoveryAddress != address(0)) {
+            LibOrganizationTxRecovery.initializeTxRecovery(
+                params.transactionAndERC1271RecoveryAddress, params.txRecoveryTimelockDurationSeconds
+            );
+        }
 
         emit IOrganizationInitialization.OrganizationInitialized({
             adminsRoot: params.adminsRoot,

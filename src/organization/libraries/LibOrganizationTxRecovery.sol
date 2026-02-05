@@ -19,40 +19,42 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
  */
 library LibOrganizationTxRecovery {
     /**
-     * @dev Initializes the transaction recovery configuration during organization initialization.
-     *      This should be called from LibOrganizationInitialization.initialize().
-     * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
-     * @param transactionAndERC1271RecoveryAddress The tx recovery address (must be non-zero if supported)
-     * @param txRecoveryTimelockDurationSeconds The timelock duration in seconds (must be > 0 if supported)
+     * @dev Initializes transaction recovery configuration. Used both during org initialization and post-deployment
+     * setup.
+     *      - If already configured, reverts
+     *      - Otherwise, validates address and timelock duration and writes to storage
+     *
+     *      Note: Event emission is handled by the caller (OrganizationTxRecoveryBase)
+     *      for post-deployment setup only.
+     * @param transactionAndERC1271RecoveryAddress The tx recovery address
+     * @param txRecoveryTimelockDurationSeconds The timelock duration in seconds
      */
     function initializeTxRecovery(
-        bool isRecoverySupportedForTransactionsAndERC1271,
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds
     ) internal {
-        // Validate tx recovery address based on support flag
-        if (isRecoverySupportedForTransactionsAndERC1271) {
-            // Case: Recovery is supported, address must be set
-            if (transactionAndERC1271RecoveryAddress == address(0)) {
-                revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
-            }
-            // Case: Recovery is supported, timelock duration must be > 0
-            if (txRecoveryTimelockDurationSeconds == 0) {
-                revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
-            }
-        } else {
-            // Case: Recovery is not supported, address must be zero
-            if (transactionAndERC1271RecoveryAddress != address(0)) {
-                revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
-            }
+        LibOrganizationRecoveryStorage.TxRecoveryState storage
+            txRecoveryLayout = LibOrganizationRecoveryStorage.layout().txRecovery;
+
+        // Case: Transaction recovery is already configured
+        if (txRecoveryLayout.recoveryAddress != address(0) || txRecoveryLayout.timelockDurationSeconds != 0) {
+            revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
         }
 
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        // Case: New tx recovery address is zero
+        if (transactionAndERC1271RecoveryAddress == address(0)) {
+            revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
+        }
 
-        txRecovery.isSupported = isRecoverySupportedForTransactionsAndERC1271;
-        txRecovery.recoveryAddress = transactionAndERC1271RecoveryAddress;
-        txRecovery.timelockDurationSeconds = txRecoveryTimelockDurationSeconds;
+        // Case: New tx recovery timelock duration is zero
+        if (txRecoveryTimelockDurationSeconds == 0) {
+            revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
+        }
+
+        // Set storage values
+        txRecoveryLayout.isSupported = true;
+        txRecoveryLayout.recoveryAddress = transactionAndERC1271RecoveryAddress;
+        txRecoveryLayout.timelockDurationSeconds = txRecoveryTimelockDurationSeconds;
     }
 
     /**

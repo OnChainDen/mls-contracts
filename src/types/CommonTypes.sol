@@ -30,6 +30,8 @@ enum OperationType {
     Upgrade,
     DeployAccount,
     UpgradeAccount,
+    InitializeGuardianRecovery,
+    InitializeTransactionRecovery,
     // Account transaction operations
     AccountTransaction,
     AccountTransactionRejection

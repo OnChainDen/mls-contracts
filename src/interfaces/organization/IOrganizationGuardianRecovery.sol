@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {AdminAuthParams} from "types/AdminTypes.sol";
+
 /**
  * @title IOrganizationGuardianRecovery
  * @notice Interface for guardian recovery operations in Organization contracts
@@ -45,6 +47,14 @@ interface IOrganizationGuardianRecovery {
      * @param newGuardian The new guardian address
      */
     event RecoveryGuardianUpdateAccepted(address indexed previousGuardian, address indexed newGuardian);
+
+    /**
+     * @notice Emitted when guardian recovery is configured for the first time after deployment
+     * @param guardianRecoveryAddress The configured recovery address
+     * @param timelockDurationSeconds The timelock duration in seconds
+     */
+    // solhint-disable-next-line gas-indexed-events
+    event GuardianRecoveryConfigured(address indexed guardianRecoveryAddress, uint256 timelockDurationSeconds);
 
     /**
      * @notice Thrown when the guardian recovery timelock duration is invalid (zero)
@@ -98,6 +108,11 @@ interface IOrganizationGuardianRecovery {
     error UnauthorizedRecoveryGuardianAcceptance(address caller, address pendingGuardian);
 
     /**
+     * @notice Thrown when trying to setup guardian recovery but it has already been configured
+     */
+    error GuardianRecoveryAlreadyConfigured();
+
+    /**
      * @notice Initiates a recovery guardian update (starts timelock)
      * @dev Can only be called by the guardian recovery address.
      * @param newGuardian The proposed new guardian address
@@ -121,6 +136,20 @@ interface IOrganizationGuardianRecovery {
      * @dev Can only be called by the recovery pending guardian after the update has been finalized.
      */
     function acceptGuardianRecovery() external;
+
+    /**
+     * @notice Initializes guardian recovery for the first time after organization deployment
+     * @dev Can only be called by the guardian with admin authorization.
+     *      Can only be called once - reverts if guardian recovery is already configured.
+     * @param guardianRecoveryAddress The address that will be authorized to perform guardian recovery
+     * @param guardianRecoveryTimelockDurationSeconds The timelock duration in seconds for recovery operations
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
+     */
+    function initializeGuardianRecovery(
+        address guardianRecoveryAddress,
+        uint256 guardianRecoveryTimelockDurationSeconds,
+        AdminAuthParams calldata authParams
+    ) external;
 
     /**
      * @notice Returns the guardian recovery address
