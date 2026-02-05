@@ -6,7 +6,10 @@ import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
+import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title OrganizationTxRecoveryBase
@@ -55,8 +58,27 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function isRecoverySupportedForTransactionsAndERC1271() external view override returns (bool) {
-        return LibOrganizationTxRecovery.isRecoverySupportedForTxAndERC1271();
+    function initializeTransactionAndERC1271Recovery(
+        address recoveryAddress,
+        uint256 timelockDurationSeconds,
+        AdminAuthParams calldata authParams
+    ) external override onlyGuardian {
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
+
+        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.InitializeTransactionRecovery,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        // Initialize tx recovery (will revert if already configured or invalid timelock)
+        LibOrganizationTxRecovery.initializeTxRecovery(recoveryAddress, timelockDurationSeconds);
+
+        // Emit event for post-deployment initialization
+        emit TransactionRecoveryConfigured(recoveryAddress, timelockDurationSeconds);
     }
 
     /// @inheritdoc IOrganizationTxRecovery

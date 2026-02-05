@@ -30,6 +30,8 @@ enum OperationType {
     Upgrade,
     DeployAccount,
     UpgradeAccount,
+    InitializeGuardianRecovery,
+    InitializeTransactionRecovery,
     // Account transaction operations
     AccountTransaction,
     AccountTransactionRejection
@@ -50,11 +52,9 @@ enum OperationType {
  * @param groupsRoot The initial Merkle root for all groups
  * @param membersIpfsCid The IPFS CID where full members data is stored
  * @param groupsIpfsCid The IPFS CID where full groups data is stored
- * @param isRecoverySupportedForTransactionsAndERC1271 Whether recovery is supported for tx/signatures
- * @param transactionAndERC1271RecoveryAddress The privileged address for tx/signature recovery (must be set if
- * supported)
+ * @param transactionAndERC1271RecoveryAddress The privileged address for tx/signature recovery (zero to defer setup)
  * @param txRecoveryTimelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
- * @param guardianRecoveryAddress The privileged address for guardian recovery (must always be set)
+ * @param guardianRecoveryAddress The privileged address for guardian recovery (zero to defer setup)
  * @param guardianRecoveryTimelockDurationSeconds The duration in seconds for guardian recovery timelocks
  */
 struct InitializationParams {
@@ -70,8 +70,7 @@ struct InitializationParams {
     bytes32 groupsRoot;
     string membersIpfsCid;
     string groupsIpfsCid;
-    // Recovery configuration
-    bool isRecoverySupportedForTransactionsAndERC1271;
+    // Recovery configuration (zero addresses defer setup to post-deployment)
     address transactionAndERC1271RecoveryAddress;
     uint256 txRecoveryTimelockDurationSeconds;
     address guardianRecoveryAddress;

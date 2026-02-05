@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {AdminAuthParams} from "types/AdminTypes.sol";
+
 /**
  * @title IOrganizationTxRecovery
  * @notice Interface for transaction and ERC1271 recovery operations in Organization contracts
@@ -44,9 +46,17 @@ interface IOrganizationTxRecovery {
     event RecoveryAccountTransactionExecuted(address indexed account, address indexed to, uint256 value, bytes data);
 
     /**
-     * @notice Thrown when transaction recovery is not supported (not configured at initialization)
+     * @notice Emitted when transaction recovery is configured for the first time after deployment
+     * @param recoveryAddress The configured recovery address
+     * @param timelockDurationSeconds The timelock duration in seconds
      */
-    error TxRecoveryNotSupported();
+    // solhint-disable-next-line gas-indexed-events
+    event TransactionRecoveryConfigured(address indexed recoveryAddress, uint256 timelockDurationSeconds);
+
+    /**
+     * @notice Thrown when transaction recovery is not configured (no recovery address set)
+     */
+    error TxRecoveryNotConfigured();
 
     /**
      * @notice Thrown when transaction recovery is not enabled
@@ -93,9 +103,14 @@ interface IOrganizationTxRecovery {
     error InvalidTxRecoveryTimelockDurationSeconds();
 
     /**
+     * @notice Thrown when trying to setup transaction recovery but it has already been configured
+     */
+    error TransactionRecoveryAlreadyConfigured();
+
+    /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the transaction recovery address.
-     *      Recovery must be supported for this to work.
+     *      Recovery must be configured for this to work.
      */
     function initiateEnableTransactionAndERC1271Recovery() external;
 
@@ -122,7 +137,7 @@ interface IOrganizationTxRecovery {
     /**
      * @notice Executes an account transaction via recovery (bypassing guardian and policy checks)
      * @dev Can only be called by the transaction recovery address.
-     *      Recovery must be both supported AND enabled.
+     *      Recovery must be configured and enabled.
      * @param account The account to execute the transaction from
      * @param to The destination address
      * @param value The ETH value to send
@@ -137,10 +152,18 @@ interface IOrganizationTxRecovery {
     ) external;
 
     /**
-     * @notice Returns whether recovery is supported for transactions and ERC1271 signatures
-     * @return True if recovery is supported, false otherwise
+     * @notice Initializes transaction and ERC1271 recovery for the first time after organization deployment
+     * @dev Can only be called by the guardian with admin authorization.
+     *      Can only be called once - reverts if transaction recovery is already configured.
+     * @param recoveryAddress The address that will be authorized to perform recovery
+     * @param timelockDurationSeconds The timelock duration in seconds for enabling recovery
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
-    function isRecoverySupportedForTransactionsAndERC1271() external view returns (bool);
+    function initializeTransactionAndERC1271Recovery(
+        address recoveryAddress,
+        uint256 timelockDurationSeconds,
+        AdminAuthParams calldata authParams
+    ) external;
 
     /**
      * @notice Returns whether recovery is enabled for transactions and ERC1271 signatures

@@ -335,14 +335,3 @@ struct ValidationProofs {
     InitiatorProofs initiatorProofs;
     ApproverProofs approverProofs;
 }
-
-/**
- * @dev Structure for function selector leaves in the allowed functions merkle tree.
- *      Each allowed function has a selector and optional parameter constraints.
- * @param selector The 4-byte function selector
- * @param constraintsHash Hash of the parameter constraints for this function
- */
-struct FunctionLeaf {
-    bytes4 selector;
-    bytes32 constraintsHash;
-}
