@@ -3,10 +3,8 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
-import {
-    LibOrganizationSecureTimelockStorage
-} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 
 /**
  * @title Lib Organization Guardian
@@ -52,8 +50,7 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.GuardianUpdateAlreadyPending();
         }
 
-        uint256 canFinalizeAtTimestamp =
-            block.timestamp + LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
+        uint256 canFinalizeAtTimestamp = LibOrganizationSecureTimelock.computeCanFinalizeAtTimestamp();
 
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
@@ -82,9 +79,7 @@ library LibOrganizationGuardian {
         uint256 canFinalizeAtTimestamp = guardianLayout.pendingGuardianUpdateTimestamp;
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationGuardian.GuardianUpdateTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
-        }
+        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Mark as ready for acceptance (new guardian must call acceptGuardian)
         guardianLayout.isGuardianUpdateReadyForAcceptance = true;

@@ -75,13 +75,6 @@ interface IOrganizationGuardian {
     error UnauthorizedGuardianAcceptance(address caller, address pendingGuardian);
 
     /**
-     * @notice Thrown when trying to finalize a guardian update before the timelock expires
-     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
-     * @param currentTime The current block timestamp
-     */
-    error GuardianUpdateTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
-
-    /**
      * @notice Thrown when trying to initiate a guardian update while one is already pending
      */
     error GuardianUpdateAlreadyPending();

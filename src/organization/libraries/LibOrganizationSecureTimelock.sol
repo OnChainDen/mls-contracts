@@ -43,4 +43,24 @@ library LibOrganizationSecureTimelock {
     function getSecureTimelockDurationSeconds() internal view returns (uint256) {
         return LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
     }
+
+    /**
+     * @dev Validates that a timelock has expired.
+     *      Reverts with TimelockNotExpired if block.timestamp is before canFinalizeAtTimestamp.
+     * @param canFinalizeAtTimestamp The timestamp when the timelock expires
+     */
+    function validateTimelockExpiredOrRevert(uint256 canFinalizeAtTimestamp) internal view {
+        if (block.timestamp < canFinalizeAtTimestamp) {
+            revert IOrganizationSecureTimelock.TimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
+        }
+    }
+
+    /**
+     * @dev Computes the timestamp when a newly initiated timelocked operation can be finalized.
+     *      Uses the organization-wide secure timelock duration.
+     * @return The finalization timestamp (block.timestamp + secureTimelockDurationSeconds)
+     */
+    function computeCanFinalizeAtTimestamp() internal view returns (uint256) {
+        return block.timestamp + LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
+    }
 }

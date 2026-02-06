@@ -16,6 +16,18 @@ interface IOrganizationSecureTimelock {
     error InvalidSecureTimelockDurationSeconds();
 
     /**
+     * @notice Thrown when trying to finalize a timelocked operation before the timelock expires
+     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
+     * @param currentTime The current block timestamp
+     */
+    error TimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
+
+    /**
+     * @notice Thrown when a timelock duration parameter is invalid (zero)
+     */
+    error InvalidTimelockDurationSeconds();
+
+    /**
      * @notice Returns the organization-wide secure timelock duration in seconds
      * @return The timelock duration in seconds
      */

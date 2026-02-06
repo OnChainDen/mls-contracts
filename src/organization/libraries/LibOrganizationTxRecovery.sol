@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
-import {
-    LibOrganizationSecureTimelockStorage
-} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 
 /**
  * @title Lib Organization Transaction Recovery
@@ -90,9 +89,7 @@ library LibOrganizationTxRecovery {
         }
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationTxRecovery.TxRecoveryTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
-        }
+        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Enable recovery and clear pending state
         txRecovery.isEnabled = true;
@@ -150,20 +147,18 @@ library LibOrganizationTxRecovery {
         _validateTxRecoveryNotConfiguredOrRevert(txRecovery);
 
         // Case: Already a pending initialization
-        if (txRecovery.pendingInitTimestamp != 0) {
+        if (txRecovery.pendingInit.pendingTimestamp != 0) {
             revert IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending();
         }
 
         _validateTxRecoveryParamsOrRevert(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
 
-        // Read the organization-wide secure timelock duration
-        uint256 secureTimelock = LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
-        uint256 canFinalizeAtTimestamp = block.timestamp + secureTimelock;
+        uint256 canFinalizeAtTimestamp = LibOrganizationSecureTimelock.computeCanFinalizeAtTimestamp();
 
         // Store pending initialization values
-        txRecovery.pendingInitRecoveryAddress = transactionAndERC1271RecoveryAddress;
-        txRecovery.pendingInitTimelockDurationSeconds = txRecoveryTimelockDurationSeconds;
-        txRecovery.pendingInitTimestamp = canFinalizeAtTimestamp;
+        txRecovery.pendingInit.pendingRecoveryAddress = transactionAndERC1271RecoveryAddress;
+        txRecovery.pendingInit.pendingTimelockDurationSeconds = txRecoveryTimelockDurationSeconds;
+        txRecovery.pendingInit.pendingTimestamp = canFinalizeAtTimestamp;
 
         emit IOrganizationTxRecovery.TxRecoveryInitializationInitiated(
             transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds, canFinalizeAtTimestamp
@@ -179,7 +174,7 @@ library LibOrganizationTxRecovery {
         LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
         LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        uint256 canFinalizeAtTimestamp = txRecovery.pendingInitTimestamp;
+        uint256 canFinalizeAtTimestamp = txRecovery.pendingInit.pendingTimestamp;
 
         // Case: No pending initialization
         if (canFinalizeAtTimestamp == 0) {
@@ -187,15 +182,11 @@ library LibOrganizationTxRecovery {
         }
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationTxRecovery.TxRecoveryInitializationTimelockNotExpired(
-                canFinalizeAtTimestamp, block.timestamp
-            );
-        }
+        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Read pending values before clearing
-        address pendingAddress = txRecovery.pendingInitRecoveryAddress;
-        uint256 pendingTimelock = txRecovery.pendingInitTimelockDurationSeconds;
+        address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
 
         // Clear pending state
         _clearPendingTxRecoveryInitTimelock(txRecovery);
@@ -215,7 +206,7 @@ library LibOrganizationTxRecovery {
         LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: No pending initialization
-        if (txRecovery.pendingInitTimestamp == 0) {
+        if (txRecovery.pendingInit.pendingTimestamp == 0) {
             revert IOrganizationTxRecovery.NoTxRecoveryInitializationPending();
         }
 
@@ -315,7 +306,7 @@ library LibOrganizationTxRecovery {
      * @return The pending address (zero if no pending initialization)
      */
     function getPendingInitTxRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitRecoveryAddress;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInit.pendingRecoveryAddress;
     }
 
     /**
@@ -323,7 +314,7 @@ library LibOrganizationTxRecovery {
      * @return The pending duration (zero if no pending initialization)
      */
     function getPendingInitTxRecoveryTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitTimelockDurationSeconds;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInit.pendingTimelockDurationSeconds;
     }
 
     /**
@@ -331,17 +322,19 @@ library LibOrganizationTxRecovery {
      * @return The timestamp when initialization can be finalized (zero if no pending)
      */
     function getPendingInitTxRecoveryTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitTimestamp;
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInit.pendingTimestamp;
     }
 
     /**
      * @dev Clears all pending initialization state fields.
      * @param txRecovery The tx recovery storage state
      */
-    function _clearPendingTxRecoveryInitTimelock(LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery) private {
-        txRecovery.pendingInitRecoveryAddress = address(0);
-        txRecovery.pendingInitTimelockDurationSeconds = 0;
-        txRecovery.pendingInitTimestamp = 0;
+    function _clearPendingTxRecoveryInitTimelock(LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery)
+        private
+    {
+        txRecovery.pendingInit.pendingRecoveryAddress = address(0);
+        txRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
+        txRecovery.pendingInit.pendingTimestamp = 0;
     }
 
     /**
@@ -372,7 +365,7 @@ library LibOrganizationTxRecovery {
 
         // Case: Timelock duration is zero
         if (timelockDurationSeconds == 0) {
-            revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
+            revert IOrganizationSecureTimelock.InvalidTimelockDurationSeconds();
         }
     }
 }

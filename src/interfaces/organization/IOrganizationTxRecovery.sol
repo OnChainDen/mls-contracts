@@ -97,13 +97,6 @@ interface IOrganizationTxRecovery {
     error NoTxRecoveryEnablePending();
 
     /**
-     * @notice Thrown when trying to finalize a tx recovery enable before the timelock expires
-     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
-     * @param currentTime The current block timestamp
-     */
-    error TxRecoveryTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
-
-    /**
      * @notice Thrown when trying to initiate a tx recovery enable while one is already pending
      */
     error TxRecoveryEnableAlreadyPending();
@@ -112,11 +105,6 @@ interface IOrganizationTxRecovery {
      * @notice Thrown when trying to initiate a tx recovery enable while recovery is already enabled
      */
     error TxRecoveryAlreadyEnabled();
-
-    /**
-     * @notice Thrown when the tx recovery timelock duration is invalid (zero)
-     */
-    error InvalidTxRecoveryTimelockDurationSeconds();
 
     /**
      * @notice Thrown when trying to setup transaction recovery but it has already been configured
@@ -132,13 +120,6 @@ interface IOrganizationTxRecovery {
      * @notice Thrown when trying to finalize or cancel deferred initialization but none is pending
      */
     error NoTxRecoveryInitializationPending();
-
-    /**
-     * @notice Thrown when trying to finalize deferred initialization before the timelock expires
-     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
-     * @param currentTime The current block timestamp
-     */
-    error TxRecoveryInitializationTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)

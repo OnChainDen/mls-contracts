@@ -3,11 +3,10 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
+import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
+import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
-import {
-    LibOrganizationSecureTimelockStorage
-} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 
 /**
  * @title Lib Organization Guardian Recovery
@@ -97,11 +96,7 @@ library LibOrganizationGuardianRecovery {
         uint256 canFinalizeAtTimestamp = guardianRecovery.pendingGuardianTimestamp;
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired(
-                canFinalizeAtTimestamp, block.timestamp
-            );
-        }
+        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Mark as ready for acceptance (new guardian must call acceptGuardianRecovery)
         guardianRecovery.isUpdateReadyForAcceptance = true;
@@ -183,20 +178,18 @@ library LibOrganizationGuardianRecovery {
         _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecovery);
 
         // Case: Already a pending initialization
-        if (guardianRecovery.pendingInitTimestamp != 0) {
+        if (guardianRecovery.pendingInit.pendingTimestamp != 0) {
             revert IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending();
         }
 
         _validateGuardianRecoveryParamsOrRevert(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
 
-        // Read the organization-wide secure timelock duration
-        uint256 secureTimelock = LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
-        uint256 canFinalizeAtTimestamp = block.timestamp + secureTimelock;
+        uint256 canFinalizeAtTimestamp = LibOrganizationSecureTimelock.computeCanFinalizeAtTimestamp();
 
         // Store pending initialization values
-        guardianRecovery.pendingInitRecoveryAddress = guardianRecoveryAddress;
-        guardianRecovery.pendingInitTimelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;
-        guardianRecovery.pendingInitTimestamp = canFinalizeAtTimestamp;
+        guardianRecovery.pendingInit.pendingRecoveryAddress = guardianRecoveryAddress;
+        guardianRecovery.pendingInit.pendingTimelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;
+        guardianRecovery.pendingInit.pendingTimestamp = canFinalizeAtTimestamp;
 
         emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationInitiated(
             guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds, canFinalizeAtTimestamp
@@ -212,7 +205,7 @@ library LibOrganizationGuardianRecovery {
         LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
         LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
-        uint256 canFinalizeAtTimestamp = guardianRecovery.pendingInitTimestamp;
+        uint256 canFinalizeAtTimestamp = guardianRecovery.pendingInit.pendingTimestamp;
 
         // Case: No pending initialization
         if (canFinalizeAtTimestamp == 0) {
@@ -220,15 +213,11 @@ library LibOrganizationGuardianRecovery {
         }
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryInitializationTimelockNotExpired(
-                canFinalizeAtTimestamp, block.timestamp
-            );
-        }
+        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Read pending values before clearing
-        address pendingAddress = guardianRecovery.pendingInitRecoveryAddress;
-        uint256 pendingTimelock = guardianRecovery.pendingInitTimelockDurationSeconds;
+        address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
 
         // Clear pending state
         _clearPendingGuardianRecoveryInitTimelock(guardianRecovery);
@@ -248,7 +237,7 @@ library LibOrganizationGuardianRecovery {
         LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending initialization
-        if (guardianRecovery.pendingInitTimestamp == 0) {
+        if (guardianRecovery.pendingInit.pendingTimestamp == 0) {
             revert IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending();
         }
 
@@ -326,7 +315,7 @@ library LibOrganizationGuardianRecovery {
      * @return The pending address (zero if no pending initialization)
      */
     function getPendingInitGuardianRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitRecoveryAddress;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInit.pendingRecoveryAddress;
     }
 
     /**
@@ -334,7 +323,7 @@ library LibOrganizationGuardianRecovery {
      * @return The pending duration (zero if no pending initialization)
      */
     function getPendingInitGuardianRecoveryTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitTimelockDurationSeconds;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
     }
 
     /**
@@ -342,7 +331,7 @@ library LibOrganizationGuardianRecovery {
      * @return The timestamp when initialization can be finalized (zero if no pending)
      */
     function getPendingInitGuardianRecoveryTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitTimestamp;
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInit.pendingTimestamp;
     }
 
     /**
@@ -352,9 +341,9 @@ library LibOrganizationGuardianRecovery {
     function _clearPendingGuardianRecoveryInitTimelock(
         LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery
     ) private {
-        guardianRecovery.pendingInitRecoveryAddress = address(0);
-        guardianRecovery.pendingInitTimelockDurationSeconds = 0;
-        guardianRecovery.pendingInitTimestamp = 0;
+        guardianRecovery.pendingInit.pendingRecoveryAddress = address(0);
+        guardianRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
+        guardianRecovery.pendingInit.pendingTimestamp = 0;
     }
 
     /**
@@ -387,7 +376,7 @@ library LibOrganizationGuardianRecovery {
 
         // Case: Timelock duration is zero
         if (timelockDurationSeconds == 0) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
+            revert IOrganizationSecureTimelock.InvalidTimelockDurationSeconds();
         }
     }
 }

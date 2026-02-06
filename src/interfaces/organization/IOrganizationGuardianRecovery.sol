@@ -73,11 +73,6 @@ interface IOrganizationGuardianRecovery {
     event GuardianRecoveryInitializationCancelled();
 
     /**
-     * @notice Thrown when the guardian recovery timelock duration is invalid (zero)
-     */
-    error InvalidGuardianRecoveryTimelockDurationSeconds();
-
-    /**
      * @notice Thrown when the guardian recovery address is invalid (zero)
      */
     error InvalidGuardianRecoveryAddress();
@@ -93,13 +88,6 @@ interface IOrganizationGuardianRecovery {
      * @param expected The expected guardian recovery address
      */
     error UnauthorizedGuardianRecoveryAddress(address caller, address expected);
-
-    /**
-     * @notice Thrown when trying to finalize a recovery guardian update before the timelock expires
-     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
-     * @param currentTime The current block timestamp
-     */
-    error GuardianRecoveryTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Thrown when there's no pending recovery guardian update
@@ -137,13 +125,6 @@ interface IOrganizationGuardianRecovery {
      * @notice Thrown when trying to finalize or cancel deferred initialization but none is pending
      */
     error NoGuardianRecoveryInitializationPending();
-
-    /**
-     * @notice Thrown when trying to finalize deferred initialization before the timelock expires
-     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
-     * @param currentTime The current block timestamp
-     */
-    error GuardianRecoveryInitializationTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Initiates a recovery guardian update (starts timelock)

@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
+import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
@@ -121,9 +122,9 @@ contract TxRecoveryTestHarness {
         layout.txRecovery.isEnabled = false;
         layout.txRecovery.timelockDurationSeconds = 0;
         layout.txRecovery.pendingEnableTimestamp = 0;
-        layout.txRecovery.pendingInitRecoveryAddress = address(0);
-        layout.txRecovery.pendingInitTimelockDurationSeconds = 0;
-        layout.txRecovery.pendingInitTimestamp = 0;
+        layout.txRecovery.pendingInit.pendingRecoveryAddress = address(0);
+        layout.txRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
+        layout.txRecovery.pendingInit.pendingTimestamp = 0;
 
         // Reset guardian recovery state
         layout.guardianRecovery.recoveryAddress = address(0);
@@ -131,9 +132,9 @@ contract TxRecoveryTestHarness {
         layout.guardianRecovery.pendingGuardian = address(0);
         layout.guardianRecovery.pendingGuardianTimestamp = 0;
         layout.guardianRecovery.isUpdateReadyForAcceptance = false;
-        layout.guardianRecovery.pendingInitRecoveryAddress = address(0);
-        layout.guardianRecovery.pendingInitTimelockDurationSeconds = 0;
-        layout.guardianRecovery.pendingInitTimestamp = 0;
+        layout.guardianRecovery.pendingInit.pendingRecoveryAddress = address(0);
+        layout.guardianRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
+        layout.guardianRecovery.pendingInit.pendingTimestamp = 0;
     }
 }
 
@@ -194,7 +195,7 @@ contract LibOrganizationTxRecoveryTest is Test {
     function test_initializeTxRecovery_revertsOnZeroTimelockDuration() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
+        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
         harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
         });
@@ -269,7 +270,7 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationTxRecovery.TxRecoveryTimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeEnableTransactionAndERC1271Recovery();
@@ -392,7 +393,7 @@ contract LibOrganizationTxRecoveryTest is Test {
     function test_initiateInitializeTxRecovery_revertsOnZeroTimelock() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
+        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
         harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
         });
@@ -452,9 +453,7 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationTxRecovery.TxRecoveryInitializationTimelockNotExpired.selector,
-                canFinalizeAt,
-                block.timestamp
+                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeInitializeTxRecovery();
