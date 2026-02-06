@@ -4,14 +4,14 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
-import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
+import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
-import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {
-    LibOrganizationSecureTimelockStorage
-} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
+    LibOrganizationAdminOperationTimelockStorage
+} from "organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol";
+import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
@@ -88,8 +88,9 @@ contract TxRecoveryTestHarness {
     // Storage Direct Access (for reset/setup in tests)
     // ================================
 
-    function initializeSecureTimelock(uint256 secureTimelockDurationSeconds) external {
-        LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds = secureTimelockDurationSeconds;
+    function initializeAdminOperationTimelock(uint256 adminOperationTimelockDurationSeconds) external {
+        LibOrganizationAdminOperationTimelockStorage.layout().adminOperationTimelockDurationSeconds =
+        adminOperationTimelockDurationSeconds;
     }
 
     function resetRecoveryStorage() external {
@@ -128,13 +129,13 @@ contract LibOrganizationTxRecoveryTest is Test {
     address constant TX_RECOVERY_ADDRESS = address(0x100);
 
     uint256 constant TIMELOCK_DURATION = 2 days;
-    uint256 constant SECURE_TIMELOCK_DURATION = 3 days;
+    uint256 constant ADMIN_OPERATION_TIMELOCK_DURATION = 3 days;
 
     function setUp() public {
         harness = new TxRecoveryTestHarness();
 
-        // Initialize secure timelock (required for deferred initialization tests)
-        harness.initializeSecureTimelock(SECURE_TIMELOCK_DURATION);
+        // Initialize admin operation timelock (required for deferred initialization tests)
+        harness.initializeAdminOperationTimelock(ADMIN_OPERATION_TIMELOCK_DURATION);
 
         // Initialize tx recovery configuration
         harness.initializeTxRecovery({
@@ -251,7 +252,7 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeEnableTransactionAndERC1271Recovery();
@@ -319,14 +320,14 @@ contract LibOrganizationTxRecoveryTest is Test {
         TxRecoveryState memory state = harness.getTxRecoveryState();
         assertEq(state.pendingInit.pendingRecoveryAddress, TX_RECOVERY_ADDRESS, "Pending address not set");
         assertEq(state.pendingInit.pendingTimelockDurationSeconds, TIMELOCK_DURATION, "Pending timelock not set");
-        uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION;
         assertEq(state.pendingInit.pendingTimestamp, expectedCanFinalizeAt, "Pending timestamp not set");
     }
 
     function test_initiateInitializeTxRecovery_emitsEvent() public {
         harness.resetRecoveryStorage();
 
-        uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION;
 
         vm.expectEmit(true, true, true, true);
         emit IOrganizationTxRecovery.TxRecoveryInitializationInitiated(
@@ -394,7 +395,7 @@ contract LibOrganizationTxRecoveryTest is Test {
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeInitializeTxRecovery();
 
         TxRecoveryState memory state = harness.getTxRecoveryState();
@@ -416,7 +417,7 @@ contract LibOrganizationTxRecoveryTest is Test {
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
 
         vm.expectEmit(true, true, true, true);
         emit IOrganizationTxRecovery.TxRecoveryInitializationFinalized(TX_RECOVERY_ADDRESS, TIMELOCK_DURATION);
@@ -441,7 +442,7 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeInitializeTxRecovery();
@@ -491,8 +492,8 @@ contract LibOrganizationTxRecoveryTest is Test {
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        // Wait for secure timelock and finalize
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        // Wait for admin operation timelock and finalize
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeInitializeTxRecovery();
 
         // Now enable recovery through the normal flow

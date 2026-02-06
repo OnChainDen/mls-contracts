@@ -23,7 +23,7 @@ Recovery mechanisms can be set up in two ways:
 - Zero address means the mechanism is deferred for later setup
 
 **Option B: Post-Deployment Initialization (Timelocked)**
-- Uses a timelocked flow: initiate → wait for `secureTimelockDurationSeconds` → finalize
+- Uses a timelocked flow: initiate → wait for `adminOperationTimelockDurationSeconds` → finalize
 - Requires Guardian to submit the transaction (`onlyGuardian` modifier)
 - Requires admin signature authorization at each step (initiate, finalize, cancel)
 - Can only be called once per mechanism - reverts if already configured
@@ -49,17 +49,17 @@ There are three distinct timelock durations in the system, each validated to be 
 
 | Timelock | Purpose | Set At | Used By |
 |----------|---------|--------|---------|
-| `secureTimelockDurationSeconds` | Organization-wide timelock for sensitive admin operations | Organization initialization | Guardian updates (normal flow), deferred recovery initialization |
+| `adminOperationTimelockDurationSeconds` | Organization-wide timelock for sensitive admin operations | Organization initialization | Guardian updates (normal flow), deferred recovery initialization |
 | `guardianRecoveryTimelockDurationSeconds` | Timelock for guardian recovery operations | Organization init or deferred initialization | Guardian recovery update flow (initiate → finalize → accept) |
 | `txRecoveryTimelockDurationSeconds` | Timelock for enabling transaction/ERC-1271 recovery | Organization init or deferred initialization | Transaction recovery enable flow (initiate → finalize) |
 
-The **secure timelock** (`secureTimelockDurationSeconds`) is stored in `LibOrganizationSecureTimelockStorage` and governs:
+The **admin operation timelock** (`adminOperationTimelockDurationSeconds`) is stored in `LibOrganizationAdminOperationTimelockStorage` and governs:
 - Normal guardian updates (initiate → finalize → accept)
 - Deferred recovery initialization (initiate → finalize)
 
 The **recovery-specific timelocks** (`guardianRecoveryTimelockDurationSeconds` and `txRecoveryTimelockDurationSeconds`) are stored in `LibOrganizationRecoveryStorage` and govern the actual recovery operations themselves.
 
-Files: `OrganizationSecureTimelockBase.sol`, `LibOrganizationSecureTimelock.sol`, `TimelockUtils.sol`
+Files: `OrganizationAdminOperationTimelockBase.sol`, `LibOrganizationAdminOperationTimelock.sol`, `TimelockUtils.sol`
 
 ---
 
@@ -193,7 +193,7 @@ File: `LibOrganizationAccountSignature.sol:79`
 1. Deploy Organization without recovery addresses configured (pass zero addresses)
 2. Later, decide to add Guardian Recovery and/or Transaction Recovery
 3. Guardian calls `initiateInitializeGuardianRecovery()` or `initiateInitializeTransactionAndERC1271Recovery()` with admin authorization
-4. Wait for `secureTimelockDurationSeconds` to elapse
+4. Wait for `adminOperationTimelockDurationSeconds` to elapse
 5. Guardian calls `finalizeInitializeGuardianRecovery()` or `finalizeInitializeTransactionAndERC1271Recovery()` with admin authorization
 6. Recovery mechanisms are now available
 

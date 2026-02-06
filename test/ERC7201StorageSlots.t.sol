@@ -9,6 +9,9 @@ import {Test} from "forge-std/Test.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {
+    LibOrganizationAdminOperationTimelockStorage
+} from "organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
     LibOrganizationDeployerAddressStorage
@@ -18,9 +21,6 @@ import {LibOrganizationGuardianStorage} from "organization/libraries/storage/Lib
 import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
 import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
-import {
-    LibOrganizationSecureTimelockStorage
-} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 
@@ -118,11 +118,11 @@ contract ERC7201StorageSlotsTest is Test {
         );
     }
 
-    function test_organizationSecureTimelockStorage_slotIsCorrect() public pure {
+    function test_organizationAdminOperationTimelockStorage_slotIsCorrect() public pure {
         assertEq(
-            LibOrganizationSecureTimelockStorage.STORAGE_LOCATION,
-            SlotDerivation.erc7201Slot("den.mls-wallet.organization.secure-timelock"),
-            "LibOrganizationSecureTimelockStorage slot mismatch. Verify with: cast index-erc7201 'den.mls-wallet.organization.secure-timelock'"
+            LibOrganizationAdminOperationTimelockStorage.STORAGE_LOCATION,
+            SlotDerivation.erc7201Slot("den.mls-wallet.organization.admin-operation-timelock"),
+            "LibOrganizationAdminOperationTimelockStorage slot mismatch. Verify with: cast index-erc7201 'den.mls-wallet.organization.admin-operation-timelock'"
         );
     }
 
@@ -168,7 +168,7 @@ contract ERC7201StorageSlotsTest is Test {
         slots[7] = LibOrganizationSignaturesStorage.STORAGE_LOCATION;
         slots[8] = LibOrganizationUpgradeStorage.STORAGE_LOCATION;
         slots[9] = LibOrganizationRecoveryStorage.STORAGE_LOCATION;
-        slots[10] = LibOrganizationSecureTimelockStorage.STORAGE_LOCATION;
+        slots[10] = LibOrganizationAdminOperationTimelockStorage.STORAGE_LOCATION;
 
         // Implementation whitelist storage slots
         slots[11] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
@@ -207,7 +207,7 @@ contract ERC7201StorageSlotsTest is Test {
         slots[7] = LibOrganizationSignaturesStorage.STORAGE_LOCATION;
         slots[8] = LibOrganizationUpgradeStorage.STORAGE_LOCATION;
         slots[9] = LibOrganizationRecoveryStorage.STORAGE_LOCATION;
-        slots[10] = LibOrganizationSecureTimelockStorage.STORAGE_LOCATION;
+        slots[10] = LibOrganizationAdminOperationTimelockStorage.STORAGE_LOCATION;
         slots[11] = LibImplementationWhitelistStorage.STORAGE_LOCATION;
 
         for (uint256 i = 0; i < slots.length; i++) {

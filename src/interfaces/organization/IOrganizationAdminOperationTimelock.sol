@@ -3,13 +3,13 @@
 pragma solidity 0.8.33;
 
 /**
- * @title IOrganizationSecureTimelock
- * @notice Interface for organization-wide secure timelock configuration
- * @dev The secure timelock duration applies to all sensitive timelocked operations
+ * @title IOrganizationAdminOperationTimelock
+ * @notice Interface for organization-wide admin operation timelock configuration
+ * @dev The admin operation timelock duration applies to all sensitive timelocked operations
  *      in the organization, including guardian updates and deferred recovery initialization.
  * @author Den Technologies Inc
  */
-interface IOrganizationSecureTimelock {
+interface IOrganizationAdminOperationTimelock {
     /**
      * @notice Thrown when trying to finalize a timelocked operation before the timelock expires
      * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
@@ -18,8 +18,8 @@ interface IOrganizationSecureTimelock {
     error TimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
-     * @notice Returns the organization-wide secure timelock duration in seconds
+     * @notice Returns the organization-wide admin operation timelock duration in seconds
      * @return The timelock duration in seconds
      */
-    function secureTimelockDurationSeconds() external view returns (uint256);
+    function adminOperationTimelockDurationSeconds() external view returns (uint256);
 }

@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
-import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
+import {LibOrganizationAdminOperationTimelock} from "organization/libraries/LibOrganizationAdminOperationTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 
 /**
@@ -20,8 +20,8 @@ library LibOrganizationGuardian {
     /**
      * @dev Initializes the guardian configuration during organization initialization.
      *      This should be called from LibOrganizationInitialization.initialize().
-     *      Note: The secure timelock duration must be initialized separately via
-     *      LibOrganizationSecureTimelock.initializeSecureTimelock() BEFORE calling this.
+     *      Note: The admin operation timelock duration must be initialized separately via
+     *      LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock() BEFORE calling this.
      * @param guardian The initial guardian address (must be non-zero)
      */
     function initializeGuardian(address guardian) internal {
@@ -50,7 +50,7 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.GuardianUpdateAlreadyPending();
         }
 
-        uint256 canFinalizeAtTimestamp = LibOrganizationSecureTimelock.computeCanFinalizeAtTimestamp();
+        uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
@@ -79,7 +79,7 @@ library LibOrganizationGuardian {
         uint256 canFinalizeAtTimestamp = guardianLayout.pendingGuardianUpdateTimestamp;
 
         // Case: Timelock not expired
-        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
+        LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Mark as ready for acceptance (new guardian must call acceptGuardian)
         guardianLayout.isGuardianUpdateReadyForAcceptance = true;

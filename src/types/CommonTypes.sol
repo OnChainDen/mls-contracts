@@ -50,7 +50,8 @@ enum OperationType {
  * @param adminInAdminTreeProofs Merkle proofs that each admin address is in adminsRoot
  * @param adminInMembersTreeProofs Merkle proofs that each admin address is in membersRoot
  * @param guardian Guardian address for the organization
- * @param secureTimelockDurationSeconds The organization-wide secure timelock duration in seconds for sensitive
+ * @param adminOperationTimelockDurationSeconds The organization-wide admin operation timelock duration in seconds for
+ * sensitive
  * operations
  * @param membersRoot The initial Merkle root for all members
  * @param groupsRoot The initial Merkle root for all groups
@@ -69,7 +70,7 @@ struct InitializationParams {
     bytes32[][] adminInAdminTreeProofs;
     bytes32[][] adminInMembersTreeProofs;
     address guardian;
-    uint256 secureTimelockDurationSeconds;
+    uint256 adminOperationTimelockDurationSeconds;
     bytes32 membersRoot;
     bytes32 groupsRoot;
     string membersIpfsCid;

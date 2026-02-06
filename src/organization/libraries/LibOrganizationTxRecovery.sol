@@ -5,7 +5,7 @@ pragma solidity 0.8.33;
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
-import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
+import {LibOrganizationAdminOperationTimelock} from "organization/libraries/LibOrganizationAdminOperationTimelock.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
@@ -87,7 +87,7 @@ library LibOrganizationTxRecovery {
         }
 
         // Case: Timelock not expired
-        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
+        LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Enable recovery and clear pending state
         txRecovery.isEnabled = true;
@@ -148,7 +148,7 @@ library LibOrganizationTxRecovery {
 
         _validateTxRecoveryParamsOrRevert(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
 
-        uint256 canFinalizeAtTimestamp = LibOrganizationSecureTimelock.computeCanFinalizeAtTimestamp();
+        uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
         // Store pending initialization values
         txRecovery.pendingInit.pendingRecoveryAddress = transactionAndERC1271RecoveryAddress;
@@ -176,7 +176,7 @@ library LibOrganizationTxRecovery {
         }
 
         // Case: Timelock not expired
-        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
+        LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Read pending values before clearing
         address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;

@@ -5,17 +5,17 @@ pragma solidity 0.8.33;
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {Test} from "forge-std/Test.sol";
 
+import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
-import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {
+    LibOrganizationAdminOperationTimelockStorage
+} from "organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
-import {
-    LibOrganizationSecureTimelockStorage
-} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
@@ -107,8 +107,8 @@ contract GuardianRecoveryTestHarness {
         return LibOrganizationRecoveryStorage.layout().guardianRecovery;
     }
 
-    function getSecureTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
+    function getAdminOperationTimelockDurationSeconds() external view returns (uint256) {
+        return LibOrganizationAdminOperationTimelockStorage.layout().adminOperationTimelockDurationSeconds;
     }
 
     // Normal flow guardian state (uses LibOrganizationGuardian getters -- separate from recovery)
@@ -136,8 +136,9 @@ contract GuardianRecoveryTestHarness {
         LibOrganizationGuardianStorage.layout().guardian = _guardian;
     }
 
-    function initializeSecureTimelock(uint256 secureTimelockDurationSeconds) external {
-        LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds = secureTimelockDurationSeconds;
+    function initializeAdminOperationTimelock(uint256 adminOperationTimelockDurationSeconds) external {
+        LibOrganizationAdminOperationTimelockStorage.layout().adminOperationTimelockDurationSeconds =
+        adminOperationTimelockDurationSeconds;
     }
 
     function resetRecoveryStorage() external {
@@ -192,13 +193,13 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     address constant NEW_GUARDIAN_2 = address(0x500);
 
     uint256 constant TIMELOCK_DURATION = 2 days;
-    uint256 constant SECURE_TIMELOCK_DURATION = 3 days;
+    uint256 constant ADMIN_OPERATION_TIMELOCK_DURATION = 3 days;
 
     function setUp() public {
         harness = new GuardianRecoveryTestHarness();
 
-        // Initialize secure timelock (organization-wide)
-        harness.initializeSecureTimelock(SECURE_TIMELOCK_DURATION);
+        // Initialize admin operation timelock (organization-wide)
+        harness.initializeAdminOperationTimelock(ADMIN_OPERATION_TIMELOCK_DURATION);
 
         // Initialize guardian configuration (sets guardian address)
         harness.initializeGuardian(GUARDIAN);
@@ -239,9 +240,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         assertEq(state.recoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "guardianRecoveryAddress not set");
         assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "guardianRecoveryTimelockDurationSeconds not set");
         assertEq(
-            harness.getSecureTimelockDurationSeconds(),
-            SECURE_TIMELOCK_DURATION,
-            "secureTimelockDurationSeconds not set"
+            harness.getAdminOperationTimelockDurationSeconds(),
+            ADMIN_OPERATION_TIMELOCK_DURATION,
+            "adminOperationTimelockDurationSeconds not set"
         );
     }
 
@@ -307,7 +308,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeRecoveryGuardianUpdate();
@@ -402,7 +403,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
     function test_finalizeGuardianUpdate_setsReadyForAcceptance() public {
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
 
         harness.finalizeGuardianUpdate();
 
@@ -416,7 +417,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeGuardianUpdate();
@@ -442,7 +443,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
     function test_acceptGuardian_updatesGuardian() public {
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeGuardianUpdate();
 
         vm.prank(NEW_GUARDIAN);
@@ -454,7 +455,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
     function test_acceptGuardian_revertsIfNotPendingGuardian() public {
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeGuardianUpdate();
 
         address wrongCaller = address(0x999);
@@ -498,7 +499,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
 
         // Complete recovery flow
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeRecoveryGuardianUpdate();
         vm.prank(NEW_GUARDIAN_2);
         harness.acceptGuardianRecovery();
@@ -516,7 +517,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
 
         // Complete normal flow
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeGuardianUpdate();
         vm.prank(NEW_GUARDIAN);
         harness.acceptGuardian();
@@ -581,14 +582,14 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
         assertEq(state.pendingInit.pendingRecoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "Pending address not set");
         assertEq(state.pendingInit.pendingTimelockDurationSeconds, TIMELOCK_DURATION, "Pending timelock not set");
-        uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION;
         assertEq(state.pendingInit.pendingTimestamp, expectedCanFinalizeAt, "Pending timestamp not set");
     }
 
     function test_initiateInitializeGuardianRecovery_emitsEvent() public {
         harness.resetRecoveryStorage();
 
-        uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION;
 
         vm.expectEmit(true, true, true, true);
         emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationInitiated(
@@ -656,7 +657,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeInitializeGuardianRecovery();
 
         GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
@@ -677,7 +678,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
 
         vm.expectEmit(true, true, true, true);
         emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationFinalized(
@@ -704,7 +705,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationSecureTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeInitializeGuardianRecovery();
@@ -758,8 +759,8 @@ contract LibOrganizationGuardianRecoveryTest is Test {
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        // Wait for secure timelock and finalize
-        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        // Wait for admin operation timelock and finalize
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeInitializeGuardianRecovery();
 
         // Now use the recovery flow

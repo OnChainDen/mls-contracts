@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
-import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
+import {LibOrganizationAdminOperationTimelock} from "organization/libraries/LibOrganizationAdminOperationTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
@@ -94,7 +94,7 @@ library LibOrganizationGuardianRecovery {
         uint256 canFinalizeAtTimestamp = guardianRecovery.pendingGuardianTimestamp;
 
         // Case: Timelock not expired
-        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
+        LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Mark as ready for acceptance (new guardian must call acceptGuardianRecovery)
         guardianRecovery.isUpdateReadyForAcceptance = true;
@@ -179,7 +179,7 @@ library LibOrganizationGuardianRecovery {
 
         _validateGuardianRecoveryParamsOrRevert(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
 
-        uint256 canFinalizeAtTimestamp = LibOrganizationSecureTimelock.computeCanFinalizeAtTimestamp();
+        uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
         // Store pending initialization values
         guardianRecovery.pendingInit.pendingRecoveryAddress = guardianRecoveryAddress;
@@ -207,7 +207,7 @@ library LibOrganizationGuardianRecovery {
         }
 
         // Case: Timelock not expired
-        LibOrganizationSecureTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
+        LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Read pending values before clearing
         address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;

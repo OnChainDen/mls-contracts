@@ -11,13 +11,13 @@ import {OrganizationAccountFactoryBase} from "organization/base/OrganizationAcco
 import {OrganizationAccountSignatureBase} from "organization/base/OrganizationAccountSignatureBase.sol";
 import {OrganizationAccountTransactionBase} from "organization/base/OrganizationAccountTransactionBase.sol";
 import {OrganizationAdminBase} from "organization/base/OrganizationAdminBase.sol";
+import {OrganizationAdminOperationTimelockBase} from "organization/base/OrganizationAdminOperationTimelockBase.sol";
 import {OrganizationGroupsBase} from "organization/base/OrganizationGroupsBase.sol";
 import {OrganizationGuardianBase} from "organization/base/OrganizationGuardianBase.sol";
 import {OrganizationGuardianRecoveryBase} from "organization/base/OrganizationGuardianRecoveryBase.sol";
 import {OrganizationInitializationBase} from "organization/base/OrganizationInitializationBase.sol";
 import {OrganizationMembersBase} from "organization/base/OrganizationMembersBase.sol";
 import {OrganizationPolicyBase} from "organization/base/OrganizationPolicyBase.sol";
-import {OrganizationSecureTimelockBase} from "organization/base/OrganizationSecureTimelockBase.sol";
 import {OrganizationSignaturesBase} from "organization/base/OrganizationSignaturesBase.sol";
 import {OrganizationTxRecoveryBase} from "organization/base/OrganizationTxRecoveryBase.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
@@ -37,7 +37,7 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
  *      - OrganizationMembersBase: Member management
  *      - OrganizationGroupsBase: Group management
  *      - OrganizationPolicyBase: Policy management
- *      - OrganizationSecureTimelockBase: Organization-wide secure timelock configuration
+ *      - OrganizationAdminOperationTimelockBase: Organization-wide admin operation timelock configuration
  *      - OrganizationGuardianBase: Normal guardian update flow
  *      - OrganizationAccountFactoryBase: Account deployment and beacon implementation
  *      - OrganizationAccountTransactionBase: Account transaction execution
@@ -57,7 +57,7 @@ contract OrganizationImplementation is
     OrganizationMembersBase,
     OrganizationGroupsBase,
     OrganizationPolicyBase,
-    OrganizationSecureTimelockBase,
+    OrganizationAdminOperationTimelockBase,
     OrganizationGuardianBase,
     OrganizationAccountFactoryBase,
     OrganizationAccountTransactionBase,
