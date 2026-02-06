@@ -22,13 +22,10 @@ import {
  */
 library LibOrganizationTxRecovery {
     /**
-     * @dev Initializes transaction recovery configuration. Used both during org initialization and post-deployment
-     * setup.
+     * @dev Initializes transaction recovery configuration. Used during org initialization
+     *      and called by finalizeInitializeTxRecovery for post-deployment setup.
      *      - If already configured, reverts
      *      - Otherwise, validates address and timelock duration and writes to storage
-     *
-     *      Note: Event emission is handled by the caller (OrganizationTxRecoveryBase)
-     *      for post-deployment setup only.
      * @param transactionAndERC1271RecoveryAddress The tx recovery address
      * @param txRecoveryTimelockDurationSeconds The timelock duration in seconds
      */
@@ -39,20 +36,8 @@ library LibOrganizationTxRecovery {
         LibOrganizationRecoveryStorage.TxRecoveryState storage
             txRecoveryLayout = LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        // Case: Transaction recovery is already configured
-        if (txRecoveryLayout.recoveryAddress != address(0) || txRecoveryLayout.timelockDurationSeconds != 0) {
-            revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
-        }
-
-        // Case: New tx recovery address is zero
-        if (transactionAndERC1271RecoveryAddress == address(0)) {
-            revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
-        }
-
-        // Case: New tx recovery timelock duration is zero
-        if (txRecoveryTimelockDurationSeconds == 0) {
-            revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
-        }
+        _validateTxRecoveryNotConfiguredOrRevert(txRecoveryLayout);
+        _validateTxRecoveryParamsOrRevert(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
 
         // Set storage values
         txRecoveryLayout.isEnabled = false;
@@ -152,8 +137,6 @@ library LibOrganizationTxRecovery {
     /**
      * @dev Initiates deferred initialization of transaction recovery (starts timelock).
      *      Reverts if already configured, already pending, or inputs are invalid.
-     *
-     *      Note: Event emission is handled by the caller (OrganizationTxRecoveryBase).
      * @param transactionAndERC1271RecoveryAddress The proposed recovery address
      * @param txRecoveryTimelockDurationSeconds The proposed timelock duration in seconds
      */
@@ -164,25 +147,14 @@ library LibOrganizationTxRecovery {
         LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
         LibOrganizationRecoveryStorage.layout().txRecovery;
 
-        // Case: Transaction recovery is already configured
-        if (txRecovery.recoveryAddress != address(0) || txRecovery.timelockDurationSeconds != 0) {
-            revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
-        }
+        _validateTxRecoveryNotConfiguredOrRevert(txRecovery);
 
         // Case: Already a pending initialization
         if (txRecovery.pendingInitTimestamp != 0) {
             revert IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending();
         }
 
-        // Case: New tx recovery address is zero
-        if (transactionAndERC1271RecoveryAddress == address(0)) {
-            revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
-        }
-
-        // Case: New tx recovery timelock duration is zero
-        if (txRecoveryTimelockDurationSeconds == 0) {
-            revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
-        }
+        _validateTxRecoveryParamsOrRevert(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
 
         // Read the organization-wide secure timelock duration
         uint256 secureTimelock = LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
@@ -200,9 +172,8 @@ library LibOrganizationTxRecovery {
 
     /**
      * @dev Finalizes deferred initialization of transaction recovery (after timelock).
-     *      Writes the pending values to the actual recovery configuration fields.
-     *
-     *      Note: Event emission is handled by the caller (OrganizationTxRecoveryBase).
+     *      Reads pending values, clears pending state, then delegates to initializeTxRecovery
+     *      to reuse validation and config-writing logic.
      */
     function finalizeInitializeTxRecovery() internal {
         LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
@@ -222,19 +193,15 @@ library LibOrganizationTxRecovery {
             );
         }
 
-        // Read pending values
+        // Read pending values before clearing
         address pendingAddress = txRecovery.pendingInitRecoveryAddress;
         uint256 pendingTimelock = txRecovery.pendingInitTimelockDurationSeconds;
 
-        // Write actual configuration (same as initializeTxRecovery logic)
-        txRecovery.isEnabled = false;
-        txRecovery.recoveryAddress = pendingAddress;
-        txRecovery.timelockDurationSeconds = pendingTimelock;
-
         // Clear pending state
-        txRecovery.pendingInitRecoveryAddress = address(0);
-        txRecovery.pendingInitTimelockDurationSeconds = 0;
-        txRecovery.pendingInitTimestamp = 0;
+        _clearPendingTxRecoveryInitTimelock(txRecovery);
+
+        // Reuse initializeTxRecovery for validation + config writes
+        initializeTxRecovery(pendingAddress, pendingTimelock);
 
         emit IOrganizationTxRecovery.TxRecoveryInitializationFinalized(pendingAddress, pendingTimelock);
     }
@@ -252,10 +219,7 @@ library LibOrganizationTxRecovery {
             revert IOrganizationTxRecovery.NoTxRecoveryInitializationPending();
         }
 
-        // Clear pending state
-        txRecovery.pendingInitRecoveryAddress = address(0);
-        txRecovery.pendingInitTimelockDurationSeconds = 0;
-        txRecovery.pendingInitTimestamp = 0;
+        _clearPendingTxRecoveryInitTimelock(txRecovery);
 
         emit IOrganizationTxRecovery.TxRecoveryInitializationCancelled();
     }
@@ -368,5 +332,47 @@ library LibOrganizationTxRecovery {
      */
     function getPendingInitTxRecoveryTimestamp() internal view returns (uint256) {
         return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitTimestamp;
+    }
+
+    /**
+     * @dev Clears all pending initialization state fields.
+     * @param txRecovery The tx recovery storage state
+     */
+    function _clearPendingTxRecoveryInitTimelock(LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery) private {
+        txRecovery.pendingInitRecoveryAddress = address(0);
+        txRecovery.pendingInitTimelockDurationSeconds = 0;
+        txRecovery.pendingInitTimestamp = 0;
+    }
+
+    /**
+     * @dev Validates that transaction recovery is not already configured.
+     *      Reverts if recoveryAddress or timelockDurationSeconds is non-zero.
+     * @param txRecovery The tx recovery storage state
+     */
+    function _validateTxRecoveryNotConfiguredOrRevert(LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery)
+        private
+        view
+    {
+        if (txRecovery.recoveryAddress != address(0) || txRecovery.timelockDurationSeconds != 0) {
+            revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
+        }
+    }
+
+    /**
+     * @dev Validates tx recovery initialization parameters.
+     *      Reverts if recovery address is zero or timelock duration is zero.
+     * @param recoveryAddress The recovery address to validate
+     * @param timelockDurationSeconds The timelock duration to validate
+     */
+    function _validateTxRecoveryParamsOrRevert(address recoveryAddress, uint256 timelockDurationSeconds) private pure {
+        // Case: Recovery address is zero
+        if (recoveryAddress == address(0)) {
+            revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
+        }
+
+        // Case: Timelock duration is zero
+        if (timelockDurationSeconds == 0) {
+            revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
+        }
     }
 }

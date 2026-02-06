@@ -25,12 +25,10 @@ import {
  */
 library LibOrganizationGuardianRecovery {
     /**
-     * @dev Initializes guardian recovery configuration. Used both during org initialization and post-deployment setup.
+     * @dev Initializes guardian recovery configuration. Used during org initialization
+     *      and called by finalizeInitializeGuardianRecovery for post-deployment setup.
      *      - If already configured, reverts
      *      - Otherwise, validates address and timelock duration and writes to storage
-     *
-     *      Note: Event emission is handled by the caller (OrganizationGuardianRecoveryBase)
-     *      for post-deployment setup only.
      * @param guardianRecoveryAddress The guardian recovery address
      * @param guardianRecoveryTimelockDurationSeconds The timelock duration in seconds
      */
@@ -41,20 +39,8 @@ library LibOrganizationGuardianRecovery {
         LibOrganizationRecoveryStorage.GuardianRecoveryState storage
             guardianRecoveryLayout = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
-        // Case: Guardian recovery is already configured
-        if (guardianRecoveryLayout.recoveryAddress != address(0) || guardianRecoveryLayout.timelockDurationSeconds != 0)
-        {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured();
-        }
-        // Case: New guardian recovery address is zero
-        if (guardianRecoveryAddress == address(0)) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
-        }
-
-        // Case: New guardian recovery timelock duration is zero
-        if (guardianRecoveryTimelockDurationSeconds == 0) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
-        }
+        _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecoveryLayout);
+        _validateGuardianRecoveryParamsOrRevert(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
 
         // Set storage values
         guardianRecoveryLayout.recoveryAddress = guardianRecoveryAddress;
@@ -184,8 +170,6 @@ library LibOrganizationGuardianRecovery {
     /**
      * @dev Initiates deferred initialization of guardian recovery (starts timelock).
      *      Reverts if already configured, already pending, or inputs are invalid.
-     *
-     *      Note: Event emission is handled by the caller (OrganizationGuardianRecoveryBase).
      * @param guardianRecoveryAddress The proposed guardian recovery address
      * @param guardianRecoveryTimelockDurationSeconds The proposed timelock duration in seconds
      */
@@ -196,25 +180,14 @@ library LibOrganizationGuardianRecovery {
         LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
         LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
-        // Case: Guardian recovery is already configured
-        if (guardianRecovery.recoveryAddress != address(0) || guardianRecovery.timelockDurationSeconds != 0) {
-            revert IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured();
-        }
+        _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecovery);
 
         // Case: Already a pending initialization
         if (guardianRecovery.pendingInitTimestamp != 0) {
             revert IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending();
         }
 
-        // Case: New guardian recovery address is zero
-        if (guardianRecoveryAddress == address(0)) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
-        }
-
-        // Case: New guardian recovery timelock duration is zero
-        if (guardianRecoveryTimelockDurationSeconds == 0) {
-            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
-        }
+        _validateGuardianRecoveryParamsOrRevert(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
 
         // Read the organization-wide secure timelock duration
         uint256 secureTimelock = LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
@@ -232,9 +205,8 @@ library LibOrganizationGuardianRecovery {
 
     /**
      * @dev Finalizes deferred initialization of guardian recovery (after timelock).
-     *      Writes the pending values to the actual recovery configuration fields.
-     *
-     *      Note: Event emission is handled by the caller (OrganizationGuardianRecoveryBase).
+     *      Reads pending values, clears pending state, then delegates to initializeGuardianRecovery
+     *      to reuse validation and config-writing logic.
      */
     function finalizeInitializeGuardianRecovery() internal {
         LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
@@ -254,18 +226,15 @@ library LibOrganizationGuardianRecovery {
             );
         }
 
-        // Read pending values
+        // Read pending values before clearing
         address pendingAddress = guardianRecovery.pendingInitRecoveryAddress;
         uint256 pendingTimelock = guardianRecovery.pendingInitTimelockDurationSeconds;
 
-        // Write actual configuration (same as initializeGuardianRecovery logic)
-        guardianRecovery.recoveryAddress = pendingAddress;
-        guardianRecovery.timelockDurationSeconds = pendingTimelock;
-
         // Clear pending state
-        guardianRecovery.pendingInitRecoveryAddress = address(0);
-        guardianRecovery.pendingInitTimelockDurationSeconds = 0;
-        guardianRecovery.pendingInitTimestamp = 0;
+        _clearPendingGuardianRecoveryInitTimelock(guardianRecovery);
+
+        // Reuse initializeGuardianRecovery for validation + config writes
+        initializeGuardianRecovery(pendingAddress, pendingTimelock);
 
         emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationFinalized(pendingAddress, pendingTimelock);
     }
@@ -283,10 +252,7 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending();
         }
 
-        // Clear pending state
-        guardianRecovery.pendingInitRecoveryAddress = address(0);
-        guardianRecovery.pendingInitTimelockDurationSeconds = 0;
-        guardianRecovery.pendingInitTimestamp = 0;
+        _clearPendingGuardianRecoveryInitTimelock(guardianRecovery);
 
         emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationCancelled();
     }
@@ -377,5 +343,51 @@ library LibOrganizationGuardianRecovery {
      */
     function getPendingInitGuardianRecoveryTimestamp() internal view returns (uint256) {
         return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitTimestamp;
+    }
+
+    /**
+     * @dev Clears all pending initialization state fields.
+     * @param guardianRecovery The guardian recovery storage state
+     */
+    function _clearPendingGuardianRecoveryInitTimelock(
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery
+    ) private {
+        guardianRecovery.pendingInitRecoveryAddress = address(0);
+        guardianRecovery.pendingInitTimelockDurationSeconds = 0;
+        guardianRecovery.pendingInitTimestamp = 0;
+    }
+
+    /**
+     * @dev Validates that guardian recovery is not already configured.
+     *      Reverts if recoveryAddress or timelockDurationSeconds is non-zero.
+     * @param guardianRecovery The guardian recovery storage state
+     */
+    function _validateGuardianRecoveryNotConfiguredOrRevert(
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery
+    ) private view {
+        if (guardianRecovery.recoveryAddress != address(0) || guardianRecovery.timelockDurationSeconds != 0) {
+            revert IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured();
+        }
+    }
+
+    /**
+     * @dev Validates guardian recovery initialization parameters.
+     *      Reverts if recovery address is zero or timelock duration is zero.
+     * @param recoveryAddress The recovery address to validate
+     * @param timelockDurationSeconds The timelock duration to validate
+     */
+    function _validateGuardianRecoveryParamsOrRevert(address recoveryAddress, uint256 timelockDurationSeconds)
+        private
+        pure
+    {
+        // Case: Recovery address is zero
+        if (recoveryAddress == address(0)) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
+        }
+
+        // Case: Timelock duration is zero
+        if (timelockDurationSeconds == 0) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
+        }
     }
 }
