@@ -23,7 +23,7 @@ Recovery mechanisms can be set up in two ways:
 - Zero address means the mechanism is deferred for later setup
 
 **Option B: Post-Deployment Initialization (Timelocked)**
-- Uses a 3-step timelocked flow: initiate → wait for `secureTimelockDurationSeconds` → finalize
+- Uses a timelocked flow: initiate → wait for `secureTimelockDurationSeconds` → finalize
 - Requires Guardian to submit the transaction (`onlyGuardian` modifier)
 - Requires admin signature authorization at each step (initiate, finalize, cancel)
 - Can only be called once per mechanism - reverts if already configured
@@ -43,23 +43,31 @@ Recovery mechanisms can be set up in two ways:
 
 ---
 
-### Secure Timelock
+### Timelock Durations
 
-The organization has a single, organization-wide `secureTimelockDurationSeconds` (minimum 3 days) that governs all sensitive timelocked operations:
-- Guardian updates (initiate → finalize → accept)
+There are three distinct timelock durations in the system, each validated to be within the range enforced by `TimelockUtils` (min 2 days, max 30 days):
+
+| Timelock | Purpose | Set At | Used By |
+|----------|---------|--------|---------|
+| `secureTimelockDurationSeconds` | Organization-wide timelock for sensitive admin operations | Organization initialization | Guardian updates (normal flow), deferred recovery initialization |
+| `guardianRecoveryTimelockDurationSeconds` | Timelock for guardian recovery operations | Organization init or deferred initialization | Guardian recovery update flow (initiate → finalize → accept) |
+| `txRecoveryTimelockDurationSeconds` | Timelock for enabling transaction/ERC-1271 recovery | Organization init or deferred initialization | Transaction recovery enable flow (initiate → finalize) |
+
+The **secure timelock** (`secureTimelockDurationSeconds`) is stored in `LibOrganizationSecureTimelockStorage` and governs:
+- Normal guardian updates (initiate → finalize → accept)
 - Deferred recovery initialization (initiate → finalize)
 
-This value is set at organization initialization and stored in `LibOrganizationSecureTimelockStorage`.
+The **recovery-specific timelocks** (`guardianRecoveryTimelockDurationSeconds` and `txRecoveryTimelockDurationSeconds`) are stored in `LibOrganizationRecoveryStorage` and govern the actual recovery operations themselves.
 
-Files: `OrganizationSecureTimelockBase.sol`, `LibOrganizationSecureTimelock.sol`, `LibOrganizationSecureTimelockStorage.sol`
+Files: `OrganizationSecureTimelockBase.sol`, `LibOrganizationSecureTimelock.sol`, `TimelockUtils.sol`
 
 ---
 
 ### Guardian Recovery
 
-Allows replacing the Guardian through a time-locked process.
+Allows replacing the Guardian through a time-locked process using the `guardianRecoveryTimelockDurationSeconds` timelock.
 
-**3-Step Flow:**
+**Flow:**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -69,7 +77,7 @@ Allows replacing the Guardian through a time-locked process.
 │ Effect: Sets pendingGuardian, starts timelock                   │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ Wait for timelock to expire
+                              │ Wait for guardianRecoveryTimelockDurationSeconds
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Step 2: FINALIZE                                                │
@@ -97,7 +105,7 @@ Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.
 
 Allows executing transactions and validating ERC-1271 signatures without the Guardian.
 
-**Enable Flow (2-Step with Timelock):**
+**Enable Flow (Timelocked with `txRecoveryTimelockDurationSeconds`):**
 
 ```
 1. initiateEnableTransactionAndERC1271Recovery()
@@ -166,7 +174,7 @@ File: `LibOrganizationAccountSignature.sol:79`
 
 **Scenario A: Guardian Compromised**
 1. Guardian Recovery Address initiates new Guardian
-2. Wait for timelock
+2. Wait for `guardianRecoveryTimelockDurationSeconds`
 3. Finalize and have new Guardian accept
 4. Normal operations resume with new Guardian
 
