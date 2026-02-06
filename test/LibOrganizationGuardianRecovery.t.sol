@@ -5,12 +5,18 @@ pragma solidity 0.8.33;
 import {SlotDerivation} from "@openzeppelin/contracts/utils/SlotDerivation.sol";
 import {Test} from "forge-std/Test.sol";
 
+import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {
+    LibOrganizationAdminOperationTimelockStorage
+} from "organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title Guardian Recovery Test Harness
@@ -34,19 +40,21 @@ contract GuardianRecoveryTestHarness {
         }
     }
 
-    function setupGuardianRecovery(address guardianRecoveryAddress, uint256 guardianRecoveryTimelockDurationSeconds)
-        external
-    {
-        // Simulate what OrganizationGuardianRecoveryBase.initializeGuardianRecovery does for post-deployment:
-        // Initialize (will revert if already configured, invalid address, or invalid timelock)
-        LibOrganizationGuardianRecovery.initializeGuardianRecovery(
+    function initiateInitializeGuardianRecovery(
+        address guardianRecoveryAddress,
+        uint256 guardianRecoveryTimelockDurationSeconds
+    ) external {
+        LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery(
             guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds
         );
+    }
 
-        // Emit event
-        emit IOrganizationGuardianRecovery.GuardianRecoveryConfigured(
-            guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds
-        );
+    function finalizeInitializeGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery();
+    }
+
+    function cancelInitializeGuardianRecovery() external {
+        LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery();
     }
 
     function initiateRecoveryGuardianUpdate(address newGuardian) external {
@@ -95,19 +103,15 @@ contract GuardianRecoveryTestHarness {
     // View Functions
     // ================================
 
-    function getGuardianRecoveryAddress() external view returns (address) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
+    function getGuardianRecoveryState() external view returns (GuardianRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery;
     }
 
-    function getGuardianRecoveryTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDurationSeconds();
+    function getAdminOperationTimelockDurationSeconds() external view returns (uint256) {
+        return LibOrganizationAdminOperationTimelockStorage.layout().adminOperationTimelockDurationSeconds;
     }
 
-    function getGuardianTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationGuardian.getGuardianTimelockDurationSeconds();
-    }
-
-    // Normal flow guardian state
+    // Normal flow guardian state (uses LibOrganizationGuardian getters -- separate from recovery)
     function getGuardian() external view returns (address) {
         return LibOrganizationGuardian.getGuardian();
     }
@@ -124,25 +128,17 @@ contract GuardianRecoveryTestHarness {
         return LibOrganizationGuardian.getIsGuardianUpdateReadyForAcceptance();
     }
 
-    // Recovery flow guardian state
-    function getRecoveryPendingGuardian() external view returns (address) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardian();
-    }
-
-    function getRecoveryPendingGuardianTimestamp() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardianTimestamp();
-    }
-
-    function getIsRecoveryGuardianUpdateReadyForAcceptance() external view returns (bool) {
-        return LibOrganizationGuardianRecovery.getIsRecoveryGuardianUpdateReadyForAcceptance();
-    }
-
     // ================================
-    // Storage Direct Access (for reset in tests)
+    // Storage Direct Access (for reset/setup in tests)
     // ================================
 
     function setGuardian(address _guardian) external {
         LibOrganizationGuardianStorage.layout().guardian = _guardian;
+    }
+
+    function initializeAdminOperationTimelock(uint256 adminOperationTimelockDurationSeconds) external {
+        LibOrganizationAdminOperationTimelockStorage.layout().adminOperationTimelockDurationSeconds =
+        adminOperationTimelockDurationSeconds;
     }
 
     function resetRecoveryStorage() external {
@@ -153,6 +149,9 @@ contract GuardianRecoveryTestHarness {
         layout.txRecovery.isEnabled = false;
         layout.txRecovery.timelockDurationSeconds = 0;
         layout.txRecovery.pendingEnableTimestamp = 0;
+        layout.txRecovery.pendingInit.pendingRecoveryAddress = address(0);
+        layout.txRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
+        layout.txRecovery.pendingInit.pendingTimestamp = 0;
 
         // Reset guardian recovery state
         layout.guardianRecovery.recoveryAddress = address(0);
@@ -160,26 +159,28 @@ contract GuardianRecoveryTestHarness {
         layout.guardianRecovery.pendingGuardian = address(0);
         layout.guardianRecovery.pendingGuardianTimestamp = 0;
         layout.guardianRecovery.isUpdateReadyForAcceptance = false;
+        layout.guardianRecovery.pendingInit.pendingRecoveryAddress = address(0);
+        layout.guardianRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
+        layout.guardianRecovery.pendingInit.pendingTimestamp = 0;
     }
 
     function resetGuardianStorage() external {
         LibOrganizationGuardianStorage.Layout storage layout = LibOrganizationGuardianStorage.layout();
         layout.guardian = address(0);
-        layout.guardianTimelockDurationSeconds = 0;
         layout.pendingGuardian = address(0);
         layout.pendingGuardianUpdateTimestamp = 0;
         layout.isGuardianUpdateReadyForAcceptance = false;
     }
 
-    function initializeGuardian(address guardian, uint256 guardianTimelockDurationSeconds) external {
-        LibOrganizationGuardian.initializeGuardian(guardian, guardianTimelockDurationSeconds);
+    function initializeGuardian(address guardian) external {
+        LibOrganizationGuardian.initializeGuardian(guardian);
     }
 }
 
 /**
  * @title Lib Organization Guardian Recovery Test
  * @notice Tests for guardian recovery functionality
- * @dev Tests initialization, timelocked guardian recovery flows, and access control.
+ * @dev Tests initialization, timelocked guardian recovery flows, deferred initialization, and access control.
  *      Normal and recovery guardian update flows use SEPARATE storage and are NOT mutually exclusive.
  * @author Den Technologies Inc
  */
@@ -191,13 +192,17 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     address constant NEW_GUARDIAN = address(0x400);
     address constant NEW_GUARDIAN_2 = address(0x500);
 
-    uint256 constant TIMELOCK_DURATION = 1 days;
+    uint256 constant TIMELOCK_DURATION = 2 days;
+    uint256 constant ADMIN_OPERATION_TIMELOCK_DURATION = 3 days;
 
     function setUp() public {
         harness = new GuardianRecoveryTestHarness();
 
-        // Initialize guardian configuration (sets guardian and timelock duration)
-        harness.initializeGuardian({guardian: GUARDIAN, guardianTimelockDurationSeconds: TIMELOCK_DURATION});
+        // Initialize admin operation timelock (organization-wide)
+        harness.initializeAdminOperationTimelock(ADMIN_OPERATION_TIMELOCK_DURATION);
+
+        // Initialize guardian configuration (sets guardian address)
+        harness.initializeGuardian(GUARDIAN);
 
         // Initialize guardian recovery configuration
         harness.initializeGuardianRecovery({
@@ -231,21 +236,27 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     // ================================
 
     function test_initializeGuardianRecovery_setsCorrectValues() public view {
-        assertEq(harness.getGuardianRecoveryAddress(), GUARDIAN_RECOVERY_ADDRESS, "guardianRecoveryAddress not set");
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.recoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "guardianRecoveryAddress not set");
+        assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "guardianRecoveryTimelockDurationSeconds not set");
         assertEq(
-            harness.getGuardianRecoveryTimelockDurationSeconds(),
-            TIMELOCK_DURATION,
-            "guardianRecoveryTimelockDurationSeconds not set"
-        );
-        assertEq(
-            harness.getGuardianTimelockDurationSeconds(), TIMELOCK_DURATION, "guardianTimelockDurationSeconds not set"
+            harness.getAdminOperationTimelockDurationSeconds(),
+            ADMIN_OPERATION_TIMELOCK_DURATION,
+            "adminOperationTimelockDurationSeconds not set"
         );
     }
 
     function test_initializeGuardianRecovery_revertsOnZeroTimelockDurationSeconds() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });
@@ -261,7 +272,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_initiateRecoveryGuardianUpdate_setsPendingGuardian() public {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
-        assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN, "Recovery pending guardian not set");
+        assertEq(harness.getGuardianRecoveryState().pendingGuardian, NEW_GUARDIAN, "Recovery pending guardian not set");
     }
 
     function test_initiateRecoveryGuardianUpdate_revertsIfAlreadyPending() public {
@@ -282,7 +293,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         harness.finalizeRecoveryGuardianUpdate();
 
-        assertTrue(harness.getIsRecoveryGuardianUpdateReadyForAcceptance(), "Should be ready for acceptance");
+        assertTrue(harness.getGuardianRecoveryState().isUpdateReadyForAcceptance, "Should be ready for acceptance");
     }
 
     function test_finalizeRecoveryGuardianUpdate_revertsIfNoPending() public {
@@ -293,13 +304,11 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_finalizeRecoveryGuardianUpdate_revertsIfTimelockNotExpired() public {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
-        uint256 canFinalizeAt = harness.getRecoveryPendingGuardianTimestamp();
+        uint256 canFinalizeAt = harness.getGuardianRecoveryState().pendingGuardianTimestamp;
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationGuardianRecovery.GuardianRecoveryTimelockNotExpired.selector,
-                canFinalizeAt,
-                block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeRecoveryGuardianUpdate();
@@ -310,7 +319,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         harness.cancelRecoveryGuardianUpdate();
 
-        assertEq(harness.getRecoveryPendingGuardian(), address(0), "Recovery pending guardian not cleared");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian, address(0), "Recovery pending guardian not cleared"
+        );
     }
 
     function test_cancelRecoveryGuardianUpdate_revertsIfNoPending() public {
@@ -327,7 +338,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness.acceptGuardianRecovery();
 
         assertEq(harness.getGuardian(), NEW_GUARDIAN, "Guardian not updated");
-        assertEq(harness.getRecoveryPendingGuardian(), address(0), "Recovery pending guardian not cleared");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian, address(0), "Recovery pending guardian not cleared"
+        );
     }
 
     function test_acceptGuardianRecovery_revertsIfNotPendingGuardian() public {
@@ -390,7 +403,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
     function test_finalizeGuardianUpdate_setsReadyForAcceptance() public {
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
 
         harness.finalizeGuardianUpdate();
 
@@ -404,7 +417,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationGuardian.GuardianUpdateTimelockNotExpired.selector, canFinalizeAt, block.timestamp
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
             )
         );
         harness.finalizeGuardianUpdate();
@@ -430,7 +443,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
     function test_acceptGuardian_updatesGuardian() public {
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeGuardianUpdate();
 
         vm.prank(NEW_GUARDIAN);
@@ -442,7 +455,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
     function test_acceptGuardian_revertsIfNotPendingGuardian() public {
         harness.initiateGuardianUpdate(NEW_GUARDIAN);
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeGuardianUpdate();
 
         address wrongCaller = address(0x999);
@@ -475,7 +488,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         // Both should have pending state
         assertEq(harness.getPendingGuardian(), NEW_GUARDIAN, "Normal flow pending guardian not set");
-        assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN_2, "Recovery flow pending guardian not set");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian, NEW_GUARDIAN_2, "Recovery flow pending guardian not set"
+        );
     }
 
     function test_recoveryFlowCanCompleteWhileNormalFlowPending() public {
@@ -484,7 +499,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
 
         // Complete recovery flow
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeRecoveryGuardianUpdate();
         vm.prank(NEW_GUARDIAN_2);
         harness.acceptGuardianRecovery();
@@ -502,7 +517,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_2);
 
         // Complete normal flow
-        vm.warp(block.timestamp + TIMELOCK_DURATION);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
         harness.finalizeGuardianUpdate();
         vm.prank(NEW_GUARDIAN);
         harness.acceptGuardian();
@@ -511,11 +526,15 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         assertEq(harness.getGuardian(), NEW_GUARDIAN, "Guardian should be updated by normal flow");
 
         // Recovery flow should still have pending state
-        assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN_2, "Recovery flow pending should still exist");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian,
+            NEW_GUARDIAN_2,
+            "Recovery flow pending should still exist"
+        );
     }
 
     // ================================
-    // Optional Guardian Recovery Setup Tests
+    // Optional Guardian Recovery Setup Tests (Deferred Initialization)
     // ================================
 
     function test_initializeGuardianRecovery_allowsDeferredSetup() public {
@@ -527,82 +546,222 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         });
 
         // Verify nothing was set (deferred)
-        assertEq(harness.getGuardianRecoveryAddress(), address(0), "Recovery address should be zero");
-        assertEq(harness.getGuardianRecoveryTimelockDurationSeconds(), 0, "Timelock should be zero");
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.recoveryAddress, address(0), "Recovery address should be zero");
+        assertEq(state.timelockDurationSeconds, 0, "Timelock should be zero");
     }
 
     function test_initializeGuardianRecovery_revertsOnZeroTimelockWhenAddressProvided() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });
     }
 
-    function test_setupGuardianRecovery_configuresRecovery() public {
+    // ================================
+    // Deferred Initialization (Timelocked) Tests
+    // ================================
+
+    function test_initiateInitializeGuardianRecovery_setsPendingState() public {
         harness.resetRecoveryStorage();
 
-        // Setup recovery (post-deployment initialization)
-        harness.setupGuardianRecovery({
+        harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        assertEq(harness.getGuardianRecoveryAddress(), GUARDIAN_RECOVERY_ADDRESS, "Recovery address not set");
-        assertEq(harness.getGuardianRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Timelock duration not set");
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "Pending address not set");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, TIMELOCK_DURATION, "Pending timelock not set");
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION;
+        assertEq(state.pendingInit.pendingTimestamp, expectedCanFinalizeAt, "Pending timestamp not set");
     }
 
-    function test_setupGuardianRecovery_emitsEvent() public {
+    function test_initiateInitializeGuardianRecovery_emitsEvent() public {
         harness.resetRecoveryStorage();
+
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION;
 
         vm.expectEmit(true, true, true, true);
-        emit IOrganizationGuardianRecovery.GuardianRecoveryConfigured(GUARDIAN_RECOVERY_ADDRESS, TIMELOCK_DURATION);
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationInitiated(
+            GUARDIAN_RECOVERY_ADDRESS, TIMELOCK_DURATION, expectedCanFinalizeAt
+        );
 
-        harness.setupGuardianRecovery({
+        harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
-    function test_setupGuardianRecovery_revertsIfAlreadyConfigured() public {
-        // Setup is already done in setUp(), so recovery is already configured
+    function test_initiateInitializeGuardianRecovery_revertsIfAlreadyConfigured() public {
+        // setUp already configured recovery, so this should revert
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
-        harness.setupGuardianRecovery({
+        harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: address(0x999), guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
-    function test_setupGuardianRecovery_revertsOnZeroAddress() public {
+    function test_initiateInitializeGuardianRecovery_revertsIfAlreadyPending() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector);
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: address(0x999), guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+    }
+
+    function test_initiateInitializeGuardianRecovery_revertsOnZeroAddress() public {
         harness.resetRecoveryStorage();
 
         vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
-        harness.setupGuardianRecovery({
+        harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: address(0), guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
-    function test_setupGuardianRecovery_revertsOnZeroTimelock() public {
+    function test_initiateInitializeGuardianRecovery_revertsOnZeroTimelock() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds.selector);
-        harness.setupGuardianRecovery({
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });
     }
 
-    function test_setupGuardianRecovery_allowsRecoveryFlowAfterSetup() public {
+    function test_finalizeInitializeGuardianRecovery_configuresRecovery() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
+        harness.finalizeInitializeGuardianRecovery();
+
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.recoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "Recovery address not set");
+        assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "Timelock duration not set");
+
+        // Pending state should be cleared
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "Pending address not cleared");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "Pending timelock not cleared");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "Pending timestamp not cleared");
+    }
+
+    function test_finalizeInitializeGuardianRecovery_emitsEvent() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationFinalized(
+            GUARDIAN_RECOVERY_ADDRESS, TIMELOCK_DURATION
+        );
+
+        harness.finalizeInitializeGuardianRecovery();
+    }
+
+    function test_finalizeInitializeGuardianRecovery_revertsIfNoPending() public {
+        vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
+        harness.finalizeInitializeGuardianRecovery();
+    }
+
+    function test_finalizeInitializeGuardianRecovery_revertsIfTimelockNotExpired() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        uint256 canFinalizeAt = harness.getGuardianRecoveryState().pendingInit.pendingTimestamp;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+            )
+        );
+        harness.finalizeInitializeGuardianRecovery();
+    }
+
+    function test_cancelInitializeGuardianRecovery_clearsPendingState() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        harness.cancelInitializeGuardianRecovery();
+
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "Pending address not cleared");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "Pending timelock not cleared");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "Pending timestamp not cleared");
+    }
+
+    function test_cancelInitializeGuardianRecovery_emitsEvent() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeGuardianRecovery({
+            guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
+            guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationCancelled();
+
+        harness.cancelInitializeGuardianRecovery();
+    }
+
+    function test_cancelInitializeGuardianRecovery_revertsIfNoPending() public {
+        vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
+        harness.cancelInitializeGuardianRecovery();
+    }
+
+    function test_deferredInitializeGuardianRecovery_allowsRecoveryFlowAfterSetup() public {
         harness.resetRecoveryStorage();
         harness.resetGuardianStorage();
 
         // Initialize guardian (required for the recovery flow)
-        harness.initializeGuardian({guardian: GUARDIAN, guardianTimelockDurationSeconds: TIMELOCK_DURATION});
+        harness.initializeGuardian(GUARDIAN);
 
-        // Setup recovery (post-deployment initialization)
-        harness.setupGuardianRecovery({
+        // Initiate deferred initialization
+        harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS,
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
+
+        // Wait for admin operation timelock and finalize
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK_DURATION);
+        harness.finalizeInitializeGuardianRecovery();
 
         // Now use the recovery flow
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);

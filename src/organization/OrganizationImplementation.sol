@@ -11,6 +11,7 @@ import {OrganizationAccountFactoryBase} from "organization/base/OrganizationAcco
 import {OrganizationAccountSignatureBase} from "organization/base/OrganizationAccountSignatureBase.sol";
 import {OrganizationAccountTransactionBase} from "organization/base/OrganizationAccountTransactionBase.sol";
 import {OrganizationAdminBase} from "organization/base/OrganizationAdminBase.sol";
+import {OrganizationAdminOperationTimelockBase} from "organization/base/OrganizationAdminOperationTimelockBase.sol";
 import {OrganizationGroupsBase} from "organization/base/OrganizationGroupsBase.sol";
 import {OrganizationGuardianBase} from "organization/base/OrganizationGuardianBase.sol";
 import {OrganizationGuardianRecoveryBase} from "organization/base/OrganizationGuardianRecoveryBase.sol";
@@ -36,6 +37,7 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
  *      - OrganizationMembersBase: Member management
  *      - OrganizationGroupsBase: Group management
  *      - OrganizationPolicyBase: Policy management
+ *      - OrganizationAdminOperationTimelockBase: Organization-wide admin operation timelock configuration
  *      - OrganizationGuardianBase: Normal guardian update flow
  *      - OrganizationAccountFactoryBase: Account deployment and beacon implementation
  *      - OrganizationAccountTransactionBase: Account transaction execution
@@ -55,6 +57,7 @@ contract OrganizationImplementation is
     OrganizationMembersBase,
     OrganizationGroupsBase,
     OrganizationPolicyBase,
+    OrganizationAdminOperationTimelockBase,
     OrganizationGuardianBase,
     OrganizationAccountFactoryBase,
     OrganizationAccountTransactionBase,

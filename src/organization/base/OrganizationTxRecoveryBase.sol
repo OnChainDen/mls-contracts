@@ -8,8 +8,10 @@ import {OrganizationModifiers} from "organization/common/OrganizationModifiers.s
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
+import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
+import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title OrganizationTxRecoveryBase
@@ -58,7 +60,7 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function initializeTransactionAndERC1271Recovery(
+    function initiateInitializeTransactionAndERC1271Recovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
@@ -66,38 +68,72 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
-        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        // Validate that the current admin has authorized this initiation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
-            operationType: OperationType.InitializeTransactionRecovery,
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Initialize tx recovery (will revert if already configured or invalid timelock)
-        LibOrganizationTxRecovery.initializeTxRecovery(recoveryAddress, timelockDurationSeconds);
-
-        // Emit event for post-deployment initialization
-        emit TransactionRecoveryConfigured(recoveryAddress, timelockDurationSeconds);
+        // Initiate deferred initialization (starts timelock)
+        LibOrganizationTxRecovery.initiateInitializeTxRecovery(recoveryAddress, timelockDurationSeconds);
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function isRecoveryEnabledForTransactionsAndERC1271() external view override returns (bool) {
-        return LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271();
+    function finalizeInitializeTransactionAndERC1271Recovery(AdminAuthParams calldata authParams)
+        external
+        override
+        onlyGuardian
+    {
+        // Get pending values directly from storage for operation data
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
+        address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+
+        // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        // Finalize deferred initialization (writes config after timelock)
+        LibOrganizationTxRecovery.finalizeInitializeTxRecovery();
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function transactionAndERC1271RecoveryAddress() external view override returns (address) {
-        return LibOrganizationTxRecovery.getTxRecoveryAddress();
+    function cancelInitializeTransactionAndERC1271Recovery(AdminAuthParams calldata authParams)
+        external
+        override
+        onlyGuardian
+    {
+        // Get pending values directly from storage for operation data
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
+        address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+
+        // Validate that the current admin has authorized this cancellation (dedicated Cancel type)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        // Cancel the pending initialization
+        LibOrganizationTxRecovery.cancelInitializeTxRecovery();
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function pendingTxRecoveryEnableTimestamp() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function txRecoveryTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getTxRecoveryTimelockDurationSeconds();
+    function getTxRecoveryState() external view override returns (TxRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery;
     }
 }

@@ -27,7 +27,7 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
 
         // Validate that the current admin has authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
-            operationType: OperationType.UpdateGuardian,
+            operationType: OperationType.InitiateUpdateGuardian,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
@@ -41,12 +41,12 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
         // Get pending guardian for operation data
         address pendingGuardianAddr = LibOrganizationGuardian.getPendingGuardian();
 
-        // Encode the operation data for validation (same as initiate)
+        // Encode the operation data for validation
         bytes memory operationData = abi.encode(pendingGuardianAddr);
 
-        // Validate that the current admin has authorized this operation
+        // Validate that the current admin has authorized this operation (separate OperationType from initiate)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
-            operationType: OperationType.UpdateGuardian,
+            operationType: OperationType.FinalizeUpdateGuardian,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
@@ -63,11 +63,11 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(pendingGuardianAddr);
 
-        // Validate that the current admin has authorized this operation (isApproval = false for cancellation)
+        // Validate that the current admin has authorized this cancellation (dedicated CancelUpdateGuardian type)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
-            operationType: OperationType.UpdateGuardian,
+            operationType: OperationType.CancelUpdateGuardian,
             operationData: operationData,
-            isApproval: false,
+            isApproval: true,
             authParams: authParams
         });
 
@@ -97,10 +97,5 @@ abstract contract OrganizationGuardianBase is OrganizationModifiers, IOrganizati
     /// @inheritdoc IOrganizationGuardian
     function isGuardianUpdateReadyForAcceptance() external view override returns (bool) {
         return LibOrganizationGuardian.getIsGuardianUpdateReadyForAcceptance();
-    }
-
-    /// @inheritdoc IOrganizationGuardian
-    function guardianTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationGuardian.getGuardianTimelockDurationSeconds();
     }
 }
