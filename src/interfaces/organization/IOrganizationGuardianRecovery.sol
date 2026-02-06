@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title IOrganizationGuardianRecovery
@@ -49,17 +50,28 @@ interface IOrganizationGuardianRecovery {
     event RecoveryGuardianUpdateAccepted(address indexed previousGuardian, address indexed newGuardian);
 
     /**
-     * @notice Emitted when guardian recovery is configured for the first time after deployment
-     * @param guardianRecoveryAddress The configured recovery address
-     * @param timelockDurationSeconds The timelock duration in seconds
+     * @notice Emitted when deferred guardian recovery initialization is initiated (timelock started)
+     * @param recoveryAddress The proposed guardian recovery address
+     * @param timelockDurationSeconds The proposed timelock duration in seconds
+     * @param canFinalizeAtTimestamp The timestamp when the initialization can be finalized
      */
     // solhint-disable-next-line gas-indexed-events
-    event GuardianRecoveryConfigured(address indexed guardianRecoveryAddress, uint256 timelockDurationSeconds);
+    event GuardianRecoveryInitializationInitiated(
+        address indexed recoveryAddress, uint256 timelockDurationSeconds, uint256 canFinalizeAtTimestamp
+    );
 
     /**
-     * @notice Thrown when the guardian recovery timelock duration is invalid (zero)
+     * @notice Emitted when deferred guardian recovery initialization is finalized
+     * @param recoveryAddress The configured guardian recovery address
+     * @param timelockDurationSeconds The configured timelock duration in seconds
      */
-    error InvalidGuardianRecoveryTimelockDurationSeconds();
+    // solhint-disable-next-line gas-indexed-events
+    event GuardianRecoveryInitializationFinalized(address indexed recoveryAddress, uint256 timelockDurationSeconds);
+
+    /**
+     * @notice Emitted when a pending deferred guardian recovery initialization is cancelled
+     */
+    event GuardianRecoveryInitializationCancelled();
 
     /**
      * @notice Thrown when the guardian recovery address is invalid (zero)
@@ -77,13 +89,6 @@ interface IOrganizationGuardianRecovery {
      * @param expected The expected guardian recovery address
      */
     error UnauthorizedGuardianRecoveryAddress(address caller, address expected);
-
-    /**
-     * @notice Thrown when trying to finalize a recovery guardian update before the timelock expires
-     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
-     * @param currentTime The current block timestamp
-     */
-    error GuardianRecoveryTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
 
     /**
      * @notice Thrown when there's no pending recovery guardian update
@@ -113,6 +118,16 @@ interface IOrganizationGuardianRecovery {
     error GuardianRecoveryAlreadyConfigured();
 
     /**
+     * @notice Thrown when trying to initiate deferred initialization while one is already pending
+     */
+    error GuardianRecoveryInitializationAlreadyPending();
+
+    /**
+     * @notice Thrown when trying to finalize or cancel deferred initialization but none is pending
+     */
+    error NoGuardianRecoveryInitializationPending();
+
+    /**
      * @notice Initiates a recovery guardian update (starts timelock)
      * @dev Can only be called by the guardian recovery address.
      * @param newGuardian The proposed new guardian address
@@ -138,46 +153,36 @@ interface IOrganizationGuardianRecovery {
     function acceptGuardianRecovery() external;
 
     /**
-     * @notice Initializes guardian recovery for the first time after organization deployment
+     * @notice Initiates deferred initialization of guardian recovery (starts timelock)
      * @dev Can only be called by the guardian with admin authorization.
-     *      Can only be called once - reverts if guardian recovery is already configured.
-     * @param recoveryAddress The address that will be authorized to perform guardian recovery
-     * @param timelockDurationSeconds The timelock duration in seconds for recovery operations
+     *      Reverts if guardian recovery is already configured or if an initialization is already pending.
+     * @param recoveryAddress The proposed guardian recovery address
+     * @param timelockDurationSeconds The proposed timelock duration in seconds for recovery operations
      * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
-    function initializeGuardianRecovery(
+    function initiateInitializeGuardianRecovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
     ) external;
 
     /**
-     * @notice Returns the guardian recovery address
-     * @return The recovery address
+     * @notice Finalizes deferred initialization of guardian recovery (after timelock)
+     * @dev Can only be called by the guardian with admin authorization after timelock expires.
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
-    function guardianRecoveryAddress() external view returns (address);
+    function finalizeInitializeGuardianRecovery(AdminAuthParams calldata authParams) external;
 
     /**
-     * @notice Returns the guardian recovery timelock duration in seconds
-     * @return The timelock duration
+     * @notice Cancels a pending deferred initialization of guardian recovery
+     * @dev Can only be called by the guardian with admin authorization.
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
-    function guardianRecoveryTimelockDurationSeconds() external view returns (uint256);
+    function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external;
 
     /**
-     * @notice Returns the recovery pending guardian address
-     * @return The pending guardian address (zero if no pending recovery update)
+     * @notice Returns the full guardian recovery state
+     * @return The GuardianRecoveryState struct containing all recovery configuration and pending state
      */
-    function recoveryPendingGuardian() external view returns (address);
-
-    /**
-     * @notice Returns the recovery pending guardian timestamp
-     * @return The timestamp when the recovery update can be finalized (0 if no pending)
-     */
-    function recoveryPendingGuardianTimestamp() external view returns (uint256);
-
-    /**
-     * @notice Returns whether the recovery guardian update is ready for acceptance
-     * @return True if the recovery update has been finalized and is waiting for the new guardian to accept
-     */
-    function isRecoveryGuardianUpdateReadyForAcceptance() external view returns (bool);
+    function getGuardianRecoveryState() external view returns (GuardianRecoveryState memory);
 }

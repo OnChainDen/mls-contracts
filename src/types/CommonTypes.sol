@@ -26,12 +26,18 @@ enum OperationType {
     ModifyGroups,
     ModifyMembers,
     ModifyPolicies,
-    UpdateGuardian,
+    InitiateUpdateGuardian,
+    FinalizeUpdateGuardian,
+    CancelUpdateGuardian,
     Upgrade,
     DeployAccount,
     UpgradeAccount,
-    InitializeGuardianRecovery,
-    InitializeTransactionRecovery,
+    InitiateInitializeGuardianRecovery,
+    FinalizeInitializeGuardianRecovery,
+    CancelInitializeGuardianRecovery,
+    InitiateInitializeTransactionRecovery,
+    FinalizeInitializeTransactionRecovery,
+    CancelInitializeTransactionRecovery,
     // Account transaction operations
     AccountTransaction,
     AccountTransactionRejection
@@ -47,7 +53,9 @@ enum OperationType {
  * @param adminInAdminTreeProofs Merkle proofs that each admin address is in adminsRoot
  * @param adminInMembersTreeProofs Merkle proofs that each admin address is in membersRoot
  * @param guardian Guardian address for the organization
- * @param guardianTimelockDurationSeconds The duration in seconds for normal guardian update timelocks
+ * @param adminOperationTimelockDurationSeconds The organization-wide admin operation timelock duration in seconds for
+ * sensitive
+ * operations
  * @param membersRoot The initial Merkle root for all members
  * @param groupsRoot The initial Merkle root for all groups
  * @param membersIpfsCid The IPFS CID where full members data is stored
@@ -65,7 +73,7 @@ struct InitializationParams {
     bytes32[][] adminInAdminTreeProofs;
     bytes32[][] adminInMembersTreeProofs;
     address guardian;
-    uint256 guardianTimelockDurationSeconds;
+    uint256 adminOperationTimelockDurationSeconds;
     bytes32 membersRoot;
     bytes32 groupsRoot;
     string membersIpfsCid;

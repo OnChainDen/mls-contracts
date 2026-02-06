@@ -6,8 +6,10 @@ import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizati
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title OrganizationGuardianRecoveryBase
@@ -38,7 +40,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function initializeGuardianRecovery(
+    function initiateInitializeGuardianRecovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
@@ -46,43 +48,68 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
-        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        // Validate that the current admin has authorized this initiation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
-            operationType: OperationType.InitializeGuardianRecovery,
+            operationType: OperationType.InitiateInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Initialize guardian recovery (will revert if already configured or invalid timelock)
-        LibOrganizationGuardianRecovery.initializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
-
-        // Emit event for post-deployment initialization
-        emit GuardianRecoveryConfigured(recoveryAddress, timelockDurationSeconds);
+        // Initiate deferred initialization (starts timelock)
+        LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function guardianRecoveryAddress() external view override returns (address) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
+    function finalizeInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Get pending values directly from storage for operation data
+        // forgefmt: disable-next-item
+        GuardianRecoveryState storage guardianRecovery =
+            LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+
+        // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.FinalizeInitializeGuardianRecovery,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        // Finalize deferred initialization (writes config after timelock)
+        LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery();
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function guardianRecoveryTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDurationSeconds();
+    function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Get pending values directly from storage for operation data
+        // forgefmt: disable-next-item
+        GuardianRecoveryState storage guardianRecovery =
+            LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+
+        // Validate that the current admin has authorized this cancellation (dedicated Cancel type)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.CancelInitializeGuardianRecovery,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        // Cancel the pending initialization
+        LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery();
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function recoveryPendingGuardian() external view override returns (address) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardian();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function recoveryPendingGuardianTimestamp() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardianTimestamp();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function isRecoveryGuardianUpdateReadyForAcceptance() external view override returns (bool) {
-        return LibOrganizationGuardianRecovery.getIsRecoveryGuardianUpdateReadyForAcceptance();
+    function getGuardianRecoveryState() external view override returns (GuardianRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery;
     }
 }

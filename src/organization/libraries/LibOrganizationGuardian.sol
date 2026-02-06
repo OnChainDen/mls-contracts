@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {LibOrganizationAdminOperationTimelock} from "organization/libraries/LibOrganizationAdminOperationTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 
 /**
@@ -19,20 +20,16 @@ library LibOrganizationGuardian {
     /**
      * @dev Initializes the guardian configuration during organization initialization.
      *      This should be called from LibOrganizationInitialization.initialize().
+     *      Note: The admin operation timelock duration must be initialized separately via
+     *      LibOrganizationAdminOperationTimelock.initializeAdminOperationTimelock() BEFORE calling this.
      * @param guardian The initial guardian address (must be non-zero)
-     * @param guardianTimelockDurationSeconds The timelock duration in seconds (must be > 0)
      */
-    function initializeGuardian(address guardian, uint256 guardianTimelockDurationSeconds) internal {
+    function initializeGuardian(address guardian) internal {
         if (guardian == address(0)) {
             revert IOrganizationGuardian.InvalidGuardianAddress();
         }
-        if (guardianTimelockDurationSeconds == 0) {
-            revert IOrganizationGuardian.InvalidGuardianTimelockDurationSeconds();
-        }
 
-        LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
-        guardianLayout.guardian = guardian;
-        guardianLayout.guardianTimelockDurationSeconds = guardianTimelockDurationSeconds;
+        LibOrganizationGuardianStorage.layout().guardian = guardian;
     }
 
     /**
@@ -53,7 +50,7 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.GuardianUpdateAlreadyPending();
         }
 
-        uint256 canFinalizeAtTimestamp = block.timestamp + guardianLayout.guardianTimelockDurationSeconds;
+        uint256 canFinalizeAtTimestamp = LibOrganizationAdminOperationTimelock.computeCanFinalizeAtTimestamp();
 
         // Set pending state
         guardianLayout.pendingGuardian = newGuardian;
@@ -82,9 +79,7 @@ library LibOrganizationGuardian {
         uint256 canFinalizeAtTimestamp = guardianLayout.pendingGuardianUpdateTimestamp;
 
         // Case: Timelock not expired
-        if (block.timestamp < canFinalizeAtTimestamp) {
-            revert IOrganizationGuardian.GuardianUpdateTimelockNotExpired(canFinalizeAtTimestamp, block.timestamp);
-        }
+        LibOrganizationAdminOperationTimelock.validateTimelockExpiredOrRevert(canFinalizeAtTimestamp);
 
         // Mark as ready for acceptance (new guardian must call acceptGuardian)
         guardianLayout.isGuardianUpdateReadyForAcceptance = true;
@@ -198,13 +193,5 @@ library LibOrganizationGuardian {
      */
     function getIsGuardianUpdateReadyForAcceptance() internal view returns (bool) {
         return LibOrganizationGuardianStorage.layout().isGuardianUpdateReadyForAcceptance;
-    }
-
-    /**
-     * @dev Gets the guardian timelock duration.
-     * @return The timelock duration in seconds
-     */
-    function getGuardianTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationGuardianStorage.layout().guardianTimelockDurationSeconds;
     }
 }

@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
+
 /**
  * @title Organization Recovery Storage
  * @dev ERC-7201 namespaced storage for disaster recovery functionality.
@@ -9,40 +11,11 @@ pragma solidity 0.8.33;
  *      Storage is organized into two nested structs for clarity:
  *      - TxRecoveryState: Transaction and ERC1271 signature recovery
  *      - GuardianRecoveryState: Guardian update recovery
+ *
+ *      Struct types are defined in types/RecoveryTypes.sol since they are publicly exposed.
  * @author Den Technologies Inc
  */
 library LibOrganizationRecoveryStorage {
-    /**
-     * @dev Storage for transaction and ERC1271 signature recovery functionality.
-     * @param recoveryAddress The privileged address that can execute recovery transactions and sign via recovery
-     * @param isEnabled Whether recovery is currently enabled for transactions and ERC1271
-     * @param timelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
-     * @param pendingEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no pending)
-     */
-    struct TxRecoveryState {
-        address recoveryAddress;
-        bool isEnabled;
-        uint256 timelockDurationSeconds;
-        uint256 pendingEnableTimestamp;
-    }
-
-    /**
-     * @dev Storage for guardian recovery functionality.
-     *      Struct is ordered for optimal storage packing (4 slots).
-     * @param recoveryAddress The privileged address that can update the guardian via recovery
-     * @param isUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept (recovery flow)
-     * @param pendingGuardian The proposed new guardian address for recovery flow (0 = no pending)
-     * @param timelockDurationSeconds The duration in seconds for guardian recovery timelocks
-     * @param pendingGuardianTimestamp When the recovery flow pending update timelock expires (0 = no pending)
-     */
-    struct GuardianRecoveryState {
-        address recoveryAddress;
-        bool isUpdateReadyForAcceptance;
-        address pendingGuardian;
-        uint256 timelockDurationSeconds;
-        uint256 pendingGuardianTimestamp;
-    }
-
     /**
      * @dev Main storage layout containing both recovery subsystems.
      * @custom:storage-location erc7201:den.mls-wallet.organization.recovery
