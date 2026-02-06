@@ -11,6 +11,7 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
 import {
     LibOrganizationSecureTimelockStorage
 } from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
+import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title Transaction Recovery Test Harness
@@ -78,32 +79,8 @@ contract TxRecoveryTestHarness {
     // View Functions
     // ================================
 
-    function isRecoveryEnabledForTransactionsAndERC1271() external view returns (bool) {
-        return LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271();
-    }
-
-    function getTransactionAndERC1271RecoveryAddress() external view returns (address) {
-        return LibOrganizationTxRecovery.getTxRecoveryAddress();
-    }
-
-    function getTxRecoveryTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationTxRecovery.getTxRecoveryTimelockDurationSeconds();
-    }
-
-    function getPendingTxRecoveryEnableTimestamp() external view returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
-    }
-
-    function getPendingInitTxRecoveryAddress() external view returns (address) {
-        return LibOrganizationTxRecovery.getPendingInitTxRecoveryAddress();
-    }
-
-    function getPendingInitTxRecoveryTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingInitTxRecoveryTimelockDurationSeconds();
-    }
-
-    function getPendingInitTxRecoveryTimestamp() external view returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingInitTxRecoveryTimestamp();
+    function getTxRecoveryState() external view returns (TxRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery;
     }
 
     // ================================
@@ -170,17 +147,10 @@ contract LibOrganizationTxRecoveryTest is Test {
     // ================================
 
     function test_initializeTxRecovery_setsCorrectValues() public view {
-        assertEq(
-            harness.getTransactionAndERC1271RecoveryAddress(),
-            TX_RECOVERY_ADDRESS,
-            "transactionAndERC1271RecoveryAddress not set"
-        );
-        assertEq(
-            harness.getTxRecoveryTimelockDurationSeconds(),
-            TIMELOCK_DURATION,
-            "txRecoveryTimelockDurationSeconds not set"
-        );
-        assertFalse(harness.isRecoveryEnabledForTransactionsAndERC1271(), "isEnabled should be false initially");
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.recoveryAddress, TX_RECOVERY_ADDRESS, "recoveryAddress not set");
+        assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "timelockDurationSeconds not set");
+        assertFalse(state.isEnabled, "isEnabled should be false initially");
     }
 
     function test_initializeTxRecovery_revertsOnZeroAddress() public {
@@ -210,7 +180,9 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         uint256 expectedCanFinalizeAt = block.timestamp + TIMELOCK_DURATION;
         assertEq(
-            harness.getPendingTxRecoveryEnableTimestamp(), expectedCanFinalizeAt, "Pending timestamp not set correctly"
+            harness.getTxRecoveryState().pendingEnableTimestamp,
+            expectedCanFinalizeAt,
+            "Pending timestamp not set correctly"
         );
     }
 
@@ -242,7 +214,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initiateEnableTransactionAndERC1271Recovery();
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeEnableTransactionAndERC1271Recovery();
-        assertTrue(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery should be enabled");
+        assertTrue(harness.getTxRecoveryState().isEnabled, "Recovery should be enabled");
 
         // Try to initiate again - should revert
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryAlreadyEnabled.selector);
@@ -254,8 +226,9 @@ contract LibOrganizationTxRecoveryTest is Test {
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeEnableTransactionAndERC1271Recovery();
 
-        assertTrue(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery not enabled after finalize");
-        assertEq(harness.getPendingTxRecoveryEnableTimestamp(), 0, "Pending timestamp not cleared");
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertTrue(state.isEnabled, "Recovery not enabled after finalize");
+        assertEq(state.pendingEnableTimestamp, 0, "Pending timestamp not cleared");
     }
 
     function test_finalizeEnableTxRecovery_revertsIfNoPending() public {
@@ -266,7 +239,7 @@ contract LibOrganizationTxRecoveryTest is Test {
     function test_finalizeEnableTxRecovery_revertsIfTimelockNotExpired() public {
         harness.initiateEnableTransactionAndERC1271Recovery();
 
-        uint256 canFinalizeAt = harness.getPendingTxRecoveryEnableTimestamp();
+        uint256 canFinalizeAt = harness.getTxRecoveryState().pendingEnableTimestamp;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -280,7 +253,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initiateEnableTransactionAndERC1271Recovery();
         harness.cancelEnableTransactionAndERC1271Recovery();
 
-        assertEq(harness.getPendingTxRecoveryEnableTimestamp(), 0, "Pending timestamp not cleared");
+        assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "Pending timestamp not cleared");
     }
 
     function test_cancelEnableTxRecovery_revertsIfNoPending() public {
@@ -292,11 +265,11 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initiateEnableTransactionAndERC1271Recovery();
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeEnableTransactionAndERC1271Recovery();
-        assertTrue(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery should be enabled");
+        assertTrue(harness.getTxRecoveryState().isEnabled, "Recovery should be enabled");
 
         harness.disableTransactionAndERC1271Recovery();
 
-        assertFalse(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery should be disabled");
+        assertFalse(harness.getTxRecoveryState().isEnabled, "Recovery should be disabled");
     }
 
     // ================================
@@ -335,12 +308,11 @@ contract LibOrganizationTxRecoveryTest is Test {
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        assertEq(harness.getPendingInitTxRecoveryAddress(), TX_RECOVERY_ADDRESS, "Pending address not set");
-        assertEq(
-            harness.getPendingInitTxRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Pending timelock not set"
-        );
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, TX_RECOVERY_ADDRESS, "Pending address not set");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, TIMELOCK_DURATION, "Pending timelock not set");
         uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
-        assertEq(harness.getPendingInitTxRecoveryTimestamp(), expectedCanFinalizeAt, "Pending timestamp not set");
+        assertEq(state.pendingInit.pendingTimestamp, expectedCanFinalizeAt, "Pending timestamp not set");
     }
 
     function test_initiateInitializeTxRecovery_emitsEvent() public {
@@ -410,14 +382,15 @@ contract LibOrganizationTxRecoveryTest is Test {
         vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
         harness.finalizeInitializeTxRecovery();
 
-        assertEq(harness.getTransactionAndERC1271RecoveryAddress(), TX_RECOVERY_ADDRESS, "Recovery address not set");
-        assertEq(harness.getTxRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Timelock duration not set");
-        assertFalse(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Should not be enabled yet");
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.recoveryAddress, TX_RECOVERY_ADDRESS, "Recovery address not set");
+        assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "Timelock duration not set");
+        assertFalse(state.isEnabled, "Should not be enabled yet");
 
         // Pending state should be cleared
-        assertEq(harness.getPendingInitTxRecoveryAddress(), address(0), "Pending address not cleared");
-        assertEq(harness.getPendingInitTxRecoveryTimelockDurationSeconds(), 0, "Pending timelock not cleared");
-        assertEq(harness.getPendingInitTxRecoveryTimestamp(), 0, "Pending timestamp not cleared");
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "Pending address not cleared");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "Pending timelock not cleared");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "Pending timestamp not cleared");
     }
 
     function test_finalizeInitializeTxRecovery_emitsEvent() public {
@@ -449,7 +422,7 @@ contract LibOrganizationTxRecoveryTest is Test {
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        uint256 canFinalizeAt = harness.getPendingInitTxRecoveryTimestamp();
+        uint256 canFinalizeAt = harness.getTxRecoveryState().pendingInit.pendingTimestamp;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -469,9 +442,10 @@ contract LibOrganizationTxRecoveryTest is Test {
 
         harness.cancelInitializeTxRecovery();
 
-        assertEq(harness.getPendingInitTxRecoveryAddress(), address(0), "Pending address not cleared");
-        assertEq(harness.getPendingInitTxRecoveryTimelockDurationSeconds(), 0, "Pending timelock not cleared");
-        assertEq(harness.getPendingInitTxRecoveryTimestamp(), 0, "Pending timestamp not cleared");
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "Pending address not cleared");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "Pending timelock not cleared");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "Pending timestamp not cleared");
     }
 
     function test_cancelInitializeTxRecovery_emitsEvent() public {
@@ -511,7 +485,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeEnableTransactionAndERC1271Recovery();
 
-        assertTrue(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Recovery should be enabled");
+        assertTrue(harness.getTxRecoveryState().isEnabled, "Recovery should be enabled");
 
         // Validate recovery transaction is now allowed
         harness.validateRecoveryAccountTransactionAllowedOrRevert();

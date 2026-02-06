@@ -7,6 +7,7 @@ import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganization
 import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title Lib Organization Guardian Recovery
@@ -35,8 +36,7 @@ library LibOrganizationGuardianRecovery {
         address guardianRecoveryAddress,
         uint256 guardianRecoveryTimelockDurationSeconds
     ) internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage
-            guardianRecoveryLayout = LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecoveryLayout = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecoveryLayout);
         _validateGuardianRecoveryParamsOrRevert(guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds);
@@ -52,8 +52,7 @@ library LibOrganizationGuardianRecovery {
      * @param newGuardian The proposed new guardian address
      */
     function initiateRecoveryGuardianUpdate(address newGuardian) internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: Already a pending recovery guardian update
         if (guardianRecovery.pendingGuardian != address(0)) {
@@ -85,8 +84,7 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if no recovery guardian update is pending or timelock has not expired.
      */
     function finalizeRecoveryGuardianUpdate() internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending recovery guardian update
         if (guardianRecovery.pendingGuardian == address(0)) {
@@ -109,8 +107,7 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if no recovery guardian update is pending.
      */
     function cancelRecoveryGuardianUpdate() internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending recovery guardian update
         if (guardianRecovery.pendingGuardian == address(0)) {
@@ -132,8 +129,7 @@ library LibOrganizationGuardianRecovery {
      *      Caller must be the recovery pending guardian (enforced by modifier in OrganizationImplementation).
      */
     function acceptGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         address pendingGuardianAddr = guardianRecovery.pendingGuardian;
 
@@ -172,8 +168,7 @@ library LibOrganizationGuardianRecovery {
         address guardianRecoveryAddress,
         uint256 guardianRecoveryTimelockDurationSeconds
     ) internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecovery);
 
@@ -202,8 +197,7 @@ library LibOrganizationGuardianRecovery {
      *      to reuse validation and config-writing logic.
      */
     function finalizeInitializeGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         uint256 canFinalizeAtTimestamp = guardianRecovery.pendingInit.pendingTimestamp;
 
@@ -233,8 +227,7 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if no initialization is pending.
      */
     function cancelInitializeGuardianRecovery() internal {
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
-        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending initialization
         if (guardianRecovery.pendingInit.pendingTimestamp == 0) {
@@ -271,76 +264,10 @@ library LibOrganizationGuardianRecovery {
     }
 
     /**
-     * @dev Returns the guardian recovery address.
-     * @return The recovery address
-     */
-    function getGuardianRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.recoveryAddress;
-    }
-
-    /**
-     * @dev Returns the guardian recovery timelock duration in seconds.
-     * @return The duration
-     */
-    function getGuardianRecoveryTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.timelockDurationSeconds;
-    }
-
-    /**
-     * @dev Returns the recovery pending guardian address.
-     * @return The pending guardian address (zero if no pending recovery update)
-     */
-    function getRecoveryPendingGuardian() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingGuardian;
-    }
-
-    /**
-     * @dev Returns the recovery pending guardian timestamp.
-     * @return The timestamp when the recovery update can be finalized (0 if no pending)
-     */
-    function getRecoveryPendingGuardianTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingGuardianTimestamp;
-    }
-
-    /**
-     * @dev Checks if the recovery guardian update is ready for acceptance.
-     * @return True if the recovery update has been finalized and is waiting for the new guardian to accept
-     */
-    function getIsRecoveryGuardianUpdateReadyForAcceptance() internal view returns (bool) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.isUpdateReadyForAcceptance;
-    }
-
-    /**
-     * @dev Returns the pending initialization recovery address.
-     * @return The pending address (zero if no pending initialization)
-     */
-    function getPendingInitGuardianRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInit.pendingRecoveryAddress;
-    }
-
-    /**
-     * @dev Returns the pending initialization timelock duration in seconds.
-     * @return The pending duration (zero if no pending initialization)
-     */
-    function getPendingInitGuardianRecoveryTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
-    }
-
-    /**
-     * @dev Returns the pending initialization timestamp.
-     * @return The timestamp when initialization can be finalized (zero if no pending)
-     */
-    function getPendingInitGuardianRecoveryTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInit.pendingTimestamp;
-    }
-
-    /**
      * @dev Clears all pending initialization state fields.
      * @param guardianRecovery The guardian recovery storage state
      */
-    function _clearPendingGuardianRecoveryInitTimelock(
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery
-    ) private {
+    function _clearPendingGuardianRecoveryInitTimelock(GuardianRecoveryState storage guardianRecovery) private {
         guardianRecovery.pendingInit.pendingRecoveryAddress = address(0);
         guardianRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
         guardianRecovery.pendingInit.pendingTimestamp = 0;
@@ -351,9 +278,10 @@ library LibOrganizationGuardianRecovery {
      *      Reverts if recoveryAddress or timelockDurationSeconds is non-zero.
      * @param guardianRecovery The guardian recovery storage state
      */
-    function _validateGuardianRecoveryNotConfiguredOrRevert(
-        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery
-    ) private view {
+    function _validateGuardianRecoveryNotConfiguredOrRevert(GuardianRecoveryState storage guardianRecovery)
+        private
+        view
+    {
         if (guardianRecovery.recoveryAddress != address(0) || guardianRecovery.timelockDurationSeconds != 0) {
             revert IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured();
         }

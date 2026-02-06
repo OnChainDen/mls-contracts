@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title IOrganizationGuardianRecovery
@@ -180,50 +181,8 @@ interface IOrganizationGuardianRecovery {
     function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external;
 
     /**
-     * @notice Returns the guardian recovery address
-     * @return The recovery address
+     * @notice Returns the full guardian recovery state
+     * @return The GuardianRecoveryState struct containing all recovery configuration and pending state
      */
-    function guardianRecoveryAddress() external view returns (address);
-
-    /**
-     * @notice Returns the guardian recovery timelock duration in seconds
-     * @return The timelock duration
-     */
-    function guardianRecoveryTimelockDurationSeconds() external view returns (uint256);
-
-    /**
-     * @notice Returns the recovery pending guardian address
-     * @return The pending guardian address (zero if no pending recovery update)
-     */
-    function recoveryPendingGuardian() external view returns (address);
-
-    /**
-     * @notice Returns the recovery pending guardian timestamp
-     * @return The timestamp when the recovery update can be finalized (0 if no pending)
-     */
-    function recoveryPendingGuardianTimestamp() external view returns (uint256);
-
-    /**
-     * @notice Returns whether the recovery guardian update is ready for acceptance
-     * @return True if the recovery update has been finalized and is waiting for the new guardian to accept
-     */
-    function isRecoveryGuardianUpdateReadyForAcceptance() external view returns (bool);
-
-    /**
-     * @notice Returns the pending initialization recovery address
-     * @return The pending address (zero if no pending initialization)
-     */
-    function pendingInitGuardianRecoveryAddress() external view returns (address);
-
-    /**
-     * @notice Returns the pending initialization timelock duration in seconds
-     * @return The pending timelock duration (zero if no pending initialization)
-     */
-    function pendingInitGuardianRecoveryTimelockDurationSeconds() external view returns (uint256);
-
-    /**
-     * @notice Returns the timestamp when pending initialization can be finalized
-     * @return The timestamp (zero if no pending initialization)
-     */
-    function pendingInitGuardianRecoveryTimestamp() external view returns (uint256);
+    function getGuardianRecoveryState() external view returns (GuardianRecoveryState memory);
 }

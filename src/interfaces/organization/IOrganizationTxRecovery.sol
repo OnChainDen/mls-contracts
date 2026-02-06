@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title IOrganizationTxRecovery
@@ -194,44 +195,8 @@ interface IOrganizationTxRecovery {
     function cancelInitializeTransactionAndERC1271Recovery(AdminAuthParams calldata authParams) external;
 
     /**
-     * @notice Returns whether recovery is enabled for transactions and ERC1271 signatures
-     * @return True if recovery is enabled, false otherwise
+     * @notice Returns the full transaction recovery state
+     * @return The TxRecoveryState struct containing all recovery configuration and pending state
      */
-    function isRecoveryEnabledForTransactionsAndERC1271() external view returns (bool);
-
-    /**
-     * @notice Returns the transaction and ERC1271 recovery address
-     * @return The recovery address
-     */
-    function transactionAndERC1271RecoveryAddress() external view returns (address);
-
-    /**
-     * @notice Returns the timestamp when pending tx recovery enable can be finalized
-     * @return The timestamp (0 if no pending request)
-     */
-    function pendingTxRecoveryEnableTimestamp() external view returns (uint256);
-
-    /**
-     * @notice Returns the tx recovery timelock duration in seconds
-     * @return The timelock duration
-     */
-    function txRecoveryTimelockDurationSeconds() external view returns (uint256);
-
-    /**
-     * @notice Returns the pending initialization recovery address
-     * @return The pending address (zero if no pending initialization)
-     */
-    function pendingInitTxRecoveryAddress() external view returns (address);
-
-    /**
-     * @notice Returns the pending initialization timelock duration in seconds
-     * @return The pending timelock duration (zero if no pending initialization)
-     */
-    function pendingInitTxRecoveryTimelockDurationSeconds() external view returns (uint256);
-
-    /**
-     * @notice Returns the timestamp when pending initialization can be finalized
-     * @return The timestamp (zero if no pending initialization)
-     */
-    function pendingInitTxRecoveryTimestamp() external view returns (uint256);
+    function getTxRecoveryState() external view returns (TxRecoveryState memory);
 }

@@ -8,8 +8,10 @@ import {OrganizationModifiers} from "organization/common/OrganizationModifiers.s
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
+import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
+import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title OrganizationTxRecoveryBase
@@ -84,9 +86,10 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         override
         onlyGuardian
     {
-        // Get pending values for operation data
-        address pendingAddress = LibOrganizationTxRecovery.getPendingInitTxRecoveryAddress();
-        uint256 pendingTimelock = LibOrganizationTxRecovery.getPendingInitTxRecoveryTimelockDurationSeconds();
+        // Get pending values directly from storage for operation data
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
+        address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
@@ -109,9 +112,10 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
         override
         onlyGuardian
     {
-        // Get pending values for operation data
-        address pendingAddress = LibOrganizationTxRecovery.getPendingInitTxRecoveryAddress();
-        uint256 pendingTimelock = LibOrganizationTxRecovery.getPendingInitTxRecoveryTimelockDurationSeconds();
+        // Get pending values directly from storage for operation data
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
+        address pendingAddress = txRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = txRecovery.pendingInit.pendingTimelockDurationSeconds;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
@@ -129,37 +133,7 @@ abstract contract OrganizationTxRecoveryBase is OrganizationModifiers, IOrganiza
     }
 
     /// @inheritdoc IOrganizationTxRecovery
-    function isRecoveryEnabledForTransactionsAndERC1271() external view override returns (bool) {
-        return LibOrganizationTxRecovery.isRecoveryEnabledForTxAndERC1271();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function transactionAndERC1271RecoveryAddress() external view override returns (address) {
-        return LibOrganizationTxRecovery.getTxRecoveryAddress();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function pendingTxRecoveryEnableTimestamp() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function txRecoveryTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getTxRecoveryTimelockDurationSeconds();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function pendingInitTxRecoveryAddress() external view override returns (address) {
-        return LibOrganizationTxRecovery.getPendingInitTxRecoveryAddress();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function pendingInitTxRecoveryTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingInitTxRecoveryTimelockDurationSeconds();
-    }
-
-    /// @inheritdoc IOrganizationTxRecovery
-    function pendingInitTxRecoveryTimestamp() external view override returns (uint256) {
-        return LibOrganizationTxRecovery.getPendingInitTxRecoveryTimestamp();
+    function getTxRecoveryState() external view override returns (TxRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery;
     }
 }

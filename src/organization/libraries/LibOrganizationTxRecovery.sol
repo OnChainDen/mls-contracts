@@ -7,6 +7,7 @@ import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRe
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
+import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title Lib Organization Transaction Recovery
@@ -32,8 +33,7 @@ library LibOrganizationTxRecovery {
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds
     ) internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage
-            txRecoveryLayout = LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecoveryLayout = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         _validateTxRecoveryNotConfiguredOrRevert(txRecoveryLayout);
         _validateTxRecoveryParamsOrRevert(transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds);
@@ -49,8 +49,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if recovery is not configured or if a request is already pending.
      */
     function initiateEnableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: Recovery not configured (no recovery address or timelock duration set)
         if (txRecovery.recoveryAddress == address(0) || txRecovery.timelockDurationSeconds == 0) {
@@ -78,8 +77,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if no request is pending or timelock has not expired.
      */
     function finalizeEnableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         uint256 canFinalizeAtTimestamp = txRecovery.pendingEnableTimestamp;
 
@@ -103,8 +101,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if no request is pending.
      */
     function cancelEnableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: No pending request
         if (txRecovery.pendingEnableTimestamp == 0) {
@@ -122,8 +119,7 @@ library LibOrganizationTxRecovery {
      *      even if the timelock has already expired. This ensures recovery is fully disabled.
      */
     function disableTxRecovery() internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         txRecovery.isEnabled = false;
         txRecovery.pendingEnableTimestamp = 0;
@@ -141,8 +137,7 @@ library LibOrganizationTxRecovery {
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds
     ) internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         _validateTxRecoveryNotConfiguredOrRevert(txRecovery);
 
@@ -171,8 +166,7 @@ library LibOrganizationTxRecovery {
      *      to reuse validation and config-writing logic.
      */
     function finalizeInitializeTxRecovery() internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         uint256 canFinalizeAtTimestamp = txRecovery.pendingInit.pendingTimestamp;
 
@@ -202,8 +196,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if no initialization is pending.
      */
     function cancelInitializeTxRecovery() internal {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: No pending initialization
         if (txRecovery.pendingInit.pendingTimestamp == 0) {
@@ -220,8 +213,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if recovery is not configured or not enabled.
      */
     function validateRecoveryAccountTransactionAllowedOrRevert() internal view {
-        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
-        LibOrganizationRecoveryStorage.layout().txRecovery;
+        TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: Recovery not configured (no recovery address or timelock duration set)
         if (txRecovery.recoveryAddress == address(0) || txRecovery.timelockDurationSeconds == 0) {
@@ -278,60 +270,10 @@ library LibOrganizationTxRecovery {
     }
 
     /**
-     * @dev Returns the transaction and ERC1271 recovery address.
-     * @return The recovery address
-     */
-    function getTxRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.recoveryAddress;
-    }
-
-    /**
-     * @dev Returns the pending tx recovery enable timestamp.
-     * @return The timestamp (0 if no pending request)
-     */
-    function getPendingTxRecoveryEnableTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingEnableTimestamp;
-    }
-
-    /**
-     * @dev Returns the tx recovery timelock duration in seconds.
-     * @return The duration
-     */
-    function getTxRecoveryTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.timelockDurationSeconds;
-    }
-
-    /**
-     * @dev Returns the pending initialization recovery address.
-     * @return The pending address (zero if no pending initialization)
-     */
-    function getPendingInitTxRecoveryAddress() internal view returns (address) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInit.pendingRecoveryAddress;
-    }
-
-    /**
-     * @dev Returns the pending initialization timelock duration in seconds.
-     * @return The pending duration (zero if no pending initialization)
-     */
-    function getPendingInitTxRecoveryTimelockDurationSeconds() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInit.pendingTimelockDurationSeconds;
-    }
-
-    /**
-     * @dev Returns the pending initialization timestamp.
-     * @return The timestamp when initialization can be finalized (zero if no pending)
-     */
-    function getPendingInitTxRecoveryTimestamp() internal view returns (uint256) {
-        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInit.pendingTimestamp;
-    }
-
-    /**
      * @dev Clears all pending initialization state fields.
      * @param txRecovery The tx recovery storage state
      */
-    function _clearPendingTxRecoveryInitTimelock(LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery)
-        private
-    {
+    function _clearPendingTxRecoveryInitTimelock(TxRecoveryState storage txRecovery) private {
         txRecovery.pendingInit.pendingRecoveryAddress = address(0);
         txRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
         txRecovery.pendingInit.pendingTimestamp = 0;
@@ -342,10 +284,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if recoveryAddress or timelockDurationSeconds is non-zero.
      * @param txRecovery The tx recovery storage state
      */
-    function _validateTxRecoveryNotConfiguredOrRevert(LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery)
-        private
-        view
-    {
+    function _validateTxRecoveryNotConfiguredOrRevert(TxRecoveryState storage txRecovery) private view {
         if (txRecovery.recoveryAddress != address(0) || txRecovery.timelockDurationSeconds != 0) {
             revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
         }

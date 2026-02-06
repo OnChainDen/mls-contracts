@@ -6,8 +6,10 @@ import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizati
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title OrganizationGuardianRecoveryBase
@@ -60,11 +62,12 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
 
     /// @inheritdoc IOrganizationGuardianRecovery
     function finalizeInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
-        // Get pending values for operation data
-        address pendingAddress = LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
+        // Get pending values directly from storage for operation data
         // forgefmt: disable-next-item
-        uint256 pendingTimelock =
-            LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
+        GuardianRecoveryState storage guardianRecovery =
+            LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
@@ -83,11 +86,12 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
 
     /// @inheritdoc IOrganizationGuardianRecovery
     function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
-        // Get pending values for operation data
-        address pendingAddress = LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
+        // Get pending values directly from storage for operation data
         // forgefmt: disable-next-item
-        uint256 pendingTimelock =
-            LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
+        GuardianRecoveryState storage guardianRecovery =
+            LibOrganizationRecoveryStorage.layout().guardianRecovery;
+        address pendingAddress = guardianRecovery.pendingInit.pendingRecoveryAddress;
+        uint256 pendingTimelock = guardianRecovery.pendingInit.pendingTimelockDurationSeconds;
 
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
@@ -105,42 +109,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function guardianRecoveryAddress() external view override returns (address) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function guardianRecoveryTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDurationSeconds();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function recoveryPendingGuardian() external view override returns (address) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardian();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function recoveryPendingGuardianTimestamp() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardianTimestamp();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function isRecoveryGuardianUpdateReadyForAcceptance() external view override returns (bool) {
-        return LibOrganizationGuardianRecovery.getIsRecoveryGuardianUpdateReadyForAcceptance();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function pendingInitGuardianRecoveryAddress() external view override returns (address) {
-        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function pendingInitGuardianRecoveryTimelockDurationSeconds() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
-    }
-
-    /// @inheritdoc IOrganizationGuardianRecovery
-    function pendingInitGuardianRecoveryTimestamp() external view override returns (uint256) {
-        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimestamp();
+    function getGuardianRecoveryState() external view override returns (GuardianRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery;
     }
 }

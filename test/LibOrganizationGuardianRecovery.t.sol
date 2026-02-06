@@ -15,6 +15,7 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
 import {
     LibOrganizationSecureTimelockStorage
 } from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
+import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @title Guardian Recovery Test Harness
@@ -101,19 +102,15 @@ contract GuardianRecoveryTestHarness {
     // View Functions
     // ================================
 
-    function getGuardianRecoveryAddress() external view returns (address) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryAddress();
-    }
-
-    function getGuardianRecoveryTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getGuardianRecoveryTimelockDurationSeconds();
+    function getGuardianRecoveryState() external view returns (GuardianRecoveryState memory) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery;
     }
 
     function getSecureTimelockDurationSeconds() external view returns (uint256) {
         return LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
     }
 
-    // Normal flow guardian state
+    // Normal flow guardian state (uses LibOrganizationGuardian getters -- separate from recovery)
     function getGuardian() external view returns (address) {
         return LibOrganizationGuardian.getGuardian();
     }
@@ -128,32 +125,6 @@ contract GuardianRecoveryTestHarness {
 
     function getIsGuardianUpdateReadyForAcceptance() external view returns (bool) {
         return LibOrganizationGuardian.getIsGuardianUpdateReadyForAcceptance();
-    }
-
-    // Recovery flow guardian state
-    function getRecoveryPendingGuardian() external view returns (address) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardian();
-    }
-
-    function getRecoveryPendingGuardianTimestamp() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getRecoveryPendingGuardianTimestamp();
-    }
-
-    function getIsRecoveryGuardianUpdateReadyForAcceptance() external view returns (bool) {
-        return LibOrganizationGuardianRecovery.getIsRecoveryGuardianUpdateReadyForAcceptance();
-    }
-
-    // Pending initialization state
-    function getPendingInitGuardianRecoveryAddress() external view returns (address) {
-        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
-    }
-
-    function getPendingInitGuardianRecoveryTimelockDurationSeconds() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
-    }
-
-    function getPendingInitGuardianRecoveryTimestamp() external view returns (uint256) {
-        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimestamp();
     }
 
     // ================================
@@ -263,12 +234,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     // ================================
 
     function test_initializeGuardianRecovery_setsCorrectValues() public view {
-        assertEq(harness.getGuardianRecoveryAddress(), GUARDIAN_RECOVERY_ADDRESS, "guardianRecoveryAddress not set");
-        assertEq(
-            harness.getGuardianRecoveryTimelockDurationSeconds(),
-            TIMELOCK_DURATION,
-            "guardianRecoveryTimelockDurationSeconds not set"
-        );
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.recoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "guardianRecoveryAddress not set");
+        assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "guardianRecoveryTimelockDurationSeconds not set");
         assertEq(
             harness.getSecureTimelockDurationSeconds(),
             SECURE_TIMELOCK_DURATION,
@@ -295,7 +263,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_initiateRecoveryGuardianUpdate_setsPendingGuardian() public {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
-        assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN, "Recovery pending guardian not set");
+        assertEq(harness.getGuardianRecoveryState().pendingGuardian, NEW_GUARDIAN, "Recovery pending guardian not set");
     }
 
     function test_initiateRecoveryGuardianUpdate_revertsIfAlreadyPending() public {
@@ -316,7 +284,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         harness.finalizeRecoveryGuardianUpdate();
 
-        assertTrue(harness.getIsRecoveryGuardianUpdateReadyForAcceptance(), "Should be ready for acceptance");
+        assertTrue(harness.getGuardianRecoveryState().isUpdateReadyForAcceptance, "Should be ready for acceptance");
     }
 
     function test_finalizeRecoveryGuardianUpdate_revertsIfNoPending() public {
@@ -327,7 +295,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_finalizeRecoveryGuardianUpdate_revertsIfTimelockNotExpired() public {
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN);
 
-        uint256 canFinalizeAt = harness.getRecoveryPendingGuardianTimestamp();
+        uint256 canFinalizeAt = harness.getGuardianRecoveryState().pendingGuardianTimestamp;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -342,7 +310,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         harness.cancelRecoveryGuardianUpdate();
 
-        assertEq(harness.getRecoveryPendingGuardian(), address(0), "Recovery pending guardian not cleared");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian, address(0), "Recovery pending guardian not cleared"
+        );
     }
 
     function test_cancelRecoveryGuardianUpdate_revertsIfNoPending() public {
@@ -359,7 +329,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         harness.acceptGuardianRecovery();
 
         assertEq(harness.getGuardian(), NEW_GUARDIAN, "Guardian not updated");
-        assertEq(harness.getRecoveryPendingGuardian(), address(0), "Recovery pending guardian not cleared");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian, address(0), "Recovery pending guardian not cleared"
+        );
     }
 
     function test_acceptGuardianRecovery_revertsIfNotPendingGuardian() public {
@@ -507,7 +479,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         // Both should have pending state
         assertEq(harness.getPendingGuardian(), NEW_GUARDIAN, "Normal flow pending guardian not set");
-        assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN_2, "Recovery flow pending guardian not set");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian, NEW_GUARDIAN_2, "Recovery flow pending guardian not set"
+        );
     }
 
     function test_recoveryFlowCanCompleteWhileNormalFlowPending() public {
@@ -543,7 +517,11 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         assertEq(harness.getGuardian(), NEW_GUARDIAN, "Guardian should be updated by normal flow");
 
         // Recovery flow should still have pending state
-        assertEq(harness.getRecoveryPendingGuardian(), NEW_GUARDIAN_2, "Recovery flow pending should still exist");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian,
+            NEW_GUARDIAN_2,
+            "Recovery flow pending should still exist"
+        );
     }
 
     // ================================
@@ -559,8 +537,9 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         });
 
         // Verify nothing was set (deferred)
-        assertEq(harness.getGuardianRecoveryAddress(), address(0), "Recovery address should be zero");
-        assertEq(harness.getGuardianRecoveryTimelockDurationSeconds(), 0, "Timelock should be zero");
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.recoveryAddress, address(0), "Recovery address should be zero");
+        assertEq(state.timelockDurationSeconds, 0, "Timelock should be zero");
     }
 
     function test_initializeGuardianRecovery_revertsOnZeroTimelockWhenAddressProvided() public {
@@ -584,14 +563,11 @@ contract LibOrganizationGuardianRecoveryTest is Test {
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        assertEq(harness.getPendingInitGuardianRecoveryAddress(), GUARDIAN_RECOVERY_ADDRESS, "Pending address not set");
-        assertEq(
-            harness.getPendingInitGuardianRecoveryTimelockDurationSeconds(),
-            TIMELOCK_DURATION,
-            "Pending timelock not set"
-        );
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "Pending address not set");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, TIMELOCK_DURATION, "Pending timelock not set");
         uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
-        assertEq(harness.getPendingInitGuardianRecoveryTimestamp(), expectedCanFinalizeAt, "Pending timestamp not set");
+        assertEq(state.pendingInit.pendingTimestamp, expectedCanFinalizeAt, "Pending timestamp not set");
     }
 
     function test_initiateInitializeGuardianRecovery_emitsEvent() public {
@@ -661,13 +637,14 @@ contract LibOrganizationGuardianRecoveryTest is Test {
         vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
         harness.finalizeInitializeGuardianRecovery();
 
-        assertEq(harness.getGuardianRecoveryAddress(), GUARDIAN_RECOVERY_ADDRESS, "Recovery address not set");
-        assertEq(harness.getGuardianRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Timelock duration not set");
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.recoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "Recovery address not set");
+        assertEq(state.timelockDurationSeconds, TIMELOCK_DURATION, "Timelock duration not set");
 
         // Pending state should be cleared
-        assertEq(harness.getPendingInitGuardianRecoveryAddress(), address(0), "Pending address not cleared");
-        assertEq(harness.getPendingInitGuardianRecoveryTimelockDurationSeconds(), 0, "Pending timelock not cleared");
-        assertEq(harness.getPendingInitGuardianRecoveryTimestamp(), 0, "Pending timestamp not cleared");
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "Pending address not cleared");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "Pending timelock not cleared");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "Pending timestamp not cleared");
     }
 
     function test_finalizeInitializeGuardianRecovery_emitsEvent() public {
@@ -701,7 +678,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
             guardianRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        uint256 canFinalizeAt = harness.getPendingInitGuardianRecoveryTimestamp();
+        uint256 canFinalizeAt = harness.getGuardianRecoveryState().pendingInit.pendingTimestamp;
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -721,9 +698,10 @@ contract LibOrganizationGuardianRecoveryTest is Test {
 
         harness.cancelInitializeGuardianRecovery();
 
-        assertEq(harness.getPendingInitGuardianRecoveryAddress(), address(0), "Pending address not cleared");
-        assertEq(harness.getPendingInitGuardianRecoveryTimelockDurationSeconds(), 0, "Pending timelock not cleared");
-        assertEq(harness.getPendingInitGuardianRecoveryTimestamp(), 0, "Pending timestamp not cleared");
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "Pending address not cleared");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "Pending timelock not cleared");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "Pending timestamp not cleared");
     }
 
     function test_cancelInitializeGuardianRecovery_emitsEvent() public {
