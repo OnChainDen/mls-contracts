@@ -38,7 +38,7 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
-    function initializeGuardianRecovery(
+    function initiateInitializeGuardianRecovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
@@ -46,19 +46,62 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
         // Encode the operation data for validation
         bytes memory operationData = abi.encode(recoveryAddress, timelockDurationSeconds);
 
-        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        // Validate that the current admin has authorized this initiation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
-            operationType: OperationType.InitializeGuardianRecovery,
+            operationType: OperationType.InitiateInitializeGuardianRecovery,
             operationData: operationData,
             isApproval: true,
             authParams: authParams
         });
 
-        // Initialize guardian recovery (will revert if already configured or invalid timelock)
-        LibOrganizationGuardianRecovery.initializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
+        // Initiate deferred initialization (starts timelock)
+        LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery(recoveryAddress, timelockDurationSeconds);
+    }
 
-        // Emit event for post-deployment initialization
-        emit GuardianRecoveryConfigured(recoveryAddress, timelockDurationSeconds);
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function finalizeInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Get pending values for operation data
+        address pendingAddress = LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
+        // forgefmt: disable-next-item
+        uint256 pendingTimelock =
+            LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+
+        // Validate that the current admin has authorized this finalization (separate OperationType from initiate)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.FinalizeInitializeGuardianRecovery,
+            operationData: operationData,
+            isApproval: true,
+            authParams: authParams
+        });
+
+        // Finalize deferred initialization (writes config after timelock)
+        LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery();
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function cancelInitializeGuardianRecovery(AdminAuthParams calldata authParams) external override onlyGuardian {
+        // Get pending values for operation data
+        address pendingAddress = LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
+        // forgefmt: disable-next-item
+        uint256 pendingTimelock =
+            LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
+
+        // Encode the operation data for validation
+        bytes memory operationData = abi.encode(pendingAddress, pendingTimelock);
+
+        // Validate that the current admin has authorized this cancellation (isApproval = false)
+        LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.InitiateInitializeGuardianRecovery,
+            operationData: operationData,
+            isApproval: false,
+            authParams: authParams
+        });
+
+        // Cancel the pending initialization
+        LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery();
     }
 
     /// @inheritdoc IOrganizationGuardianRecovery
@@ -84,5 +127,20 @@ abstract contract OrganizationGuardianRecoveryBase is OrganizationModifiers, IOr
     /// @inheritdoc IOrganizationGuardianRecovery
     function isRecoveryGuardianUpdateReadyForAcceptance() external view override returns (bool) {
         return LibOrganizationGuardianRecovery.getIsRecoveryGuardianUpdateReadyForAcceptance();
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function pendingInitGuardianRecoveryAddress() external view override returns (address) {
+        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryAddress();
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function pendingInitGuardianRecoveryTimelockDurationSeconds() external view override returns (uint256) {
+        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimelockDurationSeconds();
+    }
+
+    /// @inheritdoc IOrganizationGuardianRecovery
+    function pendingInitGuardianRecoveryTimestamp() external view override returns (uint256) {
+        return LibOrganizationGuardianRecovery.getPendingInitGuardianRecoveryTimestamp();
     }
 }

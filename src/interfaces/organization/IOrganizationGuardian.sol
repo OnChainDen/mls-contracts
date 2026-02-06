@@ -51,11 +51,6 @@ interface IOrganizationGuardian {
     error InvalidGuardianAddress();
 
     /**
-     * @notice Thrown when the guardian timelock duration is invalid (zero)
-     */
-    error InvalidGuardianTimelockDurationSeconds();
-
-    /**
      * @notice Thrown when a function is called by an unauthorized address (not the guardian)
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
@@ -142,10 +137,4 @@ interface IOrganizationGuardian {
      * @return True if the update has been finalized and is waiting for the new guardian to accept
      */
     function isGuardianUpdateReadyForAcceptance() external view returns (bool);
-
-    /**
-     * @notice Returns the guardian timelock duration in seconds
-     * @return The timelock duration
-     */
-    function guardianTimelockDurationSeconds() external view returns (uint256);
 }

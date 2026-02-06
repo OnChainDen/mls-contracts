@@ -22,7 +22,7 @@ interface IOrganizationInitialization {
      * @param votingThreshold The voting threshold for admin operations
      * @param adminAddresses The admin addresses (in ascending order)
      * @param guardian The guardian address set during initialization
-     * @param guardianTimelockDurationSeconds The guardian update timelock duration in seconds
+     * @param secureTimelockDurationSeconds The organization-wide secure timelock duration in seconds
      * @param membersRoot The initial members Merkle root
      * @param groupsRoot The initial groups Merkle root
      * @param membersIpfsCid The IPFS CID for members data
@@ -38,7 +38,7 @@ interface IOrganizationInitialization {
         uint256 votingThreshold,
         address[] adminAddresses,
         address guardian,
-        uint256 guardianTimelockDurationSeconds,
+        uint256 secureTimelockDurationSeconds,
         bytes32 membersRoot,
         bytes32 groupsRoot,
         string membersIpfsCid,

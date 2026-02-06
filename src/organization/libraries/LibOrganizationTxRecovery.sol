@@ -5,6 +5,9 @@ pragma solidity 0.8.33;
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
+import {
+    LibOrganizationSecureTimelockStorage
+} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 
 /**
  * @title Lib Organization Transaction Recovery
@@ -147,6 +150,117 @@ library LibOrganizationTxRecovery {
     }
 
     /**
+     * @dev Initiates deferred initialization of transaction recovery (starts timelock).
+     *      Reverts if already configured, already pending, or inputs are invalid.
+     *
+     *      Note: Event emission is handled by the caller (OrganizationTxRecoveryBase).
+     * @param transactionAndERC1271RecoveryAddress The proposed recovery address
+     * @param txRecoveryTimelockDurationSeconds The proposed timelock duration in seconds
+     */
+    function initiateInitializeTxRecovery(
+        address transactionAndERC1271RecoveryAddress,
+        uint256 txRecoveryTimelockDurationSeconds
+    ) internal {
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
+
+        // Case: Transaction recovery is already configured
+        if (txRecovery.recoveryAddress != address(0) || txRecovery.timelockDurationSeconds != 0) {
+            revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
+        }
+
+        // Case: Already a pending initialization
+        if (txRecovery.pendingInitTimestamp != 0) {
+            revert IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending();
+        }
+
+        // Case: New tx recovery address is zero
+        if (transactionAndERC1271RecoveryAddress == address(0)) {
+            revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
+        }
+
+        // Case: New tx recovery timelock duration is zero
+        if (txRecoveryTimelockDurationSeconds == 0) {
+            revert IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds();
+        }
+
+        // Read the organization-wide secure timelock duration
+        uint256 secureTimelock = LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
+        uint256 canFinalizeAtTimestamp = block.timestamp + secureTimelock;
+
+        // Store pending initialization values
+        txRecovery.pendingInitRecoveryAddress = transactionAndERC1271RecoveryAddress;
+        txRecovery.pendingInitTimelockDurationSeconds = txRecoveryTimelockDurationSeconds;
+        txRecovery.pendingInitTimestamp = canFinalizeAtTimestamp;
+
+        emit IOrganizationTxRecovery.TxRecoveryInitializationInitiated(
+            transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds, canFinalizeAtTimestamp
+        );
+    }
+
+    /**
+     * @dev Finalizes deferred initialization of transaction recovery (after timelock).
+     *      Writes the pending values to the actual recovery configuration fields.
+     *
+     *      Note: Event emission is handled by the caller (OrganizationTxRecoveryBase).
+     */
+    function finalizeInitializeTxRecovery() internal {
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
+
+        uint256 canFinalizeAtTimestamp = txRecovery.pendingInitTimestamp;
+
+        // Case: No pending initialization
+        if (canFinalizeAtTimestamp == 0) {
+            revert IOrganizationTxRecovery.NoTxRecoveryInitializationPending();
+        }
+
+        // Case: Timelock not expired
+        if (block.timestamp < canFinalizeAtTimestamp) {
+            revert IOrganizationTxRecovery.TxRecoveryInitializationTimelockNotExpired(
+                canFinalizeAtTimestamp, block.timestamp
+            );
+        }
+
+        // Read pending values
+        address pendingAddress = txRecovery.pendingInitRecoveryAddress;
+        uint256 pendingTimelock = txRecovery.pendingInitTimelockDurationSeconds;
+
+        // Write actual configuration (same as initializeTxRecovery logic)
+        txRecovery.isEnabled = false;
+        txRecovery.recoveryAddress = pendingAddress;
+        txRecovery.timelockDurationSeconds = pendingTimelock;
+
+        // Clear pending state
+        txRecovery.pendingInitRecoveryAddress = address(0);
+        txRecovery.pendingInitTimelockDurationSeconds = 0;
+        txRecovery.pendingInitTimestamp = 0;
+
+        emit IOrganizationTxRecovery.TxRecoveryInitializationFinalized(pendingAddress, pendingTimelock);
+    }
+
+    /**
+     * @dev Cancels a pending deferred initialization of transaction recovery.
+     *      Reverts if no initialization is pending.
+     */
+    function cancelInitializeTxRecovery() internal {
+        LibOrganizationRecoveryStorage.TxRecoveryState storage txRecovery =
+        LibOrganizationRecoveryStorage.layout().txRecovery;
+
+        // Case: No pending initialization
+        if (txRecovery.pendingInitTimestamp == 0) {
+            revert IOrganizationTxRecovery.NoTxRecoveryInitializationPending();
+        }
+
+        // Clear pending state
+        txRecovery.pendingInitRecoveryAddress = address(0);
+        txRecovery.pendingInitTimelockDurationSeconds = 0;
+        txRecovery.pendingInitTimestamp = 0;
+
+        emit IOrganizationTxRecovery.TxRecoveryInitializationCancelled();
+    }
+
+    /**
      * @dev Validates that a recovery account transaction is allowed.
      *      Reverts if recovery is not configured or not enabled.
      */
@@ -230,5 +344,29 @@ library LibOrganizationTxRecovery {
      */
     function getTxRecoveryTimelockDurationSeconds() internal view returns (uint256) {
         return LibOrganizationRecoveryStorage.layout().txRecovery.timelockDurationSeconds;
+    }
+
+    /**
+     * @dev Returns the pending initialization recovery address.
+     * @return The pending address (zero if no pending initialization)
+     */
+    function getPendingInitTxRecoveryAddress() internal view returns (address) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitRecoveryAddress;
+    }
+
+    /**
+     * @dev Returns the pending initialization timelock duration in seconds.
+     * @return The pending duration (zero if no pending initialization)
+     */
+    function getPendingInitTxRecoveryTimelockDurationSeconds() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitTimelockDurationSeconds;
+    }
+
+    /**
+     * @dev Returns the pending initialization timestamp.
+     * @return The timestamp when initialization can be finalized (zero if no pending)
+     */
+    function getPendingInitTxRecoveryTimestamp() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().txRecovery.pendingInitTimestamp;
     }
 }

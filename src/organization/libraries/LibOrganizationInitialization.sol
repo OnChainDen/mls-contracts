@@ -6,6 +6,7 @@ import {IOrganizationInitialization} from "interfaces/organization/IOrganization
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
+import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
@@ -72,10 +73,11 @@ library LibOrganizationInitialization {
             adminsRoot: params.adminsRoot, adminCount: params.adminCount, votingThreshold: params.votingThreshold
         });
 
-        // Initialize guardian configuration (sets guardian address and timelock duration)
-        LibOrganizationGuardian.initializeGuardian({
-            guardian: params.guardian, guardianTimelockDurationSeconds: params.guardianTimelockDurationSeconds
-        });
+        // Initialize secure timelock (organization-wide timelock for sensitive operations)
+        LibOrganizationSecureTimelock.initializeSecureTimelock(params.secureTimelockDurationSeconds);
+
+        // Initialize guardian configuration (sets guardian address)
+        LibOrganizationGuardian.initializeGuardian(params.guardian);
 
         // Case: Guardian recovery address is non-zero
         // Initialize guardian recovery (will revert invalid timelock duration)
@@ -100,7 +102,7 @@ library LibOrganizationInitialization {
             votingThreshold: params.votingThreshold,
             adminAddresses: params.adminAddresses,
             guardian: params.guardian,
-            guardianTimelockDurationSeconds: params.guardianTimelockDurationSeconds,
+            secureTimelockDurationSeconds: params.secureTimelockDurationSeconds,
             membersRoot: params.membersRoot,
             groupsRoot: params.groupsRoot,
             membersIpfsCid: params.membersIpfsCid,

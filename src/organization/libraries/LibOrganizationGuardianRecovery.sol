@@ -5,6 +5,9 @@ pragma solidity 0.8.33;
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
+import {
+    LibOrganizationSecureTimelockStorage
+} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 
 /**
  * @title Lib Organization Guardian Recovery
@@ -179,6 +182,116 @@ library LibOrganizationGuardianRecovery {
     }
 
     /**
+     * @dev Initiates deferred initialization of guardian recovery (starts timelock).
+     *      Reverts if already configured, already pending, or inputs are invalid.
+     *
+     *      Note: Event emission is handled by the caller (OrganizationGuardianRecoveryBase).
+     * @param guardianRecoveryAddress The proposed guardian recovery address
+     * @param guardianRecoveryTimelockDurationSeconds The proposed timelock duration in seconds
+     */
+    function initiateInitializeGuardianRecovery(
+        address guardianRecoveryAddress,
+        uint256 guardianRecoveryTimelockDurationSeconds
+    ) internal {
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+
+        // Case: Guardian recovery is already configured
+        if (guardianRecovery.recoveryAddress != address(0) || guardianRecovery.timelockDurationSeconds != 0) {
+            revert IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured();
+        }
+
+        // Case: Already a pending initialization
+        if (guardianRecovery.pendingInitTimestamp != 0) {
+            revert IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending();
+        }
+
+        // Case: New guardian recovery address is zero
+        if (guardianRecoveryAddress == address(0)) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
+        }
+
+        // Case: New guardian recovery timelock duration is zero
+        if (guardianRecoveryTimelockDurationSeconds == 0) {
+            revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryTimelockDurationSeconds();
+        }
+
+        // Read the organization-wide secure timelock duration
+        uint256 secureTimelock = LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds;
+        uint256 canFinalizeAtTimestamp = block.timestamp + secureTimelock;
+
+        // Store pending initialization values
+        guardianRecovery.pendingInitRecoveryAddress = guardianRecoveryAddress;
+        guardianRecovery.pendingInitTimelockDurationSeconds = guardianRecoveryTimelockDurationSeconds;
+        guardianRecovery.pendingInitTimestamp = canFinalizeAtTimestamp;
+
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationInitiated(
+            guardianRecoveryAddress, guardianRecoveryTimelockDurationSeconds, canFinalizeAtTimestamp
+        );
+    }
+
+    /**
+     * @dev Finalizes deferred initialization of guardian recovery (after timelock).
+     *      Writes the pending values to the actual recovery configuration fields.
+     *
+     *      Note: Event emission is handled by the caller (OrganizationGuardianRecoveryBase).
+     */
+    function finalizeInitializeGuardianRecovery() internal {
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+
+        uint256 canFinalizeAtTimestamp = guardianRecovery.pendingInitTimestamp;
+
+        // Case: No pending initialization
+        if (canFinalizeAtTimestamp == 0) {
+            revert IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending();
+        }
+
+        // Case: Timelock not expired
+        if (block.timestamp < canFinalizeAtTimestamp) {
+            revert IOrganizationGuardianRecovery.GuardianRecoveryInitializationTimelockNotExpired(
+                canFinalizeAtTimestamp, block.timestamp
+            );
+        }
+
+        // Read pending values
+        address pendingAddress = guardianRecovery.pendingInitRecoveryAddress;
+        uint256 pendingTimelock = guardianRecovery.pendingInitTimelockDurationSeconds;
+
+        // Write actual configuration (same as initializeGuardianRecovery logic)
+        guardianRecovery.recoveryAddress = pendingAddress;
+        guardianRecovery.timelockDurationSeconds = pendingTimelock;
+
+        // Clear pending state
+        guardianRecovery.pendingInitRecoveryAddress = address(0);
+        guardianRecovery.pendingInitTimelockDurationSeconds = 0;
+        guardianRecovery.pendingInitTimestamp = 0;
+
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationFinalized(pendingAddress, pendingTimelock);
+    }
+
+    /**
+     * @dev Cancels a pending deferred initialization of guardian recovery.
+     *      Reverts if no initialization is pending.
+     */
+    function cancelInitializeGuardianRecovery() internal {
+        LibOrganizationRecoveryStorage.GuardianRecoveryState storage guardianRecovery =
+        LibOrganizationRecoveryStorage.layout().guardianRecovery;
+
+        // Case: No pending initialization
+        if (guardianRecovery.pendingInitTimestamp == 0) {
+            revert IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending();
+        }
+
+        // Clear pending state
+        guardianRecovery.pendingInitRecoveryAddress = address(0);
+        guardianRecovery.pendingInitTimelockDurationSeconds = 0;
+        guardianRecovery.pendingInitTimestamp = 0;
+
+        emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationCancelled();
+    }
+
+    /**
      * @dev Enforces that the caller is the guardian recovery address.
      *      Reverts if msg.sender is not the guardian recovery address.
      */
@@ -240,5 +353,29 @@ library LibOrganizationGuardianRecovery {
      */
     function getIsRecoveryGuardianUpdateReadyForAcceptance() internal view returns (bool) {
         return LibOrganizationRecoveryStorage.layout().guardianRecovery.isUpdateReadyForAcceptance;
+    }
+
+    /**
+     * @dev Returns the pending initialization recovery address.
+     * @return The pending address (zero if no pending initialization)
+     */
+    function getPendingInitGuardianRecoveryAddress() internal view returns (address) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitRecoveryAddress;
+    }
+
+    /**
+     * @dev Returns the pending initialization timelock duration in seconds.
+     * @return The pending duration (zero if no pending initialization)
+     */
+    function getPendingInitGuardianRecoveryTimelockDurationSeconds() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitTimelockDurationSeconds;
+    }
+
+    /**
+     * @dev Returns the pending initialization timestamp.
+     * @return The timestamp when initialization can be finalized (zero if no pending)
+     */
+    function getPendingInitGuardianRecoveryTimestamp() internal view returns (uint256) {
+        return LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingInitTimestamp;
     }
 }

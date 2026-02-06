@@ -18,22 +18,30 @@ library LibOrganizationRecoveryStorage {
      * @param isEnabled Whether recovery is currently enabled for transactions and ERC1271
      * @param timelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
      * @param pendingEnableTimestamp Timestamp when pending tx recovery enable can be finalized (0 = no pending)
+     * @param pendingInitRecoveryAddress The proposed recovery address during deferred initialization (0 = no pending)
+     * @param pendingInitTimelockDurationSeconds The proposed timelock duration during deferred initialization
+     * @param pendingInitTimestamp Timestamp when pending initialization can be finalized (0 = no pending)
      */
     struct TxRecoveryState {
         address recoveryAddress;
         bool isEnabled;
         uint256 timelockDurationSeconds;
         uint256 pendingEnableTimestamp;
+        address pendingInitRecoveryAddress;
+        uint256 pendingInitTimelockDurationSeconds;
+        uint256 pendingInitTimestamp;
     }
 
     /**
      * @dev Storage for guardian recovery functionality.
-     *      Struct is ordered for optimal storage packing (4 slots).
      * @param recoveryAddress The privileged address that can update the guardian via recovery
      * @param isUpdateReadyForAcceptance True after finalize, waiting for new guardian to accept (recovery flow)
      * @param pendingGuardian The proposed new guardian address for recovery flow (0 = no pending)
      * @param timelockDurationSeconds The duration in seconds for guardian recovery timelocks
      * @param pendingGuardianTimestamp When the recovery flow pending update timelock expires (0 = no pending)
+     * @param pendingInitRecoveryAddress The proposed recovery address during deferred initialization (0 = no pending)
+     * @param pendingInitTimelockDurationSeconds The proposed timelock duration during deferred initialization
+     * @param pendingInitTimestamp Timestamp when pending initialization can be finalized (0 = no pending)
      */
     struct GuardianRecoveryState {
         address recoveryAddress;
@@ -41,6 +49,9 @@ library LibOrganizationRecoveryStorage {
         address pendingGuardian;
         uint256 timelockDurationSeconds;
         uint256 pendingGuardianTimestamp;
+        address pendingInitRecoveryAddress;
+        uint256 pendingInitTimelockDurationSeconds;
+        uint256 pendingInitTimestamp;
     }
 
     /**

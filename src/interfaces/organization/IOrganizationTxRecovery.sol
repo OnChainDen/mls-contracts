@@ -46,12 +46,28 @@ interface IOrganizationTxRecovery {
     event RecoveryAccountTransactionExecuted(address indexed account, address indexed to, uint256 value, bytes data);
 
     /**
-     * @notice Emitted when transaction recovery is configured for the first time after deployment
-     * @param recoveryAddress The configured recovery address
-     * @param timelockDurationSeconds The timelock duration in seconds
+     * @notice Emitted when deferred transaction recovery initialization is initiated (timelock started)
+     * @param recoveryAddress The proposed recovery address
+     * @param timelockDurationSeconds The proposed timelock duration in seconds
+     * @param canFinalizeAtTimestamp The timestamp when the initialization can be finalized
      */
     // solhint-disable-next-line gas-indexed-events
-    event TransactionRecoveryConfigured(address indexed recoveryAddress, uint256 timelockDurationSeconds);
+    event TxRecoveryInitializationInitiated(
+        address indexed recoveryAddress, uint256 timelockDurationSeconds, uint256 canFinalizeAtTimestamp
+    );
+
+    /**
+     * @notice Emitted when deferred transaction recovery initialization is finalized
+     * @param recoveryAddress The configured recovery address
+     * @param timelockDurationSeconds The configured timelock duration in seconds
+     */
+    // solhint-disable-next-line gas-indexed-events
+    event TxRecoveryInitializationFinalized(address indexed recoveryAddress, uint256 timelockDurationSeconds);
+
+    /**
+     * @notice Emitted when a pending deferred transaction recovery initialization is cancelled
+     */
+    event TxRecoveryInitializationCancelled();
 
     /**
      * @notice Thrown when transaction recovery is not configured (no recovery address set)
@@ -108,6 +124,23 @@ interface IOrganizationTxRecovery {
     error TransactionRecoveryAlreadyConfigured();
 
     /**
+     * @notice Thrown when trying to initiate deferred initialization while one is already pending
+     */
+    error TxRecoveryInitializationAlreadyPending();
+
+    /**
+     * @notice Thrown when trying to finalize or cancel deferred initialization but none is pending
+     */
+    error NoTxRecoveryInitializationPending();
+
+    /**
+     * @notice Thrown when trying to finalize deferred initialization before the timelock expires
+     * @param canFinalizeAtTimestamp The timestamp when finalization becomes possible
+     * @param currentTime The current block timestamp
+     */
+    error TxRecoveryInitializationTimelockNotExpired(uint256 canFinalizeAtTimestamp, uint256 currentTime);
+
+    /**
      * @notice Initiates enabling transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the transaction recovery address.
      *      Recovery must be configured for this to work.
@@ -152,18 +185,32 @@ interface IOrganizationTxRecovery {
     ) external;
 
     /**
-     * @notice Initializes transaction and ERC1271 recovery for the first time after organization deployment
+     * @notice Initiates deferred initialization of transaction and ERC1271 recovery (starts timelock)
      * @dev Can only be called by the guardian with admin authorization.
-     *      Can only be called once - reverts if transaction recovery is already configured.
-     * @param recoveryAddress The address that will be authorized to perform recovery
-     * @param timelockDurationSeconds The timelock duration in seconds for enabling recovery
+     *      Reverts if transaction recovery is already configured or if an initialization is already pending.
+     * @param recoveryAddress The proposed recovery address
+     * @param timelockDurationSeconds The proposed timelock duration in seconds for enabling recovery
      * @param authParams The admin authorization parameters (signatures, proofs, etc.)
      */
-    function initializeTransactionAndERC1271Recovery(
+    function initiateInitializeTransactionAndERC1271Recovery(
         address recoveryAddress,
         uint256 timelockDurationSeconds,
         AdminAuthParams calldata authParams
     ) external;
+
+    /**
+     * @notice Finalizes deferred initialization of transaction and ERC1271 recovery (after timelock)
+     * @dev Can only be called by the guardian with admin authorization after timelock expires.
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
+     */
+    function finalizeInitializeTransactionAndERC1271Recovery(AdminAuthParams calldata authParams) external;
+
+    /**
+     * @notice Cancels a pending deferred initialization of transaction and ERC1271 recovery
+     * @dev Can only be called by the guardian with admin authorization.
+     * @param authParams The admin authorization parameters (signatures, proofs, etc.)
+     */
+    function cancelInitializeTransactionAndERC1271Recovery(AdminAuthParams calldata authParams) external;
 
     /**
      * @notice Returns whether recovery is enabled for transactions and ERC1271 signatures
@@ -188,4 +235,22 @@ interface IOrganizationTxRecovery {
      * @return The timelock duration
      */
     function txRecoveryTimelockDurationSeconds() external view returns (uint256);
+
+    /**
+     * @notice Returns the pending initialization recovery address
+     * @return The pending address (zero if no pending initialization)
+     */
+    function pendingInitTxRecoveryAddress() external view returns (address);
+
+    /**
+     * @notice Returns the pending initialization timelock duration in seconds
+     * @return The pending timelock duration (zero if no pending initialization)
+     */
+    function pendingInitTxRecoveryTimelockDurationSeconds() external view returns (uint256);
+
+    /**
+     * @notice Returns the timestamp when pending initialization can be finalized
+     * @return The timestamp (zero if no pending initialization)
+     */
+    function pendingInitTxRecoveryTimestamp() external view returns (uint256);
 }

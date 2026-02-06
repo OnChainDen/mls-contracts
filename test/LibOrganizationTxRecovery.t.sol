@@ -7,6 +7,9 @@ import {Test} from "forge-std/Test.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
+import {
+    LibOrganizationSecureTimelockStorage
+} from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
 
 /**
  * @title Transaction Recovery Test Harness
@@ -29,19 +32,21 @@ contract TxRecoveryTestHarness {
         }
     }
 
-    function setupTxRecovery(address transactionAndERC1271RecoveryAddress, uint256 txRecoveryTimelockDurationSeconds)
-        external
-    {
-        // Simulate what OrganizationTxRecoveryBase.initializeTransactionAndERC1271Recovery does for post-deployment:
-        // Initialize (will revert if already configured, invalid address, or invalid timelock)
-        LibOrganizationTxRecovery.initializeTxRecovery(
+    function initiateInitializeTxRecovery(
+        address transactionAndERC1271RecoveryAddress,
+        uint256 txRecoveryTimelockDurationSeconds
+    ) external {
+        LibOrganizationTxRecovery.initiateInitializeTxRecovery(
             transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
         );
+    }
 
-        // Emit event
-        emit IOrganizationTxRecovery.TransactionRecoveryConfigured(
-            transactionAndERC1271RecoveryAddress, txRecoveryTimelockDurationSeconds
-        );
+    function finalizeInitializeTxRecovery() external {
+        LibOrganizationTxRecovery.finalizeInitializeTxRecovery();
+    }
+
+    function cancelInitializeTxRecovery() external {
+        LibOrganizationTxRecovery.cancelInitializeTxRecovery();
     }
 
     function initiateEnableTransactionAndERC1271Recovery() external {
@@ -88,9 +93,25 @@ contract TxRecoveryTestHarness {
         return LibOrganizationTxRecovery.getPendingTxRecoveryEnableTimestamp();
     }
 
+    function getPendingInitTxRecoveryAddress() external view returns (address) {
+        return LibOrganizationTxRecovery.getPendingInitTxRecoveryAddress();
+    }
+
+    function getPendingInitTxRecoveryTimelockDurationSeconds() external view returns (uint256) {
+        return LibOrganizationTxRecovery.getPendingInitTxRecoveryTimelockDurationSeconds();
+    }
+
+    function getPendingInitTxRecoveryTimestamp() external view returns (uint256) {
+        return LibOrganizationTxRecovery.getPendingInitTxRecoveryTimestamp();
+    }
+
     // ================================
-    // Storage Direct Access (for reset in tests)
+    // Storage Direct Access (for reset/setup in tests)
     // ================================
+
+    function initializeSecureTimelock(uint256 secureTimelockDurationSeconds) external {
+        LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds = secureTimelockDurationSeconds;
+    }
 
     function resetRecoveryStorage() external {
         LibOrganizationRecoveryStorage.Layout storage layout = LibOrganizationRecoveryStorage.layout();
@@ -100,6 +121,9 @@ contract TxRecoveryTestHarness {
         layout.txRecovery.isEnabled = false;
         layout.txRecovery.timelockDurationSeconds = 0;
         layout.txRecovery.pendingEnableTimestamp = 0;
+        layout.txRecovery.pendingInitRecoveryAddress = address(0);
+        layout.txRecovery.pendingInitTimelockDurationSeconds = 0;
+        layout.txRecovery.pendingInitTimestamp = 0;
 
         // Reset guardian recovery state
         layout.guardianRecovery.recoveryAddress = address(0);
@@ -107,13 +131,16 @@ contract TxRecoveryTestHarness {
         layout.guardianRecovery.pendingGuardian = address(0);
         layout.guardianRecovery.pendingGuardianTimestamp = 0;
         layout.guardianRecovery.isUpdateReadyForAcceptance = false;
+        layout.guardianRecovery.pendingInitRecoveryAddress = address(0);
+        layout.guardianRecovery.pendingInitTimelockDurationSeconds = 0;
+        layout.guardianRecovery.pendingInitTimestamp = 0;
     }
 }
 
 /**
  * @title Lib Organization Tx Recovery Test
  * @notice Tests for transaction and ERC1271 recovery functionality
- * @dev Tests initialization, timelocked enable/disable flows, and access control.
+ * @dev Tests initialization, timelocked enable/disable flows, deferred initialization, and access control.
  * @author Den Technologies Inc
  */
 contract LibOrganizationTxRecoveryTest is Test {
@@ -122,9 +149,13 @@ contract LibOrganizationTxRecoveryTest is Test {
     address constant TX_RECOVERY_ADDRESS = address(0x100);
 
     uint256 constant TIMELOCK_DURATION = 1 days;
+    uint256 constant SECURE_TIMELOCK_DURATION = 3 days;
 
     function setUp() public {
         harness = new TxRecoveryTestHarness();
+
+        // Initialize secure timelock (required for deferred initialization tests)
+        harness.initializeSecureTimelock(SECURE_TIMELOCK_DURATION);
 
         // Initialize tx recovery configuration
         harness.initializeTxRecovery({
@@ -155,7 +186,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.resetRecoveryStorage();
 
         vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
-        harness.setupTxRecovery({
+        harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
@@ -164,7 +195,7 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.resetRecoveryStorage();
 
         vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
-        harness.setupTxRecovery({
+        harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
         });
     }
@@ -292,70 +323,191 @@ contract LibOrganizationTxRecoveryTest is Test {
     }
 
     // ================================
-    // Post-Deployment Setup Tests
+    // Deferred Initialization (Timelocked) Tests
     // ================================
 
-    function test_setupTxRecovery_configuresRecovery() public {
+    function test_initiateInitializeTxRecovery_setsPendingState() public {
         harness.resetRecoveryStorage();
 
-        // Setup recovery (simulates post-deployment initialization)
-        harness.setupTxRecovery({
+        harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        assertEq(harness.getTransactionAndERC1271RecoveryAddress(), TX_RECOVERY_ADDRESS, "Recovery address not set");
-        assertEq(harness.getTxRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Timelock duration not set");
+        assertEq(harness.getPendingInitTxRecoveryAddress(), TX_RECOVERY_ADDRESS, "Pending address not set");
+        assertEq(
+            harness.getPendingInitTxRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Pending timelock not set"
+        );
+        uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
+        assertEq(harness.getPendingInitTxRecoveryTimestamp(), expectedCanFinalizeAt, "Pending timestamp not set");
     }
 
-    function test_setupTxRecovery_emitsEvent() public {
+    function test_initiateInitializeTxRecovery_emitsEvent() public {
         harness.resetRecoveryStorage();
+
+        uint256 expectedCanFinalizeAt = block.timestamp + SECURE_TIMELOCK_DURATION;
 
         vm.expectEmit(true, true, true, true);
-        emit IOrganizationTxRecovery.TransactionRecoveryConfigured(TX_RECOVERY_ADDRESS, TIMELOCK_DURATION);
+        emit IOrganizationTxRecovery.TxRecoveryInitializationInitiated(
+            TX_RECOVERY_ADDRESS, TIMELOCK_DURATION, expectedCanFinalizeAt
+        );
 
-        harness.setupTxRecovery({
+        harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
-    function test_setupTxRecovery_revertsIfAlreadyConfigured() public {
-        // Setup is already done in setUp(), so recovery is already configured
+    function test_initiateInitializeTxRecovery_revertsIfAlreadyConfigured() public {
+        // setUp already configured recovery, so this should revert
         vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
-        harness.setupTxRecovery({
+        harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: address(0x999), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
     }
 
-    function test_setupTxRecovery_revertsOnZeroAddress() public {
+    function test_initiateInitializeTxRecovery_revertsIfAlreadyPending() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
-        harness.setupTxRecovery({
-            transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
-        });
-    }
-
-    function test_setupTxRecovery_revertsOnZeroTimelock() public {
-        harness.resetRecoveryStorage();
-
-        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
-        harness.setupTxRecovery({
-            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
-        });
-    }
-
-    function test_setupTxRecovery_allowsEnableFlowAfterSetup() public {
-        harness.resetRecoveryStorage();
-
-        // Setup recovery (post-deployment)
-        harness.setupTxRecovery({
+        harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
             txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
         });
 
-        // Now enable recovery
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending.selector);
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: address(0x999), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+    }
+
+    function test_initiateInitializeTxRecovery_revertsOnZeroAddress() public {
+        harness.resetRecoveryStorage();
+
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: address(0), txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+    }
+
+    function test_initiateInitializeTxRecovery_revertsOnZeroTimelock() public {
+        harness.resetRecoveryStorage();
+
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryTimelockDurationSeconds.selector);
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
+        });
+    }
+
+    function test_finalizeInitializeTxRecovery_configuresRecovery() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        harness.finalizeInitializeTxRecovery();
+
+        assertEq(harness.getTransactionAndERC1271RecoveryAddress(), TX_RECOVERY_ADDRESS, "Recovery address not set");
+        assertEq(harness.getTxRecoveryTimelockDurationSeconds(), TIMELOCK_DURATION, "Timelock duration not set");
+        assertFalse(harness.isRecoveryEnabledForTransactionsAndERC1271(), "Should not be enabled yet");
+
+        // Pending state should be cleared
+        assertEq(harness.getPendingInitTxRecoveryAddress(), address(0), "Pending address not cleared");
+        assertEq(harness.getPendingInitTxRecoveryTimelockDurationSeconds(), 0, "Pending timelock not cleared");
+        assertEq(harness.getPendingInitTxRecoveryTimestamp(), 0, "Pending timestamp not cleared");
+    }
+
+    function test_finalizeInitializeTxRecovery_emitsEvent() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.TxRecoveryInitializationFinalized(TX_RECOVERY_ADDRESS, TIMELOCK_DURATION);
+
+        harness.finalizeInitializeTxRecovery();
+    }
+
+    function test_finalizeInitializeTxRecovery_revertsIfNoPending() public {
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        harness.finalizeInitializeTxRecovery();
+    }
+
+    function test_finalizeInitializeTxRecovery_revertsIfTimelockNotExpired() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        uint256 canFinalizeAt = harness.getPendingInitTxRecoveryTimestamp();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationTxRecovery.TxRecoveryInitializationTimelockNotExpired.selector,
+                canFinalizeAt,
+                block.timestamp
+            )
+        );
+        harness.finalizeInitializeTxRecovery();
+    }
+
+    function test_cancelInitializeTxRecovery_clearsPendingState() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        harness.cancelInitializeTxRecovery();
+
+        assertEq(harness.getPendingInitTxRecoveryAddress(), address(0), "Pending address not cleared");
+        assertEq(harness.getPendingInitTxRecoveryTimelockDurationSeconds(), 0, "Pending timelock not cleared");
+        assertEq(harness.getPendingInitTxRecoveryTimestamp(), 0, "Pending timestamp not cleared");
+    }
+
+    function test_cancelInitializeTxRecovery_emitsEvent() public {
+        harness.resetRecoveryStorage();
+
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.TxRecoveryInitializationCancelled();
+
+        harness.cancelInitializeTxRecovery();
+    }
+
+    function test_cancelInitializeTxRecovery_revertsIfNoPending() public {
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        harness.cancelInitializeTxRecovery();
+    }
+
+    function test_deferredInitializeTxRecovery_allowsEnableFlowAfterSetup() public {
+        harness.resetRecoveryStorage();
+
+        // Initiate deferred initialization
+        harness.initiateInitializeTxRecovery({
+            transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS,
+            txRecoveryTimelockDurationSeconds: TIMELOCK_DURATION
+        });
+
+        // Wait for secure timelock and finalize
+        vm.warp(block.timestamp + SECURE_TIMELOCK_DURATION);
+        harness.finalizeInitializeTxRecovery();
+
+        // Now enable recovery through the normal flow
         harness.initiateEnableTransactionAndERC1271Recovery();
         vm.warp(block.timestamp + TIMELOCK_DURATION);
         harness.finalizeEnableTransactionAndERC1271Recovery();
