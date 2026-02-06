@@ -30,15 +30,17 @@ factory = "0x4e59b44847b379578588920cA78FbF26c0B4956C"
 factory_deployer = "0x3fAB184622Dc19b6109349B94811493BF2a45362"
 
 # Platform Libraries (environment-independent)
-lib_org_policy = "0x9addAe2Ab8F80055836585bDdE0125972ba18112"
-lib_org_admin = "0xE827877B50Ea70D1e1267C1CEc8CFaCd95D6840F"
-lib_org_init = "0xfd4346439DdA79C4b542dBe2d08D063fa59ddb72"
-lib_org_account_sig = "0xd0037C59A9f23a06f797986A0Ef51c6f324044B5"
+lib_org_policy = "0x09A1e6B98CfDf00159F0ED9142211d17687Fd1E3"
+lib_org_admin = "0x5aC9C0FF4DC40e9590b94E6f15EdB36DF1D89eA7"
+lib_org_init = "0x029841a189F4E9119fD1CCfE74c93B2df175f782"
+lib_org_account_sig = "0xdbE168Eef97b5f668E36552570df11E8bE0488a6"
+lib_org_tx_recovery = "0x7d3508F3a9B914E78cB2Be37930D75Ca889C6b86"
+lib_org_guardian_recovery = "0x8D5F8274F0A6393CF6423DBDee12440a90067B07"
 
 # Platform Implementation Contracts (environment-independent)
-whitelist_impl = "0x33ED9aCF53B57D2544a9723eC6C0131B8aA7774F"
-org_impl = "0x7219D04DaB4bafAf3aFA7C779D895Fc817fDD77f"
-account_impl = "0x023F5040a3170c89Af5680dbDE6833dB2f593013"
+whitelist_impl = "0x185C96f7B59db4c927Fd781F2BbfCAC5C6A2E72f"
+org_impl = "0x3B083D9B67172bE990193f7026fE2E59c222822a"
+account_impl = "0xf2229EB76186aeA785febeFB8076a4C069338301"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
 safe_singleton = "0xc500DCD5d1cde97fdFDfEEbBad9886FDAaF42337"
@@ -57,8 +59,8 @@ batched_transaction = "0xE6310F307Ad41062427d35e0881B42ad4DAcC6D6"
 [factory.arachnid.env.nonprod]
 guardian_safe = "0x673fCe0337Bc55B7D2ade293Ef9C71371D9555C4"
 admin_safe = "0x0999652E086de106439f1a22dEa6bF39C2d53d97"
-org_factory = "0x5aff1Ca6aD75226923dF497127eCD5A0a8ae927d"
-whitelist_proxy = "0x1e35Ae5a4Ca43A9e97Cbc02f782d9839B17B0395"
+org_factory = "0x4Cf86399d1eb7c9f043bd69B698d1E5d3DD2deec"
+whitelist_proxy = "0x6e142CFD4860BeF217ef10ea47516B4333c9bD95"
 guardian_safe_executor_module = "0x155ed05d1dD5AD80e17461866DaAe35a47EEc933"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -66,8 +68,8 @@ guardian_safe_executor_module = "0x155ed05d1dD5AD80e17461866DaAe35a47EEc933"
 [factory.arachnid.env.prod]
 guardian_safe = "0xDae80bBDD6C7A78d89A3992ae66A91CA471A19e5"
 admin_safe = "0xbFFb89dba27e9CFfB71A0d80a9552f693F77F0a3"
-org_factory = "0xC5E61A7f3Af39Eabf6df49f614391e040a7f60b3"
-whitelist_proxy = "0x08072a4c505b53A72936b9f998e4bafed9CCdD9c"
+org_factory = "0xF2662722e16D532Aa590F87221efC28F40BaC0dd"
+whitelist_proxy = "0x97ae3993E3202748C32B380AD0df4cC297fBBB98"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
@@ -82,15 +84,17 @@ factory = "0xD13cb449d4f79C0D5A868a3D82e892d3d99b05f5"
 factory_deployer = "0xFdA43C00bA0589bb10Bc3b75c3D8E1046e73E328"
 
 # Platform Libraries (environment-independent)
-lib_org_policy = "0x6241A3f7566Bcfc44D6f723fa3A5ee7b4e723A4f"
-lib_org_admin = "0x6694E9CfCb5DD1Bd52d6c779fB90d423d021D8D3"
-lib_org_init = "0x3d90823BEDC5130A40086005e7Dd6901930fb196"
-lib_org_account_sig = "0x87D7F0B913b91550335132Fd987E1FB273a7f370"
+lib_org_policy = "0x554aBbd51B7e0De3a9d8Ea8263eA92c4eAbA0507"
+lib_org_admin = "0x74E9CE2295C42e58D9fDE02226B1DD5FCABDeC10"
+lib_org_init = "0xF5485a4b1aEb7dF6ac7be539b9A150624f835F4E"
+lib_org_account_sig = "0x65Cd9C5186Be89dE749c7d92Bb2e935826CEC994"
+lib_org_tx_recovery = "0x59756f06e9E59859431A7d5Fe2e03E7B6e76905B"
+lib_org_guardian_recovery = "0xDabF54aDF488D6586CE8DBEB51894036Ca24dED8"
 
 # Platform Implementation Contracts (environment-independent)
-whitelist_impl = "0x6212264F5883b59BcFAf762E29d7FbF57050b9ec"
-org_impl = "0x57425d552d0eb33303Ed0618Ce6A98ad321cb5EF"
-account_impl = "0x7d212C23Df808DB5cC0d964C22dC2598B73F4183"
+whitelist_impl = "0x1876456F72250E36c1ECc8dFC29505E1a407eCc1"
+org_impl = "0x72d5DaB08C8eeB33F20231d8BEa0797b207E19d4"
+account_impl = "0xe2efb87aAa4595a85E818c99473b2eB8349067a4"
 
 # Safe 1.4.1 Infrastructure (environment-independent)
 safe_singleton = "0x6619F88c34beaB1392bfc579F82F87EAF336AD7e"
@@ -109,8 +113,8 @@ batched_transaction = "0x382b010b50043e507d6cd72F6C98480A48228528"
 [factory.den-nonprod.env.nonprod]
 guardian_safe = "0x0A17fB969164d83629E5901E2E8f609AB4226b27"
 admin_safe = "0xe8a64Ff3A086e3a71b19B23aAe47b234f200cFe6"
-org_factory = "0xE1ac31c6Ae50948A90e9537A5c6e1F922328ED52"
-whitelist_proxy = "0x0b6e8c790cDE2401031A14B3eB052A101c923466"
+org_factory = "0xDcB6B2d1CE9623c2C76119eC9B33b5506207D3fD"
+whitelist_proxy = "0x9B9319bECD7ca3F154BA973d086241198a122D0d"
 guardian_safe_executor_module = "0x47985F9B24DD9648c27374d805D7576f1Ca8987B"
 
 # Environment: prod (2-of-3 Safe with production executors)
@@ -118,8 +122,8 @@ guardian_safe_executor_module = "0x47985F9B24DD9648c27374d805D7576f1Ca8987B"
 [factory.den-nonprod.env.prod]
 guardian_safe = "0x4F5E215b7Ef4a1B37d56d12afe79B274F9c65C7F"
 admin_safe = "0xf7e38d16B4b8b1e8E2466a68c6c8AbCe03f14CBa"
-org_factory = "0x70aAB65939Cc92058a72A60621735ff3c4307F91"
-whitelist_proxy = "0x3394854277b2fC2638fA374Eb290645a525e41A8"
+org_factory = "0xdc8a6798E03D4C5e82EBc931BF0875229a6C6907"
+whitelist_proxy = "0x403FA857008d4429CB374D0Ea73e9dbC00b1Aa6d"
 guardian_safe_executor_module = "0x0000000000000000000000000000000000000000"
 
 # ------------------------------------------------------------------------------
@@ -140,6 +144,8 @@ lib_org_policy = "0x0000000000000000000000000000000000000000"
 lib_org_admin = "0x0000000000000000000000000000000000000000"
 lib_org_init = "0x0000000000000000000000000000000000000000"
 lib_org_account_sig = "0x0000000000000000000000000000000000000000"
+lib_org_tx_recovery = "0x0000000000000000000000000000000000000000"
+lib_org_guardian_recovery = "0x0000000000000000000000000000000000000000"
 
 # Platform Implementation Contracts (environment-independent)
 # TODO: Update after deploying platform contracts via prod Den Singleton Factory

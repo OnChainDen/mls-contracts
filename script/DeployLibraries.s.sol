@@ -4,8 +4,10 @@ pragma solidity 0.8.33;
 
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
+import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {BaseDeployScript} from "script/base/BaseDeployScript.sol";
 import {Create2Utils} from "script/libraries/Create2Utils.sol";
 import {LinkedLibrariesUtils} from "script/libraries/LinkedLibrariesUtils.sol";
@@ -139,6 +141,18 @@ contract DeployLibraries is BaseDeployScript {
             "LibOrganizationAdmin",
             Create2Utils.computeAddress(factoryAddress, LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode)
         );
+        Logger.logKeyValue(
+            "LibOrganizationTxRecovery",
+            Create2Utils.computeAddress(
+                factoryAddress, LIB_ORG_TX_RECOVERY_SALT, type(LibOrganizationTxRecovery).creationCode
+            )
+        );
+        Logger.logKeyValue(
+            "LibOrganizationGuardianRecovery",
+            Create2Utils.computeAddress(
+                factoryAddress, LIB_ORG_GUARDIAN_RECOVERY_SALT, type(LibOrganizationGuardianRecovery).creationCode
+            )
+        );
         Logger.logEmptyLine();
     }
 
@@ -188,6 +202,22 @@ contract DeployLibraries is BaseDeployScript {
         (libs.adminAddress,) = Create2Utils.deployIfNotExists(
             _factoryAddress, LIB_ORG_ADMIN_SALT, type(LibOrganizationAdmin).creationCode, "LibOrganizationAdmin"
         );
+
+        // Deploy LibOrganizationTxRecovery
+        (libs.txRecoveryAddress,) = Create2Utils.deployIfNotExists(
+            _factoryAddress,
+            LIB_ORG_TX_RECOVERY_SALT,
+            type(LibOrganizationTxRecovery).creationCode,
+            "LibOrganizationTxRecovery"
+        );
+
+        // Deploy LibOrganizationGuardianRecovery
+        (libs.guardianRecoveryAddress,) = Create2Utils.deployIfNotExists(
+            _factoryAddress,
+            LIB_ORG_GUARDIAN_RECOVERY_SALT,
+            type(LibOrganizationGuardianRecovery).creationCode,
+            "LibOrganizationGuardianRecovery"
+        );
     }
 
     /// @dev Deploys dependent platform libraries (Init and AccountSig) via CREATE2
@@ -218,6 +248,8 @@ contract DeployLibraries is BaseDeployScript {
         Logger.logBoxHeader(unicode"✅ Deployed Independent Library Addresses");
         Logger.logKeyValue("LibOrganizationPolicy", libs.policyAddress);
         Logger.logKeyValue("LibOrganizationAdmin", libs.adminAddress);
+        Logger.logKeyValue("LibOrganizationTxRecovery", libs.txRecoveryAddress);
+        Logger.logKeyValue("LibOrganizationGuardianRecovery", libs.guardianRecoveryAddress);
         Logger.logBoxFooter();
     }
 

@@ -14,12 +14,16 @@ struct PlatformLibraries {
     address adminAddress;
     address initializationAddress;
     address accountSignatureAddress;
+    address txRecoveryAddress;
+    address guardianRecoveryAddress;
 }
 
 /// @dev Grouped addresses for independent libraries (no dependencies on other platform libraries)
 struct IndependentLibraries {
     address policyAddress;
     address adminAddress;
+    address txRecoveryAddress;
+    address guardianRecoveryAddress;
 }
 
 /// @dev Grouped addresses for dependent libraries (depend on independent libraries being linked)

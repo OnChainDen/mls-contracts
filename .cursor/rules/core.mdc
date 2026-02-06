@@ -1,0 +1,19 @@
+---
+desription: "Code quality and best practice rules"
+alwaysApply: true
+---
+
+# Reduce duplicate code
+Always try to avoid duplicating code. Always check to see if we already have a function, struct, error, event, etc. in the codebase already that you should use, instead of reimplementing it. If you touch multiple files, always check to make sure you didn't unecessarily duplicate code.
+
+# Styling
+After you apply changes, always check to make sure you're following our styleguide, located in @STYLEGUIDE.md. If you're breaking any rules in the styleguide, update your implementation to follow the style guide.
+
+# Check linter and static analysis
+After you apply changes and made sure you followed the styleguide, run `make check`. This command runs our automatic format, linters, slither static analysis, and test suite. 
+
+Fix any warnings you see.
+
+# Always ask clarifying questions when in doubt
+If you ever have clarifying questions, always ask me.
+
