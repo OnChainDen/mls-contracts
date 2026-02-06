@@ -90,7 +90,14 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
             policyAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_policy"))),
             adminAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_admin"))),
             initializationAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_init"))),
-            accountSignatureAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_account_sig")))
+            accountSignatureAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".lib_org_account_sig"))
+            ),
+            txRecoveryAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_tx_recovery"))),
+            // forgefmt: disable-next-item
+            guardianRecoveryAddress: vm.parseTomlAddress(
+                toml, string(abi.encodePacked(prefix, ".lib_org_guardian_recovery"))
+            )
         });
     }
 

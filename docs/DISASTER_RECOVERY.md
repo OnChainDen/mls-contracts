@@ -9,7 +9,7 @@ MLS Wallet implements two independent recovery mechanisms to handle scenarios wh
 | **Guardian Recovery** | Replace compromised/unavailable Guardian | Yes | `guardianRecoveryAddress` |
 | **Transaction Recovery** | Execute transactions without Guardian | Yes (to enable) | `transactionAndERC1271RecoveryAddress` |
 
-Both mechanisms use separate privileged addresses that can be configured either at Organization initialization OR after deployment (with admin authorization).
+Both mechanisms use separate privileged addresses that can be configured either at Organization initialization OR after deployment (with admin authorization via a timelocked flow).
 
 ---
 
@@ -22,24 +22,52 @@ Recovery mechanisms can be set up in two ways:
 - Guardian recovery and/or transaction recovery are immediately configured
 - Zero address means the mechanism is deferred for later setup
 
-**Option B: Post-Deployment Initialization**
-- Call `initializeGuardianRecovery()` or `initializeTransactionAndERC1271Recovery()` after deployment
+**Option B: Post-Deployment Initialization (Timelocked)**
+- Uses a timelocked flow: initiate → wait for `adminOperationTimelockDurationSeconds` → finalize
 - Requires Guardian to submit the transaction (`onlyGuardian` modifier)
-- Requires admin signature authorization (same as other admin operations)
+- Requires admin signature authorization at each step (initiate, finalize, cancel)
 - Can only be called once per mechanism - reverts if already configured
+- Uses separate `OperationType` values for initiate vs finalize to prevent signature replay
 
-| Function | Authorization | Can Only Be Called Once |
-|----------|---------------|-------------------------|
-| `initializeGuardianRecovery(recoveryAddress, timelockDurationSeconds, authParams)` | Guardian + Admin threshold signatures | Yes |
-| `initializeTransactionAndERC1271Recovery(recoveryAddress, timelockDurationSeconds, authParams)` | Guardian + Admin threshold signatures | Yes |
+| Step | Function | Authorization | OperationType |
+|------|----------|---------------|---------------|
+| Initiate | `initiateInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: true) | `InitiateInitializeGuardianRecovery` |
+| Finalize | `finalizeInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: true) | `FinalizeInitializeGuardianRecovery` |
+| Cancel | `cancelInitializeGuardianRecovery(...)` | Guardian + Admin threshold (isApproval: false) | `InitiateInitializeGuardianRecovery` |
+
+| Step | Function | Authorization | OperationType |
+|------|----------|---------------|---------------|
+| Initiate | `initiateInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: true) | `InitiateInitializeTransactionRecovery` |
+| Finalize | `finalizeInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: true) | `FinalizeInitializeTransactionRecovery` |
+| Cancel | `cancelInitializeTransactionAndERC1271Recovery(...)` | Guardian + Admin threshold (isApproval: false) | `InitiateInitializeTransactionRecovery` |
+
+---
+
+### Timelock Durations
+
+There are three distinct timelock durations in the system, each validated to be within the range enforced by `TimelockUtils` (min 2 days, max 30 days):
+
+| Timelock | Purpose | Set At | Used By |
+|----------|---------|--------|---------|
+| `adminOperationTimelockDurationSeconds` | Organization-wide timelock for sensitive admin operations | Organization initialization | Guardian updates (normal flow), deferred recovery initialization |
+| `guardianRecoveryTimelockDurationSeconds` | Timelock for guardian recovery operations | Organization init or deferred initialization | Guardian recovery update flow (initiate → finalize → accept) |
+| `txRecoveryTimelockDurationSeconds` | Timelock for enabling transaction/ERC-1271 recovery | Organization init or deferred initialization | Transaction recovery enable flow (initiate → finalize) |
+
+The **admin operation timelock** (`adminOperationTimelockDurationSeconds`) is stored in `LibOrganizationAdminOperationTimelockStorage` and governs:
+- Normal guardian updates (initiate → finalize → accept)
+- Deferred recovery initialization (initiate → finalize)
+
+The **recovery-specific timelocks** (`guardianRecoveryTimelockDurationSeconds` and `txRecoveryTimelockDurationSeconds`) are stored in `LibOrganizationRecoveryStorage` and govern the actual recovery operations themselves.
+
+Files: `OrganizationAdminOperationTimelockBase.sol`, `LibOrganizationAdminOperationTimelock.sol`, `TimelockUtils.sol`
 
 ---
 
 ### Guardian Recovery
 
-Allows replacing the Guardian through a time-locked process.
+Allows replacing the Guardian through a time-locked process using the `guardianRecoveryTimelockDurationSeconds` timelock.
 
-**3-Step Flow:**
+**Flow:**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -49,7 +77,7 @@ Allows replacing the Guardian through a time-locked process.
 │ Effect: Sets pendingGuardian, starts timelock                   │
 └─────────────────────────────────────────────────────────────────┘
                               │
-                              │ Wait for timelock to expire
+                              │ Wait for guardianRecoveryTimelockDurationSeconds
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ Step 2: FINALIZE                                                │
@@ -77,7 +105,7 @@ Files: `OrganizationGuardianRecoveryBase.sol`, `LibOrganizationGuardianRecovery.
 
 Allows executing transactions and validating ERC-1271 signatures without the Guardian.
 
-**Enable Flow (2-Step with Timelock):**
+**Enable Flow (Timelocked with `txRecoveryTimelockDurationSeconds`):**
 
 ```
 1. initiateEnableTransactionAndERC1271Recovery()
@@ -146,7 +174,7 @@ File: `LibOrganizationAccountSignature.sol:79`
 
 **Scenario A: Guardian Compromised**
 1. Guardian Recovery Address initiates new Guardian
-2. Wait for timelock
+2. Wait for `guardianRecoveryTimelockDurationSeconds`
 3. Finalize and have new Guardian accept
 4. Normal operations resume with new Guardian
 
@@ -164,9 +192,10 @@ File: `LibOrganizationAccountSignature.sol:79`
 **Scenario D: Deferred Recovery Setup**
 1. Deploy Organization without recovery addresses configured (pass zero addresses)
 2. Later, decide to add Guardian Recovery and/or Transaction Recovery
-3. Have admins sign authorization for the setup
-4. Guardian calls `initializeGuardianRecovery()` or `initializeTransactionAndERC1271Recovery()`
-5. Recovery mechanisms are now available
+3. Guardian calls `initiateInitializeGuardianRecovery()` or `initiateInitializeTransactionAndERC1271Recovery()` with admin authorization
+4. Wait for `adminOperationTimelockDurationSeconds` to elapse
+5. Guardian calls `finalizeInitializeGuardianRecovery()` or `finalizeInitializeTransactionAndERC1271Recovery()` with admin authorization
+6. Recovery mechanisms are now available
 
 ---
 

@@ -189,8 +189,10 @@ LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibrari
 # Extract independent library addresses (these are correct without --libraries)
 LIB_ORG_POLICY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationPolicy")
 LIB_ORG_ADMIN_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationAdmin")
+LIB_ORG_TX_RECOVERY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationTxRecovery")
+LIB_ORG_GUARDIAN_RECOVERY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationGuardianRecovery")
 
-if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" ]]; then
+if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_TX_RECOVERY_ADDRESS" || -z "$LIB_ORG_GUARDIAN_RECOVERY_ADDRESS" ]]; then
     clear_progress
     echo "Error: Failed to extract independent library addresses from output" >&2
     echo "$LIB_OUTPUT_INDEPENDENT" >&2
@@ -260,6 +262,8 @@ LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_INIT_PATH}:${LIB_ORG_INIT_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${LIB_ORG_ACCOUNT_SIG_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${LIB_ORG_TX_RECOVERY_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS}"
 
 # Compute platform contracts with NONPROD guardian and admin safes
 print_progress "  Computing platform contract addresses (nonprod)..."
@@ -347,6 +351,8 @@ print_toml "lib_org_policy" "${LIB_ORG_POLICY_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_admin" "${LIB_ORG_ADMIN_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_init" "${LIB_ORG_INIT_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_account_sig" "${LIB_ORG_ACCOUNT_SIG_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_tx_recovery" "${LIB_ORG_TX_RECOVERY_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_guardian_recovery" "${LIB_ORG_GUARDIAN_RECOVERY_ADDRESS:-NOT_COMPUTED}"
 echo ""
 echo "# Platform Implementation Contracts (environment-independent)"
 print_toml "whitelist_impl" "${WHITELIST_IMPL_ADDRESS:-NOT_COMPUTED}"
