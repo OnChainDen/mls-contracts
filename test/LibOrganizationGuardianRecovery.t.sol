@@ -8,6 +8,7 @@ import {Test} from "forge-std/Test.sol";
 import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGuardian.sol";
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
@@ -190,7 +191,7 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     address constant NEW_GUARDIAN = address(0x400);
     address constant NEW_GUARDIAN_2 = address(0x500);
 
-    uint256 constant TIMELOCK_DURATION = 1 days;
+    uint256 constant TIMELOCK_DURATION = 2 days;
     uint256 constant SECURE_TIMELOCK_DURATION = 3 days;
 
     function setUp() public {
@@ -247,7 +248,14 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_initializeGuardianRecovery_revertsOnZeroTimelockDurationSeconds() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });
@@ -545,7 +553,14 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_initializeGuardianRecovery_revertsOnZeroTimelockWhenAddressProvided() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });
@@ -620,7 +635,14 @@ contract LibOrganizationGuardianRecoveryTest is Test {
     function test_initiateInitializeGuardianRecovery_revertsOnZeroTimelock() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initiateInitializeGuardianRecovery({
             guardianRecoveryAddress: GUARDIAN_RECOVERY_ADDRESS, guardianRecoveryTimelockDurationSeconds: 0
         });

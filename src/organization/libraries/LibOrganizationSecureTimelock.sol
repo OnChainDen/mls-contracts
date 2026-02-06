@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {
     LibOrganizationSecureTimelockStorage
 } from "organization/libraries/storage/LibOrganizationSecureTimelockStorage.sol";
@@ -15,23 +16,17 @@ import {
  *      - Deferred recovery initialization (initiate → finalize)
  *      - Any future timelocked operations
  *
- *      Enforces a minimum of 3 days to ensure meaningful timelock protection.
+ *      Validates duration via TimelockUtils to ensure it falls within the allowed range.
  * @author Den Technologies Inc
  */
 library LibOrganizationSecureTimelock {
-    /// @dev Minimum secure timelock duration: 3 days
-    uint256 internal constant MIN_SECURE_TIMELOCK_DURATION_SECONDS = 3 days;
-
     /**
      * @dev Initializes the secure timelock duration during organization initialization.
-     *      Validates that the duration meets the minimum requirement (3 days).
+     *      Validates that the duration is within the allowed range via TimelockUtils.
      * @param secureTimelockDurationSeconds The timelock duration in seconds
      */
     function initializeSecureTimelock(uint256 secureTimelockDurationSeconds) internal {
-        // Case: Below minimum (also catches zero)
-        if (secureTimelockDurationSeconds < MIN_SECURE_TIMELOCK_DURATION_SECONDS) {
-            revert IOrganizationSecureTimelock.InvalidSecureTimelockDurationSeconds();
-        }
+        TimelockUtils.validateTimelockDurationOrRevert(secureTimelockDurationSeconds);
 
         LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds = secureTimelockDurationSeconds;
     }

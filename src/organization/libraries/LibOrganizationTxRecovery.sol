@@ -2,9 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {TxRecoveryState} from "types/RecoveryTypes.sol";
@@ -302,9 +302,7 @@ library LibOrganizationTxRecovery {
             revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
         }
 
-        // Case: Timelock duration is zero
-        if (timelockDurationSeconds == 0) {
-            revert IOrganizationSecureTimelock.InvalidTimelockDurationSeconds();
-        }
+        // Case: Timelock duration outside allowed range
+        TimelockUtils.validateTimelockDurationOrRevert(timelockDurationSeconds);
     }
 }

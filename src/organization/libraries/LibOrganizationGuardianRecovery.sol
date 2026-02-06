@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
-import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationSecureTimelock} from "organization/libraries/LibOrganizationSecureTimelock.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
@@ -302,9 +302,7 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress();
         }
 
-        // Case: Timelock duration is zero
-        if (timelockDurationSeconds == 0) {
-            revert IOrganizationSecureTimelock.InvalidTimelockDurationSeconds();
-        }
+        // Case: Timelock duration outside allowed range
+        TimelockUtils.validateTimelockDurationOrRevert(timelockDurationSeconds);
     }
 }

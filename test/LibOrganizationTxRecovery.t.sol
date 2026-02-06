@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {IOrganizationSecureTimelock} from "interfaces/organization/IOrganizationSecureTimelock.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {
@@ -126,7 +127,7 @@ contract LibOrganizationTxRecoveryTest is Test {
 
     address constant TX_RECOVERY_ADDRESS = address(0x100);
 
-    uint256 constant TIMELOCK_DURATION = 1 days;
+    uint256 constant TIMELOCK_DURATION = 2 days;
     uint256 constant SECURE_TIMELOCK_DURATION = 3 days;
 
     function setUp() public {
@@ -165,7 +166,14 @@ contract LibOrganizationTxRecoveryTest is Test {
     function test_initializeTxRecovery_revertsOnZeroTimelockDuration() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
         });
@@ -365,7 +373,14 @@ contract LibOrganizationTxRecoveryTest is Test {
     function test_initiateInitializeTxRecovery_revertsOnZeroTimelock() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationSecureTimelock.InvalidTimelockDurationSeconds.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initiateInitializeTxRecovery({
             transactionAndERC1271RecoveryAddress: TX_RECOVERY_ADDRESS, txRecoveryTimelockDurationSeconds: 0
         });
