@@ -24,20 +24,13 @@ library LibOrganizationSecureTimelock {
 
     /**
      * @dev Initializes the secure timelock duration during organization initialization.
-     *      Validates that the duration is non-zero and meets the minimum requirement.
+     *      Validates that the duration meets the minimum requirement (3 days).
      * @param secureTimelockDurationSeconds The timelock duration in seconds
      */
     function initializeSecureTimelock(uint256 secureTimelockDurationSeconds) internal {
-        // Case: Zero timelock duration
-        if (secureTimelockDurationSeconds == 0) {
-            revert IOrganizationSecureTimelock.InvalidSecureTimelockDurationSeconds();
-        }
-
-        // Case: Below minimum
+        // Case: Below minimum (also catches zero)
         if (secureTimelockDurationSeconds < MIN_SECURE_TIMELOCK_DURATION_SECONDS) {
-            revert IOrganizationSecureTimelock.SecureTimelockDurationBelowMinimum(
-                secureTimelockDurationSeconds, MIN_SECURE_TIMELOCK_DURATION_SECONDS
-            );
+            revert IOrganizationSecureTimelock.InvalidSecureTimelockDurationSeconds();
         }
 
         LibOrganizationSecureTimelockStorage.layout().secureTimelockDurationSeconds = secureTimelockDurationSeconds;

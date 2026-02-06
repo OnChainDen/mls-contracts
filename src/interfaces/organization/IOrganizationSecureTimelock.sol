@@ -11,16 +11,9 @@ pragma solidity 0.8.33;
  */
 interface IOrganizationSecureTimelock {
     /**
-     * @notice Thrown when the secure timelock duration is invalid (zero)
+     * @notice Thrown when the secure timelock duration is invalid (zero or below minimum)
      */
     error InvalidSecureTimelockDurationSeconds();
-
-    /**
-     * @notice Thrown when the secure timelock duration is below the required minimum
-     * @param provided The provided timelock duration in seconds
-     * @param minimum The required minimum timelock duration in seconds
-     */
-    error SecureTimelockDurationBelowMinimum(uint256 provided, uint256 minimum);
 
     /**
      * @notice Returns the organization-wide secure timelock duration in seconds
