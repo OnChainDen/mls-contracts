@@ -53,6 +53,8 @@ LIB_ORG_POLICY_ADDRESS := $(get_lib_org_policy "$FACTORY")
 LIB_ORG_ADMIN_ADDRESS := $(get_lib_org_admin "$FACTORY")
 LIB_ORG_INIT_ADDRESS := $(get_lib_org_init "$FACTORY")
 LIB_ORG_ACCOUNT_SIG_ADDRESS := $(get_lib_org_account_sig "$FACTORY")
+LIB_ORG_TX_RECOVERY_ADDRESS := $(get_lib_org_tx_recovery "$FACTORY")
+LIB_ORG_GUARDIAN_RECOVERY_ADDRESS := $(get_lib_org_guardian_recovery "$FACTORY")
 
 # Arachnid deployer address (special case for funding - always from arachnid factory)
 ARACHNID_DEPLOYER_ADDRESS := $(get_factory_deployer "arachnid")
@@ -64,6 +66,8 @@ LIB_ORG_POLICY_PATH := $LIB_ORG_POLICY_PATH
 LIB_ORG_ADMIN_PATH := $LIB_ORG_ADMIN_PATH
 LIB_ORG_INIT_PATH := $LIB_ORG_INIT_PATH
 LIB_ORG_ACCOUNT_SIG_PATH := $LIB_ORG_ACCOUNT_SIG_PATH
+LIB_ORG_TX_RECOVERY_PATH := $LIB_ORG_TX_RECOVERY_PATH
+LIB_ORG_GUARDIAN_RECOVERY_PATH := $LIB_ORG_GUARDIAN_RECOVERY_PATH
 
 # ------------------------------------------------------------------------------
 # Library Linking Flags (for deploy-contracts and deploy-dependent-libs)
@@ -78,5 +82,7 @@ ALL_LIBRARIES_FLAGS = \\
 	--libraries \$(LIB_ORG_POLICY_PATH):\$(LIB_ORG_POLICY_ADDRESS) \\
 	--libraries \$(LIB_ORG_ADMIN_PATH):\$(LIB_ORG_ADMIN_ADDRESS) \\
 	--libraries \$(LIB_ORG_INIT_PATH):\$(LIB_ORG_INIT_ADDRESS) \\
-	--libraries \$(LIB_ORG_ACCOUNT_SIG_PATH):\$(LIB_ORG_ACCOUNT_SIG_ADDRESS)
+	--libraries \$(LIB_ORG_ACCOUNT_SIG_PATH):\$(LIB_ORG_ACCOUNT_SIG_ADDRESS) \\
+	--libraries \$(LIB_ORG_TX_RECOVERY_PATH):\$(LIB_ORG_TX_RECOVERY_ADDRESS) \\
+	--libraries \$(LIB_ORG_GUARDIAN_RECOVERY_PATH):\$(LIB_ORG_GUARDIAN_RECOVERY_ADDRESS)
 EOF

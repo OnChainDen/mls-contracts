@@ -18,6 +18,10 @@ import {TxRecoveryState} from "types/RecoveryTypes.sol";
  *      - Recovery ERC1271 signature validation
  *
  *      Separated from guardian recovery for cleaner code organization and easier auditing.
+ *
+ *      This library uses public functions and is deployed as a separate contract onchain.
+ *      The Solidity compiler inserts DELEGATECALL operations for public library functions,
+ *      which reduces the bytecode size of contracts that use this library.
  * @author Den Technologies Inc
  */
 library LibOrganizationTxRecovery {
@@ -32,7 +36,7 @@ library LibOrganizationTxRecovery {
     function initializeTxRecovery(
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds
-    ) internal {
+    ) public {
         TxRecoveryState storage txRecoveryLayout = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         _validateTxRecoveryNotConfiguredOrRevert(txRecoveryLayout);
@@ -48,7 +52,7 @@ library LibOrganizationTxRecovery {
      * @dev Initiates enabling transaction and ERC1271 recovery (starts timelock).
      *      Reverts if recovery is not configured or if a request is already pending.
      */
-    function initiateEnableTxRecovery() internal {
+    function initiateEnableTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: Recovery not configured (no recovery address or timelock duration set)
@@ -76,7 +80,7 @@ library LibOrganizationTxRecovery {
      * @dev Finalizes enabling transaction and ERC1271 recovery (after timelock).
      *      Reverts if no request is pending or timelock has not expired.
      */
-    function finalizeEnableTxRecovery() internal {
+    function finalizeEnableTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         uint256 canFinalizeAtTimestamp = txRecovery.pendingEnableTimestamp;
@@ -100,7 +104,7 @@ library LibOrganizationTxRecovery {
      * @dev Cancels a pending transaction and ERC1271 recovery enable request.
      *      Reverts if no request is pending.
      */
-    function cancelEnableTxRecovery() internal {
+    function cancelEnableTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: No pending request
@@ -118,7 +122,7 @@ library LibOrganizationTxRecovery {
      *      Also cancels any pending enable request (clears pendingEnableTimestamp),
      *      even if the timelock has already expired. This ensures recovery is fully disabled.
      */
-    function disableTxRecovery() internal {
+    function disableTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         txRecovery.isEnabled = false;
@@ -136,7 +140,7 @@ library LibOrganizationTxRecovery {
     function initiateInitializeTxRecovery(
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds
-    ) internal {
+    ) public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         _validateTxRecoveryNotConfiguredOrRevert(txRecovery);
@@ -165,7 +169,7 @@ library LibOrganizationTxRecovery {
      *      Reads pending values, clears pending state, then delegates to initializeTxRecovery
      *      to reuse validation and config-writing logic.
      */
-    function finalizeInitializeTxRecovery() internal {
+    function finalizeInitializeTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         uint256 canFinalizeAtTimestamp = txRecovery.pendingInit.pendingTimestamp;
@@ -195,7 +199,7 @@ library LibOrganizationTxRecovery {
      * @dev Cancels a pending deferred initialization of transaction recovery.
      *      Reverts if no initialization is pending.
      */
-    function cancelInitializeTxRecovery() internal {
+    function cancelInitializeTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: No pending initialization
@@ -212,7 +216,7 @@ library LibOrganizationTxRecovery {
      * @dev Validates that a recovery account transaction is allowed.
      *      Reverts if recovery is not configured or not enabled.
      */
-    function validateRecoveryAccountTransactionAllowedOrRevert() internal view {
+    function validateRecoveryAccountTransactionAllowedOrRevert() public view {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
         // Case: Recovery not configured (no recovery address or timelock duration set)
@@ -235,7 +239,7 @@ library LibOrganizationTxRecovery {
      * @param signature The signature to validate
      * @return True if the signature is valid from the recovery address
      */
-    function isValidRecoverySignature(bytes32 hash, bytes memory signature) internal view returns (bool) {
+    function isValidRecoverySignature(bytes32 hash, bytes memory signature) public view returns (bool) {
         address recoveryAddress = LibOrganizationRecoveryStorage.layout().txRecovery.recoveryAddress;
 
         // Case: No recovery address configured
@@ -253,7 +257,7 @@ library LibOrganizationTxRecovery {
      * @dev Enforces that the caller is the transaction recovery address.
      *      Reverts if msg.sender is not the tx recovery address.
      */
-    function enforceOnlyTxRecoveryAddress() internal view {
+    function enforceOnlyTxRecoveryAddress() public view {
         address expected = LibOrganizationRecoveryStorage.layout().txRecovery.recoveryAddress;
 
         if (msg.sender != expected) {
@@ -265,7 +269,7 @@ library LibOrganizationTxRecovery {
      * @dev Returns whether recovery is enabled for transactions and ERC1271 signatures.
      * @return True if enabled
      */
-    function isRecoveryEnabledForTxAndERC1271() internal view returns (bool) {
+    function isRecoveryEnabledForTxAndERC1271() public view returns (bool) {
         return LibOrganizationRecoveryStorage.layout().txRecovery.isEnabled;
     }
 

@@ -222,7 +222,7 @@ make deploy-safe-multisigs ACCOUNT=my-deployer FACTORY=arachnid
 
 ### Step 4: Deploy Independent Libraries
 
-Deploys `LibOrganizationPolicy` and `LibOrganizationAdmin`—external libraries with no dependencies on other platform libraries.
+Deploys `LibOrganizationPolicy`, `LibOrganizationAdmin`, `LibOrganizationTxRecovery`, and `LibOrganizationGuardianRecovery`—external libraries with no dependencies on other platform libraries.
 
 ```bash
 make deploy-independent-libs ACCOUNT=my-deployer FACTORY=arachnid
@@ -302,7 +302,7 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 | 1 | `make deploy-arachnid-factory` | Or `deploy-den-factory` for unsupported chains |
 | 2 | `make deploy-safe-infra` | Uses Solidity 0.7.6 profile |
 | 3 | `make deploy-safe-multisigs` | Verifies infrastructure first |
-| 4 | `make deploy-independent-libs` | Policy, Admin libraries |
+| 4 | `make deploy-independent-libs` | Policy, Admin, TxRecovery, GuardianRecovery libraries |
 | 5 | `make deploy-dependent-libs` | Init, AccountSig libraries (with linking) |
 | 6 | `make deploy-contracts` | Platform contracts (with linking) |
 | 7 | `make deploy-batched-transaction` | Before SafeExecutorModule |
@@ -313,7 +313,7 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 
 | Target | Steps | What it deploys |
 |--------|-------|-----------------|
-| `make deploy-libraries` | 4, 5 | All four external libraries (Policy, Admin, Init, AccountSig) |
+| `make deploy-libraries` | 4, 5 | All six external libraries (Policy, Admin, TxRecovery, GuardianRecovery, Init, AccountSig) |
 | `make deploy-platform` | 2, 3, 4, 5, 6 | Safe infrastructure, Safe multisigs, all libraries, and platform contracts |
 
 > **Note:** Convenience targets do not include Steps 1, 7, 8, or 9. The CREATE2 factory (Step 1) only needs to be deployed once per chain. BatchedTransaction (Step 7), Guardian module (Step 8), and module approval (Step 9) are typically done separately after the core platform is deployed.
@@ -490,7 +490,7 @@ Understanding which addresses depend on what is critical:
 | Address | Dependencies |
 |---------|--------------|
 | Factory | Factory deployer EOA (for Den factories) |
-| Libraries (Policy, Admin) | Factory only |
+| Libraries (Policy, Admin, TxRecovery, GuardianRecovery) | Factory only |
 | Libraries (Init, AccountSig) | Factory + independent library addresses |
 | Safe infrastructure | Factory only |
 | Safe multisigs | Factory + Safe proxy factory + Safe owner addresses |
@@ -581,12 +581,14 @@ Note that our external libraries can be broken down into two groups:
 - **Independent libraries** – External libraries that do not rely on any other external libraries
 - **Dependent libraries** – External libraries that rely on other external libraries (must be deployed after their dependencies) 
 
-The four external libraries that require linking are:
+The six external libraries that require linking are:
 
 | Library | Purpose | Dependencies |
 |---------|---------|--------------|
 | `LibOrganizationPolicy` | Policy validation and enforcement | None (independent) |
 | `LibOrganizationAdmin` | Admin operations | None (independent) |
+| `LibOrganizationTxRecovery` | Transaction and ERC1271 recovery | None (independent) |
+| `LibOrganizationGuardianRecovery` | Guardian recovery operations | None (independent) |
 | `LibOrganizationInitialization` | Organization setup | Depends on `LibOrganizationAdmin` |
 | `LibOrganizationAccountSignature` | Account signature verification | Depends on `LibOrganizationPolicy` |
 
@@ -606,7 +608,7 @@ With explicit library linking:
 
 Due to inter-library dependencies, libraries must be deployed in **two stages**:
 
-**Stage 1 - Independent Libraries (Policy and Admin):**
+**Stage 1 - Independent Libraries (Policy, Admin, TxRecovery, GuardianRecovery):**
 These libraries have no dependencies on other platform libraries. They can be deployed without any `--libraries` flags.
 
 **Stage 2 - Dependent Libraries (Init and AccountSig):**

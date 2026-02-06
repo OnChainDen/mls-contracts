@@ -22,6 +22,8 @@ LIB_ORG_POLICY_PATH="src/organization/libraries/LibOrganizationPolicy.sol:LibOrg
 LIB_ORG_ADMIN_PATH="src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin"
 LIB_ORG_INIT_PATH="src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization"
 LIB_ORG_ACCOUNT_SIG_PATH="src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature"
+LIB_ORG_TX_RECOVERY_PATH="src/organization/libraries/LibOrganizationTxRecovery.sol:LibOrganizationTxRecovery"
+LIB_ORG_GUARDIAN_RECOVERY_PATH="src/organization/libraries/LibOrganizationGuardianRecovery.sol:LibOrganizationGuardianRecovery"
 
 # =============================================================================
 # Validation Functions
@@ -147,6 +149,20 @@ get_lib_org_account_sig() {
     get_config ".factory[\"$factory\"].lib_org_account_sig"
 }
 
+# Get LibOrganizationTxRecovery address for a given factory
+# Usage: get_lib_org_tx_recovery "arachnid"
+get_lib_org_tx_recovery() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_tx_recovery"
+}
+
+# Get LibOrganizationGuardianRecovery address for a given factory
+# Usage: get_lib_org_guardian_recovery "arachnid"
+get_lib_org_guardian_recovery() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_guardian_recovery"
+}
+
 # =============================================================================
 # Safe Config Getters (from [safe.*] sections)
 # =============================================================================
@@ -241,13 +257,17 @@ build_all_libraries_flags() {
     local admin_addr
     local init_addr
     local account_sig_addr
+    local tx_recovery_addr
+    local guardian_recovery_addr
 
     policy_addr=$(get_lib_org_policy "$factory")
     admin_addr=$(get_lib_org_admin "$factory")
     init_addr=$(get_lib_org_init "$factory")
     account_sig_addr=$(get_lib_org_account_sig "$factory")
+    tx_recovery_addr=$(get_lib_org_tx_recovery "$factory")
+    guardian_recovery_addr=$(get_lib_org_guardian_recovery "$factory")
 
-    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_INIT_PATH}:${init_addr} --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${account_sig_addr}"
+    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_INIT_PATH}:${init_addr} --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${account_sig_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr}"
 }
 
 # =============================================================================

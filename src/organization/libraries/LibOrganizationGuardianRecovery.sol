@@ -21,6 +21,10 @@ import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
  *      The flow is: initiate (starts timelock) → finalize (after timelock) → accept (new guardian confirms)
  *
  *      Separated from transaction recovery for cleaner code organization and easier auditing.
+ *
+ *      This library uses public functions and is deployed as a separate contract onchain.
+ *      The Solidity compiler inserts DELEGATECALL operations for public library functions,
+ *      which reduces the bytecode size of contracts that use this library.
  * @author Den Technologies Inc
  */
 library LibOrganizationGuardianRecovery {
@@ -35,7 +39,7 @@ library LibOrganizationGuardianRecovery {
     function initializeGuardianRecovery(
         address guardianRecoveryAddress,
         uint256 guardianRecoveryTimelockDurationSeconds
-    ) internal {
+    ) public {
         GuardianRecoveryState storage guardianRecoveryLayout = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecoveryLayout);
@@ -51,7 +55,7 @@ library LibOrganizationGuardianRecovery {
      *      Uses recovery storage for pending state (separate from normal flow).
      * @param newGuardian The proposed new guardian address
      */
-    function initiateRecoveryGuardianUpdate(address newGuardian) internal {
+    function initiateRecoveryGuardianUpdate(address newGuardian) public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: Already a pending recovery guardian update
@@ -83,7 +87,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Finalizes a recovery guardian update (after timelock, ready for new guardian to accept).
      *      Reverts if no recovery guardian update is pending or timelock has not expired.
      */
-    function finalizeRecoveryGuardianUpdate() internal {
+    function finalizeRecoveryGuardianUpdate() public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending recovery guardian update
@@ -106,7 +110,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Cancels a pending recovery guardian update.
      *      Reverts if no recovery guardian update is pending.
      */
-    function cancelRecoveryGuardianUpdate() internal {
+    function cancelRecoveryGuardianUpdate() public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending recovery guardian update
@@ -128,7 +132,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Accepts the guardian role via recovery flow (completes the recovery update).
      *      Caller must be the recovery pending guardian (enforced by modifier in OrganizationImplementation).
      */
-    function acceptGuardianRecovery() internal {
+    function acceptGuardianRecovery() public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         address pendingGuardianAddr = guardianRecovery.pendingGuardian;
@@ -167,7 +171,7 @@ library LibOrganizationGuardianRecovery {
     function initiateInitializeGuardianRecovery(
         address guardianRecoveryAddress,
         uint256 guardianRecoveryTimelockDurationSeconds
-    ) internal {
+    ) public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         _validateGuardianRecoveryNotConfiguredOrRevert(guardianRecovery);
@@ -196,7 +200,7 @@ library LibOrganizationGuardianRecovery {
      *      Reads pending values, clears pending state, then delegates to initializeGuardianRecovery
      *      to reuse validation and config-writing logic.
      */
-    function finalizeInitializeGuardianRecovery() internal {
+    function finalizeInitializeGuardianRecovery() public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         uint256 canFinalizeAtTimestamp = guardianRecovery.pendingInit.pendingTimestamp;
@@ -226,7 +230,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Cancels a pending deferred initialization of guardian recovery.
      *      Reverts if no initialization is pending.
      */
-    function cancelInitializeGuardianRecovery() internal {
+    function cancelInitializeGuardianRecovery() public {
         GuardianRecoveryState storage guardianRecovery = LibOrganizationRecoveryStorage.layout().guardianRecovery;
 
         // Case: No pending initialization
@@ -243,7 +247,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Enforces that the caller is the guardian recovery address.
      *      Reverts if msg.sender is not the guardian recovery address.
      */
-    function enforceOnlyGuardianRecoveryAddress() internal view {
+    function enforceOnlyGuardianRecoveryAddress() public view {
         address expected = LibOrganizationRecoveryStorage.layout().guardianRecovery.recoveryAddress;
 
         if (msg.sender != expected) {
@@ -255,7 +259,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Enforces that the caller is the recovery pending guardian address.
      *      Reverts if msg.sender is not the recovery pending guardian.
      */
-    function enforceOnlyRecoveryPendingGuardian() internal view {
+    function enforceOnlyRecoveryPendingGuardian() public view {
         address pendingGuardianAddr = LibOrganizationRecoveryStorage.layout().guardianRecovery.pendingGuardian;
         if (msg.sender != pendingGuardianAddr) {
             // solhint-disable-next-line max-line-length
