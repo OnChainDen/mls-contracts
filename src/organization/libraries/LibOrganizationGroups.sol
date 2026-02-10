@@ -73,7 +73,7 @@ library LibOrganizationGroups {
 
         // Case: Deletion with non-empty member arrays
         if (mod.membersToAdd.length > 0 || mod.membersToRemove.length > 0) {
-            revert IOrganizationGroups.GroupDeletionWithMembers(groupId);
+            revert IOrganizationGroups.InvalidGroupDeletionOperation(groupId);
         }
 
         groupsLayout.isGroup[groupId] = false;

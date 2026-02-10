@@ -64,7 +64,7 @@ interface IOrganizationGroups {
      * @notice Thrown when trying to delete a group while providing members to add or remove
      * @param groupId The group ID being deleted
      */
-    error GroupDeletionWithMembers(uint256 groupId);
+    error InvalidGroupDeletionOperation(uint256 groupId);
 
     /**
      * @notice Thrown when trying to remove a member who is not in the group
