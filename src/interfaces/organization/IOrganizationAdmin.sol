@@ -114,13 +114,13 @@ interface IOrganizationAdmin {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Adds and/or removes admins and optionally updates the voting threshold
+     * @notice Adds and/or removes admins and updates the voting threshold
      * @dev All new admins must be current members. Adding a duplicate admin reverts.
-     *      Removing a non-existent admin reverts. The voting threshold must be <= adminCount
-     *      after modifications. A newVotingThreshold of 0 keeps the current threshold.
+     *      Removing a non-existent admin reverts. The voting threshold must always be
+     *      explicitly provided as a non-zero value and must be <= adminCount after modifications.
      * @param adminsToAdd Addresses to add as admins
      * @param adminsToRemove Addresses to remove from admins
-     * @param newVotingThreshold The new voting threshold (0 to keep current)
+     * @param newVotingThreshold The new voting threshold (must be non-zero and <= final admin count)
      * @param authParams The authorization parameters (salt, expiration, signatures)
      */
     function modifyAdmins(

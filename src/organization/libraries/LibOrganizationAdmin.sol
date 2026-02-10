@@ -65,13 +65,13 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Adds and/or removes admins and optionally updates the voting threshold.
+     * @dev Adds and/or removes admins and updates the voting threshold.
      *      All new admins must be current members. Adding a duplicate admin reverts.
-     *      Removing a non-existent admin reverts. The voting threshold must be <= adminCount
-     *      after modifications. A newVotingThreshold of 0 keeps the current threshold.
+     *      Removing a non-existent admin reverts. The voting threshold must always be
+     *      explicitly provided as a non-zero value and must be <= adminCount after modifications.
      * @param adminsToAdd Addresses to add as admins
      * @param adminsToRemove Addresses to remove from admins
-     * @param newVotingThreshold The new voting threshold (0 to keep current)
+     * @param newVotingThreshold The new voting threshold (must be non-zero and <= final admin count)
      */
     function modifyAdmins(address[] calldata adminsToAdd, address[] calldata adminsToRemove, uint256 newVotingThreshold)
         public
@@ -106,21 +106,19 @@ library LibOrganizationAdmin {
             emit IOrganizationAdmin.AdminRemoved(admin);
         }
 
-        // Invariant: must always have at least one admin
+        // Case: change would result in no admins
         if (adminLayout.adminCount == 0) revert IOrganizationAdmin.InvalidAdminConfig();
 
-        // Update voting threshold if a new one is provided (0 means keep current)
-        uint256 effectiveThreshold = newVotingThreshold > 0 ? newVotingThreshold : adminLayout.votingThreshold;
-
-        // Invariant: threshold cannot be zero and cannot exceed admin count
-        if (effectiveThreshold == 0 || effectiveThreshold > adminLayout.adminCount) {
-            revert IOrganizationAdmin.InvalidAdminVotingThreshold(effectiveThreshold, adminLayout.adminCount);
+        // Case: invalid admin voting thresholdd
+        if (newVotingThreshold == 0 || newVotingThreshold > adminLayout.adminCount) {
+            revert IOrganizationAdmin.InvalidAdminVotingThreshold(newVotingThreshold, adminLayout.adminCount);
         }
 
-        if (adminLayout.votingThreshold != effectiveThreshold) {
+        // Case: New voting threshold
+        if (adminLayout.votingThreshold != newVotingThreshold) {
             uint256 previousThreshold = adminLayout.votingThreshold;
-            adminLayout.votingThreshold = effectiveThreshold;
-            emit IOrganizationAdmin.VotingThresholdUpdated(previousThreshold, effectiveThreshold);
+            adminLayout.votingThreshold = newVotingThreshold;
+            emit IOrganizationAdmin.VotingThresholdUpdated(previousThreshold, newVotingThreshold);
         }
     }
 
