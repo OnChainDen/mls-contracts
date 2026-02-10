@@ -49,16 +49,28 @@ interface IOrganizationGroups {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Thrown when trying to modify a group that does not exist
+     * @notice Thrown when trying to update or delete a group that does not exist
      * @param groupId The non-existent group ID
      */
     error GroupDoesNotExist(uint256 groupId);
 
     /**
-     * @notice Thrown when trying to recreate a group ID that was previously deleted
+     * @notice Thrown when trying to create a group that already exists
+     * @param groupId The existing group ID
+     */
+    error GroupAlreadyExists(uint256 groupId);
+
+    /**
+     * @notice Thrown when trying to create or recreate a group ID that was previously deleted
      * @param groupId The deleted group ID
      */
     error GroupAlreadyDeleted(uint256 groupId);
+
+    /**
+     * @notice Thrown when trying to create a group while providing members to remove
+     * @param groupId The group ID being created
+     */
+    error InvalidGroupCreationOperation(uint256 groupId);
 
     /**
      * @notice Thrown when trying to delete a group while providing members to add or remove
@@ -78,9 +90,11 @@ interface IOrganizationGroups {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Creates, modifies, or deletes groups in the organization
-     * @dev When deleteGroup is true, the group is deleted and membersToAdd/membersToRemove must be empty.
-     *      When deleteGroup is false and the groupId doesn't exist yet, the group is implicitly created.
+     * @notice Creates, updates, or deletes groups in the organization
+     * @dev Each modification specifies its type via GroupModificationType:
+     *      - Create: creates a new group (reverts if already exists, was deleted, or membersToRemove is non-empty)
+     *      - Update: modifies membership of an existing group (reverts if group doesn't exist)
+     *      - Delete: deletes a group (membersToAdd/membersToRemove must be empty)
      *      Adding a duplicate group member is a no-op. Removing a non-existent group member reverts.
      *      Group IDs are not reusable after deletion.
      * @param modifications Array of group modifications to apply

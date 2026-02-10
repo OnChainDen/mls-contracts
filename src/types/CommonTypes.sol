@@ -44,18 +44,29 @@ enum OperationType {
 }
 
 /**
+ * @notice Enum to specify the type of group modification being performed
+ */
+enum GroupModificationType {
+    Create, // Create a new group (group must not already exist)
+    Update, // Update an existing group's membership (group must already exist)
+    Delete // Delete an existing group (group must already exist, member arrays must be empty)
+}
+
+/**
  * @notice Represents a single group modification operation
- * @dev When deleteGroup is true, the group is deleted and membersToAdd/membersToRemove must be empty.
- *      When deleteGroup is false and the groupId doesn't exist yet, the group is implicitly created.
+ * @dev Create: creates a new group (reverts if already exists, was deleted, or membersToRemove is non-empty).
+ *      Update: modifies an existing group's membership (reverts if group does not exist).
+ *      Delete: deletes an existing group (reverts if group does not exist or member arrays are non-empty).
  *      Group IDs are not reusable after deletion -- recreating a deleted group ID will revert.
  * @param groupId The unique identifier for the group
- * @param deleteGroup If true, deletes the group (membersToAdd/membersToRemove must be empty)
- * @param membersToAdd Addresses to add to the group (no-op on duplicates)
- * @param membersToRemove Addresses to remove from the group (reverts if not in group)
+ * @param modificationType The type of modification to perform (Create, Update, or Delete)
+ * @param membersToAdd Addresses to add to the group (no-op on duplicates; must be empty for Delete)
+ * @param membersToRemove Addresses to remove from the group (reverts if not in group; must be empty for Create and
+ * Delete)
  */
 struct GroupModification {
     uint256 groupId;
-    bool deleteGroup;
+    GroupModificationType modificationType;
     address[] membersToAdd;
     address[] membersToRemove;
 }
