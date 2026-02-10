@@ -197,7 +197,7 @@ library LibOrganizationAdmin {
             }
         }
 
-        return validSignatures >= requiredSignatures;
+        return false;
     }
 
     /**

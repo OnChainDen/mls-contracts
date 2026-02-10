@@ -78,7 +78,7 @@ library LibPolicyApproval {
             }
         }
 
-        return validApprovals >= requiredApprovals;
+        return false;
     }
 
     /**
