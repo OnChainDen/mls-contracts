@@ -19,7 +19,6 @@ library LibOrganizationMembers {
      *      Adding a duplicate member is a no-op.
      *      Removing a non-existent member reverts.
      *      Removing a member who is an admin reverts with MemberIsAdmin.
-     *      Reverts if the operation would result in zero members.
      * @param membersToAdd Addresses to add as members
      * @param membersToRemove Addresses to remove from members
      */
@@ -54,9 +53,6 @@ library LibOrganizationMembers {
             --membersLayout.memberCount;
             emit IOrganizationMembers.MemberRemoved(member);
         }
-
-        // Invariant: organization must always have at least one member
-        if (membersLayout.memberCount == 0) revert IOrganizationMembers.CannotRemoveAllMembers();
     }
 
     /**

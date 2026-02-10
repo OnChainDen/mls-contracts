@@ -51,11 +51,6 @@ interface IOrganizationMembers {
      */
     error InvalidMemberAddress(address member);
 
-    /**
-     * @notice Thrown when a modify members operation would result in zero members
-     */
-    error CannotRemoveAllMembers();
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════
