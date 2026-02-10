@@ -84,13 +84,19 @@ library LibOrganizationAdmin {
         // Process additions
         for (uint256 i = 0; i < adminsToAdd.length; ++i) {
             address admin = adminsToAdd[i];
-            if (admin == address(0)) revert IOrganizationMembers.InvalidMemberAddress(admin);
+            if (admin == address(0)) {
+                revert IOrganizationMembers.InvalidMemberAddress(admin);
+            }
 
             // Case: Admin already exists — revert (not a no-op, unlike members)
-            if (adminLayout.isAdmin[admin]) revert IOrganizationAdmin.AdminAlreadyExists(admin);
+            if (adminLayout.isAdmin[admin]) {
+                revert IOrganizationAdmin.AdminAlreadyExists(admin);
+            }
 
             // Case: Admin is not a member of the organization
-            if (!LibOrganizationMembers.isMember(admin)) revert IOrganizationAdmin.AdminNotMember(admin);
+            if (!LibOrganizationMembers.isMember(admin)) {
+                revert IOrganizationAdmin.AdminNotMember(admin);
+            }
 
             adminLayout.isAdmin[admin] = true;
             ++adminCount;
@@ -102,7 +108,9 @@ library LibOrganizationAdmin {
             address admin = adminsToRemove[i];
 
             // Case: Admin does not exist
-            if (!adminLayout.isAdmin[admin]) revert IOrganizationAdmin.AdminDoesNotExist(admin);
+            if (!adminLayout.isAdmin[admin]) {
+                revert IOrganizationAdmin.AdminDoesNotExist(admin);
+            }
 
             adminLayout.isAdmin[admin] = false;
             --adminCount;
@@ -110,7 +118,9 @@ library LibOrganizationAdmin {
         }
 
         // Case: change would result in no admins
-        if (adminCount == 0) revert IOrganizationAdmin.InvalidAdminConfig();
+        if (adminCount == 0) {
+            revert IOrganizationAdmin.InvalidAdminConfig();
+        }
 
         // Case: invalid admin voting threshold
         if (newVotingThreshold == 0 || newVotingThreshold > adminCount) {
@@ -163,7 +173,9 @@ library LibOrganizationAdmin {
      */
     function _areAdminSignaturesValid(bytes memory signatures, bytes32 operationHash) private view returns (bool) {
         // Case: No signatures provided
-        if (signatures.length == 0) return false;
+        if (signatures.length == 0) {
+            return false;
+        }
 
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
         uint256 requiredSignatures = adminLayout.votingThreshold;
@@ -188,7 +200,9 @@ library LibOrganizationAdmin {
             lastSigner = signer;
 
             // Case: Signer is not an admin — revert (strict validation for admin operations)
-            if (!adminLayout.isAdmin[signer]) revert IOrganizationAdmin.SignerIsNotAdmin(signer);
+            if (!adminLayout.isAdmin[signer]) {
+                revert IOrganizationAdmin.SignerIsNotAdmin(signer);
+            }
 
             ++validSignatures;
 
