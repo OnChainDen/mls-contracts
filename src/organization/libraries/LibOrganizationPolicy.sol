@@ -114,9 +114,7 @@ library LibOrganizationPolicy {
         }
 
         // Case: The initiator is not authorized by the policy
-        if (!LibPolicyInitiator.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorGroupId)) {
-            return false;
-        }
+        if (!LibPolicyInitiator.isInitiatorAuthorized(proofs.policy, initiator)) return false;
 
         TransactionType txType = proofs.policy.config.transactionType;
 
@@ -167,18 +165,14 @@ library LibOrganizationPolicy {
      * @param policy The policy to check against
      * @param signatures The concatenated reviewer signatures (variable length, hybrid format)
      * @param messageHash The message hash that was signed
-     * @param approverGroupId The group ID for group-based approver verification
      * @return True if there are enough valid approvals, false otherwise
      */
-    function areApprovalsValid(
-        Policy memory policy,
-        bytes memory signatures,
-        bytes32 messageHash,
-        uint256 approverGroupId
-    ) public view returns (bool) {
-        return LibPolicyApproval.areApprovalsValid({
-            policy: policy, signatures: signatures, messageHash: messageHash, approverGroupId: approverGroupId
-        });
+    function areApprovalsValid(Policy memory policy, bytes memory signatures, bytes32 messageHash)
+        public
+        view
+        returns (bool)
+    {
+        return LibPolicyApproval.areApprovalsValid({policy: policy, signatures: signatures, messageHash: messageHash});
     }
 
     /**
@@ -218,15 +212,10 @@ library LibOrganizationPolicy {
      *      Delegates to LibPolicyInitiator.
      * @param policy The policy to check against
      * @param initiatorAddress The address of the transaction initiator
-     * @param initiatorGroupId The group ID for group-based initiator verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress, uint256 initiatorGroupId)
-        public
-        view
-        returns (bool)
-    {
-        return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorGroupId);
+    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress) public view returns (bool) {
+        return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress);
     }
 
     /**

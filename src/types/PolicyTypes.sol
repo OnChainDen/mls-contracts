@@ -273,15 +273,14 @@ struct Policy {
  * @notice All proofs and data needed to validate a transaction against a policy
  * @dev Bundled together to simplify function signatures and reduce stack depth.
  *      Policy existence is verified via merkle proof. Initiator/approver membership is
- *      verified via direct storage reads (mappings), so only group IDs are needed.
+ *      verified via direct storage reads (mappings). Group IDs for initiator and approver
+ *      verification are obtained from the policy's config (InitiatorConfig and ApprovalConfig).
  * @param policy The full policy data (verified against policyProof)
  * @param policyProof Merkle proof that this policy exists in the organization
  * @param sourceAccountProof Proof that source account is allowed by policy
  * @param destinationProof Proof that destination is allowed by policy
  * @param functionProof Proof that function selector is allowed by policy
  * @param constraints ABI-encoded parameter constraints for function calls (includes proofs for OneOf constraints)
- * @param initiatorGroupId Group ID for initiator verification (only used when initiator type is Group)
- * @param approverGroupId Group ID for approver verification (only used when approver type is Group)
  */
 struct ValidationProofs {
     Policy policy;
@@ -290,6 +289,4 @@ struct ValidationProofs {
     bytes32[] destinationProof;
     bytes32[] functionProof;
     bytes constraints;
-    uint256 initiatorGroupId;
-    uint256 approverGroupId;
 }

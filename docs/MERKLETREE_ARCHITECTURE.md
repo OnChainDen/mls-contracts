@@ -159,10 +159,12 @@ struct ValidationProofs {
     bytes32[] destinationProof;      // Proof for destination (if CustomList)
     bytes32[] functionProof;         // Proof for function (if not anyFunction)
     bytes constraints;               // ABI-encoded ParameterConstraint[] (includes OneOf proofs)
-    uint256 initiatorGroupId;        // Group ID for initiator verification
-    uint256 approverGroupId;         // Group ID for approver verification
 }
 ```
+
+> **Note:** Group IDs for initiator and approver verification are obtained directly from the policy's
+> `InitiatorConfig.initiatorGroupId` and `ApprovalConfig.approverGroupId` fields rather than being
+> passed separately in the proofs struct.
 
 ### Validation Flow Example
 
@@ -175,8 +177,8 @@ if (!isPolicyInOrg(policyId, proofs.policy, proofs.policyProof)) revert;
 // 2. Verify source account is allowed by policy (Merkle proof)
 if (!isSourceAccountAllowedByPolicy(proofs.policy, account, proofs.sourceAccountProof)) revert;
 
-// 3. Verify initiator is authorized
-if (!isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorGroupId)) revert;
+// 3. Verify initiator is authorized (group ID obtained from policy config)
+if (!isInitiatorAuthorized(proofs.policy, initiator)) revert;
 
 // 4. Verify destination is allowed (Merkle proof)
 if (!isDestinationAllowedByPolicy(proofs.policy, to, data, proofs.destinationProof)) revert;
@@ -184,8 +186,8 @@ if (!isDestinationAllowedByPolicy(proofs.policy, to, data, proofs.destinationPro
 // 5. Verify function and parameters (Merkle proof for function, constraints)
 if (!isFunctionAllowedByPolicy(proofs.policy, data, proofs.functionProof, proofs.constraints)) revert;
 
-// 6. Verify approvals (signatures)
-if (!areApprovalsValid(proofs.policy, signatures, hash, proofs.approverGroupId)) revert;
+// 6. Verify approvals (signatures, group ID obtained from policy config)
+if (!areApprovalsValid(proofs.policy, signatures, hash)) revert;
 ```
 
 ### Why Double Hashing?

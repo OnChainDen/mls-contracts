@@ -189,12 +189,10 @@ library LibOrganizationAccountSignature {
         // Case: Policy is a ManualApproval approval policy (Need to check if we have enough valid approval signatures)
         if (pType == PolicyType.RequireManualApproval) {
             // Case: Sufficient valid approval signatures are provided
+            // forgefmt: disable-next-item
             if (LibOrganizationPolicy.areApprovalsValid({
-                    policy: proofs.policy,
-                    signatures: reviewSignatures,
-                    messageHash: reviewHash,
-                    approverGroupId: proofs.approverGroupId
-                })) {
+                policy: proofs.policy, signatures: reviewSignatures, messageHash: reviewHash
+            })) {
                 return SignatureUtils.ERC1271_MAGIC_VALUE;
             }
         }
@@ -275,9 +273,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Initiator is not authorized by this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorGroupId)) {
-            return false;
-        }
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator)) return false;
 
         return true;
     }

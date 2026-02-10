@@ -22,14 +22,9 @@ library LibPolicyInitiator {
      *      Uses direct mapping lookups for membership and group membership.
      * @param policy The policy to check against
      * @param initiatorAddress The address of the transaction initiator
-     * @param initiatorGroupId The group ID for group-based initiator verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress, uint256 initiatorGroupId)
-        internal
-        view
-        returns (bool)
-    {
+    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress) internal view returns (bool) {
         // Case: The policy matches transactions with any initiator
         if (policy.config.initiator.anyInitiator) return true;
 
@@ -48,10 +43,7 @@ library LibPolicyInitiator {
 
         // Case: The policy matches transactions made by any individual from a specific group
         if (initType == ApproverType.Group) {
-            // Check the group ID matches the policy's initiator group ID
-            if (initiatorGroupId != policy.config.initiator.initiatorGroupId) {
-                return false;
-            }
+            uint256 initiatorGroupId = policy.config.initiator.initiatorGroupId;
 
             // Verify the group exists
             if (!LibOrganizationGroups.isGroup(initiatorGroupId)) {

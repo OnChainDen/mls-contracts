@@ -28,20 +28,19 @@ library LibPolicyApproval {
      * @param policy The policy to check against
      * @param signatures The concatenated reviewer signatures (variable length, hybrid format)
      * @param messageHash The message hash that was signed
-     * @param approverGroupId The group ID for group-based approver verification
      * @return True if there are enough valid approvals, false otherwise
      */
-    function areApprovalsValid(
-        Policy memory policy,
-        bytes memory signatures,
-        bytes32 messageHash,
-        uint256 approverGroupId
-    ) internal view returns (bool) {
+    function areApprovalsValid(Policy memory policy, bytes memory signatures, bytes32 messageHash)
+        internal
+        view
+        returns (bool)
+    {
         // Case: No signatures provided
         if (signatures.length == 0) return false;
 
-        // For Group approver type, verify group existence before the loop
+        // For Group approver type, verify group existence once before the loop for gas efficiency
         if (policy.config.approval.approverType == ApproverType.Group) {
+            uint256 approverGroupId = policy.config.approval.approverGroupId;
             if (!LibOrganizationGroups.isGroup(approverGroupId)) {
                 revert IOrganizationGroups.GroupDoesNotExist(approverGroupId);
             }
@@ -68,10 +67,7 @@ library LibPolicyApproval {
             lastSigner = signer;
 
             // Check if signer is authorized based on policy (with mapping lookups)
-            // forgefmt: disable-next-item
-            _validateAndCountApprovalOrRevert({
-                policy: policy, signerAddress: signer, approverGroupId: approverGroupId
-            });
+            _validateAndCountApprovalOrRevert({policy: policy, signerAddress: signer});
 
             ++validApprovals;
 
@@ -109,12 +105,8 @@ library LibPolicyApproval {
      *      NOTE: Group existence must be verified by the caller before calling this function.
      * @param policy The policy to check against
      * @param signerAddress The address of the signer
-     * @param approverGroupId The group ID for group-based approver verification
      */
-    function _validateAndCountApprovalOrRevert(Policy memory policy, address signerAddress, uint256 approverGroupId)
-        private
-        view
-    {
+    function _validateAndCountApprovalOrRevert(Policy memory policy, address signerAddress) private view {
         // Case: Signer is not a member of the organization
         if (!LibOrganizationMembers.isMember(signerAddress)) {
             revert IOrganizationMembers.MemberDoesNotExist(signerAddress);
@@ -132,10 +124,7 @@ library LibPolicyApproval {
 
         // Case: Policy requires approval from any member of a specific group
         if (approverType == ApproverType.Group) {
-            // Check the group ID matches the policy's approver group ID
-            if (approverGroupId != policy.config.approval.approverGroupId) {
-                revert IOrganizationGroups.GroupDoesNotExist(approverGroupId);
-            }
+            uint256 approverGroupId = policy.config.approval.approverGroupId;
 
             // Verify member is in the group (group existence verified by caller)
             if (!LibOrganizationGroups.isGroupMember(approverGroupId, signerAddress)) {

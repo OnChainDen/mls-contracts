@@ -301,7 +301,7 @@ library LibOrganizationAccountTransaction {
         address rejectionSigner = SignatureUtils.recoverSignerOrRevert(reviewSignatures, rejectionTxHash);
 
         // Verify the rejection signer is an authorized initiator for this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorGroupId)) {
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner)) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
     }
@@ -335,10 +335,7 @@ library LibOrganizationAccountTransaction {
 
         // Check if there are enough valid approvals (with mapping lookups for membership verification)
         bool approvalsValid = LibOrganizationPolicy.areApprovalsValid({
-            policy: proofs.policy,
-            signatures: reviewSignatures,
-            messageHash: reviewTxHash,
-            approverGroupId: proofs.approverGroupId
+            policy: proofs.policy, signatures: reviewSignatures, messageHash: reviewTxHash
         });
 
         if (!approvalsValid) {
