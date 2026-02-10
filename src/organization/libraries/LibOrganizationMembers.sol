@@ -54,24 +54,6 @@ library LibOrganizationMembers {
     }
 
     /**
-     * @dev Sets initial members during organization initialization.
-     *      Skips admin-related invariant checks since admins haven't been set yet.
-     *      Does NOT check for duplicates — callers must ensure unique addresses.
-     * @param members The initial member addresses (must have at least one)
-     */
-    function setInitialMembers(address[] calldata members) public {
-        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
-
-        for (uint256 i = 0; i < members.length; ++i) {
-            address member = members[i];
-            if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
-
-            membersLayout.isMember[member] = true;
-            emit IOrganizationMembers.MemberAdded(member);
-        }
-    }
-
-    /**
      * @dev Checks if an address is a member of the organization
      * @param memberAddress The address to check
      * @return True if the address is a member, false otherwise

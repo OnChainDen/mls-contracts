@@ -43,7 +43,12 @@ library LibOrganizationInitialization {
         }
 
         // 1. Set initial members first (populates isMember mapping)
-        LibOrganizationMembers.setInitialMembers(params.members);
+        LibOrganizationMembers.modifyMembers({
+            membersToAdd: params.members,
+            // Pass in an empty calldata array for `membersToRemove` parameter
+            // This is a zero-length calldata slice of the `params.members` array
+            membersToRemove: params.members[0:0]
+        });
 
         // 2. Set initial admins (validates all admins are members via mapping lookup)
         LibOrganizationAdmin.modifyAdmins({
