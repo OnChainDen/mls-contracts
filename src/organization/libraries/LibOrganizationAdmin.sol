@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
@@ -83,7 +84,7 @@ library LibOrganizationAdmin {
         // Process additions
         for (uint256 i = 0; i < adminsToAdd.length; ++i) {
             address admin = adminsToAdd[i];
-            if (admin == address(0)) revert IOrganizationAdmin.InvalidAdminAddress(admin);
+            if (admin == address(0)) revert IOrganizationMembers.InvalidMemberAddress(admin);
 
             // Case: Admin already exists — revert (not a no-op, unlike members)
             if (adminLayout.isAdmin[admin]) revert IOrganizationAdmin.AdminAlreadyExists(admin);

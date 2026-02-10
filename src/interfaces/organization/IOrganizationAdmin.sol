@@ -98,12 +98,6 @@ interface IOrganizationAdmin {
     error InvalidAdminConfig();
 
     /**
-     * @notice Thrown when the admin address is the zero address
-     * @param admin The invalid zero address
-     */
-    error InvalidAdminAddress(address admin);
-
-    /**
      * @notice Thrown when a signer is not an admin of the organization
      * @param signer The address that is not an admin
      */
