@@ -46,7 +46,13 @@ library LibOrganizationInitialization {
         LibOrganizationMembers.setInitialMembers(params.members);
 
         // 2. Set initial admins (validates all admins are members via mapping lookup)
-        LibOrganizationAdmin.setInitialAdmins(params.admins, params.votingThreshold);
+        LibOrganizationAdmin.modifyAdmins({
+            adminsToAdd: params.admins,
+            // Pass in an empty calldata array for `adminsToRemove` parameter
+            // This is a zero-length calldata slice of the `params.admins` array
+            adminsToRemove: params.admins[0:0],
+            newVotingThreshold: params.votingThreshold
+        });
 
         // 3. Set initial groups (if any)
         if (params.groups.length > 0) {

@@ -123,38 +123,6 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Sets initial admins during organization initialization.
-     *      Skips membership validation since members are set in a separate init step.
-     *      All admins MUST already be members when this is called — caller is responsible.
-     *      Does NOT check for duplicates — callers must ensure unique addresses.
-     * @param admins The initial admin addresses (must have at least one)
-     * @param initialVotingThreshold The initial voting threshold
-     */
-    function setInitialAdmins(address[] calldata admins, uint256 initialVotingThreshold) public {
-        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
-
-        // Validate configuration
-        if (admins.length == 0 || initialVotingThreshold == 0 || initialVotingThreshold > admins.length) {
-            revert IOrganizationAdmin.InvalidAdminConfig();
-        }
-
-        for (uint256 i = 0; i < admins.length; ++i) {
-            address admin = admins[i];
-            if (admin == address(0)) revert IOrganizationAdmin.InvalidAdminAddress(admin);
-
-            // During initialization, all admins must be members — caller must ensure this
-            if (!LibOrganizationMembers.isMember(admin)) revert IOrganizationAdmin.AdminNotMember(admin);
-
-            adminLayout.isAdmin[admin] = true;
-            emit IOrganizationAdmin.AdminAdded(admin);
-        }
-
-        adminLayout.adminCount = admins.length;
-        adminLayout.votingThreshold = initialVotingThreshold;
-        emit IOrganizationAdmin.VotingThresholdUpdated(0, initialVotingThreshold);
-    }
-
-    /**
      * @dev Checks if an address is an admin of the organization
      * @param adminAddress The address to check
      * @return True if the address is an admin, false otherwise
