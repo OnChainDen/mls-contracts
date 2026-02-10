@@ -86,16 +86,11 @@ interface IOrganizationAdmin {
     error AdminNotMember(address admin);
 
     /**
-     * @notice Thrown when the voting threshold exceeds the admin count
+     * @notice Thrown when the voting threshold is invalid (zero or exceeds admin count)
      * @param votingThreshold The invalid voting threshold
      * @param adminCount The current admin count
      */
-    error VotingThresholdExceedsAdminCount(uint256 votingThreshold, uint256 adminCount);
-
-    /**
-     * @notice Thrown when the voting threshold is zero
-     */
-    error VotingThresholdCannotBeZero();
+    error InvalidAdminVotingThreshold(uint256 votingThreshold, uint256 adminCount);
 
     /**
      * @notice Thrown when admin configuration is invalid (zero count or invalid threshold)
@@ -113,12 +108,6 @@ interface IOrganizationAdmin {
      * @param signer The address that is not an admin
      */
     error SignerIsNotAdmin(address signer);
-
-    /**
-     * @notice Thrown when a signer is not a member of the organization
-     * @param signer The address that is not a member
-     */
-    error SignerIsNotMember(address signer);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions

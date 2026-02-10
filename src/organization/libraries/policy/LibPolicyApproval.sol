@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
@@ -41,7 +43,7 @@ library LibPolicyApproval {
         // For Group approver type, verify group existence before the loop
         if (policy.config.approval.approverType == ApproverType.Group) {
             if (!LibOrganizationGroups.isGroup(approverGroupId)) {
-                revert IOrganizationPolicy.ApproverGroupDoesNotExist(approverGroupId);
+                revert IOrganizationGroups.GroupDoesNotExist(approverGroupId);
             }
         }
 
@@ -115,7 +117,7 @@ library LibPolicyApproval {
     {
         // Case: Signer is not a member of the organization
         if (!LibOrganizationMembers.isMember(signerAddress)) {
-            revert IOrganizationPolicy.ApproverSignerIsNotMember(signerAddress);
+            revert IOrganizationMembers.MemberDoesNotExist(signerAddress);
         }
 
         ApproverType approverType = policy.config.approval.approverType;
@@ -123,7 +125,7 @@ library LibPolicyApproval {
         // Case: Policy requires approval from a specific member
         if (approverType == ApproverType.Member) {
             if (signerAddress != policy.config.approval.approverMember) {
-                revert IOrganizationPolicy.ApproverSignerIsNotMember(signerAddress);
+                revert IOrganizationMembers.MemberDoesNotExist(signerAddress);
             }
             return;
         }
@@ -132,7 +134,7 @@ library LibPolicyApproval {
         if (approverType == ApproverType.Group) {
             // Check the group ID matches the policy's approver group ID
             if (approverGroupId != policy.config.approval.approverGroupId) {
-                revert IOrganizationPolicy.ApproverGroupDoesNotExist(approverGroupId);
+                revert IOrganizationGroups.GroupDoesNotExist(approverGroupId);
             }
 
             // Verify member is in the group (group existence verified by caller)

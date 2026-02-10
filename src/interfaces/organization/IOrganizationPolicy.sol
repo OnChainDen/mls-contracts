@@ -41,29 +41,11 @@ interface IOrganizationPolicy {
     error DuplicateOrOutOfOrderSigner(address signer, address lastSigner);
 
     /**
-     * @notice Thrown when an approver signer is not a member of the organization
-     * @param signer The address that is not a member
-     */
-    error ApproverSignerIsNotMember(address signer);
-
-    /**
      * @notice Thrown when an approver signer is not a member of the required group
      * @param signer The address that is not in the group
      * @param groupId The group ID that was checked
      */
     error ApproverSignerIsNotGroupMember(address signer, uint256 groupId);
-
-    /**
-     * @notice Thrown when the approver group referenced in a policy does not exist
-     * @param groupId The non-existent group ID
-     */
-    error ApproverGroupDoesNotExist(uint256 groupId);
-
-    /**
-     * @notice Thrown when the initiator group referenced in a policy does not exist
-     * @param groupId The non-existent group ID
-     */
-    error InitiatorGroupDoesNotExist(uint256 groupId);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions

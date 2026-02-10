@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
@@ -111,12 +112,9 @@ library LibOrganizationAdmin {
         // Update voting threshold if a new one is provided (0 means keep current)
         uint256 effectiveThreshold = newVotingThreshold > 0 ? newVotingThreshold : adminLayout.votingThreshold;
 
-        // Invariant: threshold cannot be zero
-        if (effectiveThreshold == 0) revert IOrganizationAdmin.VotingThresholdCannotBeZero();
-
-        // Invariant: threshold cannot exceed admin count
-        if (effectiveThreshold > adminLayout.adminCount) {
-            revert IOrganizationAdmin.VotingThresholdExceedsAdminCount(effectiveThreshold, adminLayout.adminCount);
+        // Invariant: threshold cannot be zero and cannot exceed admin count
+        if (effectiveThreshold == 0 || effectiveThreshold > adminLayout.adminCount) {
+            revert IOrganizationAdmin.InvalidAdminVotingThreshold(effectiveThreshold, adminLayout.adminCount);
         }
 
         if (adminLayout.votingThreshold != effectiveThreshold) {
@@ -221,7 +219,7 @@ library LibOrganizationAdmin {
             if (!adminLayout.isAdmin[signer]) revert IOrganizationAdmin.SignerIsNotAdmin(signer);
 
             // Case: Signer is not a member — revert (admin must also be a member)
-            if (!LibOrganizationMembers.isMember(signer)) revert IOrganizationAdmin.SignerIsNotMember(signer);
+            if (!LibOrganizationMembers.isMember(signer)) revert IOrganizationMembers.MemberDoesNotExist(signer);
 
             ++validSignatures;
 

@@ -2,7 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {ApproverType, Policy} from "types/PolicyTypes.sol";
@@ -55,7 +55,7 @@ library LibPolicyInitiator {
 
             // Verify the group exists
             if (!LibOrganizationGroups.isGroup(initiatorGroupId)) {
-                revert IOrganizationPolicy.InitiatorGroupDoesNotExist(initiatorGroupId);
+                revert IOrganizationGroups.GroupDoesNotExist(initiatorGroupId);
             }
 
             // Verify the initiator is a member of the group
