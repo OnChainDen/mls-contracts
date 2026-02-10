@@ -3,7 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP712.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
@@ -148,7 +147,7 @@ library LibOrganizationAdmin {
     }
 
     /**
-     * @dev Checks if there are enough valid signatures from admin members.
+     * @dev Checks if there are enough valid signatures from admins.
      *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      *      Iterates using while(offset < signatures.length) — no proof arrays needed.
      * @param signatures The signatures to verify (variable length, hybrid format)
@@ -183,9 +182,6 @@ library LibOrganizationAdmin {
 
             // Case: Signer is not an admin — revert (strict validation for admin operations)
             if (!adminLayout.isAdmin[signer]) revert IOrganizationAdmin.SignerIsNotAdmin(signer);
-
-            // Case: Signer is not a member — revert (admin must also be a member)
-            if (!LibOrganizationMembers.isMember(signer)) revert IOrganizationMembers.MemberDoesNotExist(signer);
 
             ++validSignatures;
 
