@@ -27,18 +27,15 @@ library LibOrganizationGroups {
      * @param modifications Array of group modifications to apply
      */
     function modifyGroups(GroupModification[] calldata modifications) public {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-
         for (uint256 i = 0; i < modifications.length; ++i) {
             GroupModification calldata mod = modifications[i];
-            uint256 groupId = mod.groupId;
 
             if (mod.modificationType == GroupModificationType.Create) {
-                _createGroup(groupsLayout, groupId, mod);
+                _createGroup(mod);
             } else if (mod.modificationType == GroupModificationType.Update) {
-                _updateGroup(groupsLayout, groupId, mod);
+                _updateGroup(mod);
             } else if (mod.modificationType == GroupModificationType.Delete) {
-                _deleteGroup(groupsLayout, groupId, mod);
+                _deleteGroup(mod);
             }
         }
     }
@@ -64,15 +61,12 @@ library LibOrganizationGroups {
 
     /**
      * @dev Deletes a group. Reverts if group does not exist or if members are provided.
-     * @param groupsLayout The groups storage layout
-     * @param groupId The group ID to delete
      * @param mod The group modification containing the delete request
      */
-    function _deleteGroup(
-        LibOrganizationGroupsStorage.Layout storage groupsLayout,
-        uint256 groupId,
-        GroupModification calldata mod
-    ) private {
+    function _deleteGroup(GroupModification calldata mod) private {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint256 groupId = mod.groupId;
+
         // Case: Group does not exist
         if (!groupsLayout.isGroup[groupId]) revert IOrganizationGroups.GroupDoesNotExist(groupId);
 
@@ -89,15 +83,12 @@ library LibOrganizationGroups {
     /**
      * @dev Creates a new group. Reverts if the group already exists, was previously deleted,
      *      or if membersToRemove is non-empty.
-     * @param groupsLayout The groups storage layout
-     * @param groupId The group ID to create
      * @param mod The group modification containing initial members to add
      */
-    function _createGroup(
-        LibOrganizationGroupsStorage.Layout storage groupsLayout,
-        uint256 groupId,
-        GroupModification calldata mod
-    ) private {
+    function _createGroup(GroupModification calldata mod) private {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint256 groupId = mod.groupId;
+
         // Case: Group ID was previously deleted — cannot be reused
         if (groupsLayout.wasGroupDeleted[groupId]) revert IOrganizationGroups.GroupAlreadyDeleted(groupId);
 
@@ -115,15 +106,12 @@ library LibOrganizationGroups {
 
     /**
      * @dev Updates an existing group's membership. Reverts if the group does not exist.
-     * @param groupsLayout The groups storage layout
-     * @param groupId The group ID to update
      * @param mod The group modification containing members to add/remove
      */
-    function _updateGroup(
-        LibOrganizationGroupsStorage.Layout storage groupsLayout,
-        uint256 groupId,
-        GroupModification calldata mod
-    ) private {
+    function _updateGroup(GroupModification calldata mod) private {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+        uint256 groupId = mod.groupId;
+
         // Case: Group does not exist
         if (!groupsLayout.isGroup[groupId]) revert IOrganizationGroups.GroupDoesNotExist(groupId);
 
