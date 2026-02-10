@@ -3,60 +3,110 @@
 pragma solidity 0.8.33;
 
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {GroupData} from "types/PolicyTypes.sol";
+import {GroupModification} from "types/CommonTypes.sol";
 
 /**
  * @title IOrganizationGroups
  * @notice Interface for group-related operations in Organization contracts
- * @dev Maps to LibOrganizationGroups library functionality
+ * @dev Maps to LibOrganizationGroups library functionality.
+ *      Groups are stored in mappings for O(1) lookups.
+ *      Group IDs are not reusable after deletion.
  * @author Den Technologies Inc
  */
 interface IOrganizationGroups {
-    /**
-     * @notice Emitted when the groups merkle root is updated
-     * @param newRoot The new merkle root
-     * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
-     */
-    event GroupsUpdated(bytes32 indexed newRoot, string ipfsCid);
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Events
+    // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Updates the global groups merkle root
-     * @dev This is the only way to set groups. All group data is stored off-chain (IPFS).
-     * @param newGroupsRoot The new merkle root containing all groups
-     * @param ipfsCid The IPFS CID where full group data is stored for disaster recovery
-     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     * @notice Emitted when a new group is created
+     * @param groupId The ID of the created group
      */
-    function setGroups(bytes32 newGroupsRoot, string calldata ipfsCid, AdminAuthParams calldata authParams) external;
+    event GroupCreated(uint256 indexed groupId);
 
     /**
-     * @notice Returns the current groups merkle root
-     * @return The groups merkle root
+     * @notice Emitted when a group is deleted
+     * @param groupId The ID of the deleted group
      */
-    function groupsRoot() external view returns (bytes32);
+    event GroupDeleted(uint256 indexed groupId);
 
     /**
-     * @notice Verifies that a group exists in the organization
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof for the group
+     * @notice Emitted when a member is added to a group
+     * @param groupId The ID of the group
+     * @param member The address of the added member
+     */
+    event GroupMemberAdded(uint256 indexed groupId, address indexed member);
+
+    /**
+     * @notice Emitted when a member is removed from a group
+     * @param groupId The ID of the group
+     * @param member The address of the removed member
+     */
+    event GroupMemberRemoved(uint256 indexed groupId, address indexed member);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Errors
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Thrown when trying to modify a group that does not exist
+     * @param groupId The non-existent group ID
+     */
+    error GroupDoesNotExist(uint256 groupId);
+
+    /**
+     * @notice Thrown when trying to recreate a group ID that was previously deleted
+     * @param groupId The deleted group ID
+     */
+    error GroupAlreadyDeleted(uint256 groupId);
+
+    /**
+     * @notice Thrown when trying to delete a group while providing members to add or remove
+     * @param groupId The group ID being deleted
+     */
+    error GroupDeletionWithMembers(uint256 groupId);
+
+    /**
+     * @notice Thrown when trying to remove a member who is not in the group
+     * @param groupId The group ID
+     * @param member The address that is not in the group
+     */
+    error MemberNotInGroup(uint256 groupId, address member);
+
+    /**
+     * @notice Thrown when a group member address is the zero address
+     * @param groupId The group ID
+     * @param member The invalid zero address
+     */
+    error InvalidGroupMemberAddress(uint256 groupId, address member);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Functions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Creates, modifies, or deletes groups in the organization
+     * @dev When deleteGroup is true, the group is deleted and membersToAdd/membersToRemove must be empty.
+     *      When deleteGroup is false and the groupId doesn't exist yet, the group is implicitly created.
+     *      Adding a duplicate group member is a no-op. Removing a non-existent group member reverts.
+     *      Group IDs are not reusable after deletion.
+     * @param modifications Array of group modifications to apply
+     * @param authParams The authorization parameters (salt, expiration, signatures)
+     */
+    function modifyGroups(GroupModification[] calldata modifications, AdminAuthParams calldata authParams) external;
+
+    /**
+     * @notice Checks if a group exists in the organization
+     * @param groupId The group ID to check
      * @return True if the group exists, false otherwise
      */
-    function isGroupInOrg(GroupData calldata groupData, bytes32[] calldata groupInOrgGroupsTreeProof)
-        external
-        view
-        returns (bool);
+    function isGroup(uint256 groupId) external view returns (bool);
 
     /**
-     * @notice Verifies complete group membership (group exists AND member is in group)
-     * @param memberAddress The address to verify
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
-     * @param memberInGroupProof The merkle proof that the member is in the group
-     * @return True if both verifications pass, false otherwise
+     * @notice Checks if an address is a member of a group
+     * @param groupId The group ID to check
+     * @param memberAddress The address to check
+     * @return True if the address is a member of the group, false otherwise
      */
-    function isMemberInGroupAndGroupInOrg(
-        address memberAddress,
-        GroupData calldata groupData,
-        bytes32[] calldata groupInOrgGroupsTreeProof,
-        bytes32[] calldata memberInGroupProof
-    ) external view returns (bool);
+    function isGroupMember(uint256 groupId, address memberAddress) external view returns (bool);
 }

@@ -44,7 +44,7 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         // REPLAY PROTECTION: Nonce is consumed BEFORE the external call to prevent reentrancy.
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
-        // Validate the transaction against the policy and signatures (with merkle proofs)
+        // Validate the transaction against the policy and signatures
         LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert({
             account: account,
             to: to,
@@ -99,7 +99,7 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         // Validate and consume nonce (will revert if already used)
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
-        // Validate the rejection authorization (with merkle proofs)
+        // Validate the rejection authorization
         LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert({
             account: account,
             to: to,

@@ -4,20 +4,20 @@ pragma solidity 0.8.33;
 
 /**
  * @title Organization Members Storage
- * @dev ERC-7201 namespaced storage for merkle-based members functionality.
- *      Members are stored in a merkle tree. Only the root is stored on-chain.
- *      Full member data is stored off-chain (IPFS) and provided via calldata at validation time.
+ * @dev ERC-7201 namespaced storage for mapping-based members functionality.
+ *      Members are stored in a mapping for O(1) membership checks.
  * @author Den Technologies Inc
  */
 library LibOrganizationMembersStorage {
     /**
      * @dev Storage layout for members functionality
      * @custom:storage-location erc7201:den.mls-wallet.organization.members
-     * @param membersRoot Global merkle root containing ALL members.
-     *        Each leaf is hash(hash(memberAddress))
+     * @param isMember Mapping from address to membership status
+     * @param memberCount Total number of members in the organization
      */
     struct Layout {
-        bytes32 membersRoot;
+        mapping(address => bool) isMember;
+        uint256 memberCount;
     }
 
     /// @dev Storage location for MembersStorage, following ERC-7201 namespaced storage pattern.

@@ -20,8 +20,8 @@ import {Policy, PolicyType, RateLimitType, TransactionType, ValidationProofs} fr
  *      4. Required approvals have been collected (for manual approval policies)
  *      5. Rate limits are not exceeded
  *
- *      Policies are verified via merkle proofs. Policy data is provided in calldata
- *      and verified against the organization's policy merkle root.
+ *      Policies are verified via merkle proofs against the organization's policy root.
+ *      Members and groups are verified via direct mapping lookups.
  *
  *      The library supports both transaction approval and rejection flows.
  *      Rejections require the same authorization level as approvals to prevent
@@ -66,7 +66,7 @@ library LibOrganizationAccountTransaction {
      * @param policyId The policy ID authorizing this transaction
      * @param initiatorSignature The initiator's signature authorizing the transaction
      * @param reviewSignatures The reviewer signatures (empty for auto-approve policies)
-     * @param proofs Merkle proofs and policy data for validation
+     * @param proofs Policy data, merkle proofs, and group IDs for validation
      */
     function validateTransactionApprovalOrRevert(
         address account,
@@ -152,7 +152,7 @@ library LibOrganizationAccountTransaction {
      * @param policyId The policy ID for the transaction
      * @param initiatorSignature The initiator's signature for the original transaction
      * @param reviewSignatures The reviewer signatures authorizing the rejection
-     * @param proofs Merkle proofs and policy data
+     * @param proofs Policy data, merkle proofs, and group IDs for validation
      */
     function validateTransactionRejectionOrRevert(
         address account,
@@ -281,7 +281,7 @@ library LibOrganizationAccountTransaction {
      * @param params The packed transaction parameters
      * @param data The transaction calldata
      * @param reviewSignatures The rejection signature from an authorized initiator
-     * @param proofs Merkle proofs and policy data
+     * @param proofs Policy data, merkle proofs, and group IDs for validation
      */
     function _validateAutoApproveRejectionOrRevert(
         TxParams memory params,
@@ -301,7 +301,7 @@ library LibOrganizationAccountTransaction {
         address rejectionSigner = SignatureUtils.recoverSignerOrRevert(reviewSignatures, rejectionTxHash);
 
         // Verify the rejection signer is an authorized initiator for this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorProofs)) {
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, rejectionSigner, proofs.initiatorGroupId)) {
             revert IOrganizationAccountTransaction.TransactionRejectionNotAllowed();
         }
     }
@@ -315,7 +315,7 @@ library LibOrganizationAccountTransaction {
      * @param data The transaction calldata
      * @param reviewSignatures The reviewer signatures
      * @param initiatorSignature The initiator's signature (for hash binding)
-     * @param proofs Merkle proofs and policy data
+     * @param proofs Policy data, merkle proofs, and group IDs for validation
      * @param isApproval True for approval validation, false for rejection validation
      */
     function _validateManualConfirmationOrRevert(
@@ -333,12 +333,12 @@ library LibOrganizationAccountTransaction {
         // Includes initiator signature to bind approvals to specific request
         bytes32 reviewTxHash = _computeReviewHashFromParams(params, data, isApproval, initiatorSignature);
 
-        // Check if there are enough valid approvals (with Merkle proofs for membership verification)
+        // Check if there are enough valid approvals (with mapping lookups for membership verification)
         bool approvalsValid = LibOrganizationPolicy.areApprovalsValid({
             policy: proofs.policy,
             signatures: reviewSignatures,
             messageHash: reviewTxHash,
-            approverProofs: proofs.approverProofs
+            approverGroupId: proofs.approverGroupId
         });
 
         if (!approvalsValid) {

@@ -89,6 +89,8 @@ abstract contract DeploymentConfig is Script, DeploymentConstants, FactoryState 
         libs = PlatformLibraries({
             policyAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_policy"))),
             adminAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_admin"))),
+            membersAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_members"))),
+            groupsAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_groups"))),
             initializationAddress: vm.parseTomlAddress(toml, string(abi.encodePacked(prefix, ".lib_org_init"))),
             accountSignatureAddress: vm.parseTomlAddress(
                 toml, string(abi.encodePacked(prefix, ".lib_org_account_sig"))

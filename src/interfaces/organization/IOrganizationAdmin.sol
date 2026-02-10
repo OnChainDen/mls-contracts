@@ -2,13 +2,14 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title IOrganizationAdmin
  * @notice Interface for admin-related operations in Organization contracts
- * @dev Maps to LibOrganizationAdmin library functionality
+ * @dev Maps to LibOrganizationAdmin library functionality.
+ *      Admins are stored in a mapping for O(1) admin checks.
  * @author Den Technologies Inc
  */
 interface IOrganizationAdmin {
@@ -17,24 +18,23 @@ interface IOrganizationAdmin {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Emitted when admin permissions are updated
-     * @param previousAdminsRoot The previous admins merkle root
-     * @param previousAdminCount The previous admin count
-     * @param previousVotingThreshold The previous voting threshold
-     * @param newAdminsRoot The new admins merkle root
-     * @param newAdminCount The new admin count
-     * @param newVotingThreshold The new voting threshold
-     * @param newAdminAddresses The new admin addresses (in ascending order)
+     * @notice Emitted when an admin is added to the organization
+     * @param admin The address of the added admin
      */
-    event AdminConfigUpdated(
-        bytes32 previousAdminsRoot,
-        uint256 previousAdminCount,
-        uint256 previousVotingThreshold,
-        bytes32 newAdminsRoot,
-        uint256 newAdminCount,
-        uint256 newVotingThreshold,
-        address[] newAdminAddresses
-    );
+    event AdminAdded(address indexed admin);
+
+    /**
+     * @notice Emitted when an admin is removed from the organization
+     * @param admin The address of the removed admin
+     */
+    event AdminRemoved(address indexed admin);
+
+    /**
+     * @notice Emitted when the voting threshold is updated
+     * @param previousVotingThreshold The previous voting threshold
+     * @param newVotingThreshold The new voting threshold
+     */
+    event VotingThresholdUpdated(uint256 previousVotingThreshold, uint256 newVotingThreshold);
 
     /**
      * @notice Emitted when an admin operation is rejected by authorized admins
@@ -68,23 +68,16 @@ interface IOrganizationAdmin {
     error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
     /**
-     * @notice Thrown when admin count doesn't match expected
-     * @param expected The expected admin count
-     * @param provided The provided admin count
+     * @notice Thrown when trying to add an admin that already exists
+     * @param admin The address that is already an admin
      */
-    error AdminCountMismatch(uint256 expected, uint256 provided);
+    error AdminAlreadyExists(address admin);
 
     /**
-     * @notice Thrown when admin addresses are not in ascending order or have duplicates
-     * @param address_ The duplicate or out-of-order address
+     * @notice Thrown when trying to remove an admin that does not exist
+     * @param admin The address that is not an admin
      */
-    error DuplicateOrUnorderedAdminAddress(address address_);
-
-    /**
-     * @notice Thrown when an admin is not in the admin tree
-     * @param admin The address that is not in the admin tree
-     */
-    error AdminNotInTree(address admin);
+    error AdminDoesNotExist(address admin);
 
     /**
      * @notice Thrown when an admin is not a member of the organization
@@ -93,43 +86,59 @@ interface IOrganizationAdmin {
     error AdminNotMember(address admin);
 
     /**
-     * @notice Thrown when admin configuration is invalid (zero root, zero count, or invalid threshold)
+     * @notice Thrown when the voting threshold exceeds the admin count
+     * @param votingThreshold The invalid voting threshold
+     * @param adminCount The current admin count
+     */
+    error VotingThresholdExceedsAdminCount(uint256 votingThreshold, uint256 adminCount);
+
+    /**
+     * @notice Thrown when the voting threshold is zero
+     */
+    error VotingThresholdCannotBeZero();
+
+    /**
+     * @notice Thrown when admin configuration is invalid (zero count or invalid threshold)
      */
     error InvalidAdminConfig();
 
     /**
-     * @notice Thrown when admin tree proofs length doesn't match signature count
-     * @param expected The expected length (signature count)
-     * @param actual The actual length of proofs array
+     * @notice Thrown when the admin address is the zero address
+     * @param admin The invalid zero address
      */
-    error AdminTreeProofsLengthMismatch(uint256 expected, uint256 actual);
+    error InvalidAdminAddress(address admin);
 
     /**
-     * @notice Thrown when members tree proofs length doesn't match signature count
-     * @param expected The expected length (signature count)
-     * @param actual The actual length of proofs array
+     * @notice Thrown when a signer is not an admin of the organization
+     * @param signer The address that is not an admin
      */
-    error MembersTreeProofsLengthMismatch(uint256 expected, uint256 actual);
+    error SignerIsNotAdmin(address signer);
+
+    /**
+     * @notice Thrown when a signer is not a member of the organization
+     * @param signer The address that is not a member
+     */
+    error SignerIsNotMember(address signer);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Sets the admin permissions for the organization
-     * @dev Validates that all new admins are current members before updating.
-     * @param newAdminsRoot The new merkle root of admin addresses
-     * @param newAdminCount The number of admins in the new tree
-     * @param newVotingThreshold The new voting threshold
-     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
-     * @param newAdminsInOrgProofs Proofs that all new admins are in the organization (admin tree and members tree)
+     * @notice Adds and/or removes admins and optionally updates the voting threshold
+     * @dev All new admins must be current members. Adding a duplicate admin reverts.
+     *      Removing a non-existent admin reverts. The voting threshold must be <= adminCount
+     *      after modifications. A newVotingThreshold of 0 keeps the current threshold.
+     * @param adminsToAdd Addresses to add as admins
+     * @param adminsToRemove Addresses to remove from admins
+     * @param newVotingThreshold The new voting threshold (0 to keep current)
+     * @param authParams The authorization parameters (salt, expiration, signatures)
      */
-    function setAdmins(
-        bytes32 newAdminsRoot,
-        uint256 newAdminCount,
+    function modifyAdmins(
+        address[] calldata adminsToAdd,
+        address[] calldata adminsToRemove,
         uint256 newVotingThreshold,
-        AdminAuthParams calldata authParams,
-        AllAdminsInOrgProofs calldata newAdminsInOrgProofs
+        AdminAuthParams calldata authParams
     ) external;
 
     /**
@@ -138,7 +147,7 @@ interface IOrganizationAdmin {
      *      by consuming its nonce without executing the operation logic
      * @param operationType The type of admin operation to reject
      * @param operationData The ABI-encoded data of the operation
-     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     * @param authParams The authorization parameters (salt, expiration, signatures)
      */
     function rejectAdminOperation(
         OperationType operationType,
@@ -147,8 +156,21 @@ interface IOrganizationAdmin {
     ) external;
 
     /**
-     * @notice Returns the current admin permission settings for the organization
-     * @return The admin permission configuration including admins root, count, and voting threshold
+     * @notice Checks if an address is an admin of the organization
+     * @param adminAddress The address to check
+     * @return True if the address is an admin, false otherwise
      */
-    function adminConfig() external view returns (AdminConfig memory);
+    function isAdmin(address adminAddress) external view returns (bool);
+
+    /**
+     * @notice Returns the total number of admins in the organization
+     * @return The admin count
+     */
+    function adminCount() external view returns (uint256);
+
+    /**
+     * @notice Returns the current voting threshold for admin operations
+     * @return The voting threshold
+     */
+    function votingThreshold() external view returns (uint256);
 }

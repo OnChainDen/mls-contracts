@@ -4,22 +4,24 @@ pragma solidity 0.8.33;
 
 /**
  * @title Organization Groups Storage
- * @dev ERC-7201 namespaced storage for merkle-based groups functionality.
- *      Groups are stored in a nested merkle tree. Only the root is stored on-chain.
- *      Full group data is stored off-chain (IPFS) and provided via calldata at validation time.
- *      Each group leaf is hash(hash(groupId, groupMembersRoot)) where groupMembersRoot is
- *      a separate merkle tree containing the member addresses in that group.
+ * @dev ERC-7201 namespaced storage for mapping-based groups functionality.
+ *      Group existence and group membership are stored in mappings for O(1) lookups.
+ *      Group IDs are not reusable after deletion -- isGroupMember entries persist as ghost data.
+ *      The wasGroupDeleted mapping tracks deleted group IDs to prevent recreation.
  * @author Den Technologies Inc
  */
 library LibOrganizationGroupsStorage {
     /**
      * @dev Storage layout for groups functionality
      * @custom:storage-location erc7201:den.mls-wallet.organization.groups
-     * @param groupsRoot Global merkle root containing ALL groups.
-     *        Each leaf is hash(hash(groupId, groupMembersRoot))
+     * @param isGroup Mapping from group ID to existence status
+     * @param isGroupMember Mapping from group ID to member address to membership status
+     * @param wasGroupDeleted Mapping from group ID to deletion status (prevents ID reuse)
      */
     struct Layout {
-        bytes32 groupsRoot;
+        mapping(uint256 groupId => bool) isGroup;
+        mapping(uint256 groupId => mapping(address => bool)) isGroupMember;
+        mapping(uint256 groupId => bool) wasGroupDeleted;
     }
 
     /// @dev Storage location for GroupsStorage, following ERC-7201 namespaced storage pattern.

@@ -2,22 +2,25 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {AdminConfig} from "types/AdminTypes.sol";
-
 /**
  * @title Organization Admin Storage
  * @dev ERC-7201 namespaced storage for organization admin functionality.
- *      Admin is a list of members represented as a Merkle tree.
+ *      Admins are stored in a mapping for O(1) admin checks.
+ *      adminCount and votingThreshold are stored directly (AdminConfig struct is removed).
  * @author Den Technologies Inc
  */
 library LibOrganizationAdminStorage {
     /**
      * @dev Storage layout for admin permissions
      * @custom:storage-location erc7201:den.mls-wallet.organization.admin
-     * @param adminConfig The admin permission configuration
+     * @param isAdmin Mapping from address to admin status
+     * @param adminCount Total number of admins in the organization
+     * @param votingThreshold Number of admin signatures required for admin operations
      */
     struct Layout {
-        AdminConfig adminConfig;
+        mapping(address => bool) isAdmin;
+        uint256 adminCount;
+        uint256 votingThreshold;
     }
 
     /// @dev Storage location for AdminStorage, following ERC-7201 namespaced storage pattern.

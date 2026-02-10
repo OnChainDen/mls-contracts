@@ -2,12 +2,13 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {AdminAuthParams, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
 
 /**
  * @title IOrganizationMembers
  * @notice Interface for member-related operations in Organization contracts
- * @dev Maps to LibOrganizationMembers library functionality
+ * @dev Maps to LibOrganizationMembers library functionality.
+ *      Members are stored in a mapping for O(1) membership checks.
  * @author Den Technologies Inc
  */
 interface IOrganizationMembers {
@@ -16,43 +17,73 @@ interface IOrganizationMembers {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Emitted when the members merkle root is updated
-     * @param newRoot The new merkle root
-     * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
+     * @notice Emitted when a member is added to the organization
+     * @param member The address of the added member
      */
-    event MembersUpdated(bytes32 indexed newRoot, string ipfsCid);
+    event MemberAdded(address indexed member);
+
+    /**
+     * @notice Emitted when a member is removed from the organization
+     * @param member The address of the removed member
+     */
+    event MemberRemoved(address indexed member);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Errors
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * @notice Thrown when trying to remove a member who is currently an admin
+     * @dev Admin status must be removed via modifyAdmins before removing the member
+     * @param member The address of the member who is an admin
+     */
+    error MemberIsAdmin(address member);
+
+    /**
+     * @notice Thrown when trying to remove a member who does not exist
+     * @param member The address that is not a member
+     */
+    error MemberDoesNotExist(address member);
+
+    /**
+     * @notice Thrown when the member address is the zero address
+     * @param member The invalid zero address
+     */
+    error InvalidMemberAddress(address member);
+
+    /**
+     * @notice Thrown when a modify members operation would result in zero members
+     */
+    error CannotRemoveAllMembers();
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Updates the global members merkle root
-     * @dev This is the only way to set members. All member data is stored off-chain (IPFS).
-     *      Validates that all admins remain members in the new tree to prevent bricking.
-     * @param newMembersRoot The new merkle root containing all members
-     * @param ipfsCid The IPFS CID where full member data is stored for disaster recovery
-     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
-     * @param allAdminsInOrgProofs Proofs that all admins are in the new members tree
+     * @notice Adds and/or removes members from the organization
+     * @dev Adding a duplicate member is a no-op. Removing a non-existent member reverts.
+     *      Removing a member who is an admin reverts with MemberIsAdmin.
+     * @param membersToAdd Addresses to add as members
+     * @param membersToRemove Addresses to remove from members
+     * @param authParams The authorization parameters (salt, expiration, signatures)
      */
-    function setMembers(
-        bytes32 newMembersRoot,
-        string calldata ipfsCid,
-        AdminAuthParams calldata authParams,
-        AllAdminsInOrgProofs calldata allAdminsInOrgProofs
+    function modifyMembers(
+        address[] calldata membersToAdd,
+        address[] calldata membersToRemove,
+        AdminAuthParams calldata authParams
     ) external;
 
     /**
-     * @notice Returns the current members merkle root
-     * @return The members merkle root
+     * @notice Checks if an address is a member of the organization
+     * @param memberAddress The address to check
+     * @return True if the address is a member, false otherwise
      */
-    function membersRoot() external view returns (bytes32);
+    function isMember(address memberAddress) external view returns (bool);
 
     /**
-     * @notice Verifies that an address is a member of the organization
-     * @param memberAddress The address to verify
-     * @param proof The merkle proof for the address
-     * @return True if the address is a verified member, false otherwise
+     * @notice Returns the total number of members in the organization
+     * @return The member count
      */
-    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view returns (bool);
+    function memberCount() external view returns (uint256);
 }

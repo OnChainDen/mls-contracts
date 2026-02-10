@@ -44,40 +44,45 @@ enum OperationType {
 }
 
 /**
+ * @notice Represents a single group modification operation
+ * @dev When deleteGroup is true, the group is deleted and membersToAdd/membersToRemove must be empty.
+ *      When deleteGroup is false and the groupId doesn't exist yet, the group is implicitly created.
+ *      Group IDs are not reusable after deletion -- recreating a deleted group ID will revert.
+ * @param groupId The unique identifier for the group
+ * @param deleteGroup If true, deletes the group (membersToAdd/membersToRemove must be empty)
+ * @param membersToAdd Addresses to add to the group (no-op on duplicates)
+ * @param membersToRemove Addresses to remove from the group (reverts if not in group)
+ */
+struct GroupModification {
+    uint256 groupId;
+    bool deleteGroup;
+    address[] membersToAdd;
+    address[] membersToRemove;
+}
+
+/**
  * @notice Parameters for organization initialization
- * @dev Packed into a struct to avoid stack too deep errors
- * @param adminsRoot Merkle root of admin member addresses
- * @param adminCount Number of admins in the admin tree (for completeness validation)
- * @param votingThreshold Number of admin signatures required
- * @param adminAddresses All admin addresses (must match adminCount, in ascending order)
- * @param adminInAdminTreeProofs Merkle proofs that each admin address is in adminsRoot
- * @param adminInMembersTreeProofs Merkle proofs that each admin address is in membersRoot
+ * @dev Packed into a struct to avoid stack too deep errors.
+ *      Members and admins are provided as address arrays and stored directly in mappings.
+ *      Groups are provided as GroupModification structs for batch creation.
+ * @param members Initial member addresses (must have at least one)
+ * @param admins Initial admin addresses (must all be members)
+ * @param votingThreshold Number of admin signatures required for admin operations
+ * @param groups Initial group configurations
  * @param guardian Guardian address for the organization
- * @param adminOperationTimelockDurationSeconds The organization-wide admin operation timelock duration in seconds for
- * sensitive
- * operations
- * @param membersRoot The initial Merkle root for all members
- * @param groupsRoot The initial Merkle root for all groups
- * @param membersIpfsCid The IPFS CID where full members data is stored
- * @param groupsIpfsCid The IPFS CID where full groups data is stored
+ * @param adminOperationTimelockDurationSeconds The organization-wide admin operation timelock duration in seconds
  * @param transactionAndERC1271RecoveryAddress The privileged address for tx/signature recovery (zero to defer setup)
  * @param txRecoveryTimelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
  * @param guardianRecoveryAddress The privileged address for guardian recovery (zero to defer setup)
  * @param guardianRecoveryTimelockDurationSeconds The duration in seconds for guardian recovery timelocks
  */
 struct InitializationParams {
-    bytes32 adminsRoot;
-    uint256 adminCount;
+    address[] members;
+    address[] admins;
     uint256 votingThreshold;
-    address[] adminAddresses;
-    bytes32[][] adminInAdminTreeProofs;
-    bytes32[][] adminInMembersTreeProofs;
+    GroupModification[] groups;
     address guardian;
     uint256 adminOperationTimelockDurationSeconds;
-    bytes32 membersRoot;
-    bytes32 groupsRoot;
-    string membersIpfsCid;
-    string groupsIpfsCid;
     // Recovery configuration (zero addresses defer setup to post-deployment)
     address transactionAndERC1271RecoveryAddress;
     uint256 txRecoveryTimelockDurationSeconds;

@@ -222,7 +222,7 @@ make deploy-safe-multisigs ACCOUNT=my-deployer FACTORY=arachnid
 
 ### Step 4: Deploy Independent Libraries
 
-Deploys `LibOrganizationPolicy`, `LibOrganizationAdmin`, `LibOrganizationTxRecovery`, and `LibOrganizationGuardianRecovery`—external libraries with no dependencies on other platform libraries.
+Deploys `LibOrganizationPolicy`, `LibOrganizationAdmin`, `LibOrganizationMembers`, `LibOrganizationGroups`, `LibOrganizationTxRecovery`, and `LibOrganizationGuardianRecovery`—external libraries with no dependencies on other platform libraries.
 
 ```bash
 make deploy-independent-libs ACCOUNT=my-deployer FACTORY=arachnid
@@ -302,7 +302,7 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 | 1 | `make deploy-arachnid-factory` | Or `deploy-den-factory` for unsupported chains |
 | 2 | `make deploy-safe-infra` | Uses Solidity 0.7.6 profile |
 | 3 | `make deploy-safe-multisigs` | Verifies infrastructure first |
-| 4 | `make deploy-independent-libs` | Policy, Admin, TxRecovery, GuardianRecovery libraries |
+| 4 | `make deploy-independent-libs` | Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery libraries |
 | 5 | `make deploy-dependent-libs` | Init, AccountSig libraries (with linking) |
 | 6 | `make deploy-contracts` | Platform contracts (with linking) |
 | 7 | `make deploy-batched-transaction` | Before SafeExecutorModule |
@@ -313,7 +313,7 @@ When `EXECUTE=true` and the approval threshold is met, the transaction is automa
 
 | Target | Steps | What it deploys |
 |--------|-------|-----------------|
-| `make deploy-libraries` | 4, 5 | All six external libraries (Policy, Admin, TxRecovery, GuardianRecovery, Init, AccountSig) |
+| `make deploy-libraries` | 4, 5 | All eight external libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery, Init, AccountSig) |
 | `make deploy-platform` | 2, 3, 4, 5, 6 | Safe infrastructure, Safe multisigs, all libraries, and platform contracts |
 
 > **Note:** Convenience targets do not include Steps 1, 7, 8, or 9. The CREATE2 factory (Step 1) only needs to be deployed once per chain. BatchedTransaction (Step 7), Guardian module (Step 8), and module approval (Step 9) are typically done separately after the core platform is deployed.
@@ -475,7 +475,7 @@ The `compute_all_addresses.sh` script orchestrates address computation by:
 2. **Computing addresses in dependency order:**
    - Safe infrastructure (singleton, proxy factory, handlers)
    - Safe multisigs (Guardian and Admin Safes for both prod and nonprod)
-   - Independent libraries (Policy, Admin)
+   - Independent libraries (Policy, Admin, Members, Groups)
    - Dependent libraries (Init, AccountSig) — computed with `--libraries` flags
    - Platform implementations (Organization, Account, Whitelist)
    - Platform contracts (OrganizationFactory, WhitelistProxy) — depends on Safe addresses
@@ -490,7 +490,7 @@ Understanding which addresses depend on what is critical:
 | Address | Dependencies |
 |---------|--------------|
 | Factory | Factory deployer EOA (for Den factories) |
-| Libraries (Policy, Admin, TxRecovery, GuardianRecovery) | Factory only |
+| Libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery) | Factory only |
 | Libraries (Init, AccountSig) | Factory + independent library addresses |
 | Safe infrastructure | Factory only |
 | Safe multisigs | Factory + Safe proxy factory + Safe owner addresses |
@@ -608,12 +608,12 @@ With explicit library linking:
 
 Due to inter-library dependencies, libraries must be deployed in **two stages**:
 
-**Stage 1 - Independent Libraries (Policy, Admin, TxRecovery, GuardianRecovery):**
+**Stage 1 - Independent Libraries (Policy, Admin, Members, Groups, TxRecovery, GuardianRecovery):**
 These libraries have no dependencies on other platform libraries. They can be deployed without any `--libraries` flags.
 
 **Stage 2 - Dependent Libraries (Init and AccountSig):**
 These libraries depend on the independent libraries being linked into their bytecode:
-- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`
+- `LibOrganizationInitialization` imports and uses `LibOrganizationAdmin`, `LibOrganizationMembers`, and `LibOrganizationGroups`
 - `LibOrganizationAccountSignature` imports and uses `LibOrganizationPolicy`
 
 They must be deployed with a `--libraries` flag that informs the compiler to link the external libraries they're dependent on.
@@ -627,12 +627,12 @@ The CREATE2 address formula is:
 address = keccak256(0xff ++ factory ++ salt ++ keccak256(initCode))[12:]
 ```
 
-If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flag, the Admin address is embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
+If `LibOrganizationInitialization` is compiled without `LibOrganizationAdmin`, `LibOrganizationMembers`, and `LibOrganizationGroups` being linked, the initCode will have placeholder bytes. When compiled with the correct `--libraries` flags, those addresses are embedded in the initCode, producing a different hash and therefore a different CREATE2 address.
 
 The Makefile handles this automatically with the `deploy-libraries` target (which runs both stages), or you can run them separately:
 
 ```bash
-# Deploy independent libraries (Policy, Admin)
+# Deploy independent libraries (Policy, Admin, Members, Groups)
 make deploy-independent-libs ACCOUNT=my-deployer
 
 # Deploy dependent libraries (Init, AccountSig) - requires --libraries flags
@@ -734,7 +734,7 @@ make deploy-libraries NETWORK=https://my-custom-rpc.example.com ACCOUNT=my-deplo
 
 | Command | Description |
 |---------|-------------|
-| `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin) via CREATE2 |
+| `make deploy-independent-libs` | Deploy independent libraries (Policy, Admin, Members, Groups) via CREATE2 |
 | `make deploy-dependent-libs` | Deploy dependent libraries (Init, AccountSig) via CREATE2 |
 | `make deploy-libraries` | Deploy all platform libraries (runs both stages) |
 | `make deploy-contracts` | Deploy platform contracts with library linking |

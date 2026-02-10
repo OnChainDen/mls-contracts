@@ -2,130 +2,129 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
-import {MerkleUtils} from "libraries/MerkleUtils.sol";
 import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
-import {GroupData} from "types/PolicyTypes.sol";
+import {GroupModification} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Groups
- * @dev Library for merkle-based group operations for Organization contracts.
- *      Groups are stored in a nested merkle tree. Only the root is stored on-chain.
- *      Full group data is stored off-chain (IPFS) and provided via calldata at validation time.
- *      Each group leaf is hash(hash(groupId, groupMembersRoot)) where groupMembersRoot is
- *      a separate merkle tree containing the member addresses in that group.
- *      This approach drastically reduces gas costs for group management (1 SSTORE)
- *      while keeping verification costs reasonable (O(log n) hash operations per verification).
+ * @dev Library for mapping-based group operations for Organization contracts.
+ *      Group existence and group membership are stored in mappings for O(1) lookups.
+ *      Group IDs are not reusable after deletion -- isGroupMember entries persist as ghost data.
+ *      The wasGroupDeleted mapping tracks deleted group IDs to prevent recreation.
  * @author Den Technologies Inc
  */
 library LibOrganizationGroups {
     /**
-     * @dev Updates the global groups merkle root.
-     *      This is the only way to set groups. All group data is stored off-chain (IPFS).
-     *      Emits GroupsUpdated event with the IPFS CID for disaster recovery.
-     * @param newGroupsRoot The new merkle root containing all groups
-     * @param ipfsCid The IPFS CID where full group data is stored
+     * @dev Creates, modifies, or deletes groups in the organization.
+     *      When deleteGroup is true, the group is deleted and membersToAdd/membersToRemove must be empty.
+     *      When deleteGroup is false and the groupId doesn't exist yet, the group is implicitly created.
+     *      Adding a duplicate group member is a no-op. Removing a non-existent group member reverts.
+     *      Group IDs are not reusable after deletion.
+     * @param modifications Array of group modifications to apply
      */
-    function setGroups(bytes32 newGroupsRoot, string calldata ipfsCid) internal {
-        LibOrganizationGroupsStorage.layout().groupsRoot = newGroupsRoot;
-        emit IOrganizationGroups.GroupsUpdated(newGroupsRoot, ipfsCid);
+    function modifyGroups(GroupModification[] calldata modifications) public {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+
+        for (uint256 i = 0; i < modifications.length; ++i) {
+            GroupModification calldata mod = modifications[i];
+            uint256 groupId = mod.groupId;
+
+            if (mod.deleteGroup) {
+                _deleteGroup(groupsLayout, groupId, mod);
+            } else {
+                _createOrModifyGroup(groupsLayout, groupId, mod);
+            }
+        }
     }
 
     /**
-     * @dev Verifies that a group exists in the organization
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof for the group
+     * @dev Checks if a group exists in the organization
+     * @param groupId The group ID to check
      * @return True if the group exists, false otherwise
      */
-    function isGroupInOrg(GroupData memory groupData, bytes32[] memory groupInOrgGroupsTreeProof)
-        internal
-        view
-        returns (bool)
-    {
-        bytes32 root = LibOrganizationGroupsStorage.layout().groupsRoot;
-        return isGroupInTree(groupData, root, groupInOrgGroupsTreeProof);
+    function isGroup(uint256 groupId) internal view returns (bool) {
+        return LibOrganizationGroupsStorage.layout().isGroup[groupId];
     }
 
     /**
-     * @dev Verifies complete group membership (group exists AND member is in group)
-     * @param memberAddress The address to verify
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupInOrgGroupsTreeProof The merkle proof that the group exists
-     * @param memberInGroupProof The merkle proof that the member is in the group
-     * @return True if both verifications pass, false otherwise
+     * @dev Checks if an address is a member of a group
+     * @param groupId The group ID to check
+     * @param memberAddress The address to check
+     * @return True if the address is a member of the group, false otherwise
      */
-    function isMemberInGroupAndGroupInOrg(
-        address memberAddress,
-        GroupData memory groupData,
-        bytes32[] memory groupInOrgGroupsTreeProof,
-        bytes32[] memory memberInGroupProof
-    ) internal view returns (bool) {
-        // First verify the group exists
-        if (!isGroupInOrg(groupData, groupInOrgGroupsTreeProof)) {
-            return false;
+    function isGroupMember(uint256 groupId, address memberAddress) internal view returns (bool) {
+        return LibOrganizationGroupsStorage.layout().isGroupMember[groupId][memberAddress];
+    }
+
+    /**
+     * @dev Deletes a group. Reverts if group does not exist or if members are provided.
+     * @param groupsLayout The groups storage layout
+     * @param groupId The group ID to delete
+     * @param mod The group modification containing the delete request
+     */
+    function _deleteGroup(
+        LibOrganizationGroupsStorage.Layout storage groupsLayout,
+        uint256 groupId,
+        GroupModification calldata mod
+    ) private {
+        // Case: Group does not exist
+        if (!groupsLayout.isGroup[groupId]) revert IOrganizationGroups.GroupDoesNotExist(groupId);
+
+        // Case: Deletion with non-empty member arrays
+        if (mod.membersToAdd.length > 0 || mod.membersToRemove.length > 0) {
+            revert IOrganizationGroups.GroupDeletionWithMembers(groupId);
         }
 
-        // Then verify the member is in the group
-        return isMemberInGroup(memberAddress, groupData.groupMembersRoot, memberInGroupProof);
+        groupsLayout.isGroup[groupId] = false;
+        groupsLayout.wasGroupDeleted[groupId] = true;
+        emit IOrganizationGroups.GroupDeleted(groupId);
     }
 
     /**
-     * @dev Returns the current groups merkle root
-     * @return The groups merkle root
+     * @dev Creates a new group or modifies an existing one.
+     *      If the group doesn't exist and hasn't been deleted, it is implicitly created.
+     * @param groupsLayout The groups storage layout
+     * @param groupId The group ID to create or modify
+     * @param mod The group modification containing members to add/remove
      */
-    function getGroupsRoot() internal view returns (bytes32) {
-        return LibOrganizationGroupsStorage.layout().groupsRoot;
-    }
+    function _createOrModifyGroup(
+        LibOrganizationGroupsStorage.Layout storage groupsLayout,
+        uint256 groupId,
+        GroupModification calldata mod
+    ) private {
+        // Case: Group ID was previously deleted — cannot be reused
+        if (groupsLayout.wasGroupDeleted[groupId]) revert IOrganizationGroups.GroupAlreadyDeleted(groupId);
 
-    /**
-     * @dev Checks if a group exists in a groups tree given an explicit root.
-     *      Used to verify against potentially different roots or to avoid storage reads in loops.
-     * @param groupData The group data containing groupId and groupMembersRoot
-     * @param groupsRoot The merkle root to verify against
-     * @param groupInOrgGroupsTreeProof The merkle proof for the group
-     * @return True if the group exists in the tree, false otherwise
-     */
-    function isGroupInTree(GroupData memory groupData, bytes32 groupsRoot, bytes32[] memory groupInOrgGroupsTreeProof)
-        internal
-        pure
-        returns (bool)
-    {
-        // Empty root means no groups (organization not initialized or all groups removed)
-        if (groupsRoot == bytes32(0)) return false;
+        // Implicit group creation if it doesn't exist yet
+        if (!groupsLayout.isGroup[groupId]) {
+            groupsLayout.isGroup[groupId] = true;
+            emit IOrganizationGroups.GroupCreated(groupId);
+        }
 
-        bytes32 leaf = _computeGroupLeaf(groupData.groupId, groupData.groupMembersRoot);
-        return MerkleProof.verify(groupInOrgGroupsTreeProof, groupsRoot, leaf);
-    }
+        // Process member additions
+        for (uint256 j = 0; j < mod.membersToAdd.length; ++j) {
+            address member = mod.membersToAdd[j];
+            if (member == address(0)) revert IOrganizationGroups.InvalidGroupMemberAddress(groupId, member);
 
-    /**
-     * @dev Verifies that a member is in a specific group.
-     *      Verifies against the group's internal members merkle tree (groupMembersRoot).
-     * @param memberAddress The address to verify
-     * @param groupMembersRoot The merkle root of the group's members tree
-     * @param memberInGroupProof The merkle proof that the member is in the group
-     * @return True if the member is in the group, false otherwise
-     */
-    function isMemberInGroup(address memberAddress, bytes32 groupMembersRoot, bytes32[] memory memberInGroupProof)
-        internal
-        pure
-        returns (bool)
-    {
-        // Empty root means no members in group
-        if (groupMembersRoot == bytes32(0)) return false;
+            // No-op if already in group
+            if (groupsLayout.isGroupMember[groupId][member]) continue;
 
-        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
-        return MerkleProof.verify(memberInGroupProof, groupMembersRoot, leaf);
-    }
+            groupsLayout.isGroupMember[groupId][member] = true;
+            emit IOrganizationGroups.GroupMemberAdded(groupId, member);
+        }
 
-    /**
-     * @dev Computes the merkle leaf for a group.
-     *      Uses double hashing (hash of hash) for security against second preimage attacks.
-     * @param groupId The group's unique identifier
-     * @param groupMembersRoot The merkle root of all member addresses in this group
-     * @return The computed merkle leaf
-     */
-    function _computeGroupLeaf(uint256 groupId, bytes32 groupMembersRoot) private pure returns (bytes32) {
-        return keccak256(bytes.concat(keccak256(abi.encode(groupId, groupMembersRoot))));
+        // Process member removals
+        for (uint256 j = 0; j < mod.membersToRemove.length; ++j) {
+            address member = mod.membersToRemove[j];
+
+            // Case: Member is not in the group
+            if (!groupsLayout.isGroupMember[groupId][member]) {
+                revert IOrganizationGroups.MemberNotInGroup(groupId, member);
+            }
+
+            groupsLayout.isGroupMember[groupId][member] = false;
+            emit IOrganizationGroups.GroupMemberRemoved(groupId, member);
+        }
     }
 }

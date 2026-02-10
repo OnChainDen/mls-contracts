@@ -16,7 +16,7 @@ pragma solidity 0.8.33;
  *      Policies are stored as leaves in a merkle tree (only the root is stored on-chain).
  *      Full policy data is provided in calldata and verified via merkle proofs.
  *
- *      Members and Groups are also stored as merkle trees. Membership is verified via proofs.
+ *      Members and Groups are stored in onchain mappings. Membership is verified via direct storage reads.
  * @author Den Technologies Inc
  */
 
@@ -270,60 +270,18 @@ struct Policy {
 }
 
 /**
- * @dev Data needed to identify and verify a group.
- *      Groups are stored in a merkle tree where each leaf is hash(groupId, groupMembersRoot).
- * @param groupId The unique identifier for the group
- * @param groupMembersRoot The merkle root of all member addresses in this group
- */
-struct GroupData {
-    uint256 groupId;
-    bytes32 groupMembersRoot;
-}
-
-/**
- * @dev Proofs needed to verify an initiator's authorization.
- *      Contains proofs for both organization membership and optional group membership.
- * @param initiatorInOrgMembersTreeProof Merkle proof that the initiator address is in the organization's
- * membersRoot
- * @param group Group data if the initiator must be from a specific group (ignored if anyInitiator or Member type)
- * @param groupInOrgGroupsTreeProof Merkle proof that the group exists in the organization's groupsRoot
- * @param memberInGroupProof Merkle proof that the initiator is in the group's members tree
- */
-struct InitiatorProofs {
-    bytes32[] initiatorInOrgMembersTreeProof;
-    GroupData group;
-    bytes32[] groupInOrgGroupsTreeProof;
-    bytes32[] memberInGroupProof;
-}
-
-/**
- * @dev Proofs needed to verify approvers' authorization.
- *      Contains per-signer proofs for organization membership and optional group membership.
- *      Arrays are indexed by signer position (same order as signatures).
- * @param approverInOrgMembersTreeProofs Per-signer merkle proofs that each signer is in the organization's
- * membersRoot
- * @param group Approver group data if approvers must be from a specific group (ignored for Member type)
- * @param groupInOrgGroupsTreeProof Merkle proof that the approver group exists in groupsRoot
- * @param memberInGroupProofs Per-signer merkle proofs that each signer is in the approver group's tree
- */
-struct ApproverProofs {
-    bytes32[][] approverInOrgMembersTreeProofs;
-    GroupData group;
-    bytes32[] groupInOrgGroupsTreeProof;
-    bytes32[][] memberInGroupProofs;
-}
-
-/**
- * @notice All proofs needed to validate a transaction against a policy
- * @dev Bundled together to simplify function signatures and reduce stack depth
+ * @notice All proofs and data needed to validate a transaction against a policy
+ * @dev Bundled together to simplify function signatures and reduce stack depth.
+ *      Policy existence is verified via merkle proof. Initiator/approver membership is
+ *      verified via direct storage reads (mappings), so only group IDs are needed.
  * @param policy The full policy data (verified against policyProof)
  * @param policyProof Merkle proof that this policy exists in the organization
  * @param sourceAccountProof Proof that source account is allowed by policy
  * @param destinationProof Proof that destination is allowed by policy
  * @param functionProof Proof that function selector is allowed by policy
  * @param constraints ABI-encoded parameter constraints for function calls (includes proofs for OneOf constraints)
- * @param initiatorProofs Proofs for initiator membership verification
- * @param approverProofs Proofs for approver membership verification
+ * @param initiatorGroupId Group ID for initiator verification (only used when initiator type is Group)
+ * @param approverGroupId Group ID for approver verification (only used when approver type is Group)
  */
 struct ValidationProofs {
     Policy policy;
@@ -332,6 +290,6 @@ struct ValidationProofs {
     bytes32[] destinationProof;
     bytes32[] functionProof;
     bytes constraints;
-    InitiatorProofs initiatorProofs;
-    ApproverProofs approverProofs;
+    uint256 initiatorGroupId;
+    uint256 approverGroupId;
 }

@@ -170,14 +170,16 @@ fi
 # Library dependency chain:
 #   - LibOrganizationPolicy: No deps on other deployed libraries
 #   - LibOrganizationAdmin: No deps on other deployed libraries
-#   - LibOrganizationInitialization: Depends on LibOrganizationAdmin
+#   - LibOrganizationMembers: No deps on other deployed libraries
+#   - LibOrganizationGroups: No deps on other deployed libraries
+#   - LibOrganizationInitialization: Depends on LibOrganizationAdmin, Members, Groups
 #   - LibOrganizationAccountSignature: Depends on LibOrganizationPolicy
 #
 # We must compute in stages because some libraries have their bytecode affected
 # by the addresses of other libraries they depend on.
 
-# Step 2a: Compute independent library addresses (Policy and Admin)
-print_progress "  Computing independent library addresses (Policy, Admin)..."
+# Step 2a: Compute independent library addresses (Policy, Admin, Members, Groups)
+print_progress "  Computing independent library addresses (Policy, Admin, Members, Groups)..."
 LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeIndependentAddresses(address)" "$FACTORY_ADDRESS" --offline 2>&1) || {
     clear_progress
@@ -189,10 +191,12 @@ LIB_OUTPUT_INDEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibrari
 # Extract independent library addresses (these are correct without --libraries)
 LIB_ORG_POLICY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationPolicy")
 LIB_ORG_ADMIN_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationAdmin")
+LIB_ORG_MEMBERS_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationMembers")
+LIB_ORG_GROUPS_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationGroups")
 LIB_ORG_TX_RECOVERY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationTxRecovery")
 LIB_ORG_GUARDIAN_RECOVERY_ADDRESS=$(extract_address "$LIB_OUTPUT_INDEPENDENT" "LibOrganizationGuardianRecovery")
 
-if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_TX_RECOVERY_ADDRESS" || -z "$LIB_ORG_GUARDIAN_RECOVERY_ADDRESS" ]]; then
+if [[ -z "$LIB_ORG_POLICY_ADDRESS" || -z "$LIB_ORG_ADMIN_ADDRESS" || -z "$LIB_ORG_MEMBERS_ADDRESS" || -z "$LIB_ORG_GROUPS_ADDRESS" || -z "$LIB_ORG_TX_RECOVERY_ADDRESS" || -z "$LIB_ORG_GUARDIAN_RECOVERY_ADDRESS" ]]; then
     clear_progress
     echo "Error: Failed to extract independent library addresses from output" >&2
     echo "$LIB_OUTPUT_INDEPENDENT" >&2
@@ -207,6 +211,8 @@ print_progress "  Computing dependent library addresses (Init, AccountSig)..."
 # Build --libraries flags for the independent libraries
 DEP_LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
 DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_MEMBERS_PATH}:${LIB_ORG_MEMBERS_ADDRESS}"
+DEP_LIBRARIES_FLAGS="$DEP_LIBRARIES_FLAGS --libraries ${LIB_ORG_GROUPS_PATH}:${LIB_ORG_GROUPS_ADDRESS}"
 
 LIB_OUTPUT_DEPENDENT=$(forge script script/DeployLibraries.s.sol:DeployLibraries \
     --sig "computeDependentAddresses(address)" "$FACTORY_ADDRESS" \
@@ -260,6 +266,8 @@ fi
 # Build --libraries flags using computed library addresses
 LIBRARIES_FLAGS="--libraries ${LIB_ORG_POLICY_PATH}:${LIB_ORG_POLICY_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ADMIN_PATH}:${LIB_ORG_ADMIN_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_MEMBERS_PATH}:${LIB_ORG_MEMBERS_ADDRESS}"
+LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_GROUPS_PATH}:${LIB_ORG_GROUPS_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_INIT_PATH}:${LIB_ORG_INIT_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${LIB_ORG_ACCOUNT_SIG_ADDRESS}"
 LIBRARIES_FLAGS="$LIBRARIES_FLAGS --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${LIB_ORG_TX_RECOVERY_ADDRESS}"
@@ -349,6 +357,8 @@ echo ""
 echo "# Platform Libraries (environment-independent)"
 print_toml "lib_org_policy" "${LIB_ORG_POLICY_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_admin" "${LIB_ORG_ADMIN_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_members" "${LIB_ORG_MEMBERS_ADDRESS:-NOT_COMPUTED}"
+print_toml "lib_org_groups" "${LIB_ORG_GROUPS_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_init" "${LIB_ORG_INIT_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_account_sig" "${LIB_ORG_ACCOUNT_SIG_ADDRESS:-NOT_COMPUTED}"
 print_toml "lib_org_tx_recovery" "${LIB_ORG_TX_RECOVERY_ADDRESS:-NOT_COMPUTED}"

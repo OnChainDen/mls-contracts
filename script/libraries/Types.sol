@@ -12,6 +12,8 @@ pragma solidity >=0.7.0 <0.9.0;
 struct PlatformLibraries {
     address policyAddress;
     address adminAddress;
+    address membersAddress;
+    address groupsAddress;
     address initializationAddress;
     address accountSignatureAddress;
     address txRecoveryAddress;
@@ -22,6 +24,8 @@ struct PlatformLibraries {
 struct IndependentLibraries {
     address policyAddress;
     address adminAddress;
+    address membersAddress;
+    address groupsAddress;
     address txRecoveryAddress;
     address guardianRecoveryAddress;
 }

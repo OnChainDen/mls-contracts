@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
 import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
@@ -12,18 +14,14 @@ import {LibPolicyInitiator} from "organization/libraries/policy/LibPolicyInitiat
 import {LibPolicyRateLimits} from "organization/libraries/policy/LibPolicyRateLimits.sol";
 import {LibPolicyTokenTransfer} from "organization/libraries/policy/LibPolicyTokenTransfer.sol";
 import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
-import {ApproverProofs, InitiatorProofs, Policy, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
-
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Policy, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
 
 /**
  * @title Lib Organization Policy
  * @dev Library for merkle-based policy operations.
  *      Policies are stored in a global merkle tree. Only the root is stored on-chain.
  *      Full policy data is provided via calldata and verified against the root.
- *      Members and Groups are also Merkle-based - membership is verified via proofs.
- *      This approach drastically reduces gas costs for policy creation/modification (1 SSTORE)
- *      while keeping validation costs reasonable (O(log n) hash operations).
+ *      Members and Groups are stored in onchain mappings. Membership is verified via direct storage reads.
  * @author Den Technologies Inc
  */
 library LibOrganizationPolicy {
@@ -86,7 +84,7 @@ library LibOrganizationPolicy {
      *      Performs comprehensive validation including:
      *      1. Policy existence (via merkle proof)
      *      2. Source account matching
-     *      3. Initiator authorization (via merkle proofs for membership)
+     *      3. Initiator authorization (via mapping lookups for membership)
      *      4. Transaction type matching (including token transfer and contract interaction checks)
      *      5. Destination matching
      * @param policyId The unique identifier of the policy
@@ -116,7 +114,7 @@ library LibOrganizationPolicy {
         }
 
         // Case: The initiator is not authorized by the policy
-        if (!LibPolicyInitiator.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+        if (!LibPolicyInitiator.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorGroupId)) {
             return false;
         }
 
@@ -163,23 +161,23 @@ library LibOrganizationPolicy {
     }
 
     /**
-     * @dev Checks if there are enough valid approvals from signatures (using Merkle proofs).
+     * @dev Checks if there are enough valid approvals from signatures (using mapping lookups).
      *      Supports both EOA (ECDSA) and ERC-1271 (smart contract) signatures.
      *      Delegates to LibPolicyApproval.
      * @param policy The policy to check against
      * @param signatures The concatenated reviewer signatures (variable length, hybrid format)
      * @param messageHash The message hash that was signed
-     * @param approverProofs The proofs for approver membership verification
+     * @param approverGroupId The group ID for group-based approver verification
      * @return True if there are enough valid approvals, false otherwise
      */
     function areApprovalsValid(
         Policy memory policy,
         bytes memory signatures,
         bytes32 messageHash,
-        ApproverProofs memory approverProofs
+        uint256 approverGroupId
     ) public view returns (bool) {
         return LibPolicyApproval.areApprovalsValid({
-            policy: policy, signatures: signatures, messageHash: messageHash, approverProofs: approverProofs
+            policy: policy, signatures: signatures, messageHash: messageHash, approverGroupId: approverGroupId
         });
     }
 
@@ -220,15 +218,15 @@ library LibOrganizationPolicy {
      *      Delegates to LibPolicyInitiator.
      * @param policy The policy to check against
      * @param initiatorAddress The address of the transaction initiator
-     * @param initiatorProofs The proofs for initiator membership verification
+     * @param initiatorGroupId The group ID for group-based initiator verification
      * @return True if the initiator is authorized, false otherwise
      */
-    function isInitiatorAuthorized(
-        Policy memory policy,
-        address initiatorAddress,
-        InitiatorProofs memory initiatorProofs
-    ) public view returns (bool) {
-        return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorProofs);
+    function isInitiatorAuthorized(Policy memory policy, address initiatorAddress, uint256 initiatorGroupId)
+        public
+        view
+        returns (bool)
+    {
+        return LibPolicyInitiator.isInitiatorAuthorized(policy, initiatorAddress, initiatorGroupId);
     }
 
     /**

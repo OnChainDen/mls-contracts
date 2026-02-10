@@ -3,86 +3,96 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
-import {MerkleUtils} from "libraries/MerkleUtils.sol";
-import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
-import {AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
-
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 /**
  * @title Lib Organization Members
- * @dev Library for merkle-based member operations for Organization contracts.
- *      Members are stored in a merkle tree. Only the root is stored on-chain.
- *      Full member data is stored off-chain (IPFS) and provided via calldata at validation time.
- *      This approach drastically reduces gas costs for member management (1 SSTORE)
- *      while keeping verification costs reasonable (O(log n) hash operations).
+ * @dev Library for mapping-based member operations for Organization contracts.
+ *      Members are stored in a mapping for O(1) membership checks.
+ *      Removing a member who is an admin reverts — admin status must be removed first.
  * @author Den Technologies Inc
  */
 library LibOrganizationMembers {
     /**
-     * @dev Updates the global members merkle root.
-     *      This is the only way to set members. All member data is stored off-chain (IPFS).
-     *      Validates that ALL admins remain members in the new tree to prevent bricking.
-     *      Emits MembersUpdated event with the IPFS CID for disaster recovery.
-     * @param newMembersRoot The new merkle root containing all members
-     * @param ipfsCid The IPFS CID where full member data is stored
-     * @param allAdminsInOrgProofs Proofs that all admins are in the new members tree
+     * @dev Adds and/or removes members from the organization.
+     *      Adding a duplicate member is a no-op.
+     *      Removing a non-existent member reverts.
+     *      Removing a member who is an admin reverts with MemberIsAdmin.
+     *      Reverts if the operation would result in zero members.
+     * @param membersToAdd Addresses to add as members
+     * @param membersToRemove Addresses to remove from members
      */
-    function setMembers(
-        bytes32 newMembersRoot,
-        string calldata ipfsCid,
-        AllAdminsInOrgProofs calldata allAdminsInOrgProofs
-    ) internal {
-        // Get current admin configuration
-        AdminConfig memory admin = LibOrganizationAdminStorage.layout().adminConfig;
+    function modifyMembers(address[] calldata membersToAdd, address[] calldata membersToRemove) public {
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+        LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
-        // Validate that ALL admins are still members in the NEW members tree
-        // This prevents accidentally bricking the organization by removing admins from membership
-        LibOrganizationAdmin.validateAllAdminsAreMembersOrRevert(
-            allAdminsInOrgProofs, admin.adminsRoot, newMembersRoot, admin.adminCount
-        );
+        // Process additions
+        for (uint256 i = 0; i < membersToAdd.length; ++i) {
+            address member = membersToAdd[i];
+            if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
 
-        // Update the members root
-        LibOrganizationMembersStorage.layout().membersRoot = newMembersRoot;
-        emit IOrganizationMembers.MembersUpdated(newMembersRoot, ipfsCid);
+            // No-op if already a member
+            if (membersLayout.isMember[member]) continue;
+
+            membersLayout.isMember[member] = true;
+            ++membersLayout.memberCount;
+            emit IOrganizationMembers.MemberAdded(member);
+        }
+
+        // Process removals
+        for (uint256 i = 0; i < membersToRemove.length; ++i) {
+            address member = membersToRemove[i];
+
+            // Case: Member does not exist
+            if (!membersLayout.isMember[member]) revert IOrganizationMembers.MemberDoesNotExist(member);
+
+            // Case: Member is an admin — must remove admin status first
+            if (adminLayout.isAdmin[member]) revert IOrganizationMembers.MemberIsAdmin(member);
+
+            membersLayout.isMember[member] = false;
+            --membersLayout.memberCount;
+            emit IOrganizationMembers.MemberRemoved(member);
+        }
+
+        // Invariant: organization must always have at least one member
+        if (membersLayout.memberCount == 0) revert IOrganizationMembers.CannotRemoveAllMembers();
     }
 
     /**
-     * @dev Verifies that an address is a member of the organization
-     * @param memberAddress The address to verify
-     * @param proof The merkle proof for the address
-     * @return True if the address is a verified member, false otherwise
+     * @dev Sets initial members during organization initialization.
+     *      Skips admin-related invariant checks since admins haven't been set yet.
+     *      Does NOT check for duplicates — callers must ensure unique addresses.
+     * @param members The initial member addresses (must have at least one)
      */
-    function isMemberInOrg(address memberAddress, bytes32[] memory proof) internal view returns (bool) {
-        bytes32 root = LibOrganizationMembersStorage.layout().membersRoot;
-        return isMemberInTree(memberAddress, root, proof);
+    function setInitialMembers(address[] calldata members) public {
+        LibOrganizationMembersStorage.Layout storage membersLayout = LibOrganizationMembersStorage.layout();
+
+        for (uint256 i = 0; i < members.length; ++i) {
+            address member = members[i];
+            if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
+
+            membersLayout.isMember[member] = true;
+            emit IOrganizationMembers.MemberAdded(member);
+        }
+
+        membersLayout.memberCount = members.length;
     }
 
     /**
-     * @dev Returns the current members merkle root
-     * @return The members merkle root
+     * @dev Checks if an address is a member of the organization
+     * @param memberAddress The address to check
+     * @return True if the address is a member, false otherwise
      */
-    function getMembersRoot() internal view returns (bytes32) {
-        return LibOrganizationMembersStorage.layout().membersRoot;
+    function isMember(address memberAddress) internal view returns (bool) {
+        return LibOrganizationMembersStorage.layout().isMember[memberAddress];
     }
 
     /**
-     * @dev Checks if an address is in a member tree given an explicit root.
-     *      Used to verify against potentially different roots (current vs new).
-     * @param memberAddress The address to verify
-     * @param membersRoot The merkle root to verify against
-     * @param proof The merkle proof
-     * @return True if the address is in the member tree, false otherwise
+     * @dev Returns the total number of members in the organization
+     * @return The member count
      */
-    function isMemberInTree(address memberAddress, bytes32 membersRoot, bytes32[] memory proof)
-        internal
-        pure
-        returns (bool)
-    {
-        if (membersRoot == bytes32(0)) return false;
-        bytes32 leaf = MerkleUtils.computeAddressLeaf(memberAddress);
-        return MerkleProof.verify(proof, membersRoot, leaf);
+    function getMemberCount() internal view returns (uint256) {
+        return LibOrganizationMembersStorage.layout().memberCount;
     }
 }

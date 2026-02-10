@@ -20,6 +20,8 @@ DEPLOYMENT_TOML="deployment.toml"
 # Library paths for --libraries flag (these are constants, not addresses)
 LIB_ORG_POLICY_PATH="src/organization/libraries/LibOrganizationPolicy.sol:LibOrganizationPolicy"
 LIB_ORG_ADMIN_PATH="src/organization/libraries/LibOrganizationAdmin.sol:LibOrganizationAdmin"
+LIB_ORG_MEMBERS_PATH="src/organization/libraries/LibOrganizationMembers.sol:LibOrganizationMembers"
+LIB_ORG_GROUPS_PATH="src/organization/libraries/LibOrganizationGroups.sol:LibOrganizationGroups"
 LIB_ORG_INIT_PATH="src/organization/libraries/LibOrganizationInitialization.sol:LibOrganizationInitialization"
 LIB_ORG_ACCOUNT_SIG_PATH="src/organization/libraries/LibOrganizationAccountSignature.sol:LibOrganizationAccountSignature"
 LIB_ORG_TX_RECOVERY_PATH="src/organization/libraries/LibOrganizationTxRecovery.sol:LibOrganizationTxRecovery"
@@ -135,6 +137,20 @@ get_lib_org_admin() {
     get_config ".factory[\"$factory\"].lib_org_admin"
 }
 
+# Get LibOrganizationMembers address for a given factory
+# Usage: get_lib_org_members "arachnid"
+get_lib_org_members() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_members"
+}
+
+# Get LibOrganizationGroups address for a given factory
+# Usage: get_lib_org_groups "arachnid"
+get_lib_org_groups() {
+    local factory="$1"
+    get_config ".factory[\"$factory\"].lib_org_groups"
+}
+
 # Get LibOrganizationInitialization address for a given factory
 # Usage: get_lib_org_init "arachnid"
 get_lib_org_init() {
@@ -236,17 +252,21 @@ get_guardian_module_address() {
 # Library Flags Builders
 # =============================================================================
 
-# Build --libraries flags for independent libraries (Policy, Admin)
+# Build --libraries flags for independent libraries (Policy, Admin, Members, Groups)
 # Usage: FLAGS=$(build_independent_libraries_flags "arachnid")
 build_independent_libraries_flags() {
     local factory="$1"
     local policy_addr
     local admin_addr
+    local members_addr
+    local groups_addr
 
     policy_addr=$(get_lib_org_policy "$factory")
     admin_addr=$(get_lib_org_admin "$factory")
+    members_addr=$(get_lib_org_members "$factory")
+    groups_addr=$(get_lib_org_groups "$factory")
 
-    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr}"
+    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr}"
 }
 
 # Build --libraries flags for all libraries
@@ -255,6 +275,8 @@ build_all_libraries_flags() {
     local factory="$1"
     local policy_addr
     local admin_addr
+    local members_addr
+    local groups_addr
     local init_addr
     local account_sig_addr
     local tx_recovery_addr
@@ -262,12 +284,14 @@ build_all_libraries_flags() {
 
     policy_addr=$(get_lib_org_policy "$factory")
     admin_addr=$(get_lib_org_admin "$factory")
+    members_addr=$(get_lib_org_members "$factory")
+    groups_addr=$(get_lib_org_groups "$factory")
     init_addr=$(get_lib_org_init "$factory")
     account_sig_addr=$(get_lib_org_account_sig "$factory")
     tx_recovery_addr=$(get_lib_org_tx_recovery "$factory")
     guardian_recovery_addr=$(get_lib_org_guardian_recovery "$factory")
 
-    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_INIT_PATH}:${init_addr} --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${account_sig_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr}"
+    echo "--libraries ${LIB_ORG_POLICY_PATH}:${policy_addr} --libraries ${LIB_ORG_ADMIN_PATH}:${admin_addr} --libraries ${LIB_ORG_MEMBERS_PATH}:${members_addr} --libraries ${LIB_ORG_GROUPS_PATH}:${groups_addr} --libraries ${LIB_ORG_INIT_PATH}:${init_addr} --libraries ${LIB_ORG_ACCOUNT_SIG_PATH}:${account_sig_addr} --libraries ${LIB_ORG_TX_RECOVERY_PATH}:${tx_recovery_addr} --libraries ${LIB_ORG_GUARDIAN_RECOVERY_PATH}:${guardian_recovery_addr}"
 }
 
 # =============================================================================

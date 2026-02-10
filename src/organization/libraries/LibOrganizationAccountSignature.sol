@@ -36,7 +36,7 @@ import {PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.s
  *      - An enabled module on the Guardian Safe (e.g., SafeExecutorModule)
  *        This allows the module's AUTHORIZED_EXECUTOR to sign without Safe owner signatures.
  *
- *      Policy existence is verified via merkle proof. Policy data is provided in calldata.
+ *      Policy existence is verified via merkle proof. Members and groups are verified via mapping lookups.
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountSignature {
@@ -119,7 +119,7 @@ library LibOrganizationAccountSignature {
      *      - initiatorSignature: The initiator's signature
      *      - reviewSignatures: The reviewer signatures (empty for auto-approve policies)
      *      - guardianSignature: Guardian's approval of the signature request
-     *      - proofs: Merkle proofs and policy data for validation
+     *      - proofs: Policy data, merkle proofs, and group IDs for validation
      * @param account The account address whose signature is being validated
      * @param hash The message hash that was signed
      * @param signatureData ABI-encoded signature data (without type prefix)
@@ -193,7 +193,7 @@ library LibOrganizationAccountSignature {
                     policy: proofs.policy,
                     signatures: reviewSignatures,
                     messageHash: reviewHash,
-                    approverProofs: proofs.approverProofs
+                    approverGroupId: proofs.approverGroupId
                 })) {
                 return SignatureUtils.ERC1271_MAGIC_VALUE;
             }
@@ -249,7 +249,7 @@ library LibOrganizationAccountSignature {
      * @param account The account address whose signature is being validated
      * @param initiator The address that initiated the signature request
      * @param policyId The ID of the policy being used for validation
-     * @param proofs Merkle proofs and policy data for validation
+     * @param proofs Policy data, merkle proofs, and group IDs for validation
      * @return True if the signature is allowed by the policy, false otherwise
      */
     // forge-lint: disable-next-line(mixed-case-function)
@@ -275,7 +275,7 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Initiator is not authorized by this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorProofs)) {
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator, proofs.initiatorGroupId)) {
             return false;
         }
 
