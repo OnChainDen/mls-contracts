@@ -13,11 +13,9 @@ library LibOrganizationMembersStorage {
      * @dev Storage layout for members functionality
      * @custom:storage-location erc7201:den.mls-wallet.organization.members
      * @param isMember Mapping from address to membership status
-     * @param memberCount Total number of members in the organization
      */
     struct Layout {
         mapping(address => bool) isMember;
-        uint256 memberCount;
     }
 
     /// @dev Storage location for MembersStorage, following ERC-7201 namespaced storage pattern.

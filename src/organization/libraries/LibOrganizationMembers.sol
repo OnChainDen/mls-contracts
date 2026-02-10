@@ -35,7 +35,6 @@ library LibOrganizationMembers {
             if (membersLayout.isMember[member]) continue;
 
             membersLayout.isMember[member] = true;
-            ++membersLayout.memberCount;
             emit IOrganizationMembers.MemberAdded(member);
         }
 
@@ -50,7 +49,6 @@ library LibOrganizationMembers {
             if (adminLayout.isAdmin[member]) revert IOrganizationMembers.MemberIsAdmin(member);
 
             membersLayout.isMember[member] = false;
-            --membersLayout.memberCount;
             emit IOrganizationMembers.MemberRemoved(member);
         }
     }
@@ -71,8 +69,6 @@ library LibOrganizationMembers {
             membersLayout.isMember[member] = true;
             emit IOrganizationMembers.MemberAdded(member);
         }
-
-        membersLayout.memberCount = members.length;
     }
 
     /**
@@ -82,13 +78,5 @@ library LibOrganizationMembers {
      */
     function isMember(address memberAddress) internal view returns (bool) {
         return LibOrganizationMembersStorage.layout().isMember[memberAddress];
-    }
-
-    /**
-     * @dev Returns the total number of members in the organization
-     * @return The member count
-     */
-    function getMemberCount() internal view returns (uint256) {
-        return LibOrganizationMembersStorage.layout().memberCount;
     }
 }

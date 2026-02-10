@@ -75,10 +75,4 @@ interface IOrganizationMembers {
      * @return True if the address is a member, false otherwise
      */
     function isMember(address memberAddress) external view returns (bool);
-
-    /**
-     * @notice Returns the total number of members in the organization
-     * @return The member count
-     */
-    function memberCount() external view returns (uint256);
 }

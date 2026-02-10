@@ -10,10 +10,10 @@ import {LibOrganizationGuardian} from "organization/libraries/LibOrganizationGua
 import {LibOrganizationGuardianRecovery} from "organization/libraries/LibOrganizationGuardianRecovery.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
+import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
     LibOrganizationDeployerAddressStorage
 } from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
-import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
 import {InitializationParams} from "types/CommonTypes.sol";
 
 /**
@@ -32,7 +32,7 @@ library LibOrganizationInitialization {
      * @param params The initialization parameters struct
      */
     function initialize(InitializationParams calldata params) public {
-        // Check if already initialized (memberCount > 0 is the sentinel)
+        // Check if already initialized (adminCount > 0 is the sentinel)
         if (isInitialized()) {
             revert IOrganizationInitialization.AlreadyInitialized();
         }
@@ -114,11 +114,11 @@ library LibOrganizationInitialization {
 
     /**
      * @dev Checks if the organization has been initialized.
-     *      Uses memberCount > 0 as the initialization sentinel since every
-     *      organization must have at least one member.
+     *      Uses adminCount > 0 as the initialization sentinel since every
+     *      organization must have at least one admin.
      * @return True if initialized, false otherwise
      */
     function isInitialized() public view returns (bool) {
-        return LibOrganizationMembersStorage.layout().memberCount > 0;
+        return LibOrganizationAdminStorage.layout().adminCount > 0;
     }
 }

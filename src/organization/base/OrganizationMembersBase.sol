@@ -41,9 +41,4 @@ abstract contract OrganizationMembersBase is OrganizationModifiers, IOrganizatio
     function isMember(address memberAddress) external view override returns (bool) {
         return LibOrganizationMembers.isMember(memberAddress);
     }
-
-    /// @inheritdoc IOrganizationMembers
-    function memberCount() external view override returns (uint256) {
-        return LibOrganizationMembers.getMemberCount();
-    }
 }
