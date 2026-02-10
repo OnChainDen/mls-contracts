@@ -73,13 +73,6 @@ interface IOrganizationGroups {
      */
     error MemberNotInGroup(uint256 groupId, address member);
 
-    /**
-     * @notice Thrown when a group member address is the zero address
-     * @param groupId The group ID
-     * @param member The invalid zero address
-     */
-    error InvalidGroupMemberAddress(uint256 groupId, address member);
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
     // ═══════════════════════════════════════════════════════════════════════════

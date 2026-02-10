@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
 import {GroupModification} from "types/CommonTypes.sol";
 
@@ -105,7 +106,7 @@ library LibOrganizationGroups {
         // Process member additions
         for (uint256 j = 0; j < mod.membersToAdd.length; ++j) {
             address member = mod.membersToAdd[j];
-            if (member == address(0)) revert IOrganizationGroups.InvalidGroupMemberAddress(groupId, member);
+            if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
 
             // No-op if already in group
             if (groupsLayout.isGroupMember[groupId][member]) continue;
