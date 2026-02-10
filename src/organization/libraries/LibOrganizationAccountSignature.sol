@@ -273,7 +273,9 @@ library LibOrganizationAccountSignature {
         }
 
         // Case: Initiator is not authorized by this policy
-        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator)) return false;
+        if (!LibOrganizationPolicy.isInitiatorAuthorized(proofs.policy, initiator)) {
+            return false;
+        }
 
         return true;
     }
