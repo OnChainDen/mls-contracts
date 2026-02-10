@@ -77,6 +77,9 @@ library LibOrganizationAdmin {
     {
         LibOrganizationAdminStorage.Layout storage adminLayout = LibOrganizationAdminStorage.layout();
 
+        // Cache admin count in memory to avoid repeated SSTORE operations in the loops
+        uint256 adminCount = adminLayout.adminCount;
+
         // Process additions
         for (uint256 i = 0; i < adminsToAdd.length; ++i) {
             address admin = adminsToAdd[i];
@@ -89,7 +92,7 @@ library LibOrganizationAdmin {
             if (!LibOrganizationMembers.isMember(admin)) revert IOrganizationAdmin.AdminNotMember(admin);
 
             adminLayout.isAdmin[admin] = true;
-            ++adminLayout.adminCount;
+            ++adminCount;
             emit IOrganizationAdmin.AdminAdded(admin);
         }
 
@@ -101,17 +104,20 @@ library LibOrganizationAdmin {
             if (!adminLayout.isAdmin[admin]) revert IOrganizationAdmin.AdminDoesNotExist(admin);
 
             adminLayout.isAdmin[admin] = false;
-            --adminLayout.adminCount;
+            --adminCount;
             emit IOrganizationAdmin.AdminRemoved(admin);
         }
 
         // Case: change would result in no admins
-        if (adminLayout.adminCount == 0) revert IOrganizationAdmin.InvalidAdminConfig();
+        if (adminCount == 0) revert IOrganizationAdmin.InvalidAdminConfig();
 
-        // Case: invalid admin voting thresholdd
-        if (newVotingThreshold == 0 || newVotingThreshold > adminLayout.adminCount) {
-            revert IOrganizationAdmin.InvalidAdminVotingThreshold(newVotingThreshold, adminLayout.adminCount);
+        // Case: invalid admin voting threshold
+        if (newVotingThreshold == 0 || newVotingThreshold > adminCount) {
+            revert IOrganizationAdmin.InvalidAdminVotingThreshold(newVotingThreshold, adminCount);
         }
+
+        // Write the final admin count to storage once
+        adminLayout.adminCount = adminCount;
 
         // Case: New voting threshold
         if (adminLayout.votingThreshold != newVotingThreshold) {
