@@ -3,7 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
-import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
@@ -66,8 +65,10 @@ library LibPolicyApproval {
             }
             lastSigner = signer;
 
-            // Check if signer is authorized based on policy (with mapping lookups)
-            _validateAndCountApprovalOrRevert({policy: policy, signerAddress: signer});
+            // Case: Signer is not authorized for this policy
+            if (!_isSignerAuthorizedForPolicy({policy: policy, signerAddress: signer})) {
+                revert IOrganizationPolicy.UnauthorizedApprovalSigner(signer);
+            }
 
             ++validApprovals;
 
@@ -98,38 +99,31 @@ library LibPolicyApproval {
     }
 
     /**
-     * @dev Validates that a signer is authorized to approve for a policy and reverts if not.
+     * @dev Checks if a signer is authorized to approve for a policy.
      *      For Member approver type, the signer must be the specified member address.
      *      For Group approver type, the signer must be a member of the specified group.
      *      All signers must be members of the organization.
      *      NOTE: Group existence must be verified by the caller before calling this function.
      * @param policy The policy to check against
      * @param signerAddress The address of the signer
+     * @return True if the signer is authorized, false otherwise
      */
-    function _validateAndCountApprovalOrRevert(Policy memory policy, address signerAddress) private view {
+    function _isSignerAuthorizedForPolicy(Policy memory policy, address signerAddress) private view returns (bool) {
         // Case: Signer is not a member of the organization
-        if (!LibOrganizationMembers.isMember(signerAddress)) {
-            revert IOrganizationMembers.MemberDoesNotExist(signerAddress);
-        }
+        if (!LibOrganizationMembers.isMember(signerAddress)) return false;
 
         ApproverType approverType = policy.config.approval.approverType;
 
         // Case: Policy requires approval from a specific member
         if (approverType == ApproverType.Member) {
-            if (signerAddress != policy.config.approval.approverMember) {
-                revert IOrganizationMembers.MemberDoesNotExist(signerAddress);
-            }
-            return;
+            return signerAddress == policy.config.approval.approverMember;
         }
 
         // Case: Policy requires approval from any member of a specific group
         if (approverType == ApproverType.Group) {
-            uint256 approverGroupId = policy.config.approval.approverGroupId;
-
-            // Verify member is in the group (group existence verified by caller)
-            if (!LibOrganizationGroups.isGroupMember(approverGroupId, signerAddress)) {
-                revert IOrganizationPolicy.ApproverSignerIsNotGroupMember(signerAddress, approverGroupId);
-            }
+            return LibOrganizationGroups.isGroupMember(policy.config.approval.approverGroupId, signerAddress);
         }
+
+        return false;
     }
 }

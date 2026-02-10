@@ -41,11 +41,10 @@ interface IOrganizationPolicy {
     error DuplicateOrOutOfOrderSigner(address signer, address lastSigner);
 
     /**
-     * @notice Thrown when an approver signer is not a member of the required group
-     * @param signer The address that is not in the group
-     * @param groupId The group ID that was checked
+     * @notice Thrown when a signer is not authorized to approve for a policy
+     * @param signer The address that is not authorized
      */
-    error ApproverSignerIsNotGroupMember(address signer, uint256 groupId);
+    error UnauthorizedApprovalSigner(address signer);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
