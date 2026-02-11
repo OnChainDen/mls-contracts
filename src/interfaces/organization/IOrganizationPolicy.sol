@@ -34,25 +34,17 @@ interface IOrganizationPolicy {
     error PolicyVerificationFailed(uint256 policyId);
 
     /**
-     * @notice Thrown when member proofs length doesn't match signature count
-     * @param expected The expected length (signature count)
-     * @param actual The actual length of proofs array
-     */
-    error MemberProofsLengthMismatch(uint256 expected, uint256 actual);
-
-    /**
-     * @notice Thrown when member in group proofs length doesn't match signature count
-     * @param expected The expected length (signature count)
-     * @param actual The actual length of proofs array
-     */
-    error MemberInGroupProofsLengthMismatch(uint256 expected, uint256 actual);
-
-    /**
      * @notice Thrown when signatures are not in ascending order by signer address or contain duplicates
      * @param signer The signer address that violated ordering
      * @param lastSigner The previous signer address
      */
     error DuplicateOrOutOfOrderSigner(address signer, address lastSigner);
+
+    /**
+     * @notice Thrown when a signer is not authorized to approve for a policy
+     * @param signer The address that is not authorized
+     */
+    error UnauthorizedApprovalSigner(address signer);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Functions
@@ -63,12 +55,12 @@ interface IOrganizationPolicy {
      * @dev This is the only way to set policies. All policy data is stored off-chain (IPFS).
      * @param newPoliciesRoot The new merkle root containing all policies
      * @param ipfsCid The IPFS CID where full policy data is stored for disaster recovery
-     * @param authParams The authorization parameters (salt, expiration, signatures, and admin proofs)
+     * @param authParams The authorization parameters (salt, expiration, signatures)
      */
     // forgefmt: disable-next-item
     function setPolicies(
-        bytes32 newPoliciesRoot, 
-        string calldata ipfsCid, 
+        bytes32 newPoliciesRoot,
+        string calldata ipfsCid,
         AdminAuthParams calldata authParams
     ) external;
 

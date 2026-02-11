@@ -71,7 +71,7 @@ help:
 	@echo "  check-guardian-module-status      Check approval status for Guardian Safe module transaction"
 	@echo ""
 	@echo "Platform Deployment:"
-	@echo "  deploy-independent-libs   Deploy independent libraries (Policy, Admin) via CREATE2"
+	@echo "  deploy-independent-libs   Deploy independent libraries (Policy, Admin, Members, Groups) via CREATE2"
 	@echo "  deploy-dependent-libs     Deploy dependent libraries (Init, AccountSig) via CREATE2"
 	@echo "  deploy-libraries          Deploy all platform libraries (both stages)"
 	@echo "  deploy-contracts          Deploy platform contracts with library linking"
@@ -590,7 +590,7 @@ endif
 # Platform Deployment Commands
 # ==============================================================================
 
-# Deploy Independent Libraries: Deploys Policy and Admin libraries via CREATE2
+# Deploy Independent Libraries: Deploys Policy, Admin, Members, Groups libraries via CREATE2
 # These libraries have no dependencies on other platform libraries.
 # Run this BEFORE deploy-dependent-libs.
 #
@@ -598,7 +598,7 @@ endif
 #   make deploy-independent-libs NETWORK=sepolia ACCOUNT=my-deployer SENDER=0x1234...
 #   make deploy-independent-libs FACTORY=den-prod NETWORK=mainnet SIGNER=ledger SENDER=0x1234...
 deploy-independent-libs: validate-signer-vars
-	@echo "Deploying independent platform libraries (Policy, Admin) via CREATE2..."
+	@echo "Deploying independent platform libraries (Policy, Admin, Members, Groups) via CREATE2..."
 	@echo "  Network: $(NETWORK)"
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
@@ -609,7 +609,7 @@ deploy-independent-libs: validate-signer-vars
 		$(VERBOSITY)
 
 # Deploy Dependent Libraries: Deploys Init and AccountSig libraries via CREATE2
-# These libraries depend on Policy and Admin being deployed and linked.
+# These libraries depend on Stage 1 libraries being deployed and linked.
 # IMPORTANT: Run deploy-independent-libs first. Uses --libraries flags.
 #
 # Example:
@@ -621,6 +621,8 @@ deploy-dependent-libs: validate-signer-vars
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Linked Policy: $(LIB_ORG_POLICY_ADDRESS)"
 	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
+	@echo "  Linked Members: $(LIB_ORG_MEMBERS_ADDRESS)"
+	@echo "  Linked Groups: $(LIB_ORG_GROUPS_ADDRESS)"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
 		$(INDEPENDENT_LIBRARIES_FLAGS) \
@@ -700,6 +702,8 @@ deploy-dependent-libs-dry-run:
 	@echo "  Factory: $(FACTORY) ($(FACTORY_ADDRESS))"
 	@echo "  Linked Policy: $(LIB_ORG_POLICY_ADDRESS)"
 	@echo "  Linked Admin: $(LIB_ORG_ADMIN_ADDRESS)"
+	@echo "  Linked Members: $(LIB_ORG_MEMBERS_ADDRESS)"
+	@echo "  Linked Groups: $(LIB_ORG_GROUPS_ADDRESS)"
 	forge script script/DeployLibraries.s.sol:DeployLibraries \
 		--sig "runDeployDependentLibs(address)" $(FACTORY_ADDRESS) \
 		$(INDEPENDENT_LIBRARIES_FLAGS) \

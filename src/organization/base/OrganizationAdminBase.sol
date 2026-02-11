@@ -5,30 +5,29 @@ pragma solidity 0.8.33;
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
-import {AdminAuthParams, AdminConfig, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title OrganizationAdminBase
  * @dev Abstract contract implementing IOrganizationAdmin.
- *      Handles admin management operations including setting admins and rejecting admin operations.
+ *      Handles admin management operations including adding/removing admins and rejecting admin operations.
  * @author Den Technologies Inc
  */
 abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationAdmin {
     /// @inheritdoc IOrganizationAdmin
-    function setAdmins(
-        bytes32 newAdminsRoot,
-        uint256 newAdminCount,
+    function modifyAdmins(
+        address[] calldata adminsToAdd,
+        address[] calldata adminsToRemove,
         uint256 newVotingThreshold,
-        AdminAuthParams calldata authParams,
-        AllAdminsInOrgProofs calldata newAdminsInOrgProofs
+        AdminAuthParams calldata authParams
     ) external override onlyGuardian {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newAdminsRoot, newAdminCount, newVotingThreshold);
+        bytes memory operationData =
+            abi.encode(keccak256(abi.encode(adminsToAdd)), keccak256(abi.encode(adminsToRemove)), newVotingThreshold);
 
-        // Validate that the current admin has authorized this change (isApproval = true for execution)
+        // Validate that the current admins have authorized this change (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -36,16 +35,7 @@ abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationA
             authParams: authParams
         });
 
-        // Get current members root for validation
-        bytes32 currentMembersRoot = LibOrganizationMembers.getMembersRoot();
-
-        LibOrganizationAdmin.setAdmins({
-            newAdminsRoot: newAdminsRoot,
-            newAdminCount: newAdminCount,
-            newVotingThreshold: newVotingThreshold,
-            newAdminsInOrgProofs: newAdminsInOrgProofs,
-            currentMembersRoot: currentMembersRoot
-        });
+        LibOrganizationAdmin.modifyAdmins(adminsToAdd, adminsToRemove, newVotingThreshold);
     }
 
     /// @inheritdoc IOrganizationAdmin
@@ -66,7 +56,17 @@ abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationA
     }
 
     /// @inheritdoc IOrganizationAdmin
-    function adminConfig() external view override returns (AdminConfig memory) {
-        return LibOrganizationAdmin.getAdminConfig();
+    function isAdmin(address adminAddress) external view override returns (bool) {
+        return LibOrganizationAdmin.isAdmin(adminAddress);
+    }
+
+    /// @inheritdoc IOrganizationAdmin
+    function adminCount() external view override returns (uint256) {
+        return LibOrganizationAdmin.getAdminCount();
+    }
+
+    /// @inheritdoc IOrganizationAdmin
+    function votingThreshold() external view override returns (uint256) {
+        return LibOrganizationAdmin.getVotingThreshold();
     }
 }

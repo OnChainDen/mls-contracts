@@ -6,27 +6,27 @@ import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
-import {AdminAuthParams, AllAdminsInOrgProofs} from "types/AdminTypes.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title OrganizationMembersBase
  * @dev Abstract contract implementing IOrganizationMembers.
- *      Handles member management operations including setting members and verifying membership.
+ *      Handles member management operations including adding/removing members and verifying membership.
  * @author Den Technologies Inc
  */
 abstract contract OrganizationMembersBase is OrganizationModifiers, IOrganizationMembers {
     /// @inheritdoc IOrganizationMembers
-    function setMembers(
-        bytes32 newMembersRoot,
-        string calldata ipfsCid,
-        AdminAuthParams calldata authParams,
-        AllAdminsInOrgProofs calldata allAdminsInOrgProofs
+    function modifyMembers(
+        address[] calldata membersToAdd,
+        address[] calldata membersToRemove,
+        AdminAuthParams calldata authParams
     ) external override onlyGuardian {
         // Encode the operation data for validation
-        bytes memory operationData = abi.encode(newMembersRoot, keccak256(bytes(ipfsCid)));
+        bytes memory operationData =
+            abi.encode(keccak256(abi.encode(membersToAdd)), keccak256(abi.encode(membersToRemove)));
 
-        // Validate that the current admin has authorized this operation (isApproval = true for execution)
+        // Validate that the current admins have authorized this operation (isApproval = true for execution)
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyMembers,
             operationData: operationData,
@@ -34,16 +34,11 @@ abstract contract OrganizationMembersBase is OrganizationModifiers, IOrganizatio
             authParams: authParams
         });
 
-        LibOrganizationMembers.setMembers(newMembersRoot, ipfsCid, allAdminsInOrgProofs);
+        LibOrganizationMembers.modifyMembers(membersToAdd, membersToRemove);
     }
 
     /// @inheritdoc IOrganizationMembers
-    function membersRoot() external view override returns (bytes32) {
-        return LibOrganizationMembers.getMembersRoot();
-    }
-
-    /// @inheritdoc IOrganizationMembers
-    function isMemberInOrg(address memberAddress, bytes32[] calldata proof) external view override returns (bool) {
-        return LibOrganizationMembers.isMemberInOrg(memberAddress, proof);
+    function isMember(address memberAddress) external view override returns (bool) {
+        return LibOrganizationMembers.isMember(memberAddress);
     }
 }

@@ -48,6 +48,12 @@ abstract contract DeploymentConstants {
     /// @dev Salt for LibOrganizationAdmin library deployment
     bytes32 internal constant LIB_ORG_ADMIN_SALT = keccak256("den.mls-wallet.organization.lib.admin.v1");
 
+    /// @dev Salt for LibOrganizationMembers library deployment
+    bytes32 internal constant LIB_ORG_MEMBERS_SALT = keccak256("den.mls-wallet.organization.lib.members.v1");
+
+    /// @dev Salt for LibOrganizationGroups library deployment
+    bytes32 internal constant LIB_ORG_GROUPS_SALT = keccak256("den.mls-wallet.organization.lib.groups.v1");
+
     /// @dev Salt for LibOrganizationInitialization library deployment
     bytes32 internal constant LIB_ORG_INIT_SALT = keccak256("den.mls-wallet.organization.lib.initialization.v1");
 

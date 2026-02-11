@@ -28,8 +28,8 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
 /**
  * @title Organization Implementation
  * @notice UUPS upgradeable implementation contract for Organization that also acts as a Beacon for Account proxies
- * @dev Policies, Members, and Groups are all stored as Merkle trees. Only the roots are stored on-chain.
- *      Full data is provided via calldata and verified against the roots.
+ * @dev Policies are stored as a Merkle tree (root stored on-chain, data provided via calldata).
+ *      Members, Groups, and Admins are stored directly in onchain mappings.
  *
  *      This contract inherits from modular base contracts that each implement a specific interface:
  *      - OrganizationInitializationBase: Initialization logic
