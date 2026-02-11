@@ -1,6 +1,6 @@
 # Merkle Tree Architecture
 
-MLS Wallet uses Merkle trees for **Policies** to efficiently store complex, nested policy structures on-chain.
+MLS Wallet uses Merkle trees for **Policies** to efficiently store complex, nested policy structures onchain.
 
 ---
 
@@ -15,7 +15,7 @@ MLS Wallet uses Merkle trees for **Policies** to efficiently store complex, nest
 
 ## Overview
 
-Policies have complex nested structures (approvers, destinations, functions, parameter constraints) that would be extremely expensive to store directly on-chain. Merkle trees store only a 32-byte root on-chain while keeping the full data off-chain (on IPFS).
+Policies have complex nested structures (approvers, destinations, functions, parameter constraints) that would be extremely expensive to store directly onchain. Merkle trees store only a 32-byte root onchain while keeping the full data offchain (on IPFS).
 
 | Data Type | Storage Method | Verification |
 |-----------|---------------|--------------|
@@ -42,7 +42,7 @@ policiesRoot (bytes32)
                             └── leaf: hash(hash(address))
 ```
 
-| Stored On-Chain | Stored Off-Chain (IPFS) |
+| Stored Onchain | Stored Offchain (IPFS) |
 |-----------------|-------------------------|
 | `policiesRoot` (32 bytes) | Array of policies with full config and nested address/function lists |
 
