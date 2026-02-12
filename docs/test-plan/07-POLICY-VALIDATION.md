@@ -335,6 +335,25 @@
 | 122 | Fuzz: Random policy configs with ContractInteraction type validate correctly | [F] | P0 |
 | 123 | Fuzz: Random parameter constraint values match expected behavior | [F] | P0 |
 | 124 | Fuzz: Random address in/not in Merkle tree — correct validation | [F] | P0 |
+| 125 | Fuzz: Random bool parameter values match Exact constraint correctly | [F] | P0 |
+| 126 | Fuzz: Random uint values against Exact constraint — only matching value passes | [F] | P0 |
+| 127 | Fuzz: Random int values against Range — two's complement comparison correct | [F] | P0 |
+| 128 | Fuzz: Random fixed bytes values against Exact constraint — correct matching | [F] | P0 |
+| 129 | Fuzz: Random approval thresholds with exact number of valid group signers — always pass | [F] | P0 |
+| 130 | Fuzz: Random destination addresses in/not in Merkle tree — correct validation result | [F] | P0 |
+| 131 | Fuzz: Random amount values against threshold — strict `<` boundary correct | [F] | P0 |
+| 132 | Fuzz: Random function selectors with valid Merkle proofs — always verified | [F] | P0 |
+
+---
+
+## 10. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 133 | **Rate limit monotonicity**: Within a time window, policy usage can only increase or stay the same | P0 |
+| 134 | **Rate limit reset**: Usage resets to 0 when a new time window begins | P0 |
+| 135 | **Rate limit no-overflow**: `currentUsage + usageAmount` never wraps — function returns false first | P0 |
+| 136 | **Parameter constraint termination**: Constraint validation always terminates (no infinite loops) | P0 |
 
 ---
 
@@ -351,5 +370,6 @@
 | LibPolicyRateLimits (gaps) | 6 | P0-P1 |
 | Rate limit overflow safety | 2 | P0 |
 | Private function tests | 16 | P0-P1 |
-| Cross-library fuzz | 4 | P0 |
-| **Total** | **142** | |
+| Cross-library fuzz | 12 | P0 |
+| Invariant tests | 4 | P0 |
+| **Total** | **154** | |

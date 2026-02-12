@@ -109,6 +109,19 @@
 | 44 | Fuzz: Random group IDs (non-deleted) can be created | [F] | P1 |
 | 45 | Fuzz: Add then remove random members, none remain in group | [F] | P0 |
 | 46 | Fuzz: Deleted group ID always rejected on re-creation attempt | [F] | P0 |
+| 46.1 | Fuzz: Random group member additions are idempotent (adding existing member is no-op) | [F] | P1 |
+| 46.2 | Fuzz: Create, modify, and delete multiple random groups in single call — atomicity preserved | [F] | P0 |
+| 46.3 | Fuzz: Random address(0) members always rejected with `InvalidMemberAddress` | [F] | P0 |
+
+---
+
+## 8.5 Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 46.4 | **Deleted group non-reuse**: If `wasGroupDeleted[groupId] == true`, then `isGroup[groupId] == false` forever | P0 |
+| 46.5 | **Deletion permanence**: `wasGroupDeleted[groupId]` can only transition from false to true, never back | P0 |
+| 46.6 | **No zero-address group members**: `isGroupMember(groupId, address(0))` is never set to true | P0 |
 
 ---
 
@@ -173,6 +186,7 @@
 | Batch modifications | 4 | P0 |
 | Query functions | 6 | P3 |
 | Access control | 3 | P0 |
-| Fuzz tests | 4 | P0-P1 |
+| Fuzz tests | 7 | P0-P1 |
+| Invariant tests | 3 | P0 |
 | Private function tests | 16 | P0-P1 |
-| **Total** | **62** | |
+| **Total** | **68** | |

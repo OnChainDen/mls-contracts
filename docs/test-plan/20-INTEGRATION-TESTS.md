@@ -197,6 +197,19 @@ This should provide:
 
 ---
 
+## 11. Fuzz-Driven Integration Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 53 | Fuzz: Random valid transaction parameters through full AutoApprove flow — always executes | [F][I] | P0 |
+| 54 | Fuzz: Random member/group configurations — policy enforcement always consistent | [F][I] | P0 |
+| 55 | Fuzz: Random rate limit configurations — cumulative usage tracked correctly across multiple transactions | [F][I] | P0 |
+| 56 | Fuzz: Random policy constraint combinations — all sub-validations enforced end-to-end | [F][I] | P0 |
+| 57 | Fuzz: Random salt values for account deployment — all accounts independently executable | [F][I] | P1 |
+| 58 | Fuzz: Random guardian update timestamps — timelock always enforced end-to-end | [F][I] | P1 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -212,4 +225,5 @@ This should provide:
 | Cross-module interactions | 6 | P0 |
 | Modifier access control | 6 | P0 |
 | Multi-account | 3 | P1 |
-| **Total** | **58** | |
+| Fuzz-driven integration | 6 | P0-P1 |
+| **Total** | **64** | |

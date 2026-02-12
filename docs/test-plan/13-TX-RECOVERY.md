@@ -117,6 +117,28 @@ The existing 35 tests cover:
 
 ---
 
+## 8. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 44 | Fuzz: Random non-zero recovery addresses with valid timelock durations always configure | [F] | P1 |
+| 45 | Fuzz: Random timelock durations in [2 days, 30 days] always accepted | [F] | P1 |
+| 46 | Fuzz: Random timelock durations outside [2 days, 30 days] always revert | [F] | P1 |
+| 47 | Fuzz: Random valid recovery address EOA signatures always authenticate | [F] | P0 |
+| 48 | Fuzz: Random non-recovery-address signers always rejected | [F] | P0 |
+
+---
+
+## 9. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 49 | **Disable immediacy**: `disableTxRecovery` always works immediately without timelock | P0 |
+| 50 | **Enable requires timelock**: Tx recovery can only be enabled after timelock expires | P0 |
+| 51 | **Recovery isolation**: Tx recovery state changes never affect guardian recovery state | P0 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -128,4 +150,6 @@ The existing 35 tests cover:
 | Disable safety | 5 | P0 |
 | Edge cases | 2 | P0-P1 |
 | Private function tests | 14 | P1-P2 |
-| **Total** | **43** | |
+| Fuzz tests | 5 | P0-P1 |
+| Invariant tests | 3 | P0 |
+| **Total** | **51** | |

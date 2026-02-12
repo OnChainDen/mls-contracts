@@ -140,6 +140,65 @@ No additional fuzz tests needed for BytesUtils.
 
 ---
 
+## 11. Guardian Recovery Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 39 | Random non-zero recovery addresses with valid timelock — always configure | 1000 | P1 |
+| 40 | Random timelock durations in [2 days, 30 days] — always accepted | 1000 | P1 |
+| 41 | Random timelock durations outside valid range — always revert | 1000 | P1 |
+| 42 | Random timestamps before/after recovery timelock — correct finalize behavior | 1000 | P1 |
+
+---
+
+## 12. TX Recovery Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 43 | Random recovery address EOA signatures — valid signer always authenticates | 1000 | P0 |
+| 44 | Random non-recovery signers — always rejected | 1000 | P0 |
+| 45 | Random enable/disable cycles — disable always immediate, enable always requires timelock | 1000 | P0 |
+
+---
+
+## 13. Whitelist Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 46 | Random addresses added to whitelist — always queryable as whitelisted | 1000 | P2 |
+| 47 | Random addresses added then removed — always queryable as not whitelisted | 1000 | P2 |
+| 48 | Random Organization vs Account types — whitelists independent | 1000 | P2 |
+
+---
+
+## 14. Storage Library Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 49 | Random namespace strings produce unique ERC-7201 storage locations | 1000 | P1 |
+| 50 | Random write/read sequences preserve data integrity across namespaces | 1000 | P1 |
+
+---
+
+## 15. Safe Module Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 51 | Random valid EOA signatures — isValidSignature returns magic value | 1000 | P2 |
+| 52 | Random packed transaction batches — encode/decode round-trip correct | 1000 | P2 |
+
+---
+
+## 16. Integration Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 53 | Random valid transaction parameters through full AutoApprove flow | 1000 | P0 |
+| 54 | Random policy constraint combinations — all sub-validations enforced end-to-end | 1000 | P0 |
+| 55 | Random rate limit configurations — cumulative usage tracked correctly | 1000 | P0 |
+
+---
+
 ## Summary
 
 | Category | Fuzz Tests | Min Runs | Priority |
@@ -154,4 +213,10 @@ No additional fuzz tests needed for BytesUtils.
 | CREATE2 | 2 | 1000 | P1 |
 | Timelocks | 4 | 1000 | P1 |
 | Param constraints & overflow | 7 | 1000-10000 | P0 |
-| **Total** | **45** | | |
+| Guardian recovery | 4 | 1000 | P1 |
+| TX recovery | 3 | 1000 | P0 |
+| Whitelist | 3 | 1000 | P2 |
+| Storage libraries | 2 | 1000 | P1 |
+| Safe module | 2 | 1000 | P2 |
+| Integration | 3 | 1000 | P0 |
+| **Total** | **62** | | |

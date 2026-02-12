@@ -69,6 +69,18 @@
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | 18 | Fuzz: Random non-whitelisted addresses always rejected for upgrade | [F] | P1 |
+| 19 | Fuzz: Random whitelisted implementations with valid auth — upgrade always succeeds | [F] | P1 |
+| 20 | Fuzz: Random calldata in upgrade `data` parameter — always forwarded to new implementation | [F] | P1 |
+
+---
+
+## 4. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 21 | **Authorization flag reset**: `isUpgradeAuthorized` is always false outside of `upgradeToAndCallWithAuthorization` | P0 |
+| 22 | **Whitelist enforcement**: No implementation can be set/upgraded to unless it's whitelisted | P0 |
+| 23 | **Storage preservation**: All organization state (members, admins, groups, policies) survives upgrades | P1 |
 
 ---
 
@@ -81,5 +93,6 @@
 | Authorization flag | 3 | P1 |
 | Account beacon upgrade | 4 | P1 |
 | Upgrade flag edge cases | 3 | P0-P1 |
-| Fuzz tests | 1 | P1 |
-| **Total** | **21** | |
+| Fuzz tests | 3 | P1 |
+| Invariant tests | 3 | P0-P1 |
+| **Total** | **26** | |

@@ -51,6 +51,16 @@
 | 14 | Fuzz: Random (operationType, operationData, salt) tuples produce unique nonces | [F] | P1 |
 | 15 | Fuzz: Consumed nonces always revert on reuse | [F] | P1 |
 | 16 | Fuzz: Unconsumed nonces always succeed | [F] | P1 |
+| 17 | Fuzz: Random operation types with same data and salt — always produce different nonces | [F] | P1 |
+
+---
+
+## 5. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 18 | **Nonce monotonicity**: Once `isNonceUsed(nonce) == true`, it remains true forever | P0 |
+| 19 | **No double-spend**: A nonce used for approval cannot be used for rejection (and vice versa) | P0 |
 
 ---
 
@@ -61,5 +71,6 @@
 | Computation | 6 | P1 |
 | Consumption | 4 | P1 |
 | Cross-operation isolation | 3 | P1 |
-| Fuzz tests | 3 | P1 |
-| **Total** | **16** | |
+| Fuzz tests | 4 | P1 |
+| Invariant tests | 2 | P0 |
+| **Total** | **19** | |

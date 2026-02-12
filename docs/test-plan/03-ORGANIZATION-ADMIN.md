@@ -200,6 +200,20 @@
 | 88 | Fuzz: Random threshold values outside valid range always revert | [F] | P0 |
 | 89 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
 | 90 | Fuzz: Random salt values produce unique nonces for same operation | [F] | P1 |
+| 91 | Fuzz: Random non-admin signers always rejected with `SignerIsNotAdmin` | [F] | P0 |
+| 92 | Fuzz: Random admin modification arrays — `adminCount` never reaches 0 | [F] | P0 |
+| 93 | Fuzz: Random admin addition with non-member addresses — always reverts `AdminNotMember` | [F] | P0 |
+
+---
+
+## 8. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 94 | **Minimum admins**: `adminCount >= 1` at all times after initialization | P0 |
+| 95 | **Voting threshold bounds**: `1 <= votingThreshold <= adminCount` at all times | P0 |
+| 96 | **Admin-must-be-member**: For every address where `isAdmin(addr) == true`, `isMember(addr) == true` | P0 |
+| 97 | **Admin count consistency**: The number of addresses where `isAdmin(addr) == true` equals `adminCount` | P0 |
 
 ---
 
@@ -214,5 +228,6 @@
 | Access control | 3 | P0 |
 | Race conditions & ordering | 4 | P0 |
 | Private function tests | 18 | P0-P1 |
-| Fuzz tests | 5 | P0-P1 |
-| **Total** | **90** | |
+| Fuzz tests | 8 | P0-P1 |
+| Invariant tests | 4 | P0 |
+| **Total** | **97** | |

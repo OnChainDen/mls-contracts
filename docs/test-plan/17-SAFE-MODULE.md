@@ -42,10 +42,22 @@
 
 ---
 
+## 3. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 9 | Fuzz: Random valid EOA private keys — `isValidSignature` returns magic value | [F] | P2 |
+| 10 | Fuzz: Random invalid signature bytes — `isValidSignature` returns invalid value (no revert) | [F] | P2 |
+| 11 | Fuzz: Random packed transaction data — batch encode/decode round-trips correctly | [F] | P2 |
+| 12 | Fuzz: Random batch sizes (1-50 transactions) — all execute or entire batch reverts | [F] | P2 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
 | SafeExecutorModule gaps | 5 | P2 |
 | BatchedTransaction gaps | 3 | P2-P3 |
-| **Total** | **8** | |
+| Fuzz tests | 4 | P2 |
+| **Total** | **12** | |

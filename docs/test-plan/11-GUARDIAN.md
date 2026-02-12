@@ -106,6 +106,18 @@
 |---|-----------|------|----------|
 | 40 | Fuzz: Random valid addresses as new guardian — update flow completes | [F] | P1 |
 | 41 | Fuzz: Random timestamps before/after timelock — correct behavior | [F] | P1 |
+| 42 | Fuzz: Random address(0) always reverts `InvalidGuardianAddress` on initiate | [F] | P1 |
+| 43 | Fuzz: Random non-pending-guardian addresses always revert on accept | [F] | P1 |
+
+---
+
+## 7. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 44 | **Guardian always set**: `guardian() != address(0)` after initialization | P0 |
+| 45 | **Pending exclusivity**: At most one pending guardian update at a time | P0 |
+| 46 | **Timelock enforcement**: Guardian cannot be changed without waiting for timelock to expire | P0 |
 
 ---
 
@@ -121,5 +133,6 @@
 | Full lifecycle | 3 | P1 |
 | Access control | 5 | P1-P3 |
 | Query functions | 4 | P3 |
-| Fuzz tests | 2 | P1 |
-| **Total** | **41** | |
+| Fuzz tests | 4 | P1 |
+| Invariant tests | 3 | P0 |
+| **Total** | **46** | |

@@ -96,6 +96,28 @@ The existing 48 tests cover:
 
 ---
 
+## 6. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 32 | Fuzz: Random non-zero recovery addresses with valid timelock durations always configure successfully | [F] | P1 |
+| 33 | Fuzz: Random timelock durations in [2 days, 30 days] always accepted | [F] | P1 |
+| 34 | Fuzz: Random timelock durations outside [2 days, 30 days] always revert `InvalidTimelockDuration` | [F] | P1 |
+| 35 | Fuzz: Random timestamps before timelock expiry — finalize always reverts `TimelockNotExpired` | [F] | P1 |
+| 36 | Fuzz: Random timestamps at/after timelock expiry — finalize always succeeds | [F] | P1 |
+
+---
+
+## 7. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 37 | **Recovery isolation**: Recovery guardian updates never modify tx recovery state | P0 |
+| 38 | **Guardian always valid**: After any recovery operation completes, `guardian() != address(0)` | P0 |
+| 39 | **Timelock enforcement**: Guardian recovery cannot bypass timelock waiting period | P0 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -105,4 +127,6 @@ The existing 48 tests cover:
 | Edge cases | 4 | P1-P2 |
 | Events | 2 | P2 |
 | Private function tests | 14 | P1-P2 |
-| **Total** | **31** | |
+| Fuzz tests | 5 | P1 |
+| Invariant tests | 3 | P0 |
+| **Total** | **39** | |

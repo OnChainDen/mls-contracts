@@ -88,6 +88,18 @@
 |---|-----------|------|----------|
 | 29 | Fuzz: Random salts always produce unique addresses | [F] | P1 |
 | 30 | Fuzz: Random salts always produce deployable accounts | [F] | P1 |
+| 31 | Fuzz: Random non-whitelisted implementation addresses always rejected | [F] | P1 |
+| 32 | Fuzz: Computed address matches deployed address for any valid salt | [F] | P1 |
+
+---
+
+## 8. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 33 | **Account tracking**: Every account deployed via `deployAccount` is tracked in `deployedAccounts` mapping | P0 |
+| 34 | **Account-org binding**: An Account's beacon (Organization) address never changes after deployment | P0 |
+| 35 | **Whitelist enforcement**: No account implementation can be set unless it's whitelisted | P0 |
 
 ---
 
@@ -101,5 +113,6 @@
 | Account validation | 4 | P1 |
 | Beacon proxy behavior | 3 | P1 |
 | Access control | 3 | P1-P3 |
-| Fuzz tests | 2 | P1 |
-| **Total** | **30** | |
+| Fuzz tests | 4 | P1 |
+| Invariant tests | 3 | P0 |
+| **Total** | **35** | |

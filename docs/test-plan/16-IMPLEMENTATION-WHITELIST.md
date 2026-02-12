@@ -94,6 +94,17 @@
 |---|-----------|------|----------|
 | 23 | Fuzz: Random addresses whitelisted and verified correctly | [F] | P2 |
 | 24 | Fuzz: Random addresses not whitelisted correctly rejected | [F] | P2 |
+| 35 | Fuzz: Random addresses added then removed — always queryable as not whitelisted | [F] | P2 |
+| 36 | Fuzz: Random Organization vs Account contract types — whitelists are independent | [F] | P2 |
+
+---
+
+## 7. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 37 | **Type independence**: Organization and Account whitelists are completely independent mappings | P2 |
+| 38 | **Owner exclusivity**: Only the owner can modify the whitelist | P2 |
 
 ---
 
@@ -106,5 +117,6 @@
 | Validation | 5 | P2 |
 | Upgrade auth | 2 | P2 |
 | Private function tests | 10 | P2 |
-| Fuzz tests | 2 | P2 |
-| **Total** | **34** | |
+| Fuzz tests | 4 | P2 |
+| Invariant tests | 2 | P2 |
+| **Total** | **38** | |

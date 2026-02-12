@@ -56,6 +56,17 @@
 |---|-----------|------|----------|
 | 13 | Fuzz: Random valid durations always accepted | [F] | P2 |
 | 14 | Fuzz: Random timestamps before/after expiry — correct behavior | [F] | P2 |
+| 15 | Fuzz: Random durations outside [2 days, 30 days] always revert `InvalidTimelockDuration` | [F] | P2 |
+| 16 | Fuzz: Random block timestamps — `computeCanFinalizeAtTimestamp` always returns `block.timestamp + duration` | [F] | P2 |
+
+---
+
+## 6. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 17 | **Duration bounds**: Active timelock duration is always in [2 days, 30 days] | P2 |
+| 18 | **Timestamp monotonicity**: `computeCanFinalizeAtTimestamp` result is always >= `block.timestamp` | P2 |
 
 ---
 
@@ -67,5 +78,6 @@
 | Validation | 3 | P2 |
 | Computation | 2 | P2 |
 | Integration | 2 | P2 |
-| Fuzz tests | 2 | P2 |
-| **Total** | **14** | |
+| Fuzz tests | 4 | P2 |
+| Invariant tests | 2 | P2 |
+| **Total** | **18** | |

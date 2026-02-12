@@ -192,6 +192,19 @@
 | 74 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
 | 75 | Fuzz: Random salt values produce unique nonces | [F] | P1 |
 | 76 | Fuzz: Random transaction data produces correct EIP-712 hashes | [F] | P0 |
+| 77 | Fuzz: Random initiator signatures produce different review hashes (binding property) | [F][S] | P0 |
+| 78 | Fuzz: Random ETH values and ERC-20 amounts — rate limit usage computed correctly | [F] | P0 |
+| 79 | Fuzz: Random ManualApproval threshold counts — insufficient signers always rejected | [F] | P0 |
+
+---
+
+## 10. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 80 | **Nonce consumption**: Once a transaction nonce is consumed, it can never be reused for approval or rejection | P0 |
+| 81 | **Rate limit atomicity**: Rate limit usage either increases by exact amount or tx reverts — no partial updates | P0 |
+| 82 | **CEI ordering**: Nonce consumed before external call — failed execution still marks nonce as used | P0 |
 
 ---
 
@@ -208,5 +221,6 @@
 | Access control | 3 | P0 |
 | Reentrancy & CEI | 3 | P0 |
 | Private function tests | 11 | P0-P1 |
-| Fuzz tests | 4 | P0-P1 |
-| **Total** | **75** | |
+| Fuzz tests | 7 | P0-P1 |
+| Invariant tests | 3 | P0 |
+| **Total** | **82** | |

@@ -199,6 +199,9 @@
 | 85 | Fuzz: Any valid private key produces recoverable signature via tryRecoverSigner | [F] | P0 |
 | 86 | Fuzz: Random bytes never successfully recover a signer (tryRecoverSigner returns false) | [F] | P1 |
 | 87 | Fuzz: Signature malleability — flipping s value always rejected by tryRecoverSigner | [F][S] | P0 |
+| 87.1 | Fuzz: Random ERC-1271 inner signature lengths — offset calculation always produces correct nextOffset | [F] | P0 |
+| 87.2 | Fuzz: Random multi-sig arrays (N EOA + M ERC-1271) — offset chaining iterates all signers correctly | [F] | P0 |
+| 87.3 | Fuzz: Random hash values — signature for hash A never validates for hash B | [F][S] | P0 |
 
 ---
 
@@ -216,6 +219,8 @@
 | 91 | Two different addresses produce different leaves | [U] | P1 |
 | 92 | Same address always produces same leaf (deterministic) | [U] | P1 |
 | 93 | Fuzz: No two random addresses produce the same leaf | [F] | P1 |
+| 93.1 | Fuzz: Random tree sizes (2-100 leaves) — each leaf verifiable with correct proof | [F] | P1 |
+| 93.2 | Fuzz: Modifying any single byte of a valid proof — verification always fails | [F] | P0 |
 
 ---
 
@@ -302,6 +307,7 @@
 | 121 | Valid calldata — extracts correct 4-byte selector | [U] | P2 |
 | 122 | Exactly 4 bytes — returns those 4 bytes | [E] | P2 |
 | 123 | Known function selectors (transfer, approve, etc.) match | [U] | P2 |
+| 123.1 | Fuzz: Random calldata (>= 4 bytes) — always extracts correct first 4 bytes | [F] | P2 |
 
 ---
 
@@ -336,8 +342,9 @@
 |---------|-----------|----------|
 | SignatureUtils (public interface) | 59 | P0 |
 | SignatureUtils (private helpers) | 28 | P0 |
-| MerkleUtils | 6 | P1 |
+| SignatureUtils (additional fuzz) | 3 | P0 |
+| MerkleUtils | 8 | P1 |
 | TokenTransferUtils | 27 | P0 |
-| ContractInteractionUtils | 3 | P2 |
+| ContractInteractionUtils | 4 | P2 |
 | TimelockUtils | 8 | P1 |
-| **Total** | **131** | |
+| **Total** | **137** | |

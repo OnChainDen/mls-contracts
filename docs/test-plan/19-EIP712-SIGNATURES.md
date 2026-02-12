@@ -54,6 +54,27 @@
 
 ---
 
+## 5. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 20 | Fuzz: Random chain IDs always produce unique domain separators | [F] | P1 |
+| 21 | Fuzz: Random verifying contract addresses produce unique domain separators | [F] | P1 |
+| 22 | Fuzz: Random struct hashes always produce unique typed data hashes | [F] | P1 |
+| 23 | Fuzz: Random operation data — initiator and review hashes always differ (different type hashes) | [F] | P1 |
+
+---
+
+## 6. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 24 | **Domain separator determinism**: Same (chainId, verifying contract address) always produces the same domain separator | P1 |
+| 25 | **Type hash uniqueness**: All EIP-712 type hashes in the system are unique (no collisions) | P1 |
+| 26 | **Prefix compliance**: All typed data hashes start with `\x19\x01` prefix per EIP-712 | P1 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -62,4 +83,6 @@
 | Type hashes | 7 | P1 |
 | Typed data hash | 3 | P1 |
 | Cross-chain replay | 2 | P1 |
-| **Total** | **19** | |
+| Fuzz tests | 4 | P1 |
+| Invariant tests | 3 | P1 |
+| **Total** | **26** | |

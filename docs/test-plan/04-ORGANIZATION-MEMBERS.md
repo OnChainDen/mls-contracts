@@ -85,6 +85,18 @@
 | 27 | Fuzz: Add N random non-zero addresses, all become members | [F] | P0 |
 | 28 | Fuzz: Add then remove N random addresses, none remain members | [F] | P0 |
 | 29 | Fuzz: Adding same address twice is idempotent | [F] | P1 |
+| 30 | Fuzz: Random address(0) input always reverts `InvalidMemberAddress` | [F] | P0 |
+| 31 | Fuzz: Removing a member who is an admin always reverts `MemberIsAdmin` | [F] | P0 |
+
+---
+
+## 8. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 32 | **Admin-must-be-member**: For every address where `isAdmin(addr) == true`, `isMember(addr) == true` | P0 |
+| 33 | **No zero-address members**: `isMember(address(0))` is always false | P0 |
+| 34 | **Idempotent add**: Adding an existing member never reverts and never changes state | P1 |
 
 ---
 
@@ -98,5 +110,6 @@
 | Combined operations | 4 | P0 |
 | Query functions | 3 | P3 |
 | Access control | 4 | P0 |
-| Fuzz tests | 3 | P0-P1 |
-| **Total** | **29** | |
+| Fuzz tests | 5 | P0-P1 |
+| Invariant tests | 3 | P0-P1 |
+| **Total** | **34** | |

@@ -74,33 +74,33 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 
 | Document | New Tests |
 |----------|-----------|
-| 01 — Utility Libraries | 131 |
-| 02 — Storage Libraries | 19 |
-| 03 — Organization Admin | 90 |
-| 04 — Organization Members | 29 |
-| 05 — Organization Groups | 62 |
-| 06 — Organization Policy | 43 |
-| 07 — Policy Validation | 142 |
-| 08 — Account Transaction | 75 |
-| 09 — Account Signature (ERC-1271) | 46 |
-| 10 — Account Factory | 30 |
-| 11 — Guardian | 41 |
-| 12 — Guardian Recovery (gaps) | 31 |
-| 13 — TX Recovery (gaps) | 43 |
-| 14 — Initialization | 46 |
-| 15 — Upgrades | 21 |
-| 16 — Implementation Whitelist | 34 |
-| 17 — Safe Module (gaps) | 8 |
-| 18 — Nonce Management | 16 |
-| 19 — EIP-712 Signatures | 19 |
-| 20 — Integration Tests | 58 |
-| 21 — Invariant Tests | 33 |
-| 22 — Fuzz Tests (cross-cutting) | 45 |
-| 23 — Admin Operation Timelock | 14 |
+| 01 — Utility Libraries | 137 |
+| 02 — Storage Libraries | 24 |
+| 03 — Organization Admin | 97 |
+| 04 — Organization Members | 34 |
+| 05 — Organization Groups | 68 |
+| 06 — Organization Policy | 48 |
+| 07 — Policy Validation | 154 |
+| 08 — Account Transaction | 82 |
+| 09 — Account Signature (ERC-1271) | 53 |
+| 10 — Account Factory | 35 |
+| 11 — Guardian | 46 |
+| 12 — Guardian Recovery (gaps) | 39 |
+| 13 — TX Recovery (gaps) | 51 |
+| 14 — Initialization | 53 |
+| 15 — Upgrades | 26 |
+| 16 — Implementation Whitelist | 38 |
+| 17 — Safe Module (gaps) | 12 |
+| 18 — Nonce Management | 19 |
+| 19 — EIP-712 Signatures | 26 |
+| 20 — Integration Tests | 64 |
+| 21 — Invariant Tests | 42 |
+| 22 — Fuzz Tests (cross-cutting) | 62 |
+| 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,137** |
+| **Total New Tests** | **~1,288** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,359** |
+| **Grand Total** | **~1,510** |
 
 ## Test Count by Type (Approximate)
 
@@ -108,9 +108,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 |------|-------|
 | Unit [U] | ~510 |
 | Negative [N] | ~220 |
+| Fuzz [F] | ~148 |
 | Security [S] | ~135 |
 | Edge Case [E] | ~115 |
-| Integration [I] | ~85 |
-| Fuzz [F] | ~82 |
+| Integration [I] | ~91 |
+| Invariant [INV] | ~75 |
 | Event [EV] | ~45 |
-| Invariant [INV] | ~33 |

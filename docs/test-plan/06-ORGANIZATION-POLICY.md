@@ -88,6 +88,18 @@
 | 37 | Fuzz: Random policy configs produce valid Merkle trees and proofs | [F] | P0 |
 | 38 | Fuzz: Random modifications to policy data invalidate proofs | [F] | P0 |
 | 39 | Fuzz: Random policyIds produce unique leaves when paired with same config | [F] | P1 |
+| 39.1 | Fuzz: Random Merkle roots with empty proofs — only single-leaf trees verify | [F] | P0 |
+| 39.2 | Fuzz: Random policy structs — changing any single field always changes the leaf | [F] | P0 |
+| 39.3 | Fuzz: Random source account addresses — `anySourceAccount=true` always accepts, specific account rejects wrong address | [F] | P0 |
+
+---
+
+## 6.5 Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 39.4 | **Merkle root consistency**: Policy Merkle root changes only via `setPolicies` (never implicitly) | P0 |
+| 39.5 | **Double hashing**: Policy leaf is always double-hashed (second preimage resistance) | P1 |
 
 ---
 
@@ -118,6 +130,7 @@
 | Transaction validation | 12 | P0 |
 | Usage tracking | 4 | P1 |
 | Leaf computation | 4 | P1 |
-| Fuzz tests | 3 | P0-P1 |
+| Fuzz tests | 6 | P0-P1 |
+| Invariant tests | 2 | P0-P1 |
 | Private function tests | 4 | P0-P1 |
-| **Total** | **43** | |
+| **Total** | **48** | |

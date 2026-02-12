@@ -123,6 +123,20 @@
 |---|-----------|------|----------|
 | 41 | Fuzz: Random valid initialization params — always succeeds | [F] | P1 |
 | 42 | Fuzz: Random salt values produce unique organization addresses | [F] | P1 |
+| 43 | Fuzz: Random member arrays (all non-zero, unique) — always initialize correctly | [F] | P1 |
+| 44 | Fuzz: Random admin subsets of members with valid threshold — always succeed | [F] | P1 |
+| 45 | Fuzz: Random timelock durations in [2 days, 30 days] — initialization succeeds | [F] | P1 |
+| 46 | Fuzz: Random voting thresholds outside [1, adminCount] — always revert | [F] | P1 |
+
+---
+
+## 5. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 47 | **Initialization permanence**: `isInitialized()` can only transition false→true, never back to false | P0 |
+| 48 | **Member-before-admin ordering**: All admins are members after initialization (admin-must-be-member) | P0 |
+| 49 | **Guardian set after init**: `guardian() != address(0)` immediately after successful initialization | P0 |
 
 ---
 
@@ -139,5 +153,6 @@
 | Initialization ordering | 3 | P1 |
 | Proxy setup | 4 | P1 |
 | Factory edge cases | 4 | P0-P1 |
-| Fuzz tests | 2 | P1 |
-| **Total** | **46** | |
+| Fuzz tests | 6 | P1 |
+| Invariant tests | 3 | P0 |
+| **Total** | **53** | |

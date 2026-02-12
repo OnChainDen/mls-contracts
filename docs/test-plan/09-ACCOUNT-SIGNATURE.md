@@ -130,6 +130,20 @@
 | 40 | Fuzz: Random hashes with valid policy signature — returns magic value | [F] | P0 |
 | 41 | Fuzz: Random type prefixes (not 0x00/0x01) — returns invalid value | [F] | P0 |
 | 42 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
+| 43 | Fuzz: Random policy IDs with valid Merkle proofs — signature validation succeeds | [F] | P0 |
+| 44 | Fuzz: Random guardian EOA private keys — guardian signature always accepted | [F] | P0 |
+| 45 | Fuzz: Random review signer counts below threshold — always rejected | [F] | P0 |
+| 46 | Fuzz: Random recovery address signatures — valid signer returns magic, wrong signer returns invalid | [F] | P0 |
+
+---
+
+## 7. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 47 | **Type prefix exclusivity**: Only `0x00` and `0x01` type prefixes ever produce `ERC1271_MAGIC_VALUE` | P0 |
+| 48 | **Approval/rejection separation**: Approval signatures never validate as rejection signatures | P0 |
+| 49 | **Cross-org replay**: Signatures for org A are never valid for org B | P0 |
 
 ---
 
@@ -143,5 +157,6 @@
 | Access control | 3 | P0 |
 | EIP-712 hashes | 4 | P0 |
 | Guardian module edge cases | 4 | P0 |
-| Fuzz tests | 3 | P0 |
-| **Total** | **46** | |
+| Fuzz tests | 7 | P0 |
+| Invariant tests | 3 | P0 |
+| **Total** | **53** | |

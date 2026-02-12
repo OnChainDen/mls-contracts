@@ -81,6 +81,25 @@ These tests verify that the storage struct layout is compatible with the ERC-720
 
 ---
 
+## 5. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 20 | Fuzz: Random namespace strings produce unique ERC-7201 storage locations | [F] | P1 |
+| 21 | Fuzz: Random write/read sequences to namespaced storage slots preserve data integrity | [F] | P1 |
+| 22 | Fuzz: Random proxy delegate call sequences preserve namespaced storage values | [F] | P1 |
+
+---
+
+## 6. Invariant Tests
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 23 | **No slot collision**: ERC-7201 storage slots never collide with ERC-1967 proxy standard slots | P1 |
+| 24 | **Namespace isolation**: Writing to one ERC-7201 namespace never affects values in another namespace | P1 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -89,4 +108,6 @@ These tests verify that the storage struct layout is compatible with the ERC-720
 | Proxy storage slot collision | 5 | P1 |
 | Storage isolation (proxy context) | 5 | P1 |
 | Storage struct layout | 7 | P2 |
-| **Total** | **19** | |
+| Fuzz tests | 3 | P1 |
+| Invariant tests | 2 | P1 |
+| **Total** | **24** | |

@@ -126,6 +126,43 @@ Create handler contracts that perform random sequences of valid operations:
 
 ---
 
+## 11. Initialization Invariants
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 28 | **Initialization permanence**: `isInitialized()` can only transition false→true, never back to false | P0 |
+| 29 | **Member-before-admin ordering**: After initialization, all admins are members | P0 |
+
+---
+
+## 12. Timelock Invariants
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 30 | **Duration bounds**: All active timelock durations are in [2 days, 30 days] | P1 |
+| 31 | **Timestamp monotonicity**: `computeCanFinalizeAtTimestamp` result is always >= `block.timestamp` | P1 |
+
+---
+
+## 13. Whitelist Invariants
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 32 | **Type independence**: Organization and Account implementation whitelists are independent mappings | P2 |
+| 33 | **Owner exclusivity**: Only the owner can add/remove implementations from the whitelist | P2 |
+
+---
+
+## 14. EIP-712 Invariants
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 34 | **Domain separator determinism**: Same (chainId, verifying contract) always produces the same domain separator | P1 |
+| 35 | **Type hash uniqueness**: All EIP-712 type hashes in the system are unique (no collisions) | P1 |
+| 36 | **Prefix compliance**: All typed data hashes include `\x19\x01` prefix per EIP-712 | P1 |
+
+---
+
 ## Summary
 
 | Category | Invariants | Priority |
@@ -141,4 +178,8 @@ Create handler contracts that perform random sequences of valid operations:
 | Signatures | 3 | P0 |
 | Rate limits & constraints | 6 | P0 |
 | Storage | 2 | P1 |
-| **Total** | **33** | |
+| Initialization | 2 | P0 |
+| Timelocks | 2 | P1 |
+| Whitelist | 2 | P2 |
+| EIP-712 | 3 | P1 |
+| **Total** | **42** | |
