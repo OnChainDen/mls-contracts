@@ -44,6 +44,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
+| 16.1 | Policy not in org (invalid Merkle proof) — returns false before any other validation | [S] | P0 |
+| 16.2 | Policy not in org (valid policy data but wrong policyId) — returns false | [S] | P0 |
+| 16.3 | Policy not in org (policiesRoot is bytes32(0)) — returns false | [S] | P0 |
 | 17 | Policy with `anySourceAccount=true` allows any account | [U] | P0 |
 | 18 | Policy with specific source account — only that account allowed | [U] | P0 |
 | 19 | Policy with wrong source account — rejected | [N] | P0 |
@@ -127,10 +130,10 @@
 |----------|-----------|----------|
 | Policy CRUD | 7 | P0 |
 | Merkle verification | 9 | P0 |
-| Transaction validation | 12 | P0 |
+| Transaction validation | 15 | P0 |
 | Usage tracking | 4 | P1 |
 | Leaf computation | 4 | P1 |
 | Fuzz tests | 6 | P0-P1 |
 | Invariant tests | 2 | P0-P1 |
 | Private function tests | 4 | P0-P1 |
-| **Total** | **48** | |
+| **Total** | **51** | |

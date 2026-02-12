@@ -79,7 +79,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 03 — Organization Admin | 97 |
 | 04 — Organization Members | 34 |
 | 05 — Organization Groups | 75 |
-| 06 — Organization Policy | 48 |
+| 06 — Organization Policy | 51 |
 | 07 — Policy Validation | 156 |
 | 08 — Account Transaction | 82 |
 | 09 — Account Signature (ERC-1271) | 53 |
@@ -98,9 +98,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 62 |
 | 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,357** |
+| **Total New Tests** | **~1,360** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,579** |
+| **Grand Total** | **~1,582** |
 
 ## Test Count by Type (Approximate)
 
