@@ -84,7 +84,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 08 — Account Transaction | 128 |
 | 09 — Account Signature (ERC-1271) | 86 |
 | 10 — Account Factory | 62 |
-| 11 — Guardian | 88 |
+| 11 — Guardian | 89 |
 | 12 — Guardian Recovery (gaps) | 39 |
 | 13 — TX Recovery (gaps) | 51 |
 | 14 — Initialization | 53 |
@@ -98,9 +98,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 62 |
 | 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,532** |
+| **Total New Tests** | **~1,533** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,754** |
+| **Grand Total** | **~1,755** |
 
 ## Test Count by Type (Approximate)
 

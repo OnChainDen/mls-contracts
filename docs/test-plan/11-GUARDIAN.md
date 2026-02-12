@@ -83,6 +83,7 @@
 | 26 | Valid address — sets guardian in storage | [U] | P1 |
 | 27 | `address(0)` — reverts `InvalidGuardianAddress` | [N] | P1 |
 | 28 | Guardian correctly readable via `getGuardian` after initialization | [U] | P1 |
+| 28.1 | Guardian already initialized (storage != `address(0)`) — reverts (prevents re-initialization) | [S] | P0 |
 
 ---
 
@@ -225,7 +226,7 @@
 | `cancelGuardianUpdate` (Base) | 6 | P0-P1 |
 | `acceptGuardian` (Base) | 2 | P0-P1 |
 | View functions (Base) | 5 | P3 |
-| `initializeGuardian` | 3 | P1 |
+| `initializeGuardian` | 4 | P0-P1 |
 | `initiateGuardianUpdate` (Lib) | 8 | P1-P2 |
 | `finalizeGuardianUpdate` (Lib) | 7 | P1-P2 |
 | `cancelGuardianUpdate` (Lib) | 7 | P1 |
@@ -236,4 +237,4 @@
 | Full lifecycle integration | 4 | P1 |
 | Fuzz tests | 6 | P0-P1 |
 | Invariant tests | 5 | P0 |
-| **Total** | **88** | |
+| **Total** | **89** | |
