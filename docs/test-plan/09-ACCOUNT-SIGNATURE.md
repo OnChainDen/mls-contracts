@@ -1,149 +1,176 @@
 # 09 — Account Signature (ERC-1271) Test Plan
 
 **Files Under Test:**
-- `src/organization/libraries/LibOrganizationAccountSignature.sol`
 - `src/organization/base/OrganizationAccountSignatureBase.sol`
+- `src/organization/libraries/LibOrganizationAccountSignature.sol`
 - `src/interfaces/organization/IOrganizationAccountSignature.sol`
 
-**Test File(s):** `test/LibOrganizationAccountSignature.t.sol`, `test/AccountSignature.t.sol`
+**Test File(s):** `test/OrganizationAccountSignatureBase.t.sol`, `test/LibOrganizationAccountSignature.t.sol`
 
 ---
 
-## 1. Signature Type Routing
+## File 1: OrganizationAccountSignatureBase.sol
 
-**Priority: P0 — Critical**
+### 1.1 `isValidSignatureForAccount`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 1 | Type prefix `0x01` (Policy) routes to policy-based validation | [U] | P0 |
-| 2 | Type prefix `0x00` (Recovery) routes to recovery validation | [U] | P0 |
-| 3 | Unknown type prefix (e.g., `0x02`) returns `ERC1271_INVALID_VALUE` | [N] | P0 |
-| 4 | Empty signature returns `ERC1271_INVALID_VALUE` | [N] | P0 |
+| 1 | `msg.sender != account` — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
+| 2 | Account not deployed by this organization — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
+| 3 | `msg.sender == account` AND account deployed by org — delegates to `LibOrganizationAccountSignature.isValidSignature` | [U] | P0 |
+| 4 | Returns magic value when library returns magic | [U] | P0 |
+| 5 | Returns invalid value when library returns invalid | [U] | P0 |
+| 6 | Function is `view` — no state changes | [U] | P1 |
 
 ---
 
-## 2. Policy-Based Signature Validation (Type 0x01)
+## File 2: LibOrganizationAccountSignature.sol
 
-### 2.1 Happy Path
+> **Prerequisite:** The functions `_validateRecoverySignature`, `_validatePolicyBasedSignature`,
+> `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`,
+> and `_getReviewSignatureHash` are currently `private`. Convert them to `internal` and expose
+> via a test harness for direct testing.
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 5 | AutoApprove policy: valid initiator + guardian signature — returns magic value | [U] | P0 |
-| 6 | ManualApproval policy: valid initiator + review + guardian signatures — returns magic value | [U] | P0 |
-
-### 2.2 Guardian Signature Validation
+### 2.1 `isValidSignature` (type routing)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 7 | Guardian is EOA: valid signature — accepted | [U] | P0 |
-| 8 | Guardian is EOA: invalid signature — rejected | [N] | P0 |
-| 9 | Guardian is Safe: module enabled, module signs — accepted | [U] | P0 |
-| 10 | Guardian is Safe: module not enabled — rejected | [N] | P0 |
-| 11 | Guardian is non-Safe contract: isModuleEnabled staticcall fails gracefully — rejected | [E] | P0 |
-| 12 | Guardian is Safe: ERC-1271 signature from Safe itself — accepted | [U] | P0 |
-
-### 2.3 Initiator Validation
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 13 | Initiator authorized by policy (Member type) — valid | [U] | P0 |
-| 14 | Initiator authorized by policy (Group type) — valid | [U] | P0 |
-| 15 | Initiator not authorized — invalid | [N] | P0 |
-| 16 | Policy must be configured for Signatures transaction type | [U] | P0 |
-| 17 | Policy configured for TokenTransfers (not Signatures) — invalid | [N] | P0 |
-
-### 2.4 Review Signatures (ManualApproval)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 18 | Sufficient review signatures — valid | [U] | P0 |
-| 19 | Insufficient review signatures — invalid | [N] | P0 |
-| 20 | Review hash includes initiator signature (binding) | [S] | P0 |
-
-### 2.5 Expiration
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 21 | Valid expiration (future) — succeeds | [U] | P0 |
-| 22 | Expired timestamp — invalid | [N] | P0 |
-| 23 | Expiration exactly at `block.timestamp` — succeeds | [E] | P0 |
-
-### 2.6 Policy Verification
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 24 | Policy must exist in Merkle tree | [U] | P0 |
-| 25 | Policy not in tree — invalid | [N] | P0 |
-| 26 | Policy must apply to source account | [U] | P0 |
-| 27 | Policy with `anySourceAccount=true` — allows any account | [U] | P0 |
+| 7 | Empty signature (length 0) — returns `ERC1271_INVALID_VALUE` | [N] | P0 |
+| 8 | Type prefix `0x00` (Recovery) — routes to `_validateRecoverySignature` | [U] | P0 |
+| 9 | Type prefix `0x01` (Policy) — routes to `_validatePolicyBasedSignature` | [U] | P0 |
+| 10 | Unknown type prefix `0x02` — returns `ERC1271_INVALID_VALUE` | [N] | P0 |
+| 11 | Unknown type prefix `0xFF` — returns `ERC1271_INVALID_VALUE` | [N] | P0 |
+| 12 | Signature with only type byte (length 1, no data after prefix) — routes correctly with empty `signatureData` | [E] | P0 |
+| 13 | Type byte extracted from `signature[0]` — first byte determines routing | [U] | P1 |
 
 ---
 
-## 3. Recovery Signature Validation (Type 0x00)
+### 2.2 `_validateRecoverySignature`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 28 | Recovery enabled: valid recovery address signature — returns magic value | [U] | P0 |
-| 29 | Recovery not enabled — returns invalid value | [N] | P0 |
-| 30 | Recovery not configured — returns invalid value | [N] | P0 |
-| 31 | Wrong recovery address signs — invalid | [N] | P0 |
-| 32 | Recovery signature supports both EOA and ERC-1271 | [U] | P0 |
+| 14 | Recovery enabled AND valid recovery signature — returns magic value | [U] | P0 |
+| 15 | Recovery not enabled for Tx/ERC-1271 — returns invalid value | [N] | P0 |
+| 16 | Recovery enabled but invalid signature (wrong signer) — returns invalid value | [N] | P0 |
+| 17 | Recovery not configured (no recovery address set) — returns invalid value | [N] | P0 |
+| 18 | Wrong recovery address signs — returns invalid value | [N] | P0 |
+| 19 | Recovery signature with valid EOA signature — accepted | [U] | P0 |
+| 20 | Recovery signature with valid ERC-1271 (smart contract) signature — accepted | [U] | P0 |
 
 ---
 
-## 4. Access Control (Base Contract)
+### 2.3 `_validatePolicyBasedSignature`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 33 | `isValidSignatureForAccount` only callable by the account itself (msg.sender check) | [S] | P0 |
-| 34 | Non-account caller — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
-| 35 | Account not deployed by this org — reverts | [N] | P0 |
+| 21 | ABI decoding of `signatureData` into `(policyId, expirationTimestamp, initiatorSignature, reviewSignatures, guardianSignature, proofs)` | [U] | P0 |
+| 22 | Expired (`block.timestamp > expirationTimestamp`) — returns invalid value | [N] | P0 |
+| 23 | Expiration at exactly `block.timestamp` — succeeds (strict `>` comparison) | [E] | P0 |
+| 24 | Empty initiator signature (length 0) — returns invalid value | [N] | P0 |
+| 25 | Invalid initiator signature (`tryRecoverSigner` fails) — returns invalid value | [N] | P0 |
+| 26 | Invalid guardian signature — returns invalid value | [N] | P0 |
+| 27 | Policy not allowed by `_isERC1271SignatureAllowedByPolicy` — returns invalid value | [N] | P0 |
+| 28 | AutoApprove policy with valid initiator + guardian — returns magic value | [U] | P0 |
+| 29 | ManualApproval policy with valid initiator + guardian + sufficient review signatures — returns magic value | [U] | P0 |
+| 30 | ManualApproval policy with insufficient review signatures — returns invalid value | [N] | P0 |
+| 31 | ManualApproval policy with invalid review signatures (wrong message hash) — returns invalid value | [N] | P0 |
+| 32 | Review hash includes `initiatorSignature` — different initiator sigs produce different review hashes (binding) | [S] | P0 |
+| 33 | All failure cases return invalid value (never reverts) — function is graceful | [E] | P0 |
 
 ---
 
-## 5. EIP-712 Hash Computation
+### 2.4 `_isValidGuardianSignature`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 36 | Initiator hash includes: address(this), account, hash, policyId, expiration, chainId | [U] | P0 |
-| 37 | Review hash includes all initiator fields + initiatorSignature hash | [U] | P0 |
-| 38 | Different chains produce different hashes | [S] | P0 |
-| 39 | Different organizations produce different hashes | [S] | P0 |
+| 34 | Guardian is EOA: recovered signer matches guardian address — returns true | [U] | P0 |
+| 35 | Guardian is EOA: recovered signer does not match guardian — returns false | [N] | P0 |
+| 36 | Guardian is Safe: recovered signer is an enabled module on the Safe — returns true | [U] | P0 |
+| 37 | Guardian is Safe: recovered signer is NOT an enabled module — returns false | [N] | P0 |
+| 38 | Guardian is Safe: guardian address itself signs (ERC-1271 from Safe) — returns true (direct match) | [U] | P0 |
+| 39 | Malformed guardian signature (`tryRecoverSigner` fails) — returns false | [N] | P0 |
+| 40 | Guardian is non-Safe contract: `isModuleEnabled()` staticcall reverts — returns false (graceful) | [E] | P0 |
+| 41 | Guardian contract returns truncated data (`< 32 bytes`) from `isModuleEnabled()` — returns false | [E] | P0 |
+| 42 | Guardian contract returns `false` from `isModuleEnabled()` — returns false | [N] | P0 |
+| 43 | Guardian is EOA: staticcall to `isModuleEnabled()` on EOA fails gracefully — returns false | [E] | P0 |
+| 44 | Module check uses low-level `staticcall` (no Safe interface imported) — does not revert on unexpected return data | [E] | P1 |
 
 ---
 
-## 5.5 Guardian Module Edge Cases
+### 2.5 `_isERC1271SignatureAllowedByPolicy`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 39.1 | Guardian contract reverts on isModuleEnabled() staticcall — signature returns invalid (not revert) | [E] | P0 |
-| 39.2 | Guardian contract returns truncated data (<32 bytes) from isModuleEnabled() — returns invalid | [E] | P0 |
-| 39.3 | Signature with only type prefix byte (0x01) and no additional data — returns invalid (not panic) | [E] | P0 |
-| 39.4 | Empty sourceAccountProof with policy requiring specific source accounts — validation fails | [S] | P0 |
+| 45 | Policy not in org (invalid Merkle proof) — returns false | [S] | P0 |
+| 46 | Policy `transactionType != Signatures` (is `TokenTransfers`) — returns false | [N] | P0 |
+| 47 | Policy `transactionType != Signatures` (is `ContractInteractions`) — returns false | [N] | P0 |
+| 48 | Policy `transactionType == Any` — returns false (must be exactly `Signatures`) | [S] | P0 |
+| 49 | Source account not allowed by policy (specific account, wrong account) — returns false | [N] | P0 |
+| 50 | Policy with `anySourceAccount=true` — allows any account | [U] | P0 |
+| 51 | Initiator not authorized by policy — returns false | [N] | P0 |
+| 52 | All four checks pass — returns true | [U] | P0 |
+| 53 | Checks are sequential: `isPolicyInOrg` checked first, short-circuits on failure | [U] | P1 |
+| 54 | Empty `sourceAccountProof` with policy requiring specific source accounts — returns false | [S] | P0 |
 
 ---
 
-## 6. Fuzz Tests
+### 2.6 `_getInitiatorSignatureHash`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 40 | Fuzz: Random hashes with valid policy signature — returns magic value | [F] | P0 |
-| 41 | Fuzz: Random type prefixes (not 0x00/0x01) — returns invalid value | [F] | P0 |
-| 42 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
-| 43 | Fuzz: Random policy IDs with valid Merkle proofs — signature validation succeeds | [F] | P0 |
-| 44 | Fuzz: Random guardian EOA private keys — guardian signature always accepted | [F] | P0 |
-| 45 | Fuzz: Random review signer counts below threshold — always rejected | [F] | P0 |
-| 46 | Fuzz: Random recovery address signatures — valid signer returns magic, wrong signer returns invalid | [F] | P0 |
+| 55 | Different organizations (`address(this)`) — produce different hashes | [S] | P0 |
+| 56 | Different accounts — produce different hashes | [U] | P0 |
+| 57 | Different message hashes — produce different hashes | [U] | P0 |
+| 58 | Different `policyId` values — produce different hashes | [U] | P0 |
+| 59 | Different `expirationTimestamp` values — produce different hashes | [U] | P0 |
+| 60 | Different `block.chainid` values — produce different hashes | [S] | P0 |
+| 61 | Uses `INITIATE_SIGNATURE_VALIDATION_TYPEHASH` in struct hash | [U] | P1 |
+| 62 | Uses `toTypedDataHash` with domain separator | [U] | P1 |
+| 63 | Deterministic: same inputs always produce same hash | [U] | P0 |
+| 64 | Golden test: known inputs → known hash (precomputed off-chain) | [U] | P0 |
 
 ---
 
-## 7. Invariant Tests
+### 2.7 `_getReviewSignatureHash`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 65 | Includes all fields from initiator hash (org, account, hash, policyId, expiration, chainId) | [U] | P0 |
+| 66 | Additionally includes `keccak256(initiatorSignature)` | [S] | P0 |
+| 67 | Different initiator signatures → different review hashes | [S] | P0 |
+| 68 | Uses `REVIEW_SIGNATURE_VALIDATION_TYPEHASH` (distinct from initiator typehash) | [U] | P1 |
+| 69 | Uses `toTypedDataHash` with domain separator | [U] | P1 |
+| 70 | Deterministic: same inputs always produce same hash | [U] | P0 |
+| 71 | Golden test: known inputs → known hash (precomputed off-chain) | [U] | P0 |
+
+---
+
+## 3. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 72 | Fuzz: Random hashes with valid policy signature — returns magic value | [F] | P0 |
+| 73 | Fuzz: Random type prefixes (not `0x00`/`0x01`) — always returns invalid value | [F] | P0 |
+| 74 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
+| 75 | Fuzz: Random policyIds with valid Merkle proofs — signature validation succeeds | [F] | P0 |
+| 76 | Fuzz: Random guardian EOA private keys — guardian signature always accepted when signer matches | [F] | P0 |
+| 77 | Fuzz: Random review signer counts below threshold — always returns invalid | [F] | P0 |
+| 78 | Fuzz: Random recovery address signatures — valid signer returns magic, wrong signer returns invalid | [F] | P0 |
+| 79 | Fuzz: Random initiator signatures — all produce different review hashes (uniqueness) | [F] | P0 |
+| 80 | Fuzz: Random accounts — policy with `anySourceAccount=true` always allows, specific account rejects others | [F] | P0 |
+| 81 | Fuzz: Random message hashes — changing hash always changes initiator signature hash | [F] | P0 |
+
+---
+
+## 4. Invariant Tests
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 47 | **Type prefix exclusivity**: Only `0x00` and `0x01` type prefixes ever produce `ERC1271_MAGIC_VALUE` | P0 |
-| 48 | **Approval/rejection separation**: Approval signatures never validate as rejection signatures | P0 |
-| 49 | **Cross-org replay**: Signatures for org A are never valid for org B | P0 |
+| 82 | **Type prefix exclusivity**: Only `0x00` and `0x01` type prefixes ever produce `ERC1271_MAGIC_VALUE` | P0 |
+| 83 | **Never reverts**: `isValidSignature` always returns a value (magic or invalid), never reverts | P0 |
+| 84 | **Cross-org replay**: Signatures valid for org A are never valid for org B | P0 |
+| 85 | **Initiator binding**: Review hash always changes when initiator signature changes | P0 |
+| 86 | **No rate limits**: `isValidSignature` is `view` — no storage modifications ever occur | P0 |
 
 ---
 
@@ -151,12 +178,14 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| Type routing | 4 | P0 |
-| Policy-based validation | 23 | P0 |
-| Recovery validation | 5 | P0 |
-| Access control | 3 | P0 |
-| EIP-712 hashes | 4 | P0 |
-| Guardian module edge cases | 4 | P0 |
-| Fuzz tests | 7 | P0 |
-| Invariant tests | 3 | P0 |
-| **Total** | **53** | |
+| `isValidSignatureForAccount` | 6 | P0-P1 |
+| `isValidSignature` (type routing) | 7 | P0-P1 |
+| `_validateRecoverySignature` | 7 | P0 |
+| `_validatePolicyBasedSignature` | 13 | P0 |
+| `_isValidGuardianSignature` | 11 | P0-P1 |
+| `_isERC1271SignatureAllowedByPolicy` | 10 | P0-P1 |
+| `_getInitiatorSignatureHash` | 10 | P0-P1 |
+| `_getReviewSignatureHash` | 7 | P0-P1 |
+| Fuzz tests | 10 | P0 |
+| Invariant tests | 5 | P0 |
+| **Total** | **86** | |

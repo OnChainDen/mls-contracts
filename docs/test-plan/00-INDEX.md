@@ -82,7 +82,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 06 — Organization Policy | 51 |
 | 07 — Policy Validation | 180 |
 | 08 — Account Transaction | 128 |
-| 09 — Account Signature (ERC-1271) | 53 |
+| 09 — Account Signature (ERC-1271) | 86 |
 | 10 — Account Factory | 35 |
 | 11 — Guardian | 46 |
 | 12 — Guardian Recovery (gaps) | 39 |
@@ -98,9 +98,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 62 |
 | 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,430** |
+| **Total New Tests** | **~1,463** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,652** |
+| **Grand Total** | **~1,685** |
 
 ## Test Count by Type (Approximate)
 
