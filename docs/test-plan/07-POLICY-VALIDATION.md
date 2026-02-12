@@ -34,6 +34,9 @@
 | 11 | Group approver with deleted group — reverts `GroupDoesNotExist` | [S] | P0 |
 | 12 | Mixed EOA + ERC-1271 approval signatures | [U] | P0 |
 | 13 | More signers than threshold — succeeds after threshold met | [E] | P0 |
+| 13.1 | Group approver with threshold=0 and valid signatures — reverts (zero threshold must not be allowed) | [S] | P0 |
+| 13.2 | Group approver: authorized group member signs wrong message hash — recovered address is not an authorized approver, reverts `UnauthorizedApprovalSigner` | [S] | P0 |
+| 13.3 | Member approver: authorized member signs wrong message hash — recovered address differs from approverMember, reverts `UnauthorizedApprovalSigner` | [S] | P0 |
 
 ### 1.2 `getRequiredApprovals`
 
@@ -41,14 +44,7 @@
 |---|-----------|------|----------|
 | 14 | Member approver type — returns 1 | [U] | P1 |
 | 15 | Group approver type — returns `approvalThreshold` from config | [U] | P1 |
-| 16 | Group approver with threshold=0 — returns 0 (potential vulnerability) | [S] | P0 |
-
-### 1.3 Zero Threshold Vulnerability Test
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 17 | Group approver with threshold=0: `areApprovalsValid` returns true with empty sigs | [S] | P0 |
-| 18 | Verify policy creation should prevent threshold=0 (or validate at runtime) | [S] | P0 |
+| 16 | Group approver with threshold=0 — reverts (zero threshold must not be allowed) | [S] | P0 |
 
 ---
 
@@ -361,7 +357,7 @@
 
 | Library | New Tests | Priority |
 |---------|-----------|----------|
-| LibPolicyApproval | 18 | P0 |
+| LibPolicyApproval | 19 | P0 |
 | LibPolicyInitiator | 11 | P0 |
 | LibPolicyDestination | 11 | P0 |
 | LibPolicyTokenTransfer | 14 | P0 |
@@ -372,4 +368,4 @@
 | Private function tests | 16 | P0-P1 |
 | Cross-library fuzz | 12 | P0 |
 | Invariant tests | 4 | P0 |
-| **Total** | **154** | |
+| **Total** | **155** | |
