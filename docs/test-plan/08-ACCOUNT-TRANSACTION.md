@@ -1,210 +1,274 @@
 # 08 — Account Transaction Test Plan
 
 **Files Under Test:**
-- `src/organization/libraries/LibOrganizationAccountTransaction.sol`
 - `src/organization/base/OrganizationAccountTransactionBase.sol`
+- `src/organization/libraries/LibOrganizationAccountTransaction.sol`
 - `src/account/AccountImplementation.sol`
 - `src/interfaces/organization/IOrganizationAccountTransaction.sol`
 - `src/interfaces/IAccount.sol`
 
-**Test File(s):** `test/LibOrganizationAccountTransaction.t.sol`, `test/AccountTransaction.t.sol`
+**Test File(s):** `test/OrganizationAccountTransactionBase.t.sol`, `test/LibOrganizationAccountTransaction.t.sol`, `test/AccountImplementation.t.sol`
 
 ---
 
-## 1. Transaction Approval Flow
+## File 1: OrganizationAccountTransactionBase.sol
 
-**Priority: P0 — Critical (core value path)**
-
-### 1.1 Full Approval Validation
+### 1.1 `executeAccountTransaction`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 1 | AutoApprove policy: valid initiator signature — approved | [U] | P0 |
-| 2 | ManualApproval policy: valid initiator + review signatures — approved | [U] | P0 |
-| 3 | ManualApproval: insufficient review signatures — reverts `InsufficientApprovals` | [N] | P0 |
-| 4 | Expired transaction — reverts `TransactionExpired` | [N] | P0 |
-| 5 | Expiration at exactly `block.timestamp` — succeeds | [E] | P0 |
-| 6 | Empty initiator signature — reverts `InsufficientSignaturesLength` | [N] | P0 |
-| 7 | Policy does not apply to transaction — reverts `PolicyDoesNotApply` | [N] | P0 |
-| 8 | Rate limit exceeded — reverts `RateLimitExceeded` | [N] | P0 |
-
-### 1.2 Initiator Signature Verification
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 9 | Valid EOA initiator signature — signer recovered correctly | [U] | P0 |
-| 10 | Valid ERC-1271 initiator signature — signer recovered correctly | [U] | P0 |
-| 11 | Initiator is authorized by policy (Member type) — succeeds | [U] | P0 |
-| 12 | Initiator is authorized by policy (Group type) — succeeds | [U] | P0 |
-| 13 | Initiator not authorized by policy — reverts | [N] | P0 |
-
-### 1.3 Review Signature Verification (ManualApproval)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 14 | Review hash includes initiator signature (binding) | [S] | P0 |
-| 15 | Review signatures from different initiator request — fail (different hash) | [S] | P0 |
-| 16 | Review signatures in ascending order — succeeds | [U] | P0 |
-| 17 | Review signatures out of order — reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
-| 18 | Review signer not in required approval group — reverts | [S] | P0 |
-
-### 1.4 Rate Limit Integration
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 19 | Transaction within rate limit — succeeds, usage updated | [U] | P0 |
-| 20 | Transaction exceeds rate limit — reverts | [N] | P0 |
-| 21 | Token transfer uses transfer amount as usage | [U] | P0 |
-| 22 | Contract interaction uses 1 as usage | [U] | P0 |
-| 23 | No rate limit configured — always succeeds | [U] | P1 |
+| 1 | Non-guardian caller — reverts (onlyGuardian modifier) | [N] | P0 |
+| 2 | Account not deployed by this organization — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
+| 3 | Nonce computed deterministically from `(account, to, value, keccak256(data), policyId, salt)` | [U] | P0 |
+| 4 | Nonce consumed BEFORE validation and external call (CEI pattern) | [S] | P0 |
+| 5 | Previously used nonce — reverts (replay protection) | [S] | P0 |
+| 6 | Delegates to `validateTransactionApprovalOrRevert` for policy validation | [U] | P0 |
+| 7 | Emits `AccountTransactionExecuted` event with correct `(account, to, value, data, nonce, policyId)` | [EV] | P1 |
+| 8 | Emits `AccountTransactionExecuted` BEFORE calling `Account.executeTransaction` (CEI) | [S] | P0 |
+| 9 | Calls `IAccount.executeTransaction` with correct arguments | [U] | P0 |
+| 10 | Entire transaction reverts if `Account.executeTransaction` reverts (nonce consumption rolled back) | [S] | P0 |
+| 11 | Successful ETH transfer via Account — end-to-end | [I] | P0 |
+| 12 | Successful ERC-20 transfer via Account — end-to-end | [I] | P0 |
+| 13 | Successful contract interaction via Account — end-to-end | [I] | P0 |
 
 ---
 
-## 2. Transaction Rejection Flow
-
-**Priority: P0 — Critical**
-
-### 2.1 ManualApproval Rejection
+### 1.2 `rejectAccountTransaction`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 24 | ManualApproval: valid rejection signatures — rejection accepted | [U] | P0 |
-| 25 | ManualApproval: insufficient rejection signatures — reverts | [N] | P0 |
-| 26 | Rejection uses `isApproval=false` in hash — different from approval | [S] | P0 |
-| 27 | Approval signatures cannot be used for rejection | [S] | P0 |
-
-### 2.2 AutoApprove Rejection
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 28 | AutoApprove: rejection requires authorized initiator signature in reviewSignatures | [U] | P0 |
-| 29 | AutoApprove: empty reviewSignatures — reverts `TransactionRejectionNotAllowed` | [N] | P0 |
-| 30 | AutoApprove: rejection signer must be authorized initiator for policy | [S] | P0 |
-| 31 | AutoApprove: non-initiator signer in reviewSignatures — reverts | [N] | P0 |
+| 14 | Non-guardian caller — reverts (onlyGuardian modifier) | [N] | P0 |
+| 15 | Account not deployed by this organization — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
+| 16 | Nonce is identical to `executeAccountTransaction` with same params (shared nonce space) | [S] | P0 |
+| 17 | Nonce consumed before validation | [S] | P0 |
+| 18 | Previously used nonce — reverts (replay protection) | [S] | P0 |
+| 19 | Delegates to `validateTransactionRejectionOrRevert` for policy validation | [U] | P0 |
+| 20 | Emits `AccountTransactionRejected` event with correct `(account, to, value, data, nonce, policyId)` | [EV] | P1 |
+| 21 | Execute consumes nonce, then reject with same params — reverts (shared nonce space) | [S] | P0 |
+| 22 | Reject consumes nonce, then execute with same params — reverts (shared nonce space) | [S] | P0 |
 
 ---
 
-## 3. EIP-712 Hash Computation
+## File 2: LibOrganizationAccountTransaction.sol
+
+> **Prerequisite:** The functions `_validateAndUpdateRateLimitOrRevert`, `_validateAutoApproveRejectionOrRevert`,
+> `_validateManualConfirmationOrRevert`, `_computeInitiatorHashFromParams`, and `_computeReviewHashFromParams`
+> are currently `private`. Convert them to `internal` and expose via a test harness for direct testing.
+
+### 2.1 `validateTransactionApprovalOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 32 | Initiator hash includes: address(this), account, to, value, data, salt, expiration, policyId, isApproval, chainId | [U] | P0 |
-| 33 | Review hash includes all initiator hash fields + initiatorSignature hash | [U] | P0 |
-| 34 | Different `isApproval` values produce different hashes | [S] | P0 |
-| 35 | Different chains produce different hashes (chain ID) | [S] | P0 |
-| 36 | Different organizations produce different hashes (address(this)) | [S] | P0 |
-| 37 | Different accounts produce different hashes | [U] | P0 |
-| 38 | Different `to` addresses produce different hashes | [U] | P0 |
-| 39 | Different `data` produces different hashes (data hashed) | [U] | P0 |
+| 23 | Expired transaction (`block.timestamp > expirationTimestamp`) — reverts `TransactionExpired` | [N] | P0 |
+| 24 | Expiration at exactly `block.timestamp` — succeeds (strict `>` comparison) | [E] | P0 |
+| 25 | Expiration at `block.timestamp - 1` — reverts `TransactionExpired` | [E] | P0 |
+| 26 | Empty initiator signature (length 0) — reverts `InsufficientSignaturesLength` | [N] | P0 |
+| 27 | Initiator hash computed with `isApproval=true` | [U] | P0 |
+| 28 | Initiator signer recovered correctly from EOA signature | [U] | P0 |
+| 29 | Initiator signer recovered correctly from ERC-1271 signature | [U] | P0 |
+| 30 | Policy does not apply to transaction — reverts `PolicyDoesNotApply` | [N] | P0 |
+| 31 | AutoApprove policy: succeeds without review signatures (no manual approval needed) | [U] | P0 |
+| 32 | ManualApproval policy: delegates to `_validateManualConfirmationOrRevert` with `isApproval=true` | [U] | P0 |
+| 33 | ManualApproval policy with empty review signatures — reverts `InsufficientApprovals` | [N] | P0 |
+| 34 | Rate limit update called after approval validation for all policy types | [U] | P0 |
+| 35 | Initiator not authorized by policy — reverts `PolicyDoesNotApply` (from `isTransactionAllowedByPolicy`) | [N] | P0 |
 
 ---
 
-## 4. Account Execution
+### 2.2 `validateTransactionRejectionOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 40 | `executeTransaction` on Account: successful ETH transfer | [I] | P0 |
-| 41 | `executeTransaction` on Account: successful ERC-20 transfer | [I] | P0 |
-| 42 | `executeTransaction` on Account: successful contract interaction | [I] | P0 |
-| 43 | `executeTransaction` on Account: reverts when sub-call fails — reverts `TransactionExecutionFailed` | [N] | P0 |
-| 44 | Only Organization can call `executeTransaction` on Account — reverts `OnlyOrganization` | [S] | P0 |
-| 45 | Account emits `TransactionExecuted` event | [EV] | P1 |
-| 46 | Nonce consumed BEFORE external call (CEI pattern) | [S] | P0 |
-| 47 | Organization emits `AccountTransactionExecuted` event before external call | [EV] | P1 |
+| 36 | Expired transaction — reverts `TransactionExpired` | [N] | P0 |
+| 37 | Expiration at exactly `block.timestamp` — succeeds (strict `>`) | [E] | P0 |
+| 38 | Empty initiator signature — reverts `InsufficientSignaturesLength` | [N] | P0 |
+| 39 | Initiator hash computed with `isApproval=true` (original approval signature used) | [S] | P0 |
+| 40 | Policy does not apply — reverts `PolicyDoesNotApply` | [N] | P0 |
+| 41 | AutoApprove policy — delegates to `_validateAutoApproveRejectionOrRevert` | [U] | P0 |
+| 42 | ManualApproval policy — delegates to `_validateManualConfirmationOrRevert` with `isApproval=false` | [U] | P0 |
+| 43 | Function is `view` — no state changes (rate limits NOT updated on rejection) | [U] | P1 |
 
 ---
 
-## 5. Account ETH Handling
+### 2.3 `_validateAndUpdateRateLimitOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 48 | Account `receive()` accepts ETH | [U] | P0 |
-| 49 | Account emits `MLSWalletAccountNativeTokenReceived` on receive | [EV] | P1 |
-| 50 | Account can receive ETH from any address | [U] | P1 |
+| 44 | `RateLimitType != TimeInterval` — returns without checking (no-op) | [U] | P0 |
+| 45 | `TransactionType.TokenTransfers`: `usageAmount = extractTransferAmount(data, value)` | [U] | P0 |
+| 46 | Non-TokenTransfers (`ContractInteractions`): `usageAmount = 1` | [U] | P0 |
+| 47 | Non-TokenTransfers (`Signatures`): `usageAmount = 1` | [U] | P0 |
+| 48 | Destination = `getActualDestination(to, data, value)` — may differ for ERC-20 transfers | [U] | P0 |
+| 49 | `checkAndUpdateRateLimit` returns false — reverts `RateLimitExceeded(policyId)` | [N] | P0 |
+| 50 | `checkAndUpdateRateLimit` returns true — succeeds, usage updated in storage | [U] | P0 |
+| 51 | Native ETH transfer: `extractTransferAmount` uses `value` parameter (data is empty) | [U] | P0 |
+| 52 | ERC-20 transfer: `extractTransferAmount` reads amount from calldata | [U] | P0 |
 
 ---
 
-## 6. Nonce Integration
+### 2.4 `_validateAutoApproveRejectionOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 51 | Transaction nonce computed from operation data + salt | [U] | P0 |
-| 52 | Same transaction executed twice — second reverts (nonce used) | [S] | P0 |
-| 53 | Approval nonce consumed prevents rejection with same nonce | [S] | P0 |
-| 54 | Rejection nonce consumed prevents approval with same nonce | [S] | P0 |
+| 53 | Computes rejection hash with `isApproval=false` | [U] | P0 |
+| 54 | Empty `reviewSignatures` (length 0) — reverts `TransactionRejectionNotAllowed` | [N] | P0 |
+| 55 | Recovers rejection signer from `reviewSignatures` | [U] | P0 |
+| 56 | Rejection signer not an authorized initiator for policy — reverts `TransactionRejectionNotAllowed` | [N] | P0 |
+| 57 | Valid authorized initiator signs rejection — succeeds | [U] | P0 |
+| 58 | Different authorized initiator (not the original) can also sign rejection | [U] | P0 |
+| 59 | Approval signatures cannot be used for rejection (different hash: `isApproval=false` vs `true`) | [S] | P0 |
 
 ---
 
-## 7. Access Control
+### 2.5 `_validateManualConfirmationOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 55 | `executeAccountTransaction` reverts when caller is not guardian | [N] | P0 |
-| 56 | `rejectAccountTransaction` reverts when caller is not guardian | [N] | P0 |
-| 57 | Transaction against non-org account — reverts `AccountNotDeployedByOrganization` | [S] | P0 |
+| 60 | Calls `getRequiredApprovals` to determine threshold from policy | [U] | P0 |
+| 61 | Review hash includes `initiatorSignature` (binding approvals to specific request) | [S] | P0 |
+| 62 | `isApproval=true` for approval flow — review hash uses approval flag | [U] | P0 |
+| 63 | `isApproval=false` for rejection flow — review hash uses rejection flag | [U] | P0 |
+| 64 | `areApprovalsValid` returns false — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
+| 65 | Sufficient valid approvals — succeeds | [U] | P0 |
+| 66 | Different initiator signatures produce different review hashes (binding property) | [S] | P0 |
 
 ---
 
-## 7.5 Reentrancy & CEI Pattern
+### 2.6 `_computeInitiatorHashFromParams`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 57.1 | Nonce consumed before external call — deliberately failing account execution still marks nonce used | [S] | P0 |
-| 57.2 | Account cannot re-enter executeAccountTransaction during execution (nonce already consumed) | [S] | P0 |
-| 57.3 | Rate limit consumed before execution — failed execution still consumes rate limit budget | [S] | P0 |
+| 67 | Different organizations (`address(this)`) produce different hashes | [S] | P0 |
+| 68 | Different accounts produce different hashes | [U] | P0 |
+| 69 | Different `to` addresses produce different hashes | [U] | P0 |
+| 70 | Different `value` amounts produce different hashes | [U] | P0 |
+| 71 | Different `data` produces different hashes (`keccak256(data)` used) | [U] | P0 |
+| 72 | Different `salt` values produce different hashes | [U] | P0 |
+| 73 | Different `expirationTimestamp` values produce different hashes | [U] | P0 |
+| 74 | Different `policyId` values produce different hashes | [U] | P0 |
+| 75 | `isApproval=true` vs `isApproval=false` produce different hashes | [S] | P0 |
+| 76 | Different `block.chainid` values produce different hashes | [S] | P0 |
+| 77 | Uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct hash | [U] | P1 |
+| 78 | Deterministic: same inputs always produce same hash | [U] | P0 |
+| 79 | Empty data → `keccak256("")` used in struct hash | [E] | P1 |
+| 80 | Golden test: known inputs → known hash (precomputed off-chain) | [U] | P0 |
 
 ---
 
-## 8. Private Function Tests (Requires `private` → `internal` Conversion)
-
-> **Prerequisite:** The functions below are currently `private` in `AccountImplementation`.
-> For contract functions, create a test contract that inherits from `AccountImplementation`
-> and exposes each private function via a public wrapper (requires converting `private` to `internal`).
-
-### 8.1 `_execute` — Low-level assembly CALL
+### 2.7 `_computeReviewHashFromParams`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 62 | Successful call returns `true` | [U] | P0 |
-| 63 | Failed call (target reverts) returns `false` (no revert propagation) | [U] | P0 |
-| 64 | Call to EOA with no code — returns `true` (CALL succeeds for EOAs) | [E] | P0 |
-| 65 | ETH value forwarded correctly to target | [U] | P0 |
-| 66 | Calldata forwarded correctly to target contract | [U] | P0 |
-| 67 | Gas parameter respected — does not forward more gas than specified | [E] | P1 |
-| 68 | Empty data with value > 0 — native transfer succeeds | [U] | P0 |
-| 69 | Call to self-destructing contract — returns `true` | [E] | P1 |
-
-### 8.2 `_onlyOrganization` — Access control check
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 70 | msg.sender == organization address — succeeds (no revert) | [U] | P0 |
-| 71 | msg.sender != organization address — reverts `OnlyOrganization` | [N] | P0 |
-| 72 | msg.sender == address(0) — reverts `OnlyOrganization` | [E] | P0 |
+| 81 | Includes all fields from initiator hash (org, account, to, value, data, salt, expiration, policyId, isApproval, chainId) | [U] | P0 |
+| 82 | Additionally includes `keccak256(initiatorSignature)` | [S] | P0 |
+| 83 | Different initiator signatures → different review hashes | [S] | P0 |
+| 84 | Uses `REVIEW_ACCOUNT_TRANSACTION_TYPEHASH` (distinct from initiator typehash) | [U] | P1 |
+| 85 | `isApproval=true` vs `isApproval=false` → different hashes | [S] | P0 |
+| 86 | Golden test: known inputs → known hash (precomputed off-chain) | [U] | P0 |
 
 ---
 
-## 9. Fuzz Tests
+## File 3: AccountImplementation.sol
+
+> **Prerequisite:** `_execute` and `_onlyOrganization` are currently `private`.
+> Convert to `internal` and create a test contract inheriting from `AccountImplementation`
+> to expose each via a public wrapper.
+
+### 3.1 `receive()`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 73 | Fuzz: Random valid transactions with AutoApprove policy — execute successfully | [F] | P0 |
-| 74 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
-| 75 | Fuzz: Random salt values produce unique nonces | [F] | P1 |
-| 76 | Fuzz: Random transaction data produces correct EIP-712 hashes | [F] | P0 |
-| 77 | Fuzz: Random initiator signatures produce different review hashes (binding property) | [F][S] | P0 |
-| 78 | Fuzz: Random ETH values and ERC-20 amounts — rate limit usage computed correctly | [F] | P0 |
-| 79 | Fuzz: Random ManualApproval threshold counts — insufficient signers always rejected | [F] | P0 |
+| 87 | Accepts ETH from any address | [U] | P0 |
+| 88 | Emits `MLSWalletAccountNativeTokenReceived(sender, value)` with correct parameters | [EV] | P1 |
+| 89 | Zero-value ETH transfer — still emits event | [E] | P1 |
 
 ---
 
-## 10. Invariant Tests
+### 3.2 `executeTransaction`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 90 | Non-organization caller — reverts `OnlyOrganization` | [N] | P0 |
+| 91 | Successful call (`_execute` returns true) — emits `TransactionExecuted` event | [U] | P0 |
+| 92 | Failed call (`_execute` returns false) — reverts `TransactionExecutionFailed` | [N] | P0 |
+| 93 | ETH value forwarded correctly to target | [U] | P0 |
+| 94 | Calldata forwarded correctly to target contract | [U] | P0 |
+| 95 | Emits `TransactionExecuted` with correct `(to, value, data, nonce, policyId)` | [EV] | P1 |
+
+---
+
+### 3.3 `getOrganizationAddress`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 96 | Returns the correct organization address from storage | [U] | P3 |
+| 97 | Callable by anyone (no access restriction) | [U] | P3 |
+
+---
+
+### 3.4 `isValidSignature` (ERC-1271)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 98 | Delegates to `Organization.isValidSignatureForAccount(address(this), hash, signature)` | [U] | P0 |
+| 99 | Returns ERC-1271 magic value when Organization approves | [U] | P0 |
+| 100 | Returns non-magic value when Organization rejects | [N] | P0 |
+
+---
+
+### 3.5 `_execute`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 101 | Successful call returns `true` | [U] | P0 |
+| 102 | Failed call (target reverts) returns `false` (no revert propagation) | [U] | P0 |
+| 103 | Call to EOA with no code — returns `true` (CALL succeeds for EOAs) | [E] | P0 |
+| 104 | ETH value forwarded correctly to target | [U] | P0 |
+| 105 | Calldata forwarded correctly to target contract | [U] | P0 |
+| 106 | Gas parameter respected — does not forward more gas than specified | [E] | P1 |
+| 107 | Empty data with value > 0 — native ETH transfer succeeds | [U] | P0 |
+| 108 | Return data from target is not captured (assembly output size = 0) | [E] | P1 |
+
+---
+
+### 3.6 `_onlyOrganization`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 109 | `msg.sender == organization` address — no revert | [U] | P0 |
+| 110 | `msg.sender != organization` address — reverts `OnlyOrganization` | [N] | P0 |
+| 111 | `msg.sender == address(0)` — reverts `OnlyOrganization` | [E] | P0 |
+
+---
+
+## 4. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 112 | Fuzz: Random valid transactions with AutoApprove policy — execute successfully | [F] | P0 |
+| 113 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
+| 114 | Fuzz: Random salt values produce unique nonces | [F] | P1 |
+| 115 | Fuzz: Random transaction data → deterministic EIP-712 hashes | [F] | P0 |
+| 116 | Fuzz: Random initiator signatures → different review hashes (binding property) | [F][S] | P0 |
+| 117 | Fuzz: Random ETH values and ERC-20 amounts — rate limit usage computed correctly | [F] | P0 |
+| 118 | Fuzz: Random ManualApproval threshold counts — insufficient signers always rejected | [F] | P0 |
+| 119 | Fuzz: Random `TxParams` fields — changing any single field always changes initiator hash | [F] | P0 |
+| 120 | Fuzz: Random `TxParams` + initiator signature — changing any field changes review hash | [F] | P0 |
+| 121 | Fuzz: Random accounts — non-org accounts always rejected with `AccountNotDeployedByOrganization` | [F] | P0 |
+| 122 | Fuzz: Random policy types — rejection routed to correct handler (AutoApprove vs ManualApproval) | [F] | P1 |
+
+---
+
+## 5. Invariant Tests
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 80 | **Nonce consumption**: Once a transaction nonce is consumed, it can never be reused for approval or rejection | P0 |
-| 81 | **Rate limit atomicity**: Rate limit usage either increases by exact amount or tx reverts — no partial updates | P0 |
-| 82 | **CEI ordering**: Nonce consumed before external call — failed execution still marks nonce as used | P0 |
+| 123 | **Nonce consumption**: Once a transaction nonce is consumed, it can never be reused for approval or rejection | P0 |
+| 124 | **Rate limit atomicity**: Rate limit usage either increases by exact amount or tx reverts — no partial updates | P0 |
+| 125 | **CEI ordering**: Nonce consumed before external call — during reentrancy nonce is already used | P0 |
+| 126 | **Shared nonce space**: `executeAccountTransaction` and `rejectAccountTransaction` produce the same nonce for the same `(account, to, value, data, policyId, salt)` | P0 |
+| 127 | **Approval/rejection hash separation**: `isApproval=true` and `isApproval=false` always produce different initiator hashes for the same transaction | P0 |
+| 128 | **Organization binding**: Initiator hash always includes `address(this)` — signatures from one organization cannot be replayed on another | P0 |
 
 ---
 
@@ -212,15 +276,21 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| Approval flow | 23 | P0 |
-| Rejection flow | 8 | P0 |
-| EIP-712 hashes | 8 | P0 |
-| Account execution | 8 | P0 |
-| Account ETH handling | 3 | P0-P1 |
-| Nonce integration | 4 | P0 |
-| Access control | 3 | P0 |
-| Reentrancy & CEI | 3 | P0 |
-| Private function tests | 11 | P0-P1 |
-| Fuzz tests | 7 | P0-P1 |
-| Invariant tests | 3 | P0 |
-| **Total** | **82** | |
+| `executeAccountTransaction` | 13 | P0 |
+| `rejectAccountTransaction` | 9 | P0 |
+| `validateTransactionApprovalOrRevert` | 13 | P0 |
+| `validateTransactionRejectionOrRevert` | 8 | P0 |
+| `_validateAndUpdateRateLimitOrRevert` | 9 | P0 |
+| `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
+| `_validateManualConfirmationOrRevert` | 7 | P0 |
+| `_computeInitiatorHashFromParams` | 14 | P0-P1 |
+| `_computeReviewHashFromParams` | 6 | P0-P1 |
+| `receive()` | 3 | P0-P1 |
+| `executeTransaction` | 6 | P0-P1 |
+| `getOrganizationAddress` | 2 | P3 |
+| `isValidSignature` | 3 | P0 |
+| `_execute` | 8 | P0-P1 |
+| `_onlyOrganization` | 3 | P0 |
+| Fuzz tests | 11 | P0-P1 |
+| Invariant tests | 6 | P0 |
+| **Total** | **128** | |
