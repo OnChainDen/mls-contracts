@@ -164,6 +164,13 @@
 | 70 | Inner sig length = 33 — two-chunk copy, only 33 bytes returned (not 64) | [E] | P0 |
 | 71 | Inner sig length = 65 (EOA sig size) — full data integrity byte-for-byte | [U] | P0 |
 | 72 | Inner sig with all 0xff bytes — no corruption during chunk copy | [E] | P0 |
+| 72.1 | Inner sig length = 96 — exact 3-chunk copy, data integrity byte-for-byte | [U] | P0 |
+| 72.2 | Inner sig length = 97 — 4-chunk copy, only 97 bytes returned (not 128) | [E] | P0 |
+| 72.3 | Inner sig length = 160 — exact 5-chunk copy, data integrity byte-for-byte | [U] | P0 |
+| 72.4 | Inner sig length = 161 — 6-chunk copy, only 161 bytes returned (not 192) | [E] | P0 |
+| 72.5 | Inner sig length = 1600 — exact 50-chunk copy, data integrity byte-for-byte | [U] | P0 |
+| 72.6 | Inner sig length = 1601 — 51-chunk copy, only 1601 bytes returned (not 1632) | [E] | P0 |
+| 72.7 | Fuzz: Random sigLength in [1, 2000] — extracted bytes always match source exactly and returned length == sigLength | [F] | P0 |
 
 #### `_tryRecoverEOASigner` — Assembly extraction of r, s at offset
 
@@ -341,10 +348,10 @@
 | Library | New Tests | Priority |
 |---------|-----------|----------|
 | SignatureUtils (public interface) | 59 | P0 |
-| SignatureUtils (private helpers) | 28 | P0 |
+| SignatureUtils (private helpers) | 35 | P0 |
 | SignatureUtils (additional fuzz) | 3 | P0 |
 | MerkleUtils | 8 | P1 |
 | TokenTransferUtils | 27 | P0 |
 | ContractInteractionUtils | 4 | P2 |
 | TimelockUtils | 8 | P1 |
-| **Total** | **137** | |
+| **Total** | **144** | |
