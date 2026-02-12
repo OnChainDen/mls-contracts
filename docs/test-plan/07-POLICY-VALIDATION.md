@@ -164,99 +164,125 @@
 
 **Priority: P0 — Critical**
 
-### 6.1 General Constraint Processing
+> **Note:** All `private` functions in this library will be converted to `internal` for direct testing via a test harness.
+
+### 6.1 `areParametersAllowedByConstraints`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 66 | Empty constraints — allows any parameters | [U] | P0 |
-| 67 | Constraint type = Any — allows any value for that parameter | [U] | P0 |
-| 68 | Multiple constraints checked sequentially | [U] | P0 |
-| 69 | First constraint fails — returns false immediately | [U] | P0 |
-| 70 | `paramCalldataHeadSlotCount = 0` — returns false | [E] | P0 |
-| 71 | Insufficient calldata for parameter — returns false | [E] | P0 |
+| 66 | Empty parameterConstraints bytes (length 0) — returns true | [U] | P0 |
+| 67 | Decoded to empty `ParameterConstraint[]` array — returns true | [U] | P0 |
+| 68 | Single constraint that passes — returns true | [U] | P0 |
+| 69 | Single constraint that fails — returns false | [N] | P0 |
+| 70 | Multiple constraints, first fails — returns false immediately | [U] | P0 |
 
-### 6.2 Bool Constraints
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 72 | Bool constraint Exact(true): parameter=true — pass | [U] | P0 |
-| 73 | Bool constraint Exact(true): parameter=false — fail | [N] | P0 |
-| 74 | Bool constraint Exact(false): parameter=false — pass | [U] | P0 |
-| 75 | Bool constraint Any: any bool value passes | [U] | P0 |
-| 76 | Non-zero value treated as true (e.g., 2, 0xff) | [E] | P0 |
-
-### 6.3 Uint Constraints
+### 6.2 `_processConstraints`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 77 | Uint Exact: matching value — pass | [U] | P0 |
-| 78 | Uint Exact: non-matching value — fail | [N] | P0 |
-| 79 | Uint Range: value within range — pass | [U] | P0 |
-| 80 | Uint Range: value at min boundary — pass (inclusive) | [E] | P0 |
-| 81 | Uint Range: value at max boundary — pass (inclusive) | [E] | P0 |
-| 82 | Uint Range: value below min — fail | [N] | P0 |
-| 83 | Uint Range: value above max — fail | [N] | P0 |
-| 84 | Uint Range: min == max — only that exact value passes | [E] | P0 |
-| 85 | Uint Range: min > max — no value passes | [E][S] | P0 |
+| 71 | `paramCalldataHeadSlotCount = 0` for a constraint — returns false | [E] | P0 |
+| 72 | Insufficient calldata for parameter (`data.length < paramCalldataOffset + paramCalldataHeadSize`) — returns false | [E] | P0 |
+| 73 | Two constraints: offset accumulates correctly (first param at byte 4, second at byte 36) | [U] | P0 |
+| 74 | Multi-slot parameter (`paramCalldataHeadSlotCount = 2`) with Any constraint — offset advances by 64 bytes | [E] | P0 |
+| 75 | `ConstraintType.Any` skips type-specific validation, correctly moves to next constraint | [U] | P0 |
+| 76 | Three constraints: second fails — returns false, third never evaluated | [U] | P0 |
 
-### 6.4 Int Constraints
+### 6.3 `_isParameterAllowedByConstraint`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 86 | Int Exact: matching positive value — pass | [U] | P0 |
-| 87 | Int Exact: matching negative value — pass | [U] | P0 |
-| 88 | Int Range: negative to positive range — pass for values in range | [U] | P0 |
-| 89 | Int Range: min = type(int256).min, max = type(int256).max — all pass | [E] | P0 |
-| 90 | Int two's complement: bytes32 with high bit set correctly interpreted | [E] | P0 |
+| 77 | `ConstraintType.Any` with any ParamType — returns true immediately (before type dispatch) | [U] | P0 |
+| 78 | ParamType.Array with non-Any constraint — returns false | [N] | P0 |
+| 79 | ParamType.Struct with non-Any constraint — returns false | [N] | P0 |
+| 80 | ParamType.Array with `ConstraintType.Any` — returns true (Any check precedes type dispatch) | [U] | P0 |
+| 81 | Unknown/invalid ParamType value — returns false | [E] | P0 |
 
-### 6.5 Address Constraints
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 91 | Address Exact: matching address — pass | [U] | P0 |
-| 92 | Address Exact: non-matching address — fail | [N] | P0 |
-| 93 | Address OneOf: address in Merkle tree — pass | [U] | P0 |
-| 94 | Address OneOf: address not in tree — fail | [N] | P0 |
-| 95 | Address extraction from bytes32 (right-aligned 160 bits) correct | [U] | P0 |
-| 96 | Address OneOf with address(0) — passes if in tree | [E] | P0 |
-
-### 6.6 FixedBytes Constraints
+### 6.4 `_isBoolParameterAllowedByConstraint`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 97 | FixedBytes Exact: matching bytes32 — pass | [U] | P0 |
-| 98 | FixedBytes Exact: non-matching — fail | [N] | P0 |
-| 99 | bytes1 value (left-aligned): correct padding comparison | [E] | P0 |
+| 82 | Exact(true), paramHeadValue represents true — returns true | [U] | P0 |
+| 83 | Exact(true), paramHeadValue = 0 (false) — returns false | [N] | P0 |
+| 84 | Exact(false), paramHeadValue = 0 (false) — returns true | [U] | P0 |
+| 85 | Exact(false), paramHeadValue represents true — returns false | [N] | P0 |
+| 86 | Non-zero non-one value (e.g., 2, 0xff) treated as true via `uint256(paramHeadValue) != 0` | [E] | P0 |
+| 87 | ConstraintType.Range — returns false (unsupported for Bool) | [N] | P0 |
+| 88 | Fuzz: random non-zero paramHeadValue with Exact(true) — always returns true | [F] | P0 |
 
-### 6.7 Bytes/String Constraints (Hash-Based)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 100 | Bytes Exact: hash matches — pass | [U] | P0 |
-| 101 | Bytes Exact: hash doesn't match — fail | [N] | P0 |
-| 102 | String Exact: hash matches — pass | [U] | P0 |
-| 103 | Empty bytes: keccak256("") hash works correctly | [E] | P0 |
-| 104 | Large bytes data: offset and length computed correctly | [E] | P0 |
-| 105 | Invalid offset (points beyond calldata) — returns false | [E][S] | P0 |
-
-### 6.8 Array/Struct Constraints
+### 6.5 `_isUintParameterAllowedByConstraint`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 106 | Array parameter with Any constraint — passes | [U] | P0 |
-| 107 | Array parameter with non-Any constraint — fails (unsupported) | [N] | P0 |
-| 108 | Struct parameter with Any constraint — passes | [U] | P0 |
-| 109 | Struct parameter with non-Any constraint — fails (unsupported) | [N] | P0 |
+| 89 | Exact: matching value — returns true | [U] | P0 |
+| 90 | Exact: non-matching value — returns false | [N] | P0 |
+| 91 | Range: value within range — returns true | [U] | P0 |
+| 92 | Range: value at min boundary — returns true (inclusive) | [E] | P0 |
+| 93 | Range: value at max boundary — returns true (inclusive) | [E] | P0 |
+| 94 | Range: value below min — returns false | [N] | P0 |
+| 95 | Range: value above max — returns false | [N] | P0 |
+| 96 | Range: min == max — only that exact value passes | [E] | P0 |
+| 97 | Range: min > max — no value passes | [E][S] | P0 |
+| 98 | Range: min = 0, max = type(uint256).max — all uint256 values pass | [E] | P0 |
+| 99 | OneOf constraint — returns false (unsupported for Uint) | [N] | P0 |
+| 99.1 | Fuzz: random uint values against Range — boundary behavior correct | [F] | P0 |
 
-### 6.9 Multi-Parameter Constraints
+### 6.6 `_isIntParameterAllowedByConstraint`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 110 | Two uint parameters: both pass — overall pass | [U] | P0 |
-| 111 | Two uint parameters: first passes, second fails — overall fail | [U] | P0 |
-| 112 | Mixed parameter types: address + uint + bool — all validated | [U] | P0 |
-| 113 | Parameter offset accumulation correct across multiple params | [U] | P0 |
-| 114 | Multi-slot parameter (2 slots) with Any constraint — offset advances by 2 slots | [E] | P0 |
+| 100 | Exact: matching positive value — returns true | [U] | P0 |
+| 101 | Exact: matching negative value — returns true | [U] | P0 |
+| 102 | Exact: non-matching value — returns false | [N] | P0 |
+| 103 | Range: negative-to-positive range, value in range — returns true | [U] | P0 |
+| 104 | Range: value at min boundary — returns true (inclusive) | [E] | P0 |
+| 105 | Range: value at max boundary — returns true (inclusive) | [E] | P0 |
+| 106 | Range: min = type(int256).min, max = type(int256).max — all values pass | [E] | P0 |
+| 107 | Two's complement: bytes32 with high bit set correctly interpreted as negative int256 | [E] | P0 |
+| 108 | Range: min > max (e.g., min=5, max=-5) — no value passes | [E][S] | P0 |
+| 109 | Range: only negative values (e.g., -100 to -1) — values in range pass, 0 and positive fail | [U] | P0 |
+| 109.1 | OneOf constraint — returns false (unsupported for Int) | [N] | P0 |
+| 109.2 | Fuzz: random int values against Range — signed comparison correct | [F] | P0 |
+
+### 6.7 `_isAddressParameterAllowedByConstraint`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 110 | Exact: matching address — returns true | [U] | P0 |
+| 111 | Exact: non-matching address — returns false | [N] | P0 |
+| 112 | OneOf: address in Merkle tree — returns true | [U] | P0 |
+| 113 | OneOf: address not in tree — returns false | [N] | P0 |
+| 114 | OneOf: address(0) in tree — returns true | [E] | P0 |
+| 115 | Address extraction from bytes32 via `address(uint160(uint256(paramHeadValue)))` — right-aligned 160 bits correct | [U] | P0 |
+| 116 | Dirty upper bits in bytes32: paramHeadValue with non-zero upper 96 bits — Exact still matches if lower 160 bits are the same address | [S] | P0 |
+| 116.1 | Dirty upper bits in bytes32: OneOf Merkle leaf computed from truncated address, not full bytes32 — still verifies correctly | [S] | P0 |
+| 117 | Range constraint — returns false (unsupported for Address) | [N] | P0 |
+| 117.1 | Fuzz: random addresses against OneOf Merkle tree — correct validation | [F] | P0 |
+
+### 6.8 `_isFixedBytesParameterAllowedByConstraint`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 118 | Exact: matching bytes32 — returns true | [U] | P0 |
+| 119 | Exact: non-matching bytes32 — returns false | [N] | P0 |
+| 120 | bytes1 value (left-aligned): correct padding comparison | [E] | P0 |
+| 121 | ConstraintType != Exact (e.g., Range, OneOf) — returns false | [N] | P0 |
+| 122 | Fuzz: random bytes32 values against Exact — only match passes | [F] | P0 |
+
+### 6.9 `_isBytesOrStringParameterAllowedByConstraint`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 123 | Exact: keccak256 hash of actual bytes matches expected hash — returns true | [U] | P0 |
+| 124 | Exact: hash doesn't match — returns false | [N] | P0 |
+| 125 | Empty bytes: keccak256("") hash comparison works correctly | [E] | P0 |
+| 126 | Large bytes data (e.g., 1000 bytes): offset and length correctly parsed from calldata | [E] | P0 |
+| 127 | Offset points beyond calldata (`data.length < dataPosition + SLOT_SIZE`) — returns false | [E][S] | P0 |
+| 128 | Length extends beyond calldata (length field valid but content truncated) — returns false | [E][S] | P0 |
+| 129 | Very large offset near `type(uint256).max` — `SELECTOR_LENGTH + offset` overflows, reverts with panic | [S] | P0 |
+| 130 | Very large length near `type(uint256).max` — `dataPosition + SLOT_SIZE + length` overflows, reverts with panic | [S] | P0 |
+| 131 | ConstraintType != Exact (e.g., Range) — returns false | [N] | P0 |
+| 132 | ParamType.String uses same encoding as ParamType.Bytes — identical hash comparison behavior | [U] | P0 |
+| 133 | Fuzz: random bytes content — keccak256 hash always computed and compared correctly | [F] | P0 |
 
 ---
 
@@ -363,10 +389,10 @@
 | LibPolicyDestination | 11 | P0 |
 | LibPolicyTokenTransfer | 14 | P0 |
 | LibPolicyContractInteraction | 11 | P0 |
-| LibPolicyParameterConstraints | 49 | P0 |
+| LibPolicyParameterConstraints | 73 | P0 |
 | LibPolicyRateLimits (gaps) | 6 | P0-P1 |
 | Rate limit overflow safety | 2 | P0 |
 | Private function tests | 16 | P0-P1 |
 | Cross-library fuzz | 12 | P0 |
 | Invariant tests | 4 | P0 |
-| **Total** | **156** | |
+| **Total** | **180** | |
