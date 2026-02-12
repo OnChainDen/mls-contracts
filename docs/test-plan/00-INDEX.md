@@ -86,7 +86,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 10 — Account Factory | 62 |
 | 11 — Guardian | 89 |
 | 12 — Guardian Recovery | 151 |
-| 13 — TX Recovery (gaps) | 51 |
+| 13 — TX Recovery | 167 |
 | 14 — Initialization | 53 |
 | 15 — Upgrades | 26 |
 | 16 — Implementation Whitelist | 38 |
@@ -98,9 +98,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 62 |
 | 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,645** |
+| **Total New Tests** | **~1,761** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,867** |
+| **Grand Total** | **~1,983** |
 
 ## Test Count by Type (Approximate)
 
