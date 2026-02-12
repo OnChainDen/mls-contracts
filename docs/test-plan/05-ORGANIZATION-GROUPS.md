@@ -22,6 +22,7 @@
 | 6 | Group creation emits `GroupCreated(groupId)` event | [EV] | P1 |
 | 7 | Group member addition emits `GroupMemberAdded(groupId, member)` for each | [EV] | P1 |
 | 8 | Create group with address(0) member — reverts with `InvalidMemberAddress` | [N] | P0 |
+| 8.1 | Create group with member who is not an organization member — reverts with `MemberDoesNotExist` | [S] | P0 |
 | 9 | Create group with duplicate members — second add is no-op (idempotent) | [E] | P0 |
 
 ---
@@ -39,6 +40,9 @@
 | 16 | Remove member emits `GroupMemberRemoved(groupId, member)` | [EV] | P1 |
 | 17 | Add already-existing group member — no-op (idempotent) | [E] | P0 |
 | 18 | Add address(0) to group — reverts | [N] | P0 |
+| 18.1 | Add non-organization-member to existing group — reverts with `MemberDoesNotExist` | [S] | P0 |
+| 18.2 | Add mix of org members and non-org-members — reverts (entire operation fails atomically) | [S] | P0 |
+| 18.3 | Remove address from organization, then try to add to group — reverts with `MemberDoesNotExist` | [S] | P0 |
 
 ---
 
@@ -112,6 +116,7 @@
 | 46.1 | Fuzz: Random group member additions are idempotent (adding existing member is no-op) | [F] | P1 |
 | 46.2 | Fuzz: Create, modify, and delete multiple random groups in single call — atomicity preserved | [F] | P0 |
 | 46.3 | Fuzz: Random address(0) members always rejected with `InvalidMemberAddress` | [F] | P0 |
+| 46.4a | Fuzz: Random non-organization-member addresses always rejected when adding to group | [F] | P0 |
 
 ---
 
@@ -119,9 +124,10 @@
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 46.4 | **Deleted group non-reuse**: If `wasGroupDeleted[groupId] == true`, then `isGroup[groupId] == false` forever | P0 |
+| 46.4b | **Deleted group non-reuse**: If `wasGroupDeleted[groupId] == true`, then `isGroup[groupId] == false` forever | P0 |
 | 46.5 | **Deletion permanence**: `wasGroupDeleted[groupId]` can only transition from false to true, never back | P0 |
 | 46.6 | **No zero-address group members**: `isGroupMember(groupId, address(0))` is never set to true | P0 |
+| 46.7 | **Group-members-are-org-members**: For every `(groupId, addr)` where `isGroupMember(groupId, addr) == true` and `isGroup(groupId) == true`, `isMember(addr) == true` | P0 |
 
 ---
 
@@ -163,6 +169,7 @@
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | 58 | Add address(0) — reverts `InvalidMemberAddress` | [N] | P0 |
+| 58.1 | Add address that is not an organization member — reverts `MemberDoesNotExist` | [S] | P0 |
 | 59 | Add already-existing member — no-op (idempotent, no event) | [E] | P0 |
 | 60 | Add new member — sets `isGroupMember = true`, emits `GroupMemberAdded` | [U] | P0 |
 
@@ -179,14 +186,14 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| Group creation | 9 | P0 |
-| Group modification | 9 | P0 |
+| Group creation | 10 | P0 |
+| Group modification | 12 | P0 |
 | Group deletion | 8 | P0 |
 | Group ID non-reuse | 3 | P0-P1 |
 | Batch modifications | 4 | P0 |
 | Query functions | 6 | P3 |
 | Access control | 3 | P0 |
-| Fuzz tests | 7 | P0-P1 |
-| Invariant tests | 3 | P0 |
-| Private function tests | 16 | P0-P1 |
-| **Total** | **68** | |
+| Fuzz tests | 8 | P0-P1 |
+| Invariant tests | 4 | P0 |
+| Private function tests | 17 | P0-P1 |
+| **Total** | **75** | |

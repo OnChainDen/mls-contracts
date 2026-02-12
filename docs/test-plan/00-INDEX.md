@@ -78,7 +78,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 02 — Storage Libraries | 24 |
 | 03 — Organization Admin | 97 |
 | 04 — Organization Members | 34 |
-| 05 — Organization Groups | 68 |
+| 05 — Organization Groups | 75 |
 | 06 — Organization Policy | 48 |
 | 07 — Policy Validation | 154 |
 | 08 — Account Transaction | 82 |
@@ -98,9 +98,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 62 |
 | 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,348** |
+| **Total New Tests** | **~1,355** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,570** |
+| **Grand Total** | **~1,577** |
 
 ## Test Count by Type (Approximate)
 
@@ -108,9 +108,9 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 |------|-------|
 | Unit [U] | ~510 |
 | Negative [N] | ~222 |
-| Fuzz [F] | ~155 |
-| Security [S] | ~136 |
+| Fuzz [F] | ~156 |
+| Security [S] | ~141 |
 | Edge Case [E] | ~129 |
 | Integration [I] | ~91 |
-| Invariant [INV] | ~75 |
+| Invariant [INV] | ~76 |
 | Event [EV] | ~45 |
