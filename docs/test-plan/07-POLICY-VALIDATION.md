@@ -56,8 +56,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 19 | `anyInitiator=true` — any address authorized | [U] | P0 |
-| 20 | `anyInitiator=true` — even address(0) authorized | [E] | P0 |
+| 19 | `anyInitiator=true`, initiator is org member — authorized | [U] | P0 |
+| 20 | `anyInitiator=true`, initiator is NOT an org member — not authorized (must be member regardless) | [S] | P0 |
+| 20.1 | `anyInitiator=true`, initiator is address(0) — not authorized (address(0) is never a member) | [S] | P0 |
 | 21 | Member initiator type: exact member address — authorized | [U] | P0 |
 | 22 | Member initiator type: different address — not authorized | [N] | P0 |
 | 23 | Member initiator type: address is member but not the specified one — not authorized | [U] | P0 |
@@ -358,7 +359,7 @@
 | Library | New Tests | Priority |
 |---------|-----------|----------|
 | LibPolicyApproval | 19 | P0 |
-| LibPolicyInitiator | 11 | P0 |
+| LibPolicyInitiator | 12 | P0 |
 | LibPolicyDestination | 11 | P0 |
 | LibPolicyTokenTransfer | 14 | P0 |
 | LibPolicyContractInteraction | 11 | P0 |
@@ -368,4 +369,4 @@
 | Private function tests | 16 | P0-P1 |
 | Cross-library fuzz | 12 | P0 |
 | Invariant tests | 4 | P0 |
-| **Total** | **155** | |
+| **Total** | **156** | |
