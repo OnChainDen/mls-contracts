@@ -74,7 +74,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 
 | Document | New Tests |
 |----------|-----------|
-| 01 — Utility Libraries | 173 |
+| 01 — Utility Libraries | 197 |
 | 02 — Storage Libraries | 24 |
 | 03 — Organization Admin | 97 |
 | 04 — Organization Members | 34 |
@@ -98,19 +98,19 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 62 |
 | 23 — Admin Operation Timelock | 18 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,324** |
+| **Total New Tests** | **~1,348** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,546** |
+| **Grand Total** | **~1,570** |
 
 ## Test Count by Type (Approximate)
 
 | Type | Count |
 |------|-------|
 | Unit [U] | ~510 |
-| Negative [N] | ~220 |
-| Fuzz [F] | ~148 |
-| Security [S] | ~135 |
-| Edge Case [E] | ~115 |
+| Negative [N] | ~222 |
+| Fuzz [F] | ~155 |
+| Security [S] | ~136 |
+| Edge Case [E] | ~129 |
 | Integration [I] | ~91 |
 | Invariant [INV] | ~75 |
 | Event [EV] | ~45 |

@@ -304,6 +304,14 @@
 | 108 | Valid transfer calldata — extracts correct recipient | [U] | P0 |
 | 109 | Data too short — reverts with `MalformedTokenTransfer` | [N] | P0 |
 | 110 | Recipient is address(0) — extracts correctly (no validation) | [E] | P0 |
+| 110.1 | data.length == 35 (one byte short of minimum 36) — reverts `MalformedTokenTransfer` | [E] | P0 |
+| 110.2 | data.length == 36 (exact minimum: selector + address, no amount word) — succeeds | [E] | P0 |
+| 110.3 | Non-transfer selector (`approve`) with valid-length data — reverts `MalformedTokenTransfer` | [N] | P0 |
+| 110.4 | Non-transfer selector (`transferFrom`) with valid-length data — reverts `MalformedTokenTransfer` | [N] | P0 |
+| 110.5 | Dirty upper bytes in address word (data[4:16] non-zero) — ignores upper bytes, extracts data[16:36] correctly | [S] | P0 |
+| 110.6 | Extra trailing data beyond 68 bytes — extracts correct recipient regardless | [E] | P0 |
+| 110.7 | data.length == 4 (selector only, no parameters) — reverts `MalformedTokenTransfer` | [E] | P0 |
+| 110.8 | Fuzz: Random non-transfer selectors with valid-length data — always reverts `MalformedTokenTransfer` | [F] | P0 |
 
 #### `extractTokenAddress(address to, bytes calldata data)`
 
@@ -311,6 +319,11 @@
 |---|-----------|------|----------|
 | 111 | Native transfer — returns address(0) | [U] | P0 |
 | 112 | ERC-20 transfer — returns `to` (token contract address) | [U] | P0 |
+| 112.1 | data is 1 byte (non-empty but minimal) — returns `to` regardless of content | [E] | P0 |
+| 112.2 | `to` == address(0), data non-empty — returns address(0), indistinguishable from native path | [E] | P0 |
+| 112.3 | `to` == address(0), data empty — returns address(0) via native path | [E] | P0 |
+| 112.4 | Fuzz: Random `to` address with random non-empty data — always returns `to` | [F] | P0 |
+| 112.5 | Fuzz: Random `to` address with empty data — always returns address(0) regardless of `to` | [F] | P0 |
 
 #### `extractTransferAmount(bytes calldata data, uint256 value)`
 
@@ -321,6 +334,15 @@
 | 115 | Amount is 0 — returns 0 | [E] | P0 |
 | 116 | Amount is type(uint256).max — returns max | [E] | P0 |
 | 117 | Data too short — reverts with `MalformedTokenTransfer` | [N] | P0 |
+| 117.1 | data.length == 67 (one byte short of minimum 68) — reverts `MalformedTokenTransfer` | [E] | P0 |
+| 117.2 | data.length == 68 (exact minimum: selector + address + amount) — succeeds | [E] | P0 |
+| 117.3 | data.length > 68 (trailing data beyond amount) — extracts from data[36:68] only, ignores rest | [E] | P0 |
+| 117.4 | data.length in [1, 3] (partial selector, not empty) — reverts `MalformedTokenTransfer` | [E] | P0 |
+| 117.5 | data.length == 4 (selector only, no params) — reverts `MalformedTokenTransfer` | [E] | P0 |
+| 117.6 | data.length == 36 (selector + address, no amount) — reverts `MalformedTokenTransfer` | [E] | P0 |
+| 117.7 | Native transfer (empty data), value = 0 — returns 0 (no validation on value) | [E] | P0 |
+| 117.8 | Fuzz: Random uint256 amounts encoded in valid 68-byte transfer calldata — always extracts correctly | [F] | P0 |
+| 117.9 | Fuzz: Random data lengths in [1, 67] — always reverts `MalformedTokenTransfer` | [F] | P0 |
 
 ### 3.3 Fuzz Tests
 
@@ -329,6 +351,8 @@
 | 118 | Fuzz: Any valid ERC-20 transfer calldata extracts correct recipient | [F] | P0 |
 | 119 | Fuzz: Any valid ERC-20 transfer calldata extracts correct amount | [F] | P0 |
 | 120 | Fuzz: Random data never classified as both native and ERC-20 | [F] | P0 |
+| 120.1 | Fuzz: `extractTokenAddress` with random `to` and random data length — returns `to` when non-empty, address(0) when empty | [F] | P0 |
+| 120.2 | Fuzz: `extractTransferAmount` with random value and empty data — always returns value exactly | [F] | P0 |
 
 ---
 
@@ -380,7 +404,7 @@
 | SignatureUtils (private helpers) | 64 | P0 |
 | SignatureUtils (additional fuzz) | 3 | P0 |
 | MerkleUtils | 8 | P1 |
-| TokenTransferUtils | 27 | P0 |
+| TokenTransferUtils | 51 | P0 |
 | ContractInteractionUtils | 4 | P2 |
 | TimelockUtils | 8 | P1 |
-| **Total** | **173** | |
+| **Total** | **197** | |
