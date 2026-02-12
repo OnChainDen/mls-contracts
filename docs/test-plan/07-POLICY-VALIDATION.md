@@ -278,6 +278,15 @@
 
 ---
 
+## 7.5 LibPolicyRateLimits — Rate Limit Overflow Safety
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 115.1 | Rate limit: currentUsage + usageAmount would overflow uint256 — returns false (no overflow) | [S] | P0 |
+| 115.2 | Rate limit: usageAmount = type(uint256).max with currentUsage > 0 — returns false | [S] | P0 |
+
+---
+
 ## 8. Cross-Library Fuzz Tests
 
 | # | Test Case | Type | Priority |
@@ -300,5 +309,6 @@
 | LibPolicyContractInteraction | 11 | P0 |
 | LibPolicyParameterConstraints | 49 | P0 |
 | LibPolicyRateLimits (gaps) | 6 | P0-P1 |
+| Rate limit overflow safety | 2 | P0 |
 | Cross-library fuzz | 4 | P0 |
-| **Total** | **124** | |
+| **Total** | **126** | |

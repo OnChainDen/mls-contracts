@@ -46,6 +46,7 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | [21-INVARIANT-TESTS.md](./21-INVARIANT-TESTS.md) | System-wide invariants that must always hold | Critical |
 | [22-FUZZ-TESTS.md](./22-FUZZ-TESTS.md) | Fuzz testing strategy for all modules | High |
 | [23-ADMIN-OPERATION-TIMELOCK.md](./23-ADMIN-OPERATION-TIMELOCK.md) | Timelock duration management | Medium |
+| [24-SECURITY-AUDIT-GAPS.md](./24-SECURITY-AUDIT-GAPS.md) | Security audit gap analysis: overflow, replay, race conditions, cross-org attacks | Critical |
 
 ## Test Types Legend
 
@@ -75,40 +76,41 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 |----------|-----------|
 | 01 — Utility Libraries | 103 |
 | 02 — Storage Libraries | 19 |
-| 03 — Organization Admin | 67 |
+| 03 — Organization Admin | 71 |
 | 04 — Organization Members | 29 |
 | 05 — Organization Groups | 46 |
 | 06 — Organization Policy | 39 |
-| 07 — Policy Validation | 124 |
-| 08 — Account Transaction | 61 |
-| 09 — Account Signature (ERC-1271) | 42 |
+| 07 — Policy Validation | 126 |
+| 08 — Account Transaction | 64 |
+| 09 — Account Signature (ERC-1271) | 46 |
 | 10 — Account Factory | 30 |
 | 11 — Guardian | 41 |
 | 12 — Guardian Recovery (gaps) | 17 |
 | 13 — TX Recovery (gaps) | 29 |
-| 14 — Initialization | 42 |
-| 15 — Upgrades | 18 |
+| 14 — Initialization | 46 |
+| 15 — Upgrades | 21 |
 | 16 — Implementation Whitelist | 24 |
 | 17 — Safe Module (gaps) | 8 |
 | 18 — Nonce Management | 16 |
 | 19 — EIP-712 Signatures | 19 |
-| 20 — Integration Tests | 52 |
-| 21 — Invariant Tests | 27 |
-| 22 — Fuzz Tests (cross-cutting) | 38 |
+| 20 — Integration Tests | 58 |
+| 21 — Invariant Tests | 33 |
+| 22 — Fuzz Tests (cross-cutting) | 45 |
 | 23 — Admin Operation Timelock | 14 |
-| **Total New Tests** | **~905** |
+| 24 — Security Audit Gaps | 60 |
+| **Total New Tests** | **~1,005** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,127** |
+| **Grand Total** | **~1,227** |
 
 ## Test Count by Type (Approximate)
 
 | Type | Count |
 |------|-------|
-| Unit [U] | ~450 |
-| Negative [N] | ~180 |
-| Security [S] | ~80 |
-| Edge Case [E] | ~70 |
-| Integration [I] | ~80 |
-| Fuzz [F] | ~75 |
+| Unit [U] | ~460 |
+| Negative [N] | ~185 |
+| Security [S] | ~115 |
+| Edge Case [E] | ~85 |
+| Integration [I] | ~85 |
+| Fuzz [F] | ~82 |
 | Event [EV] | ~40 |
-| Invariant [INV] | ~27 |
+| Invariant [INV] | ~33 |

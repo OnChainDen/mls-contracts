@@ -145,6 +145,17 @@
 
 ---
 
+## 5.5 Race Conditions & Signature Ordering
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 62.1 | [AUDIT] Admin removed after signing — operation fails if signer no longer admin at execution time | [S] | P0 |
+| 62.2 | [AUDIT] Voting threshold increased — old signatures that met old threshold fail if below new threshold | [S] | P0 |
+| 62.3 | [AUDIT] Mixed EOA+ERC-1271 signatures: offset accumulation correct for EOA→ERC1271→EOA sequence | [S] | P0 |
+| 62.4 | [AUDIT] ERC-1271 admin with very large inner signature — offset correctly advances past entire signature | [E] | P0 |
+
+---
+
 ## 6. Fuzz Tests
 
 | # | Test Case | Type | Priority |
@@ -166,5 +177,6 @@
 | Query functions | 5 | P3 |
 | Operation rejection | 6 | P0 |
 | Access control | 3 | P0 |
+| Race conditions & ordering | 4 | P0 |
 | Fuzz tests | 5 | P0-P1 |
-| **Total** | **67** | |
+| **Total** | **71** | |

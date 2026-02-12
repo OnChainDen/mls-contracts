@@ -145,6 +145,16 @@
 
 ---
 
+## 7.5 Reentrancy & CEI Pattern
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 57.1 | Nonce consumed before external call — deliberately failing account execution still marks nonce used | [S] | P0 |
+| 57.2 | Account cannot re-enter executeAccountTransaction during execution (nonce already consumed) | [S] | P0 |
+| 57.3 | Rate limit consumed before execution — failed execution still consumes rate limit budget | [S] | P0 |
+
+---
+
 ## 8. Fuzz Tests
 
 | # | Test Case | Type | Priority |
@@ -167,5 +177,6 @@
 | Account ETH handling | 3 | P0-P1 |
 | Nonce integration | 4 | P0 |
 | Access control | 3 | P0 |
+| Reentrancy & CEI | 3 | P0 |
 | Fuzz tests | 4 | P0-P1 |
-| **Total** | **61** | |
+| **Total** | **64** | |

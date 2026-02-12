@@ -104,6 +104,19 @@ Create handler contracts that perform random sequences of valid operations:
 
 ---
 
+## 9.5 Rate Limit & Parameter Constraint Invariants
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 25.1 | **Rate limit atomicity**: Rate limit usage value either increases by exact usageAmount or doesn't change | P0 |
+| 25.2 | **Rate limit no-overflow**: currentUsage + usageAmount never wraps (function returns false first) | P0 |
+| 25.3 | **Group deletion permanence**: Once `wasGroupDeleted[groupId] == true`, it can never become false | P0 |
+| 25.4 | **Account beacon immutability**: An Account's beacon (Organization) address cannot be changed after deployment | P0 |
+| 25.5 | **No orphaned admins**: Removing a member who is an admin always reverts | P0 |
+| 25.6 | **Signature non-transferability**: A signature valid for Organization A is never valid for Organization B | P0 |
+
+---
+
 ## 10. Storage Invariants
 
 | # | Invariant | Priority |
@@ -126,5 +139,6 @@ Create handler contracts that perform random sequences of valid operations:
 | Upgrades | 2 | P0 |
 | Recovery | 3 | P0 |
 | Signatures | 3 | P0 |
+| Rate limits & constraints | 6 | P0 |
 | Storage | 2 | P1 |
-| **Total** | **27** | |
+| **Total** | **33** | |

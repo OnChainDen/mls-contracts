@@ -54,6 +54,16 @@
 
 ---
 
+### 1.4 Upgrade Flag Edge Cases
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 13.1 | [AUDIT] Failed upgrade (bad init data in `data` param): flag does NOT remain stuck true (tx reverts entirely) | [S] | P0 |
+| 13.2 | [AUDIT] `_authorizeUpgrade` succeeds regardless of newImplementation param value when flag is true | [S] | P1 |
+| 13.3 | [AUDIT] Multiple inheritance: all base contract functions accessible through OrganizationImplementation | [I] | P1 |
+
+---
+
 ## 3. Fuzz Tests
 
 | # | Test Case | Type | Priority |
@@ -70,5 +80,6 @@
 | Post-upgrade | 4 | P1 |
 | Authorization flag | 3 | P1 |
 | Account beacon upgrade | 4 | P1 |
+| Upgrade flag edge cases | 3 | P0-P1 |
 | Fuzz tests | 1 | P1 |
-| **Total** | **18** | |
+| **Total** | **21** | |

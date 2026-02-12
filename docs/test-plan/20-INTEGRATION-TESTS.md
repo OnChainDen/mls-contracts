@@ -172,6 +172,21 @@ This should provide:
 
 ---
 
+## 9.5 Modifier Access Control Isolation
+
+**Priority: P0 — Critical**
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 49.1 | Guardian recovery address cannot call onlyGuardian-protected functions | [S] | P0 |
+| 49.2 | Tx recovery address cannot call onlyGuardian-protected functions | [S] | P0 |
+| 49.3 | Guardian cannot call onlyTxRecoveryAddress-protected functions | [S] | P0 |
+| 49.4 | Guardian cannot call onlyGuardianRecoveryAddress-protected functions | [S] | P0 |
+| 49.5 | Pending guardian (not yet accepted) cannot call onlyGuardian-protected functions | [S] | P0 |
+| 49.6 | All six modifiers produce correct error message for wrong caller | [N] | P0 |
+
+---
+
 ## 10. Multi-Account Scenarios
 
 | # | Test Case | Type | Priority |
@@ -195,5 +210,6 @@ This should provide:
 | Recovery flows | 4 | P1 |
 | Upgrade flows | 3 | P1 |
 | Cross-module interactions | 6 | P0 |
+| Modifier access control | 6 | P0 |
 | Multi-account | 3 | P1 |
-| **Total** | **52** | |
+| **Total** | **58** | |

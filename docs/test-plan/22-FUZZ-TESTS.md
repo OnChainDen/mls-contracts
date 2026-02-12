@@ -116,6 +116,20 @@
 
 ---
 
+## 9.5 Parameter Constraint & Overflow Fuzzing
+
+| # | Test Case | Runs | Priority |
+|---|-----------|------|----------|
+| 38.1 | Random parameter constraint offsets: bounds checking never overflows | 10000 | P0 |
+| 38.2 | Random dynamic bytes lengths in constraints: validation always terminates without panic | 10000 | P0 |
+| 38.3 | Random ERC-20 calldata: getActualDestination never panics or returns wrong type | 10000 | P0 |
+| 38.4 | Random signature type prefixes (0x00-0xff): only 0x00 and 0x01 produce valid ERC-1271 response | 1000 | P0 |
+| 38.5 | Random guardian addresses (EOA/contract/zero): module validation returns valid boolean | 1000 | P0 |
+| 38.6 | Random admin modification arrays: modifyAdmins never leaves adminCount=0 | 1000 | P0 |
+| 38.7 | Random rate limit configs: checkAndUpdateRateLimit never causes uint256 overflow | 10000 | P0 |
+
+---
+
 ## 10. Byte Manipulation Fuzzing (Existing Coverage — Verify)
 
 Existing BytesUtils fuzz tests cover:
@@ -139,4 +153,5 @@ No additional fuzz tests needed for BytesUtils.
 | EIP-712 | 3 | 1000 | P0 |
 | CREATE2 | 2 | 1000 | P1 |
 | Timelocks | 4 | 1000 | P1 |
-| **Total** | **38** | | |
+| Param constraints & overflow | 7 | 1000-10000 | P0 |
+| **Total** | **45** | | |

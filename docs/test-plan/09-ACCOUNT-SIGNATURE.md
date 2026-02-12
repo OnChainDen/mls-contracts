@@ -112,6 +112,17 @@
 
 ---
 
+## 5.5 Guardian Module Edge Cases
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 39.1 | Guardian contract reverts on isModuleEnabled() staticcall — signature returns invalid (not revert) | [E] | P0 |
+| 39.2 | Guardian contract returns truncated data (<32 bytes) from isModuleEnabled() — returns invalid | [E] | P0 |
+| 39.3 | Signature with only type prefix byte (0x01) and no additional data — returns invalid (not panic) | [E] | P0 |
+| 39.4 | Empty sourceAccountProof with policy requiring specific source accounts — validation fails | [S] | P0 |
+
+---
+
 ## 6. Fuzz Tests
 
 | # | Test Case | Type | Priority |
@@ -131,5 +142,6 @@
 | Recovery validation | 5 | P0 |
 | Access control | 3 | P0 |
 | EIP-712 hashes | 4 | P0 |
+| Guardian module edge cases | 4 | P0 |
 | Fuzz tests | 3 | P0 |
-| **Total** | **42** | |
+| **Total** | **46** | |

@@ -106,6 +106,17 @@
 
 ---
 
+### 3.5 Factory Deployment Edge Cases
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 40.1 | [AUDIT] Deploy with bad init params (e.g., no members) — entire tx reverts, no uninitialized contract on-chain | [S] | P0 |
+| 40.2 | [AUDIT] `computeOrganizationAddress` with different whitelistAddress than deployed — produces different address | [U] | P1 |
+| 40.3 | [AUDIT] Factory DEPLOYER_ADDRESS is immutable and cannot be changed after construction | [S] | P1 |
+| 40.4 | [AUDIT] Factory bytecode generation is deterministic for same inputs | [U] | P1 |
+
+---
+
 ## 4. Fuzz Tests
 
 | # | Test Case | Type | Priority |
@@ -127,5 +138,6 @@
 | Error cases | 8 | P1 |
 | Initialization ordering | 3 | P1 |
 | Proxy setup | 4 | P1 |
+| Factory edge cases | 4 | P0-P1 |
 | Fuzz tests | 2 | P1 |
-| **Total** | **42** | |
+| **Total** | **46** | |
