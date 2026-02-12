@@ -180,6 +180,16 @@
 | 74 | Preceding bytes are non-zero — no bleed into r or s values | [S] | P0 |
 | 75 | s = HALF_CURVE_ORDER at non-zero offset — accepted (boundary) | [E] | P0 |
 | 76 | s = HALF_CURVE_ORDER + 1 at non-zero offset — rejected | [E] | P0 |
+| 76.1 | offset = 0, valid signature — r and s extracted correctly from start of array | [U] | P0 |
+| 76.2 | offset + 65 > signatures.length (insufficient bytes) — returns (false, address(0)) | [N] | P0 |
+| 76.3 | offset + 65 == signatures.length (exactly fits) — succeeds | [E] | P0 |
+| 76.4 | r = bytes32(0) — ecrecover returns address(0), function returns (false, address(0)) | [S] | P0 |
+| 76.5 | s = bytes32(0) — ecrecover returns address(0), function returns (false, address(0)) | [S] | P0 |
+| 76.6 | v = 27 at offset — recovered signer matches expected | [U] | P0 |
+| 76.7 | v = 28 at offset — recovered signer matches expected | [U] | P0 |
+| 76.8 | Three consecutive EOA signatures — each extracted correctly at offsets 0, 65, 130 | [U] | P0 |
+| 76.9 | Trailing garbage bytes after valid 65-byte signature — does not affect recovery | [E] | P0 |
+| 76.10 | Fuzz: Random valid private keys at random offsets within array — always recovers correct signer | [F] | P0 |
 
 #### `_tryRecoverContractSigner` — End-to-end ERC-1271 recovery at offset
 
@@ -188,6 +198,17 @@
 | 77 | Header exactly at boundary of signatures array (offset + 23 == length) — returns false | [E] | P0 |
 | 78 | Full signature exactly at boundary (offset + 23 + sigLength == length) — succeeds | [E] | P0 |
 | 79 | Signer is address(0) — staticcall to 0x0 returns false gracefully | [S] | P0 |
+| 79.1 | offset + 23 > signatures.length (not enough bytes for header) — returns (false, address(0)) | [N] | P0 |
+| 79.2 | Header fits but inner sig doesn't (offset + 23 + sigLength > length) — returns (false, address(0)) | [N] | P0 |
+| 79.3 | Valid signer, valid ERC-1271 response — returns (true, signer) | [U] | P0 |
+| 79.4 | Valid signer but ERC-1271 returns wrong magic value — returns (false, address(0)) | [N] | P0 |
+| 79.5 | Valid signer but ERC-1271 contract reverts — returns (false, address(0)) | [N] | P0 |
+| 79.6 | sigLength = 0 (empty inner signature) — header-only, delegates to ERC-1271 with empty bytes | [E] | P0 |
+| 79.7 | Signer is an EOA (no code) — staticcall returns empty result, returns (false, address(0)) | [S] | P0 |
+| 79.8 | Contract signature at offset > 0, preceded by EOA signature — correct signer and sigLength extraction | [U] | P0 |
+| 79.9 | Two consecutive contract signatures — each recovered correctly at sequential offsets | [U] | P0 |
+| 79.10 | Very large sigLength (e.g., 1000 bytes) — extracts and validates correctly | [E] | P0 |
+| 79.11 | Fuzz: Random valid ERC-1271 signatures at random offsets — always recovers correct signer | [F] | P0 |
 
 #### `_isValidERC1271SignatureNow` — staticcall edge cases
 
@@ -198,6 +219,14 @@
 | 82 | Contract returns fewer than 32 bytes — invalid (result.length < 32 check) | [E][S] | P0 |
 | 83 | Contract consumes all gas (out-of-gas in staticcall) — returns false, no revert | [S] | P0 |
 | 84 | Contract returns empty bytes (length 0) — invalid | [E] | P0 |
+| 84.1 | Contract returns exactly 32 bytes with correct magic value — valid (happy path) | [U] | P0 |
+| 84.2 | Signer has no code (EOA) — staticcall success=true but empty result — returns false | [S] | P0 |
+| 84.3 | Contract reverts (staticcall success=false) — returns false | [N] | P0 |
+| 84.4 | Contract returns very large result (>1000 bytes) starting with magic — valid (length >= 32) | [E] | P0 |
+| 84.5 | Contract returns 31 bytes (one short of valid) — invalid | [E] | P0 |
+| 84.6 | Contract returns magic value right-padded differently (e.g., `0x1626ba7e00...01`) — still valid (only first 4 bytes decoded) | [E] | P0 |
+| 84.7 | Contract that attempts state modification during staticcall — reverts, returns false | [S] | P0 |
+| 84.8 | Fuzz: Random bytes4 return values — only `0x1626ba7e` (ERC1271_MAGIC_VALUE) produces true | [F] | P0 |
 
 ### 1.6 Fuzz Tests
 
@@ -348,10 +377,10 @@
 | Library | New Tests | Priority |
 |---------|-----------|----------|
 | SignatureUtils (public interface) | 59 | P0 |
-| SignatureUtils (private helpers) | 35 | P0 |
+| SignatureUtils (private helpers) | 64 | P0 |
 | SignatureUtils (additional fuzz) | 3 | P0 |
 | MerkleUtils | 8 | P1 |
 | TokenTransferUtils | 27 | P0 |
 | ContractInteractionUtils | 4 | P2 |
 | TimelockUtils | 8 | P1 |
-| **Total** | **144** | |
+| **Total** | **173** | |
