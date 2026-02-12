@@ -91,6 +91,24 @@
 
 ---
 
+## 7. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** `_computePolicyLeaf` is currently `private` in `LibOrganizationPolicy`.
+> Convert to `internal` and expose via a test harness. The existing section 5 tests (33-36)
+> verify behavior through the public `isPolicyInOrg` interface; the tests below enable
+> direct assertions on the leaf computation logic.
+
+### 7.1 `_computePolicyLeaf`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 40 | Known policyId + Policy → known leaf hash (golden test, precomputed off-chain) | [U] | P0 |
+| 41 | Encoding includes all Policy struct fields (changing any field changes the leaf) | [U] | P0 |
+| 42 | Double hashing: `keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))))` matches expected | [U] | P1 |
+| 43 | Leaf != `keccak256(abi.encode(policyId, policy))` (single hash — second preimage resistance) | [S] | P0 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -101,4 +119,5 @@
 | Usage tracking | 4 | P1 |
 | Leaf computation | 4 | P1 |
 | Fuzz tests | 3 | P0-P1 |
-| **Total** | **39** | |
+| Private function tests | 4 | P0-P1 |
+| **Total** | **43** | |

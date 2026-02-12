@@ -81,6 +81,40 @@ The existing 35 tests cover:
 | 28 | Enable flow: multiple enable/disable cycles | [I] | P1 |
 | 29 | Recovery tx against non-org account — reverts | [N] | P0 |
 
+### 7. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in `LibOrganizationTxRecovery`.
+> Convert them to `internal` and expose via a test harness.
+
+#### 7.1 `_clearPendingTxRecoveryInitTimelock`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 30 | After clear: `pendingRecoveryAddress == address(0)` | [U] | P1 |
+| 31 | After clear: `pendingTimelockDurationSeconds == 0` | [U] | P1 |
+| 32 | After clear: `pendingTimestamp == 0` | [U] | P1 |
+| 33 | Clearing already-zeroed state — no-op, no revert | [E] | P2 |
+
+#### 7.2 `_validateTxRecoveryNotConfiguredOrRevert`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 34 | Both fields zero — succeeds (not configured) | [U] | P1 |
+| 35 | `recoveryAddress` non-zero — reverts `TransactionRecoveryAlreadyConfigured` | [N] | P1 |
+| 36 | `timelockDurationSeconds` non-zero — reverts `TransactionRecoveryAlreadyConfigured` | [N] | P1 |
+| 37 | Both non-zero — reverts `TransactionRecoveryAlreadyConfigured` | [N] | P1 |
+
+#### 7.3 `_validateTxRecoveryParamsOrRevert`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 38 | Valid address + valid timelock duration — succeeds | [U] | P1 |
+| 39 | `recoveryAddress == address(0)` — reverts `InvalidTxRecoveryAddress` | [N] | P1 |
+| 40 | Timelock duration below minimum (< 2 days) — reverts `InvalidTimelockDuration` | [N] | P1 |
+| 41 | Timelock duration above maximum (> 30 days) — reverts `InvalidTimelockDuration` | [N] | P1 |
+| 42 | Timelock at exact minimum boundary (2 days) — succeeds | [E] | P1 |
+| 43 | Timelock at exact maximum boundary (30 days) — succeeds | [E] | P1 |
+
 ---
 
 ## Summary
@@ -93,4 +127,5 @@ The existing 35 tests cover:
 | Admin auth | 2 | P1 |
 | Disable safety | 5 | P0 |
 | Edge cases | 2 | P0-P1 |
-| **Total** | **29** | |
+| Private function tests | 14 | P1-P2 |
+| **Total** | **43** | |

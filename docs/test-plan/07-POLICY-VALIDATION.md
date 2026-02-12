@@ -287,7 +287,47 @@
 
 ---
 
-## 8. Cross-Library Fuzz Tests
+## 8. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are `private` in their respective libraries.
+> Convert them to `internal` and expose via test harnesses. Direct testing enables precise
+> assertions on authorization routing and Merkle leaf computation that can't be fully
+> isolated through the public interface.
+
+### 8.1 `_isSignerAuthorizedForPolicy` (LibPolicyApproval)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 120.1 | Non-member of org — returns false (not revert) | [N] | P0 |
+| 120.2 | Member, ApproverType.Member, signer == approverMember — returns true | [U] | P0 |
+| 120.3 | Member, ApproverType.Member, signer != approverMember — returns false | [N] | P0 |
+| 120.4 | Member, ApproverType.Group, signer in group — returns true | [U] | P0 |
+| 120.5 | Member, ApproverType.Group, signer not in group — returns false | [N] | P0 |
+| 120.6 | Member, unrecognized ApproverType — returns false | [E] | P0 |
+
+### 8.2 `_isFunctionAllowedByPolicy` (LibPolicyContractInteraction)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 120.7 | `anyFunction = true` — returns true regardless of data | [U] | P0 |
+| 120.8 | Data length < 4 bytes — returns false | [E] | P0 |
+| 120.9 | Valid selector + constraints with valid Merkle proof — returns true | [U] | P0 |
+| 120.10 | Valid selector but invalid proof — returns false | [N] | P0 |
+| 120.11 | Same selector with different constraints — different leaf, different proof | [S] | P0 |
+
+### 8.3 `_computeFunctionLeaf` (LibPolicyContractInteraction)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 120.12 | Known selector + constraintsHash → known leaf (golden test) | [U] | P1 |
+| 120.13 | Double hashing: leaf != keccak256(abi.encode(selector, constraintsHash)) | [S] | P0 |
+| 120.14 | Different selectors produce different leaves | [U] | P1 |
+| 120.15 | Same selector, different constraintsHash — different leaves | [U] | P1 |
+| 120.16 | Empty constraints (keccak256("")) — produces valid non-zero leaf | [E] | P1 |
+
+---
+
+## 9. Cross-Library Fuzz Tests
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
@@ -310,5 +350,6 @@
 | LibPolicyParameterConstraints | 49 | P0 |
 | LibPolicyRateLimits (gaps) | 6 | P0-P1 |
 | Rate limit overflow safety | 2 | P0 |
+| Private function tests | 16 | P0-P1 |
 | Cross-library fuzz | 4 | P0 |
-| **Total** | **126** | |
+| **Total** | **142** | |

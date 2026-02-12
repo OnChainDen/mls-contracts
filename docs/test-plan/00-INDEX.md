@@ -74,22 +74,22 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 
 | Document | New Tests |
 |----------|-----------|
-| 01 — Utility Libraries | 103 |
+| 01 — Utility Libraries | 131 |
 | 02 — Storage Libraries | 19 |
-| 03 — Organization Admin | 71 |
+| 03 — Organization Admin | 90 |
 | 04 — Organization Members | 29 |
-| 05 — Organization Groups | 46 |
-| 06 — Organization Policy | 39 |
-| 07 — Policy Validation | 126 |
-| 08 — Account Transaction | 64 |
+| 05 — Organization Groups | 62 |
+| 06 — Organization Policy | 43 |
+| 07 — Policy Validation | 142 |
+| 08 — Account Transaction | 75 |
 | 09 — Account Signature (ERC-1271) | 46 |
 | 10 — Account Factory | 30 |
 | 11 — Guardian | 41 |
-| 12 — Guardian Recovery (gaps) | 17 |
-| 13 — TX Recovery (gaps) | 29 |
+| 12 — Guardian Recovery (gaps) | 31 |
+| 13 — TX Recovery (gaps) | 43 |
 | 14 — Initialization | 46 |
 | 15 — Upgrades | 21 |
-| 16 — Implementation Whitelist | 24 |
+| 16 — Implementation Whitelist | 34 |
 | 17 — Safe Module (gaps) | 8 |
 | 18 — Nonce Management | 16 |
 | 19 — EIP-712 Signatures | 19 |
@@ -98,19 +98,19 @@ The remaining **~80+ source files** with **11 untested interfaces** and **4 part
 | 22 — Fuzz Tests (cross-cutting) | 45 |
 | 23 — Admin Operation Timelock | 14 |
 | 24 — Security Audit Gaps | 60 |
-| **Total New Tests** | **~1,005** |
+| **Total New Tests** | **~1,137** |
 | **Existing Tests** | **222** |
-| **Grand Total** | **~1,227** |
+| **Grand Total** | **~1,359** |
 
 ## Test Count by Type (Approximate)
 
 | Type | Count |
 |------|-------|
-| Unit [U] | ~460 |
-| Negative [N] | ~185 |
-| Security [S] | ~115 |
-| Edge Case [E] | ~85 |
+| Unit [U] | ~510 |
+| Negative [N] | ~220 |
+| Security [S] | ~135 |
+| Edge Case [E] | ~115 |
 | Integration [I] | ~85 |
 | Fuzz [F] | ~82 |
-| Event [EV] | ~40 |
+| Event [EV] | ~45 |
 | Invariant [INV] | ~33 |

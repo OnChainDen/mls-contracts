@@ -156,15 +156,50 @@
 
 ---
 
-## 6. Fuzz Tests
+## 6. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in `LibOrganizationAdmin`.
+> Convert them to `internal` and create a test harness that exposes each via public wrappers.
+
+### 6.1 `_areAdminSignaturesValid`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 63 | Fuzz: Add N random members as admins, verify all are admins | [F] | P0 |
-| 64 | Fuzz: Random threshold values within valid range always succeed | [F] | P0 |
-| 65 | Fuzz: Random threshold values outside valid range always revert | [F] | P0 |
-| 66 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
-| 67 | Fuzz: Random salt values produce unique nonces for same operation | [F] | P1 |
+| 68 | Empty signatures — returns false (not revert) | [N] | P0 |
+| 69 | Exactly `votingThreshold` valid admin signatures — returns true | [U] | P0 |
+| 70 | More signatures than threshold — returns true after threshold met (early exit) | [U] | P0 |
+| 71 | Fewer valid signatures than threshold — returns false | [N] | P0 |
+| 72 | Signer addresses not in ascending order — reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
+| 73 | Duplicate signer — reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
+| 74 | Non-admin signer — reverts `SignerIsNotAdmin` | [S] | P0 |
+| 75 | Mixed EOA + ERC-1271 admin signatures — ascending order across both types | [U] | P0 |
+| 76 | Malformed signature in array — reverts `SignatureRecoveryFailed` (from SignatureUtils) | [N] | P0 |
+
+### 6.2 `_getAdminOperationHash`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 77 | Same inputs produce same hash (deterministic) | [U] | P1 |
+| 78 | Different `operationType` — different hash | [U] | P1 |
+| 79 | Different `operationData` — different hash | [U] | P1 |
+| 80 | Different `salt` — different hash | [U] | P1 |
+| 81 | Different `expirationTimestamp` — different hash | [U] | P1 |
+| 82 | `isApproval=true` vs `isApproval=false` — different hash (approval/rejection separation) | [S] | P0 |
+| 83 | Different `block.chainid` — different hash (cross-chain replay protection) | [S] | P0 |
+| 84 | Different `address(this)` (different org) — different hash (cross-org replay protection) | [S] | P0 |
+| 85 | Output matches manual EIP-712 `hashTypedData(structHash)` computation | [U] | P1 |
+
+---
+
+## 7. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 86 | Fuzz: Add N random members as admins, verify all are admins | [F] | P0 |
+| 87 | Fuzz: Random threshold values within valid range always succeed | [F] | P0 |
+| 88 | Fuzz: Random threshold values outside valid range always revert | [F] | P0 |
+| 89 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
+| 90 | Fuzz: Random salt values produce unique nonces for same operation | [F] | P1 |
 
 ---
 
@@ -178,5 +213,6 @@
 | Operation rejection | 6 | P0 |
 | Access control | 3 | P0 |
 | Race conditions & ordering | 4 | P0 |
+| Private function tests | 18 | P0-P1 |
 | Fuzz tests | 5 | P0-P1 |
-| **Total** | **71** | |
+| **Total** | **90** | |

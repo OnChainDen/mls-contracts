@@ -60,6 +60,40 @@ The existing 48 tests cover:
 | 16 | `RecoveryGuardianUpdateInitiated` emitted with correct params | [EV] | P2 |
 | 17 | `RecoveryGuardianUpdateAccepted` emitted with old and new guardian | [EV] | P2 |
 
+### 5. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in `LibOrganizationGuardianRecovery`.
+> Convert them to `internal` and expose via a test harness.
+
+#### 5.1 `_clearPendingGuardianRecoveryInitTimelock`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 18 | After clear: `pendingRecoveryAddress == address(0)` | [U] | P1 |
+| 19 | After clear: `pendingTimelockDurationSeconds == 0` | [U] | P1 |
+| 20 | After clear: `pendingTimestamp == 0` | [U] | P1 |
+| 21 | Clearing already-zeroed state — no-op, no revert | [E] | P2 |
+
+#### 5.2 `_validateGuardianRecoveryNotConfiguredOrRevert`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 22 | Both fields zero — succeeds (not configured) | [U] | P1 |
+| 23 | `recoveryAddress` non-zero — reverts `GuardianRecoveryAlreadyConfigured` | [N] | P1 |
+| 24 | `timelockDurationSeconds` non-zero — reverts `GuardianRecoveryAlreadyConfigured` | [N] | P1 |
+| 25 | Both non-zero — reverts `GuardianRecoveryAlreadyConfigured` | [N] | P1 |
+
+#### 5.3 `_validateGuardianRecoveryParamsOrRevert`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 26 | Valid address + valid timelock duration — succeeds | [U] | P1 |
+| 27 | `recoveryAddress == address(0)` — reverts `InvalidGuardianRecoveryAddress` | [N] | P1 |
+| 28 | Timelock duration below minimum (< 2 days) — reverts `InvalidTimelockDuration` | [N] | P1 |
+| 29 | Timelock duration above maximum (> 30 days) — reverts `InvalidTimelockDuration` | [N] | P1 |
+| 30 | Timelock at exact minimum boundary (2 days) — succeeds | [E] | P1 |
+| 31 | Timelock at exact maximum boundary (30 days) — succeeds | [E] | P1 |
+
 ---
 
 ## Summary
@@ -70,4 +104,5 @@ The existing 48 tests cover:
 | Admin auth | 4 | P1 |
 | Edge cases | 4 | P1-P2 |
 | Events | 2 | P2 |
-| **Total** | **17** | |
+| Private function tests | 14 | P1-P2 |
+| **Total** | **31** | |

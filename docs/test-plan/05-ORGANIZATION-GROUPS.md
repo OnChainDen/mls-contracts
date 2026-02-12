@@ -112,6 +112,56 @@
 
 ---
 
+## 9. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in `LibOrganizationGroups`.
+> Convert them to `internal` and create a test harness that exposes each via public wrappers.
+> Note: Many edge cases of these functions ARE already covered through the public `modifyGroups`
+> interface (sections 1-5). The tests below target behaviors best verified with direct access.
+
+### 9.1 `_createGroup`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 47 | Create group — sets `isGroup[groupId] = true` | [U] | P0 |
+| 48 | Create group with previously deleted ID — reverts `GroupAlreadyDeleted` | [S] | P0 |
+| 49 | Create group that already exists — reverts `GroupAlreadyExists` | [N] | P0 |
+| 50 | Create group with `membersToRemove` non-empty — reverts `InvalidGroupCreationOperation` | [N] | P0 |
+| 51 | Create group calls `_addGroupMembers` for initial members | [U] | P0 |
+
+### 9.2 `_updateGroup`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 52 | Update non-existent group — reverts `GroupDoesNotExist` | [N] | P0 |
+| 53 | Update calls `_addGroupMembers` then `_removeGroupMembers` in order | [U] | P1 |
+
+### 9.3 `_deleteGroup`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 54 | Delete sets `isGroup = false` and `wasGroupDeleted = true` atomically | [U] | P0 |
+| 55 | Delete non-existent group — reverts `GroupDoesNotExist` | [N] | P0 |
+| 56 | Delete with non-empty `membersToAdd` — reverts `InvalidGroupDeletionOperation` | [N] | P0 |
+| 57 | Delete with non-empty `membersToRemove` — reverts `InvalidGroupDeletionOperation` | [N] | P0 |
+
+### 9.4 `_addGroupMembers`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 58 | Add address(0) — reverts `InvalidMemberAddress` | [N] | P0 |
+| 59 | Add already-existing member — no-op (idempotent, no event) | [E] | P0 |
+| 60 | Add new member — sets `isGroupMember = true`, emits `GroupMemberAdded` | [U] | P0 |
+
+### 9.5 `_removeGroupMembers`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 61 | Remove member not in group — reverts `MemberNotInGroup` | [N] | P0 |
+| 62 | Remove existing member — sets `isGroupMember = false`, emits `GroupMemberRemoved` | [U] | P0 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -124,4 +174,5 @@
 | Query functions | 6 | P3 |
 | Access control | 3 | P0 |
 | Fuzz tests | 4 | P0-P1 |
-| **Total** | **46** | |
+| Private function tests | 16 | P0-P1 |
+| **Total** | **62** | |

@@ -60,7 +60,35 @@
 
 ---
 
-## 5. Fuzz Tests
+## 5. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in `ImplementationWhitelistImplementation`.
+> For contract functions, create a test contract that inherits from the implementation
+> and exposes each private function via a public wrapper (requires converting `private` to `internal`).
+
+### 5.1 `_addToWhitelist`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 25 | Add single implementation — `whitelisted[type][impl] = true` | [U] | P2 |
+| 26 | Add multiple implementations — all whitelisted | [U] | P2 |
+| 27 | Add same implementation twice — second is no-op (idempotent, still true) | [E] | P2 |
+| 28 | Emits `ImplementationWhitelisted` for each address | [EV] | P2 |
+| 29 | Organization and Account types are independent — adding to one doesn't affect other | [U] | P2 |
+| 30 | Empty implementations array — no-op, no revert | [E] | P2 |
+
+### 5.2 `_removeFromWhitelist`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 31 | Remove whitelisted implementation — `whitelisted[type][impl] = false` | [U] | P2 |
+| 32 | Remove non-whitelisted implementation — no-op (idempotent, still false) | [E] | P2 |
+| 33 | Emits `ImplementationUnwhitelisted` for each address | [EV] | P2 |
+| 34 | Empty implementations array — no-op, no revert | [E] | P2 |
+
+---
+
+## 6. Fuzz Tests
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
@@ -77,5 +105,6 @@
 | Whitelist management | 8 | P2 |
 | Validation | 5 | P2 |
 | Upgrade auth | 2 | P2 |
+| Private function tests | 10 | P2 |
 | Fuzz tests | 2 | P2 |
-| **Total** | **24** | |
+| **Total** | **34** | |

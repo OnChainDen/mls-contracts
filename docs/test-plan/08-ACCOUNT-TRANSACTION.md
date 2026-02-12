@@ -155,14 +155,43 @@
 
 ---
 
-## 8. Fuzz Tests
+## 8. Private Function Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in `AccountImplementation`.
+> For contract functions, create a test contract that inherits from `AccountImplementation`
+> and exposes each private function via a public wrapper (requires converting `private` to `internal`).
+
+### 8.1 `_execute` — Low-level assembly CALL
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 58 | Fuzz: Random valid transactions with AutoApprove policy — execute successfully | [F] | P0 |
-| 59 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
-| 60 | Fuzz: Random salt values produce unique nonces | [F] | P1 |
-| 61 | Fuzz: Random transaction data produces correct EIP-712 hashes | [F] | P0 |
+| 62 | Successful call returns `true` | [U] | P0 |
+| 63 | Failed call (target reverts) returns `false` (no revert propagation) | [U] | P0 |
+| 64 | Call to EOA with no code — returns `true` (CALL succeeds for EOAs) | [E] | P0 |
+| 65 | ETH value forwarded correctly to target | [U] | P0 |
+| 66 | Calldata forwarded correctly to target contract | [U] | P0 |
+| 67 | Gas parameter respected — does not forward more gas than specified | [E] | P1 |
+| 68 | Empty data with value > 0 — native transfer succeeds | [U] | P0 |
+| 69 | Call to self-destructing contract — returns `true` | [E] | P1 |
+
+### 8.2 `_onlyOrganization` — Access control check
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 70 | msg.sender == organization address — succeeds (no revert) | [U] | P0 |
+| 71 | msg.sender != organization address — reverts `OnlyOrganization` | [N] | P0 |
+| 72 | msg.sender == address(0) — reverts `OnlyOrganization` | [E] | P0 |
+
+---
+
+## 9. Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 73 | Fuzz: Random valid transactions with AutoApprove policy — execute successfully | [F] | P0 |
+| 74 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
+| 75 | Fuzz: Random salt values produce unique nonces | [F] | P1 |
+| 76 | Fuzz: Random transaction data produces correct EIP-712 hashes | [F] | P0 |
 
 ---
 
@@ -178,5 +207,6 @@
 | Nonce integration | 4 | P0 |
 | Access control | 3 | P0 |
 | Reentrancy & CEI | 3 | P0 |
+| Private function tests | 11 | P0-P1 |
 | Fuzz tests | 4 | P0-P1 |
-| **Total** | **64** | |
+| **Total** | **75** | |

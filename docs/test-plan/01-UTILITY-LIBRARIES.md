@@ -122,13 +122,83 @@
 | 55 | Offset beyond signatures length — reverts `SignatureRecoveryFailed` | [N] | P0 |
 | 56 | ERC-1271 at offset where contract returns wrong magic — reverts `SignatureRecoveryFailed` | [N] | P0 |
 
-### 1.5 Fuzz Tests
+### 1.5 Private Helper Tests (Requires `private` → `internal` Conversion)
+
+> **Prerequisite:** The functions below are currently `private` in the `SignatureUtils` library.
+> To test them directly, convert them to `internal` and create a test harness contract that
+> exposes each via a public wrapper (e.g., `SignatureUtilsHarness.sol`). This enables precise
+> assertions on the assembly logic that cannot be fully validated through the public interface.
+
+#### `_getVByte` — v byte extraction via `byte(0, mload(...))`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 57 | Fuzz: Any valid private key produces recoverable signature via tryRecoverSigner | [F] | P0 |
-| 58 | Fuzz: Random bytes never successfully recover a signer (tryRecoverSigner returns false) | [F] | P1 |
-| 59 | Fuzz: Signature malleability — flipping s value always rejected by tryRecoverSigner | [F][S] | P0 |
+| 57 | Extract v byte at offset=0 — returns correct byte | [U] | P0 |
+| 58 | Extract v byte at large offset (e.g., 200) — returns correct byte | [U] | P0 |
+| 59 | Extract v byte when surrounding bytes are non-zero — only target byte returned | [E] | P0 |
+
+#### `_getContractSigner` — Address extraction via `shr(96, mload(...))`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 60 | Extract signer surrounded by non-zero bytes — only 20-byte address, no dirty upper bits | [U][S] | P0 |
+| 61 | Signer with leading zeros (e.g., `0x0000...0001`) — correctly recovered | [E] | P0 |
+| 62 | Signer with all `0xff` bytes — correctly recovered without truncation | [E] | P0 |
+
+#### `_getContractSignatureLength` — Big-endian 2-byte extraction via `shr(240, mload(...))`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 63 | Length = 1 (0x0001) — correctly parsed as 1 | [E] | P0 |
+| 64 | Length = 256 (0x0100) — verifies big-endian parsing (not little-endian 1) | [E][S] | P0 |
+| 65 | Length = 65535 (0xFFFF, max uint16) — correctly parsed | [E] | P0 |
+| 66 | Length = 0 (0x0000) — returns 0 | [E] | P0 |
+
+#### `_extractContractInnerSignature` — Assembly copy loop (32-byte chunks)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 67 | Inner sig length = 1 — extracted byte matches source exactly | [U] | P0 |
+| 68 | Inner sig length = 31 — no over-copy into returned bytes (non-aligned) | [E] | P0 |
+| 69 | Inner sig length = 32 — exact one-chunk copy, data integrity verified | [U] | P0 |
+| 70 | Inner sig length = 33 — two-chunk copy, only 33 bytes returned (not 64) | [E] | P0 |
+| 71 | Inner sig length = 65 (EOA sig size) — full data integrity byte-for-byte | [U] | P0 |
+| 72 | Inner sig with all 0xff bytes — no corruption during chunk copy | [E] | P0 |
+
+#### `_tryRecoverEOASigner` — Assembly extraction of r, s at offset
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 73 | r and s extracted correctly at offset > 0 (second sig in concat array) | [U] | P0 |
+| 74 | Preceding bytes are non-zero — no bleed into r or s values | [S] | P0 |
+| 75 | s = HALF_CURVE_ORDER at non-zero offset — accepted (boundary) | [E] | P0 |
+| 76 | s = HALF_CURVE_ORDER + 1 at non-zero offset — rejected | [E] | P0 |
+
+#### `_tryRecoverContractSigner` — End-to-end ERC-1271 recovery at offset
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 77 | Header exactly at boundary of signatures array (offset + 23 == length) — returns false | [E] | P0 |
+| 78 | Full signature exactly at boundary (offset + 23 + sigLength == length) — succeeds | [E] | P0 |
+| 79 | Signer is address(0) — staticcall to 0x0 returns false gracefully | [S] | P0 |
+
+#### `_isValidERC1271SignatureNow` — staticcall edge cases
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 80 | Contract returns magic value with extra trailing bytes (result.length > 32) — valid | [E] | P0 |
+| 81 | Contract returns exactly 32 bytes but wrong magic — invalid | [N] | P0 |
+| 82 | Contract returns fewer than 32 bytes — invalid (result.length < 32 check) | [E][S] | P0 |
+| 83 | Contract consumes all gas (out-of-gas in staticcall) — returns false, no revert | [S] | P0 |
+| 84 | Contract returns empty bytes (length 0) — invalid | [E] | P0 |
+
+### 1.6 Fuzz Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 85 | Fuzz: Any valid private key produces recoverable signature via tryRecoverSigner | [F] | P0 |
+| 86 | Fuzz: Random bytes never successfully recover a signer (tryRecoverSigner returns false) | [F] | P1 |
+| 87 | Fuzz: Signature malleability — flipping s value always rejected by tryRecoverSigner | [F][S] | P0 |
 
 ---
 
@@ -140,12 +210,12 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 60 | Known address produces known leaf (golden test) | [U] | P1 |
-| 61 | Double hashing: leaf != keccak256(abi.encode(addr)) (single hash) | [U] | P1 |
-| 62 | address(0) produces valid non-zero leaf | [U] | P1 |
-| 63 | Two different addresses produce different leaves | [U] | P1 |
-| 64 | Same address always produces same leaf (deterministic) | [U] | P1 |
-| 65 | Fuzz: No two random addresses produce the same leaf | [F] | P1 |
+| 88 | Known address produces known leaf (golden test) | [U] | P1 |
+| 89 | Double hashing: leaf != keccak256(abi.encode(addr)) (single hash) | [U] | P1 |
+| 90 | address(0) produces valid non-zero leaf | [U] | P1 |
+| 91 | Two different addresses produce different leaves | [U] | P1 |
+| 92 | Same address always produces same leaf (deterministic) | [U] | P1 |
+| 93 | Fuzz: No two random addresses produce the same leaf | [F] | P1 |
 
 ---
 
@@ -159,30 +229,30 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 66 | Native transfer: data empty, value > 0 — returns true | [U] | P0 |
-| 67 | ERC-20 transfer: correct selector, value = 0 — returns true | [U] | P0 |
-| 68 | Contract interaction: data with non-transfer selector — returns false | [U] | P0 |
-| 69 | No data, no value — returns false | [E] | P0 |
-| 70 | ERC-20 selector but value > 0 — returns false (native takes priority) | [E][S] | P0 |
-| 71 | Data length exactly 4 bytes (selector only) — returns false | [E] | P0 |
+| 94 | Native transfer: data empty, value > 0 — returns true | [U] | P0 |
+| 95 | ERC-20 transfer: correct selector, value = 0 — returns true | [U] | P0 |
+| 96 | Contract interaction: data with non-transfer selector — returns false | [U] | P0 |
+| 97 | No data, no value — returns false | [E] | P0 |
+| 98 | ERC-20 selector but value > 0 — returns false (native takes priority) | [E][S] | P0 |
+| 99 | Data length exactly 4 bytes (selector only) — returns false | [E] | P0 |
 
 #### `isTransactionNativeTokenTransfer(bytes calldata data, uint256 value)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 72 | Empty data, value > 0 — returns true | [U] | P0 |
-| 73 | Empty data, value = 0 — returns false | [U] | P0 |
-| 74 | Non-empty data, value > 0 — returns false | [U] | P0 |
+| 100 | Empty data, value > 0 — returns true | [U] | P0 |
+| 101 | Empty data, value = 0 — returns false | [U] | P0 |
+| 102 | Non-empty data, value > 0 — returns false | [U] | P0 |
 
 #### `isTransactionERC20TokenTransfer(bytes calldata data, uint256 value)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 75 | transfer(address,uint256) selector, value = 0 — returns true | [U] | P0 |
-| 76 | transfer selector, value > 0 — returns false | [U] | P0 |
-| 77 | approve(address,uint256) selector — returns false (different selector) | [U] | P0 |
-| 78 | transferFrom selector — returns false | [U] | P0 |
-| 79 | Data too short (< 4 bytes) — returns false | [E] | P0 |
+| 103 | transfer(address,uint256) selector, value = 0 — returns true | [U] | P0 |
+| 104 | transfer selector, value > 0 — returns false | [U] | P0 |
+| 105 | approve(address,uint256) selector — returns false (different selector) | [U] | P0 |
+| 106 | transferFrom selector — returns false | [U] | P0 |
+| 107 | Data too short (< 4 bytes) — returns false | [E] | P0 |
 
 ### 3.2 Extraction Functions
 
@@ -190,34 +260,34 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 80 | Valid transfer calldata — extracts correct recipient | [U] | P0 |
-| 81 | Data too short — reverts with `MalformedTokenTransfer` | [N] | P0 |
-| 82 | Recipient is address(0) — extracts correctly (no validation) | [E] | P0 |
+| 108 | Valid transfer calldata — extracts correct recipient | [U] | P0 |
+| 109 | Data too short — reverts with `MalformedTokenTransfer` | [N] | P0 |
+| 110 | Recipient is address(0) — extracts correctly (no validation) | [E] | P0 |
 
 #### `extractTokenAddress(address to, bytes calldata data)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 83 | Native transfer — returns address(0) | [U] | P0 |
-| 84 | ERC-20 transfer — returns `to` (token contract address) | [U] | P0 |
+| 111 | Native transfer — returns address(0) | [U] | P0 |
+| 112 | ERC-20 transfer — returns `to` (token contract address) | [U] | P0 |
 
 #### `extractTransferAmount(bytes calldata data, uint256 value)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 85 | Native transfer — returns `value` | [U] | P0 |
-| 86 | ERC-20 transfer — extracts amount from calldata | [U] | P0 |
-| 87 | Amount is 0 — returns 0 | [E] | P0 |
-| 88 | Amount is type(uint256).max — returns max | [E] | P0 |
-| 89 | Data too short — reverts with `MalformedTokenTransfer` | [N] | P0 |
+| 113 | Native transfer — returns `value` | [U] | P0 |
+| 114 | ERC-20 transfer — extracts amount from calldata | [U] | P0 |
+| 115 | Amount is 0 — returns 0 | [E] | P0 |
+| 116 | Amount is type(uint256).max — returns max | [E] | P0 |
+| 117 | Data too short — reverts with `MalformedTokenTransfer` | [N] | P0 |
 
 ### 3.3 Fuzz Tests
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 90 | Fuzz: Any valid ERC-20 transfer calldata extracts correct recipient | [F] | P0 |
-| 91 | Fuzz: Any valid ERC-20 transfer calldata extracts correct amount | [F] | P0 |
-| 92 | Fuzz: Random data never classified as both native and ERC-20 | [F] | P0 |
+| 118 | Fuzz: Any valid ERC-20 transfer calldata extracts correct recipient | [F] | P0 |
+| 119 | Fuzz: Any valid ERC-20 transfer calldata extracts correct amount | [F] | P0 |
+| 120 | Fuzz: Random data never classified as both native and ERC-20 | [F] | P0 |
 
 ---
 
@@ -229,9 +299,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 93 | Valid calldata — extracts correct 4-byte selector | [U] | P2 |
-| 94 | Exactly 4 bytes — returns those 4 bytes | [E] | P2 |
-| 95 | Known function selectors (transfer, approve, etc.) match | [U] | P2 |
+| 121 | Valid calldata — extracts correct 4-byte selector | [U] | P2 |
+| 122 | Exactly 4 bytes — returns those 4 bytes | [E] | P2 |
+| 123 | Known function selectors (transfer, approve, etc.) match | [U] | P2 |
 
 ---
 
@@ -243,14 +313,14 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 96 | Duration at MIN (2 days) — succeeds | [E] | P1 |
-| 97 | Duration at MAX (30 days) — succeeds | [E] | P1 |
-| 98 | Duration at MIN - 1 — reverts with `InvalidTimelockDuration` | [N] | P1 |
-| 99 | Duration at MAX + 1 — reverts with `InvalidTimelockDuration` | [N] | P1 |
-| 100 | Duration of 0 — reverts | [N] | P1 |
-| 101 | Mid-range duration (7 days) — succeeds | [U] | P1 |
-| 102 | Fuzz: Any duration in [MIN, MAX] succeeds | [F] | P1 |
-| 103 | Fuzz: Any duration outside [MIN, MAX] reverts | [F] | P1 |
+| 124 | Duration at MIN (2 days) — succeeds | [E] | P1 |
+| 125 | Duration at MAX (30 days) — succeeds | [E] | P1 |
+| 126 | Duration at MIN - 1 — reverts with `InvalidTimelockDuration` | [N] | P1 |
+| 127 | Duration at MAX + 1 — reverts with `InvalidTimelockDuration` | [N] | P1 |
+| 128 | Duration of 0 — reverts | [N] | P1 |
+| 129 | Mid-range duration (7 days) — succeeds | [U] | P1 |
+| 130 | Fuzz: Any duration in [MIN, MAX] succeeds | [F] | P1 |
+| 131 | Fuzz: Any duration outside [MIN, MAX] reverts | [F] | P1 |
 
 ---
 
@@ -264,9 +334,10 @@
 
 | Library | New Tests | Priority |
 |---------|-----------|----------|
-| SignatureUtils | 59 | P0 |
+| SignatureUtils (public interface) | 59 | P0 |
+| SignatureUtils (private helpers) | 28 | P0 |
 | MerkleUtils | 6 | P1 |
 | TokenTransferUtils | 27 | P0 |
 | ContractInteractionUtils | 3 | P2 |
 | TimelockUtils | 8 | P1 |
-| **Total** | **103** | |
+| **Total** | **131** | |
