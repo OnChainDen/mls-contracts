@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationAdminOperationTimelock} from "organization/libraries/LibOrganizationAdminOperationTimelock.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
@@ -72,7 +73,10 @@ library LibOrganizationInitialization {
         // 5. Initialize guardian configuration (sets guardian address)
         LibOrganizationGuardian.initializeGuardian(params.guardian);
 
-        // 6. Initialize guardian recovery (if recovery address is provided)
+        // 6. Initialize account implementation
+        LibOrganizationAccountFactory.setAccountImplementation(params.accountImplementation);
+
+        // 7. Initialize guardian recovery (if recovery address is provided)
         if (params.guardianRecoveryAddress != address(0)) {
             LibOrganizationGuardianRecovery.initializeGuardianRecovery({
                 guardianRecoveryAddress: params.guardianRecoveryAddress,
@@ -80,7 +84,7 @@ library LibOrganizationInitialization {
             });
         }
 
-        // 7. Initialize tx/ERC1271 recovery (if recovery address is provided)
+        // 8. Initialize tx/ERC1271 recovery (if recovery address is provided)
         if (params.transactionAndERC1271RecoveryAddress != address(0)) {
             LibOrganizationTxRecovery.initializeTxRecovery(
                 params.transactionAndERC1271RecoveryAddress, params.txRecoveryTimelockDurationSeconds
@@ -91,6 +95,7 @@ library LibOrganizationInitialization {
             adminAddresses: params.admins,
             votingThreshold: params.votingThreshold,
             guardian: params.guardian,
+            accountImplementation: params.accountImplementation,
             adminOperationTimelockDurationSeconds: params.adminOperationTimelockDurationSeconds,
             transactionAndERC1271RecoveryAddress: params.transactionAndERC1271RecoveryAddress,
             txRecoveryTimelockDurationSeconds: params.txRecoveryTimelockDurationSeconds,

@@ -21,6 +21,7 @@ interface IOrganizationInitialization {
      * @param adminAddresses The admin addresses set during initialization
      * @param votingThreshold The voting threshold for admin operations
      * @param guardian The guardian address set during initialization
+     * @param accountImplementation The account implementation address set during initialization
      * @param adminOperationTimelockDurationSeconds The organization-wide admin operation timelock duration in seconds
      * @param transactionAndERC1271RecoveryAddress The tx/signature recovery address (zero if deferred)
      * @param txRecoveryTimelockDurationSeconds The tx/ERC1271 recovery timelock duration in seconds
@@ -31,6 +32,7 @@ interface IOrganizationInitialization {
         address[] adminAddresses,
         uint256 votingThreshold,
         address guardian,
+        address accountImplementation,
         uint256 adminOperationTimelockDurationSeconds,
         address transactionAndERC1271RecoveryAddress,
         uint256 txRecoveryTimelockDurationSeconds,
