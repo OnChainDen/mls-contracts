@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {
     LibOrganizationDeployerAddressStorage
 } from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
@@ -22,6 +23,11 @@ contract OrganizationProxy is ERC1967Proxy {
      *      The factory deploys and initializes atomically in a single transaction.
      */
     constructor(address implementation, address whitelistAddress) ERC1967Proxy(implementation, "") {
+        // Case: Whitelist contract is a zero address
+        if (whitelistAddress == address(0)) {
+            revert IOrganizationFactory.ZeroAddress();
+        }
+
         // Store deployer address (the factory) in storage for initialization authorization
         LibOrganizationDeployerAddressStorage.layout().deployerAddress = msg.sender;
 
