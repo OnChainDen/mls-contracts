@@ -23,6 +23,11 @@ contract OrganizationProxy is ERC1967Proxy {
      *      The factory deploys and initializes atomically in a single transaction.
      */
     constructor(address implementation, address whitelistAddress) ERC1967Proxy(implementation, "") {
+        // Case: Implementation contract is a zero address
+        if (implementation == address(0)) {
+            revert IOrganizationFactory.ZeroAddress();
+        }
+
         // Case: Whitelist contract is a zero address
         if (whitelistAddress == address(0)) {
             revert IOrganizationFactory.ZeroAddress();
