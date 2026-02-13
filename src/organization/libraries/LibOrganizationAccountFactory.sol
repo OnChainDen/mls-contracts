@@ -5,10 +5,13 @@ pragma solidity 0.8.33;
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {AccountProxy} from "account/AccountProxy.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @title Lib Organization Account Factory
@@ -17,6 +20,24 @@ import {
  * @author Den Technologies Inc
  */
 library LibOrganizationAccountFactory {
+    /**
+     * @dev Validates and sets the account implementation address.
+     *      Reverts if the implementation is not whitelisted for account contracts.
+     * @param newImplementation The new account implementation address
+     */
+    function setAccountImplementation(address newImplementation) internal {
+        // Validate implementation against whitelist
+        // forgefmt: disable-next-item
+        IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
+            .validateIsImplementationWhitelistedOrRevert(
+                ContractType.Account,
+                newImplementation
+            );
+
+        // Update the account implementation in storage
+        LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
+    }
+
     /**
      * @dev Deploys a new Account BeaconProxy at a deterministic address.
      *      Uses CREATE2 to ensure the same address across different chains.

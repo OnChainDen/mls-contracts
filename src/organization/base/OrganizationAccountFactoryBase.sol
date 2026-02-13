@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {OrganizationModifiers} from "organization/common/OrganizationModifiers.sol";
@@ -11,9 +10,8 @@ import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
-import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {ContractType, OperationType} from "types/CommonTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @title OrganizationAccountFactoryBase
@@ -60,16 +58,8 @@ abstract contract OrganizationAccountFactoryBase is OrganizationModifiers, IOrga
             authParams: authParams
         });
 
-        // 2. Validate implementation against whitelist
-        // forgefmt: disable-next-item
-        IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
-            .validateIsImplementationWhitelistedOrRevert(
-                ContractType.Account, 
-                newImplementation
-            );
-
-        // 3. Update the account implementation in storage
-        LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
+        // 2. Validate implementation against whitelist and set storage
+        LibOrganizationAccountFactory.setAccountImplementation(newImplementation);
 
         emit AccountImplementationUpdated(newImplementation);
     }

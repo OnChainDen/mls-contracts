@@ -81,6 +81,7 @@ struct GroupModification {
  * @param votingThreshold Number of admin signatures required for admin operations
  * @param groups Initial group configurations
  * @param guardian Guardian address for the organization
+ * @param accountImplementation Initial account implementation address (must be whitelisted)
  * @param adminOperationTimelockDurationSeconds The organization-wide admin operation timelock duration in seconds
  * @param transactionAndERC1271RecoveryAddress The privileged address for tx/signature recovery (zero to defer setup)
  * @param txRecoveryTimelockDurationSeconds The duration in seconds for tx/ERC1271 recovery enable timelocks
@@ -93,6 +94,7 @@ struct InitializationParams {
     uint256 votingThreshold;
     GroupModification[] groups;
     address guardian;
+    address accountImplementation;
     uint256 adminOperationTimelockDurationSeconds;
     // Recovery configuration (zero addresses defer setup to post-deployment)
     address transactionAndERC1271RecoveryAddress;
