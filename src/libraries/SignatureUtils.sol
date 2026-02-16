@@ -190,9 +190,7 @@ library SignatureUtils {
     {
         (bool success, bytes memory result) =
             signer.staticcall(abi.encodeCall(IERC1271.isValidSignature, (hash, signature)));
-        return (
-            success && result.length >= 32 && abi.decode(result, (bytes32)) == bytes32(ERC1271_MAGIC_VALUE)
-        );
+        return (success && result.length >= 32 && abi.decode(result, (bytes32)) == bytes32(ERC1271_MAGIC_VALUE));
     }
 
     /**
