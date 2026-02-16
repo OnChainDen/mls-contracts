@@ -295,6 +295,7 @@
 | 105 | approve(address,uint256) selector — returns false (different selector) | [U] | P0 |
 | 106 | transferFrom selector — returns false | [U] | P0 |
 | 107 | Data too short (< 4 bytes) — returns false | [E] | P0 |
+| 107.1 | Fuzz: Random non-transfer selector with value = 0 — returns false | [F] | P0 |
 
 ### 3.2 Extraction Functions
 
@@ -322,7 +323,6 @@
 | 112 | ERC-20 transfer — returns `to` (token contract address) | [U] | P0 |
 | 112.1 | data is 1 byte (non-empty but minimal) — returns `to` regardless of content | [E] | P0 |
 | 112.2 | `to` == address(0), data non-empty — returns address(0), indistinguishable from native path | [E] | P0 |
-| 112.3 | `to` == address(0), data empty — returns address(0) via native path | [E] | P0 |
 | 112.4 | Fuzz: Random `to` address with random non-empty data — always returns `to` | [F] | P0 |
 | 112.5 | Fuzz: Random `to` address with empty data — always returns address(0) regardless of `to` | [F] | P0 |
 
@@ -330,7 +330,7 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 113 | Native transfer — returns `value` | [U] | P0 |
+| 113 | Native transfer (value > 0) — returns `value` | [U] | P0 |
 | 114 | ERC-20 transfer — extracts amount from calldata | [U] | P0 |
 | 115 | Amount is 0 — returns 0 | [E] | P0 |
 | 116 | Amount is type(uint256).max — returns max | [E] | P0 |
@@ -369,6 +369,7 @@
 | 122 | Exactly 4 bytes — returns those 4 bytes | [E] | P2 |
 | 123 | Known function selectors (transfer, approve, etc.) match | [U] | P2 |
 | 123.1 | Fuzz: Random calldata (>= 4 bytes) — always extracts correct first 4 bytes | [F] | P2 |
+| 123.2 | Data too short (< 4 bytes) — reverts with out-of-bounds slice | [N] | P2 |
 
 ---
 
