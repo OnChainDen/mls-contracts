@@ -21,6 +21,7 @@ remappings = [
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
     "@safe/=lib/safe-smart-account/contracts/",
     "forge-std/=lib/forge-std/src/",
+    "murky/=lib/murky/src/",
     "account/=src/account/",
     "implementation-whitelist/=src/implementation-whitelist/",
     "interfaces/=src/interfaces/",
