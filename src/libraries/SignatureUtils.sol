@@ -184,13 +184,15 @@ library SignatureUtils {
      * @return True if the contract returns the ERC-1271 magic value
      */
     function _isValidERC1271SignatureNow(address signer, bytes32 hash, bytes memory signature)
-        private
+        internal
         view
         returns (bool)
     {
         (bool success, bytes memory result) =
             signer.staticcall(abi.encodeCall(IERC1271.isValidSignature, (hash, signature)));
-        return (success && result.length >= 32 && abi.decode(result, (bytes4)) == ERC1271_MAGIC_VALUE);
+        return (
+            success && result.length >= 32 && abi.decode(result, (bytes32)) == bytes32(ERC1271_MAGIC_VALUE)
+        );
     }
 
     /**
@@ -203,7 +205,7 @@ library SignatureUtils {
      * @return signer The recovered signer address (address(0) if failed)
      */
     function _tryRecoverContractSigner(bytes memory signatures, uint256 offset, bytes32 hash)
-        private
+        internal
         view
         returns (bool success, address signer)
     {
@@ -243,7 +245,7 @@ library SignatureUtils {
      * @return signer The recovered signer address (address(0) if failed)
      */
     function _tryRecoverEOASigner(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
-        private
+        internal
         pure
         returns (bool success, address signer)
     {
@@ -280,7 +282,7 @@ library SignatureUtils {
      * @param offset The byte offset to read the v byte from
      * @return v The v byte value
      */
-    function _getVByte(bytes memory data, uint256 offset) private pure returns (uint8 v) {
+    function _getVByte(bytes memory data, uint256 offset) internal pure returns (uint8 v) {
         assembly {
             v := byte(0, mload(add(add(data, 0x20), offset)))
         }
@@ -293,7 +295,7 @@ library SignatureUtils {
      * @param offset The byte offset where the signature starts (v byte position)
      * @return signer The 20-byte signer address
      */
-    function _getContractSigner(bytes memory data, uint256 offset) private pure returns (address signer) {
+    function _getContractSigner(bytes memory data, uint256 offset) internal pure returns (address signer) {
         assembly {
             signer := shr(96, mload(add(add(data, 0x20), add(offset, 1))))
         }
@@ -306,7 +308,7 @@ library SignatureUtils {
      * @param offset The byte offset where the signature starts (v byte position)
      * @return sigLength The 2-byte inner signature length
      */
-    function _getContractSignatureLength(bytes memory data, uint256 offset) private pure returns (uint16 sigLength) {
+    function _getContractSignatureLength(bytes memory data, uint256 offset) internal pure returns (uint16 sigLength) {
         assembly {
             sigLength := shr(240, mload(add(add(data, 0x20), add(offset, 21))))
         }
@@ -321,7 +323,7 @@ library SignatureUtils {
      * @return contractSig The extracted inner signature bytes
      */
     function _extractContractInnerSignature(bytes memory data, uint256 offset, uint16 sigLength)
-        private
+        internal
         pure
         returns (bytes memory contractSig)
     {
