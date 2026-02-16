@@ -58,8 +58,9 @@ library TokenTransferUtils {
      */
     // forge-lint: disable-next-line(mixed-case-function)
     function isTransactionERC20TokenTransfer(bytes calldata data, uint256 value) internal pure returns (bool) {
-        // Case: The transaction data is too short to call a function
-        if (data.length < ContractInteractionUtils.SELECTOR_LENGTH) return false;
+        // Case: The transaction data is too short for transfer(address,uint256)
+        // 4-byte selector + 32-byte address + 32-byte amount = 68 bytes
+        if (data.length < 68) return false;
 
         // Case: The transaction has native value attached (not a pure ERC20 transfer)
         if (value > 0) return false;
