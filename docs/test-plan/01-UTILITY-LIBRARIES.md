@@ -284,6 +284,7 @@
 | 100 | Empty data, value > 0 — returns true | [U] | P0 |
 | 101 | Empty data, value = 0 — returns false | [U] | P0 |
 | 102 | Non-empty data, value > 0 — returns false | [U] | P0 |
+| 102.1 | Non-empty data, value = 0 — returns false | [U] | P0 |
 
 #### `isTransactionERC20TokenTransfer(bytes calldata data, uint256 value)`
 
