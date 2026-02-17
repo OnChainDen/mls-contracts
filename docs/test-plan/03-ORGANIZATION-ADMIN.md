@@ -112,7 +112,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | L-15 | First use of nonce succeeds; second use reverts `NonceAlreadyUsed` | [S] | P0 |
 | L-16 | Same operation with different salt produces different nonces | [U] | P0 |
 | L-17 | Same data+salt but different operationType produces different nonces | [U][S] | P0 |
-| L-18 | Same data+salt on different organization addresses produces different nonces | [S] | P0 |
+| L-18 | Same data+salt+operationType+operationData on different organization addresses produces different nonces | [S] | P0 |
 | L-19 | Approval signatures cannot authorize rejection (`isApproval` domain separation) | [S] | P0 |
 | L-20 | Rejection signatures cannot authorize approval | [S] | P0 |
 | L-21 | Extra trailing signatures/bytes after threshold is met are ignored (early exit behavior) | [E] | P1 |
