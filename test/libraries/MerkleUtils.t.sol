@@ -10,8 +10,8 @@ import {Merkle} from "murky/Merkle.sol";
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
 
 /**
- * @title MerkleUtilsHarness
- * @dev Test harness that exposes the internal MerkleUtils.computeAddressLeaf function
+ * @dev MerkleUtilsHarness
+ *      Test harness that exposes the internal MerkleUtils.computeAddressLeaf function
  *      via a public wrapper so it can be called from the test contract.
  */
 contract MerkleUtilsHarness {
@@ -21,9 +21,9 @@ contract MerkleUtilsHarness {
 }
 
 /**
- * @title MerkleUtilsTest
- * @notice Comprehensive tests for MerkleUtils library.
- * @dev Covers leaf computation (double hashing), determinism, collision resistance,
+ * @dev MerkleUtilsTest
+ *      Comprehensive tests for MerkleUtils library.
+ *      Covers leaf computation (double hashing), determinism, collision resistance,
  *      and merkle proof verification via fuzz tests.
  *
  *      MerkleUtils.computeAddressLeaf uses double hashing:
