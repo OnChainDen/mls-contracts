@@ -1,199 +1,181 @@
-# 05 — Organization Groups Test Plan
+# 05 — Organization Groups Test Plan (By File and Function)
+
+**Goal:** Validate **desired** organization-groups behavior. This plan intentionally includes tests that may fail on current code to expose implementation gaps.
 
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationGroups.sol`
 - `src/organization/base/OrganizationGroupsBase.sol`
-- `src/organization/libraries/storage/LibOrganizationGroupsStorage.sol`
-- `src/interfaces/organization/IOrganizationGroups.sol`
 
-**Test File(s):** `test/LibOrganizationGroups.t.sol`, `test/OrganizationGroupsBase.t.sol`
-
----
-
-## 1. Group Creation
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 1 | Create group with valid ID and members — succeeds | [U] | P0 |
-| 2 | Create group with no members — succeeds (empty group) | [U] | P0 |
-| 3 | Create group that already exists — reverts with `GroupAlreadyExists` | [N] | P0 |
-| 4 | Create group with previously deleted ID — reverts with `GroupAlreadyDeleted` | [S] | P0 |
-| 5 | Create group with `membersToRemove` non-empty — reverts with `InvalidGroupCreationOperation` | [N] | P0 |
-| 6 | Group creation emits `GroupCreated(groupId)` event | [EV] | P1 |
-| 7 | Group member addition emits `GroupMemberAdded(groupId, member)` for each | [EV] | P1 |
-| 8 | Create group with address(0) member — reverts with `InvalidMemberAddress` | [N] | P0 |
-| 8.1 | Create group with member who is not an organization member — reverts with `MemberDoesNotExist` | [S] | P0 |
-| 9 | Create group with duplicate members — second add is no-op (idempotent) | [E] | P0 |
+**Test File(s):**
+- `test/LibOrganizationGroups.t.sol`
+- `test/OrganizationGroupsBase.t.sol`
+- `test/harness/LibOrganizationGroupsHarness.sol` (for private-function coverage via `private` -> `internal` conversion)
 
 ---
 
-## 2. Group Modification (Update)
+## 1. `src/organization/libraries/LibOrganizationGroups.sol`
+
+### 1.1 `modifyGroups(GroupModification[] calldata modifications)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 10 | Add members to existing group — succeeds | [U] | P0 |
-| 11 | Remove members from existing group — succeeds | [U] | P0 |
-| 12 | Add and remove members in same modification — succeeds | [U] | P0 |
-| 13 | Modify non-existent group — reverts with `GroupDoesNotExist` | [N] | P0 |
-| 14 | Modify deleted group — reverts with `GroupDoesNotExist` | [N] | P0 |
-| 15 | Remove member not in group — reverts with `MemberNotInGroup` | [N] | P0 |
-| 16 | Remove member emits `GroupMemberRemoved(groupId, member)` | [EV] | P1 |
-| 17 | Add already-existing group member — no-op (idempotent) | [E] | P0 |
-| 18 | Add address(0) to group — reverts | [N] | P0 |
-| 18.1 | Add non-organization-member to existing group — reverts with `MemberDoesNotExist` | [S] | P0 |
-| 18.2 | Add mix of org members and non-org-members — reverts (entire operation fails atomically) | [S] | P0 |
-| 18.3 | Remove address from organization, then try to add to group — reverts with `MemberDoesNotExist` | [S] | P0 |
+| 1 | Empty modifications array is a no-op (no state changes, no events) | [E] | P2 |
+| 2 | Batch with create, update, and delete across multiple groups succeeds in-order | [U] | P0 |
+| 3 | Order-sensitive batch: `Create -> Update` same group in one call succeeds | [U] | P0 |
+| 4 | Order-sensitive batch: `Update -> Create` same group in one call reverts on update | [N] | P0 |
+| 5 | Same-group multi-op: `Create -> Delete` in one call succeeds and leaves group deleted | [U] | P0 |
+| 6 | Same-group multi-op: `Delete -> Create` reverts (`GroupAlreadyDeleted` on create) | [S] | P0 |
+| 7 | Same-group multi-op: `Delete -> Update` reverts (`GroupDoesNotExist` on update) | [N] | P0 |
+| 8 | Same-group multi-op: `Create -> Create` reverts (`GroupAlreadyExists` on second create) | [N] | P0 |
+| 9 | Any failing modification causes full transaction revert (atomicity across batch) | [S] | P0 |
+| 10 | Revert data from underlying helper path is bubbled correctly | [U] | P1 |
+| 11 | Malformed enum value in calldata reverts and does not silently skip modification | [N] | P0 |
+| 12 | Event ordering across a successful mixed batch follows modification order deterministically | [EV] | P1 |
+| 13 | Boundary IDs: `groupId = 0` and `groupId = type(uint256).max` are handled correctly in batch execution | [E] | P1 |
+
+### 1.2 `isGroup(uint256 groupId)`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Returns `true` for active group | [U] | P3 |
+| 2 | Returns `false` for group that never existed | [U] | P3 |
+| 3 | Returns `false` after deletion | [U] | P3 |
+| 4 | Boundary IDs `0` and `type(uint256).max` can be queried without revert | [E] | P3 |
+
+### 1.3 `isGroupMember(uint256 groupId, address memberAddress)`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Returns `true` for address currently in group | [U] | P3 |
+| 2 | Returns `false` for address not in group | [U] | P3 |
+| 3 | **Desired behavior:** checks group existence first and returns `false` for non-existent group | [U] | P1 |
+| 4 | **Desired behavior:** checks group existence first and returns `false` for deleted group even if historical membership mapping contains ghost data | [S] | P1 |
+| 5 | **Desired behavior:** member removed from org and/or group deletion cannot produce `isGroupMember == true` unless group currently exists and membership is active | [S] | P1 |
+
+### 1.4 `_createGroup(GroupModification calldata mod)` *(private; test via `modifyGroups` create path and harness)*
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Create with valid new ID and valid members succeeds; sets `isGroup[groupId] = true` and sets `isGroupMember[groupId][member] = true` for each `membersToAdd` entry | [U] | P0 |
+| 2 | Create with empty member list succeeds (empty group) and no memberships are added | [U] | P0 |
+| 3 | Create existing group reverts `GroupAlreadyExists(groupId)` | [N] | P0 |
+| 4 | Create previously-deleted group ID reverts `GroupAlreadyDeleted(groupId)` | [S] | P0 |
+| 5 | Create with non-empty `membersToRemove` reverts `InvalidGroupCreationOperation(groupId)` | [N] | P0 |
+| 6 | Emits `GroupCreated(groupId)` exactly once on successful creation | [EV] | P1 |
+| 7 | Emits `GroupMemberAdded(groupId, member)` for each newly added unique member | [EV] | P1 |
+| 8 | Duplicate members in `membersToAdd` are idempotent (no revert, no duplicate event) | [E] | P0 |
+| 9 | `address(0)` in `membersToAdd` reverts with `InvalidMemberAddress(address(0))` | [N] | P0 |
+| 10 | **Desired behavior:** non-organization member in `membersToAdd` reverts `MemberDoesNotExist(member)` | [S] | P0 |
+| 11 | **Desired behavior:** mixed valid + invalid members reverts atomically (no partial member writes, no `GroupCreated`) | [S] | P0 |
+| 12 | Boundary ID: create path supports `groupId = 0` with expected state/events | [E] | P1 |
+| 13 | Boundary ID: create path supports `groupId = type(uint256).max` with expected state/events | [E] | P1 |
+
+### 1.5 `_updateGroup(GroupModification calldata mod)` *(private; test via `modifyGroups` update path and harness)*
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Update existing group with adds succeeds; each `membersToAdd` address becomes `isGroupMember[groupId][addr] = true` and unrelated members remain unchanged | [U] | P0 |
+| 2 | Update existing group with removals succeeds; each `membersToRemove` address becomes `isGroupMember[groupId][addr] = false` and unrelated members remain unchanged | [U] | P0 |
+| 3 | Update existing group with adds + removals in same mod succeeds and results in the exact expected final membership set (`_addGroupMembers` then `_removeGroupMembers`) | [U] | P0 |
+| 4 | Update non-existent group reverts `GroupDoesNotExist(groupId)` | [N] | P0 |
+| 5 | Update deleted group reverts `GroupDoesNotExist(groupId)` | [N] | P0 |
+| 6 | Removing member not in group is a no-op (no revert, no state change, no `GroupMemberRemoved` event) | [E] | P0 |
+| 7 | Adding already-existing member is idempotent (no revert, no duplicate event) | [E] | P0 |
+| 8 | Adding `address(0)` reverts `InvalidMemberAddress(address(0))` | [N] | P0 |
+| 9 | **Desired behavior:** adding non-organization member reverts `MemberDoesNotExist(member)` | [S] | P0 |
+| 10 | **Desired behavior:** mixed valid + invalid additions revert atomically | [S] | P0 |
+| 11 | **Desired behavior:** member removed from org cannot be added/re-added to group (`MemberDoesNotExist`) | [S] | P0 |
+| 12 | Overlap semantics: same member in `membersToAdd` and `membersToRemove` when initially absent ends removed (add then remove) | [E] | P0 |
+| 13 | Overlap semantics: same member in `membersToAdd` and `membersToRemove` when initially present ends removed | [E] | P0 |
+| 14 | Event ordering in mixed update: `GroupMemberAdded` events occur before `GroupMemberRemoved` events | [EV] | P1 |
+
+### 1.6 `_deleteGroup(GroupModification calldata mod)` *(private; test via `modifyGroups` delete path and harness)*
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Delete existing group succeeds; sets `isGroup[groupId] = false` | [U] | P0 |
+| 2 | Delete sets `wasGroupDeleted[groupId] = true` and flag never resets | [U] | P0 |
+| 3 | Delete non-existent group is a no-op (no revert, no state change, no `GroupDeleted` event) | [E] | P0 |
+| 4 | Delete with non-empty `membersToAdd` reverts `InvalidGroupDeletionOperation(groupId)` | [N] | P0 |
+| 5 | Delete with non-empty `membersToRemove` reverts `InvalidGroupDeletionOperation(groupId)` | [N] | P0 |
+| 6 | Emits `GroupDeleted(groupId)` exactly once on successful deletion | [EV] | P1 |
+| 7 | Recreate of deleted `groupId` always reverts `GroupAlreadyDeleted(groupId)` | [S] | P0 |
+| 8 | Historical `isGroupMember[groupId][member]` entries persist after delete (ghost data) | [E] | P0 |
+
+### 1.7 `_addGroupMembers(Layout storage, uint256 groupId, address[] calldata members)` *(private; harness target)*
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Adds new members and marks `isGroupMember[groupId][member] = true` | [U] | P0 |
+| 2 | Emits `GroupMemberAdded(groupId, member)` for each newly added member | [EV] | P1 |
+| 3 | Duplicate members are no-op (state unchanged after first add; no duplicate event) | [E] | P0 |
+| 4 | `address(0)` member reverts `InvalidMemberAddress(address(0))` | [N] | P0 |
+| 5 | **Desired behavior:** non-organization member reverts `MemberDoesNotExist(member)` | [S] | P0 |
+| 6 | **Desired behavior:** mixed valid + invalid members in one call revert atomically | [S] | P0 |
+| 7 | **Desired behavior:** addresses removed from org are treated as invalid for group add | [S] | P0 |
+
+### 1.8 `_removeGroupMembers(Layout storage, uint256 groupId, address[] calldata members)` *(private; harness target)*
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Removing existing member sets `isGroupMember[groupId][member] = false` | [U] | P0 |
+| 2 | Emits `GroupMemberRemoved(groupId, member)` on successful removal | [EV] | P1 |
+| 3 | Removing non-member is a no-op (no revert, no state change, no `GroupMemberRemoved` event) | [E] | P0 |
+| 4 | Removing same member twice in one call is a no-op on the second removal (no revert); final state remains `false` and only the first successful removal emits `GroupMemberRemoved` | [E] | P0 |
+
+### 1.9 Library-Level Fuzz & Invariants
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Fuzz: random create/update/delete batches preserve atomicity on any failing item | [F] | P0 |
+| 2 | Fuzz: deleted group IDs are never reusable | [F] | P0 |
+| 3 | Fuzz: duplicate additions are idempotent | [F] | P1 |
+| 4 | Fuzz: zero-address member add always reverts `InvalidMemberAddress` | [F] | P0 |
+| 5 | Fuzz (desired): random non-member addresses always revert `MemberDoesNotExist` on add | [F] | P0 |
+| 6 | Invariant: if `wasGroupDeleted[groupId] == true`, then `isGroup[groupId] == false` forever | [I] | P0 |
+| 7 | Invariant: `wasGroupDeleted[groupId]` is monotonic (`false -> true` only) | [I] | P0 |
+| 8 | Invariant: no zero-address group membership can ever be set | [I] | P0 |
+| 9 | Invariant (desired): active group membership implies org membership (`isGroupMember => isMember`) | [I] | P0 |
 
 ---
 
-## 3. Group Deletion
+## 2. `src/organization/base/OrganizationGroupsBase.sol`
+
+### 2.1 `modifyGroups(GroupModification[] calldata modifications, AdminAuthParams calldata authParams)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 19 | Delete existing group — succeeds, `isGroup` returns false | [U] | P0 |
-| 20 | Delete non-existent group — reverts with `GroupDoesNotExist` | [N] | P0 |
-| 21 | Delete with `membersToAdd` non-empty — reverts with `InvalidGroupDeletionOperation` | [N] | P0 |
-| 22 | Delete with `membersToRemove` non-empty — reverts with `InvalidGroupDeletionOperation` | [N] | P0 |
-| 23 | Deleted group's `wasGroupDeleted` flag is true (prevents reuse) | [U] | P0 |
-| 24 | Group deletion emits `GroupDeleted(groupId)` event | [EV] | P1 |
-| 25 | After deletion, `isGroup` returns false | [U] | P0 |
-| 26 | After deletion, `isGroupMember` still returns true for old members (ghost data) | [E] | P0 |
+| 1 | Guardian + valid admin auth: forwards to library and applies expected state transition | [I] | P0 |
+| 2 | Non-guardian caller reverts with guardian access-control error | [N] | P0 |
+| 3 | Invalid/insufficient admin signatures revert via admin auth validation | [N] | P0 |
+| 4 | Expired auth params revert via admin auth validation | [N] | P0 |
+| 5 | Replay using same nonce/salt reverts after a successful first execution | [S] | P0 |
+| 6 | **Desired behavior:** failed auth attempt does not consume nonce; same salt/operation can succeed after corrected signatures | [S] | P0 |
+| 7 | Any modification-data tampering after signatures invalidates auth and reverts | [S] | P0 |
+| 8 | Empty modifications still require valid auth and consume nonce on success | [E] | P1 |
+| 9 | Library custom errors bubble through base unchanged (including desired `MemberDoesNotExist` once implemented) | [U] | P0 |
+| 10 | Malformed enum in modifications reverts through base path and leaves state unchanged | [N] | P0 |
+
+### 2.2 `isGroup(uint256 groupId)`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Pure passthrough to library value for active/non-existent/deleted groups | [U] | P3 |
+
+### 2.3 `isGroupMember(uint256 groupId, address memberAddress)`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 1 | Pure passthrough to library value for existing-group member and non-member queries | [U] | P3 |
+| 2 | **Desired behavior:** returns `false` for non-existent groups via library existence check | [U] | P1 |
+| 3 | **Desired behavior:** returns `false` for deleted groups via library existence check (no ghost-membership leak through base getter) | [S] | P1 |
 
 ---
 
-## 4. Group ID Non-Reuse
+## Summary (Coverage by File)
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 27 | Create group ID 1, delete it, try to create group ID 1 again — reverts | [S] | P0 |
-| 28 | Different group IDs are independent — creating/deleting one does not affect others | [U] | P1 |
-| 29 | `wasGroupDeleted` persists even after many operations | [U] | P1 |
-
----
-
-## 5. Batch Modifications (`modifyGroups` with array)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 30 | Multiple group modifications in single call — all succeed | [U] | P0 |
-| 31 | Create + modify + delete different groups in single call | [U] | P0 |
-| 32 | First modification fails — entire call reverts (atomicity) | [U] | P0 |
-| 33 | Empty modifications array — no-op succeeds | [E] | P2 |
-
----
-
-## 6. Query Functions
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 34 | `isGroup` returns true for existing group | [U] | P3 |
-| 35 | `isGroup` returns false for non-existent group | [U] | P3 |
-| 36 | `isGroup` returns false for deleted group | [U] | P3 |
-| 37 | `isGroupMember` returns true for member in group | [U] | P3 |
-| 38 | `isGroupMember` returns false for non-member | [U] | P3 |
-| 39 | `isGroupMember` returns false for non-existent group (no revert) | [E] | P3 |
-
----
-
-## 7. Access Control (Base Contract Level)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 40 | `modifyGroups` requires admin auth | [U] | P0 |
-| 41 | `modifyGroups` reverts when caller is not guardian | [N] | P0 |
-| 42 | View functions callable by anyone | [U] | P3 |
-
----
-
-## 8. Fuzz Tests
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 43 | Fuzz: Create group with N random members, all are group members | [F] | P0 |
-| 44 | Fuzz: Random group IDs (non-deleted) can be created | [F] | P1 |
-| 45 | Fuzz: Add then remove random members, none remain in group | [F] | P0 |
-| 46 | Fuzz: Deleted group ID always rejected on re-creation attempt | [F] | P0 |
-| 46.1 | Fuzz: Random group member additions are idempotent (adding existing member is no-op) | [F] | P1 |
-| 46.2 | Fuzz: Create, modify, and delete multiple random groups in single call — atomicity preserved | [F] | P0 |
-| 46.3 | Fuzz: Random address(0) members always rejected with `InvalidMemberAddress` | [F] | P0 |
-| 46.4a | Fuzz: Random non-organization-member addresses always rejected when adding to group | [F] | P0 |
-
----
-
-## 8.5 Invariant Tests
-
-| # | Invariant | Priority |
-|---|-----------|----------|
-| 46.4b | **Deleted group non-reuse**: If `wasGroupDeleted[groupId] == true`, then `isGroup[groupId] == false` forever | P0 |
-| 46.5 | **Deletion permanence**: `wasGroupDeleted[groupId]` can only transition from false to true, never back | P0 |
-| 46.6 | **No zero-address group members**: `isGroupMember(groupId, address(0))` is never set to true | P0 |
-| 46.7 | **Group-members-are-org-members**: For every `(groupId, addr)` where `isGroupMember(groupId, addr) == true` and `isGroup(groupId) == true`, `isMember(addr) == true` | P0 |
-
----
-
-## 9. Private Function Tests (Requires `private` → `internal` Conversion)
-
-> **Prerequisite:** The functions below are currently `private` in `LibOrganizationGroups`.
-> Convert them to `internal` and create a test harness that exposes each via public wrappers.
-> Note: Many edge cases of these functions ARE already covered through the public `modifyGroups`
-> interface (sections 1-5). The tests below target behaviors best verified with direct access.
-
-### 9.1 `_createGroup`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 47 | Create group — sets `isGroup[groupId] = true` | [U] | P0 |
-| 48 | Create group with previously deleted ID — reverts `GroupAlreadyDeleted` | [S] | P0 |
-| 49 | Create group that already exists — reverts `GroupAlreadyExists` | [N] | P0 |
-| 50 | Create group with `membersToRemove` non-empty — reverts `InvalidGroupCreationOperation` | [N] | P0 |
-| 51 | Create group calls `_addGroupMembers` for initial members | [U] | P0 |
-
-### 9.2 `_updateGroup`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 52 | Update non-existent group — reverts `GroupDoesNotExist` | [N] | P0 |
-| 53 | Update calls `_addGroupMembers` then `_removeGroupMembers` in order | [U] | P1 |
-
-### 9.3 `_deleteGroup`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 54 | Delete sets `isGroup = false` and `wasGroupDeleted = true` atomically | [U] | P0 |
-| 55 | Delete non-existent group — reverts `GroupDoesNotExist` | [N] | P0 |
-| 56 | Delete with non-empty `membersToAdd` — reverts `InvalidGroupDeletionOperation` | [N] | P0 |
-| 57 | Delete with non-empty `membersToRemove` — reverts `InvalidGroupDeletionOperation` | [N] | P0 |
-
-### 9.4 `_addGroupMembers`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 58 | Add address(0) — reverts `InvalidMemberAddress` | [N] | P0 |
-| 58.1 | Add address that is not an organization member — reverts `MemberDoesNotExist` | [S] | P0 |
-| 59 | Add already-existing member — no-op (idempotent, no event) | [E] | P0 |
-| 60 | Add new member — sets `isGroupMember = true`, emits `GroupMemberAdded` | [U] | P0 |
-
-### 9.5 `_removeGroupMembers`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 61 | Remove member not in group — reverts `MemberNotInGroup` | [N] | P0 |
-| 62 | Remove existing member — sets `isGroupMember = false`, emits `GroupMemberRemoved` | [U] | P0 |
-
----
-
-## Summary
-
-| Category | New Tests | Priority |
-|----------|-----------|----------|
-| Group creation | 10 | P0 |
-| Group modification | 12 | P0 |
-| Group deletion | 8 | P0 |
-| Group ID non-reuse | 3 | P0-P1 |
-| Batch modifications | 4 | P0 |
-| Query functions | 6 | P3 |
-| Access control | 3 | P0 |
-| Fuzz tests | 8 | P0-P1 |
-| Invariant tests | 4 | P0 |
-| Private function tests | 17 | P0-P1 |
-| **Total** | **75** | |
+| File | Functions Covered | Test Cases | Priority Focus |
+|------|-------------------|------------|----------------|
+| `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 77 | P0 state machine, atomicity, and desired behavior gaps |
+| `src/organization/base/OrganizationGroupsBase.sol` | 3 | 14 | P0 auth/access control and revert propagation |
+| **Total** | **12** | **91** | **P0-heavy** |
