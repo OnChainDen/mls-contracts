@@ -15,8 +15,8 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
 import {TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
- * @title Transaction Recovery Test Harness
- * @notice Wraps library functions for testing with proper msg.sender handling
+ * @dev Transaction Recovery Test Harness
+ *      Wraps library functions for testing with proper msg.sender handling
  */
 contract TxRecoveryTestHarness {
     // ================================
@@ -118,9 +118,9 @@ contract TxRecoveryTestHarness {
 }
 
 /**
- * @title Lib Organization Tx Recovery Test
- * @notice Tests for transaction and ERC1271 recovery functionality
- * @dev Tests initialization, timelocked enable/disable flows, deferred initialization, and access control.
+ * @dev Lib Organization Tx Recovery Test
+ *      Tests for transaction and ERC1271 recovery functionality
+ *      Tests initialization, timelocked enable/disable flows, deferred initialization, and access control.
  * @author Den Technologies Inc
  */
 contract LibOrganizationTxRecoveryTest is Test {
