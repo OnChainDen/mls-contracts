@@ -1,233 +1,240 @@
 # 03 — Organization Admin Test Plan
 
-**Files Under Test:**
-- `src/organization/libraries/LibOrganizationAdmin.sol`
+## Scope
+
+This plan covers admin functionality in:
+
 - `src/organization/base/OrganizationAdminBase.sol`
-- `src/organization/libraries/storage/LibOrganizationAdminStorage.sol`
-- `src/interfaces/organization/IOrganizationAdmin.sol`
+- `src/organization/libraries/LibOrganizationAdmin.sol`
 
-**Test File(s):** `test/LibOrganizationAdmin.t.sol`, `test/OrganizationAdminBase.t.sol`
+Out of scope for this plan:
 
----
+- Interface files (no direct tests for interfaces)
+- ERC-7201 storage slot tests (covered in `02-STORAGE-LIBRARIES.md`)
 
-## 1. Admin Authorization (`validateAdminAuthAndConsumeNonceOrRevert`)
+**Planned test files:**
 
-**Priority: P0 — Critical (every admin operation depends on this)**
+- `test/organization/OrganizationAdminBase.t.sol`
+- `test/organization/LibOrganizationAdmin.t.sol`
+- `test/organization/harness/LibOrganizationAdminHarness.sol`
+- `test/organization/fuzz/OrganizationAdmin.fuzz.t.sol`
+- `test/organization/invariants/OrganizationAdmin.invariants.t.sol`
 
-### 1.1 Expiration Checks
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 1 | Valid expiration (future timestamp) — succeeds | [U] | P0 |
-| 2 | Expired operation (past timestamp) — reverts with `AdminOperationExpired` | [N] | P0 |
-| 3 | Expiration at exactly `block.timestamp` — succeeds (<=) | [E] | P0 |
-| 4 | Expiration at `block.timestamp - 1` — reverts | [E] | P0 |
-| 5 | Expiration at `type(uint256).max` — succeeds | [E] | P0 |
-
-### 1.2 Nonce Management
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 6 | First use of nonce — succeeds and marks as used | [U] | P0 |
-| 7 | Replay same nonce — reverts with `NonceAlreadyUsed` | [S] | P0 |
-| 8 | Same operation data with different salt — different nonce, both succeed | [U] | P0 |
-| 9 | Different operation types with same data and salt — different nonces | [U] | P0 |
-| 10 | Nonce includes `address(this)` — cross-contract replay prevented | [S] | P0 |
-
-### 1.3 Signature Validation
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 11 | Single admin with threshold=1, valid signature — succeeds | [U] | P0 |
-| 12 | Multiple admins, threshold=2, two valid signatures — succeeds | [U] | P0 |
-| 13 | Threshold=2 but only 1 valid signature — reverts `InsufficientAdminAuthorization` | [N] | P0 |
-| 14 | Signers not in ascending order — reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
-| 15 | Duplicate signer (same signature twice) — reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
-| 16 | Valid signer who is NOT an admin — reverts `SignerIsNotAdmin` | [S] | P0 |
-| 17 | More signatures than threshold — succeeds (extra ignored after threshold met) | [E] | P0 |
-| 18 | Zero signatures with threshold > 0 — reverts | [N] | P0 |
-| 19 | Signatures for approval cannot be reused for rejection (isApproval flag) | [S] | P0 |
-| 20 | Signatures for rejection cannot be reused for approval (isApproval flag) | [S] | P0 |
-| 21 | Mixed EOA + ERC-1271 admin signatures — succeeds | [U] | P0 |
-| 22 | ERC-1271 admin signature with contract that reverts — reverts | [N] | P0 |
-
-### 1.4 Operation Hash Verification
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 23 | Hash includes chain ID — different chains produce different hashes | [S] | P0 |
-| 24 | Hash includes contract address — different orgs produce different hashes | [S] | P0 |
-| 25 | Hash includes isApproval flag — approval vs rejection produce different hashes | [U] | P0 |
-| 26 | Hash includes operation type and data — different operations produce different hashes | [U] | P0 |
+Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[F]` fuzz, `[I]` invariant.
 
 ---
 
-## 2. Admin Modification (`modifyAdmins`)
+## 1. File: `src/organization/base/OrganizationAdminBase.sol`
 
-**Priority: P0 — Critical**
-
-### 2.1 Adding Admins
+### 1.1 `modifyAdmins(address[] adminsToAdd, address[] adminsToRemove, uint256 newVotingThreshold, AdminAuthParams authParams)`
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 27 | Add a single member as admin — succeeds, increments count | [U] | P0 |
-| 28 | Add multiple members as admins — all added, count correct | [U] | P0 |
-| 29 | Add address(0) as admin — reverts | [N] | P0 |
-| 30 | Add non-member as admin — reverts with `AdminNotMember` | [N] | P0 |
-| 31 | Add existing admin — reverts with `AdminAlreadyExists` | [N] | P0 |
-| 32 | Admin added emits `AdminAdded` event | [EV] | P1 |
+|---|---|---|---|
+| B-1 | Non-guardian caller reverts via `onlyGuardian` | [N][S] | P0 |
+| B-2 | Guardian + valid signatures + valid payload succeeds (add flow) | [U] | P0 |
+| B-3 | Guardian + valid signatures + valid payload succeeds (remove flow) | [U] | P0 |
+| B-4 | Guardian + valid signatures succeeds for add+remove in one call | [U] | P0 |
+| B-5 | Signatures for a different operation type (`ModifyMembers`) cannot authorize `modifyAdmins` | [S] | P0 |
+| B-6 | Rejection signatures (`isApproval=false`) cannot execute `modifyAdmins` | [S] | P0 |
+| B-7 | Changing `adminsToAdd` after signing causes authorization failure | [S] | P0 |
+| B-8 | Changing `adminsToRemove` after signing causes authorization failure | [S] | P0 |
+| B-9 | Changing `newVotingThreshold` after signing causes authorization failure | [S] | P0 |
+| B-10 | Reordering `adminsToAdd` after signing invalidates signatures (array order bound) | [S][E] | P0 |
+| B-11 | Reordering `adminsToRemove` after signing invalidates signatures | [S][E] | P0 |
+| B-12 | Expired auth params revert with `AdminOperationExpired` | [N] | P0 |
+| B-13 | Replay (same nonce) reverts with `NonceAlreadyUsed` | [S] | P0 |
+| B-14 | If downstream `LibOrganizationAdmin.modifyAdmins` reverts, state rolls back and nonce is not consumed | [S] | P0 |
+| B-15 | Downstream revert due invalid threshold also rolls back nonce consumption | [S] | P0 |
+| B-16 | Emits `AdminAdded`/`AdminRemoved`/`VotingThresholdUpdated` with correct args on success | [EV] | P1 |
+| B-17 | No `VotingThresholdUpdated` event when threshold is unchanged | [EV][E] | P1 |
+| B-18 | Mixed EOA + ERC-1271 admin signatures authorize successfully | [U][S] | P0 |
 
-### 2.2 Removing Admins
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 33 | Remove existing admin — succeeds, decrements count | [U] | P0 |
-| 34 | Remove multiple admins — all removed, count correct | [U] | P0 |
-| 35 | Remove non-existent admin — reverts with `AdminDoesNotExist` | [N] | P0 |
-| 36 | Remove last admin (count would be 0) — reverts with `InvalidAdminConfig` | [S] | P0 |
-| 37 | Admin removed emits `AdminRemoved` event | [EV] | P1 |
-
-### 2.3 Voting Threshold
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 38 | Set threshold = 1 — succeeds | [U] | P0 |
-| 39 | Set threshold = adminCount — succeeds | [U] | P0 |
-| 40 | Set threshold = 0 — reverts with `InvalidAdminVotingThreshold` | [N] | P0 |
-| 41 | Set threshold > adminCount — reverts with `InvalidAdminVotingThreshold` | [N] | P0 |
-| 42 | Threshold = adminCount after removing admins — succeeds | [E] | P0 |
-| 43 | Remove admin where threshold would exceed new count — reverts | [S] | P0 |
-| 44 | Threshold change emits `VotingThresholdUpdated(old, new)` event | [EV] | P1 |
-
-### 2.4 Combined Add/Remove Operations
+### 1.2 `rejectAdminOperation(OperationType operationType, bytes operationData, AdminAuthParams authParams)`
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 45 | Add and remove in same call — final state correct | [U] | P0 |
-| 46 | Add then remove same address in same call (add first) — net effect depends on ordering | [E] | P0 |
-| 47 | Remove then add same address (not possible — arrays processed add first) | [E] | P0 |
-| 48 | Both arrays empty — no-op succeeds | [E] | P2 |
+|---|---|---|---|
+| B-19 | Non-guardian caller reverts via `onlyGuardian` | [N][S] | P0 |
+| B-20 | Valid rejection authorization succeeds and burns nonce | [U] | P0 |
+| B-21 | Emits `AdminOperationRejected` with exact `(operationType, operationData, nonce)` | [EV] | P1 |
+| B-22 | Approval signatures (`isApproval=true`) cannot be reused for rejection | [S] | P0 |
+| B-23 | Any mutation of signed `(operationType, operationData)` causes failure | [S] | P0 |
+| B-24 | Expired auth params revert with `AdminOperationExpired` | [N] | P0 |
+| B-25 | Replay rejection with same nonce reverts `NonceAlreadyUsed` | [N][S] | P0 |
+| B-26 | Reject first, then attempt actual execution of same operation payload: execution fails by used nonce | [S] | P0 |
+| B-27 | Execute first, then reject same payload: rejection fails by used nonce | [S] | P0 |
+| B-28 | Failed rejection authorization does not consume nonce | [S] | P0 |
+| B-29 | Rejection works for arbitrary operation types (e.g., `Upgrade`, `ModifyPolicies`) when properly signed | [U][E] | P1 |
+| B-30 | Empty `operationData` can be rejected when signatures are for empty payload | [E] | P2 |
+
+### 1.3 View wrappers
+
+#### `isAdmin(address)`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| B-31 | Returns `true` for admin | [U] | P3 |
+| B-32 | Returns `false` for non-admin | [U] | P3 |
+
+#### `adminCount()`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| B-33 | Mirrors storage count after add/remove sequences | [U] | P3 |
+
+#### `votingThreshold()`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| B-34 | Mirrors storage threshold after updates | [U] | P3 |
 
 ---
 
-## 3. Admin Query Functions
+## 2. File: `src/organization/libraries/LibOrganizationAdmin.sol`
+
+### 2.1 `validateAdminAuthAndConsumeNonceOrRevert(OperationType operationType, bytes operationData, bool isApproval, AdminAuthParams authParams)`
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 49 | `isAdmin` returns true for admin | [U] | P3 |
-| 50 | `isAdmin` returns false for non-admin | [U] | P3 |
-| 51 | `isAdmin` returns false for address(0) | [U] | P3 |
-| 52 | `adminCount` returns correct count after add/remove | [U] | P3 |
-| 53 | `votingThreshold` returns correct value after update | [U] | P3 |
+|---|---|---|---|
+| L-1 | Future expiration succeeds | [U] | P0 |
+| L-2 | `expirationTimestamp == block.timestamp` succeeds | [E] | P0 |
+| L-3 | Past expiration reverts `AdminOperationExpired` | [N] | P0 |
+| L-4 | Empty signatures revert `InsufficientAdminAuthorization` | [N] | P0 |
+| L-5 | Threshold=1 and one valid admin signature succeeds | [U] | P0 |
+| L-6 | Exactly threshold valid signatures succeeds | [U] | P0 |
+| L-7 | Fewer valid signatures than threshold reverts `InsufficientAdminAuthorization` | [N] | P0 |
+| L-8 | Duplicate signer reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
+| L-9 | Out-of-order signers reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
+| L-10 | Valid signer that is not admin reverts `SignerIsNotAdmin` | [S] | P0 |
+| L-11 | Malformed packed signatures revert `SignatureRecoveryFailed` | [N][S] | P0 |
+| L-12 | ERC-1271 signer returning wrong magic reverts `SignatureRecoveryFailed` | [N][S] | P0 |
+| L-13 | ERC-1271 signer reverting reverts `SignatureRecoveryFailed` | [N] | P0 |
+| L-14 | Mixed EOA + ERC-1271 signatures in ascending signer order succeeds | [U][S] | P0 |
+| L-15 | First use of nonce succeeds; second use reverts `NonceAlreadyUsed` | [S] | P0 |
+| L-16 | Same operation with different salt produces different nonces | [U] | P0 |
+| L-17 | Same data+salt but different operationType produces different nonces | [U][S] | P0 |
+| L-18 | Same data+salt on different organization addresses produces different nonces | [S] | P0 |
+| L-19 | Approval signatures cannot authorize rejection (`isApproval` domain separation) | [S] | P0 |
+| L-20 | Rejection signatures cannot authorize approval | [S] | P0 |
+| L-21 | Extra trailing signatures/bytes after threshold is met are ignored (early exit behavior) | [E] | P1 |
+| L-22 | If auth fails/reverts after nonce write attempt, nonce state rolls back (nonce remains unused) | [S] | P0 |
+| L-23 | Admin removed after signing but before execution causes failure (`SignerIsNotAdmin`) | [S] | P0 |
+| L-24 | Threshold raised after signing causes old signature set to fail (`InsufficientAdminAuthorization`) | [S] | P0 |
+| L-25 | `vm.chainId` change invalidates old signatures (chain-bound signing) | [S][E] | P1 |
+
+### 2.2 `modifyAdmins(address[] adminsToAdd, address[] adminsToRemove, uint256 newVotingThreshold)`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| L-26 | Add one valid member as admin succeeds and increments count | [U] | P0 |
+| L-27 | Add multiple valid members as admins succeeds | [U] | P0 |
+| L-28 | Add `address(0)` reverts `InvalidMemberAddress` | [N] | P0 |
+| L-29 | Add non-member reverts `AdminNotMember` | [N] | P0 |
+| L-30 | Add existing admin reverts `AdminAlreadyExists` | [N] | P0 |
+| L-31 | Duplicate address inside `adminsToAdd` reverts on second occurrence (`AdminAlreadyExists`) | [E] | P0 |
+| L-32 | Remove existing admin succeeds and decrements count | [U] | P0 |
+| L-33 | Remove multiple existing admins succeeds | [U] | P0 |
+| L-34 | Remove non-admin reverts `AdminDoesNotExist` | [N] | P0 |
+| L-35 | Remove `address(0)` reverts `AdminDoesNotExist` | [E] | P1 |
+| L-36 | Duplicate address inside `adminsToRemove` reverts on second occurrence (`AdminDoesNotExist`) | [E] | P0 |
+| L-37 | Removing the last admin reverts `InvalidAdminConfig` | [S] | P0 |
+| L-38 | `newVotingThreshold = 0` reverts `InvalidAdminVotingThreshold` | [N] | P0 |
+| L-39 | `newVotingThreshold > finalAdminCount` reverts `InvalidAdminVotingThreshold` | [N] | P0 |
+| L-40 | `newVotingThreshold = 1` succeeds when final count >= 1 | [U] | P0 |
+| L-41 | `newVotingThreshold = finalAdminCount` succeeds | [U] | P0 |
+| L-42 | Removing admins while keeping old threshold that becomes too high reverts | [S] | P0 |
+| L-43 | Empty add/remove arrays with unchanged valid threshold is a successful no-op | [E] | P2 |
+| L-44 | Empty add/remove arrays with changed valid threshold succeeds and updates threshold | [U] | P1 |
+| L-45 | Same address in add+remove (initially non-admin member) succeeds; net admin status unchanged | [E] | P1 |
+| L-46 | Same address in add+remove (initially admin) reverts because add loop runs first (`AdminAlreadyExists`) | [E] | P1 |
+| L-47 | Revert during additions rolls back earlier successful additions (atomicity) | [S] | P0 |
+| L-48 | Revert during removals rolls back prior additions/removals from same tx (atomicity) | [S] | P0 |
+| L-49 | Emits one `AdminAdded` per successful add with correct indexed address | [EV] | P1 |
+| L-50 | Emits one `AdminRemoved` per successful remove with correct indexed address | [EV] | P1 |
+| L-51 | Emits `VotingThresholdUpdated(old,new)` only when threshold changes | [EV] | P1 |
+| L-52 | Post-state consistency: `adminCount` equals effective admin mapping cardinality for touched set | [U][I] | P1 |
+
+### 2.3 `isAdmin(address adminAddress)`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| L-53 | Returns `true` for known admin | [U] | P3 |
+| L-54 | Returns `false` for known non-admin | [U] | P3 |
+| L-55 | Returns `false` for `address(0)` | [U][E] | P3 |
+
+### 2.4 `getAdminCount()`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| L-56 | Returns initial count, then updated count after successful mutations | [U] | P3 |
+
+### 2.5 `getVotingThreshold()`
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| L-57 | Returns initial threshold, then updated threshold after successful changes | [U] | P3 |
+
+### 2.6 `_areAdminSignaturesValid(bytes signatures, bytes32 operationHash)` (private; test via harness)
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| L-58 | Empty signatures returns `false` | [N] | P0 |
+| L-59 | Exactly threshold valid signatures returns `true` | [U] | P0 |
+| L-60 | More than threshold signatures returns `true` via early exit | [U][E] | P0 |
+| L-61 | Fewer than threshold valid signatures returns `false` | [N] | P0 |
+| L-62 | Duplicate signer reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
+| L-63 | Out-of-order signer reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
+| L-64 | Non-admin signer reverts `SignerIsNotAdmin` | [S] | P0 |
+| L-65 | Mixed EOA + ERC-1271 signers succeeds when globally sorted by signer address | [U][S] | P0 |
+| L-66 | Malformed signature encoding reverts `SignatureRecoveryFailed` | [N] | P0 |
+| L-67 | Threshold met before trailing malformed bytes still returns `true` (documents short-circuit behavior) | [E] | P1 |
+
+### 2.7 `_getAdminOperationHash(...)` (private; test via harness)
+
+| # | Test Case | Type | Priority |
+|---|---|---|---|
+| L-68 | Deterministic: same inputs produce same hash | [U] | P1 |
+| L-69 | Different `operationType` produces different hash | [U] | P1 |
+| L-70 | Different `operationData` bytes produces different hash | [U] | P1 |
+| L-71 | Different `salt` produces different hash | [U] | P1 |
+| L-72 | Different `expirationTimestamp` produces different hash | [U] | P1 |
+| L-73 | `isApproval=true/false` produces different hash | [S] | P0 |
+| L-74 | Different `chainId` produces different hash | [S] | P0 |
+| L-75 | Different contract address (`address(this)`) produces different hash | [S] | P0 |
+| L-76 | Hash equals manual EIP-712 typed-data computation using expected domain + struct encoding | [U] | P1 |
+| L-77 | Same byte content in different memory instances yields same hash (content, not pointer, dependent) | [E] | P2 |
 
 ---
 
-## 4. Admin Operation Rejection (`rejectAdminOperation`)
+## 3. Cross-File Fuzz and Invariant Coverage
+
+### 3.1 Fuzz tests
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 54 | Reject an admin operation with valid admin signatures — consumes nonce | [U] | P0 |
-| 55 | Rejection uses isApproval=false — different hash from approval | [U] | P0 |
-| 56 | Rejection emits `AdminOperationRejected` event | [EV] | P1 |
-| 57 | Rejecting with already-used nonce reverts | [N] | P0 |
-| 58 | Rejection prevents subsequent approval with same nonce | [S] | P0 |
-| 59 | Approval prevents subsequent rejection with same nonce | [S] | P0 |
+|---|---|---|---|
+| F-1 | Fuzz valid admin sets and thresholds: successful authorizations always require >= threshold valid admin signatures | [F] | P0 |
+| F-2 | Fuzz invalid threshold updates (`0` or `> finalAdminCount`) always revert | [F] | P0 |
+| F-3 | Fuzz salts for same operation payload produce unique nonces with overwhelming probability | [F] | P1 |
+| F-4 | Fuzz non-admin signer inclusion: any included non-admin signer causes strict revert (`SignerIsNotAdmin`) | [F][S] | P0 |
+| F-5 | Fuzz payload mutation after signing always invalidates authorization | [F][S] | P0 |
+| F-6 | Fuzz mixed add/remove arrays: successful calls never leave zero admins and never violate threshold bounds | [F] | P0 |
 
----
-
-## 5. Access Control (Base Contract Level)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 60 | `modifyAdmins` reverts when caller is not guardian | [N] | P0 |
-| 61 | `rejectAdminOperation` reverts when caller is not guardian | [N] | P0 |
-| 62 | View functions callable by anyone | [U] | P3 |
-
----
-
-## 5.5 Race Conditions & Signature Ordering
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 62.1 | [AUDIT] Admin removed after signing — operation fails if signer no longer admin at execution time | [S] | P0 |
-| 62.2 | [AUDIT] Voting threshold increased — old signatures that met old threshold fail if below new threshold | [S] | P0 |
-| 62.3 | [AUDIT] Mixed EOA+ERC-1271 signatures: offset accumulation correct for EOA→ERC1271→EOA sequence | [S] | P0 |
-| 62.4 | [AUDIT] ERC-1271 admin with very large inner signature — offset correctly advances past entire signature | [E] | P0 |
-
----
-
-## 6. Private Function Tests (Requires `private` → `internal` Conversion)
-
-> **Prerequisite:** The functions below are currently `private` in `LibOrganizationAdmin`.
-> Convert them to `internal` and create a test harness that exposes each via public wrappers.
-
-### 6.1 `_areAdminSignaturesValid`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 68 | Empty signatures — returns false (not revert) | [N] | P0 |
-| 69 | Exactly `votingThreshold` valid admin signatures — returns true | [U] | P0 |
-| 70 | More signatures than threshold — returns true after threshold met (early exit) | [U] | P0 |
-| 71 | Fewer valid signatures than threshold — returns false | [N] | P0 |
-| 72 | Signer addresses not in ascending order — reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
-| 73 | Duplicate signer — reverts `DuplicateOrOutOfOrderAdminSigner` | [S] | P0 |
-| 74 | Non-admin signer — reverts `SignerIsNotAdmin` | [S] | P0 |
-| 75 | Mixed EOA + ERC-1271 admin signatures — ascending order across both types | [U] | P0 |
-| 76 | Malformed signature in array — reverts `SignatureRecoveryFailed` (from SignatureUtils) | [N] | P0 |
-
-### 6.2 `_getAdminOperationHash`
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 77 | Same inputs produce same hash (deterministic) | [U] | P1 |
-| 78 | Different `operationType` — different hash | [U] | P1 |
-| 79 | Different `operationData` — different hash | [U] | P1 |
-| 80 | Different `salt` — different hash | [U] | P1 |
-| 81 | Different `expirationTimestamp` — different hash | [U] | P1 |
-| 82 | `isApproval=true` vs `isApproval=false` — different hash (approval/rejection separation) | [S] | P0 |
-| 83 | Different `block.chainid` — different hash (cross-chain replay protection) | [S] | P0 |
-| 84 | Different `address(this)` (different org) — different hash (cross-org replay protection) | [S] | P0 |
-| 85 | Output matches manual EIP-712 `hashTypedData(structHash)` computation | [U] | P1 |
-
----
-
-## 7. Fuzz Tests
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 86 | Fuzz: Add N random members as admins, verify all are admins | [F] | P0 |
-| 87 | Fuzz: Random threshold values within valid range always succeed | [F] | P0 |
-| 88 | Fuzz: Random threshold values outside valid range always revert | [F] | P0 |
-| 89 | Fuzz: Random expiration timestamps — future pass, past fail | [F] | P0 |
-| 90 | Fuzz: Random salt values produce unique nonces for same operation | [F] | P1 |
-| 91 | Fuzz: Random non-admin signers always rejected with `SignerIsNotAdmin` | [F] | P0 |
-| 92 | Fuzz: Random admin modification arrays — `adminCount` never reaches 0 | [F] | P0 |
-| 93 | Fuzz: Random admin addition with non-member addresses — always reverts `AdminNotMember` | [F] | P0 |
-
----
-
-## 8. Invariant Tests
+### 3.2 Invariants
 
 | # | Invariant | Priority |
-|---|-----------|----------|
-| 94 | **Minimum admins**: `adminCount >= 1` at all times after initialization | P0 |
-| 95 | **Voting threshold bounds**: `1 <= votingThreshold <= adminCount` at all times | P0 |
-| 96 | **Admin-must-be-member**: For every address where `isAdmin(addr) == true`, `isMember(addr) == true` | P0 |
-| 97 | **Admin count consistency**: The number of addresses where `isAdmin(addr) == true` equals `adminCount` | P0 |
+|---|---|---|
+| I-1 | `adminCount >= 1` after initialization | P0 |
+| I-2 | `1 <= votingThreshold <= adminCount` always holds | P0 |
+| I-3 | For any tracked address: `isAdmin(addr) => isMember(addr)` | P0 |
+| I-4 | Used nonce monotonicity: once `usedNonces[nonce]` becomes true, it never becomes false | P0 |
+| I-5 | Model consistency: modeled admin set cardinality matches on-chain `adminCount` | P1 |
 
 ---
 
 ## Summary
 
-| Category | New Tests | Priority |
-|----------|-----------|----------|
-| Authorization | 26 | P0 |
-| Admin modification | 22 | P0 |
-| Query functions | 5 | P3 |
-| Operation rejection | 6 | P0 |
-| Access control | 3 | P0 |
-| Race conditions & ordering | 4 | P0 |
-| Private function tests | 18 | P0-P1 |
-| Fuzz tests | 8 | P0-P1 |
-| Invariant tests | 4 | P0 |
-| **Total** | **97** | |
+| Category | Tests | Priority Focus |
+|---|---|---|
+| `OrganizationAdminBase.sol` | 34 | P0 |
+| `LibOrganizationAdmin.sol` | 77 | P0 |
+| Fuzz + invariants | 11 | P0 |
+| **Total** | **122** | **Security + correctness first** |
