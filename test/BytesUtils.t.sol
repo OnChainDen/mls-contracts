@@ -7,8 +7,8 @@ import {Test} from "forge-std/Test.sol";
 import {BytesUtils} from "libraries/BytesUtils.sol";
 
 /**
- * @title BytesUtilsHarness
- * @dev Test harness to expose internal library functions for testing
+ * @dev BytesUtilsHarness
+ *      Test harness to expose internal library functions for testing
  */
 contract BytesUtilsHarness {
     function sliceFrom(bytes memory buffer, uint256 startIndex) external pure returns (bytes memory) {
@@ -21,9 +21,9 @@ contract BytesUtilsHarness {
 }
 
 /**
- * @title BytesUtilsTest
- * @notice Comprehensive tests for BytesUtils slicing functions
- * @dev These tests verify the custom slicing implementations that avoid the mcopy opcode
+ * @dev BytesUtilsTest
+ *      Comprehensive tests for BytesUtils slicing functions
+ *      These tests verify the custom slicing implementations that avoid the mcopy opcode
  *      for Paris EVM compatibility (replacing OpenZeppelin's Bytes.slice which uses mcopy).
  *
  *      Key areas tested:

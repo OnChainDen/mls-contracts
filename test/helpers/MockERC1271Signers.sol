@@ -5,8 +5,8 @@ pragma solidity 0.8.33;
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 /**
- * @title Mock ERC-1271 Signer Contracts
- * @dev A collection of mock contracts used to test ERC-1271 signature validation
+ * @dev Mock ERC-1271 Signer Contracts
+ *      A collection of mock contracts used to test ERC-1271 signature validation
  *      in SignatureUtils. Each mock simulates a specific behavior that the library
  *      must handle correctly (valid response, wrong magic, reverts, etc.).
  * @author Den Technologies Inc
