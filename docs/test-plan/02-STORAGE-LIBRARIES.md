@@ -1,113 +1,129 @@
 # 02 — Storage Libraries Test Plan
 
-**Files Under Test:**
-- `src/organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationAdminStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationGroupsStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationGuardianStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationMembersStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationPolicyStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationRecoveryStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationSignaturesStorage.sol`
-- `src/organization/libraries/storage/LibOrganizationUpgradeStorage.sol`
-- `src/account/libraries/storage/LibAccountOrganizationAddressStorage.sol`
-- `src/implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol`
+## Scope
 
-**Existing Tests:** `test/ERC7201StorageSlots.t.sol` (14 tests — storage slot validation only)
+This plan covers **all of our project's ERC-7201 storage libraries under `src/`**.
 
-**Test File(s):** Existing `test/ERC7201StorageSlots.t.sol` + `test/StorageLayout.t.sol`
+
+**Existing Tests:** `test/ERC7201StorageSlots.t.sol` (14 tests: 12 slot checks + uniqueness + `0x00` suffix check)
+
+**Planned Test File(s):**
+- Keep/extend `test/ERC7201StorageSlots.t.sol`
+- Add `test/StorageLayout.t.sol` for variable-level read/write coverage
 
 ---
 
-## 1. ERC-7201 Slot Validation (Already Tested — Gap Analysis)
+## 1. Complete ERC-7201 Library Inventory 
 
-The existing `ERC7201StorageSlots.t.sol` verifies:
-- Each storage slot matches `cast index-erc7201` computation
-- All slots are unique
-- All slots end with `0x00` byte
+| Library | Namespace | Layout Variables That Must Be Covered |
+|---|---|---|
+| `src/organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol` | `den.mls-wallet.organization.account-factory` | `deployedAccounts`, `accountImplementation` |
+| `src/organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol` | `den.mls-wallet.organization.admin-operation-timelock` | `adminOperationTimelockDurationSeconds` |
+| `src/organization/libraries/storage/LibOrganizationAdminStorage.sol` | `den.mls-wallet.organization.admin` | `isAdmin`, `adminCount`, `votingThreshold` |
+| `src/organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol` | `den.mls-wallet.organization.deployer` | `deployerAddress` |
+| `src/organization/libraries/storage/LibOrganizationGroupsStorage.sol` | `den.mls-wallet.organization.groups` | `isGroup`, `isGroupMember`, `wasGroupDeleted` |
+| `src/organization/libraries/storage/LibOrganizationGuardianStorage.sol` | `den.mls-wallet.organization.guardian` | `guardian`, `isGuardianUpdateReadyForAcceptance`, `pendingGuardian`, `pendingGuardianUpdateTimestamp` |
+| `src/organization/libraries/storage/LibOrganizationMembersStorage.sol` | `den.mls-wallet.organization.members` | `isMember` |
+| `src/organization/libraries/storage/LibOrganizationPolicyStorage.sol` | `den.mls-wallet.organization.policy` | `policiesRoot`, `policyUsage` |
+| `src/organization/libraries/storage/LibOrganizationRecoveryStorage.sol` | `den.mls-wallet.organization.recovery` | `txRecovery`, `guardianRecovery` (expanded field coverage listed below) |
+| `src/organization/libraries/storage/LibOrganizationSignaturesStorage.sol` | `den.mls-wallet.organization.signatures` | `usedNonces` |
+| `src/organization/libraries/storage/LibOrganizationUpgradeStorage.sol` | `den.mls-wallet.organization.upgrade` | `whitelistAddress`, `isUpgradeAuthorized` |
+| `src/implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol` | `den.mls-wallet.implementation-whitelist.main` | `whitelisted` |
 
-**Gaps to fill:**
+Recovery nested-field coverage (must be explicit):
+- `txRecovery.recoveryAddress`
+- `txRecovery.isEnabled`
+- `txRecovery.timelockDurationSeconds`
+- `txRecovery.pendingEnableTimestamp`
+- `txRecovery.pendingInit.pendingRecoveryAddress`
+- `txRecovery.pendingInit.pendingTimelockDurationSeconds`
+- `txRecovery.pendingInit.pendingTimestamp`
+- `guardianRecovery.recoveryAddress`
+- `guardianRecovery.isUpdateReadyForAcceptance`
+- `guardianRecovery.pendingGuardian`
+- `guardianRecovery.timelockDurationSeconds`
+- `guardianRecovery.pendingGuardianTimestamp`
+- `guardianRecovery.pendingInit.pendingRecoveryAddress`
+- `guardianRecovery.pendingInit.pendingTimelockDurationSeconds`
+- `guardianRecovery.pendingInit.pendingTimestamp`
+
+---
+
+## 2. Slot-Level Coverage (Library Complete)
+
+`test/ERC7201StorageSlots.t.sol` already checks all 12 in-scope ERC-7201 namespaces for:
+- exact slot constant match (`cast index-erc7201` formula)
+- uniqueness across all in-scope slots
+- ERC-7201 low-byte alignment (`...00`)
+
+Additional slot-collision tests to add in `test/StorageLayout.t.sol`:
+- No in-scope ERC-7201 slot collides with ERC-1967 implementation slot
+- No in-scope ERC-7201 slot collides with ERC-1967 admin slot
+- No in-scope ERC-7201 slot collides with ERC-1967 beacon slot
+- No in-scope ERC-7201 slot collides with OpenZeppelin `Initializable` namespace
+- No in-scope ERC-7201 slot collides with OpenZeppelin `OwnableUpgradeable` namespace
+
+---
+
+## 3. Variable-Level Read/Write Coverage (All Variables)
+
+Add variable-level tests in `test/StorageLayout.t.sol` so each variable above is touched at least once (set + get assertion).
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 1 | Account storage slot (`LibAccountOrganizationAddressStorage`) does not collide with organization slots | [U] | P1 |
-| 2 | Whitelist storage slot does not collide with organization or account slots | [U] | P1 |
+|---|---|---|---|
+| 1 | `LibImplementationWhitelistStorage.whitelisted` read/write for multiple `ContractType` + implementation address pairs | [U] | P1 |
+| 2 | `LibOrganizationAccountFactoryStorage.deployedAccounts` and `.accountImplementation` read/write | [U] | P1 |
+| 3 | `LibOrganizationAdminOperationTimelockStorage.adminOperationTimelockDurationSeconds` read/write | [U] | P1 |
+| 4 | `LibOrganizationAdminStorage.isAdmin` mapping read/write + `.adminCount` + `.votingThreshold` scalar reads/writes | [U] | P1 |
+| 5 | `LibOrganizationDeployerAddressStorage.deployerAddress` read/write | [U] | P1 |
+| 6 | `LibOrganizationGroupsStorage.isGroup`, `.isGroupMember`, `.wasGroupDeleted` read/write and independence checks | [U] | P1 |
+| 7 | `LibOrganizationGuardianStorage.guardian`, `.isGuardianUpdateReadyForAcceptance`, `.pendingGuardian`, `.pendingGuardianUpdateTimestamp` read/write | [U] | P1 |
+| 8 | `LibOrganizationMembersStorage.isMember` read/write | [U] | P1 |
+| 9 | `LibOrganizationPolicyStorage.policiesRoot` and `.policyUsage` nested mapping read/write | [U] | P1 |
+| 10 | `LibOrganizationSignaturesStorage.usedNonces` mapping read/write | [U] | P1 |
+| 11 | `LibOrganizationUpgradeStorage.whitelistAddress` and `.isUpgradeAuthorized` read/write | [U] | P1 |
+| 12 | `LibOrganizationRecoveryStorage.txRecovery` nested field read/write for all 7 subfields | [U] | P1 |
+| 13 | `LibOrganizationRecoveryStorage.guardianRecovery` nested field read/write for all 8 subfields | [U] | P1 |
 
 ---
 
-## 2. Storage Layout Tests
-
-These tests verify that ERC-7201 namespaced storage does not collide with proxy storage slots or other contract state.
+## 4. Namespace Isolation and Regression Tests
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 3 | No storage slot collides with ERC-1967 implementation slot | [U] | P1 |
-| 4 | No storage slot collides with ERC-1967 beacon slot | [U] | P1 |
-| 5 | No storage slot collides with ERC-1967 admin slot | [U] | P1 |
-| 6 | No storage slot collides with Initializable storage slot | [U] | P1 |
-| 7 | No storage slot collides with OwnableUpgradeable storage slot | [U] | P1 |
+|---|---|---|---|
+| 14 | Writes in one namespace do not change values in any other namespace | [U] | P1 |
+| 15 | Writes to mappings in one namespace do not affect scalar fields in another namespace | [U] | P1 |
+| 16 | Mixed writes across all 12 namespaces preserve all previously written values | [U] | P1 |
+| 17 | Storage values persist across multiple `DELEGATECALL` transactions | [I] | P1 |
+| 18 | Storage values survive UUPS implementation upgrade | [I] | P1 |
 
 ---
 
-## 3. Storage Isolation Tests (Proxy Context)
-
-These tests verify that storage libraries work correctly when called through a proxy (UUPS or Beacon).
+## 5. Fuzz and Invariant Coverage
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 8 | Organization storage accessible through UUPS proxy | [I] | P1 |
-| 9 | Account storage accessible through BeaconProxy | [I] | P1 |
-| 10 | Writing to one storage namespace does not affect another | [U] | P1 |
-| 11 | Storage persists across multiple DELEGATECALL transactions | [I] | P1 |
-| 12 | Storage survives implementation upgrade (UUPS) | [I] | P1 |
+|---|---|---|---|
+| 19 | Fuzz mixed write/read operations across all namespaces and assert deterministic retrieval | [F] | P1 |
+| 20 | Fuzz mapping keys/values for `isAdmin`, `isMember`, `isGroupMember`, `policyUsage`, `usedNonces`, `whitelisted` | [F] | P1 |
+| 21 | Invariant: no namespace collisions with ERC-1967 slots | [I] | P1 |
+| 22 | Invariant: namespace writes are isolated (no cross-namespace mutation) | [I] | P1 |
 
 ---
 
-## 4. Storage Struct Layout Compatibility
-
-These tests verify that the storage struct layout is compatible with the ERC-7201 pattern after the Merkle-to-mapping refactor.
+## 6. Account Beacon Storage Helper Coverage (Non-ERC7201)
 
 | # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 13 | Admin storage: `isAdmin` mapping writes/reads correctly at computed slot | [U] | P2 |
-| 14 | Admin storage: `adminCount` and `votingThreshold` accessible after mapping | [U] | P2 |
-| 15 | Members storage: `isMember` mapping writes/reads correctly | [U] | P2 |
-| 16 | Groups storage: nested `isGroupMember` mapping works (groupId => address => bool) | [U] | P2 |
-| 17 | Groups storage: `wasGroupDeleted` mapping independent from `isGroup` | [U] | P2 |
-| 18 | Policy storage: `policyUsage` nested mapping (bytes32 => uint256 => uint256) works | [U] | P2 |
-| 19 | Recovery storage: `TxRecoveryState` and `GuardianRecoveryState` structs both accessible | [U] | P2 |
-
----
-
-## 5. Fuzz Tests
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 20 | Fuzz: Random namespace strings produce unique ERC-7201 storage locations | [F] | P1 |
-| 21 | Fuzz: Random write/read sequences to namespaced storage slots preserve data integrity | [F] | P1 |
-| 22 | Fuzz: Random proxy delegate call sequences preserve namespaced storage values | [F] | P1 |
-
----
-
-## 6. Invariant Tests
-
-| # | Invariant | Priority |
-|---|-----------|----------|
-| 23 | **No slot collision**: ERC-7201 storage slots never collide with ERC-1967 proxy standard slots | P1 |
-| 24 | **Namespace isolation**: Writing to one ERC-7201 namespace never affects values in another namespace | P1 |
+|---|---|---|---|
+| 23 | `LibAccountOrganizationAddressStorage.getOrganizationAddress()` returns the current ERC-1967 beacon address (organization address) | [U] | P1 |
 
 ---
 
 ## Summary
 
 | Category | New Tests | Priority |
-|----------|-----------|----------|
-| Slot collision (cross-contract) | 2 | P1 |
-| Proxy storage slot collision | 5 | P1 |
-| Storage isolation (proxy context) | 5 | P1 |
-| Storage struct layout | 7 | P2 |
-| Fuzz tests | 3 | P1 |
-| Invariant tests | 2 | P1 |
-| **Total** | **24** | |
+|---|---|---|
+| Variable-level layout coverage (all libraries, all variables) | 13 | P1 |
+| Namespace isolation and proxy persistence | 5 | P1 |
+| Fuzz/invariant | 4 | P1 |
+| Account beacon storage helper coverage | 1 | P1 |
+| **Total New** | **23** | |
