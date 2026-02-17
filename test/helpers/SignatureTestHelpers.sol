@@ -5,8 +5,8 @@ pragma solidity 0.8.33;
 import {Test} from "forge-std/Test.sol";
 
 /**
- * @title SignatureTestHelpers
- * @dev Shared helper utilities for building EOA and ERC-1271 signatures in tests.
+ * @dev SignatureTestHelpers
+ *      Shared helper utilities for building EOA and ERC-1271 signatures in tests.
  */
 abstract contract SignatureTestHelpers is Test {
     /// @dev secp256k1 curve order (n). Used for malleability calculations.

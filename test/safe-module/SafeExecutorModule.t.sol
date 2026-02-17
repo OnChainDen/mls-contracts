@@ -8,26 +8,26 @@ import {ISafeExecutorModule} from "../../src/interfaces/ISafeExecutorModule.sol"
 import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 
 /**
- * @title MockSafe
- * @notice A mock Safe contract for testing the SafeExecutorModule
- * @dev Implements only the execTransactionFromModule function needed for testing.
+ * @dev MockSafe
+ *      A mock Safe contract for testing the SafeExecutorModule
+ *      Implements only the execTransactionFromModule function needed for testing.
  *      Tracks calls for verification and allows configuring success/failure responses.
  */
 contract MockSafe {
-    /// @notice Tracks the last call made via execTransactionFromModule
+    /// @dev Tracks the last call made via execTransactionFromModule
     address public lastCallTo;
     uint256 public lastCallValue;
     bytes public lastCallData;
     uint8 public lastCallOperation;
     uint256 public callCount;
 
-    /// @notice Controls whether execTransactionFromModule returns success or failure
+    /// @dev Controls whether execTransactionFromModule returns success or failure
     bool public shouldSucceed = true;
 
-    /// @notice Storage slot for testing state changes
+    /// @dev Storage slot for testing state changes
     uint256 public storageValue;
 
-    /// @notice Simulates Safe's execTransactionFromModule
+    /// @dev Simulates Safe's execTransactionFromModule
     /// @param to Target address
     /// @param value ETH value (should always be 0 for our module)
     /// @param data Calldata
@@ -62,12 +62,12 @@ contract MockSafe {
         return success;
     }
 
-    /// @notice Configure whether mock executions should succeed or fail
+    /// @dev Configure whether mock executions should succeed or fail
     function setShouldSucceed(bool succeed) external {
         shouldSucceed = succeed;
     }
 
-    /// @notice Reset call tracking
+    /// @dev Reset call tracking
     function resetCalls() external {
         lastCallTo = address(0);
         lastCallValue = 0;
@@ -76,20 +76,20 @@ contract MockSafe {
         callCount = 0;
     }
 
-    /// @notice Function that can be called to test blocking calls to Safe
+    /// @dev Function that can be called to test blocking calls to Safe
     function addOwnerWithThreshold(address, uint256) external pure {
         // This should never be callable via the module
     }
 
-    /// @notice Function that can be called to test blocking calls to Safe
+    /// @dev Function that can be called to test blocking calls to Safe
     function enableModule(address) external pure {
         // This should never be callable via the module
     }
 }
 
 /**
- * @title MockTarget
- * @notice A mock target contract for testing module execution
+ * @dev MockTarget
+ *      A mock target contract for testing module execution
  */
 contract MockTarget {
     uint256 public value;
@@ -113,23 +113,23 @@ contract MockTarget {
 }
 
 /**
- * @title MockBatchedTransaction
- * @notice A mock BatchedTransaction contract for testing delegatecall functionality
+ * @dev MockBatchedTransaction
+ *      A mock BatchedTransaction contract for testing delegatecall functionality
  */
 contract MockBatchedTransaction {
-    /// @notice Tracks if execute was called
+    /// @dev Tracks if execute was called
     bool public wasCalled;
 
-    /// @notice Simulates the execute function
+    /// @dev Simulates the execute function
     function execute(bytes memory) external {
         wasCalled = true;
     }
 }
 
 /**
- * @title SafeExecutorModuleTest
- * @notice Comprehensive tests for the SafeExecutorModule contract
- * @dev Tests cover:
+ * @dev SafeExecutorModuleTest
+ *      Comprehensive tests for the SafeExecutorModule contract
+ *      Tests cover:
  *      - Constructor validation and initialization
  *      - Authorization checks
  *      - Target address restrictions (Safe)

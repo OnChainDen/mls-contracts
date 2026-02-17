@@ -9,8 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ContractInteractionUtils} from "libraries/ContractInteractionUtils.sol";
 
 /**
- * @title ContractInteractionUtilsHarness
- * @dev Test harness that exposes the internal ContractInteractionUtils.extractFunctionSelector
+ * @dev ContractInteractionUtilsHarness
+ *      Test harness that exposes the internal ContractInteractionUtils.extractFunctionSelector
  *      function via a public wrapper. Uses `external` because the library function takes
  *      `calldata` parameters.
  */
@@ -21,9 +21,9 @@ contract ContractInteractionUtilsHarness {
 }
 
 /**
- * @title ContractInteractionUtilsTest
- * @notice Tests for ContractInteractionUtils library.
- * @dev Covers function selector extraction from calldata, including boundary cases
+ * @dev ContractInteractionUtilsTest
+ *      Tests for ContractInteractionUtils library.
+ *      Covers function selector extraction from calldata, including boundary cases
  *      (exactly 4 bytes), known selectors, and fuzz testing.
  * @author Den Technologies Inc
  */

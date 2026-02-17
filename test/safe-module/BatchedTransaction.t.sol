@@ -8,8 +8,8 @@ import {IBatchedTransaction} from "../../src/interfaces/IBatchedTransaction.sol"
 import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
 
 /**
- * @title MockTarget
- * @notice A mock target contract for testing BatchedTransaction execution
+ * @dev MockTarget
+ *      A mock target contract for testing BatchedTransaction execution
  */
 contract MockTarget {
     uint256 public value;
@@ -45,9 +45,9 @@ contract MockTarget {
 }
 
 /**
- * @title BatchedTransactionTest
- * @notice Comprehensive tests for the BatchedTransaction contract
- * @dev Tests cover:
+ * @dev BatchedTransactionTest
+ *      Comprehensive tests for the BatchedTransaction contract
+ *      Tests cover:
  *      - Single transaction execution
  *      - Multiple transactions in a batch
  *      - Empty transactions (no-op)
@@ -324,8 +324,8 @@ contract BatchedTransactionTest is Test {
 }
 
 /**
- * @title EmptyCallTarget
- * @notice A contract that accepts empty calls for testing
+ * @dev EmptyCallTarget
+ *      A contract that accepts empty calls for testing
  */
 contract EmptyCallTarget {
     bool public wasCalled;

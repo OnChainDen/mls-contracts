@@ -9,8 +9,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
 
 /**
- * @title TokenTransferUtilsHarness
- * @dev Test harness that exposes all internal TokenTransferUtils library functions
+ * @dev TokenTransferUtilsHarness
+ *      Test harness that exposes all internal TokenTransferUtils library functions
  *      via public wrappers. Because the library functions use `calldata` parameters,
  *      all harness functions must be `external` to receive calldata from the test.
  */
@@ -43,10 +43,10 @@ contract TokenTransferUtilsHarness {
 }
 
 /**
- * @title TokenTransferUtilsTest
- * @notice Comprehensive tests for TokenTransferUtils library covering transfer
+ * @dev TokenTransferUtilsTest
+ *      Comprehensive tests for TokenTransferUtils library covering transfer
  *         detection and extraction for both native ETH and ERC-20 token transfers.
- * @dev Test coverage spans:
+ *      Test coverage spans:
  *      - Detection tests (isTransactionTokenTransfer, isTransactionNativeTokenTransfer,
  *        isTransactionERC20TokenTransfer)
  *      - Extraction tests (extractERC20TransferRecipient, extractTokenAddress,
