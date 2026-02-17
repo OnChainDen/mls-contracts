@@ -19,8 +19,8 @@ import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/Lib
 import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
- * @title Guardian Recovery Test Harness
- * @notice Wraps library functions for testing with proper msg.sender handling
+ * @dev Guardian Recovery Test Harness
+ *      Wraps library functions for testing with proper msg.sender handling
  */
 contract GuardianRecoveryTestHarness {
     // ================================
@@ -178,9 +178,9 @@ contract GuardianRecoveryTestHarness {
 }
 
 /**
- * @title Lib Organization Guardian Recovery Test
- * @notice Tests for guardian recovery functionality
- * @dev Tests initialization, timelocked guardian recovery flows, deferred initialization, and access control.
+ * @dev Lib Organization Guardian Recovery Test
+ *      Tests for guardian recovery functionality
+ *      Tests initialization, timelocked guardian recovery flows, deferred initialization, and access control.
  *      Normal and recovery guardian update flows use SEPARATE storage and are NOT mutually exclusive.
  * @author Den Technologies Inc
  */

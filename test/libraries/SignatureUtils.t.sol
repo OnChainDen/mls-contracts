@@ -23,8 +23,8 @@ import {
 } from "test/helpers/MockERC1271Signers.sol";
 
 /**
- * @title SignatureUtilsHarness
- * @dev Test harness that exposes all internal SignatureUtils library functions
+ * @dev SignatureUtilsHarness
+ *      Test harness that exposes all internal SignatureUtils library functions
  *      (both the public-facing ones and the previously-private helpers) via
  *      public wrappers so they can be called from the test contract.
  */
@@ -145,10 +145,10 @@ contract SignatureUtilsHarness {
 }
 
 /**
- * @title SignatureUtilsTest
- * @notice Comprehensive tests for SignatureUtils library covering EOA (ECDSA)
+ * @dev SignatureUtilsTest
+ *      Comprehensive tests for SignatureUtils library covering EOA (ECDSA)
  *         and ERC-1271 contract signature validation.
- * @dev Test coverage spans:
+ *      Test coverage spans:
  *      - tryRecoverSigner (core implementation)
  *      - recoverSignerOrRevert (production-path verification)
  *      - tryRecoverSignerAtOffset (multi-sig offset recovery)

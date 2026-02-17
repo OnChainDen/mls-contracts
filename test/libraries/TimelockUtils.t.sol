@@ -7,8 +7,8 @@ import {Test} from "forge-std/Test.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 
 /**
- * @title TimelockUtilsHarness
- * @dev Test harness that exposes the internal TimelockUtils.validateTimelockDurationOrRevert
+ * @dev TimelockUtilsHarness
+ *      Test harness that exposes the internal TimelockUtils.validateTimelockDurationOrRevert
  *      function and the library constants via public wrappers.
  */
 contract TimelockUtilsHarness {
@@ -26,9 +26,9 @@ contract TimelockUtilsHarness {
 }
 
 /**
- * @title TimelockUtilsTest
- * @notice Tests for TimelockUtils library.
- * @dev Covers boundary validation for timelock durations:
+ * @dev TimelockUtilsTest
+ *      Tests for TimelockUtils library.
+ *      Covers boundary validation for timelock durations:
  *      - MIN_TIMELOCK_DURATION_SECONDS = 2 days (172800 seconds)
  *      - MAX_TIMELOCK_DURATION_SECONDS = 30 days (2592000 seconds)
  *      All tests verify that durations within [MIN, MAX] succeed and durations
