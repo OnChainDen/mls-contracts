@@ -30,6 +30,8 @@ remappings = [
     "script/=script/",
     "types/=src/types/"
 ]
+# Lighter local default for stateful invariant testing. CI profile is stricter.
+invariant = { runs = 32, depth = 100 }
 
 # ------------------------------------------------------------------------------
 # RPC ENDPOINTS (Network Aliases)
