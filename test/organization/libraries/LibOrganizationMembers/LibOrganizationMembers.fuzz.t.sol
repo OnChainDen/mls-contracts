@@ -156,6 +156,8 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
 
         for (uint256 i = 0; i < count; i++) {
             // Low byte is deterministic and unique within this bounded range.
+            // Casting to uint160 is safe here: `count` is bounded to <= 16 in callers, so `(i + 1)` never truncates.
+            // forge-lint: disable-next-line(unsafe-typecast)
             values[i] = address(highBits | uint160(i + 1));
         }
     }
