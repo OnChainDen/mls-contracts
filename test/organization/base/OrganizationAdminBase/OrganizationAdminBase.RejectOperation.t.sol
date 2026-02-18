@@ -61,6 +61,8 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType operationType = OperationType.ModifyPolicies;
+        // Casting a short literal to bytes32 keeps this test payload deterministic and explicit.
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes memory operationData = abi.encode(bytes32("policyRoot"), "ipfs://cid");
         uint256 salt = 2019;
         uint256 expiration = block.timestamp + 1 hours;
@@ -347,6 +349,8 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType[2] memory operationTypes = [OperationType.Upgrade, OperationType.ModifyPolicies];
+        // Casting a short literal to bytes32 is intentional for deterministic synthetic operation payloads.
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes[2] memory operationData = [abi.encode(address(0xAB0)), abi.encode(bytes32("root"), "cid")];
 
         for (uint256 i = 0; i < operationTypes.length; i++) {
