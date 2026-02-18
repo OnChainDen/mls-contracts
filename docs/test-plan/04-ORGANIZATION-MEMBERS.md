@@ -3,10 +3,6 @@
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationMembers.sol`
 - `src/organization/base/OrganizationMembersBase.sol`
-- `src/organization/libraries/storage/LibOrganizationMembersStorage.sol`
-- `src/interfaces/organization/IOrganizationMembers.sol`
-
-**Test File(s):** `test/LibOrganizationMembers.t.sol`, `test/OrganizationMembersBase.t.sol`
 
 ---
 
@@ -56,7 +52,7 @@ Check state and events emitted for each of these
 | 17 | Add and remove different members in same call | [U] | P0 |
 | 18 | Both arrays empty — no-op succeeds | [E] | P2 |
 | 19 | Add then remove same address in same call — net effect: removed (add processed first) | [E] | P0 |
-| 20 | Remove an address then add it back in same call — net effect: added (remove is no-op, then add succeeds) | [E] | P0 |
+| 20 | Add and remove same non-member in same call — emits `MemberAdded` then `MemberRemoved`, net effect: removed | [E] | P0 |
 
 ---
 
