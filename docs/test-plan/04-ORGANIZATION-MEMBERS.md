@@ -29,10 +29,11 @@
 |---|-----------|------|----------|
 | 7 | Remove existing member — succeeds, `isMember` returns false | [U] | P0 |
 | 8 | Remove multiple members — all removed | [U] | P0 |
-| 9 | Remove non-existent member — reverts with `MemberDoesNotExist` | [N] | P0 |
+| 9 | Remove non-existent member — no-op (idempotent), no revert | [E] | P0 |
 | 10 | Remove member who is an admin — reverts with `MemberIsAdmin` | [S] | P0 |
 | 11 | Remove member who is in a group — succeeds (group membership not checked) | [E] | P0 |
 | 12 | Member removed emits `MemberRemoved` event | [EV] | P1 |
+| 13 | Removing non-existent member does NOT emit `MemberRemoved` | [EV] | P1 |
 
 ---
 
@@ -40,9 +41,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 13 | Cannot remove member who is admin without first removing admin status | [S] | P0 |
-| 14 | After removing admin status, member can be removed | [U] | P0 |
-| 15 | Adding admin (in admin module) requires address to already be member | [I] | P0 |
+| 14 | Cannot remove member who is admin without first removing admin status | [S] | P0 |
+| 15 | After removing admin status, member can be removed | [U] | P0 |
+| 16 | Adding admin (in admin module) requires address to already be member | [I] | P0 |
 
 ---
 
@@ -50,10 +51,10 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 16 | Add and remove different members in same call | [U] | P0 |
-| 17 | Both arrays empty — no-op succeeds | [E] | P2 |
-| 18 | Add then remove same address in same call — net effect: removed (add processed first) | [E] | P0 |
-| 19 | Remove an address then add it back in same call — reverts on remove (not member yet) | [E] | P0 |
+| 17 | Add and remove different members in same call | [U] | P0 |
+| 18 | Both arrays empty — no-op succeeds | [E] | P2 |
+| 19 | Add then remove same address in same call — net effect: removed (add processed first) | [E] | P0 |
+| 20 | Remove an address then add it back in same call — net effect: added (remove is no-op, then add succeeds) | [E] | P0 |
 
 ---
 
@@ -61,9 +62,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 20 | `isMember` returns true for existing member | [U] | P3 |
-| 21 | `isMember` returns false for non-member | [U] | P3 |
-| 22 | `isMember` returns false for address(0) | [U] | P3 |
+| 21 | `isMember` returns true for existing member | [U] | P3 |
+| 22 | `isMember` returns false for non-member | [U] | P3 |
+| 23 | `isMember` returns false for address(0) | [U] | P3 |
 
 ---
 
@@ -71,10 +72,10 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 23 | `modifyMembers` requires admin auth (valid signatures) | [U] | P0 |
-| 24 | `modifyMembers` reverts when caller is not guardian | [N] | P0 |
-| 25 | `modifyMembers` with insufficient admin signatures reverts | [N] | P0 |
-| 26 | `isMember` callable by anyone | [U] | P3 |
+| 24 | `modifyMembers` requires admin auth (valid signatures) | [U] | P0 |
+| 25 | `modifyMembers` reverts when caller is not guardian | [N] | P0 |
+| 26 | `modifyMembers` with insufficient admin signatures reverts | [N] | P0 |
+| 27 | `isMember` callable by anyone | [U] | P3 |
 
 ---
 
@@ -82,11 +83,12 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 27 | Fuzz: Add N random non-zero addresses, all become members | [F] | P0 |
-| 28 | Fuzz: Add then remove N random addresses, none remain members | [F] | P0 |
-| 29 | Fuzz: Adding same address twice is idempotent | [F] | P1 |
-| 30 | Fuzz: Random address(0) input always reverts `InvalidMemberAddress` | [F] | P0 |
-| 31 | Fuzz: Removing a member who is an admin always reverts `MemberIsAdmin` | [F] | P0 |
+| 28 | Fuzz: Add N random non-zero addresses, all become members | [F] | P0 |
+| 29 | Fuzz: Add then remove N random addresses, none remain members | [F] | P0 |
+| 30 | Fuzz: Adding same address twice is idempotent | [F] | P1 |
+| 31 | Fuzz: Removing same non-member address is idempotent | [F] | P1 |
+| 32 | Fuzz: Random address(0) input always reverts `InvalidMemberAddress` | [F] | P0 |
+| 33 | Fuzz: Removing a member who is an admin always reverts `MemberIsAdmin` | [F] | P0 |
 
 ---
 
@@ -94,9 +96,10 @@
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 32 | **Admin-must-be-member**: For every address where `isAdmin(addr) == true`, `isMember(addr) == true` | P0 |
-| 33 | **No zero-address members**: `isMember(address(0))` is always false | P0 |
-| 34 | **Idempotent add**: Adding an existing member never reverts and never changes state | P1 |
+| 34 | **Admin-must-be-member**: For every address where `isAdmin(addr) == true`, `isMember(addr) == true` | P0 |
+| 35 | **No zero-address members**: `isMember(address(0))` is always false | P0 |
+| 36 | **Idempotent add**: Adding an existing member never reverts and never changes state | P1 |
+| 37 | **Idempotent remove**: Removing a non-member never reverts and never changes state | P1 |
 
 ---
 
@@ -105,11 +108,11 @@
 | Category | New Tests | Priority |
 |----------|-----------|----------|
 | Member addition | 6 | P0 |
-| Member removal | 6 | P0 |
+| Member removal | 7 | P0 |
 | Admin-member invariant | 3 | P0 |
 | Combined operations | 4 | P0 |
 | Query functions | 3 | P3 |
 | Access control | 4 | P0 |
-| Fuzz tests | 5 | P0-P1 |
-| Invariant tests | 3 | P0-P1 |
-| **Total** | **34** | |
+| Fuzz tests | 6 | P0-P1 |
+| Invariant tests | 4 | P0-P1 |
+| **Total** | **37** | |
