@@ -171,7 +171,7 @@ library LibOrganizationAdmin {
      * @param operationHash The hash of the admin operation
      * @return True if there are enough valid signatures, false otherwise
      */
-    function _areAdminSignaturesValid(bytes memory signatures, bytes32 operationHash) private view returns (bool) {
+    function _areAdminSignaturesValid(bytes memory signatures, bytes32 operationHash) internal view returns (bool) {
         // Case: No signatures provided
         if (signatures.length == 0) {
             return false;
@@ -230,7 +230,7 @@ library LibOrganizationAdmin {
         uint256 salt,
         uint256 expirationTimestamp,
         bool isApproval
-    ) private view returns (bytes32) {
+    ) internal view returns (bytes32) {
         // Create EIP-712 structured data hash
         // Note: isApproval is included to differentiate execution signatures from rejection signatures
         bytes32 structHash = keccak256(
