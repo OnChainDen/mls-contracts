@@ -33,6 +33,7 @@
 | 12 | Event ordering across a successful mixed batch follows modification order deterministically | [EV] | P1 |
 | 13 | Boundary IDs: `groupId = 0` and `groupId = type(uint256).max` are handled correctly in batch execution | [E] | P1 |
 | 14 | **Desired behavior:** batch with valid create, invalid enum modification, and valid update reverts entirely with no state changes from preceding valid operations | [S] | P0 |
+| 15 | Batch where a middle modification reverts (e.g. update non-existent group) rolls back all state: no groups created/deleted, no members added/removed, no events emitted from any modification in the batch | [S] | P0 |
 
 ### 1.2 `isGroup(uint256 groupId)`
 
@@ -177,6 +178,6 @@
 
 | File | Functions Covered | Test Cases | Priority Focus |
 |------|-------------------|------------|----------------|
-| `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 78 | P0 state machine, atomicity, and desired behavior gaps |
+| `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 79 | P0 state machine, atomicity, and desired behavior gaps |
 | `src/organization/base/OrganizationGroupsBase.sol` | 3 | 14 | P0 auth/access control and revert propagation |
-| **Total** | **12** | **92** | **P0-heavy** |
+| **Total** | **12** | **93** | **P0-heavy** |
