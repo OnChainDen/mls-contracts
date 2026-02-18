@@ -40,6 +40,12 @@ interface IOrganizationMembers {
     error MemberIsAdmin(address member);
 
     /**
+     * @notice Thrown when trying to remove a member who does not exist
+     * @param member The address that is not a member
+     */
+    error MemberDoesNotExist(address member);
+
+    /**
      * @notice Thrown when the member address is the zero address
      * @param member The invalid zero address
      */
