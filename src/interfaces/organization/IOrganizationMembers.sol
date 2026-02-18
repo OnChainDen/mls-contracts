@@ -40,12 +40,6 @@ interface IOrganizationMembers {
     error MemberIsAdmin(address member);
 
     /**
-     * @notice Thrown when trying to remove a member who does not exist
-     * @param member The address that is not a member
-     */
-    error MemberDoesNotExist(address member);
-
-    /**
      * @notice Thrown when the member address is the zero address
      * @param member The invalid zero address
      */
@@ -57,7 +51,7 @@ interface IOrganizationMembers {
 
     /**
      * @notice Adds and/or removes members from the organization
-     * @dev Adding a duplicate member is a no-op. Removing a non-existent member reverts.
+     * @dev Adding a duplicate member is a no-op. Removing a non-existent member is a no-op.
      *      Removing a member who is an admin reverts with MemberIsAdmin.
      * @param membersToAdd Addresses to add as members
      * @param membersToRemove Addresses to remove from members
