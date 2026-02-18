@@ -49,6 +49,8 @@
 
 ## 4. Combined Add/Remove Operations
 
+Check state and events emitted for each of these
+
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | 17 | Add and remove different members in same call | [U] | P0 |
