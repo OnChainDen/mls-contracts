@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {BitmaskHelpers} from "test/helpers/BitmaskHelpers.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     LibOrganizationAdminHarness
@@ -13,7 +14,7 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Stateful invariant handler for `LibOrganizationAdmin` invariants.
  *      Mutations are executed through library entry points and mirrored into a local model.
  */
-contract LibOrganizationAdminInvariantHandler is SignatureTestHelpers {
+contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHelpers {
     /// @dev Harness under test.
     LibOrganizationAdminHarness public immutable harness;
 
@@ -268,16 +269,5 @@ contract LibOrganizationAdminInvariantHandler is SignatureTestHelpers {
         }
 
         return _concatSignatures(signatures);
-    }
-
-    /**
-     * @dev Counts set bits in lower 4 bits of a bitmask.
-     */
-    function _popcount4(uint8 bitmask) internal pure returns (uint256 count) {
-        for (uint256 i = 0; i < 4; i++) {
-            if (((bitmask >> i) & 1) == 1) {
-                count++;
-            }
-        }
     }
 }
