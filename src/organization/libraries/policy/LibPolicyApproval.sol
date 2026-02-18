@@ -7,6 +7,7 @@ import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.s
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationGroups} from "organization/libraries/LibOrganizationGroups.sol";
 import {LibOrganizationMembers} from "organization/libraries/LibOrganizationMembers.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
 import {ApproverType, Policy} from "types/PolicyTypes.sol";
 
 /**
@@ -121,7 +122,9 @@ library LibPolicyApproval {
 
         // Case: Policy requires approval from any member of a specific group
         if (approverType == ApproverType.Group) {
-            return LibOrganizationGroups.isGroupMember(policy.config.approval.approverGroupId, signerAddress);
+            return
+                LibOrganizationGroupsStorage.layout()
+                .isGroupMember[policy.config.approval.approverGroupId][signerAddress];
         }
 
         return false;
