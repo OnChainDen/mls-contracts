@@ -2,8 +2,12 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {LibOrganizationAdminHarness} from "test/organization/harness/LibOrganizationAdminHarness.sol";
-import {LibOrganizationAdminSuiteBase} from "test/organization/helpers/LibOrganizationAdminSuiteBase.sol";
+import {
+    LibOrganizationAdminHarness
+} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
+import {
+    LibOrganizationAdminSuiteBase
+} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminSuiteBase.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
 /**
@@ -17,18 +21,20 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
     );
 
-    /// @dev Deterministic hash for same input tuple.
+    /// @dev Verifies that the same input tuple produces a deterministic hash.
     function test_getAdminOperationHash_sameInput_isDeterministic() public view {
+        // Setup: define one operation payload and a fixed parameter tuple.
         bytes memory operationData = abi.encode("op68", uint256(1));
 
-        bytes32 a = harness.getAdminOperationHash({
+        // Call: compute operation hashes twice for identical inputs.
+        bytes32 actualHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             salt: 1,
             expirationTimestamp: 10,
             isApproval: true
         });
-        bytes32 b = harness.getAdminOperationHash({
+        bytes32 expectHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             salt: 1,
@@ -36,13 +42,17 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
-        assertEq(a, b, "hash must be deterministic");
+        // Verify: assert that the derived hash matches the expected reference hash.
+
+        assertEq(actualHash, expectHash, "hash must be deterministic");
     }
 
-    /// @dev Different operationType yields different hash.
+    /// @dev Verifies that a different operation type produces a different hash.
     function test_getAdminOperationHash_differentOperationType_producesDifferentHash() public view {
+        // Setup: define one payload used across both operation types.
         bytes memory operationData = abi.encode("op69");
 
+        // Call: compute hashes for two operation types with the same remaining inputs.
         bytes32 a = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -58,11 +68,16 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(a != b, "hash must bind operationType");
     }
 
-    /// @dev Different operationData yields different hash.
+    /// @dev Verifies that different operation data produces a different hash.
     function test_getAdminOperationHash_differentOperationData_producesDifferentHash() public view {
+        // Setup: define two distinct operation payloads.
+
+        // Call: compute hashes for both payload variants.
         bytes32 a = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: abi.encode("A"),
@@ -78,13 +93,17 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(a != b, "hash must bind operationData");
     }
 
-    /// @dev Different salt yields different hash.
+    /// @dev Verifies that a different salt produces a different hash.
     function test_getAdminOperationHash_differentSalt_producesDifferentHash() public view {
+        // Setup: define one payload and two salt variants.
         bytes memory operationData = abi.encode("op71");
 
+        // Call: compute hashes for both salt variants.
         bytes32 a = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -100,13 +119,17 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(a != b, "hash must bind salt");
     }
 
-    /// @dev Different expirationTimestamp yields different hash.
+    /// @dev Verifies that a different expiration timestamp produces a different hash.
     function test_getAdminOperationHash_differentExpiration_producesDifferentHash() public view {
+        // Setup: define one payload and two expiration variants.
         bytes memory operationData = abi.encode("op72");
 
+        // Call: compute hashes for both expiration variants.
         bytes32 a = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -122,13 +145,17 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(a != b, "hash must bind expiration timestamp");
     }
 
-    /// @dev isApproval=true/false yields different hash.
+    /// @dev Verifies that toggling `isApproval` produces a different hash.
     function test_getAdminOperationHash_differentIsApproval_producesDifferentHash() public view {
+        // Setup: define one payload with approval and rejection variants.
         bytes memory operationData = abi.encode("op73");
 
+        // Call: compute hashes for approval and rejection.
         bytes32 approval = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -144,12 +171,17 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: false
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(approval != rejection, "hash must domain-separate approval and rejection");
     }
 
-    /// @dev Different chainId yields different hash.
+    /// @dev Verifies that a different chain ID produces a different hash.
     function test_getAdminOperationHash_differentChainId_producesDifferentHash() public {
+        // Setup: define one payload and keep all signed fields constant.
         bytes memory operationData = abi.encode("op74");
+
+        // Call: compute hash on the original chain id.
         bytes32 oldHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -158,6 +190,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Call: switch chain id and recompute with the same payload.
         vm.chainId(block.chainid + 7);
         bytes32 newHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
@@ -167,14 +200,18 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(oldHash != newHash, "hash must bind chainId");
     }
 
-    /// @dev Different contract address yields different hash.
+    /// @dev Verifies that a different contract address produces a different hash.
     function test_getAdminOperationHash_differentContractAddress_producesDifferentHash() public {
+        // Setup: define one payload and deploy a second harness address.
         bytes memory operationData = abi.encode("op75");
         LibOrganizationAdminHarness secondHarness = new LibOrganizationAdminHarness();
 
+        // Call: compute hashes from two different verifying-contract addresses.
         bytes32 a = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
@@ -190,18 +227,22 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
+        // Verify: assert that changing the selected input dimension changes the resulting hash.
+
         assertTrue(a != b, "hash must bind verifying contract");
     }
 
-    /// @dev Hash equals manual EIP-712 typed-data computation.
+    /// @dev Verifies that the hash matches a manual EIP-712 typed-data computation.
     function test_getAdminOperationHash_matchesManualEIP712Computation() public view {
+        // Setup: define one operation tuple and keep all signed fields explicit.
         bytes memory operationData = abi.encode("op76", uint256(42));
         uint256 salt = 16;
         uint256 expiration = 105;
         bool isApproval = true;
         OperationType operationType = OperationType.ModifyPolicies;
 
-        bytes32 libraryHash = harness.getAdminOperationHash({
+        // Call: compute the library-produced EIP-712 operation hash.
+        bytes32 actualHash = harness.getAdminOperationHash({
             operationType: operationType,
             operationData: operationData,
             salt: salt,
@@ -210,7 +251,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         });
 
         // Build a reference struct hash from the EIP-712 schema used by this protocol.
-        bytes32 structHash = keccak256(
+        bytes32 expectStructHash = keccak256(
             abi.encode(
                 ADMIN_OPERATION_TYPEHASH,
                 uint8(operationType),
@@ -224,7 +265,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         );
 
         // Build a reference domain separator from the protocol's typed-data domain fields.
-        bytes32 domainSeparator = keccak256(
+        bytes32 expectDomainSeparator = keccak256(
             abi.encode(
                 EIP712_DOMAIN_TYPEHASH,
                 keccak256("MLSWalletOrganization"),
@@ -234,23 +275,26 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             )
         );
 
-        bytes32 manualHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
-        assertEq(libraryHash, manualHash, "manual EIP-712 hash must match library output");
+        bytes32 expectHash = keccak256(abi.encodePacked("\x19\x01", expectDomainSeparator, expectStructHash));
+        // Verify: assert that the derived hash matches the expected reference hash.
+        assertEq(actualHash, expectHash, "manual EIP-712 hash must match library output");
     }
 
-    /// @dev Same bytes content across different memory instances yields identical hash.
+    /// @dev Verifies that identical byte content in different memory instances produces the same hash.
     function test_getAdminOperationHash_sameByteContentDifferentMemoryInstances_sameHash() public view {
+        // Setup: create two distinct byte arrays with identical content.
         bytes memory operationDataA = abi.encode("same-content", uint256(77));
         bytes memory operationDataB = abi.encode("same-content", uint256(77));
 
-        bytes32 hashA = harness.getAdminOperationHash({
+        // Call: compute hashes for both memory instances.
+        bytes32 actualHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationDataA,
             salt: 17,
             expirationTimestamp: 106,
             isApproval: true
         });
-        bytes32 hashB = harness.getAdminOperationHash({
+        bytes32 expectHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationDataB,
             salt: 17,
@@ -258,6 +302,8 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
             isApproval: true
         });
 
-        assertEq(hashA, hashB, "hashing must depend on byte content, not memory pointer");
+        // Verify: assert that the derived hash matches the expected reference hash.
+
+        assertEq(actualHash, expectHash, "hashing must depend on byte content, not memory pointer");
     }
 }

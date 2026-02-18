@@ -14,7 +14,7 @@ import {
     MockERC1271WrongMagicSigner
 } from "test/helpers/MockERC1271Signers.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
-import {OrganizationAdminStateHarness} from "test/organization/harness/OrganizationAdminStateHarness.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -105,25 +105,6 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
     }
 
     /**
-     * @dev Computes operation hash via harness wrapper.
-     */
-    function _computeOperationHash(
-        OperationType operationType,
-        bytes memory operationData,
-        uint256 salt,
-        uint256 expirationTimestamp,
-        bool isApproval
-    ) internal view returns (bytes32) {
-        return stateHarness.getAdminOperationHash({
-            operationType: operationType,
-            operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
-            isApproval: isApproval
-        });
-    }
-
-    /**
      * @dev Builds sorted packed EOA signatures for `operationHash`.
      */
     function _buildSortedEOASignatures(bytes32 operationHash, uint256[] memory privateKeys)
@@ -178,7 +159,7 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory) {
         // This hash must match the exact in-contract typed-data hash used by authorization checks.
-        bytes32 operationHash = _computeOperationHash({
+        bytes32 operationHash = stateHarness.getAdminOperationHash({
             operationType: operationType,
             operationData: operationData,
             salt: salt,
@@ -187,24 +168,6 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
         });
         bytes memory signatures = _buildSortedEOASignatures(operationHash, privateKeys);
         return AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
-    }
-
-    /**
-     * @dev Computes admin-operation nonce via harness wrapper.
-     */
-    function _computeNonce(OperationType operationType, bytes memory operationData, uint256 salt)
-        internal
-        view
-        returns (uint256)
-    {
-        return stateHarness.computeNonce(operationType, operationData, salt);
-    }
-
-    /**
-     * @dev Returns true when nonce is marked used.
-     */
-    function _isNonceUsed(uint256 nonce) internal view returns (bool) {
-        return stateHarness.getUsedNonce(nonce);
     }
 
     /**
@@ -230,7 +193,7 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
      * @dev Asserts nonce-usage status with a descriptive message.
      */
     function _assertNonceUsed(uint256 nonce, bool expectedUsed, string memory reason) internal view {
-        assertEq(_isNonceUsed(nonce), expectedUsed, reason);
+        assertEq(stateHarness.getUsedNonce(nonce), expectedUsed, reason);
     }
 
     /**

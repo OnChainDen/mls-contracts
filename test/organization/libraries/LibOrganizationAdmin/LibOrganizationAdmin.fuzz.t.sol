@@ -3,34 +3,25 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {LibOrganizationAdminHarness} from "test/organization/harness/LibOrganizationAdminHarness.sol";
-import {OrganizationAdminStateHarness} from "test/organization/harness/OrganizationAdminStateHarness.sol";
-import {OrganizationAdminTestBase} from "test/organization/helpers/OrganizationAdminTestBase.sol";
+import {
+    LibOrganizationAdminSuiteBase
+} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Fuzz tests for cross-file admin behaviors.
  */
-contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
-    /// @dev Concrete harness used by fuzz tests for library-level admin behavior.
-    LibOrganizationAdminHarness internal harness;
-
+contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     /**
-     * @dev Deploys the library-focused harness for this suite.
-     */
-    function _deployHarness() internal override returns (OrganizationAdminStateHarness) {
-        harness = new LibOrganizationAdminHarness();
-        return OrganizationAdminStateHarness(address(harness));
-    }
-
-    /**
-     * @dev Successful auth requires at least threshold valid admin signatures.
+     * @dev Verifies that successful auth requires at least threshold valid admin signatures.
      */
     function testFuzz_successRequiresAtLeastThresholdSignatures(uint8 rawThreshold, uint8 rawSignatureCount) public {
         // Arrange: derive bounded values and seed a 3-admin setup.
         uint256 threshold = bound(uint256(rawThreshold), 1, 3);
         uint256 signatureCount = bound(uint256(rawSignatureCount), 0, 3);
+
+        // Setup: configure the initial organization state for this scenario.
 
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3),
@@ -41,7 +32,7 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
         bytes memory operationData = abi.encode("fuzz-f1", threshold, signatureCount);
         uint256 salt = 4001;
         uint256 expiration = block.timestamp + 1 hours;
-        bytes32 operationHash = _computeOperationHash({
+        bytes32 operationHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             salt: salt,
@@ -60,6 +51,7 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
 
         // Assert: success iff the number of valid signatures reaches threshold.
         if (signatureCount >= threshold) {
+            // Call: invoke admin-auth validation and nonce-consumption logic.
             harness.validateAdminAuthAndConsumeNonceOrRevert({
                 operationType: OperationType.ModifyAdmins,
                 operationData: operationData,
@@ -67,7 +59,9 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
                 authParams: auth
             });
         } else {
+            // Verify: this scenario should revert with the expected failure mode.
             vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
+            // Call: invoke admin-auth validation and nonce-consumption logic.
             harness.validateAdminAuthAndConsumeNonceOrRevert({
                 operationType: OperationType.ModifyAdmins,
                 operationData: operationData,
@@ -78,59 +72,72 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
     }
 
     /**
-     * @dev Invalid threshold updates (`0` or `> finalAdminCount`) always revert.
+     * @dev Verifies that invalid threshold updates (`0` or `> finalAdminCount`) always revert.
      */
     function testFuzz_invalidThresholdUpdatesAlwaysRevert(uint256 tooHighThresholdRaw, bool useZeroThreshold) public {
         // Arrange: start from a valid single-admin state.
+        // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
-        uint256 finalAdminCount = harness.adminCount();
-        uint256 invalidThreshold =
-            useZeroThreshold ? 0 : bound(tooHighThresholdRaw, finalAdminCount + 1, type(uint32).max);
+        uint256 expectFinalAdminCount = harness.adminCount();
+        uint256 actualInvalidThreshold =
+            useZeroThreshold ? 0 : bound(tooHighThresholdRaw, expectFinalAdminCount + 1, type(uint32).max);
 
         // Act/Assert: both invalid classes (`0` and `> count`) must revert.
+        // Verify: this scenario should revert with the expected failure mode.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationAdmin.InvalidAdminVotingThreshold.selector, invalidThreshold, finalAdminCount
+                IOrganizationAdmin.InvalidAdminVotingThreshold.selector, actualInvalidThreshold, expectFinalAdminCount
             )
         );
+        // Call: invoke `modifyAdminsViaLibrary` with the prepared inputs.
         harness.modifyAdminsViaLibrary({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: buildEmptyAddressArray(),
-            newVotingThreshold: invalidThreshold
+            newVotingThreshold: actualInvalidThreshold
         });
     }
 
     /**
-     * @dev Different salts for the same payload produce unique nonces.
+     * @dev Verifies that different salts for the same payload produce unique nonces.
      */
     function testFuzz_differentSaltsProduceDifferentNonces(uint256 saltA, uint256 saltB) public view {
+        // Setup: constrain fuzz inputs to valid preconditions for this scenario.
         vm.assume(saltA != saltB);
 
         // Nonce derivation includes salt, so unequal salts should produce unequal nonces.
         bytes memory operationData = abi.encode("fuzz-f3");
 
-        uint256 nonceA = _computeNonce(OperationType.ModifyAdmins, operationData, saltA);
-        uint256 nonceB = _computeNonce(OperationType.ModifyAdmins, operationData, saltB);
+        // Call: compute both nonce variants for the same payload and different salts.
+        uint256 nonceA = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: operationData, salt: saltA
+        });
+        uint256 nonceB = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: operationData, salt: saltB
+        });
+
+        // Verify: assert the postconditions for this scenario.
 
         assertTrue(nonceA != nonceB, "nonces must differ for different salts");
     }
 
     /**
-     * @dev Including a non-admin signer causes strict `SignerIsNotAdmin` revert.
+     * @dev Verifies that including a non-admin signer causes a `SignerIsNotAdmin` revert.
      */
     function testFuzz_nonAdminSignerInclusion_revertsSignerIsNotAdmin(uint256 nonAdminPk) public {
         // Arrange: threshold=2 ensures both signatures are evaluated.
+        // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         nonAdminPk = bound(nonAdminPk, 1, SECP256K1_CURVE_ORDER - 1);
         address nonAdmin = vm.addr(nonAdminPk);
+        // Setup: constrain fuzz inputs to valid preconditions for this scenario.
         vm.assume(nonAdmin != admin1 && nonAdmin != admin2);
 
         bytes memory operationData = abi.encode("fuzz-f4", nonAdmin);
         uint256 salt = 4002;
         uint256 expiration = block.timestamp + 1 hours;
-        bytes32 operationHash = _computeOperationHash({
+        bytes32 operationHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             salt: salt,
@@ -148,20 +155,24 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
         });
 
         // Assert: non-admin signatures are rejected even when cryptographically valid.
+        // Verify: this scenario should revert with the expected failure mode.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, nonAdmin));
+        // Call: invoke admin-auth validation and nonce-consumption logic.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins, operationData: operationData, isApproval: true, authParams: auth
         });
     }
 
     /**
-     * @dev Any payload mutation after signing invalidates authorization.
+     * @dev Verifies that any payload mutation after signing invalidates authorization.
      */
     function testFuzz_payloadMutationAfterSigning_invalidatesAuthorization(bytes32 signedSeed, bytes32 mutatedSeed)
         public
     {
+        // Setup: constrain fuzz inputs to valid preconditions for this scenario.
         vm.assume(signedSeed != mutatedSeed);
         // Arrange: sign one payload but execute using a different payload.
+        // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         bytes memory signedOperationData = abi.encode(signedSeed);
@@ -179,7 +190,10 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: this scenario should revert with the expected failure mode.
+
         vm.expectRevert();
+        // Call: invoke admin-auth validation and nonce-consumption logic.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
             operationData: mutatedOperationData,
@@ -188,12 +202,15 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
         });
 
         // Failed authorization should not leave nonce state partially mutated.
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, mutatedOperationData, salt);
-        assertFalse(_isNonceUsed(nonce), "failed auth must not leave nonce consumed");
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: salt
+        });
+        // Verify: assert the postconditions for this scenario.
+        assertFalse(harness.getUsedNonce(nonce), "failed auth must not leave nonce consumed");
     }
 
     /**
-     * @dev Successful mixed add/remove calls preserve admin invariants.
+     * @dev Verifies that successful mixed add/remove calls preserve admin invariants.
      */
     function testFuzz_successfulMixedAddRemove_keepsAdminInvariants(
         bool addCandidate,
@@ -203,6 +220,7 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
     ) public {
         // Arrange: start from three admins and one extra member candidate.
         address candidate = address(0xF601);
+        // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3, candidate),
             admins: buildArray(admin1, admin2, admin3),
@@ -229,17 +247,22 @@ contract OrganizationAdminFuzzTest is OrganizationAdminTestBase {
 
         uint256 proposedThreshold = bound(uint256(thresholdSeed), 0, 5);
 
-        // Use low-level call so fuzzing explores both success and revert paths.
+        // Call: use a low-level invocation so fuzzing explores both success and revert paths.
         (bool success,) = address(harness)
             .call(abi.encodeCall(harness.modifyAdminsViaLibrary, (adminsToAdd, adminsToRemove, proposedThreshold)));
 
+        // Verify: only successful calls must satisfy postconditions.
         if (success) {
             // Assert postconditions required by successful admin mutations.
             uint256 adminCount = harness.adminCount();
             uint256 threshold = harness.votingThreshold();
 
+            // Verify: assert the postconditions for this scenario.
+
             assertGe(adminCount, 1, "successful calls must never leave zero admins");
+            // Verify: assert the postconditions for this scenario.
             assertGe(threshold, 1, "successful calls must keep threshold >= 1");
+            // Verify: assert the postconditions for this scenario.
             assertLe(threshold, adminCount, "successful calls must keep threshold <= adminCount");
         }
     }

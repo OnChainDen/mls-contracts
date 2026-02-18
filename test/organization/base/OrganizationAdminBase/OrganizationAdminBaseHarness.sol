@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {OrganizationAdminBase} from "organization/base/OrganizationAdminBase.sol";
-import {OrganizationAdminStateHarness} from "test/organization/harness/OrganizationAdminStateHarness.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 
 /**
  * @dev Base-contract-focused test harness for `OrganizationAdminBase`.

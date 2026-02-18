@@ -4,7 +4,7 @@ pragma solidity 0.8.33;
 
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
-import {OrganizationAdminStateHarness} from "test/organization/harness/OrganizationAdminStateHarness.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
