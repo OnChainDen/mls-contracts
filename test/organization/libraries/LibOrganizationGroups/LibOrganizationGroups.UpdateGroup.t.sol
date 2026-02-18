@@ -241,20 +241,22 @@ contract LibOrganizationGroupsUpdateGroupTest is LibOrganizationGroupsSuiteBase 
     /// @dev Verifies mixed update emits all add events before remove events.
     function test_updateGroup_eventOrdering_addsEmittedBeforeRemovals() public {
         uint256 groupId = 7514;
+        address extraMember = address(0xF514);
 
         // Setup: active group with two members to remove.
         groupsStateHarness.setGroupStatus(groupId, true);
         groupsStateHarness.setGroupMemberStatus(groupId, admin1, true);
         groupsStateHarness.setGroupMemberStatus(groupId, admin2, true);
+        _setMembers(buildArray(admin3, extraMember), true);
 
         GroupModification memory mod =
-            _updateModification(groupId, buildArray(admin3, address(0xF514)), buildArray(admin1, admin2));
+            _updateModification(groupId, buildArray(admin3, extraMember), buildArray(admin1, admin2));
 
         // Verify: add events are emitted before remove events for mixed updates.
         vm.expectEmit(true, true, false, true);
         emit IOrganizationGroups.GroupMemberAdded(groupId, admin3);
         vm.expectEmit(true, true, false, true);
-        emit IOrganizationGroups.GroupMemberAdded(groupId, address(0xF514));
+        emit IOrganizationGroups.GroupMemberAdded(groupId, extraMember);
         vm.expectEmit(true, true, false, true);
         emit IOrganizationGroups.GroupMemberRemoved(groupId, admin1);
         vm.expectEmit(true, true, false, true);

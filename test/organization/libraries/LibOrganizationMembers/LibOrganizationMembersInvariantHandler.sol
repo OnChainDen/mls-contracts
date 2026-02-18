@@ -62,8 +62,8 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
      * @dev Stateful operation: fuzzed add/remove member mutation through library path.
      */
     function mutateMembers(uint8 addMask, uint8 removeMask) external {
-        uint256 addLength = _popcount4(addMask);
-        uint256 removeLength = _popcount4(removeMask);
+        uint256 addLength = _popcountLowerBits(addMask, 4);
+        uint256 removeLength = _popcountLowerBits(removeMask, 4);
 
         address[] memory membersToAdd = new address[](addLength);
         address[] memory membersToRemove = new address[](removeLength);
@@ -93,8 +93,8 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers
      * @dev Stateful operation: fuzzed add/remove admin mutation through library path.
      */
     function mutateAdmins(uint8 addMask, uint8 removeMask, uint8 thresholdSeed) external {
-        uint256 addLength = _popcount4(addMask);
-        uint256 removeLength = _popcount4(removeMask);
+        uint256 addLength = _popcountLowerBits(addMask, 4);
+        uint256 removeLength = _popcountLowerBits(removeMask, 4);
 
         address[] memory adminsToAdd = new address[](addLength);
         address[] memory adminsToRemove = new address[](removeLength);

@@ -22,6 +22,11 @@ abstract contract OrganizationGroupsTestBase is OrganizationAdminTestBase {
     function setUp() public virtual override {
         super.setUp();
         groupsStateHarness = OrganizationGroupsStateHarness(address(stateHarness));
+
+        // Most group-focused positive-path tests use these deterministic addresses as valid members.
+        groupsStateHarness.setMemberStatus(admin1, true);
+        groupsStateHarness.setMemberStatus(admin2, true);
+        groupsStateHarness.setMemberStatus(admin3, true);
     }
 
     /**
