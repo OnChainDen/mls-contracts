@@ -222,7 +222,7 @@ library LibOrganizationAdmin {
      * @param salt The user-provided salt for nonce computation
      * @param expirationTimestamp The timestamp after which the signatures are no longer valid
      * @param isApproval Whether this is an approval (true) or rejection (false) signature
-     * @return The hash of the admin operation formatted for ERC-1271 signature verification
+     * @return The EIP-712 typed data hash of the admin operation for signature verification
      */
     function _getAdminOperationHash(
         OperationType operationType,
@@ -246,7 +246,7 @@ library LibOrganizationAdmin {
             )
         );
 
-        // Return EIP-712 compatible hash for ERC-1271 signature verification
+        // Return EIP-712 typed data hash for signature verification
         return LibOrganizationEIP712.computeTypedDataHash(structHash);
     }
 }
