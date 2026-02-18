@@ -138,6 +138,7 @@
 | 7 | Invariant: `wasGroupDeleted[groupId]` is monotonic (`false -> true` only) | [I] | P0 |
 | 8 | Invariant: no zero-address group membership can ever be set | [I] | P0 |
 | 9 | Invariant (desired): active group membership implies org membership (`isGroupMember => isMember`) | [I] | P0 |
+| 10 | Stress: batch-create 10,000 groups in a single `modifyGroups` call succeeds and all groups are queryable via `isGroup` | [ST] | P2 |
 
 ---
 
@@ -179,6 +180,6 @@
 
 | File | Functions Covered | Test Cases | Priority Focus |
 |------|-------------------|------------|----------------|
-| `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 79 | P0 state machine, atomicity, and desired behavior gaps |
+| `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 80 | P0 state machine, atomicity, and desired behavior gaps |
 | `src/organization/base/OrganizationGroupsBase.sol` | 3 | 15 | P0 auth/access control and revert propagation |
-| **Total** | **12** | **94** | **P0-heavy** |
+| **Total** | **12** | **95** | **P0-heavy** |
