@@ -992,11 +992,8 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         (bool success, address signer) = harness.tryRecoverEOASigner(combined, 10, TEST_HASH, v);
 
-        // The malleability check should NOT reject s == HALF_CURVE_ORDER
-        // ecrecover may return address(0) for the forced s value, but the guard passes
-        if (signer != address(0)) {
-            assertTrue(success, "Should accept s == HALF_CURVE_ORDER");
-        }
+        assertTrue(success, "Should accept s == HALF_CURVE_ORDER");
+        assertTrue(signer != address(0), "Recovered signer should be non-zero at HALF_CURVE_ORDER");
     }
 
     /// @dev Test case: Recovering an EOA signer with s == HALF_CURVE_ORDER + 1 at a non-zero offset should be
