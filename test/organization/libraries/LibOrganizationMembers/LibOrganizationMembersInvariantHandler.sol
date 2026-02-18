@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {ArrayBuilders} from "test/helpers/ArrayBuilders.sol";
+import {BitmaskHelpers} from "test/helpers/BitmaskHelpers.sol";
 import {
     LibOrganizationMembersHarness
 } from "test/organization/libraries/LibOrganizationMembers/LibOrganizationMembersHarness.sol";
@@ -11,7 +12,7 @@ import {
  * @dev Stateful invariant handler for `LibOrganizationMembers` invariants.
  *      Mutations are executed through library entry points and invariant-specific probes set violation flags.
  */
-contract LibOrganizationMembersInvariantHandler is ArrayBuilders {
+contract LibOrganizationMembersInvariantHandler is ArrayBuilders, BitmaskHelpers {
     /// @dev Harness under test.
     LibOrganizationMembersHarness public immutable harness;
 
@@ -171,16 +172,5 @@ contract LibOrganizationMembersInvariantHandler is ArrayBuilders {
      */
     function trackedAddressAt(uint256 index) external view returns (address) {
         return trackedAddresses[index];
-    }
-
-    /**
-     * @dev Counts set bits in lower 4 bits of a bitmask.
-     */
-    function _popcount4(uint8 bitmask) internal pure returns (uint256 count) {
-        for (uint256 i = 0; i < 4; i++) {
-            if (((bitmask >> i) & 1) == 1) {
-                count++;
-            }
-        }
     }
 }
