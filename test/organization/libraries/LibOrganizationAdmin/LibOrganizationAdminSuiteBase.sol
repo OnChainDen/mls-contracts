@@ -2,9 +2,11 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {LibOrganizationAdminHarness} from "test/organization/harness/LibOrganizationAdminHarness.sol";
-import {OrganizationAdminStateHarness} from "test/organization/harness/OrganizationAdminStateHarness.sol";
-import {OrganizationAdminTestBase} from "test/organization/helpers/OrganizationAdminTestBase.sol";
+import {
+    LibOrganizationAdminHarness
+} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
+import {OrganizationAdminTestBase} from "test/organization/shared/OrganizationAdminTestBase.sol";
 
 /**
  * @dev Shared deployment/setup harness for `LibOrganizationAdmin` unit suites.

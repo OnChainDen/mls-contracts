@@ -3,7 +3,9 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {OrganizationAdminBaseSuiteBase} from "test/organization/helpers/OrganizationAdminBaseSuiteBase.sol";
+import {
+    OrganizationAdminBaseSuiteBase
+} from "test/organization/base/OrganizationAdminBase/OrganizationAdminBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -11,18 +13,22 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationAdminBase.rejectAdminOperation`.
  */
 contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteBase {
-    /// @dev Non-guardian caller reverts via onlyGuardian.
+    /// @dev Verifies that a non-guardian caller reverts via the `onlyGuardian` modifier.
     function test_rejectAdminOperation_nonGuardianCaller_revertsOnlyGuardian() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         AdminAuthParams memory auth;
+        // Verify: non-guardian caller must be rejected by the guardian-only modifier.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.Upgrade, bytes("payload"), auth);
     }
 
-    /// @dev Valid rejection succeeds and burns nonce.
+    /// @dev Verifies that a valid rejection succeeds and burns the nonce.
     function test_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType operationType = OperationType.Upgrade;
@@ -40,15 +46,18 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(operationType, operationData, auth);
 
         // Rejection path intentionally burns the same nonce execution would use.
-        uint256 nonce = _computeNonce(operationType, operationData, salt);
-        assertTrue(_isNonceUsed(nonce), "nonce should be consumed by rejection");
+        uint256 nonce = harness.computeNonce({operationType: operationType, operationData: operationData, salt: salt});
+        // Verify: assert that the nonce is marked used after successful authorization/execution.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed by rejection");
     }
 
-    /// @dev Emits AdminOperationRejected with exact tuple.
+    /// @dev Verifies that `AdminOperationRejected` is emitted with the exact operation tuple.
     function test_rejectAdminOperation_emitsAdminOperationRejectedWithExactArgs() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType operationType = OperationType.ModifyPolicies;
@@ -65,17 +74,21 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        uint256 nonce = _computeNonce(operationType, operationData, salt);
+        uint256 nonce = harness.computeNonce({operationType: operationType, operationData: operationData, salt: salt});
+
+        // Verify: confirm the expected event (and args/topics) is emitted for this success path.
 
         vm.expectEmit(true, true, false, true);
         emit IOrganizationAdmin.AdminOperationRejected(operationType, operationData, nonce);
 
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(operationType, operationData, auth);
     }
 
-    /// @dev Approval signatures cannot be reused for rejection.
+    /// @dev Verifies that approval signatures cannot be reused to authorize a rejection.
     function test_rejectAdminOperation_approvalSignaturesCannotAuthorizeRejection() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType operationType = OperationType.Upgrade;
@@ -92,16 +105,21 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(operationType, operationData, approvalAuth);
 
-        uint256 nonce = _computeNonce(operationType, operationData, salt);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed rejection auth");
+        uint256 nonce = harness.computeNonce({operationType: operationType, operationData: operationData, salt: salt});
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed rejection auth");
     }
 
-    /// @dev Mutating signed operation type/data causes rejection authorization failure.
+    /// @dev Verifies that mutating the signed operation type or data causes a rejection authorization failure.
     function test_rejectAdminOperation_mutatingSignedPayload_reverts() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         bytes memory signedData = abi.encode(address(0xAAC));
@@ -116,8 +134,11 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.ModifyPolicies, signedData, authTypeMutation);
 
         AdminAuthParams memory authDataMutation = _buildAdminAuthParamsForEOA({
@@ -129,13 +150,17 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.Upgrade, mutatedData, authDataMutation);
     }
 
-    /// @dev Expired auth params revert AdminOperationExpired.
+    /// @dev Verifies that expired auth params revert with `AdminOperationExpired`.
     function test_rejectAdminOperation_expiredAuth_revertsAdminOperationExpired() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         uint256 expiration = block.timestamp - 1;
@@ -148,15 +173,19 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAdmin.AdminOperationExpired.selector, expiration, block.timestamp)
         );
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.Upgrade, abi.encode(address(0xAAE)), auth);
     }
 
-    /// @dev Replay rejection with same nonce reverts NonceAlreadyUsed.
+    /// @dev Verifies that replaying a rejection with the same nonce reverts with `NonceAlreadyUsed`.
     function test_rejectAdminOperation_replaySameNonce_revertsNonceAlreadyUsed() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType operationType = OperationType.Upgrade;
@@ -173,17 +202,21 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(operationType, operationData, auth);
 
-        uint256 nonce = _computeNonce(operationType, operationData, salt);
+        uint256 nonce = harness.computeNonce({operationType: operationType, operationData: operationData, salt: salt});
+        // Verify: replay protection should reject nonce reuse.
         _expectNonceAlreadyUsed(nonce);
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(operationType, operationData, auth);
     }
 
-    /// @dev Reject first, then execution of same payload fails by used nonce.
+    /// @dev Verifies that rejecting first and then executing the same payload fails due to the consumed nonce.
     function test_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
         address newAdmin = address(0x210);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         address[] memory adminsToAdd = buildArray(newAdmin);
@@ -211,12 +244,16 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.ModifyAdmins, operationData, rejectionAuth);
 
         // Same operation/salt pair should now be replay-protected.
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, salt);
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+        // Verify: replay protection should reject nonce reuse.
         _expectNonceAlreadyUsed(nonce);
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: adminsToAdd,
             adminsToRemove: adminsToRemove,
@@ -225,9 +262,10 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
     }
 
-    /// @dev Execute first, then reject same payload fails by used nonce.
+    /// @dev Verifies that executing first and then rejecting the same payload fails due to the consumed nonce.
     function test_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
         address newAdmin = address(0x211);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         address[] memory adminsToAdd = buildArray(newAdmin);
@@ -255,6 +293,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: adminsToAdd,
             adminsToRemove: adminsToRemove,
@@ -262,14 +301,18 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             authParams: approvalAuth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, salt);
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+        // Verify: replay protection should reject nonce reuse.
         _expectNonceAlreadyUsed(nonce);
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.ModifyAdmins, operationData, rejectionAuth);
     }
 
-    /// @dev Failed rejection authorization does not consume nonce.
+    /// @dev Verifies that a failed rejection authorization does not consume the nonce.
     function test_rejectAdminOperation_failedAuthorization_doesNotConsumeNonce() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         bytes memory signedData = abi.encode("signed");
@@ -285,16 +328,22 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.Upgrade, mutatedData, auth);
 
-        uint256 nonce = _computeNonce(OperationType.Upgrade, mutatedData, salt);
-        assertFalse(_isNonceUsed(nonce), "failed rejection authorization must not burn nonce");
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.Upgrade, operationData: mutatedData, salt: salt});
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "failed rejection authorization must not burn nonce");
     }
 
-    /// @dev Rejection works for arbitrary operation types when properly signed.
+    /// @dev Verifies that rejection works for arbitrary operation types when properly signed.
     function test_rejectAdminOperation_arbitraryOperationTypes_workWhenProperlySigned() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         OperationType[2] memory operationTypes = [OperationType.Upgrade, OperationType.ModifyPolicies];
@@ -313,15 +362,19 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             });
 
             vm.prank(GUARDIAN);
+            // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
             harness.rejectAdminOperation(operationTypes[i], operationData[i], auth);
 
-            uint256 nonce = _computeNonce(operationTypes[i], operationData[i], salt);
-            assertTrue(_isNonceUsed(nonce), "rejection should consume nonce for arbitrary operation type");
+            uint256 nonce =
+                harness.computeNonce({operationType: operationTypes[i], operationData: operationData[i], salt: salt});
+            // Verify: assert that the nonce is marked used after successful authorization/execution.
+            assertTrue(harness.getUsedNonce(nonce), "rejection should consume nonce for arbitrary operation type");
         }
     }
 
-    /// @dev Empty operationData can be rejected when signatures are for empty payload.
+    /// @dev Verifies that empty operation data can be rejected when signatures cover the empty payload.
     function test_rejectAdminOperation_emptyOperationData_canBeRejected() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         bytes memory emptyOperationData = bytes("");
@@ -337,9 +390,12 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(OperationType.Upgrade, emptyOperationData, auth);
 
-        uint256 nonce = _computeNonce(OperationType.Upgrade, emptyOperationData, salt);
-        assertTrue(_isNonceUsed(nonce), "empty payload rejection should consume nonce");
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.Upgrade, operationData: emptyOperationData, salt: salt});
+        // Verify: assert that the nonce is marked used after successful authorization/execution.
+        assertTrue(harness.getUsedNonce(nonce), "empty payload rejection should consume nonce");
     }
 }

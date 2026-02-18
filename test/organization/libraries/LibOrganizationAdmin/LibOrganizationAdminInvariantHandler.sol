@@ -3,15 +3,17 @@
 pragma solidity 0.8.33;
 
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
-import {LibOrganizationAdminHarness} from "test/organization/harness/LibOrganizationAdminHarness.sol";
+import {
+    LibOrganizationAdminHarness
+} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
 /**
- * @dev Stateful invariant handler for organization admin invariants.
- *      Mutations are executed through production library/base paths and mirrored into a local model.
+ * @dev Stateful invariant handler for `LibOrganizationAdmin` invariants.
+ *      Mutations are executed through library entry points and mirrored into a local model.
  */
-contract OrganizationAdminInvariantHandler is SignatureTestHelpers {
+contract LibOrganizationAdminInvariantHandler is SignatureTestHelpers {
     /// @dev Harness under test.
     LibOrganizationAdminHarness public immutable harness;
 
