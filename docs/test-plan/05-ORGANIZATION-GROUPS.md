@@ -29,7 +29,7 @@
 | 8 | Same-group multi-op: `Create -> Create` reverts (`GroupAlreadyExists` on second create) | [N] | P0 |
 | 9 | Any failing modification causes full transaction revert (atomicity across batch) | [S] | P0 |
 | 10 | Revert data from underlying helper path is bubbled correctly | [U] | P1 |
-| 11 | Malformed enum value in calldata reverts and does not silently skip modification | [N] | P0 |
+| 11 | **Desired behavior** Malformed enum value in calldata reverts and does not silently skip modification | [N] | P0 |
 | 12 | Event ordering across a successful mixed batch follows modification order deterministically | [EV] | P1 |
 | 13 | Boundary IDs: `groupId = 0` and `groupId = type(uint256).max` are handled correctly in batch execution | [E] | P1 |
 
