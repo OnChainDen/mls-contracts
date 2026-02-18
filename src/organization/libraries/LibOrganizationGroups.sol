@@ -63,7 +63,7 @@ library LibOrganizationGroups {
      * @dev Deletes a group. Reverts if group does not exist or if members are provided.
      * @param mod The group modification containing the delete request
      */
-    function _deleteGroup(GroupModification calldata mod) private {
+    function _deleteGroup(GroupModification calldata mod) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         uint256 groupId = mod.groupId;
 
@@ -85,7 +85,7 @@ library LibOrganizationGroups {
      *      or if membersToRemove is non-empty.
      * @param mod The group modification containing initial members to add
      */
-    function _createGroup(GroupModification calldata mod) private {
+    function _createGroup(GroupModification calldata mod) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         uint256 groupId = mod.groupId;
 
@@ -108,7 +108,7 @@ library LibOrganizationGroups {
      * @dev Updates an existing group's membership. Reverts if the group does not exist.
      * @param mod The group modification containing members to add/remove
      */
-    function _updateGroup(GroupModification calldata mod) private {
+    function _updateGroup(GroupModification calldata mod) internal {
         LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
         uint256 groupId = mod.groupId;
 
@@ -129,7 +129,7 @@ library LibOrganizationGroups {
         LibOrganizationGroupsStorage.Layout storage groupsLayout,
         uint256 groupId,
         address[] calldata members
-    ) private {
+    ) internal {
         for (uint256 i = 0; i < members.length; ++i) {
             address member = members[i];
             if (member == address(0)) revert IOrganizationMembers.InvalidMemberAddress(member);
@@ -152,7 +152,7 @@ library LibOrganizationGroups {
         LibOrganizationGroupsStorage.Layout storage groupsLayout,
         uint256 groupId,
         address[] calldata members
-    ) private {
+    ) internal {
         for (uint256 i = 0; i < members.length; ++i) {
             address member = members[i];
 
