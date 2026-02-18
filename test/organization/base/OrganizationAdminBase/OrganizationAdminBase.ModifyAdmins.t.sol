@@ -5,7 +5,9 @@ pragma solidity 0.8.33;
 import {Vm} from "forge-std/Vm.sol";
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {OrganizationAdminBaseSuiteBase} from "test/organization/helpers/OrganizationAdminBaseSuiteBase.sol";
+import {
+    OrganizationAdminBaseSuiteBase
+} from "test/organization/base/OrganizationAdminBase/OrganizationAdminBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -13,15 +15,18 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationAdminBase.modifyAdmins` behavior.
  */
 contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase {
-    /// @dev Non-guardian caller reverts via onlyGuardian.
+    /// @dev Verifies that a non-guardian caller reverts via the `onlyGuardian` modifier.
     function test_modifyAdmins_nonGuardianCaller_revertsOnlyGuardian() public {
         // Arrange: valid baseline config, but call from a non-guardian account.
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         AdminAuthParams memory auth;
+        // Verify: non-guardian caller must be rejected by the guardian-only modifier.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         // Act/Assert: authorization should fail before signature checks run.
         vm.prank(NON_GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: buildEmptyAddressArray(),
@@ -30,9 +35,10 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
     }
 
-    /// @dev Guardian + valid signatures succeeds for add flow.
+    /// @dev Verifies that a guardian with valid signatures can add a new admin.
     function test_modifyAdmins_guardianWithValidAuth_addFlow_succeeds() public {
         address newAdmin = address(0x201);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
@@ -46,6 +52,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -53,12 +60,16 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
+        // Verify: assert that the address has admin status expected for this branch.
+
         assertTrue(harness.isAdmin(newAdmin), "new admin should be added");
+        // Verify: assert that admin count matches the expected value.
         assertEq(harness.adminCount(), 2, "admin count should increment");
     }
 
-    /// @dev Guardian + valid signatures succeeds for remove flow.
+    /// @dev Verifies that a guardian with valid signatures can remove an existing admin.
     function test_modifyAdmins_guardianWithValidAuth_removeFlow_succeeds() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 1});
 
         (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
@@ -72,6 +83,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: buildArray(admin2),
@@ -79,12 +91,16 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
+        // Verify: assert that the address does not have admin status for this branch.
+
         assertFalse(harness.isAdmin(admin2), "admin2 should be removed");
+        // Verify: assert that admin count matches the expected value.
         assertEq(harness.adminCount(), 1, "admin count should decrement");
     }
 
-    /// @dev Guardian + valid signatures succeeds for add+remove in one call.
+    /// @dev Verifies that a guardian with valid signatures can add and remove admins in one call.
     function test_modifyAdmins_guardianWithValidAuth_addAndRemove_succeeds() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2), threshold: 2
         });
@@ -100,18 +116,24 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(admin3), adminsToRemove: buildArray(admin2), newVotingThreshold: 2, authParams: auth
         });
 
+        // Verify: assert that the address has admin status expected for this branch.
+
         assertTrue(harness.isAdmin(admin3), "admin3 should be added");
+        // Verify: assert that the address does not have admin status for this branch.
         assertFalse(harness.isAdmin(admin2), "admin2 should be removed");
+        // Verify: assert that admin count matches the expected value.
         assertEq(harness.adminCount(), 2, "final admin count should remain 2");
     }
 
-    /// @dev Signatures for different operation type cannot authorize modifyAdmins.
+    /// @dev Verifies that signatures for a different operation type cannot authorize `modifyAdmins`.
     function test_modifyAdmins_signaturesForDifferentOperationType_cannotAuthorize() public {
         address newAdmin = address(0x202);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         bytes memory operationData =
@@ -128,8 +150,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -138,13 +163,16 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         // Nonce for the actual ModifyAdmins payload must stay unused because auth failed.
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, salt);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Rejection signatures cannot execute modifyAdmins.
+    /// @dev Verifies that rejection signatures cannot execute the `modifyAdmins` approval path.
     function test_modifyAdmins_rejectionSignatures_cannotExecuteApprovalPath() public {
         address newAdmin = address(0x203);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory rejectionAuth, bytes memory operationData) = _buildModifyAdminsAuth({
@@ -157,8 +185,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -166,14 +197,17 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: rejectionAuth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, 2005);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: 2005});
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Mutating adminsToAdd after signing causes authorization failure.
+    /// @dev Verifies that mutating `adminsToAdd` after signing causes an authorization failure.
     function test_modifyAdmins_mutateAdminsToAddAfterSigning_reverts() public {
         address signedAdmin = address(0x204);
         address mutatedAdmin = address(0x205);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, signedAdmin, mutatedAdmin), admins: buildArray(admin1), threshold: 1
         });
@@ -192,8 +226,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         bytes memory mutatedOperationData =
             _encodeOperationDataForModifyAdmins(buildArray(mutatedAdmin), buildEmptyAddressArray(), 1);
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(mutatedAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -201,12 +238,16 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, mutatedOperationData, 2006);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2006
+        });
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Mutating adminsToRemove after signing causes authorization failure.
+    /// @dev Verifies that mutating `adminsToRemove` after signing causes an authorization failure.
     function test_modifyAdmins_mutateAdminsToRemoveAfterSigning_reverts() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2, admin3), threshold: 2
         });
@@ -224,8 +265,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         bytes memory mutatedOperationData =
             _encodeOperationDataForModifyAdmins(buildEmptyAddressArray(), buildArray(admin3), 2);
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: buildArray(admin3),
@@ -233,13 +277,17 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, mutatedOperationData, 2007);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2007
+        });
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Mutating threshold after signing causes authorization failure.
+    /// @dev Verifies that mutating the threshold after signing causes an authorization failure.
     function test_modifyAdmins_mutateThresholdAfterSigning_reverts() public {
         address newAdmin = address(0x206);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 2
         });
@@ -257,8 +305,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         bytes memory mutatedOperationData =
             _encodeOperationDataForModifyAdmins(buildArray(newAdmin), buildEmptyAddressArray(), 1);
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -266,14 +317,18 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, mutatedOperationData, 2008);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2008
+        });
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Reordering adminsToAdd after signing invalidates signatures.
+    /// @dev Verifies that reordering `adminsToAdd` after signing invalidates the signatures.
     function test_modifyAdmins_reorderAdminsToAddAfterSigning_reverts() public {
         address a = address(0x207);
         address b = address(0x208);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, a, b), admins: buildArray(admin1, admin2), threshold: 2
         });
@@ -295,18 +350,25 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         bytes memory mutatedOperationData =
             _encodeOperationDataForModifyAdmins(mutatedAdds, buildEmptyAddressArray(), 2);
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: mutatedAdds, adminsToRemove: buildEmptyAddressArray(), newVotingThreshold: 2, authParams: auth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, mutatedOperationData, 2009);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2009
+        });
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Reordering adminsToRemove after signing invalidates signatures.
+    /// @dev Verifies that reordering `adminsToRemove` after signing invalidates the signatures.
     function test_modifyAdmins_reorderAdminsToRemoveAfterSigning_reverts() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2, admin3), threshold: 2
         });
@@ -327,8 +389,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         bytes memory mutatedOperationData =
             _encodeOperationDataForModifyAdmins(buildEmptyAddressArray(), mutatedRemovals, 1);
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: mutatedRemovals,
@@ -336,13 +401,17 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, mutatedOperationData, 2010);
-        assertFalse(_isNonceUsed(nonce), "nonce should rollback on failed auth");
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2010
+        });
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Expired auth params revert AdminOperationExpired.
+    /// @dev Verifies that expired auth params revert with `AdminOperationExpired`.
     function test_modifyAdmins_expiredAuth_revertsAdminOperationExpired() public {
         address newAdmin = address(0x209);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         uint256 expiration = block.timestamp - 1;
@@ -356,10 +425,13 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Verify: confirm this branch reverts for the intended failure condition.
+
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAdmin.AdminOperationExpired.selector, expiration, block.timestamp)
         );
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -368,9 +440,10 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
     }
 
-    /// @dev Replay same nonce reverts NonceAlreadyUsed.
+    /// @dev Verifies that replaying the same nonce reverts with `NonceAlreadyUsed`.
     function test_modifyAdmins_replaySameNonce_revertsNonceAlreadyUsed() public {
         address newAdmin = address(0x20A);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         uint256 salt = 2012;
@@ -385,6 +458,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -392,9 +466,12 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, salt);
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+        // Verify: replay protection should reject nonce reuse.
         _expectNonceAlreadyUsed(nonce);
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -403,9 +480,10 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
     }
 
-    /// @dev Downstream revert rolls back state and nonce consumption.
+    /// @dev Verifies that a downstream revert rolls back both state and nonce consumption.
     function test_modifyAdmins_downstreamRevert_rollsBackNonceConsumption() public {
         address nonMember = address(0x20B);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         uint256 salt = 2013;
@@ -419,11 +497,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, salt);
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
 
         // Auth succeeds, then mutation fails in LibOrganizationAdmin because candidate is not a member.
+        // Verify: confirm this branch reverts for the intended failure condition.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.AdminNotMember.selector, nonMember));
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(nonMember),
             adminsToRemove: buildEmptyAddressArray(),
@@ -432,11 +513,13 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         // Transaction revert must also roll back nonce consumption.
-        assertFalse(_isNonceUsed(nonce), "nonce should not remain consumed on downstream revert");
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+        assertFalse(harness.getUsedNonce(nonce), "nonce should not remain consumed on downstream revert");
     }
 
-    /// @dev Invalid threshold downstream revert also rolls back nonce.
+    /// @dev Verifies that an invalid-threshold downstream revert also rolls back nonce consumption.
     function test_modifyAdmins_invalidThresholdDownstreamRevert_rollsBackNonceConsumption() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         uint256 salt = 2014;
@@ -450,10 +533,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        uint256 nonce = _computeNonce(OperationType.ModifyAdmins, operationData, salt);
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+
+        // Verify: confirm this branch reverts for the intended failure condition.
 
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminVotingThreshold.selector, 0, 1));
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: buildEmptyAddressArray(),
@@ -461,12 +548,16 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        assertFalse(_isNonceUsed(nonce), "nonce should not remain consumed on downstream revert");
+        // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
+
+        assertFalse(harness.getUsedNonce(nonce), "nonce should not remain consumed on downstream revert");
     }
 
-    /// @dev Emits AdminAdded/AdminRemoved/VotingThresholdUpdated with correct args.
+    /// @dev Verifies that `AdminAdded`, `AdminRemoved`, and `VotingThresholdUpdated` events are emitted with correct
+    /// args.
     function test_modifyAdmins_emitsExpectedEventsOnSuccess() public {
         address newAdmin = address(0x20C);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 2
         });
@@ -481,14 +572,19 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1, ADMIN_PK_2)
         });
 
+        // Verify: confirm the expected event (and args/topics) is emitted for this success path.
+
         vm.expectEmit(true, false, false, true);
         emit IOrganizationAdmin.AdminAdded(newAdmin);
+        // Verify: confirm the expected event (and args/topics) is emitted for this success path.
         vm.expectEmit(true, false, false, true);
         emit IOrganizationAdmin.AdminRemoved(admin2);
+        // Verify: confirm the expected event (and args/topics) is emitted for this success path.
         vm.expectEmit(false, false, false, true);
         emit IOrganizationAdmin.VotingThresholdUpdated(2, 1);
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildArray(admin2),
@@ -497,9 +593,10 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
     }
 
-    /// @dev No VotingThresholdUpdated event when threshold is unchanged.
+    /// @dev Verifies that no `VotingThresholdUpdated` event is emitted when the threshold is unchanged.
     function test_modifyAdmins_unchangedThreshold_doesNotEmitVotingThresholdUpdated() public {
         address newAdmin = address(0x20D);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
@@ -514,6 +611,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
 
         vm.recordLogs();
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
@@ -522,20 +620,22 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         // Verify no threshold-update event was emitted when threshold did not change.
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        bytes32 votingThresholdUpdatedSig = keccak256("VotingThresholdUpdated(uint256,uint256)");
-        for (uint256 i = 0; i < entries.length; i++) {
+        Vm.Log[] memory actualLogs = vm.getRecordedLogs();
+        bytes32 expectVotingThresholdUpdatedSig = keccak256("VotingThresholdUpdated(uint256,uint256)");
+        for (uint256 i = 0; i < actualLogs.length; i++) {
+            // Verify: confirm the resulting state/value matches the expected branch outcome.
             assertTrue(
-                entries[i].topics[0] != votingThresholdUpdatedSig,
+                actualLogs[i].topics[0] != expectVotingThresholdUpdatedSig,
                 "VotingThresholdUpdated must not be emitted when threshold is unchanged"
             );
         }
     }
 
-    /// @dev Mixed EOA + ERC-1271 admin signatures authorize modifyAdmins successfully.
+    /// @dev Verifies that mixed EOA and ERC-1271 admin signatures authorize `modifyAdmins` successfully.
     function test_modifyAdmins_mixedEOAAndERC1271Signatures_authorizeSuccessfully() public {
         address contractAdmin = address(validSigner1271);
         address newAdmin = address(0x20E);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, contractAdmin, newAdmin),
             admins: buildArray(admin1, contractAdmin),
@@ -549,7 +649,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         uint256 expiration = block.timestamp + 1 hours;
 
         bytes memory operationData = _encodeOperationDataForModifyAdmins(adminsToAdd, adminsToRemove, newThreshold);
-        bytes32 operationHash = _computeOperationHash({
+        bytes32 operationHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             salt: salt,
@@ -567,9 +667,12 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         });
 
         vm.prank(GUARDIAN);
+        // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
             adminsToAdd: adminsToAdd, adminsToRemove: adminsToRemove, newVotingThreshold: newThreshold, authParams: auth
         });
+
+        // Verify: assert that the address has admin status expected for this branch.
 
         assertTrue(harness.isAdmin(newAdmin), "new admin should be added");
     }

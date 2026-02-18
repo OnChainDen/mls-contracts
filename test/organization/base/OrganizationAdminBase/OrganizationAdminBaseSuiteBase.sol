@@ -2,9 +2,11 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {OrganizationAdminBaseHarness} from "test/organization/harness/OrganizationAdminBaseHarness.sol";
-import {OrganizationAdminStateHarness} from "test/organization/harness/OrganizationAdminStateHarness.sol";
-import {OrganizationAdminTestBase} from "test/organization/helpers/OrganizationAdminTestBase.sol";
+import {
+    OrganizationAdminBaseHarness
+} from "test/organization/base/OrganizationAdminBase/OrganizationAdminBaseHarness.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
+import {OrganizationAdminTestBase} from "test/organization/shared/OrganizationAdminTestBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
