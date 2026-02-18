@@ -33,6 +33,8 @@ abstract contract LibOrganizationAdminSuiteBase is OrganizationAdminTestBase {
     function setUp() public virtual override {
         super.setUp();
         // Shared payload keeps auth tests focused on signature/nonce behavior rather than payload shape.
+        // Casting a short ASCII literal to bytes32 is intentional for a deterministic test seed.
+        // forge-lint: disable-next-line(unsafe-typecast)
         baseOperationData = abi.encode(bytes32("operation"), uint256(123));
     }
 }
