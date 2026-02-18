@@ -12,31 +12,10 @@ import {GroupModification} from "types/CommonTypes.sol";
  */
 contract OrganizationGroupsStateHarness is OrganizationAdminStateHarness {
     /**
-     * @dev Sets active-group status for a group ID.
-     */
-    function setGroupStatus(uint256 groupId, bool isActive) external {
-        LibOrganizationGroupsStorage.layout().isGroup[groupId] = isActive;
-    }
-
-    /**
      * @dev Reads active-group status for a group ID.
      */
     function getGroupStatus(uint256 groupId) external view returns (bool) {
         return LibOrganizationGroupsStorage.layout().isGroup[groupId];
-    }
-
-    /**
-     * @dev Sets group-member status for a `(groupId, member)` pair.
-     */
-    function setGroupMemberStatus(uint256 groupId, address member, bool isGroupMember) external {
-        LibOrganizationGroupsStorage.layout().isGroupMember[groupId][member] = isGroupMember;
-    }
-
-    /**
-     * @dev Reads group-member status for a `(groupId, member)` pair.
-     */
-    function getGroupMemberStatus(uint256 groupId, address member) external view returns (bool) {
-        return LibOrganizationGroupsStorage.layout().isGroupMember[groupId][member];
     }
 
     /**

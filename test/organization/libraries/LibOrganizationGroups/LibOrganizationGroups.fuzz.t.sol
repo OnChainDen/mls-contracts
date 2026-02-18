@@ -31,6 +31,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
         // Setup: seed one active group and one active member before the fuzzed batch.
         groupsStateHarness.setGroupStatus(existingGroupId, true);
         groupsStateHarness.setGroupMemberStatus(existingGroupId, existingMember, true);
+        _setMembers(buildArray(existingMember, newMember), true);
 
         GroupModification[] memory modifications = _buildModificationsArray(
             _updateModification(existingGroupId, buildArray(newMember), buildEmptyAddressArray()),
@@ -62,6 +63,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies fuzzed group IDs cannot be reused after delete.
     function testFuzz_deletedGroupIds_neverReusable(uint256 groupId, address member) public {
         vm.assume(member != address(0));
+        groupsStateHarness.setMemberStatus(member, true);
 
         // Setup: create and delete a fuzzed group ID.
         harness.modifyGroupsViaLibrary(_buildModificationsArray(_createModification(groupId, buildArray(member))));
@@ -78,6 +80,7 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
 
         groupsStateHarness.setGroupStatus(groupId, true);
+        groupsStateHarness.setMemberStatus(member, true);
 
         address[] memory members = new address[](2);
         members[0] = member;
@@ -100,12 +103,15 @@ contract LibOrganizationGroupsFuzzTest is LibOrganizationGroupsSuiteBase {
         assertEq(addedEventCount, 1, "duplicate additions should emit one GroupMemberAdded event");
     }
 
-    /// @dev Verifies any member-add batch containing zero address reverts with `InvalidMemberAddress`.
+    /// @dev Verifies any member-add batch containing zero address reverts with `InvalidMemberAddress`
+    ///      when the paired non-zero address is otherwise valid.
     function testFuzz_addGroupMembers_zeroAddressAlwaysReverts(uint256 rawGroupId, address otherMember, bool zeroFirst)
         public
     {
         uint256 groupId = bound(rawGroupId, 1, 50_000);
+        vm.assume(otherMember != address(0));
         groupsStateHarness.setGroupStatus(groupId, true);
+        groupsStateHarness.setMemberStatus(otherMember, true);
 
         address[] memory members = new address[](2);
         if (zeroFirst) {
