@@ -157,6 +157,7 @@
 | 8 | Empty modifications still require valid auth and consume nonce on success | [E] | P1 |
 | 9 | Library custom errors bubble through base unchanged (including desired `MemberDoesNotExist` once implemented) | [U] | P0 |
 | 10 | Malformed enum in modifications reverts through base path and leaves state unchanged | [N] | P0 |
+| 11 | Valid auth passes but library reverts (e.g. `GroupDoesNotExist`): nonce is not consumed and the same salt/operation can be retried successfully | [S] | P0 |
 
 ### 2.2 `isGroup(uint256 groupId)`
 
@@ -179,5 +180,5 @@
 | File | Functions Covered | Test Cases | Priority Focus |
 |------|-------------------|------------|----------------|
 | `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 79 | P0 state machine, atomicity, and desired behavior gaps |
-| `src/organization/base/OrganizationGroupsBase.sol` | 3 | 14 | P0 auth/access control and revert propagation |
-| **Total** | **12** | **93** | **P0-heavy** |
+| `src/organization/base/OrganizationGroupsBase.sol` | 3 | 15 | P0 auth/access control and revert propagation |
+| **Total** | **12** | **94** | **P0-heavy** |
