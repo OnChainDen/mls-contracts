@@ -130,8 +130,8 @@ contract LibOrganizationGroupsDeleteGroupTest is LibOrganizationGroupsSuiteBase 
         harness.createGroupViaLibrary(_createModification(groupId, buildArray(admin1)));
         harness.deleteGroupViaLibrary(_deleteModification(groupId));
 
-        // Verify: active-group flag is false but historical member bit remains true.
+        // Verify: active-group flag is false but historical storage bit remains true.
         assertFalse(harness.isGroupViaLibrary(groupId), "group should be inactive");
-        assertTrue(harness.isGroupMemberViaLibrary(groupId, admin1), "membership ghost data should persist");
+        assertTrue(groupsStateHarness.getGroupMemberStatus(groupId, admin1), "membership ghost data should persist");
     }
 }

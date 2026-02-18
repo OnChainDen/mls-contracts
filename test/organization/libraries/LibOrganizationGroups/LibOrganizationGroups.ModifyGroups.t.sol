@@ -17,6 +17,17 @@ contract LibOrganizationGroupsModifyGroupsTest is LibOrganizationGroupsSuiteBase
     /// @dev Stress batch size used by the large-batch creation test case.
     uint256 internal constant STRESS_GROUP_COUNT = 10_000;
 
+    /**
+     * @dev Raw-typed group modification used to craft malformed enum calldata.
+     *      ABI shape intentionally mirrors `GroupModification` with `modificationType` as unchecked integer.
+     */
+    struct RawGroupModification {
+        uint256 groupId;
+        uint256 modificationType;
+        address[] membersToAdd;
+        address[] membersToRemove;
+    }
+
     /// @dev Verifies that an empty modifications array is a no-op with no emitted events.
     function test_modifyGroups_emptyModifications_noOpAndNoEvents() public {
         uint256 existingGroupId = 7001;
@@ -124,7 +135,8 @@ contract LibOrganizationGroupsModifyGroupsTest is LibOrganizationGroupsSuiteBase
         assertFalse(harness.isGroupViaLibrary(groupId), "group should be deleted");
         assertTrue(groupsStateHarness.getWasGroupDeletedStatus(groupId), "deleted marker should be set");
         assertTrue(
-            harness.isGroupMemberViaLibrary(groupId, admin1), "historical membership should persist as ghost data"
+            groupsStateHarness.getGroupMemberStatus(groupId, admin1),
+            "historical membership should persist as ghost data"
         );
     }
 
@@ -215,13 +227,20 @@ contract LibOrganizationGroupsModifyGroupsTest is LibOrganizationGroupsSuiteBase
     /// @dev Verifies malformed enum values revert instead of being silently skipped.
     function test_modifyGroups_malformedEnumValue_revertsAndDoesNotSkip() public {
         uint256 groupId = 7209;
-        GroupModification memory malformed =
-            _unsafeSetModificationType(_createModification(groupId, buildArray(admin1)), uint256(77));
-        GroupModification[] memory modifications = _buildModificationsArray(malformed);
+        RawGroupModification[] memory rawModifications = new RawGroupModification[](1);
+        rawModifications[0] = RawGroupModification({
+            groupId: groupId,
+            modificationType: 77,
+            membersToAdd: buildArray(admin1),
+            membersToRemove: buildEmptyAddressArray()
+        });
+
+        bytes memory malformedCallData =
+            abi.encodeWithSelector(harness.modifyGroupsViaLibrary.selector, rawModifications);
 
         // Desired behavior: malformed enum in calldata should revert.
-        vm.expectRevert();
-        harness.modifyGroupsViaLibrary(modifications);
+        (bool success,) = address(harness).call(malformedCallData);
+        assertFalse(success, "malformed enum payload should revert");
 
         assertFalse(harness.isGroupViaLibrary(groupId), "malformed enum path should not mutate state");
     }
@@ -278,20 +297,32 @@ contract LibOrganizationGroupsModifyGroupsTest is LibOrganizationGroupsSuiteBase
     /// @dev Verifies a batch containing a malformed enum in the middle reverts atomically.
     function test_modifyGroups_createThenMalformedEnumThenUpdate_revertsAtomically() public {
         uint256 groupId = 7211;
+        RawGroupModification[] memory rawModifications = new RawGroupModification[](3);
+        rawModifications[0] = RawGroupModification({
+            groupId: groupId,
+            modificationType: uint256(GroupModificationType.Create),
+            membersToAdd: buildArray(admin1),
+            membersToRemove: buildEmptyAddressArray()
+        });
+        rawModifications[1] = RawGroupModification({
+            groupId: 8888,
+            modificationType: 88,
+            membersToAdd: buildEmptyAddressArray(),
+            membersToRemove: buildEmptyAddressArray()
+        });
+        rawModifications[2] = RawGroupModification({
+            groupId: groupId,
+            modificationType: uint256(GroupModificationType.Update),
+            membersToAdd: buildArray(admin2),
+            membersToRemove: buildArray(admin1)
+        });
 
-        GroupModification memory malformedMiddle = _unsafeSetModificationType(
-            _updateModification(8888, buildEmptyAddressArray(), buildEmptyAddressArray()), uint256(88)
-        );
-
-        GroupModification[] memory modifications = _buildModificationsArray(
-            _createModification(groupId, buildArray(admin1)),
-            malformedMiddle,
-            _updateModification(groupId, buildArray(admin2), buildArray(admin1))
-        );
+        bytes memory malformedCallData =
+            abi.encodeWithSelector(harness.modifyGroupsViaLibrary.selector, rawModifications);
 
         // Desired behavior: malformed enum should revert and rollback preceding valid operations.
-        vm.expectRevert();
-        harness.modifyGroupsViaLibrary(modifications);
+        (bool success,) = address(harness).call(malformedCallData);
+        assertFalse(success, "malformed enum payload should revert");
 
         assertFalse(harness.isGroupViaLibrary(groupId), "create before malformed enum should rollback");
         assertFalse(

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {BitmaskHelpers} from "test/helpers/BitmaskHelpers.sol";
 import {
     LibOrganizationGroupsHarness
 } from "test/organization/libraries/LibOrganizationGroups/LibOrganizationGroupsHarness.sol";
@@ -11,7 +12,7 @@ import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
  * @dev Stateful invariant handler for `LibOrganizationGroups` invariants.
  *      Mutations are executed through library helper wrappers; reverts are absorbed via low-level calls.
  */
-contract LibOrganizationGroupsInvariantHandler {
+contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
     /// @dev Harness under test.
     LibOrganizationGroupsHarness public immutable harness;
 
@@ -147,7 +148,7 @@ contract LibOrganizationGroupsInvariantHandler {
      */
     function _membersFromMask(uint8 mask) internal view returns (address[] memory members) {
         uint8 masked = mask & 0x07;
-        uint256 length = _popcount3(masked);
+        uint256 length = _popcountLowerBits(masked, 3);
 
         members = new address[](length);
         uint256 index = 0;
@@ -167,17 +168,6 @@ contract LibOrganizationGroupsInvariantHandler {
             uint256 groupId = trackedGroupIds[i];
             if (harness.getWasGroupDeletedStatus(groupId)) {
                 modelWasDeletedEver[groupId] = true;
-            }
-        }
-    }
-
-    /**
-     * @dev Counts set bits in lower three bits of `bitmask`.
-     */
-    function _popcount3(uint8 bitmask) internal pure returns (uint256 count) {
-        for (uint256 i = 0; i < 3; i++) {
-            if (((bitmask >> i) & 1) == 1) {
-                count++;
             }
         }
     }
