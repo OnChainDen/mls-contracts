@@ -5,6 +5,7 @@ pragma solidity 0.8.33;
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
 import {LibOrganizationSignatures} from "organization/libraries/LibOrganizationSignatures.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
+import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
 import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/LibOrganizationSignaturesStorage.sol";
@@ -34,6 +35,27 @@ contract OrganizationAdminStateHarness {
      */
     function getMemberStatus(address member) external view returns (bool) {
         return LibOrganizationMembersStorage.layout().isMember[member];
+    }
+
+    /**
+     * @dev Sets group existence for a group ID.
+     */
+    function setGroupStatus(uint256 groupId, bool isGroup) external {
+        LibOrganizationGroupsStorage.layout().isGroup[groupId] = isGroup;
+    }
+
+    /**
+     * @dev Sets group-member status for an address in a group.
+     */
+    function setGroupMemberStatus(uint256 groupId, address member, bool isGroupMember) external {
+        LibOrganizationGroupsStorage.layout().isGroupMember[groupId][member] = isGroupMember;
+    }
+
+    /**
+     * @dev Reads group-member status for an address in a group.
+     */
+    function getGroupMemberStatus(uint256 groupId, address member) external view returns (bool) {
+        return LibOrganizationGroupsStorage.layout().isGroupMember[groupId][member];
     }
 
     /**
@@ -113,5 +135,16 @@ contract OrganizationAdminStateHarness {
         uint256 newVotingThreshold
     ) external pure returns (bytes memory) {
         return abi.encode(keccak256(abi.encode(adminsToAdd)), keccak256(abi.encode(adminsToRemove)), newVotingThreshold);
+    }
+
+    /**
+     * @dev Encodes member-modification payload exactly as OrganizationMembersBase does.
+     */
+    function encodeModifyMembersOperationData(address[] calldata membersToAdd, address[] calldata membersToRemove)
+        external
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(keccak256(abi.encode(membersToAdd)), keccak256(abi.encode(membersToRemove)));
     }
 }
