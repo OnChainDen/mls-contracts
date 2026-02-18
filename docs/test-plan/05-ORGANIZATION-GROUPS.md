@@ -96,7 +96,7 @@
 |---|-----------|------|----------|
 | 1 | Delete existing group succeeds; sets `isGroup[groupId] = false` | [U] | P0 |
 | 2 | Delete sets `wasGroupDeleted[groupId] = true` and flag never resets | [U] | P0 |
-| 3 | Delete non-existent group is a no-op (no revert, no state change, no `GroupDeleted` event) | [E] | P0 |
+| 3 | **Desire behavior** Delete non-existent group is a no-op (no revert, no state change, no `GroupDeleted` event) | [E] | P0 |
 | 4 | Delete with non-empty `membersToAdd` reverts `InvalidGroupDeletionOperation(groupId)` | [N] | P0 |
 | 5 | Delete with non-empty `membersToRemove` reverts `InvalidGroupDeletionOperation(groupId)` | [N] | P0 |
 | 6 | Emits `GroupDeleted(groupId)` exactly once on successful deletion | [EV] | P1 |
@@ -121,8 +121,8 @@
 |---|-----------|------|----------|
 | 1 | Removing existing member sets `isGroupMember[groupId][member] = false` | [U] | P0 |
 | 2 | Emits `GroupMemberRemoved(groupId, member)` on successful removal | [EV] | P1 |
-| 3 | Removing non-member is a no-op (no revert, no state change, no `GroupMemberRemoved` event) | [E] | P0 |
-| 4 | Removing same member twice in one call is a no-op on the second removal (no revert); final state remains `false` and only the first successful removal emits `GroupMemberRemoved` | [E] | P0 |
+| 3 | **Desired behavior:** Removing non-member is a no-op (no revert, no state change, no `GroupMemberRemoved` event) | [E] | P0 |
+| 4 | **Desired behavior:** Removing same member twice in one call is a no-op on the second removal (no revert); final state remains `false` and only the first successful removal emits `GroupMemberRemoved` | [E] | P0 |
 
 ### 1.9 Library-Level Fuzz & Invariants
 
