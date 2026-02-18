@@ -183,6 +183,18 @@ abstract contract OrganizationAdminTestBase is Test, SignatureTestHelpers, Array
     }
 
     /**
+     * @dev Encodes operation data exactly as `OrganizationMembersBase.modifyMembers`.
+     */
+    function _encodeOperationDataForModifyMembers(address[] memory membersToAdd, address[] memory membersToRemove)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        // The base contract signs hashes of each array (not raw array ABI bytes directly).
+        return abi.encode(keccak256(abi.encode(membersToAdd)), keccak256(abi.encode(membersToRemove)));
+    }
+
+    /**
      * @dev Asserts the standard `onlyGuardian` revert shape.
      */
     function _expectOnlyGuardianRevert(address caller) internal {
