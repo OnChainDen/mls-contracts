@@ -7,6 +7,7 @@
 # Usage:
 #   ./test_deploy_scripts_locally.sh arachnid      # Test Arachnid factory flow
 #   ./test_deploy_scripts_locally.sh den-nonprod   # Test Den non-prod factory flow
+#   ./test_deploy_scripts_locally.sh arachnid /path/to/state.json  # Optional custom Anvil state file
 #
 # =============================================================================
 
@@ -25,6 +26,7 @@ validate_prerequisites
 # Argument Validation
 # =============================================================================
 FACTORY="$1"
+STATE_FILE_ARG="$2"
 
 # For this script, only arachnid and den-nonprod are valid (local testing)
 if [[ -z "$FACTORY" ]]; then
@@ -53,6 +55,8 @@ fi
 
 PORT="8545"
 RPC_URL="http://127.0.0.1:$PORT"
+LOCAL_CHAIN_ID="8421"
+ANVIL_STATE_FILE="${STATE_FILE_ARG:-${ANVIL_STATE_FILE:-../.anvil/state.json}}"
 
 # Account names
 DEPLOYER_ACCOUNT="test-deployer"
@@ -87,7 +91,7 @@ echo "[Step 1] Starting Anvil..."
 pkill anvil || true  # Kill any existing Anvil instances (ignore error if none running)
 
 # Start Anvil without the default CREATE2 deployer so we can deploy our own
-anvil --disable-default-create2-deployer -p $PORT &
+anvil --disable-default-create2-deployer --chain-id $LOCAL_CHAIN_ID --state $ANVIL_STATE_FILE -p $PORT &
 ANVIL_PID=$!
 
 # Wait for Anvil to start
