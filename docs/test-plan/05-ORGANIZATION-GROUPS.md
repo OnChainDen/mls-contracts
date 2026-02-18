@@ -132,7 +132,7 @@
 | 1 | Fuzz: random create/update/delete batches preserve atomicity on any failing item | [F] | P0 |
 | 2 | Fuzz: deleted group IDs are never reusable | [F] | P0 |
 | 3 | Fuzz: duplicate additions are idempotent | [F] | P1 |
-| 4 | Fuzz: zero-address member add always reverts `InvalidMemberAddress` | [F] | P0 |
+| 4 | Fuzz: zero-address member add (paired with otherwise-valid non-zero member entries) reverts `InvalidMemberAddress` | [F] | P0 |
 | 5 | Fuzz (desired): random non-member addresses always revert `MemberDoesNotExist` on add | [F] | P0 |
 | 6 | Invariant: if `wasGroupDeleted[groupId] == true`, then `isGroup[groupId] == false` forever | [I] | P0 |
 | 7 | Invariant: `wasGroupDeleted[groupId]` is monotonic (`false -> true` only) | [I] | P0 |
