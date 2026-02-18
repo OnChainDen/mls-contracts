@@ -65,7 +65,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         });
 
         // Keep stateful sequences running through expected reverts.
-        address(harness).call(abi.encodeCall(harness.createGroupViaLibrary, (mod)));
+        _callHarnessIgnoringResult(abi.encodeCall(harness.createGroupViaLibrary, (mod)));
         _refreshDeletedModel();
     }
 
@@ -85,7 +85,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         });
 
         // Keep stateful sequences running through expected reverts.
-        address(harness).call(abi.encodeCall(harness.updateGroupViaLibrary, (mod)));
+        _callHarnessIgnoringResult(abi.encodeCall(harness.updateGroupViaLibrary, (mod)));
         _refreshDeletedModel();
     }
 
@@ -103,7 +103,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         });
 
         // Keep stateful sequences running through expected reverts.
-        address(harness).call(abi.encodeCall(harness.deleteGroupViaLibrary, (mod)));
+        _callHarnessIgnoringResult(abi.encodeCall(harness.deleteGroupViaLibrary, (mod)));
         _refreshDeletedModel();
     }
 
@@ -169,6 +169,17 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
             if (harness.getWasGroupDeletedStatus(groupId)) {
                 modelWasDeletedEver[groupId] = true;
             }
+        }
+    }
+
+    /**
+     * @dev Executes a low-level harness call and intentionally ignores success/failure.
+     *      Handlers must continue across expected reverts during invariant state exploration.
+     */
+    function _callHarnessIgnoringResult(bytes memory callData) internal {
+        (bool success,) = address(harness).call(callData);
+        if (!success) {
+            // Intentionally swallow revert.
         }
     }
 }
