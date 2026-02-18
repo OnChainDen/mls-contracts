@@ -1078,25 +1078,23 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Recovering an EOA signer with v = 27 should recover the expected signer.
     function test_tryRecoverEOASigner_v27_recoversCorrectly() public view {
-        bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
+        (bytes memory sig, bytes32 hash) = _findValidSignatureForV(TEST_PK_1, 27, TEST_HASH);
         address expectedSigner = vm.addr(TEST_PK_1);
-        uint8 v = uint8(sig[0]);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, hash, 27);
 
-        assertTrue(success, "Should recover with v=27 or v=28");
+        assertTrue(success, "Should recover with v=27");
         assertEq(signer, expectedSigner, "Signer should match");
     }
 
     /// @dev Test case: Recovering an EOA signer with v = 28 should recover the expected signer.
     function test_tryRecoverEOASigner_v28_recoversCorrectly() public view {
-        bytes memory sig = _signHash(TEST_PK_2, TEST_HASH);
-        address expectedSigner = vm.addr(TEST_PK_2);
-        uint8 v = uint8(sig[0]);
+        (bytes memory sig, bytes32 hash) = _findValidSignatureForV(TEST_PK_1, 28, TEST_HASH);
+        address expectedSigner = vm.addr(TEST_PK_1);
 
-        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, TEST_HASH, v);
+        (bool success, address signer) = harness.tryRecoverEOASigner(sig, 0, hash, 28);
 
-        assertTrue(success, "Should recover with v=28 or v=27");
+        assertTrue(success, "Should recover with v=28");
         assertEq(signer, expectedSigner, "Signer should match");
     }
 
