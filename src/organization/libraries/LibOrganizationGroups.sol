@@ -44,33 +44,6 @@ library LibOrganizationGroups {
     }
 
     /**
-     * @dev Checks if a group exists in the organization
-     * @param groupId The group ID to check
-     * @return True if the group exists, false otherwise
-     */
-    function isGroup(uint256 groupId) internal view returns (bool) {
-        return LibOrganizationGroupsStorage.layout().isGroup[groupId];
-    }
-
-    /**
-     * @dev Checks if an address is a member of a group
-     * @param groupId The group ID to check
-     * @param memberAddress The address to check
-     * @return True if the address is a member of the group, false otherwise
-     */
-    function isGroupMember(uint256 groupId, address memberAddress) internal view returns (bool) {
-        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
-
-        // Case: Group does not exist
-        if (!groupsLayout.isGroup[groupId]) return false;
-
-        // Case: Member is not an organization member
-        if (!LibOrganizationMembers.isMember(memberAddress)) return false;
-
-        return groupsLayout.isGroupMember[groupId][memberAddress];
-    }
-
-    /**
      * @dev Deletes a group. Deleting a non-existent group is a no-op.
      *      Reverts if members are provided in the delete modification.
      * @param mod The group modification containing the delete request
@@ -179,5 +152,32 @@ library LibOrganizationGroups {
             groupsLayout.isGroupMember[groupId][member] = false;
             emit IOrganizationGroups.GroupMemberRemoved(groupId, member);
         }
+    }
+
+    /**
+     * @dev Checks if a group exists in the organization
+     * @param groupId The group ID to check
+     * @return True if the group exists, false otherwise
+     */
+    function isGroup(uint256 groupId) internal view returns (bool) {
+        return LibOrganizationGroupsStorage.layout().isGroup[groupId];
+    }
+
+    /**
+     * @dev Checks if an address is a member of a group
+     * @param groupId The group ID to check
+     * @param memberAddress The address to check
+     * @return True if the address is a member of the group, false otherwise
+     */
+    function isGroupMember(uint256 groupId, address memberAddress) internal view returns (bool) {
+        LibOrganizationGroupsStorage.Layout storage groupsLayout = LibOrganizationGroupsStorage.layout();
+
+        // Case: Group does not exist
+        if (!groupsLayout.isGroup[groupId]) return false;
+
+        // Case: Member is not an organization member
+        if (!LibOrganizationMembers.isMember(memberAddress)) return false;
+
+        return groupsLayout.isGroupMember[groupId][memberAddress];
     }
 }
