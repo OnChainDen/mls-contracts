@@ -118,8 +118,8 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         harness.areAdminSignaturesValid(outOfOrder, hash);
     }
 
-    /// @dev Verifies that a non-admin signer reverts with `SignerIsNotAdmin`.
-    function test_areAdminSignaturesValid_nonAdminSigner_revertsSignerIsNotAdmin() public {
+    /// @dev Verifies that a signer who is neither admin nor member reverts with `SignerIsNotAdmin`.
+    function test_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -131,6 +131,23 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         // Verify: confirm this branch reverts for the intended failure condition.
 
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, nonAdmin));
+        // Call: invoke signature validation on the packed signatures payload.
+        harness.areAdminSignaturesValid(sig, hash);
+    }
+
+    /// @dev Verifies that a member who is not an admin reverts with `SignerIsNotAdmin`.
+    function test_areAdminSignaturesValid_nonAdminMemberSigner_revertsSignerIsNotAdmin() public {
+        uint256 memberNonAdminPk = 0xF00E;
+        address memberNonAdmin = vm.addr(memberNonAdminPk);
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
+        _setMembersAndAdmins({members: buildArray(admin1, memberNonAdmin), admins: buildArray(admin1), threshold: 1});
+
+        bytes32 hash = keccak256("op64-member");
+        bytes memory sig = _signHash(memberNonAdminPk, hash);
+
+        // Verify: confirm this branch reverts for the intended failure condition.
+
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, memberNonAdmin));
         // Call: invoke signature validation on the packed signatures payload.
         harness.areAdminSignaturesValid(sig, hash);
     }
