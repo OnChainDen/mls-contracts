@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {
     OrganizationGroupsBaseSuiteBase
 } from "test/organization/base/OrganizationGroupsBase/OrganizationGroupsBaseSuiteBase.sol";
@@ -260,6 +261,33 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         // Library revert should rollback nonce consumption from prior auth step.
         uint256 nonce = _computeModifyGroupsNonce(operationData, 3108);
         assertFalse(groupsStateHarness.getUsedNonce(nonce), "nonce should rollback on downstream library revert");
+    }
+
+    /// @dev Verifies member-level custom errors bubble through base unchanged and nonce is rolled back.
+    function test_modifyGroups_memberDoesNotExist_bubblesThroughBaseAndDoesNotConsumeNonce() public {
+        uint256 groupId = 7911;
+        address nonMember = address(0xD00D);
+
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        groupsStateHarness.setGroupStatus(groupId, true);
+
+        GroupModification[] memory modifications =
+            _buildModificationsArray(_updateModification(groupId, buildArray(nonMember), buildEmptyAddressArray()));
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyGroupsAuth({
+            modifications: modifications,
+            salt: 3111,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember));
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(modifications, auth);
+
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3111);
+        assertFalse(groupsStateHarness.getUsedNonce(nonce), "nonce should rollback on member-level library revert");
     }
 
     /// @dev Verifies malformed enum payloads revert through base path and do not mutate state.
