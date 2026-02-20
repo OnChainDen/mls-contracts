@@ -100,6 +100,24 @@ contract LibOrganizationGroupsViewsTest is LibOrganizationGroupsSuiteBase {
         assertFalse(actualIsGroupMember, "non-existent group membership query should return false");
     }
 
+    /// @dev Verifies `isGroupMember` returns false when membership bit is true but group is inactive.
+    function test_isGroupMember_fudgedGhostBitWithInactiveGroup_returnsFalse() public {
+        uint256 groupId = 7309;
+
+        // Setup: fudge state directly so membership bit is true while group remains inactive.
+        groupsStateHarness.setGroupStatus(groupId, false);
+        groupsStateHarness.setGroupMemberStatus(groupId, admin1, true);
+
+        // Sanity-check: raw storage has the ghost membership bit set.
+        assertTrue(groupsStateHarness.getGroupMemberStatus(groupId, admin1), "precondition: ghost bit should be set");
+
+        // Call: query through library view wrapper.
+        bool actualIsGroupMember = harness.isGroupMemberViaLibrary(groupId, admin1);
+
+        // Verify: inactive groups must never report active membership.
+        assertFalse(actualIsGroupMember, "inactive group should not report membership even if storage bit is true");
+    }
+
     /// @dev Verifies desired behavior that deleted groups return false even if ghost membership data exists.
     function test_isGroupMember_deletedGroupWithGhostData_returnsFalse() public {
         uint256 groupId = 7307;
