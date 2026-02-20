@@ -7,9 +7,17 @@
 - `src/organization/base/OrganizationGroupsBase.sol`
 
 **Test File(s):**
-- `test/LibOrganizationGroups.t.sol`
-- `test/OrganizationGroupsBase.t.sol`
-- `test/harness/LibOrganizationGroupsHarness.sol` (for private-function coverage via `private` -> `internal` conversion)
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.AddGroupMembers.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.CreateGroup.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.DeleteGroup.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.ModifyGroups.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.RemoveGroupMembers.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.UpdateGroup.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.Views.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.fuzz.t.sol`
+- `test/organization/libraries/LibOrganizationGroups/LibOrganizationGroups.invariants.t.sol`
+- `test/organization/base/OrganizationGroupsBase/OrganizationGroupsBase.ModifyGroups.t.sol`
+- `test/organization/base/OrganizationGroupsBase/OrganizationGroupsBase.Views.t.sol`
 
 ---
 
