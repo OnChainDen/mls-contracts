@@ -164,9 +164,10 @@
 | 6 | **Desired behavior:** failed auth attempt does not consume nonce; same salt/operation can succeed after corrected signatures | [S] | P0 |
 | 7 | Any modification-data tampering after signatures invalidates auth and reverts | [S] | P0 |
 | 8 | Empty modifications still require valid auth and consume nonce on success | [E] | P1 |
-| 9 | Library custom errors bubble through base unchanged (including desired `MemberDoesNotExist` once implemented) | [U] | P0 |
+| 9 | Library custom errors bubble through base unchanged (e.g. `GroupDoesNotExist`) | [U] | P0 |
 | 10 | Malformed enum in modifications reverts through base path and leaves state unchanged | [N] | P0 |
 | 11 | Valid auth passes but library reverts (e.g. `GroupDoesNotExist`): nonce is not consumed and the same salt/operation can be retried successfully | [S] | P0 |
+| 12 | Lower-level member validation error bubbles unchanged (`MemberDoesNotExist`) and nonce is not consumed | [S] | P0 |
 
 ### 2.2 `isGroup(uint256 groupId)`
 
@@ -189,5 +190,5 @@
 | File | Functions Covered | Test Cases | Priority Focus |
 |------|-------------------|------------|----------------|
 | `src/organization/libraries/LibOrganizationGroups.sol` | 9 | 80 | P0 state machine, atomicity, and desired behavior gaps |
-| `src/organization/base/OrganizationGroupsBase.sol` | 3 | 15 | P0 auth/access control and revert propagation |
-| **Total** | **12** | **95** | **P0-heavy** |
+| `src/organization/base/OrganizationGroupsBase.sol` | 3 | 16 | P0 auth/access control and revert propagation |
+| **Total** | **12** | **96** | **P0-heavy** |
