@@ -38,7 +38,7 @@ contract LibOrganizationGroupsAddGroupMembersTest is LibOrganizationGroupsSuiteB
         bytes32 addedTopic = keccak256("GroupMemberAdded(uint256,address)");
         uint256 addedEventCount = 0;
         for (uint256 i = 0; i < logs.length; i++) {
-            if (logs[i].topics.length > 0 && logs[i].topics[0] == addedTopic) {
+            if (logs[i].emitter == address(harness) && logs[i].topics.length > 0 && logs[i].topics[0] == addedTopic) {
                 addedEventCount++;
             }
         }
