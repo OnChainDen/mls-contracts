@@ -207,7 +207,8 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         uint256 nonce =
             harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: 2005});
         // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(nonce), "approval nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(nonce), "rejection nonce should not be consumed on failed auth");
     }
 
     /// @dev Verifies that mutating `adminsToAdd` after signing causes an authorization failure.
