@@ -675,7 +675,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     /// @dev Verifies that removing an admin after signing but before execution reverts with `SignerIsNotAdmin`.
     function test_validateAdminAuth_adminRemovedAfterSigning_revertsSignerIsNotAdmin() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
-        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 1});
 
         uint256 salt = 30;
         uint256 expiration = block.timestamp + 1 hours;
