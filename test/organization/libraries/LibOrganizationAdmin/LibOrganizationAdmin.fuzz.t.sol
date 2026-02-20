@@ -246,11 +246,15 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         });
 
         // Failed authorization should not leave nonce state partially mutated.
-        uint256 nonce = harness.computeNonce({
+        uint256 mutatedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: salt
         });
+        uint256 signedNonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: salt
+        });
         // Verify: assert the postconditions for this scenario.
-        assertFalse(harness.getUsedNonce(nonce), "failed auth must not leave nonce consumed");
+        assertFalse(harness.getUsedNonce(mutatedNonce), "failed auth must not leave mutated nonce consumed");
+        assertFalse(harness.getUsedNonce(signedNonce), "failed auth must not leave signed nonce consumed");
     }
 
     /**
