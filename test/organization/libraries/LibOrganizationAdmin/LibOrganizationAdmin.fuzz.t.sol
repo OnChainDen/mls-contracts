@@ -122,9 +122,9 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
     }
 
     /**
-     * @dev Verifies that including a non-admin signer causes a `SignerIsNotAdmin` revert.
+     * @dev Verifies that including a signer who is neither admin nor member causes `SignerIsNotAdmin`.
      */
-    function testFuzz_nonAdminSignerInclusion_revertsSignerIsNotAdmin(uint256 nonAdminPk) public {
+    function testFuzz_nonAdminNonMemberSignerInclusion_revertsSignerIsNotAdmin(uint256 nonAdminPk) public {
         // Arrange: threshold=2 ensures both signatures are evaluated.
         // Setup: configure the initial organization state for this scenario.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
@@ -157,6 +157,50 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
         // Assert: non-admin signatures are rejected even when cryptographically valid.
         // Verify: this scenario should revert with the expected failure mode.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, nonAdmin));
+        // Call: invoke admin-auth validation and nonce-consumption logic.
+        harness.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyAdmins, operationData: operationData, isApproval: true, authParams: auth
+        });
+    }
+
+    /**
+     * @dev Verifies that including a signer who is a member but not an admin causes `SignerIsNotAdmin`.
+     */
+    function testFuzz_nonAdminMemberSignerInclusion_revertsSignerIsNotAdmin(uint256 memberNonAdminPk) public {
+        memberNonAdminPk = bound(memberNonAdminPk, 1, SECP256K1_CURVE_ORDER - 1);
+        address memberNonAdmin = vm.addr(memberNonAdminPk);
+        // Setup: constrain fuzz inputs to valid preconditions for this scenario.
+        vm.assume(memberNonAdmin != admin1 && memberNonAdmin != admin2);
+
+        // Arrange: threshold=2 ensures both signatures are evaluated.
+        // Setup: configure the initial organization state for this scenario.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, admin2, memberNonAdmin), admins: buildArray(admin1, admin2), threshold: 2
+        });
+
+        bytes memory operationData = abi.encode("fuzz-f4-member", memberNonAdmin);
+        uint256 salt = 4004;
+        uint256 expiration = block.timestamp + 1 hours;
+        bytes32 operationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+
+        address[] memory signers = buildArray(admin1, memberNonAdmin);
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _signHash(ADMIN_PK_1, operationHash);
+        signatures[1] = _signHash(memberNonAdminPk, operationHash);
+
+        AdminAuthParams memory auth = AdminAuthParams({
+            salt: salt, expirationTimestamp: expiration, signatures: _sortAndConcatSignatures(signers, signatures)
+        });
+
+        // Assert: member-only (non-admin) signatures are rejected.
+        // Verify: this scenario should revert with the expected failure mode.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, memberNonAdmin));
         // Call: invoke admin-auth validation and nonce-consumption logic.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins, operationData: operationData, isApproval: true, authParams: auth
