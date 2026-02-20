@@ -220,7 +220,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             members: buildArray(admin1, signedAdmin, mutatedAdmin), admins: buildArray(admin1), threshold: 1
         });
 
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory signedOperationData) = _buildModifyAdminsAuth({
             adminsToAdd: buildArray(signedAdmin),
             adminsToRemove: buildEmptyAddressArray(),
             newVotingThreshold: 1,
@@ -246,11 +246,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = harness.computeNonce({
+        uint256 mutatedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2006
         });
+        uint256 signedNonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: 2006});
         // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(signedNonce), "signed payload nonce should remain unused on failed auth");
     }
 
     /// @dev Verifies that mutating `adminsToRemove` after signing causes an authorization failure.
@@ -260,7 +263,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2, admin3), threshold: 2
         });
 
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory signedOperationData) = _buildModifyAdminsAuth({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: buildArray(admin2),
             newVotingThreshold: 2,
@@ -285,11 +288,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = harness.computeNonce({
+        uint256 mutatedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2007
         });
+        uint256 signedNonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: 2007});
         // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(signedNonce), "signed payload nonce should remain unused on failed auth");
     }
 
     /// @dev Verifies that mutating the threshold after signing causes an authorization failure.
@@ -300,7 +306,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 2
         });
 
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory signedOperationData) = _buildModifyAdminsAuth({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
             newVotingThreshold: 2,
@@ -325,11 +331,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = harness.computeNonce({
+        uint256 mutatedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2008
         });
+        uint256 signedNonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: 2008});
         // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(signedNonce), "signed payload nonce should remain unused on failed auth");
     }
 
     /// @dev Verifies that reordering `adminsToAdd` after signing invalidates the signatures.
@@ -345,7 +354,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         address[] memory mutatedAdds = buildArray(b, a);
 
         // Array ordering is part of the signed hash and therefore part of authorization.
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory signedOperationData) = _buildModifyAdminsAuth({
             adminsToAdd: signedAdds,
             adminsToRemove: buildEmptyAddressArray(),
             newVotingThreshold: 2,
@@ -367,11 +376,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             adminsToAdd: mutatedAdds, adminsToRemove: buildEmptyAddressArray(), newVotingThreshold: 2, authParams: auth
         });
 
-        uint256 nonce = harness.computeNonce({
+        uint256 mutatedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2009
         });
+        uint256 signedNonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: 2009});
         // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(signedNonce), "signed payload nonce should remain unused on failed auth");
     }
 
     /// @dev Verifies that reordering `adminsToRemove` after signing invalidates the signatures.
@@ -384,7 +396,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         address[] memory signedRemovals = buildArray(admin2, admin3);
         address[] memory mutatedRemovals = buildArray(admin3, admin2);
 
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory signedOperationData) = _buildModifyAdminsAuth({
             adminsToAdd: buildEmptyAddressArray(),
             adminsToRemove: signedRemovals,
             newVotingThreshold: 1,
@@ -409,11 +421,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             authParams: auth
         });
 
-        uint256 nonce = harness.computeNonce({
+        uint256 mutatedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: mutatedOperationData, salt: 2010
         });
+        uint256 signedNonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: 2010});
         // Verify: assert that nonce usage was rolled back (or never consumed) on failure.
-        assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should rollback on failed auth");
+        assertFalse(harness.getUsedNonce(signedNonce), "signed payload nonce should remain unused on failed auth");
     }
 
     /// @dev Verifies that expired auth params revert with `AdminOperationExpired`.
