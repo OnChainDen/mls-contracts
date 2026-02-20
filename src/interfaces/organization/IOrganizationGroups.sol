@@ -79,13 +79,6 @@ interface IOrganizationGroups {
     error InvalidGroupDeletionOperation(uint256 groupId);
 
     /**
-     * @notice Thrown when trying to remove a member who is not in the group
-     * @param groupId The group ID
-     * @param member The address that is not in the group
-     */
-    error MemberNotInGroup(uint256 groupId, address member);
-
-    /**
      * @notice Thrown when a group modification has an invalid enum value
      * @param modificationType The invalid modification type value
      */
