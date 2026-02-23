@@ -1,4 +1,4 @@
-# 11 — Guardian Test Plan
+# 10 — Guardian Test Plan
 
 **Files Under Test:**
 - `src/organization/base/OrganizationGuardianBase.sol`
