@@ -10,7 +10,7 @@
 
 ## Invariant Harness Prerequisite (Private Functions)
 
-For this plan, private helper functions are in scope. In the test branch, change selected helpers from `private` to `internal` and expose them through harness contracts for direct assertions.
+For this plan, private helper functions are explicitly in scope. In the test branch, change targeted helpers from `private` to `internal` and expose them through harness contracts for direct assertions (and include any newly introduced private helpers in scope during refactors).
 
 Helpers to expose include:
 - `LibOrganizationAdmin`: `_areAdminSignaturesValid`, `_getAdminOperationHash`
@@ -19,8 +19,8 @@ Helpers to expose include:
 - `LibOrganizationAccountSignature`: `_validateRecoverySignature`, `_validatePolicyBasedSignature`, `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`, `_getReviewSignatureHash`
 - `LibOrganizationPolicy`: `_computePolicyLeaf`
 - `LibPolicyApproval`: `_isSignerAuthorizedForPolicy`
-- `LibPolicyContractInteraction`: `_computeFunctionLeaf`
-- `LibPolicyParameterConstraints`: `_processConstraints` and type-specific validators
+- `LibPolicyContractInteraction`: `_isFunctionAllowedByPolicy`, `_computeFunctionLeaf`
+- `LibPolicyParameterConstraints`: `_processConstraints`, `_isParameterAllowedByConstraint`, and type-specific validators
 - `LibOrganizationGuardianRecovery`: `_clearPendingGuardianRecoveryInitTimelock`, `_validateGuardianRecoveryNotConfiguredOrRevert`, `_validateGuardianRecoveryParamsOrRevert`
 - `LibOrganizationTxRecovery`: `_clearPendingTxRecoveryInitTimelock`, `_validateTxRecoveryNotConfiguredOrRevert`, `_validateTxRecoveryParamsOrRevert`
 - `ImplementationWhitelistImplementation`: `_addToWhitelist`, `_removeFromWhitelist`
@@ -89,6 +89,8 @@ Functions: `modifyGroups`, `_createGroup`, `_updateGroup`, `_deleteGroup`, `_add
 | 19 | **No ghost authorization:** stale `isGroupMember` entries for deleted groups never grant policy authorization | P0 |
 | 20 | **Zero-address exclusion:** `address(0)` cannot become a group member | P0 |
 | 21 | **Isolation:** group mutations never directly alter admin/member counters or thresholds | P1 |
+| 105 | **Desired behavior (docs): member-only groups:** addresses added to groups must be current Organization members | P0 |
+| 106 | **Desired behavior (docs): no effective stale group membership:** once an address is no longer a member, it cannot remain effectively authorized via any group path | P1 |
 
 ---
 
@@ -106,6 +108,8 @@ Functions: `setPolicies`, `isPolicyInOrg`, `isTransactionAllowedByPolicy`, `isSo
 | 27 | **Approval semantics:** member approver always requires exactly one authorized signer; group approver enforces configured threshold | P0 |
 | 28 | **Desired behavior:** `anyInitiator=true` should still require initiator to be an Organization member (per docs) | P0 |
 | 29 | **Desired behavior fail-closed:** malformed proofs/constraints payloads never authorize an operation | P0 |
+| 107 | **Desired behavior (token threshold semantics):** token amount thresholds are inclusive (`amount <= threshold`) | P0 |
+| 108 | **Function-filter helper correctness:** `_isFunctionAllowedByPolicy` enforces selector/proof checks when `anyFunction=false` and rejects calldata shorter than 4 bytes | P0 |
 
 ---
 
@@ -123,6 +127,9 @@ Functions: `checkAndUpdateRateLimit`, `computeTimeWindow`, `computeUsageKey`, `_
 | 35 | **Atomic rollback:** reverted execution path leaves no persisted rate-limit updates | P0 |
 | 36 | **Update atomicity:** usage either increases by exact `usageAmount` or remains unchanged | P0 |
 | 37 | **Desired behavior:** `currentUsage + usageAmount` overflow fails closed without wrap/panic behavior leaks | P0 |
+| 109 | **Policy-ID isolation:** rate-limit usage counters are isolated per `policyId` even when all scoped entities match | P0 |
+| 110 | **No-op when disabled:** non-`TimeInterval` limits (or `timeIntervalHours=0`) never write usage state | P1 |
+| 111 | **Destination-scope correctness:** token-transfer destination scoping uses actual recipient address, not token contract address | P0 |
 
 ---
 
@@ -139,6 +146,7 @@ Functions: `initializeGuardian`, `initiateGuardianUpdate`, `finalizeGuardianUpda
 | 42 | **Accept clears pending:** acceptance always clears pending guardian, timestamp, and ready flag | P0 |
 | 43 | **Role enforcement:** only guardian can initiate/finalize/cancel normal updates | P0 |
 | 44 | **Role enforcement:** only pending guardian can call `acceptGuardian` | P0 |
+| 112 | **Cancel clears pending:** `cancelGuardianUpdate` always clears pending guardian, timestamp, and ready flag | P0 |
 
 ---
 
@@ -156,6 +164,9 @@ Functions: recovery update lifecycle, deferred recovery init lifecycle, access-c
 | 50 | **Role enforcement:** only `guardianRecoveryAddress` can initiate/finalize/cancel recovery updates | P0 |
 | 51 | **Role enforcement:** only recovery pending guardian can accept recovery update | P0 |
 | 52 | **Subsystem isolation:** guardian-recovery operations never mutate tx-recovery state | P0 |
+| 113 | **Recovery-cancel clears pending:** `cancelRecoveryGuardianUpdate` always clears recovery pending guardian, timestamp, and ready flag | P0 |
+| 114 | **Recovery timelock source correctness:** recovery-update pending timestamp is derived from `guardianRecovery.timelockDurationSeconds` | P0 |
+| 126 | **Param validation gate:** guardian-recovery setup rejects zero recovery address and out-of-range timelock durations | P0 |
 
 ---
 
@@ -174,6 +185,8 @@ Functions: enable/disable tx recovery lifecycle, deferred tx-recovery init lifec
 | 59 | **Subsystem isolation:** tx-recovery operations never mutate guardian-recovery state | P0 |
 | 60 | **Nonce-space isolation:** recovery account execution does not consume Organization nonce mapping | P0 |
 | 61 | **Signature helper separation:** `isValidRecoverySignature` result is independent of enabled/disabled flag | P1 |
+| 115 | **Deferred-init consistency:** if tx-recovery pending init timestamp is `0`, pending init address and timelock are zeroed | P0 |
+| 127 | **Param validation gate:** tx-recovery setup rejects zero recovery address and out-of-range timelock durations | P0 |
 
 ---
 
@@ -191,6 +204,9 @@ Functions: `deployAccount`, `computeAccountAddress`, `validateIsAccountDeployedB
 | 67 | **Upgrade independence:** account implementation updates do not change Organization proxy implementation pointer | P0 |
 | 68 | **Deployment atomicity:** failed organization initialization leaves no live partially initialized org | P0 |
 | 69 | **Desired behavior:** proxy-stored whitelist address remains immutable for upgrade checks | P1 |
+| 116 | **Factory deployer gate:** only `DEPLOYER_ADDRESS` can call `OrganizationFactory.deployOrganization` | P0 |
+| 117 | **Factory whitelist gate:** organization deployment succeeds only for whitelisted `ContractType.Organization` implementations | P0 |
+| 118 | **No duplicate account CREATE2 deployments:** reusing `(organization, salt)` never yields a second deployed account | P0 |
 
 ---
 
@@ -224,6 +240,9 @@ Functions: signature routing and validation, Safe module execution, batched exec
 | 82 | **No ETH forwarding:** `SafeExecutorModule` always forwards `value = 0` | P0 |
 | 83 | **Batched atomicity and safe-call block:** batched execution never allows subcall to delegatecaller `address(this)` and fully reverts on any subcall failure | P0 |
 | 84 | **Desired behavior fail-closed parsing:** malformed batched payloads and malformed policy-signature payloads never authorize execution | P0 |
+| 119 | **Account-caller binding:** `isValidSignatureForAccount` only succeeds when `msg.sender == account` and `account` is org-deployed | P0 |
+| 120 | **Safe executor caller gate:** `executeOnBehalf` succeeds only when caller is `AUTHORIZED_EXECUTOR` | P0 |
+| 121 | **Desired behavior (ERC-1271 compatibility):** malformed policy-signature payloads return invalid magic value (`0xffffffff`) instead of reverting | P1 |
 
 ---
 
@@ -241,6 +260,8 @@ Functions: upgrade/whitelist control paths
 | 90 | **Whitelist type independence:** account and organization whitelist maps never cross-enable each other | P0 |
 | 91 | **Desired behavior:** org upgrade admin auth should bind both `newImplementation` and migration `data` payload | P0 |
 | 92 | **Desired behavior:** only non-zero contract addresses can be whitelisted/activated as implementations | P0 |
+| 122 | **Upgrade rollback safety:** failed org upgrade/migration leaves pre-upgrade implementation active and `isUpgradeAuthorized == false` | P0 |
+| 123 | **Whitelist UUPS owner gate:** direct whitelist upgrades are authorized only by the current whitelist owner | P0 |
 
 ---
 
@@ -256,6 +277,7 @@ Functions: `getDomainSeparator`, `computeTypedDataHash`, `_getAdminOperationHash
 | 96 | **Initiator-signature binding:** review hashes are bound to `keccak256(initiatorSignature)` | P0 |
 | 97 | **Cross-chain replay protection:** valid signatures on one chain never validate on another chain | P0 |
 | 98 | **Cross-org replay protection:** valid signatures for one org never validate for another org | P0 |
+| 124 | **Field-level hash binding:** changing any signed field (`expirationTimestamp`, `policyId`, `account`, `operationData/data`) changes the corresponding typed-data hash | P0 |
 
 ---
 
@@ -271,6 +293,7 @@ Functions: `initialize`, `isInitialized`, modifier-enforced role boundaries
 | 102 | **Role-boundary isolation:** guardian, tx-recovery, and guardian-recovery role checks remain disjoint by function set | P0 |
 | 103 | **No recovery-role privilege bleed:** recovery privileged roles cannot call guardian-only entrypoints unless also guardian | P0 |
 | 104 | **Desired behavior atomicity:** deployment/init and deferred-recovery finalization paths never leave partial committed state on revert | P0 |
+| 125 | **Timelock bound enforcement:** all timelock params accepted in init/deferred-init paths satisfy `TimelockUtils` min/max bounds | P0 |
 
 ---
 
@@ -279,12 +302,12 @@ Functions: `initialize`, `isInitialized`, modifier-enforced role boundaries
 | Category | Invariants | Priority Focus |
 |----------|------------|----------------|
 | Nonce and replay properties | 6 | P0 |
-| Admin/member/group consistency | 15 | P0-P1 |
-| Policy and rate-limit correctness | 16 | P0 |
-| Guardian and recovery state machines | 24 | P0 |
-| Account factory/account behavior | 13 | P0-P1 |
-| Signature and guardian-module security | 10 | P0 |
-| Upgrade and whitelist controls | 8 | P0 |
-| EIP-712 separation properties | 6 | P0 |
-| Initialization and role boundaries | 6 | P0 |
-| **Total** | **104** | |
+| Admin/member/group consistency | 17 | P0-P1 |
+| Policy and rate-limit correctness | 21 | P0 |
+| Guardian and recovery state machines | 30 | P0 |
+| Account factory/account behavior | 16 | P0-P1 |
+| Signature and guardian-module security | 13 | P0 |
+| Upgrade and whitelist controls | 10 | P0 |
+| EIP-712 separation properties | 7 | P0 |
+| Initialization and role boundaries | 7 | P0 |
+| **Total** | **127** | |

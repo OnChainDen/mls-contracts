@@ -15,8 +15,8 @@
 - `src/organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol` (storage coverage tracked elsewhere)
 
 > Note on internal/private function testing:
-> This plan includes internal/private helper behavior where timelock safety depends on it.
-> For implementation, expose those functions as `internal` in harness-only test builds.
+> This plan explicitly covers helper logic that is currently `private` where timelock safety depends on it.
+> For implementation, all currently-private timelock helpers should be exposed as `internal` in harness-only test builds so they can be tested directly.
 
 ---
 
@@ -106,6 +106,7 @@
 | Timelock below min reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
 | Timelock above max reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
 | Invalid timelock causes full initialization revert (no partial persisted org state) | `[S]` | P0 |
+| If a later initialization step reverts (for example, invalid guardian), admin-operation timelock state write is rolled back atomically | `[S]` | P0 |
 | Second initialize attempt reverts (`AlreadyInitialized`) and does not change timelock value | `[N]` | P0 |
 
 ---
@@ -129,7 +130,19 @@
 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
 | At exact pending timestamp succeeds | `[E]` | P1 |
 | After pending timestamp succeeds | `[U]` | P1 |
+| Success sets `isGuardianUpdateReadyForAcceptance = true` while preserving pending guardian + pending timestamp until accept/cancel | `[U]` | P1 |
 | After cancellation, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
+
+---
+
+### 4.3 `cancelGuardianUpdate`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Before timelock expiry, cancel clears pending guardian timestamp to `0` and emits `GuardianUpdateCancelled` with the cancelled pending guardian | `[U][EV]` | P1 |
+| After timelock expiry (but before acceptance), cancel still succeeds and clears pending timelock state | `[E]` | P1 |
+| Cancelling a finalized-but-not-yet-accepted update resets `isGuardianUpdateReadyForAcceptance` to `false` | `[U]` | P1 |
+| After cancellation, re-initiation computes a fresh `canFinalizeAtTimestamp = newStart + adminOperationTimelockDurationSeconds` (no stale timestamp reuse) | `[S]` | P1 |
 
 ---
 
@@ -141,6 +154,7 @@
 |---|---|---|
 | Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
 | Deferred-init pending timestamp does **not** use guardian-recovery timelock duration input | `[S]` | P0 |
+| Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
 | `GuardianRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
 
 ---
@@ -151,27 +165,64 @@
 |---|---|---|
 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
 | At exact pending timestamp succeeds | `[E]` | P1 |
+| After pending timestamp succeeds | `[U]` | P1 |
 | Success clears pending-init timelock state and writes final recovery config | `[U]` | P1 |
+| Emits `GuardianRecoveryInitializationFinalized(recoveryAddress,timelockDurationSeconds)` matching pending-init values used during finalization | `[EV]` | P1 |
 | After cancellation, finalize reverts `NoGuardianRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
 | Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
 
 ---
 
-### 5.3 `finalizeRecoveryGuardianUpdate`
+### 5.3 `cancelInitializeGuardianRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` and emits `GuardianRecoveryInitializationCancelled` | `[U][EV]` | P1 |
+| Cancel is allowed both before and after timelock expiry, as long as finalization has not occurred | `[E]` | P1 |
+| No pending init reverts `NoGuardianRecoveryInitializationPending` | `[N]` | P0 |
+| After cancellation, a fresh initiate is allowed and uses a new admin-operation timelock timestamp | `[S]` | P1 |
+
+---
+
+### 5.4 `finalizeRecoveryGuardianUpdate`
 
 | Test Case | Type | Priority |
 |---|---|---|
 | Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
 | Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
+| Uses shared `validateTimelockExpiredOrRevert` semantics: after timestamp succeeds | `[U]` | P1 |
 
 ---
 
-### 5.4 `_clearPendingGuardianRecoveryInitTimelock` (private; harness-only)
+### 5.5 `_clearPendingGuardianRecoveryInitTimelock` (private; harness-only)
 
 | Test Case | Type | Priority |
 |---|---|---|
 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` to zero | `[U]` | P1 |
 | Idempotent when fields are already zero | `[E]` | P2 |
+
+---
+
+### 5.6 `_validateGuardianRecoveryNotConfiguredOrRevert` (private; harness-only)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Unconfigured state (`recoveryAddress=0` and `timelockDurationSeconds=0`) succeeds | `[U]` | P1 |
+| `recoveryAddress!=0` and `timelockDurationSeconds=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+| `recoveryAddress=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+| `recoveryAddress!=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+
+---
+
+### 5.7 `_validateGuardianRecoveryParamsOrRevert` (private; harness-only)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| `recoveryAddress=0` reverts `InvalidGuardianRecoveryAddress` | `[N]` | P0 |
+| Timelock below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| Timelock above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| Non-zero address + timelock at min boundary (`2 days`) succeeds | `[E]` | P1 |
+| Non-zero address + timelock at max boundary (`30 days`) succeeds | `[E]` | P1 |
 
 ---
 
@@ -183,6 +234,7 @@
 |---|---|---|
 | Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
 | Deferred-init pending timestamp does **not** use tx-recovery timelock duration input | `[S]` | P0 |
+| Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
 | `TxRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
 
 ---
@@ -193,27 +245,64 @@
 |---|---|---|
 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
 | At exact pending timestamp succeeds | `[E]` | P1 |
+| After pending timestamp succeeds | `[U]` | P1 |
 | Success clears pending-init timelock state and writes final tx-recovery config | `[U]` | P1 |
+| Emits `TxRecoveryInitializationFinalized(recoveryAddress,timelockDurationSeconds)` matching pending-init values used during finalization | `[EV]` | P1 |
 | After cancellation, finalize reverts `NoTxRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
 | Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
 
 ---
 
-### 6.3 `finalizeEnableTxRecovery`
+### 6.3 `cancelInitializeTxRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` and emits `TxRecoveryInitializationCancelled` | `[U][EV]` | P1 |
+| Cancel is allowed both before and after timelock expiry, as long as finalization has not occurred | `[E]` | P1 |
+| No pending init reverts `NoTxRecoveryInitializationPending` | `[N]` | P0 |
+| After cancellation, a fresh initiate is allowed and uses a new admin-operation timelock timestamp | `[S]` | P1 |
+
+---
+
+### 6.4 `finalizeEnableTxRecovery`
 
 | Test Case | Type | Priority |
 |---|---|---|
 | Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
 | Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
+| Uses shared `validateTimelockExpiredOrRevert` semantics: after timestamp succeeds | `[U]` | P1 |
 
 ---
 
-### 6.4 `_clearPendingTxRecoveryInitTimelock` (private; harness-only)
+### 6.5 `_clearPendingTxRecoveryInitTimelock` (private; harness-only)
 
 | Test Case | Type | Priority |
 |---|---|---|
 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` to zero | `[U]` | P1 |
 | Idempotent when fields are already zero | `[E]` | P2 |
+
+---
+
+### 6.6 `_validateTxRecoveryNotConfiguredOrRevert` (private; harness-only)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Unconfigured state (`recoveryAddress=0` and `timelockDurationSeconds=0`) succeeds | `[U]` | P1 |
+| `recoveryAddress!=0` and `timelockDurationSeconds=0` reverts `TransactionRecoveryAlreadyConfigured` | `[N]` | P0 |
+| `recoveryAddress=0` and `timelockDurationSeconds!=0` reverts `TransactionRecoveryAlreadyConfigured` | `[N]` | P0 |
+| `recoveryAddress!=0` and `timelockDurationSeconds!=0` reverts `TransactionRecoveryAlreadyConfigured` | `[N]` | P0 |
+
+---
+
+### 6.7 `_validateTxRecoveryParamsOrRevert` (private; harness-only)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| `recoveryAddress=0` reverts `InvalidTxRecoveryAddress` | `[N]` | P0 |
+| Timelock below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| Timelock above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| Non-zero address + timelock at min boundary (`2 days`) succeeds | `[E]` | P1 |
+| Non-zero address + timelock at max boundary (`30 days`) succeeds | `[E]` | P1 |
 
 ---
 
@@ -224,6 +313,8 @@
 | Fuzz valid admin-operation timelock durations in `[2 days, 30 days]`: all admin-timelock initiation call sites compute `pendingTimestamp = start + duration` | `[F]` | P1 |
 | Fuzz timestamps around expiry (`t-1`, `t`, `t+1`) for all finalize call sites using helper; behavior is revert/succeed/succeed respectively | `[F]` | P1 |
 | Fuzz out-of-range admin-operation durations: initialization always reverts `InvalidTimelockDuration` | `[F]` | P0 |
+| Fuzz deferred-init cancel/re-init cycles (guardian recovery + tx recovery): cancel always zeroes pending init fields and re-init always computes a fresh `pendingTimestamp` from the new start time | `[F]` | P1 |
+| Fuzz partially configured recovery states for currently-private `_validate*NotConfiguredOrRevert` helpers: any non-zero config field always reverts as already configured | `[F]` | P1 |
 
 ---
 
@@ -234,3 +325,5 @@
 | In any initialized organization, `adminOperationTimelockDurationSeconds` is always within `[2 days, 30 days]` | `[INV]` | P0 |
 | No sequence of guardian/recovery operations can mutate `adminOperationTimelockDurationSeconds` post-initialization | `[INV]` | P0 |
 | Admin-operation timelocked flows cannot be finalized in the same block they are initiated | `[INV]` | P0 |
+| For deferred recovery-init states (guardian + tx): `pendingTimestamp == 0` implies pending init address and pending init timelock are also zero | `[INV]` | P0 |
+| For deferred recovery-init states (guardian + tx): `pendingTimestamp != 0` implies pending init address is non-zero and pending init timelock is within `[2 days, 30 days]` | `[INV]` | P0 |

@@ -8,7 +8,7 @@
 
 **Scope Notes:**
 - This plan intentionally excludes interface files and storage libraries.
-- Private functions should be tested via harnesses by changing `private` to `internal` in test-only builds.
+- All currently-private functions in these files (and any private initialization-path helpers) should be tested via harnesses by changing `private` to `internal` in test-only builds.
 
 ---
 
@@ -33,6 +33,8 @@
 | 6 | Emits `OrganizationDeployed(organizationAddress, salt, DEPLOYER_ADDRESS)` with correct values | [EV] | P1 |
 | 7 | Unauthorized caller — reverts `UnauthorizedDeployer` | [N] | P0 |
 | 8 | Non-whitelisted implementation — reverts via whitelist validation | [N] | P0 |
+| 8.1 | Implementation whitelisted only for `ContractType.Account` (not `ContractType.Organization`) — reverts | [S] | P0 |
+| 8.2 | Factory calls whitelist validation with `ContractType.Organization` and the exact implementation address (spy/mock assertion) | [U] | P1 |
 | 9 | `implementationAddress == address(0)` — reverts (desired behavior: invalid implementation must not deploy) | [N] | P0 |
 | 10 | `implementationAddress` is EOA/non-contract — reverts (desired behavior: implementation must have code) | [N] | P0 |
 | 11 | `whitelistAddress == address(0)` — reverts (desired behavior: whitelist must be configured) | [S] | P0 |
@@ -45,6 +47,7 @@
 | 18 | After failed deploy with a salt, retrying same tuple with valid params succeeds (no stuck salt) | [U] | P1 |
 | 19 | Successfully deployed organization is already initialized in same tx (`isInitialized() == true`) | [I] | P0 |
 | 20 | Successfully deployed organization reports deployer as the factory address via `getDeployerAddress()` | [I] | P0 |
+| 20.1 | Successfully deployed address has proxy runtime code (not raw implementation runtime code) | [I] | P1 |
 | 21 | Success path log order: `OrganizationDeployed` emitted before `OrganizationInitialized` | [EV] | P2 |
 | 22 | Whitelisted but incompatible implementation (missing compatible `initialize`) — deploy reverts atomically | [S] | P1 |
 
@@ -104,6 +107,7 @@
 | 45 | `isInitialized()` returns false before successful initialization | [U] | P1 |
 | 46 | `isInitialized()` returns true after successful initialization | [U] | P1 |
 | 47 | `isInitialized()` remains false if initialize reverts | [U] | P1 |
+| 47.1 | Direct call to implementation contract `getDeployerAddress()` returns `address(0)` (no proxy constructor storage) | [E] | P2 |
 
 ---
 
@@ -119,6 +123,8 @@
 | 51 | Valid group create operations in `params.groups` initialize group state correctly | [I] | P1 |
 | 52 | Guardian set correctly | [U] | P0 |
 | 53 | `adminOperationTimelockDurationSeconds` set correctly | [U] | P0 |
+| 53.1 | `adminOperationTimelockDurationSeconds == 2 days` is accepted | [E] | P0 |
+| 53.2 | `adminOperationTimelockDurationSeconds == 30 days` is accepted | [E] | P0 |
 | 54 | `OrganizationInitialized` event fields match input params exactly | [EV] | P1 |
 | 55 | Duplicate members in `params.members` are idempotent (init still succeeds, no duplicate state effect) | [E] | P1 |
 | 56 | Empty `params.groups` is a valid no-op | [E] | P2 |
@@ -133,6 +139,10 @@
 | 58 | Non-zero `transactionAndERC1271RecoveryAddress` configures tx recovery state | [U] | P1 |
 | 59 | Tx recovery configured at initialization starts with `isEnabled == false` | [U] | P0 |
 | 60 | Both recovery addresses non-zero — both mechanisms configured in one initialization | [U] | P1 |
+| 60.1 | Guardian recovery configured with timelock exactly `2 days` succeeds | [E] | P1 |
+| 60.2 | Guardian recovery configured with timelock exactly `30 days` succeeds | [E] | P1 |
+| 60.3 | Tx recovery configured with timelock exactly `2 days` succeeds and remains disabled | [E] | P1 |
+| 60.4 | Tx recovery configured with timelock exactly `30 days` succeeds and remains disabled | [E] | P1 |
 | 61 | `guardianRecoveryAddress == address(0)` leaves guardian recovery unconfigured (deferred setup) | [E] | P1 |
 | 62 | `transactionAndERC1271RecoveryAddress == address(0)` leaves tx recovery unconfigured (deferred setup) | [E] | P1 |
 | 63 | Deferred recovery paths have zeroed pending fields immediately after initialization | [U] | P1 |
@@ -159,6 +169,11 @@
 | 77 | Group creation with non-empty `membersToRemove` inside init params — reverts `InvalidGroupCreationOperation` | [N] | P1 |
 | 78 | Group update/delete on non-existent group during initialization — reverts `GroupDoesNotExist` | [N] | P1 |
 | 79 | Group member includes `address(0)` during initialization — reverts `InvalidMemberAddress` | [N] | P1 |
+| 79.1 | Duplicate group creation entries for the same `groupId` in one init batch — reverts `GroupAlreadyExists` | [N] | P1 |
+| 79.2 | Group update removing an address that is not currently in the group — reverts `MemberNotInGroup` | [N] | P1 |
+| 79.3 | Group delete with non-empty `membersToAdd`/`membersToRemove` — reverts `InvalidGroupDeletionOperation` | [N] | P1 |
+| 79.4 | Group ID deleted earlier in init batch cannot be recreated later in same batch — reverts `GroupAlreadyDeleted` | [S] | P1 |
+| 79.5 | Group member not present in organization `params.members` — reverts `MemberDoesNotExist` (desired behavior) | [S] | P0 |
 
 ---
 
@@ -197,6 +212,8 @@
 | 92 | Stores `whitelistAddress` in upgrade storage slot | [U] | P0 |
 | 93 | Sets ERC1967 implementation slot to `implementation` | [U] | P0 |
 | 94 | Deployment with non-contract implementation reverts (proxy safety expectation) | [N] | P0 |
+| 94.1 | Deployment with `whitelistAddress == address(0)` reverts (desired behavior: upgrade whitelist must be configured) | [S] | P0 |
+| 94.2 | Deployment with EOA/non-contract `whitelistAddress` reverts (desired behavior: upgrade whitelist target must have code) | [S] | P0 |
 | 95 | Direct proxy deployment (without factory) sets deployer to direct deployer and enforces only that deployer can initialize | [S] | P1 |
 
 ---
@@ -208,6 +225,7 @@
 | 96 | Calls to initialization view functions through proxy delegate correctly to implementation logic | [I] | P1 |
 | 97 | Multiple proxies using same implementation keep isolated initialization state | [I] | P1 |
 | 98 | Factory deployment path leaves no externally reachable uninitialized proxy instance | [S] | P0 |
+| 98.1 | Successful initialization via proxy does not overwrite stored deployer/whitelist slots (no storage collision) | [S] | P0 |
 
 ---
 
@@ -249,6 +267,7 @@
 | 116 | **No partial state on failed init:** reverting initialization never leaves persisted partial member/admin/group/recovery state | P0 |
 | 117 | **Proxy deployer immutability:** deployer address set by proxy constructor does not change | P0 |
 | 118 | **Tx recovery default safety:** tx recovery is never initialized as enabled; explicit enable flow is required | P1 |
+| 118.1 | **Group/member consistency:** for active groups, every group member address is also an organization member | P0 |
 
 ---
 
@@ -256,11 +275,11 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `OrganizationFactory.sol` | 36 | P0-P2 |
-| `OrganizationInitializationBase.sol` | 11 | P0-P1 |
-| `LibOrganizationInitialization.sol` | 43 | P0-P1 |
-| `OrganizationProxy.sol` | 8 | P0-P1 |
+| `OrganizationFactory.sol` | 39 | P0-P2 |
+| `OrganizationInitializationBase.sol` | 12 | P0-P2 |
+| `LibOrganizationInitialization.sol` | 54 | P0-P1 |
+| `OrganizationProxy.sol` | 11 | P0-P1 |
 | Cross-file integration | 6 | P0-P1 |
 | Fuzz tests | 8 | P1 |
-| Invariant tests | 6 | P0-P1 |
-| **Total** | **118** | |
+| Invariant tests | 7 | P0-P1 |
+| **Total** | **137** | |

@@ -12,6 +12,9 @@
 - `src/interfaces/IImplementationWhitelist.sol`
 - `src/implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol`
 
+**Harness Strategy (Private Functions):**
+- For this plan, helper functions currently marked `private` are changed to `internal` in test-only builds and exposed via harness contracts for direct unit testing.
+
 ---
 
 ## 1. File: `ImplementationWhitelistImplementation.sol`
@@ -115,8 +118,9 @@
 | 56 | [DESIRED] `_addToWhitelist`: reject no-code addresses | [S] | P0 |
 | 57 | `_removeFromWhitelist`: whitelisted entry becomes false | [U] | P2 |
 | 58 | `_removeFromWhitelist`: non-whitelisted entry stays false (idempotent) | [E] | P2 |
-| 59 | `_removeFromWhitelist`: empty array is no-op | [E] | P2 |
-| 60 | `_removeFromWhitelist`: emits `ImplementationUnwhitelisted` per processed element | [EV] | P2 |
+| 59 | `_removeFromWhitelist`: type independence preserved (removing under one `ContractType` does not affect the other mapping) | [U] | P2 |
+| 60 | `_removeFromWhitelist`: empty array is no-op | [E] | P2 |
+| 61 | `_removeFromWhitelist`: emits `ImplementationUnwhitelisted` per processed element | [EV] | P2 |
 
 ---
 
@@ -126,12 +130,14 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 61 | Deploying proxy with valid `initData` initializes owner + initial implementation lists atomically | [I] | P1 |
-| 62 | Invalid/malformed `initData` causes constructor deployment revert | [N] | P1 |
-| 63 | If delegated `initialize` reverts, proxy deployment reverts atomically | [S] | P1 |
-| 64 | Implementation slot points to provided implementation address after deploy | [U] | P2 |
-| 65 | Proxy delegates calls to implementation correctly (read path and write path) | [I] | P1 |
-| 66 | [DESIRED] Empty `initData` deployment should revert to prevent uninitialized proxy takeover | [S] | P0 |
+| 62 | Deploying proxy with valid `initData` initializes owner + initial implementation lists atomically | [I] | P1 |
+| 63 | Deploying proxy with `implementation == address(0)` reverts | [N] | P0 |
+| 64 | Deploying proxy with implementation address that has no code reverts | [N] | P0 |
+| 65 | Invalid/malformed `initData` causes constructor deployment revert | [N] | P1 |
+| 66 | If delegated `initialize` reverts, proxy deployment reverts atomically | [S] | P1 |
+| 67 | Implementation slot points to provided implementation address after deploy | [U] | P2 |
+| 68 | Proxy delegates calls to implementation correctly (read path and write path) | [I] | P1 |
+| 69 | [DESIRED] Empty `initData` deployment should revert to prevent uninitialized proxy takeover | [S] | P0 |
 
 ---
 
@@ -141,25 +147,29 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 67 | Rejects deployment when organization implementation is not whitelisted | [N] | P0 |
-| 68 | Rejects deployment when implementation is whitelisted only under `ContractType.Account` | [N] | P0 |
-| 69 | Deployment succeeds when implementation is whitelisted under `ContractType.Organization` | [I] | P1 |
-| 70 | If whitelist call reverts (bad whitelist contract), deployment reverts | [N] | P0 |
-| 71 | `whitelistAddress == address(0)` causes deployment revert | [N] | P0 |
-| 72 | Whitelist check failure occurs before proxy deployment side effects (no deployed contract, no event) | [S] | P0 |
-| 73 | Deployed Organization proxy stores the exact `whitelistAddress` passed to factory | [I] | P1 |
-| 74 | [DESIRED] Reject implementation targets with no code, even if whitelist contract is permissive/malicious | [S] | P0 |
-| 75 | [DESIRED] Reject `implementationAddress == address(0)` explicitly | [N] | P0 |
-| 76 | If organization initialization fails after deploy, tx reverts atomically and no uninitialized org remains deployed | [S] | P0 |
+| 70 | Rejects caller that is not `DEPLOYER_ADDRESS` | [N] | P0 |
+| 71 | Rejects deployment when organization implementation is not whitelisted | [N] | P0 |
+| 72 | Rejects deployment when implementation is whitelisted only under `ContractType.Account` | [N] | P0 |
+| 73 | Deployment succeeds when implementation is whitelisted under `ContractType.Organization` | [I] | P1 |
+| 74 | Emits `OrganizationDeployed(organizationAddress, salt, DEPLOYER_ADDRESS)` with correct values on successful deployment | [EV] | P1 |
+| 75 | If whitelist call reverts (bad whitelist contract), deployment reverts | [N] | P0 |
+| 76 | `whitelistAddress == address(0)` causes deployment revert | [N] | P0 |
+| 77 | Whitelist check failure occurs before proxy deployment side effects (no deployed contract, no event) | [S] | P0 |
+| 78 | Deployed Organization proxy stores the exact `whitelistAddress` passed to factory | [I] | P1 |
+| 79 | [DESIRED] Reject implementation targets with no code, even if whitelist contract is permissive/malicious | [S] | P0 |
+| 80 | [DESIRED] Reject `implementationAddress == address(0)` explicitly | [N] | P0 |
+| 81 | If organization initialization fails after deploy, tx reverts atomically and no uninitialized org remains deployed | [S] | P0 |
+| 82 | Same `(salt, implementationAddress, whitelistAddress)` cannot be deployed twice (CREATE2 collision) | [N] | P1 |
 
 ### 3.2 `computeOrganizationAddress`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 77 | Deterministic output for same `(salt, implementationAddress, whitelistAddress)` | [U] | P1 |
-| 78 | Changing `whitelistAddress` changes computed address | [U] | P1 |
-| 79 | Changing `implementationAddress` changes computed address | [U] | P1 |
-| 80 | Computed address matches actual deployed address when deployment succeeds | [U] | P1 |
+| 83 | Deterministic output for same `(salt, implementationAddress, whitelistAddress)` | [U] | P1 |
+| 84 | Changing `salt` changes computed address | [U] | P1 |
+| 85 | Changing `whitelistAddress` changes computed address | [U] | P1 |
+| 86 | Changing `implementationAddress` changes computed address | [U] | P1 |
+| 87 | Computed address matches actual deployed address when deployment succeeds | [U] | P1 |
 
 ### 3.3 `_getOrganizationProxyBytecode` (private)
 
@@ -167,10 +177,10 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 81 | Encodes `OrganizationProxy` creation code with constructor args `(implementationAddress, whitelistAddress)` | [U] | P2 |
-| 82 | Deterministic for same inputs | [U] | P2 |
-| 83 | Changing `whitelistAddress` changes bytecode hash | [U] | P1 |
-| 84 | Changing `implementationAddress` changes bytecode hash | [U] | P1 |
+| 88 | Encodes `OrganizationProxy` creation code with constructor args `(implementationAddress, whitelistAddress)` | [U] | P2 |
+| 89 | Deterministic for same inputs | [U] | P2 |
+| 90 | Changing `whitelistAddress` changes bytecode hash | [U] | P1 |
+| 91 | Changing `implementationAddress` changes bytecode hash | [U] | P1 |
 
 ---
 
@@ -180,9 +190,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 85 | Constructor stores `whitelistAddress` in upgrade storage slot used by org/account upgrade flows | [U] | P1 |
-| 86 | Organization upgrade path reads the stored whitelist address (not caller-supplied address) | [I] | P1 |
-| 87 | [DESIRED] Constructor should reject `whitelistAddress == address(0)` | [N] | P0 |
+| 92 | Constructor stores `whitelistAddress` in upgrade storage slot used by org/account upgrade flows | [U] | P1 |
+| 93 | Organization upgrade path reads the stored whitelist address (not caller-supplied address) | [I] | P1 |
+| 94 | [DESIRED] Constructor should reject `whitelistAddress == address(0)` | [N] | P0 |
 
 ---
 
@@ -192,26 +202,29 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 88 | Non-whitelisted organization implementation is rejected | [N] | P0 |
-| 89 | Implementation whitelisted only as `Account` is rejected | [N] | P0 |
-| 90 | Whitelisted organization implementation with valid auth upgrades successfully | [I] | P1 |
-| 91 | Whitelist-call failure causes upgrade revert and implementation remains unchanged | [S] | P0 |
-| 92 | If stored whitelist address is invalid/no-code, upgrade reverts | [N] | P0 |
-| 93 | Failed whitelist validation does not leave `isUpgradeAuthorized` stuck true | [S] | P0 |
-| 94 | Successful upgrade resets `isUpgradeAuthorized` back to false | [S] | P0 |
-| 95 | Failed upgrade execution (e.g., bad `data`) does not leave auth flag stuck true (tx rollback) | [S] | P0 |
-| 96 | Direct call to inherited `upgradeToAndCall` bypassing auth flow reverts `UnauthorizedUpgrade` | [S] | P0 |
-| 97 | Upgrade `data` payload executes only on successful whitelisted upgrade | [I] | P1 |
-| 98 | [DESIRED] Reject new implementation with no code even if whitelist contract returns true | [S] | P0 |
-| 99 | [DESIRED] Reject `newImplementation == address(0)` explicitly | [N] | P0 |
+| 95 | Non-whitelisted organization implementation is rejected | [N] | P0 |
+| 96 | Implementation whitelisted only as `Account` is rejected | [N] | P0 |
+| 97 | Whitelisted organization implementation with valid auth upgrades successfully | [I] | P1 |
+| 98 | Whitelist-call failure causes upgrade revert and implementation remains unchanged | [S] | P0 |
+| 99 | If stored whitelist address is invalid/no-code, upgrade reverts | [N] | P0 |
+| 100 | Whitelist validation executes before setting `isUpgradeAuthorized` (no external window with flag=true pre-validation) | [S] | P0 |
+| 101 | Failed whitelist validation does not leave `isUpgradeAuthorized` stuck true | [S] | P0 |
+| 102 | Successful upgrade resets `isUpgradeAuthorized` back to false | [S] | P0 |
+| 103 | Failed upgrade execution (e.g., bad `data`) does not leave auth flag stuck true (tx rollback) | [S] | P0 |
+| 104 | Direct call to inherited `upgradeToAndCall` bypassing auth flow reverts `UnauthorizedUpgrade` | [S] | P0 |
+| 105 | Upgrade `data` payload executes only on successful whitelisted upgrade | [I] | P1 |
+| 106 | [DESIRED] Admin authorization must bind migration `data` payload in addition to `newImplementation` | [S] | P0 |
+| 107 | [DESIRED] Migration `data` cannot trigger unauthorized nested second upgrade that bypasses whitelist/admin checks | [S] | P0 |
+| 108 | [DESIRED] Reject new implementation with no code even if whitelist contract returns true | [S] | P0 |
+| 109 | [DESIRED] Reject `newImplementation == address(0)` explicitly | [N] | P0 |
 
 ### 5.2 `_authorizeUpgrade` (internal hook)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 100 | Reverts `UnauthorizedUpgrade` when authorization flag is false | [N] | P0 |
-| 101 | Succeeds when flag is true (called via authorized flow) | [U] | P1 |
-| 102 | Behavior is flag-based rather than parameter-based (`newImplementation` not re-validated here) | [S] | P1 |
+| 110 | Reverts `UnauthorizedUpgrade` when authorization flag is false | [N] | P0 |
+| 111 | Succeeds when flag is true (called via authorized flow) | [U] | P1 |
+| 112 | Behavior is flag-based rather than parameter-based (`newImplementation` not re-validated here) | [S] | P1 |
 
 ---
 
@@ -221,14 +234,16 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 103 | Non-whitelisted account implementation is rejected | [N] | P0 |
-| 104 | Implementation whitelisted only as `Organization` is rejected | [N] | P0 |
-| 105 | Whitelisted account implementation updates beacon implementation storage | [U] | P1 |
-| 106 | Emits `AccountImplementationUpdated(newImplementation)` on success | [EV] | P1 |
-| 107 | Whitelist-call failure reverts and does not update implementation state | [S] | P0 |
-| 108 | Invalid/no-code whitelist contract address causes revert | [N] | P0 |
-| 109 | [DESIRED] Reject account implementation with no code even if whitelist contract returns true | [S] | P0 |
-| 110 | [DESIRED] Reject `newImplementation == address(0)` explicitly | [N] | P0 |
+| 113 | Non-guardian caller reverts (onlyGuardian) | [N] | P0 |
+| 114 | Admin signatures for a different `newImplementation` cannot authorize this call (operationData binding) | [S] | P0 |
+| 115 | Non-whitelisted account implementation is rejected | [N] | P0 |
+| 116 | Implementation whitelisted only as `Organization` is rejected | [N] | P0 |
+| 117 | Whitelisted account implementation updates beacon implementation storage | [U] | P1 |
+| 118 | Emits `AccountImplementationUpdated(newImplementation)` on success | [EV] | P1 |
+| 119 | Whitelist-call failure reverts and does not update implementation state | [S] | P0 |
+| 120 | Invalid/no-code whitelist contract address causes revert | [N] | P0 |
+| 121 | [DESIRED] Reject account implementation with no code even if whitelist contract returns true | [S] | P0 |
+| 122 | [DESIRED] Reject `newImplementation == address(0)` explicitly | [N] | P0 |
 
 ---
 
@@ -236,14 +251,14 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 111 | Unwhitelisted implementation cannot be used in any entrypoint: org deploy, org upgrade, account upgrade | [I] | P0 |
-| 112 | Type separation end-to-end: `Account` whitelist never unlocks org deploy/upgrade, and vice versa | [I] | P0 |
-| 113 | Unwhitelisting an implementation blocks future use but does not break already-deployed contracts currently running it | [I] | P1 |
-| 114 | Re-whitelisting previously removed implementation re-enables eligible flows | [I] | P1 |
-| 115 | Upgrading the whitelist contract preserves existing whitelist state and enforcement behavior in factory/org/account flows | [I] | P1 |
-| 116 | Ownership transfer of whitelist contract immediately changes who can alter allowed implementations system-wide | [I] | P1 |
-| 117 | Malicious/buggy whitelist contract behavior (revert/false positives) cannot bypass desired no-code-address protections | [S] | P0 |
-| 118 | Deployment path remains atomic with whitelist validation + initialization (no partial state exposure) | [S] | P0 |
+| 123 | Unwhitelisted implementation cannot be used in any entrypoint: org deploy, org upgrade, account upgrade | [I] | P0 |
+| 124 | Type separation end-to-end: `Account` whitelist never unlocks org deploy/upgrade, and vice versa | [I] | P0 |
+| 125 | Unwhitelisting an implementation blocks future use but does not break already-deployed contracts currently running it | [I] | P1 |
+| 126 | Re-whitelisting previously removed implementation re-enables eligible flows | [I] | P1 |
+| 127 | Upgrading the whitelist contract preserves existing whitelist state and enforcement behavior in factory/org/account flows | [I] | P1 |
+| 128 | Ownership transfer of whitelist contract immediately changes who can alter allowed implementations system-wide | [I] | P1 |
+| 129 | Malicious/buggy whitelist contract behavior (revert/false positives) cannot bypass desired no-code-address protections | [S] | P0 |
+| 130 | Deployment path remains atomic with whitelist validation + initialization (no partial state exposure) | [S] | P0 |
 
 ---
 
@@ -251,12 +266,13 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 119 | Fuzz random unwhitelisted addresses: always rejected by all three enforcement entrypoints | [F] | P0 |
-| 120 | Fuzz add/remove sequences per `ContractType`: onchain state matches reference model mapping | [F] | P1 |
-| 121 | Fuzz mixed `Account`/`Organization` operations: mappings remain independent | [F] | P1 |
-| 122 | Fuzz `(salt, implementation, whitelist)` tuples: `computeOrganizationAddress` remains deterministic and sensitivity-preserving | [F] | P1 |
-| 123 | [DESIRED] Fuzz zero/no-code implementation addresses: always rejected as valid implementations | [F] | P0 |
-| 124 | Fuzz proxy initialization inputs: malformed init data never leaves partially initialized whitelist proxy | [F] | P1 |
+| 131 | Fuzz random unwhitelisted addresses: always rejected by all three enforcement entrypoints | [F] | P0 |
+| 132 | Fuzz add/remove sequences per `ContractType`: onchain state matches reference model mapping | [F] | P1 |
+| 133 | Fuzz mixed `Account`/`Organization` operations: mappings remain independent | [F] | P1 |
+| 134 | Fuzz `(salt, implementation, whitelist)` tuples: `computeOrganizationAddress` remains deterministic and sensitivity-preserving | [F] | P1 |
+| 135 | [DESIRED] Fuzz zero/no-code implementation addresses: always rejected as valid implementations | [F] | P0 |
+| 136 | [DESIRED] Fuzz org-upgrade migration calldata: nested second-upgrade bypass attempts always fail | [F] | P0 |
+| 137 | Fuzz proxy initialization inputs: malformed init data never leaves partially initialized whitelist proxy | [F] | P1 |
 
 ---
 
@@ -264,12 +280,13 @@
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 125 | **Owner exclusivity:** Only current whitelist owner can mutate whitelist entries | P0 |
-| 126 | **Global whitelist enforcement:** No unwhitelisted implementation can become active via org deploy/org upgrade/account upgrade | P0 |
-| 127 | **Type independence:** `Account` and `Organization` whitelist mappings never alias or cross-enable | P0 |
-| 128 | **Upgrade auth flag safety:** `isUpgradeAuthorized` is false outside authorized org-upgrade execution window | P0 |
-| 129 | **Whitelist state continuity across whitelist upgrades:** Whitelist data is preserved after whitelist UUPS upgrade | P1 |
-| 130 | **[DESIRED] Initialization permanence:** Whitelist initialized state is monotonic (`false -> true` only once) | P0 |
+| 138 | **Owner exclusivity:** Only current whitelist owner can mutate whitelist entries | P0 |
+| 139 | **Global whitelist enforcement:** No unwhitelisted implementation can become active via org deploy/org upgrade/account upgrade | P0 |
+| 140 | **Type independence:** `Account` and `Organization` whitelist mappings never alias or cross-enable | P0 |
+| 141 | **Upgrade auth flag safety:** `isUpgradeAuthorized` is false outside authorized org-upgrade execution window | P0 |
+| 142 | **[DESIRED] Org whitelist-pointer immutability:** stored org `whitelistAddress` used for upgrades does not change after proxy construction | P1 |
+| 143 | **Whitelist state continuity across whitelist upgrades:** Whitelist data is preserved after whitelist UUPS upgrade | P1 |
+| 144 | **[DESIRED] Initialization permanence:** Whitelist initialized state is monotonic (`false -> true` only once) | P0 |
 
 ---
 
@@ -277,13 +294,13 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `ImplementationWhitelistImplementation.sol` | 60 | P0-P2 |
-| `ImplementationWhitelistProxy.sol` | 6 | P0-P2 |
-| `OrganizationFactory.sol` | 18 | P0-P2 |
+| `ImplementationWhitelistImplementation.sol` | 61 | P0-P2 |
+| `ImplementationWhitelistProxy.sol` | 8 | P0-P2 |
+| `OrganizationFactory.sol` | 22 | P0-P2 |
 | `OrganizationProxy.sol` | 3 | P0-P1 |
-| `OrganizationImplementation.sol` | 15 | P0-P1 |
-| `OrganizationAccountFactoryBase.sol` | 8 | P0-P1 |
+| `OrganizationImplementation.sol` | 18 | P0-P1 |
+| `OrganizationAccountFactoryBase.sol` | 10 | P0-P1 |
 | Cross-file integration | 8 | P0-P1 |
-| Fuzz tests | 6 | P0-P1 |
-| Invariant tests | 6 | P0-P1 |
-| **Total** | **130** | |
+| Fuzz tests | 7 | P0-P1 |
+| Invariant tests | 7 | P0-P1 |
+| **Total** | **144** | |

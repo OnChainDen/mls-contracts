@@ -16,8 +16,9 @@
 **Existing Tests:** `test/LibOrganizationTxRecovery.t.sol` (35 tests)
 
 > Note on private function testing:
-> This plan includes tests for private functions. For implementation, expose those as `internal`
-> in a dedicated harness-only test build so they can be invoked directly.
+> This plan includes tests for all currently-`private` functions in scope (including related
+> interaction files). For implementation, expose those as `internal` in dedicated harness-only
+> test builds so they can be invoked directly.
 
 ---
 
@@ -114,6 +115,8 @@
 | Insufficient admin authorization reverts | `[N]` | P0 |
 | Signatures built with `isApproval=false` are rejected | `[S]` | P0 |
 | Signatures for wrong `OperationType` are rejected | `[S]` | P0 |
+| Valid auth requires `OperationType.InitiateInitializeTransactionRecovery` with `isApproval=true` | `[U]` | P1 |
+| Auth `operationData` must be exact `abi.encode(recoveryAddress,timelockDurationSeconds)` | `[U]` | P1 |
 | Signatures for mismatched `operationData` (`recoveryAddress`,`timelock`) are rejected | `[S]` | P0 |
 | Replay with consumed nonce fails | `[S]` | P0 |
 | Valid auth path delegates and creates pending init state | `[U]` | P1 |
@@ -131,6 +134,7 @@
 | Insufficient admin authorization reverts | `[N]` | P0 |
 | Signatures built with `isApproval=false` are rejected | `[S]` | P0 |
 | Signatures for wrong `OperationType` are rejected | `[S]` | P0 |
+| Valid auth requires `OperationType.FinalizeInitializeTransactionRecovery` with `isApproval=true` | `[U]` | P1 |
 | Auth uses pending values from storage; stale signatures for old pending values fail | `[S]` | P0 |
 | Valid auth but no pending init reverts (`NoTxRecoveryInitializationPending`) | `[N]` | P1 |
 | Valid auth before admin-op timelock expiry reverts (`TimelockNotExpired`) | `[N]` | P1 |
@@ -149,6 +153,7 @@
 | Insufficient admin authorization reverts | `[N]` | P0 |
 | Signatures built with `isApproval=false` are rejected | `[S]` | P0 |
 | Signatures for wrong `OperationType` are rejected | `[S]` | P0 |
+| Valid auth requires `OperationType.CancelInitializeTransactionRecovery` with `isApproval=true` | `[U]` | P1 |
 | Auth uses pending values from storage; stale signatures for old pending values fail | `[S]` | P0 |
 | Valid auth but no pending init reverts (`NoTxRecoveryInitializationPending`) | `[N]` | P1 |
 | Success clears all pending init fields | `[U]` | P1 |
@@ -267,6 +272,8 @@
 | Zero recovery address reverts (`InvalidTxRecoveryAddress`) | `[N]` | P1 |
 | Timelock below min reverts (`InvalidTimelockDuration`) | `[N]` | P1 |
 | Timelock above max reverts (`InvalidTimelockDuration`) | `[N]` | P1 |
+| Timelock exactly at min boundary succeeds and stores pending init values | `[E]` | P1 |
+| Timelock exactly at max boundary succeeds and stores pending init values | `[E]` | P1 |
 | Active config and `isEnabled` are unchanged during initiate step | `[U]` | P1 |
 
 ---
@@ -397,6 +404,8 @@
 | Test Case | Type | Priority |
 |---|---|---|
 | Non-zero `transactionAndERC1271RecoveryAddress` + valid timelock configures tx recovery during org initialization | `[I]` | P1 |
+| Non-zero recovery address + tx-recovery timelock at min boundary configures successfully at initialization | `[E]` | P1 |
+| Non-zero recovery address + tx-recovery timelock at max boundary configures successfully at initialization | `[E]` | P1 |
 | `transactionAndERC1271RecoveryAddress=0` leaves tx recovery unconfigured (deferred setup) | `[I]` | P1 |
 | Deferred setup path does not auto-enable tx recovery | `[I]` | P1 |
 | Non-zero recovery address with invalid tx recovery timelock reverts organization initialization | `[N]` | P0 |
@@ -408,11 +417,13 @@
 
 | Test Case | Type | Priority |
 |---|---|---|
+| Recovery signature path (`0x00`) returns invalid value (not revert) when tx recovery is unconfigured | `[N]` | P0 |
 | Recovery signature path (`0x00`) returns magic value when tx recovery is enabled and signer is valid | `[I]` | P0 |
 | Same valid signer returns invalid value when tx recovery is configured but disabled | `[I]` | P0 |
 | After `disableTransactionAndERC1271Recovery`, previously-valid recovery signatures are rejected | `[S]` | P0 |
 | Re-enabling tx recovery re-allows valid recovery signatures | `[I]` | P1 |
 | Recovery signature path requires raw recovery signature only (no guardian signature, no policy proofs) | `[S]` | P0 |
+| Recovery signature path returns invalid value (not revert) for malformed raw recovery signature bytes | `[N]` | P0 |
 
 ---
 
@@ -422,6 +433,18 @@
 |---|---|---|
 | Failed inner account call bubbles back through recovery execution path as revert | `[I]` | P0 |
 | Successful recovery execution produces account-level `TransactionExecuted` with `nonce=0` and `policyId=0` | `[I]` | P0 |
+| Direct external call to `Account.executeTransaction` from non-organization caller still reverts (`OnlyOrganization`) | `[S]` | P0 |
+
+---
+
+### 3.4 `AccountImplementation` private helpers (`_onlyOrganization`, `_execute`) (private -> internal harness)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| `_onlyOrganization` reverts `OnlyOrganization` for non-organization caller | `[N]` | P0 |
+| `_onlyOrganization` succeeds for the configured organization caller | `[U]` | P1 |
+| `_execute` returns `true` for successful low-level call and forwards exact `to` / `value` / `data` | `[U]` | P1 |
+| `_execute` returns `false` (without reverting by itself) when the inner call fails | `[U]` | P1 |
 
 ---
 
@@ -437,6 +460,7 @@
 | Guardian cannot call tx-recovery-only entrypoints and tx recovery address cannot call guardian-only entrypoints | `[S]` | P0 |
 | Stale admin signatures for deferred finalize/cancel fail if pending values changed | `[S]` | P0 |
 | Recovery flow bypasses guardian/policy execution path but still enforces organization-account ownership | `[S]` | P0 |
+| Recovery execution cannot be used to perform guardian-only Organization operations via account call chaining | `[S]` | P0 |
 
 ---
 
@@ -452,6 +476,7 @@
 | Fuzz random non-recovery callers across all only-tx-recovery entrypoints: always revert with unauthorized error | `[F]` | P0 |
 | Fuzz random `to/value/data` for successful recovery execution on test accounts: forwarded calldata/value are exact | `[F]` | P1 |
 | Fuzz repeated enable/disable cycles: config remains immutable and transitions remain legal | `[F]` | P1 |
+| Fuzz mixed enable/finalize/disable sequences: any `isEnabled=true` state always has non-zero config and zero pending-enable timestamp | `[F]` | P1 |
 
 ---
 
@@ -463,11 +488,13 @@
 | Tx recovery config (`recoveryAddress`, `timelockDurationSeconds`) is write-once after first successful initialization | P0 |
 | `isEnabled` transitions to `true` only through finalize-enable path | P0 |
 | `isEnabled` transitions to `false` only through disable path (or stays false from initialization) | P0 |
+| If `isEnabled == true`, then `recoveryAddress != address(0)`, `timelockDurationSeconds != 0`, and `pendingEnableTimestamp == 0` | P0 |
 | If `pendingEnableTimestamp != 0`, then `isEnabled` must be false | P0 |
+| If `pendingEnableTimestamp != 0`, then tx recovery config fields (`recoveryAddress`,`timelockDurationSeconds`) are both non-zero | P0 |
 | After any successful disable, `pendingEnableTimestamp == 0` | P0 |
 | If `pendingInit.pendingTimestamp == 0`, then pending init address and timelock are also zero | P0 |
+| If tx recovery config is set, deferred-init pending fields remain cleared (no configured+pending-init overlap) | P0 |
 | Recovery transaction execution never mutates tx recovery config/pending fields | P0 |
 | `validateRecoveryAccountTransactionAllowedOrRevert` must revert whenever `isEnabled == false` | P0 |
 | Tx recovery state transitions never modify guardian recovery state | P0 |
 | Any successful recovery execution uses `nonce=0` and `policyId=0` | P0 |
-

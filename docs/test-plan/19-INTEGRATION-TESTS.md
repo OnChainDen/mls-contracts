@@ -6,7 +6,7 @@
 - This plan intentionally excludes interface files and storage libraries.
 - Test intent follows desired behavior documented in `README.md` and `docs/*.md`.
 - Where desired behavior may differ from current implementation, cases are marked `[DESIRED]`.
-- Private functions should be tested through harnesses in test-only builds by changing `private` to `internal`.
+- All integration-critical private helpers should be tested through harnesses in test-only builds by changing `private` to `internal` (see section 16 plus private-helper subsections under each module).
 
 ## Legend
 
@@ -31,24 +31,25 @@
 | 4 | Failed initialization (invalid init params) reverts atomically; no partial deployment persists | [S] | P0 |
 | 5 | Retry after failed deploy with same `(salt, implementation, whitelist)` succeeds (salt not consumed on revert) | [I] | P1 |
 | 6 | Deployment emits `OrganizationDeployed` only on successful full flow | [EV] | P1 |
-| 7 | [DESIRED] `implementationAddress == address(0)` reverts | [DESIRED][N] | P0 |
-| 8 | [DESIRED] `implementationAddress` without code reverts | [DESIRED][S] | P0 |
-| 9 | [DESIRED] `whitelistAddress == address(0)` reverts | [DESIRED][S] | P0 |
-| 10 | [DESIRED] `whitelistAddress` without code reverts | [DESIRED][S] | P0 |
+| 7 | Reusing same `(salt, implementation, whitelist)` after successful deployment reverts (CREATE2 collision) and does not produce duplicate deploy side effects | [N][S] | P1 |
+| 8 | [DESIRED] `implementationAddress == address(0)` reverts | [DESIRED][N] | P0 |
+| 9 | [DESIRED] `implementationAddress` without code reverts | [DESIRED][S] | P0 |
+| 10 | [DESIRED] `whitelistAddress == address(0)` reverts | [DESIRED][S] | P0 |
+| 11 | [DESIRED] `whitelistAddress` without code reverts | [DESIRED][S] | P0 |
 
 ### 1.2 `computeOrganizationAddress(...)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 11 | Deterministic for same inputs | [I] | P1 |
-| 12 | Different salt/implementation/whitelist produce different addresses | [I] | P1 |
-| 13 | Matches actual deployed address from `deployOrganization` | [I] | P0 |
+| 12 | Deterministic for same inputs | [I] | P1 |
+| 13 | Different salt/implementation/whitelist produce different addresses | [I] | P1 |
+| 14 | Matches actual deployed address from `deployOrganization` | [I] | P0 |
 
 ### 1.3 `_getOrganizationProxyBytecode(...)` (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 14 | Bytecode hash is stable for same inputs and sensitive to implementation/whitelist changes | [S] | P1 |
+| 15 | Bytecode hash is stable for same inputs and sensitive to implementation/whitelist changes | [S] | P1 |
 
 ---
 
@@ -58,12 +59,19 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 15 | Factory/deployer-only initialization succeeds once and sets core state (members/admins/groups/guardian/timelock) | [I] | P0 |
-| 16 | Re-initialization reverts | [S] | P0 |
-| 17 | Invalid initialization (no members, invalid admins/threshold/guardian/timelock) reverts with full rollback | [S] | P0 |
-| 18 | Deferred recovery setup path works when recovery addresses are zero at init | [I] | P0 |
-| 19 | Immediate recovery setup path works when recovery addresses are provided at init | [I] | P1 |
-| 20 | Admins are always members after successful initialization | [S] | P0 |
+| 16 | Factory/deployer-only initialization succeeds once and sets core state (members/admins/groups/guardian/timelock) | [I] | P0 |
+| 17 | Non-deployer caller cannot initialize and reverts `UnauthorizedDeployer` | [N] | P0 |
+| 18 | Re-initialization reverts | [S] | P0 |
+| 19 | Invalid initialization (no members, invalid admins/threshold/guardian/timelock) reverts with full rollback | [S] | P0 |
+| 20 | Deferred recovery setup path works when recovery addresses are zero at init | [I] | P0 |
+| 21 | Immediate recovery setup path works when recovery addresses are provided at init | [I] | P1 |
+| 22 | Admins are always members after successful initialization | [S] | P0 |
+
+### 2.2 `getDeployerAddress()` / `isInitialized()`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 23 | `getDeployerAddress` returns the factory address and `isInitialized` transitions `false -> true` only after successful initialization | [I] | P1 |
 
 ---
 
@@ -73,18 +81,20 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 21 | Guardian + valid admin signatures can add/remove admins and update threshold end-to-end | [I] | P0 |
-| 22 | Non-guardian caller reverts | [N] | P0 |
-| 23 | Signer ordering/duplicate signer violations revert | [S] | P0 |
-| 24 | Admin removed after signing but before execution causes authorization failure at execution time | [S] | P0 |
-| 25 | Threshold changes invalidate signatures that only satisfy old threshold | [S] | P0 |
+| 24 | Guardian + valid admin signatures can add/remove admins and update threshold end-to-end | [I] | P0 |
+| 25 | Non-guardian caller reverts | [N] | P0 |
+| 26 | Signer ordering/duplicate signer violations revert | [S] | P0 |
+| 27 | Admin removed after signing but before execution causes authorization failure at execution time | [S] | P0 |
+| 28 | Threshold changes invalidate signatures that only satisfy old threshold | [S] | P0 |
+| 29 | Expired admin auth (`block.timestamp > expirationTimestamp`) reverts and does not consume an otherwise-unused nonce | [S] | P0 |
 
 ### 3.2 `rejectAdminOperation(...)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 26 | Valid rejection burns nonce and blocks later approval of same operation params | [S] | P0 |
-| 27 | Approval first blocks later rejection of same operation params | [S] | P0 |
+| 30 | Valid rejection burns nonce and blocks later approval of same operation params | [S] | P0 |
+| 31 | Approval first blocks later rejection of same operation params | [S] | P0 |
+| 32 | Admin auth hash binds `isApproval`; approval signatures cannot authorize rejection and rejection signatures cannot authorize execution | [S] | P0 |
 
 ---
 
@@ -94,9 +104,9 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 28 | Add/remove members via guardian + admin auth works end-to-end | [I] | P0 |
-| 29 | Removing admin member reverts until admin role is removed first | [S] | P0 |
-| 30 | Member removal affects later policy authorization (removed member cannot initiate/approve) | [I] | P0 |
+| 33 | Add/remove members via guardian + admin auth works end-to-end | [I] | P0 |
+| 34 | Removing admin member reverts until admin role is removed first | [S] | P0 |
+| 35 | Member removal affects later policy authorization (removed member cannot initiate/approve) | [I] | P0 |
 
 ---
 
@@ -106,18 +116,19 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 31 | Create/update/delete group lifecycle works with admin auth | [I] | P0 |
-| 32 | Deleted group cannot be recreated (group ID non-reuse) | [S] | P0 |
-| 33 | Policies referencing deleted group stop authorizing approvals/initiations | [I] | P0 |
-| 34 | Batch modifications are atomic (any failing modification reverts all) | [S] | P0 |
-| 35 | Ghost membership data after delete does not authorize because group existence gate is enforced | [S] | P0 |
-| 36 | [DESIRED] Adding non-member addresses to groups reverts | [DESIRED][S] | P0 |
+| 36 | Create/update/delete group lifecycle works with admin auth | [I] | P0 |
+| 37 | Deleted group cannot be recreated (group ID non-reuse) | [S] | P0 |
+| 38 | Policies referencing deleted group stop authorizing approvals/initiations | [I] | P0 |
+| 39 | Batch modifications are atomic (any failing modification reverts all) | [S] | P0 |
+| 40 | Ghost membership data after delete does not authorize because group existence gate is enforced | [S] | P0 |
+| 41 | Invalid operation shapes revert (Create with `membersToRemove`, Delete with non-empty member arrays) | [S] | P1 |
+| 42 | [DESIRED] Adding non-member addresses to groups reverts | [DESIRED][S] | P0 |
 
 ### 5.2 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 37 | `_createGroup/_updateGroup/_deleteGroup/_addGroupMembers/_removeGroupMembers` enforce expected sequencing and revert conditions used by public integration flows | [S] | P1 |
+| 43 | `_createGroup/_updateGroup/_deleteGroup/_addGroupMembers/_removeGroupMembers` enforce expected sequencing and revert conditions used by public integration flows | [S] | P1 |
 
 ---
 
@@ -127,35 +138,41 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 38 | Guardian + admin-auth updates policy root and enables new policy set immediately | [I] | P0 |
-| 39 | Rejection flow (`rejectAdminOperation`) blocks later `setPolicies` execution for same signed operation | [S] | P0 |
+| 44 | Guardian + admin-auth updates policy root and enables new policy set immediately | [I] | P0 |
+| 45 | Rejection flow (`rejectAdminOperation`) blocks later `setPolicies` execution for same signed operation | [S] | P0 |
+| 46 | `setPolicies` authorization binds both `newPoliciesRoot` and `ipfsCid` hash (same root with different CID cannot reuse signatures) | [S] | P0 |
 
 ### 6.2 `getPolicyUsage(...)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 40 | Valid policy proof returns live usage after transactions | [I] | P1 |
-| 41 | Invalid policy proof reverts `PolicyVerificationFailed` | [N] | P1 |
+| 47 | Valid policy proof returns live usage after transactions | [I] | P1 |
+| 48 | Invalid policy proof reverts `PolicyVerificationFailed` | [N] | P1 |
 
 ### 6.3 Integrated policy constraint behavior
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 42 | Source-account filtering (`anySourceAccount` vs specific list) is enforced across multiple accounts | [I] | P0 |
-| 43 | Destination custom-list validation uses actual recipient for ERC-20 transfers (not token contract address) | [S] | P0 |
-| 44 | Token threshold boundary is strict `<` (amount == threshold rejected) | [E][S] | P0 |
-| 45 | Function allowlist binds selector + constraints hash; same selector with different constraints behaves differently | [S] | P0 |
-| 46 | Parameter constraints for dynamic bytes/string offsets reject malformed calldata without bypass | [S] | P0 |
-| 47 | Rate-limit scopes (per initiator/source/destination vs across-all) track independently as configured | [I] | P0 |
-| 48 | [DESIRED] Rate-limit arithmetic must fail safely (no overflow bypass / no wrapped usage) | [DESIRED][S] | P0 |
-| 49 | [DESIRED] Zero approval threshold in group-manual policy is rejected | [DESIRED][S] | P0 |
-| 50 | [DESIRED] `anyInitiator=true` still requires initiator to be an organization member | [DESIRED][S] | P0 |
+| 49 | Source-account filtering (`anySourceAccount` vs specific list) is enforced across multiple accounts | [I] | P0 |
+| 50 | Destination custom-list validation uses actual recipient for ERC-20 transfers (not token contract address) | [S] | P0 |
+| 51 | Token threshold boundary is strict `<` (amount == threshold rejected) | [E][S] | P0 |
+| 52 | Function allowlist binds selector + constraints hash; same selector with different constraints behaves differently | [S] | P0 |
+| 53 | Parameter constraints for dynamic bytes/string offsets reject malformed calldata without bypass | [S] | P0 |
+| 54 | Rate-limit scopes (per initiator/source/destination vs across-all) track independently as configured | [I] | P0 |
+| 55 | Rate-limit usage resets on time-window rollover and does not leak usage between windows | [I][E] | P1 |
+| 56 | [DESIRED] Rate-limit arithmetic must fail safely (no overflow bypass / no wrapped usage) | [DESIRED][S] | P0 |
+| 57 | [DESIRED] Zero approval threshold in group-manual policy is rejected | [DESIRED][S] | P0 |
+| 58 | [DESIRED] `anyInitiator=true` still requires initiator to be an organization member | [DESIRED][S] | P0 |
 
 ### 6.4 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 51 | `LibOrganizationPolicy._computePolicyLeaf` and policy-private helpers preserve Merkle/constraint security assumptions used by end-to-end auth | [S] | P1 |
+| 59 | `LibOrganizationPolicy._computePolicyLeaf` and policy-private helpers preserve Merkle/constraint security assumptions used by end-to-end auth | [S] | P1 |
+| 60 | `LibPolicyContractInteraction._computeFunctionLeaf/_isFunctionAllowedByPolicy` preserve selector+constraints-hash binding and reject malformed selector paths | [S] | P1 |
+| 61 | `LibPolicyApproval._isSignerAuthorizedForPolicy` enforces org membership and reviewer member/group authorization invariants | [S] | P1 |
+| 62 | `LibPolicyTokenTransfer._isTokenAllowedByPolicy/_isTokenAmountAllowedByPolicy` enforce native/ERC-20 token and amount semantics used by integration flows | [S] | P1 |
+| 63 | `LibPolicyParameterConstraints` private validators enforce the documented type/constraint compatibility matrix without bypass | [S] | P1 |
 
 ---
 
@@ -165,19 +182,27 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 52 | Guardian + admin-auth deploys deterministic account; account is usable immediately | [I] | P0 |
-| 53 | Replay of same admin auth nonce reverts | [S] | P0 |
-| 54 | Account from org A cannot be treated as org B deployed account | [S] | P0 |
+| 64 | Guardian + admin-auth deploys deterministic account; account is usable immediately | [I] | P0 |
+| 65 | Replay of same admin auth nonce reverts | [S] | P0 |
+| 66 | Account from org A cannot be treated as org B deployed account | [S] | P0 |
+| 67 | Reusing same account CREATE2 salt after successful deployment reverts and does not duplicate deployment side effects | [N][S] | P1 |
 
 ### 7.2 `setAccountImplementation(...)` / `implementation()`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 55 | Whitelisted account implementation upgrade updates behavior for all existing accounts under org | [I] | P0 |
-| 56 | New accounts deployed after upgrade use new implementation | [I] | P1 |
-| 57 | Non-whitelisted or wrong-contract-type implementation reverts | [N] | P0 |
-| 58 | `implementation()` reverts before initial account implementation is configured | [N] | P1 |
-| 59 | [DESIRED] Reject zero/no-code account implementation even if whitelist returns true | [DESIRED][S] | P0 |
+| 68 | Whitelisted account implementation upgrade updates behavior for all existing accounts under org | [I] | P0 |
+| 69 | New accounts deployed after upgrade use new implementation | [I] | P1 |
+| 70 | Non-whitelisted or wrong-contract-type implementation reverts | [N] | P0 |
+| 71 | `implementation()` reverts before initial account implementation is configured | [N] | P1 |
+| 72 | [DESIRED] Reject zero/no-code account implementation even if whitelist returns true | [DESIRED][S] | P0 |
+
+### 7.3 `computeAccountAddress(...)`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 73 | Deterministic for same salt and organization | [I] | P1 |
+| 74 | Matches actual deployed address from `deployAccount` | [I] | P0 |
 
 ---
 
@@ -187,37 +212,42 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 60 | Full ETH transfer flow succeeds (policy proof + initiator/reviewer signatures + guardian caller) | [I] | P0 |
-| 61 | Full ERC-20 transfer flow succeeds with destination/token/amount constraints | [I] | P0 |
-| 62 | Full contract-interaction flow succeeds with function + parameter constraints | [I] | P0 |
-| 63 | Nonce is shared and deterministic for `(account,to,value,data,policyId,salt)` | [S] | P0 |
-| 64 | Nonce consumed before external call prevents same-tx reentrancy replay | [S] | P0 |
-| 65 | If validation or account execution reverts, nonce consumption rolls back (same operation can be retried) | [S] | P0 |
-| 66 | Manual-approval review signatures are bound to initiator signature (initiator sig swap invalidates approvals) | [S] | P0 |
+| 75 | Full ETH transfer flow succeeds (policy proof + initiator/reviewer signatures + guardian caller) | [I] | P0 |
+| 76 | Full ERC-20 transfer flow succeeds with destination/token/amount constraints | [I] | P0 |
+| 77 | Full contract-interaction flow succeeds with function + parameter constraints | [I] | P0 |
+| 78 | Nonce is shared and deterministic for `(account,to,value,data,policyId,salt)` | [S] | P0 |
+| 79 | Nonce consumed before external call prevents same-tx reentrancy replay | [S] | P0 |
+| 80 | If validation or account execution reverts, nonce consumption rolls back (same operation can be retried) | [S] | P0 |
+| 81 | Manual-approval review signatures are bound to initiator signature (initiator sig swap invalidates approvals) | [S] | P0 |
+| 82 | Execute path reverts for accounts not deployed by the organization | [S][N] | P0 |
+| 83 | Execute path rejects expired signatures and preserves retryability for valid fresh signatures | [S] | P0 |
+| 84 | If account execution reverts after rate-limit update, rate-limit usage rolls back with the transaction | [S] | P0 |
 
 ### 8.2 `rejectAccountTransaction(...)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 67 | Auto-approve rejection requires authorized initiator rejection signature (`isApproval=false` hash) | [I][S] | P0 |
-| 68 | Manual-approval rejection requires reviewer threshold on rejection hash | [I][S] | P0 |
-| 69 | Execute then reject (or reject then execute) with same params/salt is blocked via shared nonce | [S] | P0 |
-| 70 | Rejection path does not mutate rate-limit usage | [S] | P1 |
+| 85 | Auto-approve rejection requires authorized initiator rejection signature (`isApproval=false` hash) | [I][S] | P0 |
+| 86 | Manual-approval rejection requires reviewer threshold on rejection hash | [I][S] | P0 |
+| 87 | Execute then reject (or reject then execute) with same params/salt is blocked via shared nonce | [S] | P0 |
+| 88 | Rejection path does not mutate rate-limit usage | [S] | P1 |
+| 89 | If rejection validation fails, nonce consumption rolls back (same operation params/salt can still be validly retried) | [S] | P0 |
 
 ### 8.3 `AccountImplementation.executeTransaction(...)` / `receive()` / `isValidSignature(...)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 71 | Only Organization can call `executeTransaction`; non-org caller reverts | [S] | P0 |
-| 72 | Failed low-level call reverts `TransactionExecutionFailed` and bubbles failure to org flow | [I] | P0 |
-| 73 | Account receives ETH and emits receive event | [I] | P1 |
-| 74 | `Account.isValidSignature` delegates to Organization account-signature path and returns contract result | [I] | P0 |
+| 90 | Only Organization can call `executeTransaction`; non-org caller reverts | [S] | P0 |
+| 91 | Failed low-level call reverts `TransactionExecutionFailed` and bubbles failure to org flow | [I] | P0 |
+| 92 | Account execution path is CALL-only (no delegatecall semantics available to mutate account storage) | [S] | P1 |
+| 93 | Account receives ETH and emits receive event | [I] | P1 |
+| 94 | `Account.isValidSignature` delegates to Organization account-signature path and returns contract result | [I] | P0 |
 
 ### 8.4 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 75 | `_validateAndUpdateRateLimitOrRevert`, `_validateAutoApproveRejectionOrRevert`, `_validateManualConfirmationOrRevert`, `_computeInitiatorHashFromParams`, `_computeReviewHashFromParams`, `AccountImplementation._execute`, `AccountImplementation._onlyOrganization` preserve expected integration invariants | [S] | P1 |
+| 95 | `_validateAndUpdateRateLimitOrRevert`, `_validateAutoApproveRejectionOrRevert`, `_validateManualConfirmationOrRevert`, `_computeInitiatorHashFromParams`, `_computeReviewHashFromParams`, `AccountImplementation._execute`, `AccountImplementation._onlyOrganization` preserve expected integration invariants | [S] | P1 |
 
 ---
 
@@ -227,21 +257,29 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 76 | Caller must be the account itself and account must belong to org | [S] | P0 |
-| 77 | Type `0x01` policy signatures: AutoApprove and ManualApproval flows validate correctly end-to-end | [I] | P0 |
-| 78 | Type `0x00` recovery signature is valid only when tx/ERC1271 recovery is configured and enabled | [I][S] | P0 |
-| 79 | Unknown type prefix returns invalid value | [N] | P0 |
-| 80 | Guardian signature accepted from guardian directly or enabled Safe module; disabled module is rejected | [S] | P0 |
-| 81 | Signature policy requires `TransactionType.Signatures` exactly (`Any` does not authorize ERC-1271) | [S] | P0 |
-| 82 | Cross-org replay prevented (domain binds organization address) | [S] | P0 |
-| 83 | Cross-chain replay prevented (typed data binds `chainId`) | [S] | P0 |
-| 84 | [DESIRED] Malformed policy payload returns invalid value instead of reverting | [DESIRED][S] | P0 |
+| 96 | Caller must be the account itself and account must belong to org | [S] | P0 |
+| 97 | Type `0x01` policy signatures: AutoApprove and ManualApproval flows validate correctly end-to-end | [I] | P0 |
+| 98 | Type `0x00` recovery signature is valid only when tx/ERC1271 recovery is configured and enabled | [I][S] | P0 |
+| 99 | Unknown type prefix returns invalid value | [N] | P0 |
+| 100 | Guardian signature accepted from guardian directly or enabled Safe module; disabled module is rejected | [S] | P0 |
+| 101 | Signature policy requires `TransactionType.Signatures` exactly (`Any` does not authorize ERC-1271) | [S] | P0 |
+| 102 | Policy-signature expiration boundary is enforced (`== expiration` valid, `> expiration` invalid) | [S][E] | P0 |
+| 103 | Repeated calls with the same valid policy signature remain stateless (no nonce burn / no state mutation) | [I][S] | P1 |
+| 104 | Cross-org replay prevented (domain binds organization address) | [S] | P0 |
+| 105 | Cross-chain replay prevented (typed data binds `chainId`) | [S] | P0 |
+| 106 | [DESIRED] Malformed policy payload returns invalid value instead of reverting | [DESIRED][S] | P0 |
 
 ### 9.2 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 85 | `_validateRecoverySignature`, `_validatePolicyBasedSignature`, `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`, `_getReviewSignatureHash` uphold integration security assumptions | [S] | P1 |
+| 107 | `_validateRecoverySignature`, `_validatePolicyBasedSignature`, `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`, `_getReviewSignatureHash` uphold integration security assumptions | [S] | P1 |
+
+### 9.3 `src/libraries/SignatureUtils.sol` private helpers (private -> harness)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 108 | `_isValidERC1271SignatureNow`, `_tryRecoverContractSigner`, `_tryRecoverEOASigner`, and parser helpers reject malformed/truncated/high-`s` signatures and accept valid EOA/ERC-1271 encodings | [S] | P0 |
 
 ---
 
@@ -251,10 +289,12 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 86 | Normal guardian update flow (initiate -> timelock -> finalize -> accept) succeeds with guardian+admin auth | [I] | P0 |
-| 87 | Distinct signatures are required per stage (`Initiate`/`Finalize`/`Cancel` operation types not replayable across stages) | [S] | P0 |
-| 88 | Cancel works both before and after finalize (before accept) | [I] | P1 |
-| 89 | Only pending guardian can accept | [S] | P0 |
+| 109 | Normal guardian update flow (initiate -> timelock -> finalize -> accept) succeeds with guardian+admin auth | [I] | P0 |
+| 110 | Distinct signatures are required per stage (`Initiate`/`Finalize`/`Cancel` operation types not replayable across stages) | [S] | P0 |
+| 111 | Finalize reverts before timelock expiry and succeeds at/after expiry boundary | [S][E] | P0 |
+| 112 | Cancel works both before and after finalize (before accept) | [I] | P1 |
+| 113 | Cannot initiate a second normal guardian update while one is pending | [S] | P0 |
+| 114 | Only pending guardian can accept | [S] | P0 |
 
 ---
 
@@ -264,33 +304,38 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 90 | Guardian + admin-auth deferred initialization works for guardian recovery and tx recovery after admin timelock | [I] | P0 |
-| 91 | Cancelled deferred initialization leaves mechanism unconfigured and re-initiable | [I] | P1 |
-| 92 | Finalize/cancel operation signatures are bound to current pending values (stale signatures fail) | [S] | P0 |
-| 93 | Recovery mechanisms can be initialized only once | [S] | P0 |
+| 115 | Guardian + admin-auth deferred initialization works for guardian recovery and tx recovery after admin timelock | [I] | P0 |
+| 116 | Cancelled deferred initialization leaves mechanism unconfigured and re-initiable | [I] | P1 |
+| 117 | Deferred init finalize reverts before timelock expiry and succeeds at/after expiry boundary | [S][E] | P0 |
+| 118 | Finalize/cancel operation signatures are bound to current pending values (stale signatures fail) | [S] | P0 |
+| 119 | Recovery mechanisms can be initialized only once | [S] | P0 |
 
 ### 11.2 Guardian recovery flow (`initiate/finalize/cancelRecoveryGuardianUpdate`, `acceptGuardianRecovery`)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 94 | Recovery address can rotate guardian without current guardian participation after timelock | [I] | P0 |
-| 95 | Unauthorized callers to recovery-only functions revert | [N] | P0 |
-| 96 | Recovery and normal guardian update flows can run in parallel without shared-state corruption | [S] | P0 |
+| 120 | Recovery address can rotate guardian without current guardian participation after timelock | [I] | P0 |
+| 121 | Unauthorized callers to recovery-only functions revert | [N] | P0 |
+| 122 | Recovery guardian finalize reverts before recovery timelock expiry and succeeds at/after expiry boundary | [S][E] | P0 |
+| 123 | Recovery and normal guardian update flows can run in parallel without shared-state corruption | [S] | P0 |
 
 ### 11.3 Tx recovery flow (`initiate/finalize/cancelEnable...`, `disable...`, `executeRecoveryAccountTransaction`)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 97 | Tx recovery enable requires timelock; disable is immediate and clears pending enable state | [I][S] | P0 |
-| 98 | Recovery account transaction works only when configured+enabled and bypasses policy checks | [I] | P0 |
-| 99 | Recovery account transaction executes with `nonce=0` and `policyId=0` on account side | [I] | P1 |
-| 100 | Recovery disable immediately blocks further recovery transactions and recovery ERC-1271 signatures | [S] | P0 |
+| 124 | Tx recovery enable requires timelock; disable is immediate and clears pending enable state | [I][S] | P0 |
+| 125 | Enable flow reverts when tx/ERC1271 recovery is not configured | [N][S] | P0 |
+| 126 | Recovery account transaction works only when configured+enabled and bypasses policy checks | [I] | P0 |
+| 127 | Recovery account transaction rejects accounts not deployed by this organization | [S] | P0 |
+| 128 | Recovery account transaction executes with `nonce=0` and `policyId=0` on account side | [I] | P1 |
+| 129 | Recovery account-transaction target failure bubbles as revert and leaves no side effects | [S] | P0 |
+| 130 | Recovery disable immediately blocks further recovery transactions and recovery ERC-1271 signatures | [S] | P0 |
 
 ### 11.4 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 101 | Recovery private helpers (`_clearPending*`, `_validate*NotConfiguredOrRevert`, `_validate*ParamsOrRevert`) preserve timelock/configuration integrity in end-to-end flows | [S] | P1 |
+| 131 | Recovery private helpers (`_clearPending*`, `_validate*NotConfiguredOrRevert`, `_validate*ParamsOrRevert`) preserve timelock/configuration integrity in end-to-end flows | [S] | P1 |
 
 ---
 
@@ -300,21 +345,22 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 102 | Guardian + admin-auth + whitelisted implementation performs successful org UUPS upgrade | [I] | P0 |
-| 103 | Direct call to inherited `upgradeToAndCall` bypass path reverts `UnauthorizedUpgrade` | [S] | P0 |
-| 104 | Failed migration call reverts atomically and does not leave upgraded implementation active | [S] | P0 |
-| 105 | Existing org state (members/admins/groups/policies/recovery/nonces) persists after upgrade | [I] | P0 |
-| 106 | Upgrade authorization flag is false before/after and never stuck true on failure | [S] | P0 |
-| 107 | [DESIRED] Admin authorization must bind both `newImplementation` and migration `data` | [DESIRED][S] | P0 |
-| 108 | [DESIRED] Migration payload cannot trigger unauthorized nested second upgrade | [DESIRED][S] | P0 |
-| 109 | [DESIRED] Reject zero/no-code `newImplementation` even if whitelist contract misbehaves | [DESIRED][S] | P0 |
+| 132 | Guardian + admin-auth + whitelisted implementation performs successful org UUPS upgrade | [I] | P0 |
+| 133 | Direct call to inherited `upgradeToAndCall` bypass path reverts `UnauthorizedUpgrade` | [S] | P0 |
+| 134 | Failed migration call reverts atomically and does not leave upgraded implementation active | [S] | P0 |
+| 135 | Existing org state (members/admins/groups/policies/recovery/nonces) persists after upgrade | [I] | P0 |
+| 136 | Upgrade authorization flag is false before/after and never stuck true on failure | [S] | P0 |
+| 137 | Rejected upgrade operation (`rejectAdminOperation` + `OperationType.Upgrade`) blocks later upgrade execution for same signed params | [S] | P0 |
+| 138 | [DESIRED] Admin authorization must bind both `newImplementation` and migration `data` | [DESIRED][S] | P0 |
+| 139 | [DESIRED] Migration payload cannot trigger unauthorized nested second upgrade | [DESIRED][S] | P0 |
+| 140 | [DESIRED] Reject zero/no-code `newImplementation` even if whitelist contract misbehaves | [DESIRED][S] | P0 |
 
 ### 12.2 `_authorizeUpgrade(...)` (internal -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 110 | Authorization only succeeds inside validated upgrade window | [S] | P0 |
-| 111 | [DESIRED] Authorization should be bound to specific approved implementation, not only boolean flag | [DESIRED][S] | P0 |
+| 141 | Authorization only succeeds inside validated upgrade window | [S] | P0 |
+| 142 | [DESIRED] Authorization should be bound to specific approved implementation, not only boolean flag | [DESIRED][S] | P0 |
 
 ---
 
@@ -324,18 +370,19 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 112 | Whitelist proxy initialization seeds org/account allowlists and owner correctly | [I] | P1 |
-| 113 | Only current owner can add/remove implementations; ownership transfer updates control immediately | [S] | P0 |
-| 114 | Contract-type isolation: Account whitelist entries never authorize org deploy/upgrade and vice versa | [S] | P0 |
-| 115 | Unwhitelisting blocks future deployments/upgrades but does not mutate already active implementation pointers | [I] | P1 |
-| 116 | Whitelist UUPS upgrade preserves allowlist state and ownership | [I] | P1 |
-| 117 | [DESIRED] Reject zero/no-code addresses when whitelisting | [DESIRED][S] | P0 |
+| 143 | Whitelist proxy initialization seeds org/account allowlists and owner correctly | [I] | P1 |
+| 144 | `initialize` is one-time only (second initialization attempt reverts) | [S] | P0 |
+| 145 | Only current owner can add/remove implementations; ownership transfer updates control immediately | [S] | P0 |
+| 146 | Contract-type isolation: Account whitelist entries never authorize org deploy/upgrade and vice versa | [S] | P0 |
+| 147 | Unwhitelisting blocks future deployments/upgrades but does not mutate already active implementation pointers | [I] | P1 |
+| 148 | Whitelist UUPS upgrade preserves allowlist state and ownership | [I] | P1 |
+| 149 | [DESIRED] Reject zero/no-code addresses when whitelisting | [DESIRED][S] | P0 |
 
 ### 13.2 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 118 | `_addToWhitelist` / `_removeFromWhitelist` preserve contract-type isolation and event/state semantics required by integration gates | [S] | P1 |
+| 150 | `_addToWhitelist` / `_removeFromWhitelist` preserve contract-type isolation and event/state semantics required by integration gates | [S] | P1 |
 
 ---
 
@@ -345,23 +392,24 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 119 | Only `AUTHORIZED_EXECUTOR` can execute on behalf of Safe | [S] | P0 |
-| 120 | Calls targeting Safe itself are blocked | [S] | P0 |
-| 121 | Non-batch targets use CALL; batch target uses DELEGATECALL; forwarded value is always zero | [S] | P0 |
-| 122 | Safe execution failure reverts `ExecutionFailed` | [N] | P0 |
-| 123 | Module ERC-1271 signature path accepts only signatures from authorized executor | [S] | P0 |
-| 124 | Authorized executor can execute guardian-only Organization entrypoints via Safe module; unauthorized callers cannot | [I][S] | P0 |
-| 125 | [DESIRED] Constructor hardening: reject invalid/non-contract Safe and BatchedTransaction wiring | [DESIRED][S] | P1 |
+| 151 | Only `AUTHORIZED_EXECUTOR` can execute on behalf of Safe | [S] | P0 |
+| 152 | Calls targeting Safe itself are blocked | [S] | P0 |
+| 153 | Non-batch targets use CALL; batch target uses DELEGATECALL; forwarded value is always zero | [S] | P0 |
+| 154 | Safe execution failure reverts `ExecutionFailed` | [N] | P0 |
+| 155 | Module ERC-1271 signature path accepts only signatures from authorized executor | [S] | P0 |
+| 156 | Malformed/invalid module-signature encodings return ERC-1271 invalid value (not revert) | [S] | P1 |
+| 157 | Authorized executor can execute guardian-only Organization entrypoints via Safe module; unauthorized callers cannot | [I][S] | P0 |
+| 158 | [DESIRED] Constructor hardening: reject invalid/non-contract Safe and BatchedTransaction wiring | [DESIRED][S] | P1 |
 
 ### 14.2 `BatchedTransaction.execute(...)`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 126 | Valid packed batch executes subcalls in order atomically | [I] | P0 |
-| 127 | Any failing subcall reverts full batch and rolls back earlier subcall effects | [S] | P0 |
-| 128 | Subcall to `address(this)` (Safe in delegatecall context) always reverts `CannotCallSafe` | [S] | P0 |
-| 129 | No ETH value transfer possible through batch (value hardcoded zero) | [S] | P0 |
-| 130 | [DESIRED] Malformed packed encoding (short trailing bytes / oversized lengths / trailing garbage) reverts instead of silently succeeding | [DESIRED][S] | P0 |
+| 159 | Valid packed batch executes subcalls in order atomically | [I] | P0 |
+| 160 | Any failing subcall reverts full batch and rolls back earlier subcall effects | [S] | P0 |
+| 161 | Subcall to `address(this)` (Safe in delegatecall context) always reverts `CannotCallSafe` | [S] | P0 |
+| 162 | No ETH value transfer possible through batch (value hardcoded zero) | [S] | P0 |
+| 163 | [DESIRED] Malformed packed encoding (short trailing bytes / oversized lengths / trailing garbage) reverts instead of silently succeeding | [DESIRED][S] | P0 |
 
 ---
 
@@ -369,11 +417,13 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 131 | Full lifecycle: deploy org -> initialize -> deploy account -> set policies -> execute tx -> reject tx variant -> verify nonce and policy usage outcomes | [I] | P0 |
-| 132 | Multiple accounts in one org execute independently under shared policy set; scoped rate limits behave as configured | [I] | P0 |
-| 133 | Multiple orgs on same chain cannot replay each other’s admin/tx/signature authorizations | [S] | P0 |
-| 134 | Guardian update, recovery flows, and tx execution remain coherent through organization upgrade and account implementation upgrade | [I][S] | P0 |
-| 135 | Guardian Safe module rotation (disable old module/enable new) immediately changes valid guardian module signatures with no org state change | [I][S] | P0 |
+| 164 | Full lifecycle: deploy org -> initialize -> deploy account -> set policies -> execute tx -> reject tx variant -> verify nonce and policy usage outcomes | [I] | P0 |
+| 165 | Multiple accounts in one org execute independently under shared policy set; scoped rate limits behave as configured | [I] | P0 |
+| 166 | Multiple orgs on same chain cannot replay each other’s admin/tx/signature authorizations | [S] | P0 |
+| 167 | Access-control matrix: unauthorized callers are rejected across all modifier-protected entrypoints (`onlyGuardian`, `onlyDeployer`, `onlyPendingGuardian`, `onlyRecoveryPendingGuardian`, `onlyGuardianRecoveryAddress`, `onlyTxRecoveryAddress`) | [S] | P0 |
+| 168 | `computeNonce` / `isNonceUsed` public views match actual execution/rejection outcomes and rollback semantics across operation types | [I][S] | P1 |
+| 169 | Guardian update, recovery flows, and tx execution remain coherent through organization upgrade and account implementation upgrade | [I][S] | P0 |
+| 170 | Guardian Safe module rotation (disable old module/enable new) immediately changes valid guardian module signatures with no org state change | [I][S] | P0 |
 
 ---
 

@@ -9,6 +9,9 @@
 - Interface files (`src/interfaces/**/*.sol`)
 - Storage libraries (`src/**/libraries/storage/**/*.sol`)
 
+**Scope Notes:**
+- Private functions in files under test should be converted from `private` to `internal` in test-only builds and verified via harness contracts.
+
 ---
 
 ## File 1: `OrganizationImplementation.sol`
@@ -31,8 +34,10 @@
 | 12 | Upgrade to UUPS target with incompatible `proxiableUUID` reverts | [S] | P0 |
 | 13 | Upgrade emits ERC-1967 `Upgraded` event with correct implementation address | [EV] | P1 |
 | 14 | Existing Organization state (members/admins/groups/policies/guardian/recovery config) is preserved after upgrade | [I] | P0 |
+| 14.1 | Existing account-factory state (`accountImplementation` pointer and deployed-account tracking) is preserved across Organization UUPS upgrades | [I] | P0 |
 | 15 | Sequential upgrades (V1 -> V2 -> V3) preserve state and functionality at each step | [I] | P1 |
 | 16 | If post-upgrade `data` call reverts, transaction fully reverts and implementation remains unchanged | [S] | P0 |
+| 16.1 | Reverting upgrade paths (whitelist/UUPS/migration failure) do not consume admin auth nonce (same auth can be retried after root cause is fixed) | [S] | P1 |
 | 17 | `isUpgradeAuthorized` flag is true only during authorized upgrade execution window and false before/after | [S] | P0 |
 | 18 | Failed upgrade path never leaves `isUpgradeAuthorized` stuck true | [S] | P0 |
 | 19 | Direct call to inherited `upgradeToAndCall` (bypassing wrapper) always reverts `UnauthorizedUpgrade` | [S] | P0 |
@@ -40,6 +45,7 @@
 | 21 | **Desired behavior:** admin authorization must also bind the `data` payload (guardian cannot swap migration calldata after signatures are collected) | [S] | P0 |
 | 22 | **Desired behavior:** migration `data` cannot trigger a nested second upgrade to bypass whitelist/admin authorization | [S] | P0 |
 | 23 | **Desired behavior:** upgrades fail closed if configured whitelist address has no code (EOA/zero/misconfigured address) | [S] | P0 |
+| 23.1 | **Desired behavior:** upgrades fail closed if whitelist validation call itself reverts or returns malformed data (implementation must remain unchanged) | [S] | P0 |
 | 24 | **Desired behavior:** `newImplementation` must be a non-zero contract address (even if mistakenly whitelisted) | [S] | P0 |
 
 ### 1.2 `implementation()` (IBeacon override)
@@ -90,6 +96,7 @@
 | 45 | Upgrading account implementation does not alter Organization proxy implementation | [S] | P1 |
 | 46 | **Desired behavior:** upgrade fails closed if whitelist address has no code (EOA/zero/misconfigured) | [S] | P0 |
 | 47 | **Desired behavior:** `newImplementation` must be non-zero and have code (even if mistakenly whitelisted) | [S] | P0 |
+| 47.1 | Reverting account-implementation upgrade paths (whitelist/no-code checks) do not consume admin auth nonce and do not mutate beacon implementation state | [S] | P1 |
 
 ### 2.2 `implementation()` (beacon implementation getter)
 
@@ -112,6 +119,11 @@
 | 53 | Cannot initialize proxy twice | [N] | P1 |
 | 54 | Implementation contract constructor disables initializers (direct initialize on implementation reverts) | [S] | P1 |
 | 55 | `isInitialized()` is false before init and true after successful init | [U] | P1 |
+| 55.1 | `initialOwner == address(0)` reverts during initialization | [N] | P0 |
+| 55.2 | Empty initial implementation arrays still initialize successfully and set owner | [E] | P2 |
+| 55.3 | Same implementation address can be seeded independently under both `ContractType.Organization` and `ContractType.Account` in init | [S] | P1 |
+| 55.4 | **Desired behavior:** initialization rejects zero-address implementation entries in seed arrays | [S] | P0 |
+| 55.5 | **Desired behavior:** initialization rejects non-contract implementation entries in seed arrays | [S] | P0 |
 
 ### 3.2 `whitelistImplementations(ContractType contractType, address[] toWhitelist, address[] toUnwhitelist)`
 
@@ -123,6 +135,10 @@
 | 59 | Emits `ImplementationWhitelisted` and `ImplementationUnwhitelisted` for each processed address | [EV] | P2 |
 | 60 | **Desired behavior:** reject zero-address entries in whitelist updates | [S] | P0 |
 | 61 | **Desired behavior:** reject non-contract addresses in whitelist updates | [S] | P0 |
+| 61.1 | Same address present in both `toWhitelist` and `toUnwhitelist` in one call ends unwhitelisted (add then remove order) | [E] | P2 |
+| 61.2 | Both arrays empty is a no-op and does not revert | [E] | P2 |
+| 61.3 | Pending owner (before `acceptOwnership`) cannot call `whitelistImplementations` | [S] | P1 |
+| 61.4 | After ownership transfer acceptance, new owner can mutate whitelist and old owner can no longer mutate it | [S] | P1 |
 
 ### 3.3 `isImplementationWhitelisted` / `validateIsImplementationWhitelistedOrRevert`
 
@@ -131,6 +147,7 @@
 | 62 | `isImplementationWhitelisted` returns true only for addresses whitelisted under matching `ContractType` | [U] | P1 |
 | 63 | `validateIsImplementationWhitelistedOrRevert` reverts for non-whitelisted targets with `ImplementationNotWhitelisted` | [N] | P1 |
 | 64 | `validateIsImplementationWhitelistedOrRevert` succeeds for whitelisted targets | [U] | P1 |
+| 64.1 | `validateIsImplementationWhitelistedOrRevert` reverts when implementation is whitelisted only under the other `ContractType` | [N] | P1 |
 
 ### 3.4 `_authorizeUpgrade(address newImplementation)` and inherited UUPS upgrade path
 
@@ -145,6 +162,7 @@
 | 71 | Upgrade to non-UUPS / incompatible implementation reverts | [S] | P1 |
 | 72 | Calling `upgradeToAndCall` on implementation contract directly (not proxy) reverts due UUPS `onlyProxy` guard | [S] | P1 |
 | 73 | Calling `proxiableUUID` through proxy reverts due UUPS `notDelegated` guard | [S] | P1 |
+| 73.1 | **Desired behavior:** owner cannot upgrade whitelist proxy to zero/no-code targets (must fail closed even with owner auth) | [S] | P0 |
 
 ### 3.5 Private Function Tests (Requires `private` -> `internal` Conversion for Harness)
 
@@ -159,6 +177,7 @@
 | 76 | Emits one `ImplementationWhitelisted` event per input entry | [EV] | P2 |
 | 77 | Empty input array is a no-op and does not revert | [E] | P2 |
 | 78 | **Desired behavior:** rejects zero/non-contract addresses | [S] | P0 |
+| 78.1 | Duplicate entries are idempotent at state level (mapping stays `true`) | [E] | P2 |
 
 #### 3.5.2 `_removeFromWhitelist(ContractType contractType, address[] implementations)`
 
@@ -169,6 +188,7 @@
 | 81 | Emits one `ImplementationUnwhitelisted` event per input entry | [EV] | P2 |
 | 82 | Removing non-whitelisted entries is a no-op and does not revert | [E] | P2 |
 | 83 | Empty input array is a no-op and does not revert | [E] | P2 |
+| 83.1 | Duplicate removal entries are idempotent at state level (mapping stays `false`) | [E] | P2 |
 
 ---
 
@@ -181,6 +201,8 @@
 | 86 | Unwhitelisting an implementation blocks future upgrades to that implementation but does not mutate already-active implementation pointers | [I] | P1 |
 | 87 | Upgrading Organization implementation does not bypass Account implementation whitelist/type checks | [S] | P0 |
 | 88 | Compromised guardian assumption test: without valid admin auth, neither Organization nor Account upgrade path executes | [S] | P0 |
+| 88.1 | If an implementation is unwhitelisted after signatures are collected but before execution, execution still fails (whitelist enforced at execution time) | [S] | P0 |
+| 88.2 | Re-whitelisting a previously removed implementation re-enables upgrade paths only when fresh valid admin auth is provided | [I] | P1 |
 
 ---
 
@@ -205,6 +227,7 @@
 | 96 | Account upgrades only target whitelisted Account implementations | P0 |
 | 97 | All accounts under the same organization always resolve the same beacon implementation address | P0 |
 | 98 | Organization UUPS implementation pointer and Account beacon implementation pointer are independent state variables | P1 |
+| 98.1 | **Desired behavior:** Organization proxy-stored whitelist address used for upgrade checks remains immutable across Organization upgrades | P1 |
 
 ---
 
@@ -212,10 +235,10 @@
 
 | Category | Tests | Priority |
 |----------|-------|----------|
-| `OrganizationImplementation.sol` | 31 | P0-P1 |
-| `OrganizationAccountFactoryBase.sol` | 19 | P0-P1 |
-| `ImplementationWhitelistImplementation.sol` | 33 | P0-P2 |
-| Cross-file upgrade security | 5 | P0-P1 |
+| `OrganizationImplementation.sol` | 34 | P0-P1 |
+| `OrganizationAccountFactoryBase.sol` | 20 | P0-P1 |
+| `ImplementationWhitelistImplementation.sol` | 46 | P0-P2 |
+| Cross-file upgrade security | 7 | P0-P1 |
 | Fuzz tests | 5 | P0-P1 |
-| Invariants | 5 | P0-P1 |
-| **Total** | **98** | |
+| Invariants | 6 | P0-P1 |
+| **Total** | **118** | |
