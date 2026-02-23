@@ -4,6 +4,13 @@
 - `src/organization/base/OrganizationAccountSignatureBase.sol`
 - `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
+**Private Function Testability Plan (Global):**
+All `private` functions in the files under test will be refactored to `internal` for testing and exposed via test harness contracts.
+
+| File | Private functions to convert to `internal` for harness testing |
+|---|---|
+| `OrganizationAccountSignatureBase.sol` | None |
+| `LibOrganizationAccountSignature.sol` | `_validateRecoverySignature`, `_validatePolicyBasedSignature`, `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`, `_getReviewSignatureHash` |
 
 ---
 
@@ -23,11 +30,6 @@
 ---
 
 ## File 2: LibOrganizationAccountSignature.sol
-
-> **Prerequisite:** The functions `_validateRecoverySignature`, `_validatePolicyBasedSignature`,
-> `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`,
-> and `_getReviewSignatureHash` are currently `private`. Convert them to `internal` and expose
-> via a test harness for direct testing.
 
 ### 2.1 `isValidSignature` (type routing)
 
@@ -54,6 +56,7 @@
 | 18 | Wrong recovery address signs — returns invalid value | [N] | P0 |
 | 19 | Recovery signature with valid EOA signature — accepted | [U] | P0 |
 | 20 | Recovery signature with valid ERC-1271 (smart contract) signature — accepted | [U] | P0 |
+| 87 | **Desired Behavior:** Malformed recovery signature bytes (bad length/encoding) — returns invalid value (no revert) | [N][S] | P0 |
 
 ---
 
@@ -74,6 +77,16 @@
 | 31 | ManualApproval policy with invalid review signatures (wrong message hash) — returns invalid value | [N] | P0 |
 | 32 | Review hash includes `initiatorSignature` — different initiator sigs produce different review hashes (binding) | [S] | P0 |
 | 33 | All failure cases return invalid value (never reverts) — function is graceful | [E] | P0 |
+| 88 | **Desired Behavior:** Malformed policy `signatureData` (ABI decode failure) — returns invalid value (never reverts) | [S] | P0 |
+| 89 | Initiator signature from an authorized ERC-1271 member contract — accepted | [U] | P0 |
+| 90 | ManualApproval policy with authorized ERC-1271 reviewer signatures meeting threshold — returns magic value | [U] | P0 |
+| 91 | ManualApproval policy with `approverType=Member` and valid designated reviewer signature — returns magic value | [U] | P0 |
+| 92 | **Desired Behavior:** Unknown/invalid `PolicyType` value fails closed — returns invalid value | [S] | P0 |
+| 93 | **Desired Behavior:** Malformed packed `reviewSignatures` bytes — returns invalid value (never reverts) | [N][S] | P0 |
+| 94 | **Desired Behavior:** Duplicate or out-of-order reviewer signers — returns invalid value (never reverts) | [S] | P0 |
+| 95 | **Desired Behavior:** Unauthorized reviewer signer — returns invalid value (never reverts) | [S] | P0 |
+| 96 | **Desired Behavior:** Approver group does not exist — returns invalid value (never reverts) | [S] | P0 |
+| 97 | **Desired Behavior:** Same valid packed signature can be verified repeatedly before expiration — always returns magic (no nonce/state consumption) | [S] | P0 |
 
 ---
 
@@ -109,6 +122,9 @@
 | 52 | All four checks pass — returns true | [U] | P0 |
 | 53 | Checks are sequential: `isPolicyInOrg` checked first, short-circuits on failure | [U] | P1 |
 | 54 | Empty `sourceAccountProof` with policy requiring specific source accounts — returns false | [S] | P0 |
+| 98 | **Desired Behavior:** `anyInitiator=true` still enforces "Any Member" semantics — non-member initiator returns false | [S] | P0 |
+| 99 | `initiatorType=Group` with existing group and initiator in group — returns true | [U] | P0 |
+| 100 | `initiatorType=Group` with non-existent group — returns false | [N] | P0 |
 
 ---
 
@@ -157,6 +173,8 @@
 | 79 | Fuzz: Random initiator signatures — all produce different review hashes (uniqueness) | [F] | P0 |
 | 80 | Fuzz: Random accounts — policy with `anySourceAccount=true` always allows, specific account rejects others | [F] | P0 |
 | 81 | Fuzz: Random message hashes — changing hash always changes initiator signature hash | [F] | P0 |
+| 101 | Fuzz: Random malformed policy-based payloads for type `0x01` — always returns invalid value (never reverts) | [F][S] | P0 |
+| 102 | Fuzz: Random authorized signer mixes (EOA/ERC-1271) for initiator/reviewers — outcome depends on policy authorization, not signer encoding | [F] | P0 |
 
 ---
 
@@ -169,6 +187,8 @@
 | 84 | **Cross-org replay**: Signatures valid for org A are never valid for org B | P0 |
 | 85 | **Initiator binding**: Review hash always changes when initiator signature changes | P0 |
 | 86 | **No rate limits**: `isValidSignature` is `view` — no storage modifications ever occur | P0 |
+| 103 | **Cross-account replay**: Signatures valid for account A are never valid for account B within the same org | P0 |
+| 104 | **Stateless repeatability**: With fixed pre-expiration inputs, repeated `isValidSignature` calls always return the same result and never consume state | P0 |
 
 ---
 
@@ -178,12 +198,12 @@
 |----------|-----------|----------|
 | `isValidSignatureForAccount` | 6 | P0-P1 |
 | `isValidSignature` (type routing) | 7 | P0-P1 |
-| `_validateRecoverySignature` | 7 | P0 |
-| `_validatePolicyBasedSignature` | 13 | P0 |
+| `_validateRecoverySignature` | 8 | P0 |
+| `_validatePolicyBasedSignature` | 23 | P0 |
 | `_isValidGuardianSignature` | 11 | P0-P1 |
-| `_isERC1271SignatureAllowedByPolicy` | 10 | P0-P1 |
+| `_isERC1271SignatureAllowedByPolicy` | 13 | P0-P1 |
 | `_getInitiatorSignatureHash` | 10 | P0-P1 |
 | `_getReviewSignatureHash` | 7 | P0-P1 |
-| Fuzz tests | 10 | P0 |
-| Invariant tests | 5 | P0 |
-| **Total** | **86** | |
+| Fuzz tests | 12 | P0 |
+| Invariant tests | 7 | P0 |
+| **Total** | **104** | |
