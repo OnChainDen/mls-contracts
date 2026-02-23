@@ -1,4 +1,4 @@
-# 12 — Guardian Recovery Test Plan
+# 11 — Guardian Recovery Test Plan
 
 **Files Under Test:**
 - `src/organization/base/OrganizationGuardianRecoveryBase.sol`
