@@ -3,9 +3,7 @@
 **Files Under Test:**
 - `src/organization/base/OrganizationAccountSignatureBase.sol`
 - `src/organization/libraries/LibOrganizationAccountSignature.sol`
-- `src/interfaces/organization/IOrganizationAccountSignature.sol`
 
-**Test File(s):** `test/OrganizationAccountSignatureBase.t.sol`, `test/LibOrganizationAccountSignature.t.sol`
 
 ---
 
