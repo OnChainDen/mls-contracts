@@ -1,220 +1,165 @@
-# 21 — Fuzz Testing Strategy
+# 21 — Fuzz & Property-Based Test Plan (File/Function Breakdown)
 
-**Scope:** Property-based testing using Foundry's built-in fuzzer. These tests complement the unit tests by exploring edge cases that manual test design might miss.
+## Scope
+Property-based testing for custom contract behavior across `src/`, broken down by concrete file and function.
 
----
+## Exclusions
+- Interface files in `src/interfaces/**` are out of scope for this plan.
+- Storage libraries in `src/**/libraries/storage/**` are out of scope for this plan.
 
-## Fuzz Test Design Principles
+## Private Function Harness Note
+Several cases below target functions currently marked `private`. For implementation, expose these through test harnesses by changing visibility `private -> internal` in test-only builds.
 
-1. **Bound inputs**: Use `vm.assume()` or `bound()` to restrict fuzz inputs to valid ranges
-2. **Property-based**: Each fuzz test asserts a property that must hold for ALL inputs
-3. **Runs**: Configure `FOUNDRY_FUZZ_RUNS=1000` minimum (10000 for critical paths)
-4. **Seed stability**: Store failing seeds in `foundry.toml` under `[fuzz]`
+## Run Baseline
+- `P0`: `10000` runs minimum
+- `P1`: `2000` runs minimum
+- `P2`: `1000` runs minimum
 
----
-
-## 1. Signature Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 1 | Any valid private key (1 to SECP256K1_ORDER-1) produces recoverable signature | 10000 | P0 |
-| 2 | Random bytes (length != 65 for EOA) never recover a valid signer | 10000 | P0 |
-| 3 | Signature malleability: complement s value always rejected | 10000 | P0 |
-| 4 | Random hash values: signature for hash A never validates for hash B | 10000 | P0 |
-| 5 | ERC-1271 signer addresses: only contracts returning magic value accepted | 1000 | P0 |
-
----
-
-## 2. Merkle Proof Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 6 | Random leaf included in tree: correct proof always verifies | 1000 | P0 |
-| 7 | Random leaf NOT in tree: no proof verifies | 1000 | P0 |
-| 8 | Random proof bytes against valid root: never falsely verifies | 10000 | P0 |
-| 9 | Tree of N random leaves: each leaf verifiable with correct proof | 1000 | P1 |
-| 10 | Modifying any byte of a valid proof: verification fails | 1000 | P0 |
-
----
-
-## 3. Nonce Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 11 | Random (operationType, data, salt) tuples: all produce unique nonces | 1000 | P1 |
-| 12 | Consumed nonces: replay always reverts regardless of other state | 1000 | P0 |
-| 13 | Random salt values with same operation: unique nonces | 1000 | P1 |
-
----
-
-## 4. Admin Authorization Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 14 | Random valid admin signatures always authenticate | 1000 | P0 |
-| 15 | Random non-admin signers always rejected | 1000 | P0 |
-| 16 | Random expiration timestamps: future accepted, past rejected | 1000 | P0 |
-| 17 | Random voting thresholds in [1, adminCount]: always valid | 1000 | P0 |
-| 18 | Random voting thresholds outside range: always revert | 1000 | P0 |
-
----
-
-## 5. Policy Validation Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 19 | Random ERC-20 transfer calldata: token address extracted correctly | 1000 | P0 |
-| 20 | Random ERC-20 transfer calldata: amount extracted correctly | 1000 | P0 |
-| 21 | Random ERC-20 transfer calldata: recipient extracted correctly | 1000 | P0 |
-| 22 | Random uint values against Range constraint: boundary behavior correct | 1000 | P0 |
-| 23 | Random int values against Range constraint: signed comparison correct | 1000 | P0 |
-| 24 | Random addresses against Exact constraint: only matching address passes | 1000 | P0 |
-| 25 | Random rate limit usage: cumulative never exceeds limit | 1000 | P0 |
-
----
-
-## 6. Group/Member Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 26 | Random non-zero addresses can be added as members | 1000 | P0 |
-| 27 | Adding then removing random members: no longer members | 1000 | P0 |
-| 28 | Random group IDs: create and verify | 1000 | P1 |
-| 29 | Deleted group IDs: re-creation always reverts | 1000 | P0 |
-
----
-
-## 7. EIP-712 Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 30 | Random chain IDs produce unique domain separators | 1000 | P0 |
-| 31 | Random struct hashes produce unique typed data hashes | 1000 | P0 |
-| 32 | Random operation data: initiator and review hashes always differ (different type hashes) | 1000 | P0 |
-
----
-
-## 8. CREATE2 Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 33 | Random salts always produce unique account addresses | 1000 | P1 |
-| 34 | Computed address always matches deployed address | 1000 | P1 |
-
----
-
-## 9. Timelock Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 35 | Random durations in [2 days, 30 days]: always valid | 1000 | P1 |
-| 36 | Random durations outside [2 days, 30 days]: always revert | 1000 | P1 |
-| 37 | Random timestamps before timelock expiry: finalize always reverts | 1000 | P1 |
-| 38 | Random timestamps at/after timelock expiry: finalize always succeeds | 1000 | P1 |
-
----
-
-## 9.5 Parameter Constraint & Overflow Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 38.1 | Random parameter constraint offsets: bounds checking never overflows | 10000 | P0 |
-| 38.2 | Random dynamic bytes lengths in constraints: validation always terminates without panic | 10000 | P0 |
-| 38.3 | Random ERC-20 calldata: getActualDestination never panics or returns wrong type | 10000 | P0 |
-| 38.4 | Random signature type prefixes (0x00-0xff): only 0x00 and 0x01 produce valid ERC-1271 response | 1000 | P0 |
-| 38.5 | Random guardian addresses (EOA/contract/zero): module validation returns valid boolean | 1000 | P0 |
-| 38.6 | Random admin modification arrays: modifyAdmins never leaves adminCount=0 | 1000 | P0 |
-| 38.7 | Random rate limit configs: checkAndUpdateRateLimit never causes uint256 overflow | 10000 | P0 |
-
----
-
-## 10. Byte Manipulation Fuzzing (Existing Coverage — Verify)
-
-Existing BytesUtils fuzz tests cover:
-- `sliceFrom` length correctness, data integrity, arbitrary length
-- `sliceRange` arbitrary inputs, matching with sliceFrom
-
-No additional fuzz tests needed for BytesUtils.
-
----
-
-## 11. Guardian Recovery Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 39 | Random non-zero recovery addresses with valid timelock — always configure | 1000 | P1 |
-| 40 | Random timelock durations in [2 days, 30 days] — always accepted | 1000 | P1 |
-| 41 | Random timelock durations outside valid range — always revert | 1000 | P1 |
-| 42 | Random timestamps before/after recovery timelock — correct finalize behavior | 1000 | P1 |
-
----
-
-## 12. TX Recovery Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 43 | Random recovery address EOA signatures — valid signer always authenticates | 1000 | P0 |
-| 44 | Random non-recovery signers — always rejected | 1000 | P0 |
-| 45 | Random enable/disable cycles — disable always immediate, enable always requires timelock | 1000 | P0 |
-
----
-
-## 13. Whitelist Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 46 | Random addresses added to whitelist — always queryable as whitelisted | 1000 | P2 |
-| 47 | Random addresses added then removed — always queryable as not whitelisted | 1000 | P2 |
-| 48 | Random Organization vs Account types — whitelists independent | 1000 | P2 |
-
----
-
-## 14. Storage Library Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 49 | Random namespace strings produce unique ERC-7201 storage locations | 1000 | P1 |
-| 50 | Random write/read sequences preserve data integrity across namespaces | 1000 | P1 |
-
----
-
-## 15. Safe Module Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 51 | Random valid EOA signatures — isValidSignature returns magic value | 1000 | P2 |
-| 52 | Random packed transaction batches — encode/decode round-trip correct | 1000 | P2 |
-
----
-
-## 16. Integration Fuzzing
-
-| # | Test Case | Runs | Priority |
-|---|-----------|------|----------|
-| 53 | Random valid transaction parameters through full AutoApprove flow | 1000 | P0 |
-| 54 | Random policy constraint combinations — all sub-validations enforced end-to-end | 1000 | P0 |
-| 55 | Random rate limit configurations — cumulative usage tracked correctly | 1000 | P0 |
-
----
+## Matrix
+| ID | File | Function(s) | Fuzz / Property Case (Desired Behavior) | Min Runs | Priority |
+|---|---|---|---|---|---|
+| 1 | `src/libraries/SignatureUtils.sol` | `tryRecoverSigner`, `recoverSignerOrRevert` | Valid EOA and ERC-1271 signatures recover expected signer | 10000 | P0 |
+| 2 | `src/libraries/SignatureUtils.sol` | `tryRecoverSigner`, `recoverSignerOrRevert` | Invalid `v` / malformed length / truncated bytes fail (`false` or `SignatureRecoveryFailed`) | 10000 | P0 |
+| 3 | `src/libraries/SignatureUtils.sol` | `_tryRecoverEOASigner` | High-`s` malleable signatures are always rejected | 10000 | P0 |
+| 4 | `src/libraries/SignatureUtils.sol` | `tryRecoverSigner`, `tryRecoverSignerAtOffset` | Signature for hash `A` never validates for hash `B` | 10000 | P0 |
+| 5 | `src/libraries/SignatureUtils.sol` | `tryRecoverSignerAtOffset` | Mixed packed signatures (EOA + ERC-1271) produce strictly increasing offsets ending at `signatures.length` | 10000 | P0 |
+| 6 | `src/libraries/SignatureUtils.sol` | `_tryRecoverContractSigner`, `_isValidERC1271SignatureNow` | Revert/empty/short/non-magic ERC-1271 responses always fail recovery | 10000 | P0 |
+| 7 | `src/libraries/SignatureUtils.sol` | private helpers via harness | `_getVByte`, `_getContractSigner`, `_getContractSignatureLength`, `_extractContractInnerSignature` parse correctly with random offsets/lengths | 2000 | P1 |
+| 8 | `src/libraries/MerkleUtils.sol` | `computeAddressLeaf` | Deterministic and double-hashed leaf format for random addresses | 2000 | P1 |
+| 9 | `src/libraries/MerkleUtils.sol` | `computeAddressLeaf` | Distinct random addresses do not collide in practical fuzz space | 2000 | P1 |
+| 10 | `src/libraries/MerkleUtils.sol` | `computeAddressLeaf` + Merkle verification | Any byte mutation in a valid proof invalidates verification | 10000 | P0 |
+| 11 | `src/libraries/TokenTransferUtils.sol` | `isTransactionTokenTransfer` | Native and ERC-20 classification is mutually exclusive for random calldata/value pairs | 10000 | P0 |
+| 12 | `src/libraries/TokenTransferUtils.sol` | `isTransactionERC20TokenTransfer` | ERC-20 transfer only when selector is `transfer(address,uint256)` and `value == 0` | 10000 | P0 |
+| 13 | `src/libraries/TokenTransferUtils.sol` | `extractERC20TransferRecipient` | Random valid transfer calldata always extracts correct recipient | 10000 | P0 |
+| 14 | `src/libraries/TokenTransferUtils.sol` | `extractTransferAmount` | Native path returns `value`; ERC-20 path returns encoded amount | 10000 | P0 |
+| 15 | `src/libraries/TokenTransferUtils.sol` | `extractERC20TransferRecipient`, `extractTransferAmount` | Malformed calldata lengths always revert `MalformedTokenTransfer` | 10000 | P0 |
+| 16 | `src/libraries/TokenTransferUtils.sol` | `extractTokenAddress` | Non-empty calldata always returns `to`; empty calldata always returns `address(0)` | 10000 | P0 |
+| 17 | `src/libraries/ContractInteractionUtils.sol` | `extractFunctionSelector` | For random calldata length `>= 4`, selector always equals first 4 bytes | 1000 | P2 |
+| 18 | `src/libraries/TimelockUtils.sol` | `validateTimelockDurationOrRevert` | Any duration in `[2 days, 30 days]` always succeeds | 2000 | P1 |
+| 19 | `src/libraries/TimelockUtils.sol` | `validateTimelockDurationOrRevert` | Any duration outside `[2 days, 30 days]` always reverts | 2000 | P1 |
+| 20 | `src/libraries/BytesUtils.sol` | `sliceFrom`, `sliceRange` | Keep existing fuzz suite as mandatory regression coverage | 1000 | P2 |
+| 21 | `src/organization/libraries/LibOrganizationSignatures.sol` | `computeNonce` | `(operationType, operationData, salt)` sensitivity: changing any field changes nonce | 10000 | P0 |
+| 22 | `src/organization/libraries/LibOrganizationSignatures.sol` | `computeNonce` | Cross-organization isolation: same inputs on different org addresses produce different nonces | 10000 | P0 |
+| 23 | `src/organization/libraries/LibOrganizationSignatures.sol` | `validateAndConsumeNonceOrRevert` | Monotonic consumption: `false -> true` only; replay always reverts | 10000 | P0 |
+| 24 | `src/organization/libraries/LibOrganizationSignatures.sol` | `validateAndConsumeNonceOrRevert` (integration) | Failed parent tx paths do not burn nonce after revert rollback | 10000 | P0 |
+| 25 | `src/organization/libraries/LibOrganizationEIP712.sol` | `getDomainSeparator` | Domain separator deterministic for same org+chain, different for other org/chain | 10000 | P0 |
+| 26 | `src/organization/libraries/LibOrganizationEIP712.sol` | `computeTypedDataHash` | Output equals EIP-712 reference `keccak256(0x1901 || domain || structHash)` | 2000 | P1 |
+| 27 | `src/organization/libraries/LibOrganizationEIP712.sol` | typehash constants | All message type hashes are unique and match documented type strings | 2000 | P1 |
+| 28 | `src/organization/libraries/LibOrganizationAdmin.sol` | `validateAdminAuthAndConsumeNonceOrRevert` | Expiration boundary: future timestamps pass, past timestamps fail | 10000 | P0 |
+| 29 | `src/organization/libraries/LibOrganizationAdmin.sol` | `validateAdminAuthAndConsumeNonceOrRevert`, `_getAdminOperationHash` | Signatures are bound to `operationType`, `operationData`, `salt`, `isApproval`, `chainId`, and org address | 10000 | P0 |
+| 30 | `src/organization/libraries/LibOrganizationAdmin.sol` | `_areAdminSignaturesValid` | Admin signers must be strictly ascending and unique (duplicates/out-of-order revert) | 10000 | P0 |
+| 31 | `src/organization/libraries/LibOrganizationAdmin.sol` | `_areAdminSignaturesValid` | Any non-admin signer in stream reverts authorization | 10000 | P0 |
+| 32 | `src/organization/libraries/LibOrganizationAdmin.sol` | `modifyAdmins` | `newVotingThreshold` must satisfy `1 <= threshold <= adminCount` after modification | 10000 | P0 |
+| 33 | `src/organization/libraries/LibOrganizationAdmin.sol` | `modifyAdmins` | Random add/remove arrays never leave `adminCount == 0` | 10000 | P0 |
+| 34 | `src/organization/libraries/LibOrganizationAdmin.sol` | private helpers via harness | `_getAdminOperationHash` deterministic + field-sensitive; `_areAdminSignaturesValid` robust under mixed signature streams | 2000 | P1 |
+| 35 | `src/organization/libraries/LibOrganizationMembers.sol` | `modifyMembers` | Add is idempotent for duplicates; remove non-member always reverts | 10000 | P0 |
+| 36 | `src/organization/libraries/LibOrganizationMembers.sol` | `modifyMembers` | `address(0)` additions always revert; admin-member removal always reverts | 10000 | P0 |
+| 37 | `src/organization/libraries/LibOrganizationGroups.sol` | `modifyGroups` | Create/update/delete semantics hold for random valid modification batches | 10000 | P0 |
+| 38 | `src/organization/libraries/LibOrganizationGroups.sol` | `modifyGroups` | Deleted group IDs are never reusable | 10000 | P0 |
+| 39 | `src/organization/libraries/LibOrganizationGroups.sol` | `modifyGroups` | `address(0)` group members are always rejected | 10000 | P0 |
+| 40 | `src/organization/libraries/LibOrganizationGroups.sol` | `modifyGroups` | **[DESIRED]** only organization members can be added to groups | 10000 | P0 |
+| 41 | `src/organization/libraries/LibOrganizationGroups.sol` | private helpers via harness | `_createGroup`, `_updateGroup`, `_deleteGroup`, `_addGroupMembers`, `_removeGroupMembers` stay atomic and consistent | 2000 | P1 |
+| 42 | `src/organization/libraries/LibOrganizationPolicy.sol` | `setPolicies` | Policies root changes only via explicit `setPolicies` calls | 2000 | P1 |
+| 43 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isPolicyInOrg` | Exact policy+proof verifies; any single-field mutation in policy/proof fails | 10000 | P0 |
+| 44 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isSourceAccountAllowedByPolicy` | `anySourceAccount=true` always accepts; false requires valid source proof | 10000 | P0 |
+| 45 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isTransactionAllowedByPolicy` | Token-transfer policies only accept actual token transfers satisfying token+destination constraints | 10000 | P0 |
+| 46 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isTransactionAllowedByPolicy` | Contract-interaction policies reject token transfers and enforce function+constraint+destination checks | 10000 | P0 |
+| 47 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isTransactionAllowedByPolicy` | `TransactionType.Any` accepts both tx classes only when destination checks pass | 10000 | P0 |
+| 48 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isTransactionAllowedByPolicy` | `TransactionType.Signatures` never authorizes account transaction execution/rejection path | 10000 | P0 |
+| 49 | `src/organization/libraries/LibOrganizationPolicy.sol` | private `_computePolicyLeaf` via harness | Policy leaf is deterministic, double-hashed, and sensitive to every field | 2000 | P1 |
+| 50 | `src/organization/libraries/policy/LibPolicyDestination.sol` | `getActualDestination` | ERC-20 transfer uses token recipient as destination; non-transfer uses `to` | 10000 | P0 |
+| 51 | `src/organization/libraries/policy/LibPolicyDestination.sol` | `isDestinationAllowedByPolicy` | Custom destination mode accepts only valid Merkle membership proof | 10000 | P0 |
+| 52 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `_isTokenAllowedByPolicy` | `anyToken` and specific-token behavior are enforced exactly | 10000 | P0 |
+| 53 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `_isTokenAmountAllowedByPolicy` | **[DESIRED]** threshold check is inclusive (`amount <= threshold`) | 10000 | P0 |
+| 54 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `isTokenTransferAllowedByPolicy` | Malformed token calldata cannot bypass token policy checks | 10000 | P0 |
+| 55 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | `_isFunctionAllowedByPolicy` | `anyFunction=true` bypasses function proof requirements | 10000 | P0 |
+| 56 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | `_isFunctionAllowedByPolicy` | Function membership binds `selector + keccak256(constraints)` exactly | 10000 | P0 |
+| 57 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | private `_computeFunctionLeaf` via harness | Deterministic, double-hashed function leaf generation | 2000 | P1 |
+| 58 | `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` | `areParametersAllowedByConstraints` | Empty constraint bytes and empty decoded arrays both accept | 2000 | P1 |
+| 59 | `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` | type-specific validators via harness | Exact/Range/OneOf matrix enforced correctly for supported combinations | 10000 | P0 |
+| 60 | `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` | type-specific validators via harness | Unsupported combinations always fail (no silent acceptance) | 10000 | P0 |
+| 61 | `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` | address OneOf path | Valid proof passes; mutated proof/value/root fails | 10000 | P0 |
+| 62 | `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` | bytes/string path | Malformed dynamic offsets/lengths return `false` (no panic/revert) | 10000 | P0 |
+| 63 | `src/organization/libraries/policy/LibPolicyParameterConstraints.sol` | `_processConstraints` | Random offsets/head-slot counts terminate and do not overflow/panic | 10000 | P0 |
+| 64 | `src/organization/libraries/policy/LibPolicyApproval.sol` | `areApprovalsValid` | Reviewer signers must be sorted/unique; duplicates/out-of-order revert | 10000 | P0 |
+| 65 | `src/organization/libraries/policy/LibPolicyApproval.sol` | `getRequiredApprovals` | Member approver requires exactly 1; group approver requires threshold | 10000 | P0 |
+| 66 | `src/organization/libraries/policy/LibPolicyApproval.sol` | private `_isSignerAuthorizedForPolicy` via harness | Signer must be org member and match member/group approver config | 10000 | P0 |
+| 67 | `src/organization/libraries/policy/LibPolicyInitiator.sol` | `isInitiatorAuthorized` | Any/member/group initiator modes enforced correctly; non-members always fail unless `anyInitiator` is explicitly intended | 10000 | P0 |
+| 68 | `src/organization/libraries/policy/LibPolicyRateLimits.sol` | `checkAndUpdateRateLimit` | `None` and zero-hour interval modes are no-op success | 2000 | P1 |
+| 69 | `src/organization/libraries/policy/LibPolicyRateLimits.sol` | `computeUsageKey` | Scope composition (`AcrossAll` vs `PerEntity`) produces expected key isolation/merging | 10000 | P0 |
+| 70 | `src/organization/libraries/policy/LibPolicyRateLimits.sol` | `checkAndUpdateRateLimit` | Within-limit usage increments exactly by `usageAmount` | 10000 | P0 |
+| 71 | `src/organization/libraries/policy/LibPolicyRateLimits.sol` | `checkAndUpdateRateLimit` | Exceeding limit returns `false` and does not modify usage | 10000 | P0 |
+| 72 | `src/organization/libraries/policy/LibPolicyRateLimits.sol` | `computeTimeWindow`, `getCurrentUsage` | Usage is window-local and resets when time window changes | 10000 | P0 |
+| 73 | `src/organization/libraries/policy/LibPolicyRateLimits.sol` | `checkAndUpdateRateLimit` | **[DESIRED]** near-overflow usage math should fail safely (not panic) and behave as over-limit | 10000 | P0 |
+| 74 | `src/organization/libraries/LibOrganizationAccountTransaction.sol` | `validateTransactionApprovalOrRevert` | Requires non-expired tx, valid initiator sig, and policy applicability | 10000 | P0 |
+| 75 | `src/organization/libraries/LibOrganizationAccountTransaction.sol` | `validateTransactionRejectionOrRevert` | Auto-approve rejection uses authorized initiator rejection sig; manual uses reviewer threshold | 10000 | P0 |
+| 76 | `src/organization/libraries/LibOrganizationAccountTransaction.sol` | private hash helpers via harness | `_computeInitiatorHashFromParams` and `_computeReviewHashFromParams` are field-sensitive and deterministic | 10000 | P0 |
+| 77 | `src/organization/libraries/LibOrganizationAccountTransaction.sol` | private hash helpers via harness | Review hash always changes when `initiatorSignature` changes | 10000 | P0 |
+| 78 | `src/organization/libraries/LibOrganizationAccountTransaction.sol` | `_validateAndUpdateRateLimitOrRevert` | Usage amount is transfer amount for token-transfer policies, otherwise `1` | 10000 | P0 |
+| 79 | `src/organization/libraries/LibOrganizationAccountTransaction.sol` | approval/rejection signature flow | Approval signatures cannot be replayed as rejection signatures (and vice versa) | 10000 | P0 |
+| 80 | `src/organization/base/OrganizationAccountTransactionBase.sol` | `executeAccountTransaction`, `rejectAccountTransaction` | Non-org account addresses are always rejected | 10000 | P0 |
+| 81 | `src/organization/base/OrganizationAccountTransactionBase.sol` | `executeAccountTransaction`, `rejectAccountTransaction` | Same tx payload+salt yields same nonce; first consume blocks second path | 10000 | P0 |
+| 82 | `src/organization/base/OrganizationAccountTransactionBase.sol` | `executeAccountTransaction` | CEI property: replay attempts during reentrancy fail because nonce is consumed first | 10000 | P0 |
+| 83 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `isValidSignature` | Only type prefixes `0x00` and `0x01` can ever return magic value | 10000 | P0 |
+| 84 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `_validateRecoverySignature` | Recovery signatures pass only when tx recovery is configured+enabled and signer matches recovery address | 10000 | P0 |
+| 85 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `_validatePolicyBasedSignature` | Policy path enforces expiration, initiator sig, guardian sig, policy applicability, and manual approvals when needed | 10000 | P0 |
+| 86 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `_isValidGuardianSignature` | Guardian sig accepted from guardian directly or enabled safe module only | 10000 | P0 |
+| 87 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `_getReviewSignatureHash` | Review hash binds to initiator signature (`keccak256(initiatorSignature)`) | 10000 | P0 |
+| 88 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | EIP-712 hash helpers | Cross-org and cross-chain replay always fails | 10000 | P0 |
+| 89 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `isValidSignature` | **[DESIRED]** malformed policy payloads return `0xffffffff` and never revert | 10000 | P0 |
+| 90 | `src/organization/base/OrganizationAccountSignatureBase.sol` | `isValidSignatureForAccount` | Caller must equal `account` and account must be deployed by organization | 10000 | P0 |
+| 91 | `src/organization/libraries/LibOrganizationGuardian.sol` | `initiateGuardianUpdate` | Pending guardian and finalize timestamp set correctly | 2000 | P1 |
+| 92 | `src/organization/libraries/LibOrganizationGuardian.sol` | `finalizeGuardianUpdate` | Finalize before timelock expiry always reverts | 2000 | P1 |
+| 93 | `src/organization/libraries/LibOrganizationGuardian.sol` | `acceptGuardian` | Accept requires finalized state and pending guardian caller | 2000 | P1 |
+| 94 | `src/organization/libraries/LibOrganizationGuardian.sol` | `cancelGuardianUpdate` | Cancel clears all normal pending guardian state | 2000 | P1 |
+| 95 | `src/organization/libraries/LibOrganizationGuardianRecovery.sol` | `initializeGuardianRecovery` | Recovery config can only be initialized once | 2000 | P1 |
+| 96 | `src/organization/libraries/LibOrganizationTxRecovery.sol` | `initializeTxRecovery` | Tx recovery config can only be initialized once | 2000 | P1 |
+| 97 | `src/organization/libraries/LibOrganizationGuardianRecovery.sol` | deferred init trio | Initiate/finalize/cancel deferred guardian-recovery init obey admin-operation timelock | 2000 | P1 |
+| 98 | `src/organization/libraries/LibOrganizationTxRecovery.sol` | deferred init trio | Initiate/finalize/cancel deferred tx-recovery init obey admin-operation timelock | 2000 | P1 |
+| 99 | `src/organization/libraries/LibOrganizationGuardianRecovery.sol` | recovery update trio | Recovery guardian flow uses recovery-specific timelock and isolated state | 10000 | P0 |
+| 100 | `src/organization/libraries/LibOrganizationTxRecovery.sol` | enable/disable trio | Tx recovery enable requires timelock; disable is immediate and clears pending enable | 10000 | P0 |
+| 101 | `src/organization/libraries/LibOrganizationTxRecovery.sol` | `validateRecoveryAccountTransactionAllowedOrRevert` | Recovery tx path allowed only when configured and enabled | 10000 | P0 |
+| 102 | `src/organization/libraries/LibOrganizationTxRecovery.sol` | `isValidRecoverySignature` | Supports EOA and ERC-1271 recovery signers; validity independent of enabled flag | 10000 | P0 |
+| 103 | `src/organization/libraries/LibOrganizationGuardianRecovery.sol` + `LibOrganizationTxRecovery.sol` | state isolation | Guardian recovery ops never mutate tx recovery state and vice versa | 10000 | P0 |
+| 104 | `src/organization/libraries/LibOrganizationGuardianRecovery.sol` + `LibOrganizationTxRecovery.sol` | private helpers via harness | `_clearPending*` and `_validate*` helpers are idempotent and field-consistent | 2000 | P1 |
+| 105 | `src/organization/base/OrganizationGuardianBase.sol` | guardian entrypoints | Random caller fuzz enforces only-guardian and only-pending-guardian access rules | 10000 | P0 |
+| 106 | `src/organization/base/OrganizationGuardianRecoveryBase.sol` | recovery guardian entrypoints | Random caller fuzz enforces only-recovery-address and only-recovery-pending-guardian rules | 10000 | P0 |
+| 107 | `src/organization/base/OrganizationTxRecoveryBase.sol` | tx recovery entrypoints | Random caller fuzz enforces only-tx-recovery-address rules | 10000 | P0 |
+| 108 | `src/organization/libraries/LibOrganizationAccountFactory.sol` | `deployAccount`, `computeAccountAddress` | CREATE2 address is deterministic for random salts and always matches deployed address | 2000 | P1 |
+| 109 | `src/organization/libraries/LibOrganizationAccountFactory.sol` | `deployAccount` | `deployedAccounts[address]` transitions `false -> true` only | 2000 | P1 |
+| 110 | `src/organization/libraries/LibOrganizationAccountFactory.sol` | `computeAccountAddress` | Same salt across different organizations yields different account addresses | 2000 | P1 |
+| 111 | `src/organization/OrganizationFactory.sol` | `deployOrganization`, `computeOrganizationAddress` | CREATE2 address deterministic for `(salt, implementation, whitelist)` | 2000 | P1 |
+| 112 | `src/organization/OrganizationFactory.sol` | `deployOrganization` | Only `DEPLOYER_ADDRESS` can deploy | 10000 | P0 |
+| 113 | `src/organization/OrganizationFactory.sol` | deploy+initialize integration | Failed initialization leaves no partial state and allows deterministic retry | 10000 | P0 |
+| 114 | `src/organization/OrganizationImplementation.sol` | `upgradeToAndCallWithAuthorization` | Upgrade requires guardian caller + valid admin auth + whitelisted implementation | 10000 | P0 |
+| 115 | `src/organization/OrganizationImplementation.sol` | `_authorizeUpgrade` | Direct `upgradeToAndCall` without auth flag always reverts `UnauthorizedUpgrade` | 10000 | P0 |
+| 116 | `src/organization/OrganizationImplementation.sol` | upgrade auth flag flow | Authorization flag is false outside active authorized upgrade path | 10000 | P0 |
+| 117 | `src/organization/OrganizationImplementation.sol` | upgrade path | **[DESIRED]** random migration calldata cannot trigger unauthorized nested second upgrade | 10000 | P0 |
+| 118 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | `whitelistImplementations` | Only owner can mutate whitelist mapping under random caller fuzz | 10000 | P0 |
+| 119 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | whitelist mapping logic | `ContractType.Account` and `ContractType.Organization` mappings remain independent | 10000 | P0 |
+| 120 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` + integration callsites | whitelist enforcement | Unwhitelisted implementation rejected in org deploy, org upgrade, and account upgrade flows | 10000 | P0 |
+| 121 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | private `_addToWhitelist`, `_removeFromWhitelist` via harness | Model-based add/remove sequence parity under random operations | 2000 | P1 |
+| 122 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | whitelist mutation | **[DESIRED]** zero-address / no-code implementations are rejected even if submitted for whitelisting | 10000 | P0 |
+| 123 | `src/account/AccountImplementation.sol` | `executeTransaction`, `_onlyOrganization` | Only organization can execute account calls | 10000 | P0 |
+| 124 | `src/account/AccountImplementation.sol` | `_execute` via harness | CALL success/failure and data/value forwarding behavior preserved for random targets | 2000 | P1 |
+| 125 | `src/account/AccountImplementation.sol` | `isValidSignature` | Account always delegates signature validation to organization result | 2000 | P1 |
+| 126 | `src/safe-module/SafeExecutorModule.sol` | `executeOnBehalf` | Only `AUTHORIZED_EXECUTOR` can call successfully | 10000 | P0 |
+| 127 | `src/safe-module/SafeExecutorModule.sol` | `executeOnBehalf` | Calls targeting `SAFE` always revert | 10000 | P0 |
+| 128 | `src/safe-module/SafeExecutorModule.sol` | `executeOnBehalf` | Delegatecall used iff target is `BATCHED_TRANSACTION`; otherwise regular call | 2000 | P1 |
+| 129 | `src/safe-module/SafeExecutorModule.sol` | `executeOnBehalf` | Safe execution always uses `value == 0` | 10000 | P0 |
+| 130 | `src/safe-module/SafeExecutorModule.sol` | `isValidSignature` | Returns magic only when recovered signer equals `AUTHORIZED_EXECUTOR` | 10000 | P0 |
+| 131 | `src/safe-module/BatchedTransaction.sol` | `execute` | Valid packed batches produce same effects as sequential execution | 2000 | P1 |
+| 132 | `src/safe-module/BatchedTransaction.sol` | `execute` | Any subcall to `address(this)` reverts entire batch | 10000 | P0 |
+| 133 | `src/safe-module/BatchedTransaction.sol` | `execute` | **[DESIRED]** malformed packed payloads revert atomically (no partial effects) | 10000 | P0 |
+| 134 | `src/safe-module/BatchedTransaction.sol` | `execute` | Fuzzed bounded batch sizes/data lengths always terminate | 2000 | P1 |
+| 135 | `cross-file` | signature systems | Admin/account/recovery signatures are non-transferable across op types, orgs, and chains | 10000 | P0 |
+| 136 | `cross-file` | account signature + recovery | Recovery bypass is active only for `0x00` signatures while tx recovery is enabled | 10000 | P0 |
+| 137 | `cross-file` | policy rate limits | `getPolicyUsage` matches usage mutations from transaction execution path | 10000 | P0 |
+| 138 | `cross-file` | guardian module rotation | Disabling old module invalidates old signatures immediately; enabling new module activates new signatures immediately | 10000 | P0 |
+| 139 | `cross-file` | nonce/replay | Approve/reject/recovery flows cannot replay consumed nonces under randomized ordering | 10000 | P0 |
+| 140 | `cross-file` | deployment determinism | Factory/account CREATE2 address precomputation matches runtime deployment across random salts | 2000 | P1 |
 
 ## Summary
-
-| Category | Fuzz Tests | Min Runs | Priority |
-|----------|-----------|----------|----------|
-| Signatures | 5 | 10000 | P0 |
-| Merkle proofs | 5 | 1000-10000 | P0 |
-| Nonces | 3 | 1000 | P0-P1 |
-| Admin auth | 5 | 1000 | P0 |
-| Policy validation | 7 | 1000 | P0 |
-| Groups/Members | 4 | 1000 | P0-P1 |
-| EIP-712 | 3 | 1000 | P0 |
-| CREATE2 | 2 | 1000 | P1 |
-| Timelocks | 4 | 1000 | P1 |
-| Param constraints & overflow | 7 | 1000-10000 | P0 |
-| Guardian recovery | 4 | 1000 | P1 |
-| TX recovery | 3 | 1000 | P0 |
-| Whitelist | 3 | 1000 | P2 |
-| Storage libraries | 2 | 1000 | P1 |
-| Safe module | 2 | 1000 | P2 |
-| Integration | 3 | 1000 | P0 |
-| **Total** | **62** | | |
+- Total fuzz/property cases: `140`
+- Includes private-function harness coverage where needed
+- Explicitly excludes interfaces and storage libraries

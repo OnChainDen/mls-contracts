@@ -1,174 +1,353 @@
-# 23 — Security Audit Gap Analysis
+# 23 — Security Audit Gaps Test Plan
 
-**Scope:** Additional tests identified through security auditor review of all source files against existing test plan. These tests cover attack vectors, edge cases, and security properties that were missing from the original plan.
+**Scope:** Security-focused tests identified as coverage gaps after auditing the Organization, Account, policy validation, signature validation, upgrade, and factory paths.
 
----
-
-## 1. Signature Binding & Replay Attacks
-
-### 1.1 Initiator-Review Signature Binding (`LibOrganizationAccountTransaction.sol`)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 1 | [AUDIT] Modifying initiator signature bytes (append/truncate) invalidates all collected review signatures | [S] | P0 |
-| 2 | [AUDIT] Two different valid initiator signatures for same tx produce different review hashes | [S] | P0 |
-| 3 | [AUDIT] Review signature collected for initiator A cannot validate for initiator B (same tx params) | [S] | P0 |
-
-### 1.2 Approval/Rejection Nonce Isolation (`LibOrganizationAdmin.sol`)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 4 | [AUDIT] Approving admin operation consumes nonce — rejection with isApproval=false and same params uses SAME nonce and reverts | [S] | P0 |
-| 5 | [AUDIT] Rejecting first, then approving same operation — second call reverts NonceAlreadyUsed | [S] | P0 |
+**Out of Scope for this plan (covered elsewhere):**
+- Interface files (`src/interfaces/**/*.sol`)
+- Storage libraries (`src/**/libraries/storage/**/*.sol`)
 
 ---
 
-## 2. Rate Limit Edge Cases (`LibOrganizationAccountTransaction.sol`)
+## Harness Prerequisite (Private Functions)
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 6 | [AUDIT] Zero-value transaction (usageAmount=0): does not consume rate limit budget | [E] | P0 |
-| 7 | [AUDIT] ERC-20 transfer rate limit tracks actual recipient address (from calldata), not token contract address | [S] | P0 |
-| 8 | [AUDIT] Rate limit is consumed BEFORE execution — failed execution still consumes budget (CEI pattern) | [S] | P0 |
-| 9 | [AUDIT] Multiple zero-value transactions don't artificially inflate rate limit usage | [E] | P0 |
-| 10 | [AUDIT] Rate limit with timeIntervalLimit=0: blocks all transactions including zero-value | [E] | P0 |
-| 11 | [AUDIT] Rate limit overflow: usageAmount + currentUsage exceeds uint256 max — handled without overflow | [S] | P0 |
+For direct unit tests of private helpers, temporarily change them to `internal` in the test branch and expose wrappers via harness contracts.
 
----
-
-## 3. Parameter Constraint Overflow & Bounds (`LibPolicyParameterConstraints.sol`)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 12 | [AUDIT] Offset near type(uint256).max: addition overflow in dataPosition calculation — returns false | [S] | P0 |
-| 13 | [AUDIT] Dynamic bytes length near type(uint256).max: overflow in position+SLOT_SIZE+length — returns false | [S] | P0 |
-| 14 | [AUDIT] Address OneOf with empty Merkle proof array — returns false (not true) | [S] | P0 |
-| 15 | [AUDIT] Multi-slot parameter (paramCalldataHeadSlotCount=2) advances offset by 64 bytes correctly | [E] | P0 |
-| 16 | [AUDIT] Dynamic bytes where claimed length exceeds available calldata — returns false | [E] | P0 |
-| 17 | [AUDIT] Constraint with paramCalldataHeadSlotCount=0: returns false (not revert) | [E] | P0 |
-| 18 | [AUDIT] Malicious constraint array that references non-existent calldata position | [S] | P0 |
-
----
-
-## 4. Guardian Module Validation (`LibOrganizationAccountSignature.sol`)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 19 | [AUDIT] Guardian is contract that reverts on isModuleEnabled() staticcall — signature validation returns invalid | [E] | P0 |
-| 20 | [AUDIT] Guardian contract returns truncated data (<32 bytes) from isModuleEnabled() — handled gracefully | [E] | P0 |
-| 21 | [AUDIT] Policy-based signature with only type prefix (0x01, no additional data) — returns invalid (not panic) | [E] | P0 |
-| 22 | [AUDIT] Empty sourceAccountProof for policy with specific source accounts — validation fails | [S] | P0 |
-| 23 | [AUDIT] Recovery signature path: tx recovery enabled but ERC-1271 recovery also enabled — correct path taken | [S] | P0 |
+- `src/organization/libraries/LibOrganizationAccountTransaction.sol`
+  - `_validateAndUpdateRateLimitOrRevert`
+  - `_validateAutoApproveRejectionOrRevert`
+  - `_validateManualConfirmationOrRevert`
+  - `_computeInitiatorHashFromParams`
+  - `_computeReviewHashFromParams`
+- `src/organization/libraries/policy/LibPolicyParameterConstraints.sol`
+  - `_processConstraints`
+  - `_isParameterAllowedByConstraint`
+  - `_isBoolParameterAllowedByConstraint`
+  - `_isUintParameterAllowedByConstraint`
+  - `_isIntParameterAllowedByConstraint`
+  - `_isAddressParameterAllowedByConstraint`
+  - `_isFixedBytesParameterAllowedByConstraint`
+  - `_isBytesOrStringParameterAllowedByConstraint`
+- `src/organization/libraries/LibOrganizationAccountSignature.sol`
+  - `_validateRecoverySignature`
+  - `_validatePolicyBasedSignature`
+  - `_isValidGuardianSignature`
+  - `_isERC1271SignatureAllowedByPolicy`
+  - `_getInitiatorSignatureHash`
+  - `_getReviewSignatureHash`
+- `src/organization/libraries/LibOrganizationAdmin.sol`
+  - `_areAdminSignaturesValid`
+  - `_getAdminOperationHash`
+- `src/account/AccountImplementation.sol`
+  - `_execute`
+  - `_onlyOrganization`
+- `src/organization/OrganizationFactory.sol`
+  - `_getOrganizationProxyBytecode`
 
 ---
 
-## 5. Admin Authorization Race Conditions (`LibOrganizationAdmin.sol`)
+## Legend
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 24 | [AUDIT] Admin removed between signature collection and validation — operation fails because signer no longer admin | [S] | P0 |
-| 25 | [AUDIT] Voting threshold increased between signature collection and execution — old signatures insufficient | [S] | P0 |
-| 26 | [AUDIT] Mixed EOA+ERC-1271 admin signatures: offset accumulation correct for sequence EOA→ERC1271→EOA | [S] | P0 |
-
----
-
-## 6. Cross-Organization Attacks (`OrganizationAccountTransactionBase.sol`)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 27 | [AUDIT] Execute transaction against account deployed by different organization — reverts AccountNotDeployedByOrganization | [S] | P0 |
-| 28 | [AUDIT] Nonce consumed before external call — failed execution still marks nonce as used (reentrancy protection) | [S] | P0 |
-| 29 | [AUDIT] Event emission timing: AccountTransactionExecuted event emitted even if account execution reverts (verify this is intentional or reverts the whole tx) | [U] | P1 |
+- `[U]` Unit
+- `[S]` Security
+- `[N]` Negative / revert path
+- `[E]` Edge case
+- `[I]` Integration
+- `[F]` Fuzz
+- `[INV]` Invariant
+- `[EV]` Event
 
 ---
 
-## 7. Account Implementation (`AccountImplementation.sol`)
+## File 1: `src/organization/libraries/LibOrganizationAccountTransaction.sol`
+
+### 1.1 `validateTransactionApprovalOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 30 | [AUDIT] Low-level call that returns false (non-reverting failure) — reverts TransactionExecutionFailed | [U] | P0 |
-| 31 | [AUDIT] Low-level call that reverts with data — reverts TransactionExecutionFailed (revert data not propagated) | [U] | P0 |
-| 32 | [AUDIT] Low-level call with insufficient gas — reverts TransactionExecutionFailed | [S] | P0 |
-| 33 | [AUDIT] Account.receive() cannot re-enter executeTransaction (onlyOrganization prevents it) | [S] | P0 |
-| 34 | [AUDIT] isValidSignature passes address(this) correctly to Organization.isValidSignatureForAccount | [U] | P0 |
-| 35 | [AUDIT] Self-destruct target: Account executing transaction to selfdestruct target — does not destroy account | [S] | P1 |
+| 1 | Expired transaction (`block.timestamp > expirationTimestamp`) reverts `TransactionExpired` | [N] | P0 |
+| 2 | Empty `initiatorSignature` reverts `InsufficientSignaturesLength` | [N] | P0 |
+| 3 | Malformed initiator signature bytes revert (fail-closed signer recovery) | [S] | P0 |
+| 4 | Policy mismatch (proof/config/tx mismatch) reverts `PolicyDoesNotApply` | [N] | P0 |
+| 5 | Manual-approval path binds reviewer approvals to `initiatorSignature` hash; tampering initiator sig invalidates collected reviews | [S] | P0 |
+| 6 | Two different valid initiator signatures for same tx params produce different reviewer hashes (non-transferability) | [S] | P0 |
+| 7 | Auto-approval policy succeeds without reviewer signatures but still enforces initiator authorization | [U] | P0 |
+| 8 | Manual-approval policy with insufficient reviewer signatures reverts `InsufficientApprovals` | [N] | P0 |
+| 9 | Rate-limit update runs only after policy/signature checks pass | [S] | P0 |
 
----
-
-## 8. Upgrade System (`OrganizationImplementation.sol`)
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 36 | [AUDIT] Failed upgrade (bad init data) does not leave isUpgradeAuthorized flag stuck true | [S] | P0 |
-| 37 | [AUDIT] Direct call to upgradeToAndCall (bypassing upgradeToAndCallWithAuthorization) always reverts UnauthorizedUpgrade | [S] | P0 |
-| 38 | [AUDIT] _authorizeUpgrade succeeds regardless of newImplementation parameter value (flag-based, not address-based) | [S] | P1 |
-| 39 | [AUDIT] Multiple inheritance override resolution: all base contract functions accessible and correct | [I] | P1 |
-
----
-
-## 9. Factory Deployment (`OrganizationFactory.sol`)
+### 1.2 `validateTransactionRejectionOrRevert`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 40 | [AUDIT] Deploy with same salt twice — second deployment reverts | [N] | P1 |
-| 41 | [AUDIT] computeOrganizationAddress with different whitelist produces different address than deployed | [U] | P1 |
-| 42 | [AUDIT] Deploy with bad init params — entire tx reverts, no uninitialized contract left on-chain | [S] | P0 |
-| 43 | [AUDIT] Factory deployer address cannot be changed after construction | [S] | P1 |
+| 10 | Rejection on expired transaction reverts `TransactionExpired` | [N] | P0 |
+| 11 | Auto-approval rejection requires rejection hash (`isApproval=false`) signed by authorized initiator | [S] | P0 |
+| 12 | Approval signature replayed as rejection signature fails (hash domain separation) | [S] | P0 |
+| 13 | Manual rejection uses `isApproval=false` in review hash; approval review signatures are not reusable for rejection | [S] | P0 |
+| 14 | Rejection validation is read-only (no rate-limit mutation on rejection path) | [U] | P1 |
+
+### 1.3 Private Helpers
+
+| # | Function | Test Case | Type | Priority |
+|---|----------|-----------|------|----------|
+| 15 | `_validateAndUpdateRateLimitOrRevert` | Token transfer usage uses extracted transfer amount, not fixed count | [U] | P0 |
+| 16 | `_validateAndUpdateRateLimitOrRevert` | Contract interaction usage counts as `1` regardless ETH value | [U] | P0 |
+| 17 | `_validateAndUpdateRateLimitOrRevert` | ERC-20 destination tracking uses transfer recipient from calldata (not token contract address) | [S] | P0 |
+| 18 | `_validateAndUpdateRateLimitOrRevert` | If `checkAndUpdateRateLimit` returns false, revert `RateLimitExceeded(policyId)` | [N] | P0 |
+| 19 | `_validateAutoApproveRejectionOrRevert` | Empty rejection signature bytes revert `TransactionRejectionNotAllowed` | [N] | P0 |
+| 20 | `_validateManualConfirmationOrRevert` | `reviewHash` includes `keccak256(initiatorSignature)` (binding property) | [S] | P0 |
+| 21 | `_computeInitiatorHashFromParams` | Hash changes across organization address / chain ID (cross-org and cross-chain replay defense) | [S] | P0 |
+| 22 | `_computeReviewHashFromParams` | Changing only `initiatorSignature` changes review hash | [S] | P0 |
 
 ---
 
-## 10. Modifier Bypass Scenarios (`OrganizationModifiers.sol`)
+## File 2: `src/organization/libraries/policy/LibPolicyRateLimits.sol`
+
+### 2.1 `checkAndUpdateRateLimit`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 44 | [AUDIT] onlyGuardian rejects calls from guardian recovery address | [S] | P0 |
-| 45 | [AUDIT] onlyTxRecoveryAddress rejects calls from guardian (different role) | [S] | P0 |
-| 46 | [AUDIT] onlyGuardianRecoveryAddress rejects calls from tx recovery address | [S] | P0 |
-| 47 | [AUDIT] All modifier enforcement functions revert with correct error for wrong caller | [N] | P0 |
+| 23 | `RateLimitType.None` returns true and does not update usage storage | [U] | P0 |
+| 24 | `currentUsage + usageAmount == timeIntervalLimit` succeeds (inclusive limit boundary) | [E] | P0 |
+| 25 | `currentUsage + usageAmount > timeIntervalLimit` returns false and leaves usage unchanged | [N] | P0 |
+| 26 | `usageAmount = 0` does not increase stored usage | [E] | P1 |
+| 27 | Crossing into a new time window reads/writes a fresh usage bucket (window reset behavior) | [U] | P0 |
+| 28 | [DESIRED] `TimeInterval` config with `timeIntervalHours = 0` fails closed (reject usage) instead of bypassing rate limiting | [S] | P0 |
+| 29 | [DESIRED] Arithmetic overflow in `currentUsage + usageAmount` is handled gracefully (no panic) | [S] | P0 |
+
+### 2.2 `computeTimeWindow`, `computeUsageKey`, `getCurrentUsage`
+
+| # | Function | Test Case | Type | Priority |
+|---|----------|-----------|------|----------|
+| 30 | `computeTimeWindow` | Deterministic output for same timestamp/policy | [U] | P1 |
+| 31 | `computeTimeWindow` | `timeIntervalHours = 0` returns `0` | [E] | P1 |
+| 32 | `computeUsageKey` | `AcrossAll` scope normalizes to `address(0)` for that dimension | [U] | P0 |
+| 33 | `computeUsageKey` | `PerEntity` scope isolates by concrete account/destination/initiator | [U] | P0 |
+| 34 | `getCurrentUsage` | Returns `0` when rate limit is disabled / not time-interval | [U] | P1 |
 
 ---
 
-## 11. Additional Invariant Tests
+## File 3: `src/organization/libraries/policy/LibPolicyParameterConstraints.sol`
+
+### 3.1 `areParametersAllowedByConstraints` and `_processConstraints`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 35 | Empty `parameterConstraints` bytes returns true | [E] | P1 |
+| 36 | Decoded empty constraints array returns true | [E] | P1 |
+| 37 | `paramCalldataHeadSlotCount = 0` returns false | [N] | P0 |
+| 38 | Declared head slots exceeding calldata length returns false | [N] | P0 |
+| 39 | Multi-slot parameter (`paramCalldataHeadSlotCount > 1`) advances offset correctly | [U] | P0 |
+| 40 | Constraint referencing out-of-bounds calldata position returns false | [N] | P0 |
+| 41 | [DESIRED] Malformed ABI-encoded constraints payload should return false (not revert) | [S] | P0 |
+
+### 3.2 Type-Specific Constraint Helpers
+
+| # | Function | Test Case | Type | Priority |
+|---|----------|-----------|------|----------|
+| 42 | `_isAddressParameterAllowedByConstraint` | `OneOf` with empty merkle proof returns false | [N] | P0 |
+| 43 | `_isBytesOrStringParameterAllowedByConstraint` | Dynamic length exceeding calldata returns false | [N] | P0 |
+| 44 | `_isBytesOrStringParameterAllowedByConstraint` | Exact hash match for bytes/string succeeds | [U] | P1 |
+| 45 | `_isParameterAllowedByConstraint` | `Array`/`Struct` with non-`Any` constraint returns false | [N] | P0 |
+| 46 | `_isParameterAllowedByConstraint` | Unsupported/unknown param type returns false | [N] | P1 |
+| 47 | [DESIRED] Offset/length arithmetic overflow returns false (not panic) | [S] | P0 |
+| 48 | [DESIRED] Malformed `comparisonData` for typed decodes returns false (not revert) | [S] | P0 |
+
+---
+
+## File 4: `src/organization/libraries/LibOrganizationAccountSignature.sol`
+
+### 4.1 `isValidSignature`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 49 | Empty signature returns ERC-1271 invalid value | [N] | P0 |
+| 50 | Unknown signature type byte returns ERC-1271 invalid value | [N] | P0 |
+| 51 | Recovery signature type (`0x00`) with valid recovery signer and enabled recovery returns magic value | [U] | P0 |
+| 52 | Recovery signature type (`0x00`) while recovery disabled/not configured returns invalid value | [S] | P0 |
+| 53 | [DESIRED] Policy signature type (`0x01`) with malformed ABI payload returns invalid value (not revert) | [S] | P0 |
+
+### 4.2 `_validatePolicyBasedSignature`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 54 | Expired signature request returns invalid value | [N] | P0 |
+| 55 | Empty initiator signature returns invalid value | [N] | P0 |
+| 56 | Invalid initiator signature recovery returns invalid value | [N] | P0 |
+| 57 | Missing/malformed guardian signature returns invalid value | [N] | P0 |
+| 58 | Policy proof mismatch / source-account proof mismatch returns invalid value | [N] | P0 |
+| 59 | Policy `transactionType != Signatures` returns invalid value | [N] | P0 |
+| 60 | Unauthorized initiator for policy returns invalid value | [N] | P0 |
+| 61 | Auto-approval policy with valid initiator+guardian signatures returns magic value | [U] | P0 |
+| 62 | Manual-approval policy requires threshold reviewer signatures; insufficient reviewer signatures returns invalid value | [N] | P0 |
+| 63 | Manual-approval reviewer signatures are bound to initiator signature (cannot replay with different initiator signature) | [S] | P0 |
+| 64 | [DESIRED] Any downstream approval-validation revert (duplicate/out-of-order/unauthorized reviewer) should map to invalid value, not revert | [S] | P0 |
+
+### 4.3 `_isValidGuardianSignature`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 65 | Direct guardian signature is accepted | [U] | P0 |
+| 66 | Enabled module signature is accepted | [I] | P0 |
+| 67 | Signature from non-enabled module is rejected | [S] | P0 |
+| 68 | Guardian contract reverting on `isModuleEnabled` call is handled as invalid (`false`) | [E] | P0 |
+| 69 | Truncated `isModuleEnabled` return data (`< 32 bytes`) is handled as invalid (`false`) | [E] | P0 |
+| 70 | [DESIRED] Non-canonical bool return data from `isModuleEnabled` is handled as invalid (`false`), not revert | [S] | P0 |
+
+### 4.4 Recovery/Policy Path Isolation
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 71 | Policy signatures (`0x01`) are never accepted through recovery path logic | [S] | P0 |
+| 72 | Recovery signatures (`0x00`) are never accepted through policy path logic | [S] | P0 |
+
+---
+
+## File 5: `src/organization/base/OrganizationAccountSignatureBase.sol`
+
+### 5.1 `isValidSignatureForAccount`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 73 | `msg.sender != account` reverts (caller spoofing blocked) | [S] | P0 |
+| 74 | `msg.sender == account` but account not deployed by this org reverts `AccountNotDeployedByOrganization` | [S] | P0 |
+| 75 | Valid deployed account call delegates to signature library and returns its result | [U] | P1 |
+
+---
+
+## File 6: `src/organization/libraries/LibOrganizationAdmin.sol`
+
+### 6.1 `validateAdminAuthAndConsumeNonceOrRevert`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 76 | Approval and rejection for same operation data/salt share nonce domain; second attempt fails with replay protection | [S] | P0 |
+| 77 | Expired admin auth reverts before permanent nonce consumption | [S] | P0 |
+| 78 | Admin removed after signatures are collected cannot execute with stale signatures | [S] | P0 |
+| 79 | Voting threshold increase after signature collection invalidates previously sufficient signature sets | [S] | P0 |
+| 80 | Mixed EOA + ERC-1271 packed admin signatures parse correctly across offsets | [S] | P0 |
+| 81 | Malformed packed admin signature stream fails closed | [S] | P0 |
+
+### 6.2 `_areAdminSignaturesValid` and `modifyAdmins`
+
+| # | Function | Test Case | Type | Priority |
+|---|----------|-----------|------|----------|
+| 82 | `_areAdminSignaturesValid` | Duplicate or out-of-order signers revert | [N] | P0 |
+| 83 | `_areAdminSignaturesValid` | Non-admin signer reverts | [N] | P0 |
+| 84 | `_areAdminSignaturesValid` | Exact-threshold valid signatures succeed | [U] | P1 |
+| 85 | `modifyAdmins` | Removing the last admin always reverts `InvalidAdminConfig` | [S] | P0 |
+| 86 | `modifyAdmins` | Adding a non-member as admin reverts | [N] | P0 |
+| 87 | `modifyAdmins` | [DESIRED] Ambiguous add/remove inputs for same address in one call fail closed | [S] | P1 |
+
+---
+
+## File 7: `src/organization/base/OrganizationAccountTransactionBase.sol`
+
+### 7.1 `executeAccountTransaction` and `rejectAccountTransaction`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 88 | Cross-organization account call reverts `AccountNotDeployedByOrganization` | [S] | P0 |
+| 89 | Nonce is consumed before external account call (reentrancy replay defense ordering) | [S] | P0 |
+| 90 | Reentrant attempt with same nonce in same transaction fails replay check | [S] | P0 |
+| 91 | Failed downstream account execution reverts whole tx: nonce/rate-limit/event side effects are rolled back | [S] | P0 |
+| 92 | Execute and reject paths intentionally share nonce domain for identical tx params/salt | [S] | P0 |
+| 93 | Execute then reject with same params reverts replay; reject then execute also reverts replay | [S] | P0 |
+
+---
+
+## File 8: `src/account/AccountImplementation.sol`
+
+### 8.1 `executeTransaction`, `receive`, `isValidSignature`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 94 | Non-organization caller to `executeTransaction` reverts `OnlyOrganization` | [N] | P0 |
+| 95 | Low-level call returning `false` causes `TransactionExecutionFailed` revert | [N] | P0 |
+| 96 | Reverting callee also surfaces as `TransactionExecutionFailed` (revert data not bubbled) | [E] | P0 |
+| 97 | Insufficient-gas call path fails with `TransactionExecutionFailed` | [S] | P0 |
+| 98 | `receive()` cannot be used to bypass `onlyOrganization` and re-enter privileged execution | [S] | P0 |
+| 99 | `isValidSignature` always forwards `address(this)` as account to Organization signature validation | [U] | P0 |
+| 100 | [DESIRED] Executing a call that attempts account self-destruction does not destroy the account | [S] | P1 |
+
+---
+
+## File 9: `src/organization/OrganizationImplementation.sol`
+
+### 9.1 `upgradeToAndCallWithAuthorization` and `_authorizeUpgrade`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 101 | Direct call to inherited `upgradeToAndCall` (without wrapper flow) reverts `UnauthorizedUpgrade` | [S] | P0 |
+| 102 | Failed upgrade/migration path does not leave authorization flag stuck true | [S] | P0 |
+| 103 | Whitelist validation failure occurs before auth flag is set | [S] | P0 |
+| 104 | `_authorizeUpgrade` is flag-gated and does not re-validate `newImplementation` parameter | [U] | P1 |
+| 105 | [DESIRED] Admin authorization must bind migration `data` payload (not only `newImplementation`) | [S] | P0 |
+| 106 | [DESIRED] Migration `data` cannot trigger nested second upgrade to bypass whitelist/admin checks | [S] | P0 |
+
+---
+
+## File 10: `src/organization/OrganizationFactory.sol`
+
+### 10.1 `constructor`, `deployOrganization`, `computeOrganizationAddress`, `_getOrganizationProxyBytecode`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 107 | Constructor rejects zero `DEPLOYER_ADDRESS` | [N] | P0 |
+| 108 | `deployOrganization` is callable only by `DEPLOYER_ADDRESS` | [S] | P0 |
+| 109 | Same salt + same init bytecode cannot be deployed twice | [N] | P1 |
+| 110 | Initialization failure reverts atomically (no uninitialized organization left deployed) | [S] | P0 |
+| 111 | `computeOrganizationAddress` changes when `whitelistAddress` changes | [U] | P1 |
+| 112 | `DEPLOYER_ADDRESS` remains immutable after deployment | [S] | P1 |
+| 113 | [DESIRED] Deployment fails closed if `whitelistAddress` has no code (EOA/zero) | [S] | P0 |
+| 114 | [DESIRED] Deployment fails closed if `implementationAddress` has no code, even if whitelist contract is permissive | [S] | P0 |
+| 115 | `_getOrganizationProxyBytecode` is deterministic and argument-sensitive (harness) | [U] | P1 |
+
+---
+
+## File 11: `src/organization/common/OrganizationModifiers.sol`
+
+### 11.1 Access-Control Modifiers
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 116 | `onlyGuardian` rejects tx-recovery and guardian-recovery roles (no cross-role escalation) | [S] | P0 |
+| 117 | `onlyTxRecoveryAddress` rejects guardian caller | [S] | P0 |
+| 118 | `onlyGuardianRecoveryAddress` rejects tx-recovery caller | [S] | P0 |
+| 119 | `onlyPendingGuardian` and `onlyRecoveryPendingGuardian` reject calls when pending address is unset | [S] | P0 |
+| 120 | All role modifiers fail closed when configured role address is zero | [S] | P0 |
+
+---
+
+## 12. Additional Invariants
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 48 | [AUDIT-INV] **No orphaned admins**: Removing a member who is an admin always reverts (can never leave admin without member status) | P0 |
-| 49 | [AUDIT-INV] **Rate limit atomicity**: Rate limit usage is either fully updated or not at all (no partial updates) | P0 |
-| 50 | [AUDIT-INV] **Signature non-transferability**: A signature valid for one Organization is never valid for another Organization (even with same admin set) | P0 |
-| 51 | [AUDIT-INV] **Recovery path isolation**: Guardian recovery operations never modify tx recovery state, and vice versa | P0 |
-| 52 | [AUDIT-INV] **Account beacon immutability**: An Account's beacon (Organization) address cannot be changed after deployment | P0 |
-| 53 | [AUDIT-INV] **Group deletion permanence**: Once wasGroupDeleted is true for a groupId, it can never become false | P0 |
+| 121 | **Cross-org signature isolation:** signatures valid for one Organization are never valid for another | P0 |
+| 122 | **Recovery isolation:** tx-recovery operations do not mutate guardian-recovery state, and vice versa | P0 |
+| 123 | **Nonce monotonicity:** once a nonce is consumed, it is never reusable | P0 |
+| 124 | **Rate-limit atomicity:** reverted outer transaction cannot leave partial usage updates | P0 |
+| 125 | **Account beacon binding:** an Account’s Organization/beacon address is immutable post-deployment | P0 |
 
 ---
 
-## 12. Additional Fuzz Tests
+## 13. Additional Fuzz Tests
 
 | # | Test Case | Runs | Priority |
 |---|-----------|------|----------|
-| 54 | [AUDIT-FUZZ] Random parameter constraint offsets: bounds checking never overflows | 10000 | P0 |
-| 55 | [AUDIT-FUZZ] Random dynamic bytes lengths: constraint validation always terminates | 10000 | P0 |
-| 56 | [AUDIT-FUZZ] Random ERC-20 calldata: getActualDestination never panics | 10000 | P0 |
-| 57 | [AUDIT-FUZZ] Random signature type prefixes (0x00-0xff): only 0x00 and 0x01 return magic value | 1000 | P0 |
-| 58 | [AUDIT-FUZZ] Random guardian addresses (EOA/contract/zero): module validation always returns valid result | 1000 | P0 |
-| 59 | [AUDIT-FUZZ] Random admin arrays: modifyAdmins never leaves adminCount=0 | 1000 | P0 |
-| 60 | [AUDIT-FUZZ] Random rate limit configs: checkAndUpdateRateLimit never overflows | 10000 | P0 |
+| 126 | [AUDIT-FUZZ] Random parameter constraints (offset/head/length permutations) never panic and terminate safely | 10000 | P0 |
+| 127 | [AUDIT-FUZZ] Random malformed policy-signature payloads (`0x01`) return invalid (no revert) | 10000 | P0 |
+| 128 | [AUDIT-FUZZ] Random guardian module behaviors (EOA/contract/revert/truncated return data) never cause signature-validation revert | 5000 | P0 |
+| 129 | [AUDIT-FUZZ] Random mixed admin signature streams preserve strict ordering and threshold rules | 5000 | P0 |
+| 130 | [AUDIT-FUZZ] Random rate-limit scope configs produce expected key sharing/isolation | 10000 | P0 |
+| 131 | [AUDIT-FUZZ] Random execute/reject ordering preserves shared nonce replay protection | 5000 | P0 |
+| 132 | [AUDIT-FUZZ] [DESIRED] Random upgrade migration calldata cannot bypass wrapper whitelist/admin checks via nested upgrade | 2000 | P0 |
 
 ---
 
 ## Summary
 
-| Category | New Tests | Priority |
-|----------|-----------|----------|
-| Signature binding & replay | 5 | P0 |
-| Rate limit edge cases | 6 | P0 |
-| Parameter constraint overflow | 7 | P0 |
-| Guardian module validation | 5 | P0 |
-| Admin auth race conditions | 3 | P0 |
-| Cross-org attacks | 3 | P0 |
-| Account implementation | 6 | P0-P1 |
-| Upgrade system | 4 | P0-P1 |
-| Factory deployment | 4 | P0-P1 |
-| Modifier bypass | 4 | P0 |
-| Additional invariants | 6 | P0 |
-| Additional fuzz tests | 7 | P0 |
-| **Total** | **60** | |
+| Category | Tests | Priority |
+|----------|-------|----------|
+| File/function scoped security gap cases | 120 | P0-P1 |
+| Invariants | 5 | P0 |
+| Fuzz tests | 7 | P0 |
+| **Total** | **132** | |

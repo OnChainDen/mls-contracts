@@ -1,79 +1,236 @@
-# 22 — Admin Operation Timelock Test Plan
+# 22 - Admin Operation Timelock Test Plan
 
-**Files Under Test:**
+**Primary Files Under Test:**
 - `src/organization/libraries/LibOrganizationAdminOperationTimelock.sol`
 - `src/organization/base/OrganizationAdminOperationTimelockBase.sol`
 
----
+**Related Timelock Interaction Files (integration behavior only):**
+- `src/organization/libraries/LibOrganizationInitialization.sol`
+- `src/organization/libraries/LibOrganizationGuardian.sol`
+- `src/organization/libraries/LibOrganizationGuardianRecovery.sol`
+- `src/organization/libraries/LibOrganizationTxRecovery.sol`
 
-## 1. Initialization
+**Out of Scope for This Plan:**
+- `src/interfaces/organization/IOrganizationAdminOperationTimelock.sol` (interface coverage tracked elsewhere)
+- `src/organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol` (storage coverage tracked elsewhere)
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 1 | Initialize with valid duration (2 days) — succeeds | [U] | P2 |
-| 2 | Initialize with valid duration (30 days) — succeeds | [U] | P2 |
-| 3 | Initialize with invalid duration (< 2 days) — reverts `InvalidTimelockDuration` | [N] | P2 |
-| 4 | Initialize with invalid duration (> 30 days) — reverts `InvalidTimelockDuration` | [N] | P2 |
-| 5 | After init: `getAdminOperationTimelockDurationSeconds` returns correct value | [U] | P2 |
-
----
-
-## 2. Timelock Validation
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 6 | `validateTimelockExpiredOrRevert` at exactly expiry timestamp — succeeds (>=) | [E] | P2 |
-| 7 | `validateTimelockExpiredOrRevert` before expiry — reverts `TimelockNotExpired` | [N] | P2 |
-| 8 | `validateTimelockExpiredOrRevert` after expiry — succeeds | [U] | P2 |
+> Note on internal/private function testing:
+> This plan includes internal/private helper behavior where timelock safety depends on it.
+> For implementation, expose those functions as `internal` in harness-only test builds.
 
 ---
 
-## 3. Timestamp Computation
+## Legend
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 9 | `computeCanFinalizeAtTimestamp` returns `block.timestamp + duration` | [U] | P2 |
-| 10 | At different block timestamps, computation is correct | [U] | P2 |
-
----
-
-## 4. Integration with Guardian Flow
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 11 | Guardian update uses admin operation timelock correctly | [I] | P2 |
-| 12 | Recovery initialization uses admin operation timelock correctly | [I] | P2 |
+| Code | Meaning |
+|------|---------|
+| `[U]` | Unit |
+| `[N]` | Negative / revert path |
+| `[E]` | Edge case |
+| `[S]` | Security-focused |
+| `[I]` | Integration |
+| `[EV]` | Event behavior |
+| `[F]` | Fuzz / property |
+| `[INV]` | Invariant |
 
 ---
 
-## 5. Fuzz Tests
+## File 1: `LibOrganizationAdminOperationTimelock.sol`
 
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 13 | Fuzz: Random valid durations always accepted | [F] | P2 |
-| 14 | Fuzz: Random timestamps before/after expiry — correct behavior | [F] | P2 |
-| 15 | Fuzz: Random durations outside [2 days, 30 days] always revert `InvalidTimelockDuration` | [F] | P2 |
-| 16 | Fuzz: Random block timestamps — `computeCanFinalizeAtTimestamp` always returns `block.timestamp + duration` | [F] | P2 |
+### 1.1 `initializeAdminOperationTimelock`
 
----
-
-## 6. Invariant Tests
-
-| # | Invariant | Priority |
-|---|-----------|----------|
-| 17 | **Duration bounds**: Active timelock duration is always in [2 days, 30 days] | P2 |
-| 18 | **Timestamp monotonicity**: `computeCanFinalizeAtTimestamp` result is always >= `block.timestamp` | P2 |
+| Test Case | Type | Priority |
+|---|---|---|
+| Valid duration at minimum boundary (`2 days`) is accepted and stored | `[U]` | P1 |
+| Valid duration at maximum boundary (`30 days`) is accepted and stored | `[U]` | P1 |
+| Duration below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| Duration above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| Stored value matches exactly (no rounding/truncation) | `[U]` | P1 |
+| Harness-only: repeated calls overwrite stored duration (document raw library behavior; integration layer must prevent this) | `[E]` | P2 |
 
 ---
 
-## Summary
+### 1.2 `getAdminOperationTimelockDurationSeconds`
 
-| Category | New Tests | Priority |
-|----------|-----------|----------|
-| Initialization | 5 | P2 |
-| Validation | 3 | P2 |
-| Computation | 2 | P2 |
-| Integration | 2 | P2 |
-| Fuzz tests | 4 | P2 |
-| Invariant tests | 2 | P2 |
-| **Total** | **18** | |
+| Test Case | Type | Priority |
+|---|---|---|
+| Returns `0` in uninitialized harness state | `[E]` | P2 |
+| Returns configured duration after initialization | `[U]` | P1 |
+| Returns most recent value in harness-only repeated-init scenario | `[E]` | P2 |
+
+---
+
+### 1.3 `validateTimelockExpiredOrRevert`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| `block.timestamp < canFinalizeAtTimestamp` reverts `TimelockNotExpired` | `[N]` | P0 |
+| Revert payload includes correct `canFinalizeAtTimestamp` and `currentTime` values | `[U]` | P1 |
+| `block.timestamp == canFinalizeAtTimestamp` succeeds | `[E]` | P1 |
+| `block.timestamp > canFinalizeAtTimestamp` succeeds | `[U]` | P1 |
+| `canFinalizeAtTimestamp = 0` succeeds (helper semantics; callers must gate pending-state existence) | `[E]` | P2 |
+
+---
+
+### 1.4 `computeCanFinalizeAtTimestamp`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Returns `block.timestamp + adminOperationTimelockDurationSeconds` | `[U]` | P1 |
+| With duration at min boundary, computed timestamp is exactly `now + 2 days` | `[E]` | P1 |
+| With duration at max boundary, computed timestamp is exactly `now + 30 days` | `[E]` | P1 |
+| Uninitialized harness state (`duration=0`) returns `block.timestamp` (documented helper behavior) | `[E]` | P2 |
+
+---
+
+## File 2: `OrganizationAdminOperationTimelockBase.sol`
+
+### 2.1 `adminOperationTimelockDurationSeconds`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Returns the value stored by `LibOrganizationAdminOperationTimelock` | `[U]` | P1 |
+| Callable by any address (no access control) | `[U]` | P3 |
+| Returns expected value through `OrganizationImplementation` after successful initialization | `[I]` | P1 |
+
+---
+
+## File 3: `LibOrganizationInitialization.sol` (timelock-specific integration)
+
+### 3.1 `initialize`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Valid `adminOperationTimelockDurationSeconds` is persisted and readable from base getter | `[I]` | P0 |
+| `OrganizationInitialized` event includes the exact configured admin-operation timelock value | `[EV]` | P1 |
+| Timelock below min reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
+| Timelock above max reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
+| Invalid timelock causes full initialization revert (no partial persisted org state) | `[S]` | P0 |
+| Second initialize attempt reverts (`AlreadyInitialized`) and does not change timelock value | `[N]` | P0 |
+
+---
+
+## File 4: `LibOrganizationGuardian.sol` (admin-operation timelock call sites)
+
+### 4.1 `initiateGuardianUpdate`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Sets `pendingGuardianUpdateTimestamp = block.timestamp + adminOperationTimelockDurationSeconds` | `[I]` | P0 |
+| `GuardianUpdateInitiated(..., canFinalizeAtTimestamp)` emits the same timestamp persisted in storage | `[EV]` | P1 |
+| Same-block finalize attempt reverts (`TimelockNotExpired`) | `[S]` | P0 |
+
+---
+
+### 4.2 `finalizeGuardianUpdate`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
+| At exact pending timestamp succeeds | `[E]` | P1 |
+| After pending timestamp succeeds | `[U]` | P1 |
+| After cancellation, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
+
+---
+
+## File 5: `LibOrganizationGuardianRecovery.sol` (timelock-relevant paths)
+
+### 5.1 `initiateInitializeGuardianRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
+| Deferred-init pending timestamp does **not** use guardian-recovery timelock duration input | `[S]` | P0 |
+| `GuardianRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
+
+---
+
+### 5.2 `finalizeInitializeGuardianRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
+| At exact pending timestamp succeeds | `[E]` | P1 |
+| Success clears pending-init timelock state and writes final recovery config | `[U]` | P1 |
+| After cancellation, finalize reverts `NoGuardianRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
+| Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
+
+---
+
+### 5.3 `finalizeRecoveryGuardianUpdate`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
+| Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
+
+---
+
+### 5.4 `_clearPendingGuardianRecoveryInitTimelock` (private; harness-only)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` to zero | `[U]` | P1 |
+| Idempotent when fields are already zero | `[E]` | P2 |
+
+---
+
+## File 6: `LibOrganizationTxRecovery.sol` (timelock-relevant paths)
+
+### 6.1 `initiateInitializeTxRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
+| Deferred-init pending timestamp does **not** use tx-recovery timelock duration input | `[S]` | P0 |
+| `TxRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
+
+---
+
+### 6.2 `finalizeInitializeTxRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
+| At exact pending timestamp succeeds | `[E]` | P1 |
+| Success clears pending-init timelock state and writes final tx-recovery config | `[U]` | P1 |
+| After cancellation, finalize reverts `NoTxRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
+| Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
+
+---
+
+### 6.3 `finalizeEnableTxRecovery`
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
+| Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
+
+---
+
+### 6.4 `_clearPendingTxRecoveryInitTimelock` (private; harness-only)
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` to zero | `[U]` | P1 |
+| Idempotent when fields are already zero | `[E]` | P2 |
+
+---
+
+## Cross-File Fuzz Tests
+
+| Test Case | Type | Priority |
+|---|---|---|
+| Fuzz valid admin-operation timelock durations in `[2 days, 30 days]`: all admin-timelock initiation call sites compute `pendingTimestamp = start + duration` | `[F]` | P1 |
+| Fuzz timestamps around expiry (`t-1`, `t`, `t+1`) for all finalize call sites using helper; behavior is revert/succeed/succeed respectively | `[F]` | P1 |
+| Fuzz out-of-range admin-operation durations: initialization always reverts `InvalidTimelockDuration` | `[F]` | P0 |
+
+---
+
+## Cross-File Invariants
+
+| Invariant | Type | Priority |
+|---|---|---|
+| In any initialized organization, `adminOperationTimelockDurationSeconds` is always within `[2 days, 30 days]` | `[INV]` | P0 |
+| No sequence of guardian/recovery operations can mutate `adminOperationTimelockDurationSeconds` post-initialization | `[INV]` | P0 |
+| Admin-operation timelocked flows cannot be finalized in the same block they are initiated | `[INV]` | P0 |
