@@ -4,6 +4,14 @@
 - `src/organization/base/OrganizationGuardianRecoveryBase.sol`
 - `src/organization/libraries/LibOrganizationGuardianRecovery.sol`
 
+**Private Function Testability Plan (Global):**
+All `private` functions in the files under test will be refactored to `internal` for testing and exposed via test harness contracts.
+
+| File | Private functions to convert to `internal` for harness testing |
+|---|---|
+| `OrganizationGuardianRecoveryBase.sol` | None |
+| `LibOrganizationGuardianRecovery.sol` | `_clearPendingGuardianRecoveryInitTimelock`, `_validateGuardianRecoveryNotConfiguredOrRevert`, `_validateGuardianRecoveryParamsOrRevert` |
+
 
 ---
 
@@ -55,6 +63,8 @@
 | 12 | `OperationType` is `InitiateInitializeGuardianRecovery` in admin auth | [U] | P1 |
 | 13 | `operationData` encodes `(recoveryAddress, timelockDurationSeconds)` | [U] | P1 |
 | 14 | Delegates to `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` | [U] | P1 |
+| 152 | `isApproval` passed to admin auth validation is `true` (execution path, not rejection path) | [U][S] | P1 |
+| 153 | **Desired Behavior:** if downstream library call reverts (e.g., invalid params/already configured), admin nonce is not permanently consumed; same signed request can succeed after fixing root cause | [S] | P0 |
 
 ---
 
@@ -68,6 +78,9 @@
 | 18 | `OperationType` is `FinalizeInitializeGuardianRecovery` in admin auth | [U] | P1 |
 | 19 | `operationData` encodes pending values `(pendingRecoveryAddress, pendingTimelockDurationSeconds)` from storage | [U] | P1 |
 | 20 | Delegates to `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` | [U] | P1 |
+| 154 | `isApproval` passed to admin auth validation is `true` (execution path, not rejection path) | [U][S] | P1 |
+| 155 | **Desired Behavior:** admin signatures are bound to current pending init tuple; signatures over stale `(pendingRecoveryAddress, pendingTimelockDurationSeconds)` revert after pending values change | [S] | P0 |
+| 156 | **Desired Behavior:** if downstream finalize reverts (`NoGuardianRecoveryInitializationPending` or `TimelockNotExpired`), admin nonce/state changes roll back (same signed request remains usable once conditions are met) | [S] | P0 |
 
 ---
 
@@ -81,6 +94,9 @@
 | 24 | `OperationType` is `CancelInitializeGuardianRecovery` in admin auth | [U] | P1 |
 | 25 | `operationData` encodes pending values `(pendingRecoveryAddress, pendingTimelockDurationSeconds)` from storage | [U] | P1 |
 | 26 | Delegates to `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` | [U] | P1 |
+| 157 | `isApproval` passed to admin auth validation is `true` (execution path, not rejection path) | [U][S] | P1 |
+| 158 | **Desired Behavior:** cancel requires `OperationType.CancelInitializeGuardianRecovery`; signatures for initiate/finalize or rejection payloads cannot authorize cancel | [S] | P0 |
+| 159 | **Desired Behavior:** if downstream cancel reverts (`NoGuardianRecoveryInitializationPending`), admin nonce/state changes roll back (same signed request remains usable after pending state exists) | [S] | P0 |
 
 ---
 
@@ -180,6 +196,7 @@
 | 73 | After acceptance, old guardian address is no longer the guardian | [S] | P1 |
 | 74 | After acceptance, new guardian address is the guardian | [U] | P1 |
 | 75 | Recovery config (`recoveryAddress`, `timelockDurationSeconds`) unchanged after accept | [U] | P1 |
+| 160 | Pending guardian equals current guardian — accept still clears pending recovery state and emits `RecoveryGuardianUpdateAccepted` with `previousGuardian == newGuardian` | [E] | P2 |
 
 ---
 
@@ -212,6 +229,7 @@
 | 91 | Delegates to `initializeGuardianRecovery` for validation and config writes | [U] | P1 |
 | 92 | Emits `GuardianRecoveryInitializationFinalized(pendingAddress, pendingTimelock)` | [EV] | P1 |
 | 93 | After finalization, recovery flow (initiate/finalize/cancel/accept) can be used | [I] | P1 |
+| 161 | **Desired Behavior:** if pending init fields are malformed and delegated `initializeGuardianRecovery` reverts, finalization is atomic: pending init fields and config remain unchanged (full rollback) | [S] | P0 |
 
 ---
 
@@ -247,6 +265,7 @@
 | 105 | `msg.sender == pendingGuardian` — no revert | [U] | P0 |
 | 106 | `msg.sender != pendingGuardian` — reverts `UnauthorizedRecoveryGuardianAcceptance(msg.sender, pendingGuardian)` | [N] | P0 |
 | 107 | No pending update (`pendingGuardian == address(0)`) — any address reverts | [E] | P0 |
+| 162 | Error includes both caller address and expected pending guardian address | [U] | P1 |
 
 ---
 
@@ -258,6 +277,7 @@
 | 109 | After clear: `pendingInit.pendingTimelockDurationSeconds == 0` | [U] | P1 |
 | 110 | After clear: `pendingInit.pendingTimestamp == 0` | [U] | P1 |
 | 111 | Clearing already-zeroed state — no-op, no revert | [E] | P2 |
+| 163 | Clearing pending init does NOT modify `recoveryAddress`, `timelockDurationSeconds`, or recovery update pending fields (`pendingGuardian`, `pendingGuardianTimestamp`, `isUpdateReadyForAcceptance`) | [S] | P1 |
 
 ---
 
@@ -283,6 +303,7 @@
 | 120 | Timelock at exact minimum boundary (2 days) — succeeds | [E] | P1 |
 | 121 | Timelock at exact maximum boundary (30 days) — succeeds | [E] | P1 |
 | 122 | Timelock at 0 seconds — reverts `InvalidTimelockDuration` | [E] | P1 |
+| 164 | `recoveryAddress == address(0)` with out-of-range timelock — reverts `InvalidGuardianRecoveryAddress` (address check executes before timelock validation) | [E] | P1 |
 
 ---
 
@@ -300,6 +321,8 @@
 | 130 | After recovery completes, normal guardian flow can be used by the new guardian | [I] | P1 |
 | 131 | After normal guardian update completes, recovery flow can still be used by recovery address | [I] | P1 |
 | 132 | Multiple sequential recovery updates: complete first → start and complete second | [I] | P1 |
+| 165 | **Desired Behavior:** deferred-init finalize signatures become invalid after `cancelInitializeGuardianRecovery` + re-init with new params (`operationData` binding prevents stale-signature replay) | [I][S] | P0 |
+| 166 | **Desired Behavior:** deferred-init cancel signatures become invalid after pending params change (`operationData` binding to current pending tuple) | [I][S] | P0 |
 
 ---
 
@@ -333,6 +356,8 @@
 | 149 | **Deferred init state consistency**: If `pendingInit.pendingTimestamp == 0`, then `pendingInit.pendingRecoveryAddress == address(0)` AND `pendingInit.pendingTimelockDurationSeconds == 0` | P0 |
 | 150 | **Tx recovery isolation**: Guardian recovery operations never modify tx recovery state | P0 |
 | 151 | **Accept writes to normal storage**: `acceptGuardianRecovery` always writes to `LibOrganizationGuardianStorage.layout().guardian`, never to recovery storage's config fields | P0 |
+| 167 | **Ready-state consistency (reverse)**: If `isUpdateReadyForAcceptance == true`, then `pendingGuardian != address(0)` AND `pendingGuardianTimestamp != 0` | P0 |
+| 168 | **Deferred-init consistency (reverse)**: If `pendingInit.pendingTimestamp != 0`, then `pendingInit.pendingRecoveryAddress != address(0)` AND `pendingInit.pendingTimelockDurationSeconds` is within `[2 days, 30 days]` | P0 |
 
 ---
 
@@ -344,24 +369,24 @@
 | `finalizeRecoveryGuardianUpdate` (Base) | 2 | P0-P1 |
 | `cancelRecoveryGuardianUpdate` (Base) | 2 | P0-P1 |
 | `acceptGuardianRecovery` (Base) | 2 | P0-P1 |
-| `initiateInitializeGuardianRecovery` (Base) | 6 | P0-P1 |
-| `finalizeInitializeGuardianRecovery` (Base) | 6 | P0-P1 |
-| `cancelInitializeGuardianRecovery` (Base) | 6 | P0-P1 |
+| `initiateInitializeGuardianRecovery` (Base) | 8 | P0-P1 |
+| `finalizeInitializeGuardianRecovery` (Base) | 9 | P0-P1 |
+| `cancelInitializeGuardianRecovery` (Base) | 9 | P0-P1 |
 | `getGuardianRecoveryState` (Base) | 6 | P3 |
 | `initializeGuardianRecovery` (Lib) | 8 | P0-P1 |
 | `initiateRecoveryGuardianUpdate` (Lib) | 9 | P1-P2 |
 | `finalizeRecoveryGuardianUpdate` (Lib) | 8 | P1-P2 |
 | `cancelRecoveryGuardianUpdate` (Lib) | 8 | P1 |
-| `acceptGuardianRecovery` (Lib) | 10 | P0-P1 |
+| `acceptGuardianRecovery` (Lib) | 11 | P0-P2 |
 | `initiateInitializeGuardianRecovery` (Lib) | 10 | P0-P1 |
-| `finalizeInitializeGuardianRecovery` (Lib) | 8 | P1 |
+| `finalizeInitializeGuardianRecovery` (Lib) | 9 | P0-P1 |
 | `cancelInitializeGuardianRecovery` (Lib) | 7 | P1 |
 | `enforceOnlyGuardianRecoveryAddress` | 4 | P0-P1 |
-| `enforceOnlyRecoveryPendingGuardian` | 3 | P0 |
-| `_clearPendingGuardianRecoveryInitTimelock` | 4 | P1-P2 |
+| `enforceOnlyRecoveryPendingGuardian` | 4 | P0-P1 |
+| `_clearPendingGuardianRecoveryInitTimelock` | 5 | P1-P2 |
 | `_validateGuardianRecoveryNotConfiguredOrRevert` | 4 | P1 |
-| `_validateGuardianRecoveryParamsOrRevert` | 7 | P1 |
-| Full lifecycle integration | 10 | P0-P1 |
+| `_validateGuardianRecoveryParamsOrRevert` | 8 | P1 |
+| Full lifecycle integration | 12 | P0-P1 |
 | Fuzz tests | 10 | P0-P1 |
-| Invariant tests | 9 | P0 |
-| **Total** | **151** | |
+| Invariant tests | 11 | P0 |
+| **Total** | **168** | |
