@@ -1,4 +1,4 @@
-# 09 — Account Signature (ERC-1271) Test Plan
+# 08 — Account Signature (ERC-1271) Test Plan
 
 **Files Under Test:**
 - `src/organization/base/OrganizationAccountSignatureBase.sol`
