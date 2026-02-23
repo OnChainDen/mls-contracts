@@ -4,6 +4,14 @@
 - `src/organization/base/OrganizationGuardianBase.sol`
 - `src/organization/libraries/LibOrganizationGuardian.sol`
 
+**Private Function Testability Plan (Global):**
+All `private` functions in the files under test will be refactored to `internal` for testing and exposed via test harness contracts.
+
+| File | Private functions to convert to `internal` for harness testing |
+|---|---|
+| `OrganizationGuardianBase.sol` | None |
+| `LibOrganizationGuardian.sol` | None (all non-external helper functions are already `internal`) |
+
 
 ---
 
@@ -19,6 +27,10 @@
 | 4 | `OperationType` is `InitiateUpdateGuardian` in admin auth | [U] | P1 |
 | 5 | `operationData` encodes `newGuardian` | [U] | P1 |
 | 6 | Delegates to `LibOrganizationGuardian.initiateGuardianUpdate` | [U] | P1 |
+| 89 | Rejection signatures (`isApproval=false`) cannot execute `initiateGuardianUpdate` | [S] | P0 |
+| 90 | Signatures for a different `OperationType` (e.g., `FinalizeUpdateGuardian`) cannot authorize initiation | [S] | P0 |
+| 91 | Signed `operationData` binding: signatures for `newGuardian=A` cannot execute with `newGuardian=B` | [S] | P0 |
+| 92 | **Desired Behavior:** if downstream library call reverts (`InvalidGuardianAddress` or `GuardianUpdateAlreadyPending`), admin auth nonce/state rolls back so the same signed request can succeed after fixing root cause | [S] | P0 |
 
 ---
 
@@ -32,6 +44,10 @@
 | 10 | `OperationType` is `FinalizeUpdateGuardian` in admin auth | [U] | P1 |
 | 11 | `operationData` encodes `pendingGuardianAddr` (fetched via `getPendingGuardian`) | [U] | P1 |
 | 12 | Delegates to `LibOrganizationGuardian.finalizeGuardianUpdate` | [U] | P1 |
+| 93 | Rejection signatures (`isApproval=false`) cannot execute `finalizeGuardianUpdate` | [S] | P0 |
+| 94 | Signatures for a different `OperationType` cannot authorize finalize | [S] | P0 |
+| 95 | Signed `operationData` binding to pending guardian: signatures for pending `A` fail after pending guardian changes to `B` | [S] | P0 |
+| 96 | **Desired Behavior:** if downstream library call reverts (`TimelockNotExpired` or `NoPendingGuardianUpdate`), admin auth nonce/state rolls back so the same signed request can be retried once conditions are satisfied | [S] | P0 |
 
 ---
 
@@ -45,6 +61,10 @@
 | 16 | `OperationType` is `CancelUpdateGuardian` in admin auth | [U] | P1 |
 | 17 | `operationData` encodes `pendingGuardianAddr` (fetched via `getPendingGuardian`) | [U] | P1 |
 | 18 | Delegates to `LibOrganizationGuardian.cancelGuardianUpdate` | [U] | P1 |
+| 97 | Rejection signatures (`isApproval=false`) cannot execute `cancelGuardianUpdate` | [S] | P0 |
+| 98 | Signatures for a different `OperationType` cannot authorize cancellation | [S] | P0 |
+| 99 | Signed `operationData` binding to pending guardian: cancel signatures for pending `A` fail after pending guardian changes to `B` | [S] | P0 |
+| 100 | **Desired Behavior:** if downstream library call reverts (`NoPendingGuardianUpdate`), admin auth nonce/state rolls back (same signed request remains usable if matching pending state exists later) | [S] | P0 |
 
 ---
 
@@ -54,6 +74,8 @@
 |---|-----------|------|----------|
 | 19 | Non-pending-guardian caller — reverts (onlyPendingGuardian modifier) | [N] | P0 |
 | 20 | Pending guardian caller — delegates to `LibOrganizationGuardian.acceptGuardian` | [U] | P1 |
+| 101 | Pending guardian caller before finalize — reverts `GuardianUpdateNotReadyForAcceptance` | [N] | P0 |
+| 102 | After successful acceptance, second `acceptGuardian` call reverts (no pending guardian) and does not mutate state | [S] | P1 |
 
 ---
 
@@ -82,6 +104,7 @@
 | 27 | `address(0)` — reverts `InvalidGuardianAddress` | [N] | P1 |
 | 28 | Guardian correctly readable via `getGuardian` after initialization | [U] | P1 |
 | 28.1 | Guardian already initialized (storage != `address(0)`) — reverts (prevents re-initialization) | [S] | P0 |
+| 103 | Initialization touches only `guardian`; pending state remains cleared (`pendingGuardian=0`, `pendingGuardianUpdateTimestamp=0`, `isReady=false`) | [U] | P1 |
 
 ---
 
@@ -187,6 +210,9 @@
 | 75 | Cancel during pending: initiate → cancel → initiate again with different address — works | [I] | P1 |
 | 76 | Cancel after finalize: initiate → finalize → cancel → all pending state cleared | [I] | P1 |
 | 77 | Multiple sequential updates: complete first update → start and complete second update | [I] | P1 |
+| 104 | Normal flow and recovery flow can both be pending at the same time (separate state domains) | [I][S] | P1 |
+| 105 | Completing recovery flow updates `guardian` but does not clear normal-flow pending guardian state | [I][S] | P1 |
+| 106 | If guardian changes via recovery while normal update is pending, previous guardian loses `onlyGuardian` rights; new guardian controls normal-flow finalize/cancel | [I][S] | P0 |
 
 ---
 
@@ -212,6 +238,9 @@
 | 86 | **Timelock enforcement**: Guardian cannot change without timelock expiry + finalize + accept | P0 |
 | 87 | **State consistency**: If `pendingGuardian == address(0)`, then `pendingGuardianUpdateTimestamp == 0` AND `isGuardianUpdateReadyForAcceptance == false` | P0 |
 | 88 | **Accept clears all**: After `acceptGuardian`, all three pending fields are reset (`address(0)`, `0`, `false`) | P0 |
+| 107 | **Guardian mutation point**: In normal flow, `guardian` is only modified by `acceptGuardian` (never by initiate/finalize/cancel) | P0 |
+| 108 | **Ready-state coherence**: If `isGuardianUpdateReadyForAcceptance == true`, then `pendingGuardian != address(0)` AND `pendingGuardianUpdateTimestamp != 0` | P0 |
+| 109 | **Pending timestamp coherence**: If `pendingGuardian != address(0)`, then `pendingGuardianUpdateTimestamp != 0` | P0 |
 
 ---
 
@@ -219,12 +248,12 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `initiateGuardianUpdate` (Base) | 6 | P0-P1 |
-| `finalizeGuardianUpdate` (Base) | 6 | P0-P1 |
-| `cancelGuardianUpdate` (Base) | 6 | P0-P1 |
-| `acceptGuardian` (Base) | 2 | P0-P1 |
+| `initiateGuardianUpdate` (Base) | 10 | P0-P1 |
+| `finalizeGuardianUpdate` (Base) | 10 | P0-P1 |
+| `cancelGuardianUpdate` (Base) | 10 | P0-P1 |
+| `acceptGuardian` (Base) | 4 | P0-P1 |
 | View functions (Base) | 5 | P3 |
-| `initializeGuardian` | 4 | P0-P1 |
+| `initializeGuardian` | 5 | P0-P1 |
 | `initiateGuardianUpdate` (Lib) | 8 | P1-P2 |
 | `finalizeGuardianUpdate` (Lib) | 7 | P1-P2 |
 | `cancelGuardianUpdate` (Lib) | 7 | P1 |
@@ -232,7 +261,7 @@
 | `enforceOnlyGuardian` | 3 | P0-P1 |
 | `enforceOnlyPendingGuardian` | 3 | P0 |
 | View functions (Lib) | 8 | P3 |
-| Full lifecycle integration | 4 | P1 |
+| Full lifecycle integration | 7 | P0-P1 |
 | Fuzz tests | 6 | P0-P1 |
-| Invariant tests | 5 | P0 |
-| **Total** | **89** | |
+| Invariant tests | 8 | P0 |
+| **Total** | **110** | |
