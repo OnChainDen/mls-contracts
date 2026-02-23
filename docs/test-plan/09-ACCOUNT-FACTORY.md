@@ -4,9 +4,6 @@
 - `src/organization/base/OrganizationAccountFactoryBase.sol`
 - `src/organization/libraries/LibOrganizationAccountFactory.sol`
 - `src/account/AccountProxy.sol`
-- `src/interfaces/organization/IOrganizationAccountFactory.sol`
-
-**Test File(s):** `test/OrganizationAccountFactoryBase.t.sol`, `test/LibOrganizationAccountFactory.t.sol`, `test/AccountProxy.t.sol`
 
 ---
 
