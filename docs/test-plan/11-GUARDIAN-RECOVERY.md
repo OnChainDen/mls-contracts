@@ -3,11 +3,7 @@
 **Files Under Test:**
 - `src/organization/base/OrganizationGuardianRecoveryBase.sol`
 - `src/organization/libraries/LibOrganizationGuardianRecovery.sol`
-- `src/interfaces/organization/IOrganizationGuardianRecovery.sol`
 
-**Existing Tests:** `test/LibOrganizationGuardianRecovery.t.sol` (48 tests)
-
-**Test File(s):** Existing file + `test/OrganizationGuardianRecoveryBase.t.sol`
 
 ---
 
