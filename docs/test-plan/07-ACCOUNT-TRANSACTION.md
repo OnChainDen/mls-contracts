@@ -4,10 +4,7 @@
 - `src/organization/base/OrganizationAccountTransactionBase.sol`
 - `src/organization/libraries/LibOrganizationAccountTransaction.sol`
 - `src/account/AccountImplementation.sol`
-- `src/interfaces/organization/IOrganizationAccountTransaction.sol`
-- `src/interfaces/IAccount.sol`
 
-**Test File(s):** `test/OrganizationAccountTransactionBase.t.sol`, `test/LibOrganizationAccountTransaction.t.sol`, `test/AccountImplementation.t.sol`
 
 ---
 
@@ -272,6 +269,26 @@
 
 ---
 
+## 6. Additional Desired-Behavior Gap Tests
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 129 | Unknown/invalid `PolicyType` value in approval path fails closed (reverts; never treated as implicit AutoApprove) | [S] | P0 |
+| 130 | Unknown/invalid `PolicyType` value in rejection path fails closed (reverts; cannot silently skip checks) | [S] | P0 |
+| 131 | `executeAccountTransaction`: pre-execution validation revert (bad proof/signature) does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
+| 132 | `rejectAccountTransaction`: validation revert does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
+| 133 | If `Account.executeTransaction` fails after rate-limit update step, all rate-limit state changes are rolled back with full tx revert | [S] | P0 |
+| 134 | Non-empty but invalid initiator signature (malformed/wrong signer/wrong hash) reverts in approval path | [N][S] | P0 |
+| 135 | Non-empty but invalid initiator signature (malformed/wrong signer/wrong hash) reverts in rejection path | [N][S] | P0 |
+| 136 | Manual approval/rejection: duplicate or out-of-order reviewer signers revert (not `InsufficientApprovals`) | [S] | P0 |
+| 137 | Manual approval/rejection: unauthorized reviewer signer reverts `UnauthorizedApprovalSigner` | [S] | P0 |
+| 138 | Manual approval/rejection with `ApproverType.Group`: non-existent approver group reverts `GroupDoesNotExist` | [S] | P0 |
+| 139 | Account execution is CALL-only (no delegatecall semantics): target cannot mutate Account storage context as delegatecall would | [S] | P0 |
+| 140 | End-to-end replay model: identical `(account, to, value, data, policyId)` executes multiple times when using different salts and fresh signatures | [I][S] | P0 |
+| 141 | `TransactionType.Any` with rate limiting enabled uses count-based accounting (`usageAmount = 1`) even when tx shape is token transfer | [U][S] | P0 |
+
+---
+
 ## Summary
 
 | Category | New Tests | Priority |
@@ -293,4 +310,5 @@
 | `_onlyOrganization` | 3 | P0 |
 | Fuzz tests | 11 | P0-P1 |
 | Invariant tests | 6 | P0 |
-| **Total** | **128** | |
+| Additional desired-behavior gap tests | 13 | P0 |
+| **Total** | **141** | |
