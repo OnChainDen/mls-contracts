@@ -5,6 +5,15 @@
 - `src/organization/libraries/LibOrganizationAccountTransaction.sol`
 - `src/account/AccountImplementation.sol`
 
+**Private Function Testability Plan (Global):**
+All `private` functions in the files under test will be refactored to `internal` for testing and exposed via test harness contracts.
+
+| File | Private functions to convert to `internal` for harness testing |
+|---|---|
+| `OrganizationAccountTransactionBase.sol` | None |
+| `LibOrganizationAccountTransaction.sol` | `_validateAndUpdateRateLimitOrRevert`, `_validateAutoApproveRejectionOrRevert`, `_validateManualConfirmationOrRevert`, `_computeInitiatorHashFromParams`, `_computeReviewHashFromParams` |
+| `AccountImplementation.sol` | `_execute`, `_onlyOrganization` |
+
 
 ---
 
@@ -27,6 +36,9 @@
 | 11 | Successful ETH transfer via Account — end-to-end | [I] | P0 |
 | 12 | Successful ERC-20 transfer via Account — end-to-end | [I] | P0 |
 | 13 | Successful contract interaction via Account — end-to-end | [I] | P0 |
+| 131 | **Desired Behavior:** pre-execution validation revert (bad proof/signature) does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
+| 133 | **Desired Behavior:** if `Account.executeTransaction` fails after rate-limit update step, all rate-limit state changes are rolled back with full tx revert | [S] | P0 |
+| 140 | **Desired Behavior:** identical `(account, to, value, data, policyId)` executes multiple times when using different salts and fresh signatures | [I][S] | P0 |
 
 ---
 
@@ -43,6 +55,7 @@
 | 20 | Emits `AccountTransactionRejected` event with correct `(account, to, value, data, nonce, policyId)` | [EV] | P1 |
 | 21 | Execute consumes nonce, then reject with same params — reverts (shared nonce space) | [S] | P0 |
 | 22 | Reject consumes nonce, then execute with same params — reverts (shared nonce space) | [S] | P0 |
+| 132 | **Desired Behavior:** validation revert does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
 
 ---
 
@@ -69,6 +82,8 @@
 | 33 | ManualApproval policy with empty review signatures — reverts `InsufficientApprovals` | [N] | P0 |
 | 34 | Rate limit update called after approval validation for all policy types | [U] | P0 |
 | 35 | Initiator not authorized by policy — reverts `PolicyDoesNotApply` (from `isTransactionAllowedByPolicy`) | [N] | P0 |
+| 129 | **Desired Behavior:** unknown/invalid `PolicyType` value fails closed (reverts; never treated as implicit AutoApprove) | [S] | P0 |
+| 134 | **Desired Behavior:** non-empty but invalid initiator signature (malformed/wrong signer/wrong hash) reverts | [N][S] | P0 |
 
 ---
 
@@ -84,6 +99,8 @@
 | 41 | AutoApprove policy — delegates to `_validateAutoApproveRejectionOrRevert` | [U] | P0 |
 | 42 | ManualApproval policy — delegates to `_validateManualConfirmationOrRevert` with `isApproval=false` | [U] | P0 |
 | 43 | Function is `view` — no state changes (rate limits NOT updated on rejection) | [U] | P1 |
+| 130 | **Desired Behavior:** unknown/invalid `PolicyType` value fails closed (reverts; cannot silently skip checks) | [S] | P0 |
+| 135 | **Desired Behavior:** non-empty but invalid initiator signature (malformed/wrong signer/wrong hash) reverts | [N][S] | P0 |
 
 ---
 
@@ -100,6 +117,7 @@
 | 50 | `checkAndUpdateRateLimit` returns true — succeeds, usage updated in storage | [U] | P0 |
 | 51 | Native ETH transfer: `extractTransferAmount` uses `value` parameter (data is empty) | [U] | P0 |
 | 52 | ERC-20 transfer: `extractTransferAmount` reads amount from calldata | [U] | P0 |
+| 141 | **Desired Behavior:** `TransactionType.Any` with rate limiting enabled uses count-based accounting (`usageAmount = 1`) even when tx shape is token transfer | [U][S] | P0 |
 
 ---
 
@@ -128,6 +146,9 @@
 | 64 | `areApprovalsValid` returns false — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
 | 65 | Sufficient valid approvals — succeeds | [U] | P0 |
 | 66 | Different initiator signatures produce different review hashes (binding property) | [S] | P0 |
+| 136 | **Desired Behavior:** duplicate or out-of-order reviewer signers revert (not `InsufficientApprovals`) | [S] | P0 |
+| 137 | **Desired Behavior:** unauthorized reviewer signer reverts `UnauthorizedApprovalSigner` | [S] | P0 |
+| 138 | **Desired Behavior:** with `ApproverType.Group`, non-existent approver group reverts `GroupDoesNotExist` | [S] | P0 |
 
 ---
 
@@ -225,6 +246,7 @@
 | 106 | Gas parameter respected — does not forward more gas than specified | [E] | P1 |
 | 107 | Empty data with value > 0 — native ETH transfer succeeds | [U] | P0 |
 | 108 | Return data from target is not captured (assembly output size = 0) | [E] | P1 |
+| 139 | **Desired Behavior:** execution is CALL-only (no delegatecall semantics); target cannot mutate Account storage context as delegatecall would | [S] | P0 |
 
 ---
 
@@ -269,46 +291,25 @@
 
 ---
 
-## 6. Additional Desired-Behavior Gap Tests
-
-| # | Test Case | Type | Priority |
-|---|-----------|------|----------|
-| 129 | Unknown/invalid `PolicyType` value in approval path fails closed (reverts; never treated as implicit AutoApprove) | [S] | P0 |
-| 130 | Unknown/invalid `PolicyType` value in rejection path fails closed (reverts; cannot silently skip checks) | [S] | P0 |
-| 131 | `executeAccountTransaction`: pre-execution validation revert (bad proof/signature) does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
-| 132 | `rejectAccountTransaction`: validation revert does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
-| 133 | If `Account.executeTransaction` fails after rate-limit update step, all rate-limit state changes are rolled back with full tx revert | [S] | P0 |
-| 134 | Non-empty but invalid initiator signature (malformed/wrong signer/wrong hash) reverts in approval path | [N][S] | P0 |
-| 135 | Non-empty but invalid initiator signature (malformed/wrong signer/wrong hash) reverts in rejection path | [N][S] | P0 |
-| 136 | Manual approval/rejection: duplicate or out-of-order reviewer signers revert (not `InsufficientApprovals`) | [S] | P0 |
-| 137 | Manual approval/rejection: unauthorized reviewer signer reverts `UnauthorizedApprovalSigner` | [S] | P0 |
-| 138 | Manual approval/rejection with `ApproverType.Group`: non-existent approver group reverts `GroupDoesNotExist` | [S] | P0 |
-| 139 | Account execution is CALL-only (no delegatecall semantics): target cannot mutate Account storage context as delegatecall would | [S] | P0 |
-| 140 | End-to-end replay model: identical `(account, to, value, data, policyId)` executes multiple times when using different salts and fresh signatures | [I][S] | P0 |
-| 141 | `TransactionType.Any` with rate limiting enabled uses count-based accounting (`usageAmount = 1`) even when tx shape is token transfer | [U][S] | P0 |
-
----
-
 ## Summary
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `executeAccountTransaction` | 13 | P0 |
-| `rejectAccountTransaction` | 9 | P0 |
-| `validateTransactionApprovalOrRevert` | 13 | P0 |
-| `validateTransactionRejectionOrRevert` | 8 | P0 |
-| `_validateAndUpdateRateLimitOrRevert` | 9 | P0 |
+| `executeAccountTransaction` | 16 | P0 |
+| `rejectAccountTransaction` | 10 | P0 |
+| `validateTransactionApprovalOrRevert` | 15 | P0 |
+| `validateTransactionRejectionOrRevert` | 10 | P0 |
+| `_validateAndUpdateRateLimitOrRevert` | 10 | P0 |
 | `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
-| `_validateManualConfirmationOrRevert` | 7 | P0 |
+| `_validateManualConfirmationOrRevert` | 10 | P0 |
 | `_computeInitiatorHashFromParams` | 14 | P0-P1 |
 | `_computeReviewHashFromParams` | 6 | P0-P1 |
 | `receive()` | 3 | P0-P1 |
 | `executeTransaction` | 6 | P0-P1 |
 | `getOrganizationAddress` | 2 | P3 |
 | `isValidSignature` | 3 | P0 |
-| `_execute` | 8 | P0-P1 |
+| `_execute` | 9 | P0-P1 |
 | `_onlyOrganization` | 3 | P0 |
 | Fuzz tests | 11 | P0-P1 |
 | Invariant tests | 6 | P0 |
-| Additional desired-behavior gap tests | 13 | P0 |
 | **Total** | **141** | |
