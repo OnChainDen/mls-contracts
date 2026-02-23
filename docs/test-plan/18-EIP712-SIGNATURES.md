@@ -1,4 +1,4 @@
-# 19 — EIP-712 Signatures Test Plan
+# 18 — EIP-712 Signatures Test Plan
 
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationEIP712.sol`

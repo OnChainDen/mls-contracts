@@ -1,4 +1,4 @@
-# 17 — Safe Module Test Plan (Gap Analysis)
+# 16 — Safe Module Test Plan (Gap Analysis)
 
 **Files Under Test:**
 - `src/safe-module/SafeExecutorModule.sol`

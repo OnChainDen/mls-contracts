@@ -1,4 +1,4 @@
-# 23 — Admin Operation Timelock Test Plan
+# 22 — Admin Operation Timelock Test Plan
 
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationAdminOperationTimelock.sol`

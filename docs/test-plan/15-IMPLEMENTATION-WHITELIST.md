@@ -1,4 +1,4 @@
-# 16 — Implementation Whitelist Test Plan
+# 15 — Implementation Whitelist Test Plan
 
 **Files Under Test:**
 - `src/implementation-whitelist/ImplementationWhitelistImplementation.sol`

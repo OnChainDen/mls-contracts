@@ -1,4 +1,4 @@
-# 21 — Invariant Tests Plan
+# 20 — Invariant Tests Plan
 
 **Scope:** System-wide properties that must hold true across ALL states, regardless of the sequence of operations. These use Foundry's invariant testing framework with handler contracts.
 

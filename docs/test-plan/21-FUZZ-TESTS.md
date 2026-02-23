@@ -1,4 +1,4 @@
-# 22 — Fuzz Testing Strategy
+# 21 — Fuzz Testing Strategy
 
 **Scope:** Property-based testing using Foundry's built-in fuzzer. These tests complement the unit tests by exploring edge cases that manual test design might miss.
 

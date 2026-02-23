@@ -1,4 +1,4 @@
-# 13 — Transaction Recovery Test Plan
+# 12 — Transaction Recovery Test Plan
 
 **Files Under Test:**
 - `src/organization/base/OrganizationTxRecoveryBase.sol`
