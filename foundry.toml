@@ -48,6 +48,19 @@ arbitrum-sepolia = "https://rpc.ankr.com/arbitrum_sepolia"
 base-sepolia = "https://rpc.ankr.com/base_sepolia"
 optimism-sepolia = "https://rpc.ankr.com/optimism_sepolia"
 local = "localhost:8545"
+
+# Tenderly Virtual TestNets
+#
+# These aliases are what `make ... NETWORK=<alias>` uses (Makefile passes `--rpc-url $(NETWORK)`).
+# Put the values in `onchain-custody-contracts/.env` (ignored by git). Use the *last* path segment
+# of the Tenderly RPC URL (the VNet ID / API key-ish UUID), not the full URL.
+#
+# Example full RPC URL:
+#   https://virtual.base.us-east.rpc.tenderly.co/<VNET_ID>
+#
+ethereum-fork = "https://virtual.mainnet.us-east.rpc.tenderly.co/${TENDERLY_ETHEREUM_FORK_VNET_ID}"
+base-fork = "https://virtual.base.us-east.rpc.tenderly.co/${TENDERLY_BASE_FORK_VNET_ID}"
+arbitrum-fork = "https://virtual.arbitrum.us-east.rpc.tenderly.co/${TENDERLY_ARBITRUM_FORK_VNET_ID}"
 stage = "https://virtual.base.us-east.rpc.tenderly.co/${STAGE_TENDERLY_VIRTUAL_TESTNET_API_KEY}"
 
 # ==============================================================================
