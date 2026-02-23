@@ -495,7 +495,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-12 | Rejection path for manual-approval requires threshold approvals over rejection hash (`isApproval=false`) | [S] | P0 |
 | LOAT-13 | Approval signatures cannot be replayed as rejection signatures (domain separation) | [S] | P0 |
 | LOAT-14 | Private hash builders (`_computeInitiatorHashFromParams`, `_computeReviewHashFromParams`) are deterministic and bind all fields (`data`, `salt`, `policyId`, `isApproval`, `chainId`, initiator signature for review hash) | [U][S] | P0 |
-| LOAT-15 | **Desired behavior:** for `TransactionType.Any` token transfers, rate-limit usage amount is token transfer amount (not fixed `1`) | [S] | P0 |
+| LOAT-15 | **Desired behavior:** for `TransactionType.Any` token transfers, rate-limit usage is count-based (`usageAmount = 1`), not token-amount-based | [S] | P0 |
 | LOAT-16 | Pre-rate-limit validation failure (`PolicyDoesNotApply`) leaves rate-limit usage state unchanged | [S] | P0 |
 | LOAT-17 | Pre-rate-limit validation failure (`InsufficientApprovals`) leaves rate-limit usage state unchanged | [S] | P0 |
 
