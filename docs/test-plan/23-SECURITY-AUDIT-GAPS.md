@@ -2,8 +2,6 @@
 
 **Scope:** Additional tests identified through security auditor review of all source files against existing test plan. These tests cover attack vectors, edge cases, and security properties that were missing from the original plan.
 
-**Test File(s):** Distributed across existing test files. Critical gaps are flagged with `[AUDIT]` prefix.
-
 ---
 
 ## 1. Signature Binding & Replay Attacks

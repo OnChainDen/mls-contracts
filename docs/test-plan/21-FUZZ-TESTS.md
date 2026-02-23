@@ -2,8 +2,6 @@
 
 **Scope:** Property-based testing using Foundry's built-in fuzzer. These tests complement the unit tests by exploring edge cases that manual test design might miss.
 
-**Test File(s):** Fuzz tests are embedded in each module's test file. This document defines the cross-cutting fuzz strategy.
-
 ---
 
 ## Fuzz Test Design Principles

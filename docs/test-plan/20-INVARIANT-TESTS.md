@@ -2,8 +2,6 @@
 
 **Scope:** System-wide properties that must hold true across ALL states, regardless of the sequence of operations. These use Foundry's invariant testing framework with handler contracts.
 
-**Test File(s):** `test/invariant/InvariantOrganization.t.sol`, `test/invariant/handlers/OrganizationHandler.sol`
-
 ---
 
 ## Handler Design

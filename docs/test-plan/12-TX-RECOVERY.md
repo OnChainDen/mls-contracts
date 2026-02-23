@@ -3,11 +3,8 @@
 **Files Under Test:**
 - `src/organization/base/OrganizationTxRecoveryBase.sol`
 - `src/organization/libraries/LibOrganizationTxRecovery.sol`
-- `src/interfaces/organization/IOrganizationTxRecovery.sol`
 
 **Existing Tests:** `test/LibOrganizationTxRecovery.t.sol` (35 tests)
-
-**Test File(s):** Existing file + `test/OrganizationTxRecoveryBase.t.sol`
 
 ---
 

@@ -5,10 +5,6 @@
 - `src/organization/base/OrganizationInitializationBase.sol`
 - `src/organization/OrganizationFactory.sol`
 - `src/organization/OrganizationProxy.sol`
-- `src/interfaces/organization/IOrganizationInitialization.sol`
-- `src/interfaces/IOrganizationFactory.sol`
-
-**Test File(s):** `test/OrganizationInitialization.t.sol`, `test/OrganizationFactory.t.sol`
 
 ---
 

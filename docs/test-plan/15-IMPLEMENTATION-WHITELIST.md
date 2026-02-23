@@ -3,10 +3,6 @@
 **Files Under Test:**
 - `src/implementation-whitelist/ImplementationWhitelistImplementation.sol`
 - `src/implementation-whitelist/ImplementationWhitelistProxy.sol`
-- `src/implementation-whitelist/libraries/storage/LibImplementationWhitelistStorage.sol`
-- `src/interfaces/IImplementationWhitelist.sol`
-
-**Test File(s):** `test/ImplementationWhitelist.t.sol`
 
 ---
 

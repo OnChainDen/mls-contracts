@@ -2,8 +2,6 @@
 
 **Scope:** End-to-end flows across multiple contracts and modules, tested through a fully deployed Organization with Accounts.
 
-**Test File(s):** `test/integration/OrganizationLifecycle.t.sol`, `test/integration/TransactionFlows.t.sol`, `test/integration/RecoveryFlows.t.sol`, `test/integration/UpgradeFlows.t.sol`
-
 ---
 
 ## Test Infrastructure Required

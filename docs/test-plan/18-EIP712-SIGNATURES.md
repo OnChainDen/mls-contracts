@@ -3,8 +3,6 @@
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationEIP712.sol`
 
-**Test File(s):** `test/LibOrganizationEIP712.t.sol`
-
 ---
 
 ## 1. Domain Separator

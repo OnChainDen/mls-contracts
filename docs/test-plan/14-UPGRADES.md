@@ -2,10 +2,7 @@
 
 **Files Under Test:**
 - `src/organization/OrganizationImplementation.sol` (upgrade functions)
-- `src/organization/libraries/storage/LibOrganizationUpgradeStorage.sol`
 - `src/implementation-whitelist/ImplementationWhitelistImplementation.sol`
-
-**Test File(s):** `test/OrganizationUpgrade.t.sol`
 
 ---
 

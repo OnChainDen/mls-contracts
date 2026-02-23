@@ -3,12 +3,8 @@
 **Files Under Test:**
 - `src/safe-module/SafeExecutorModule.sol`
 - `src/safe-module/BatchedTransaction.sol`
-- `src/interfaces/ISafeExecutorModule.sol`
-- `src/interfaces/IBatchedTransaction.sol`
 
 **Existing Tests:** `test/safe-module/SafeExecutorModule.t.sol` (32 tests), `test/safe-module/BatchedTransaction.t.sol` (22 tests)
-
-**Test File(s):** Existing files (gap additions)
 
 ---
 

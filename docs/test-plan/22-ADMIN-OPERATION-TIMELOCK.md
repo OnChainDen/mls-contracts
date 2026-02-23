@@ -3,10 +3,6 @@
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationAdminOperationTimelock.sol`
 - `src/organization/base/OrganizationAdminOperationTimelockBase.sol`
-- `src/organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol`
-- `src/interfaces/organization/IOrganizationAdminOperationTimelock.sol`
-
-**Test File(s):** `test/LibOrganizationAdminOperationTimelock.t.sol`
 
 ---
 

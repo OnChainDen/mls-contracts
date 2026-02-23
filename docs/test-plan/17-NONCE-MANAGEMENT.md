@@ -3,10 +3,6 @@
 **Files Under Test:**
 - `src/organization/libraries/LibOrganizationSignatures.sol`
 - `src/organization/base/OrganizationSignaturesBase.sol`
-- `src/organization/libraries/storage/LibOrganizationSignaturesStorage.sol`
-- `src/interfaces/organization/IOrganizationSignatures.sol`
-
-**Test File(s):** `test/LibOrganizationSignatures.t.sol`
 
 ---
 
