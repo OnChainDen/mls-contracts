@@ -1,4 +1,4 @@
-# 10 — Account Factory Test Plan
+# 09 — Account Factory Test Plan
 
 **Files Under Test:**
 - `src/organization/base/OrganizationAccountFactoryBase.sol`
