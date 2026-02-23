@@ -3,9 +3,7 @@
 **Files Under Test:**
 - `src/organization/base/OrganizationGuardianBase.sol`
 - `src/organization/libraries/LibOrganizationGuardian.sol`
-- `src/interfaces/organization/IOrganizationGuardian.sol`
 
-**Test File(s):** `test/OrganizationGuardianBase.t.sol`, `test/LibOrganizationGuardian.t.sol`
 
 ---
 
