@@ -315,7 +315,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         });
     }
 
-    /// @dev Verifies that a valid signature from a signer who is neither admin nor member reverts with `SignerIsNotAdmin`.
+    /// @dev Verifies that a valid signature from a signer who is neither admin nor member reverts with
+    /// `SignerIsNotAdmin`.
     function test_validateAdminAuth_nonAdminNonMemberSigner_revertsSignerIsNotAdmin() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
