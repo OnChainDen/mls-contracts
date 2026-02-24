@@ -175,16 +175,17 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPA-3 | Member approver: non-authorized signer reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
 | LPA-4 | Member approver: signer not in org reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
 | LPA-5 | Group approver: threshold `N` with exactly `N` valid sorted signatures returns `true` | [U] | P0 |
-| LPA-6 | Group approver: fewer than threshold valid signatures returns `false` | [N] | P0 |
-| LPA-7 | Group approver: signer in org but not in approver group reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
-| LPA-8 | Group approver: non-existent group reverts `GroupDoesNotExist` | [N] | P0 |
-| LPA-9 | Duplicate signer reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
-| LPA-10 | Out-of-order signer sequence reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
-| LPA-11 | Malformed packed signature data bubbles signature recovery revert | [N][S] | P0 |
-| LPA-12 | Mixed EOA + ERC-1271 signers (sorted by signer address) are supported | [U][S] | P0 |
-| LPA-13 | Early-exit behavior: once threshold met, additional trailing signatures are not required for success | [E] | P1 |
-| LPA-14 | **Desired behavior:** group threshold `0` is invalid and should fail closed (false or explicit revert) | [S] | P0 |
-| LPA-15 | Deterministic output for same inputs and unchanged membership/group state | [U] | P2 |
+| LPA-6 | Group approver: threshold `1` with `2` valid sorted signatures returns `true` (more-than-threshold accepted) | [U][E] | P1 |
+| LPA-7 | Group approver: fewer than threshold valid signatures returns `false` | [N] | P0 |
+| LPA-8 | Group approver: signer in org but not in approver group reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
+| LPA-9 | Group approver: non-existent group reverts `GroupDoesNotExist` | [N] | P0 |
+| LPA-10 | Duplicate signer reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
+| LPA-11 | Out-of-order signer sequence reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
+| LPA-12 | Malformed packed signature data bubbles signature recovery revert | [N][S] | P0 |
+| LPA-13 | Mixed EOA + ERC-1271 signers (sorted by signer address) are supported | [U][S] | P0 |
+| LPA-14 | Early-exit behavior: threshold met before trailing malformed bytes still returns `true` (trailing bytes are not parsed) | [E][S] | P1 |
+| LPA-15 | **Desired behavior:** group threshold `0` is invalid and should fail closed (false or explicit revert) | [S] | P0 |
+| LPA-16 | Deterministic output for same inputs and unchanged membership/group state | [U] | P2 |
 
 ### 4.2 `getRequiredApprovals(Policy policy)`
 
