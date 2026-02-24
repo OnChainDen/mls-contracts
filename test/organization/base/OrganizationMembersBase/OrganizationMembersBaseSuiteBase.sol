@@ -49,4 +49,29 @@ abstract contract OrganizationMembersBaseSuiteBase is OrganizationAdminTestBase 
             privateKeys: privateKeys
         });
     }
+
+    /**
+     * @dev Builds auth for `modifyAdmins` using base contract operation-data encoding.
+     */
+    function _buildModifyAdminsAuth(
+        address[] memory adminsToAdd,
+        address[] memory adminsToRemove,
+        uint256 newVotingThreshold,
+        uint256 salt,
+        uint256 expiration,
+        bool isApproval,
+        uint256[] memory privateKeys
+    ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
+        // OrganizationAdminBase signs hashes of arrays + threshold, not raw arrays directly.
+        operationData = _encodeOperationDataForModifyAdmins(adminsToAdd, adminsToRemove, newVotingThreshold);
+        // Build signatures against the exact base-contract payload encoding.
+        auth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            isApproval: isApproval,
+            salt: salt,
+            expirationTimestamp: expiration,
+            privateKeys: privateKeys
+        });
+    }
 }
