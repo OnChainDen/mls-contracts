@@ -112,6 +112,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-TX-16 | **Desired behavior:** malformed token-transfer calldata fails closed (`false`) in policy-validation path | [S] | P0 |
 | LOP-TX-17 | No partial success: all required sub-checks must pass for `true` | [U] | P0 |
 | LOP-TX-18 | Deterministic result for same inputs and unchanged state | [U] | P2 |
+| LOP-TX-19 | Single-policy-tree case: empty `policyProof` is accepted when `policiesRoot` equals the computed policy leaf (otherwise-valid transaction returns `true`) | [E] | P1 |
+| LOP-TX-20 | Single-destination-tree case (`DestinationType.CustomList`): empty `destinationProof` is accepted when destination root equals destination leaf (otherwise-valid transaction returns `true`) | [E] | P1 |
 
 ### 2.4 `isSourceAccountAllowedByPolicy(Policy policy, address sourceAccount, bytes32[] sourceAccountProof)`
 
@@ -121,7 +123,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-SRC-2 | Specific-source mode: valid account proof returns `true` | [U] | P0 |
 | LOP-SRC-3 | Specific-source mode: invalid proof returns `false` | [N] | P0 |
 | LOP-SRC-4 | Specific-source mode: proof for different account returns `false` | [S] | P0 |
-| LOP-SRC-5 | Unknown destination root / empty proof in specific-source mode fails closed | [N] | P1 |
+| LOP-SRC-5 | Unknown source-account root in specific-source mode fails closed | [N] | P1 |
+| LOP-SRC-6 | Empty proof only valid for single-leaf source-account tree case | [E] | P1 |
 
 ### 2.5 Wrapper passthroughs (`areApprovalsValid`, `computeTimeWindow`, `getCurrentUsage`, `isInitiatorAuthorized`, `getRequiredApprovals`, `getActualDestination`, `computeUsageKey`, `checkAndUpdateRateLimit`)
 
