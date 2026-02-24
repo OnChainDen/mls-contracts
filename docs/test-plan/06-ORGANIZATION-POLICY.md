@@ -114,6 +114,14 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-TX-18 | Deterministic result for same inputs and unchanged state | [U] | P2 |
 | LOP-TX-19 | Single-policy-tree case: empty `policyProof` is accepted when `policiesRoot` equals the computed policy leaf (otherwise-valid transaction returns `true`) | [E] | P1 |
 | LOP-TX-20 | Single-destination-tree case (`DestinationType.CustomList`): empty `destinationProof` is accepted when destination root equals destination leaf (otherwise-valid transaction returns `true`) | [E] | P1 |
+| LOP-TX-21 | `TransactionType.TokenTransfers`: ERC-20 `transfer` selector with calldata `< 68` bytes is rejected (`false`) | [S] | P0 |
+| LOP-TX-22 | `TransactionType.TokenTransfers`: ERC-20-like calldata with non-zero top-level `value` is rejected (`false`) | [S] | P0 |
+| LOP-TX-23 | `TransactionType.TokenTransfers`: ERC-20 `approve(address,uint256)` calldata with `value == 0` is rejected (`false`) | [S] | P0 |
+| LOP-TX-24 | `TransactionType.TokenTransfers`: ERC-20 `transferFrom(address,address,uint256)` calldata with `value == 0` is rejected (`false`) | [S] | P0 |
+| LOP-TX-25 | `TransactionType.TokenTransfers`: selector-only calldata (`transfer` selector, 4 bytes total) is rejected (`false`) | [S] | P0 |
+| LOP-TX-26 | `TransactionType.TokenTransfers`: calldata shorter than selector (`data.length < 4`) is rejected (`false`) | [S] | P0 |
+| LOP-TX-27 | `TransactionType.TokenTransfers`: zero-data zero-value transaction is rejected (`false`) | [E][S] | P0 |
+| LOP-TX-28 | Fuzz: `TransactionType.TokenTransfers` rejects random non-`transfer` selectors (68-byte payload, `value == 0`) | [F][S] | P1 |
 
 ### 2.4 `isSourceAccountAllowedByPolicy(Policy policy, address sourceAccount, bytes32[] sourceAccountProof)`
 
@@ -221,6 +229,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPD-GAD-4 | ERC-20 transfer selector + non-zero native `value` is treated as non-token interaction and returns `to` | [E] | P1 |
 | LPD-GAD-5 | Zero-value empty-data transaction returns `to` (not a transfer, but destination is still `to`) | [E] | P2 |
 | LPD-GAD-6 | **Desired behavior:** malformed transfer calldata fails closed without ambiguous destination | [S] | P1 |
+| LPD-GAD-7 | ERC-20 `transfer` selector with calldata `< 68` bytes is treated as non-token interaction and returns `to` | [E] | P1 |
 
 ### 5.2 `isDestinationAllowedByPolicy(...)`
 
@@ -235,6 +244,13 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPD-ALW-7 | Unknown/invalid destination enum fails closed (`false`) | [S] | P0 |
 | LPD-ALW-8 | Empty proof only valid for single-leaf destination tree case | [E] | P1 |
 | LPD-ALW-9 | Deterministic result for same inputs | [U] | P2 |
+| LPD-ALW-10 | `CustomList`: ERC-20 `transfer` selector with calldata `< 68` bytes checks `to` (token contract) as destination; proof for encoded recipient does not authorize | [S] | P0 |
+| LPD-ALW-11 | `CustomList`: ERC-20-like calldata with non-zero top-level `value` checks `to` (token contract) as destination; proof for transfer recipient does not authorize | [S] | P0 |
+| LPD-ALW-12 | `CustomList`: `approve(address,uint256)` interaction checks `to`; proof for encoded spender does not authorize | [S] | P0 |
+| LPD-ALW-13 | `CustomList`: `transferFrom(address,address,uint256)` interaction checks `to`; proof for encoded `from`/`to` parameters does not authorize | [S] | P0 |
+| LPD-ALW-14 | `CustomList`: selector-only `transfer` calldata checks `to`; proof for intended recipient does not authorize | [S] | P0 |
+| LPD-ALW-15 | `CustomList`: calldata shorter than selector (`data.length < 4`) checks `to`; proof for unrelated address does not authorize | [S] | P1 |
+| LPD-ALW-16 | `CustomList`: zero-data zero-value transaction checks `to`; proof for unrelated address does not authorize | [E][S] | P1 |
 
 ---
 
