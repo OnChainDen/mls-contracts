@@ -315,8 +315,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         });
     }
 
-    /// @dev Verifies that a valid signature from a non-admin signer reverts with `SignerIsNotAdmin`.
-    function test_validateAdminAuth_nonAdminSigner_revertsSignerIsNotAdmin() public {
+    /// @dev Verifies that a valid signature from a signer who is neither admin nor member reverts with `SignerIsNotAdmin`.
+    function test_validateAdminAuth_nonAdminNonMemberSigner_revertsSignerIsNotAdmin() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -337,6 +337,36 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         // Verify: confirm this branch reverts for the intended failure condition.
 
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, nonAdminSigner));
+        // Call: run `validateAdminAuthAndConsumeNonceOrRevert` for the prepared operation payload and auth params.
+        harness.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            isApproval: true,
+            authParams: auth
+        });
+    }
+
+    /// @dev Verifies that a valid signature from a member who is not an admin reverts with `SignerIsNotAdmin`.
+    function test_validateAdminAuth_nonAdminMemberSigner_revertsSignerIsNotAdmin() public {
+        // Setup: configure members, admins, and voting threshold for the branch being exercised.
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1), threshold: 1});
+
+        uint256 salt = 20;
+        uint256 expiration = block.timestamp + 1 hours;
+
+        bytes32 operationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            salt: salt,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+        bytes memory sig = _signHash(ADMIN_PK_2, operationHash);
+        AdminAuthParams memory auth = AdminAuthParams({salt: salt, expirationTimestamp: expiration, signatures: sig});
+
+        // Verify: confirm this branch reverts for the intended failure condition.
+
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, admin2));
         // Call: run `validateAdminAuthAndConsumeNonceOrRevert` for the prepared operation payload and auth params.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
