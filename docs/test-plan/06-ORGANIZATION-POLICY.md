@@ -41,6 +41,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | OPB-SET-8 | `newPoliciesRoot == bytes32(0)` is allowed and clears policy tree | [E] | P0 |
 | OPB-SET-9 | Empty `ipfsCid` is allowed (still emits event) | [E] | P1 |
 | OPB-SET-10 | Failed auth attempt must not consume nonce (same salt can later succeed with valid signatures) | [S] | P0 |
+| OPB-SET-11 | Transition check: set valid non-zero root `R1` then clear to `bytes32(0)`; previously valid `getPolicyUsage` proof must revert `PolicyVerificationFailed` (no stale-root reads) | [E][S] | P0 |
+| OPB-SET-12 | Hardening transition: set `R1`, clear to `0`, then set `R2`; proofs from `R1` must fail while proofs from `R2` succeed | [E][S] | P0 |
 
 ### 1.2 `policiesRoot()`
 
@@ -498,6 +500,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-15 | **Desired behavior:** for `TransactionType.Any` token transfers, rate-limit usage is count-based (`usageAmount = 1`), not token-amount-based | [S] | P0 |
 | LOAT-16 | Pre-rate-limit validation failure (`PolicyDoesNotApply`) leaves rate-limit usage state unchanged | [S] | P0 |
 | LOAT-17 | Pre-rate-limit validation failure (`InsufficientApprovals`) leaves rate-limit usage state unchanged | [S] | P0 |
+| LOAT-18 | Root transition guard: after policy succeeds under `R1`, clearing root to `0` makes same transaction + old proofs revert `PolicyDoesNotApply` (no stale-root authorization) | [S] | P0 |
 
 ### 10.2 File: `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
@@ -521,6 +524,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-14 | Private hash builders (`_getInitiatorSignatureHash`, `_getReviewSignatureHash`) are deterministic and field-bound | [U][S] | P1 |
 | LOAS-15 | **Desired behavior:** malformed policy `signatureData` payload returns ERC-1271 invalid value (fail closed) and does not revert | [S] | P0 |
 | LOAS-16 | **Desired behavior:** manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
+| LOAS-17 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
 
 ---
 
