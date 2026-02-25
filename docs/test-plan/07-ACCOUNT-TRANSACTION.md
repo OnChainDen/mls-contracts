@@ -198,7 +198,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 82 | Additionally includes `keccak256(initiatorSignature)` | [S] | P0 |
 | 83 | Different initiator signatures → different review hashes | [S] | P0 |
 | 84 | Uses `REVIEW_ACCOUNT_TRANSACTION_TYPEHASH` (distinct from initiator typehash) | [U] | P1 |
-| 85 | `isApproval=true` vs `isApproval=false` → different hashes | [S] | P0 |
+| 85 | `isApproval=true` vs `isApproval=false` → different hashes | [F][S] | P0 |
 | 86 | Golden test: known inputs → known hash (precomputed off-chain) | [U] | P0 |
 
 ---
