@@ -522,6 +522,11 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-16 | Pre-rate-limit validation failure (`PolicyDoesNotApply`) leaves rate-limit usage state unchanged | [S] | P0 |
 | LOAT-17 | Pre-rate-limit validation failure (`InsufficientApprovals`) leaves rate-limit usage state unchanged | [S] | P0 |
 | LOAT-18 | Root transition guard: after policy succeeds under `R1`, clearing root to `0` makes same transaction + old proofs revert `PolicyDoesNotApply` (no stale-root authorization) | [S] | P0 |
+| LOAT-19 | Branch comparison: with identical transaction/policy inputs except `approval.policyType`, `AutoApprove` succeeds without reviewer signatures while `RequireManualApproval` reverts `InsufficientApprovals` | [U][S] | P0 |
+| LOAT-20 | Invalid `approval.policyType` enum value in calldata/proofs fails closed (revert) and cannot silently bypass manual-approval checks | [N][S] | P0 |
+| LOAT-21 | Branch comparison (inverted setup): with identical transaction/policy inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid threshold reviewer approvals, and flipping to `AutoApprove` also succeeds with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
+| LOAT-22 | Rejection branch comparison: with identical rejection inputs except `approval.policyType`, `AutoApprove` succeeds with an authorized initiator rejection signature while `RequireManualApproval` reverts `InsufficientApprovals` for the same payload | [U][S] | P0 |
+| LOAT-23 | Rejection branch comparison (inverted setup): with identical rejection inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid reviewer approvals, while `AutoApprove` rejects the same reviewer-signature payload via `TransactionRejectionNotAllowed` (reviewer is not an authorized initiator) | [U][S] | P1 |
 
 ### 10.2 File: `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
@@ -546,6 +551,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-15 | **Desired behavior:** malformed policy `signatureData` payload returns ERC-1271 invalid value (fail closed) and does not revert | [S] | P0 |
 | LOAS-16 | **Desired behavior:** manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
 | LOAS-17 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
+| LOAS-18 | Branch comparison: with identical signature payload except `approval.policyType` and empty `reviewSignatures`, `AutoApprove` returns ERC-1271 magic value while `RequireManualApproval` returns ERC-1271 invalid value | [U][S] | P0 |
+| LOAS-19 | Branch comparison (inverted setup): with identical signature payload except `approval.policyType` and valid reviewer approvals, `RequireManualApproval` returns ERC-1271 magic value and flipping to `AutoApprove` also returns magic value with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
 
 ---
 
