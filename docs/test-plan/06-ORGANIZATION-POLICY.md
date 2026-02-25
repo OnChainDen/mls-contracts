@@ -372,6 +372,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-DISP-6 | Address `OneOf` path validates Merkle proof against decoded root | [U] | P0 |
 | LPPC-DISP-7 | Bytes/string path uses dynamic offset and content hashing correctly | [U] | P0 |
 | LPPC-DISP-8 | **Desired behavior:** invalid dynamic offset fails closed (`false`) | [S] | P0 |
+| LPPC-DISP-9 | Unknown/invalid `ConstraintType` value fails closed (`false`) for all supported `ParamType` dispatch paths | [S] | P0 |
 
 ### 8.4 `_isBoolParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -450,7 +451,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LPRL-UPD-1 | `limitType != TimeInterval` returns `true` and does not write usage | [U] | P0 |
+| LPRL-UPD-1 | `limitType == RateLimitType.None` returns `true` and does not write usage | [U] | P0 |
 | LPRL-UPD-2 | `timeIntervalHours == 0` returns `true` and does not write usage | [U] | P0 |
 | LPRL-UPD-3 | Usage below limit returns `true` and writes updated usage | [U] | P0 |
 | LPRL-UPD-4 | Usage exactly at limit returns `true` and writes updated usage | [U] | P0 |
@@ -462,6 +463,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPRL-UPD-10 | **Desired behavior:** `currentUsage + usageAmount` overflow fails closed (`false`) rather than revert | [S] | P0 |
 | LPRL-UPD-11 | `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and keeps usage unchanged | [E] | P1 |
 | LPRL-UPD-12 | `timeIntervalLimit == 0` and `usageAmount > 0` returns `false` and does not mutate usage | [N] | P0 |
+| LPRL-UPD-13 | **Desired behavior:** unknown/invalid `RateLimitType` fails closed (`false`) and does not write usage | [S] | P0 |
 
 ### 9.2 `computeTimeWindow(Policy policy)`
 
@@ -492,7 +494,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPRL-KEY-5 | Different `policyId` always yields different keys | [S] | P0 |
 | LPRL-KEY-6 | Mixed scope combinations produce expected collisions/separations | [U] | P1 |
 | LPRL-KEY-7 | Deterministic output for identical inputs | [U] | P2 |
-| LPRL-KEY-8 | Invalid scope enum values fail closed by treating scope as `AcrossAll` | [S] | P1 |
+| LPRL-KEY-8 | Invalid `RateLimitScope` value in any scope dimension fails closed by treating that dimension as `AcrossAll` | [S] | P1 |
 
 ---
 
@@ -529,6 +531,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-23 | Rejection branch comparison (inverted setup): with identical rejection inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid reviewer approvals, while `AutoApprove` rejects the same reviewer-signature payload via `TransactionRejectionNotAllowed` (reviewer is not an authorized initiator) | [U][S] | P1 |
 | LOAT-24 | Cross-chain replay protection (initiator): initiator signature signed for chain A cannot authorize the same transaction on chain B | [S] | P0 |
 | LOAT-25 | Cross-chain replay protection (reviewers): reviewer approval/rejection signatures signed for chain A cannot be replayed on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
+| LOAT-26 | **Desired behavior:** invalid `rateLimit.limitType` enum value in calldata/proofs fails closed (revert) and cannot bypass rate-limit enforcement | [N][S] | P0 |
 
 ### 10.2 File: `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
@@ -590,7 +593,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-4 | For active time window and usage key, usage is monotonic non-decreasing on successful updates | P0 |
 | POL-I-5 | Exceeded rate limit never mutates usage | P0 |
 | POL-I-6 | Manual-approval policies can never pass with fewer than required valid approvals | P0 |
-| POL-I-7 | Unknown enum values across policy validation paths fail closed | P0 |
+| POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` fail closed across policy validation paths | P0 |
 | POL-I-8 | **Desired behavior:** `anyInitiator` does not authorize non-members | P0 |
 | POL-I-9 | **Desired behavior:** token amount threshold acts as inclusive max (`<=`) | P0 |
 | POL-I-10 | **Desired behavior:** malformed constraint payloads fail closed without unexpected reverts in policy-check paths | P0 |
