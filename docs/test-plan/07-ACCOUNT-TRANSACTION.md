@@ -249,6 +249,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 98 | Delegates to `Organization.isValidSignatureForAccount(address(this), hash, signature)` | [U] | P0 |
 | 99 | Returns ERC-1271 magic value when Organization approves | [U] | P0 |
 | 100 | Returns non-magic value when Organization rejects | [N] | P0 |
+| 100.1 | Fuzz: `isValidSignature` is callable by anyone (no access restriction on caller) | [F] | P0 |
 
 ---
 
@@ -326,7 +327,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `receive()` | 3 | P0-P1 |
 | `executeTransaction` | 7 | P0-P1 |
 | `getOrganizationAddress` | 2 | P3 |
-| `isValidSignature` | 3 | P0 |
+| `isValidSignature` | 4 | P0 |
 | `_execute` | 9 | P0-P1 |
 | `_onlyOrganization` | 4 | P0 |
 | Fuzz tests | 11 | P0-P1 |
