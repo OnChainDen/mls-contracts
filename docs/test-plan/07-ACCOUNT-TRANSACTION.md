@@ -1,4 +1,4 @@
-# 08 — Account Transaction Test Plan
+# 07 — Account Transaction Test Plan
 
 **Files Under Test:**
 - `src/organization/base/OrganizationAccountTransactionBase.sol`
