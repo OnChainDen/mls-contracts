@@ -541,22 +541,28 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-3 | Missing or invalid initiator signature returns invalid value | [N] | P0 |
 | LOAS-4 | Invalid guardian signature returns invalid value | [N][S] | P0 |
 | LOAS-5 | Enabled guardian module signature is accepted as guardian authorization | [U][S] | P0 |
-| LOAS-6 | Policy proof invalid returns invalid value | [N][S] | P0 |
-| LOAS-7 | Non-`TransactionType.Signatures` policy returns invalid value | [S] | P0 |
-| LOAS-8 | Source account not allowed by policy returns invalid value | [N][S] | P0 |
-| LOAS-9 | Unauthorized initiator returns invalid value | [N][S] | P0 |
-| LOAS-10 | Auto-approve signature policy succeeds without reviewer signatures once guardian + initiator checks pass | [U] | P0 |
-| LOAS-11 | Manual-approval signature policy requires valid reviewer approvals; insufficient approvals return invalid value | [N] | P0 |
-| LOAS-12 | Reviewer approvals are bound to initiator signature (`reviewHash` includes `keccak256(initiatorSignature)`) | [S] | P0 |
-| LOAS-13 | Private helper `_isERC1271SignatureAllowedByPolicy` fails closed for any failed sub-check | [S] | P0 |
-| LOAS-14 | Private hash builders (`_getInitiatorSignatureHash`, `_getReviewSignatureHash`) are deterministic and field-bound | [U][S] | P1 |
-| LOAS-15 | **Desired behavior:** malformed policy `signatureData` payload returns ERC-1271 invalid value (fail closed) and does not revert | [S] | P0 |
-| LOAS-16 | **Desired behavior:** manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
-| LOAS-17 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
-| LOAS-18 | Branch comparison: with identical signature payload except `approval.policyType` and empty `reviewSignatures`, `AutoApprove` returns ERC-1271 magic value while `RequireManualApproval` returns ERC-1271 invalid value | [U][S] | P0 |
-| LOAS-19 | Branch comparison (inverted setup): with identical signature payload except `approval.policyType` and valid reviewer approvals, `RequireManualApproval` returns ERC-1271 magic value and flipping to `AutoApprove` also returns magic value with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
-| LOAS-20 | Cross-chain replay protection (initiator): policy-based initiator signature signed for chain A returns ERC-1271 invalid value on chain B | [S] | P0 |
-| LOAS-21 | Cross-chain replay protection (guardian/reviewers): guardian and reviewer signatures signed for chain A return ERC-1271 invalid value on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
+| LOAS-6 | Guardian module signature from a signer that is not enabled on the guardian Safe returns invalid value | [N][S] | P0 |
+| LOAS-7 | Guardian is not a Safe; module-signer authorization path fails closed and returns invalid value | [N][S] | P0 |
+| LOAS-8 | Guardian `isModuleEnabled` response malformed/too short fails closed and returns invalid value | [N][S] | P0 |
+| LOAS-9 | Policy proof invalid returns invalid value | [N][S] | P0 |
+| LOAS-10 | Non-`TransactionType.Signatures` policy returns invalid value | [S] | P0 |
+| LOAS-11 | Source account not allowed by policy returns invalid value | [N][S] | P0 |
+| LOAS-12 | Unauthorized initiator returns invalid value | [N][S] | P0 |
+| LOAS-13 | Auto-approve signature policy succeeds without reviewer signatures once guardian + initiator checks pass | [U] | P0 |
+| LOAS-14 | Manual-approval signature policy requires valid reviewer approvals; insufficient approvals return invalid value | [N] | P0 |
+| LOAS-15 | Reviewer approvals are bound to initiator signature (`reviewHash` includes `keccak256(initiatorSignature)`) | [S] | P0 |
+| LOAS-16 | Private helper `_isERC1271SignatureAllowedByPolicy` fails closed for any failed sub-check | [S] | P0 |
+| LOAS-17 | Private hash builders (`_getInitiatorSignatureHash`, `_getReviewSignatureHash`) are deterministic and field-bound | [U][S] | P1 |
+| LOAS-18 | **Desired behavior:** malformed policy `signatureData` payload returns ERC-1271 invalid value (fail closed) and does not revert | [S] | P0 |
+| LOAS-19 | **Desired behavior:** manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
+| LOAS-20 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
+| LOAS-21 | Branch comparison: with identical signature payload except `approval.policyType` and empty `reviewSignatures`, `AutoApprove` returns ERC-1271 magic value while `RequireManualApproval` returns ERC-1271 invalid value | [U][S] | P0 |
+| LOAS-22 | Branch comparison (inverted setup): with identical signature payload except `approval.policyType` and valid reviewer approvals, `RequireManualApproval` returns ERC-1271 magic value and flipping to `AutoApprove` also returns magic value with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
+| LOAS-23 | Cross-chain replay protection (initiator): policy-based initiator signature signed for chain A returns ERC-1271 invalid value on chain B | [S] | P0 |
+| LOAS-24 | Cross-chain replay protection (guardian/reviewers): guardian and reviewer signatures signed for chain A return ERC-1271 invalid value on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
+| LOAS-25 | Empty top-level signature bytes (`signature.length == 0`) returns ERC-1271 invalid value | [N] | P0 |
+| LOAS-26 | Unknown signature type prefix (not `0x00` recovery or `0x01` policy) returns ERC-1271 invalid value | [N][S] | P0 |
+| LOAS-27 | Invalid `approval.policyType` enum value in provided policy proof fails closed and returns ERC-1271 invalid value | [N][S] | P0 |
 
 ---
 
