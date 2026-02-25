@@ -63,6 +63,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | OPB-USAGE-6 | Usage is key-scoped correctly by account/destination/initiator scope configuration | [U] | P1 |
 | OPB-USAGE-7 | Usage reflects window rollover (old window not counted in new window) | [U][E] | P1 |
 | OPB-USAGE-8 | View call does not mutate state | [I] | P2 |
+| OPB-USAGE-9 | Root-rotation read guard: set valid root `R1`, confirm read with `R1` proof succeeds, set different non-zero root `R2`, then same read with stale `R1` proof reverts `PolicyVerificationFailed` while `R2` proof succeeds | [E][S] | P0 |
 
 ---
 
