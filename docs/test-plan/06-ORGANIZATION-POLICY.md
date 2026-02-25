@@ -527,6 +527,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-21 | Branch comparison (inverted setup): with identical transaction/policy inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid threshold reviewer approvals, and flipping to `AutoApprove` also succeeds with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
 | LOAT-22 | Rejection branch comparison: with identical rejection inputs except `approval.policyType`, `AutoApprove` succeeds with an authorized initiator rejection signature while `RequireManualApproval` reverts `InsufficientApprovals` for the same payload | [U][S] | P0 |
 | LOAT-23 | Rejection branch comparison (inverted setup): with identical rejection inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid reviewer approvals, while `AutoApprove` rejects the same reviewer-signature payload via `TransactionRejectionNotAllowed` (reviewer is not an authorized initiator) | [U][S] | P1 |
+| LOAT-24 | Cross-chain replay protection (initiator): initiator signature signed for chain A cannot authorize the same transaction on chain B | [S] | P0 |
+| LOAT-25 | Cross-chain replay protection (reviewers): reviewer approval/rejection signatures signed for chain A cannot be replayed on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
 
 ### 10.2 File: `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
@@ -553,6 +555,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-17 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
 | LOAS-18 | Branch comparison: with identical signature payload except `approval.policyType` and empty `reviewSignatures`, `AutoApprove` returns ERC-1271 magic value while `RequireManualApproval` returns ERC-1271 invalid value | [U][S] | P0 |
 | LOAS-19 | Branch comparison (inverted setup): with identical signature payload except `approval.policyType` and valid reviewer approvals, `RequireManualApproval` returns ERC-1271 magic value and flipping to `AutoApprove` also returns magic value with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
+| LOAS-20 | Cross-chain replay protection (initiator): policy-based initiator signature signed for chain A returns ERC-1271 invalid value on chain B | [S] | P0 |
+| LOAS-21 | Cross-chain replay protection (guardian/reviewers): guardian and reviewer signatures signed for chain A return ERC-1271 invalid value on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
 
 ---
 
