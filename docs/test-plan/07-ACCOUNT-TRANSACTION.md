@@ -95,6 +95,7 @@ All `private` functions in the files under test will be refactored to `internal`
 |---|-----------|------|----------|
 | 36 | Expired transaction — reverts `TransactionExpired` | [N] | P0 |
 | 37 | Expiration at exactly `block.timestamp` — succeeds (strict `>`) | [E] | P0 |
+| 146 | Expiration at `block.timestamp - 1` — reverts `TransactionExpired` | [E] | P0 |
 | 38 | Empty initiator signature — reverts `InsufficientSignaturesLength` | [N] | P0 |
 | 39 | Initiator hash computed with `isApproval=true` (original approval signature used) | [S] | P0 |
 | 144 | Initiator signer recovered correctly from EOA signature (rejection flow) | [U] | P0 |
@@ -302,7 +303,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `executeAccountTransaction` | 18 | P0 |
 | `rejectAccountTransaction` | 10 | P0 |
 | `validateTransactionApprovalOrRevert` | 15 | P0 |
-| `validateTransactionRejectionOrRevert` | 12 | P0 |
+| `validateTransactionRejectionOrRevert` | 13 | P0 |
 | `_validateAndUpdateRateLimitOrRevert` | 10 | P0 |
 | `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
 | `_validateManualConfirmationOrRevert` | 10 | P0 |
