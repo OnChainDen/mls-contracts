@@ -117,7 +117,10 @@ All `private` functions in the files under test will be refactored to `internal`
 | 44 | `RateLimitType != TimeInterval` — returns without checking (no-op) | [U] | P0 |
 | 45 | `TransactionType.TokenTransfers`: `usageAmount = extractTransferAmount(data, value)` | [U] | P0 |
 | 46 | Non-TokenTransfers (`ContractInteractions`): `usageAmount = 1` | [U] | P0 |
-| 48 | Destination = `getActualDestination(to, data, value)` — may differ for ERC-20 transfers | [U] | P0 |
+| 48 | Destination for rate-limit key is derived via `getActualDestination(to, data, value)` | [U] | P0 |
+| 148 | `getActualDestination` (native transfer): returns `to` when `data` is empty | [U] | P0 |
+| 149 | `getActualDestination` (ERC-20 transfer): returns recipient parsed from calldata (not token contract `to`) | [U] | P0 |
+| 150 | `getActualDestination` (contract interaction): returns `to` for non-token-transfer calldata | [U] | P0 |
 | 49 | `checkAndUpdateRateLimit` returns false — reverts `RateLimitExceeded(policyId)` | [N] | P0 |
 | 50 | `checkAndUpdateRateLimit` returns true — succeeds, usage updated in storage | [U] | P0 |
 | 51 | Native ETH transfer: `extractTransferAmount` uses `value` parameter (data is empty) | [U] | P0 |
@@ -274,7 +277,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 114 | Fuzz: Random salt values produce unique nonces | [F] | P1 |
 | 115 | Fuzz: Random transaction data → deterministic EIP-712 hashes | [F] | P0 |
 | 116 | Fuzz: Random initiator signatures → different review hashes (binding property) | [F][S] | P0 |
-| 117 | Fuzz: Random ETH values and ERC-20 amounts — rate limit usage computed correctly | [F] | P0 |
+| 117 | Fuzz: Random native ETH, ERC-20, and contract-interaction tx shapes — rate limit destination and usage computed correctly | [F] | P0 |
 | 118 | Fuzz: Random ManualApproval threshold counts — insufficient signers always rejected | [F] | P0 |
 | 119 | Fuzz: Random `TxParams` fields — changing any single field always changes initiator hash | [F] | P0 |
 | 120 | Fuzz: Random `TxParams` + initiator signature — changing any field changes review hash | [F] | P0 |
@@ -302,9 +305,9 @@ All `private` functions in the files under test will be refactored to `internal`
 |----------|-----------|----------|
 | `executeAccountTransaction` | 18 | P0 |
 | `rejectAccountTransaction` | 10 | P0 |
-| `validateTransactionApprovalOrRevert` | 15 | P0 |
+| `validateTransactionApprovalOrRevert` | 16 | P0 |
 | `validateTransactionRejectionOrRevert` | 13 | P0 |
-| `_validateAndUpdateRateLimitOrRevert` | 10 | P0 |
+| `_validateAndUpdateRateLimitOrRevert` | 12 | P0 |
 | `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
 | `_validateManualConfirmationOrRevert` | 10 | P0 |
 | `_computeInitiatorHashFromParams` | 14 | P0-P1 |
@@ -317,4 +320,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | `_onlyOrganization` | 3 | P0 |
 | Fuzz tests | 11 | P0-P1 |
 | Invariant tests | 6 | P0 |
-| **Total** | **145** | |
+| **Total** | **149** | |
