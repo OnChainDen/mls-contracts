@@ -36,6 +36,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 11 | Successful ETH transfer via Account — end-to-end | [I] | P0 |
 | 12 | Successful ERC-20 transfer via Account — end-to-end | [I] | P0 |
 | 13 | Successful contract interaction via Account — end-to-end | [I] | P0 |
+| 13.1 | Successful contract interaction via Account with `value > 0` (native token sent with calldata) — end-to-end | [I][E] | P0 |
 | 142 | End-to-end revert path: expired transaction via `executeAccountTransaction` reverts `TransactionExpired` | [I][N] | P0 |
 | 143 | End-to-end revert path: ManualApproval with insufficient review signatures via `executeAccountTransaction` reverts `InsufficientApprovals` | [I][N] | P0 |
 | 131 | **Desired Behavior:** pre-execution validation revert (bad proof/signature) does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
@@ -316,7 +317,7 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `executeAccountTransaction` | 18 | P0 |
+| `executeAccountTransaction` | 19 | P0 |
 | `rejectAccountTransaction` | 10 | P0 |
 | `validateTransactionApprovalOrRevert` | 16 | P0 |
 | `validateTransactionRejectionOrRevert` | 13 | P0 |
