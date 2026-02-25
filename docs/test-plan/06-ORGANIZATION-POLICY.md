@@ -358,6 +358,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-PROC-4 | Multi-constraint processing stops and returns `false` at first failing constraint | [U] | P1 |
 | LPPC-PROC-5 | Array/struct constraints with `Any` can span multiple head slots without decode errors | [E] | P1 |
 | LPPC-PROC-6 | No out-of-bounds reads on fuzzed offset/head-size combinations | [F][S] | P0 |
+| LPPC-PROC-8 | **Desired behavior:** primitive parameter types with `paramCalldataHeadSlotCount > 1` fail closed (`false`) rather than allowing shifted-offset interpretation | [S] | P0 |
 
 ### 8.3 `_isParameterAllowedByConstraint(...)` *(private; harness target)*
 
