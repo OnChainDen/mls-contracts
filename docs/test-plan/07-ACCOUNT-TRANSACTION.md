@@ -224,6 +224,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | 90 | Non-organization caller — reverts `OnlyOrganization` | [N] | P0 |
+| 90.1 | Different organization caller (not this account's bound organization/beacon organization) — reverts `OnlyOrganization` | [N][S] | P0 |
 | 91 | Successful call (`_execute` returns true) — emits `TransactionExecuted` event | [U] | P0 |
 | 92 | Failed call (`_execute` returns false) — reverts `TransactionExecutionFailed` | [N] | P0 |
 | 93 | ETH value forwarded correctly to target | [U] | P0 |
@@ -273,6 +274,7 @@ All `private` functions in the files under test will be refactored to `internal`
 |---|-----------|------|----------|
 | 109 | `msg.sender == organization` address — no revert | [U] | P0 |
 | 110 | `msg.sender != organization` address — reverts `OnlyOrganization` | [N] | P0 |
+| 110.1 | Different organization caller (not this account's bound organization/beacon organization) — reverts `OnlyOrganization` | [N][S] | P0 |
 | 111 | `msg.sender == address(0)` — reverts `OnlyOrganization` | [E] | P0 |
 
 ---
@@ -322,11 +324,11 @@ All `private` functions in the files under test will be refactored to `internal`
 | `_computeInitiatorHashFromParams` | 14 | P0-P1 |
 | `_computeReviewHashFromParams` | 14 | P0-P1 |
 | `receive()` | 3 | P0-P1 |
-| `executeTransaction` | 6 | P0-P1 |
+| `executeTransaction` | 7 | P0-P1 |
 | `getOrganizationAddress` | 2 | P3 |
 | `isValidSignature` | 3 | P0 |
 | `_execute` | 9 | P0-P1 |
-| `_onlyOrganization` | 3 | P0 |
+| `_onlyOrganization` | 4 | P0 |
 | Fuzz tests | 11 | P0-P1 |
 | Invariant tests | 6 | P0 |
 | **Total** | **149** | |
