@@ -176,7 +176,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 75 | `isApproval=true` vs `isApproval=false` produce different hashes | [S] | P0 |
 | 76 | Different `block.chainid` values produce different hashes | [S] | P0 |
 | 77 | Uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct hash | [U] | P1 |
-| 78 | Deterministic: same inputs always produce same hash | [U] | P0 |
+| 78 | Deterministic: same inputs always produce same hash | [U][F] | P0 |
 | 79 | Empty data → `keccak256("")` used in struct hash | [E] | P1 |
 | 80 | Golden test: known inputs → known hash (precomputed off-chain) | [U] | P0 |
 
