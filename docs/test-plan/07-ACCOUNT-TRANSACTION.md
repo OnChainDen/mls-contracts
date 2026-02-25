@@ -186,7 +186,15 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 81 | Includes all fields from initiator hash (org, account, to, value, data, salt, expiration, policyId, isApproval, chainId) | [U] | P0 |
+| 81 | Organization binding: different organizations (`address(this)`) produce different review hashes | [S] | P0 |
+| 81.1 | Different accounts produce different review hashes | [U] | P0 |
+| 81.2 | Different `to` addresses produce different review hashes | [U] | P0 |
+| 81.3 | Different `value` amounts produce different review hashes | [U] | P0 |
+| 81.4 | Different `data` produces different review hashes (`keccak256(data)` used) | [U] | P0 |
+| 81.5 | Different `salt` values produce different review hashes | [U] | P0 |
+| 81.6 | Different `expirationTimestamp` values produce different review hashes | [U] | P0 |
+| 81.7 | Different `policyId` values produce different review hashes | [U] | P0 |
+| 81.8 | Different `block.chainid` values produce different review hashes | [S] | P0 |
 | 82 | Additionally includes `keccak256(initiatorSignature)` | [S] | P0 |
 | 83 | Different initiator signatures → different review hashes | [S] | P0 |
 | 84 | Uses `REVIEW_ACCOUNT_TRANSACTION_TYPEHASH` (distinct from initiator typehash) | [U] | P1 |
@@ -312,7 +320,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
 | `_validateManualConfirmationOrRevert` | 11 | P0 |
 | `_computeInitiatorHashFromParams` | 14 | P0-P1 |
-| `_computeReviewHashFromParams` | 6 | P0-P1 |
+| `_computeReviewHashFromParams` | 14 | P0-P1 |
 | `receive()` | 3 | P0-P1 |
 | `executeTransaction` | 6 | P0-P1 |
 | `getOrganizationAddress` | 2 | P3 |
