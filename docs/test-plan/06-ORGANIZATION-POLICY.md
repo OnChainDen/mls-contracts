@@ -532,6 +532,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-24 | Cross-chain replay protection (initiator): initiator signature signed for chain A cannot authorize the same transaction on chain B | [S] | P0 |
 | LOAT-25 | Cross-chain replay protection (reviewers): reviewer approval/rejection signatures signed for chain A cannot be replayed on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
 | LOAT-26 | **Desired behavior:** invalid `rateLimit.limitType` enum value in calldata/proofs fails closed (revert) and cannot bypass rate-limit enforcement | [N][S] | P0 |
+| LOAT-27 | Cross-organization replay protection (initiator): initiator signature signed for organization A cannot authorize the same transaction on organization B | [S] | P0 |
+| LOAT-28 | Cross-organization replay protection (reviewers): reviewer approval/rejection signatures signed for organization A cannot be replayed on organization B when paired with a valid organization-B initiator signature | [S] | P0 |
 
 ### 10.2 File: `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
@@ -566,6 +568,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-25 | Empty top-level signature bytes (`signature.length == 0`) returns ERC-1271 invalid value | [N] | P0 |
 | LOAS-26 | Unknown signature type prefix (not `0x00` recovery or `0x01` policy) returns ERC-1271 invalid value | [N][S] | P0 |
 | LOAS-27 | Invalid `approval.policyType` enum value in provided policy proof fails closed and returns ERC-1271 invalid value | [N][S] | P0 |
+| LOAS-28 | Cross-organization replay protection (initiator): policy-based initiator signature signed for organization A returns ERC-1271 invalid value on organization B | [S] | P0 |
+| LOAS-29 | Cross-organization replay protection (guardian/reviewers): guardian and reviewer signatures signed for organization A return ERC-1271 invalid value on organization B when paired with a valid organization-B initiator signature | [S] | P0 |
 
 ---
 
