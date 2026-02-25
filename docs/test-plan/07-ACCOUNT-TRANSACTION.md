@@ -213,7 +213,7 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 87 | Accepts ETH from any address | [U] | P0 |
+| 87 | Accepts ETH from anyone | [U][F] | P0 |
 | 88 | Emits `MLSWalletAccountNativeTokenReceived(sender, value)` with correct parameters | [EV] | P1 |
 | 89 | Zero-value ETH transfer — still emits event | [E] | P1 |
 
