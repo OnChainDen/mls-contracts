@@ -152,6 +152,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 62 | `isApproval=true` for approval flow — review hash uses approval flag | [U] | P0 |
 | 63 | `isApproval=false` for rejection flow — review hash uses rejection flag | [U] | P0 |
 | 64 | `areApprovalsValid` returns false — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
+| 151 | Non-empty but below-threshold valid review signatures (e.g., required `2`, provided `1`) — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
 | 65 | Sufficient valid approvals — succeeds | [U] | P0 |
 | 66 | Different initiator signatures produce different review hashes (binding property) | [S] | P0 |
 | 136 | **Desired Behavior:** duplicate or out-of-order reviewer signers revert (not `InsufficientApprovals`) | [S] | P0 |
@@ -309,7 +310,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `validateTransactionRejectionOrRevert` | 13 | P0 |
 | `_validateAndUpdateRateLimitOrRevert` | 12 | P0 |
 | `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
-| `_validateManualConfirmationOrRevert` | 10 | P0 |
+| `_validateManualConfirmationOrRevert` | 11 | P0 |
 | `_computeInitiatorHashFromParams` | 14 | P0-P1 |
 | `_computeReviewHashFromParams` | 6 | P0-P1 |
 | `receive()` | 3 | P0-P1 |
