@@ -123,6 +123,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 150 | `getActualDestination` (contract interaction): returns `to` for non-token-transfer calldata | [U] | P0 |
 | 49 | `checkAndUpdateRateLimit` returns false — reverts `RateLimitExceeded(policyId)` | [N] | P0 |
 | 50 | `checkAndUpdateRateLimit` returns true — succeeds, usage updated in storage | [U] | P0 |
+| 50.1 | After hitting `timeIntervalLimit` in current window, advancing to the next window allows usage again for the same `(policyId, account, destination, initiator)` | [U][E] | P0 |
 | 51 | Native ETH transfer: `extractTransferAmount` uses `value` parameter (data is empty) | [U] | P0 |
 | 52 | ERC-20 transfer: `extractTransferAmount` reads amount from calldata | [U] | P0 |
 | 141 | **Desired Behavior:** `TransactionType.Any` with rate limiting enabled uses count-based accounting (`usageAmount = 1`) even when tx shape is token transfer | [U][S] | P0 |
@@ -319,7 +320,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `rejectAccountTransaction` | 10 | P0 |
 | `validateTransactionApprovalOrRevert` | 16 | P0 |
 | `validateTransactionRejectionOrRevert` | 13 | P0 |
-| `_validateAndUpdateRateLimitOrRevert` | 12 | P0 |
+| `_validateAndUpdateRateLimitOrRevert` | 13 | P0 |
 | `_validateAutoApproveRejectionOrRevert` | 7 | P0 |
 | `_validateManualConfirmationOrRevert` | 11 | P0 |
 | `_computeInitiatorHashFromParams` | 14 | P0-P1 |
