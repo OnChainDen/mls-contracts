@@ -36,6 +36,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | 11 | Successful ETH transfer via Account — end-to-end | [I] | P0 |
 | 12 | Successful ERC-20 transfer via Account — end-to-end | [I] | P0 |
 | 13 | Successful contract interaction via Account — end-to-end | [I] | P0 |
+| 142 | End-to-end revert path: expired transaction via `executeAccountTransaction` reverts `TransactionExpired` | [I][N] | P0 |
+| 143 | End-to-end revert path: ManualApproval with insufficient review signatures via `executeAccountTransaction` reverts `InsufficientApprovals` | [I][N] | P0 |
 | 131 | **Desired Behavior:** pre-execution validation revert (bad proof/signature) does **not** permanently burn nonce; same params+salt can succeed after fixing inputs | [S] | P0 |
 | 133 | **Desired Behavior:** if `Account.executeTransaction` fails after rate-limit update step, all rate-limit state changes are rolled back with full tx revert | [S] | P0 |
 | 140 | **Desired Behavior:** identical `(account, to, value, data, policyId)` executes multiple times when using different salts and fresh signatures | [I][S] | P0 |
@@ -295,7 +297,7 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `executeAccountTransaction` | 16 | P0 |
+| `executeAccountTransaction` | 18 | P0 |
 | `rejectAccountTransaction` | 10 | P0 |
 | `validateTransactionApprovalOrRevert` | 15 | P0 |
 | `validateTransactionRejectionOrRevert` | 10 | P0 |
@@ -312,4 +314,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | `_onlyOrganization` | 3 | P0 |
 | Fuzz tests | 11 | P0-P1 |
 | Invariant tests | 6 | P0 |
-| **Total** | **141** | |
+| **Total** | **143** | |
