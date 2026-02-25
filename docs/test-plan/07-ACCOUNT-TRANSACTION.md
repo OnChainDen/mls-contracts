@@ -79,6 +79,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 28 | Initiator signer recovered correctly from EOA signature | [U] | P0 |
 | 29 | Initiator signer recovered correctly from ERC-1271 signature | [U] | P0 |
 | 30 | Policy does not apply to transaction — reverts `PolicyDoesNotApply` | [N] | P0 |
+| 147 | `TransactionType.Signatures` policy used for account transaction — reverts `PolicyDoesNotApply` | [N] | P0 |
 | 31 | AutoApprove policy: succeeds without review signatures (no manual approval needed) | [U] | P0 |
 | 32 | ManualApproval policy: delegates to `_validateManualConfirmationOrRevert` with `isApproval=true` | [U] | P0 |
 | 33 | ManualApproval policy with empty review signatures — reverts `InsufficientApprovals` | [N] | P0 |
@@ -116,7 +117,6 @@ All `private` functions in the files under test will be refactored to `internal`
 | 44 | `RateLimitType != TimeInterval` — returns without checking (no-op) | [U] | P0 |
 | 45 | `TransactionType.TokenTransfers`: `usageAmount = extractTransferAmount(data, value)` | [U] | P0 |
 | 46 | Non-TokenTransfers (`ContractInteractions`): `usageAmount = 1` | [U] | P0 |
-| 47 | Non-TokenTransfers (`Signatures`): `usageAmount = 1` | [U] | P0 |
 | 48 | Destination = `getActualDestination(to, data, value)` — may differ for ERC-20 transfers | [U] | P0 |
 | 49 | `checkAndUpdateRateLimit` returns false — reverts `RateLimitExceeded(policyId)` | [N] | P0 |
 | 50 | `checkAndUpdateRateLimit` returns true — succeeds, usage updated in storage | [U] | P0 |
