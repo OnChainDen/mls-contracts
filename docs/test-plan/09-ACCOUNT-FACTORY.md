@@ -29,7 +29,6 @@ All `private` functions in the files under test will be refactored to `internal`
 | 5 | Returns the correct deployed account address | [U] | P1 |
 | 6 | `OperationType` is `DeployAccount` in admin auth | [U] | P1 |
 | 7 | `operationData` encodes `create2Salt` | [U] | P1 |
-| 63 | **Desired Behavior:** if deployment reverts after auth validation (e.g., CREATE2 collision or invalid beacon implementation), nonce/state changes are rolled back so the same signed request can be retried after fixing root cause | [S] | P0 |
 
 ---
 
@@ -90,6 +89,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 28 | Deployed proxy's beacon is the Organization (`address(this)`) | [U] | P1 |
 | 29 | Defensive check: reverts `AccountDeploymentAddressMismatch` if deployed address != computed (should never happen in practice) | [E] | P2 |
 | 68 | Reverts when beacon (`address(this)`) returns an implementation with no runtime code | [N] | P0 |
+| 81 | Reverts when Organization beacon returns `implementation() == address(0)` during proxy deployment | [N] | P0 |
 | 69 | Failed deployment path does not set `deployedAccounts[computedAddress]` | [S] | P0 |
 | 70 | Failed deployment path does not emit `AccountDeployed` | [S] | P0 |
 
@@ -192,11 +192,11 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `deployAccount` (Base) | 8 | P0-P1 |
+| `deployAccount` (Base) | 7 | P0-P1 |
 | `setAccountImplementation` | 12 | P0-P1 |
 | `computeAccountAddress` (external) | 3 | P1-P3 |
 | `implementation` (IBeacon) | 5 | P0-P1 |
-| `deployAccount` (Lib) | 12 | P0-P2 |
+| `deployAccount` (Lib) | 13 | P0-P2 |
 | `computeAccountAddress` (Lib) | 7 | P1 |
 | `isAccountDeployedByOrganization` | 5 | P0-P1 |
 | `validateIsAccountDeployedByOrgOrRevert` | 3 | P0 |
