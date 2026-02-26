@@ -106,6 +106,31 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         harness.areApprovalsValidViaLibrary(groupPolicy, _signHash(REVIEWER_PK_1, messageHash), messageHash);
     }
 
+    /// @dev Verifies that wrapper bubbles delegated duplicate/out-of-order signer errors unchanged.
+    function test_wrapperApprovals_bubblesDuplicateOrOutOfOrderSignerErrorUnchanged() public {
+        // Setup: configure a group-approval policy and prepare duplicate signatures from the same authorized signer.
+        uint256 approverGroupId = 99_124;
+        Policy memory policy = _buildBasePolicy();
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = approverGroupId;
+        policy.config.approval.approvalThreshold = 2;
+
+        policyStateHarness.setGroupStatus(approverGroupId, true);
+        policyStateHarness.setMemberStatus(reviewer1, true);
+        policyStateHarness.setGroupMemberStatus(approverGroupId, reviewer1, true);
+
+        bytes32 messageHash = keccak256("lop-wrap-2b-message");
+        bytes memory signerSignature = _signHash(REVIEWER_PK_1, messageHash);
+        bytes memory duplicateSignatures = abi.encodePacked(signerSignature, signerSignature);
+
+        // Verify: assert that the duplicate-signer custom error is surfaced unchanged by the wrapper entry point.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationPolicy.DuplicateOrOutOfOrderSigner.selector, reviewer1, reviewer1)
+        );
+        // Call: invoke `areApprovalsValidViaLibrary` with duplicate signer payload to hit signer-order validation.
+        harness.areApprovalsValidViaLibrary(policy, duplicateSignatures, messageHash);
+    }
+
     /// @dev Verifies that wrapper bubbles delegated signature-decoding errors unchanged.
     function test_wrapperApprovals_bubblesSignatureRecoveryErrorsUnchanged() public {
         // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated
