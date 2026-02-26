@@ -24,7 +24,7 @@ import {
 /**
  * @dev Policy-coupled integration tests for `LibOrganizationAccountTransaction`.
  */
-contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationAccountTransactionSuiteBase {
+contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationAccountTransactionSuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 77;
 
     address internal constant ACCOUNT = address(0xA1101);
