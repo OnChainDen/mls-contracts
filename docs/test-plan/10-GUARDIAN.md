@@ -213,6 +213,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | 104 | Normal flow and recovery flow can both be pending at the same time (separate state domains) | [I][S] | P1 |
 | 105 | Completing recovery flow updates `guardian` but does not clear normal-flow pending guardian state | [I][S] | P1 |
 | 106 | If guardian changes via recovery while normal update is pending, previous guardian loses `onlyGuardian` rights; new guardian controls normal-flow finalize/cancel | [I][S] | P0 |
+| 110 | Cancel during pending then wait past the original timelock window — previous pending guardian `acceptGuardian` still reverts (no pending guardian after cancel) | [I] | P1 |
+| 111 | Cancel after finalize — previous pending guardian `acceptGuardian` reverts (canceled finalized update cannot be accepted) | [I] | P1 |
 
 ---
 
@@ -261,7 +263,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `enforceOnlyGuardian` | 3 | P0-P1 |
 | `enforceOnlyPendingGuardian` | 3 | P0 |
 | View functions (Lib) | 8 | P3 |
-| Full lifecycle integration | 7 | P0-P1 |
+| Full lifecycle integration | 9 | P0-P1 |
 | Fuzz tests | 6 | P0-P1 |
 | Invariant tests | 8 | P0 |
-| **Total** | **110** | |
+| **Total** | **112** | |
