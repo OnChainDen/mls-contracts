@@ -17,7 +17,6 @@ import {ApproverType, Policy, PolicyType, TransactionType, ValidationProofs} fro
 
 /**
  * @dev Policy-coupled ERC-1271 integration tests for `LibOrganizationAccountSignature`.
- *      Covers Section 10.2 IDs `LOAS-1` through `LOAS-29`.
  */
 contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAccountSignatureSuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 177;
@@ -34,8 +33,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         policyStateHarness.setMemberStatus(reviewer2, true);
     }
 
-    // LOAS-1
+    /// @dev Verifies that valid policy guardian initiator and approvals returns magic value.
     function test_LOAS_1_validPolicyGuardianInitiatorAndApprovals_returnsMagicValue() public {
+        // Setup: configure a valid fixture for valid policy guardian initiator and approvals returns magic value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
@@ -80,12 +80,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "valid policy-based signature should return magic");
     }
 
-    // LOAS-2
+    /// @dev Verifies that expired policy request returns invalid value.
     function test_LOAS_2_expiredPolicyRequest_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for expired policy request returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -119,12 +122,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "expired requests should be invalid");
     }
 
-    // LOAS-3
+    /// @dev Verifies that missing or invalid initiator signature returns invalid value.
     function test_LOAS_3_missingOrInvalidInitiatorSignature_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for missing or invalid initiator signature returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -150,12 +156,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "missing initiator signature should be invalid");
     }
 
-    // LOAS-4
+    /// @dev Verifies that invalid guardian signature returns invalid value.
     function test_LOAS_4_invalidGuardianSignature_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for invalid guardian signature returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -190,12 +199,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "invalid guardian signatures should be rejected");
     }
 
-    // LOAS-5
+    /// @dev Verifies that enabled guardian module signer is accepted.
     function test_LOAS_5_enabledGuardianModuleSigner_isAccepted() public {
+        // Setup: configure a valid fixture for enabled guardian module signer is accepted.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         guardianSafe.setModuleEnabled(guardianSigner, true);
         policyStateHarness.setGuardian(address(guardianSafe));
@@ -231,12 +243,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "enabled module signer should be accepted");
     }
 
-    // LOAS-6
+    /// @dev Verifies that disabled guardian module signer returns invalid value.
     function test_LOAS_6_disabledGuardianModuleSigner_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for disabled guardian module signer returns invalid value.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         policyStateHarness.setGuardian(address(guardianSafe));
 
@@ -271,12 +286,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "disabled module signer should be rejected");
     }
 
-    // LOAS-7
+    /// @dev Verifies that non safe guardian module path fails closed.
     function test_LOAS_7_nonSafeGuardianModulePath_failsClosed() public {
+        // Setup: configure a valid fixture for non safe guardian module path fails closed.
         policyStateHarness.setGuardian(address(0xBEEFCAFE));
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -310,12 +328,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "non-safe guardian module path should fail closed");
     }
 
-    // LOAS-8
+    /// @dev Verifies that guardian module short return fails closed.
     function test_LOAS_8_guardianModuleShortReturn_failsClosed() public {
+        // Setup: configure a valid fixture for guardian module short return fails closed.
         MockGuardianSafeShortReturn shortReturnGuardian = new MockGuardianSafeShortReturn();
         policyStateHarness.setGuardian(address(shortReturnGuardian));
 
@@ -350,12 +371,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "short-return guardian module check should fail closed");
     }
 
-    // LOAS-9
+    /// @dev Verifies that invalid policy proof returns invalid value.
     function test_LOAS_9_invalidPolicyProof_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for invalid policy proof returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -391,12 +415,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "invalid policy proof should be rejected");
     }
 
-    // LOAS-10
+    /// @dev Verifies that non signature transaction type policy returns invalid value.
     function test_LOAS_10_nonSignatureTransactionTypePolicy_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for non signature transaction type policy returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -431,12 +458,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "non-signature txType policies should be rejected");
     }
 
-    // LOAS-11
+    /// @dev Verifies that source account not allowed returns invalid value.
     function test_LOAS_11_sourceAccountNotAllowed_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for source account not allowed returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -473,12 +503,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "source-account mismatch should be rejected");
     }
 
-    // LOAS-12
+    /// @dev Verifies that unauthorized initiator returns invalid value.
     function test_LOAS_12_unauthorizedInitiator_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for unauthorized initiator returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -512,12 +545,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unauthorized initiators should be rejected");
     }
 
-    // LOAS-13
+    /// @dev Verifies that auto approve policy without review signatures returns magic value.
     function test_LOAS_13_autoApprovePolicyWithoutReviewSignatures_returnsMagicValue() public {
+        // Setup: configure a valid fixture for auto approve policy without review signatures returns magic value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -551,12 +587,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "auto-approve should not require reviewer signatures");
     }
 
-    // LOAS-14
+    /// @dev Verifies that manual policy without required approvals returns invalid value.
     function test_LOAS_14_manualPolicyWithoutRequiredApprovals_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for manual policy without required approvals returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
@@ -590,12 +629,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "manual policy requires review signatures");
     }
 
-    // LOAS-15
+    /// @dev Verifies that reviewer approvals bound to initiator signature bytes.
     function test_LOAS_15_reviewerApprovalsBoundToInitiatorSignatureBytes() public {
+        // Setup: configure a valid fixture for reviewer approvals bound to initiator signature bytes.
         policyStateHarness.setGuardian(guardianSigner);
 
         MockERC1271ValidSigner contractInitiator = new MockERC1271ValidSigner();
@@ -639,17 +681,22 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "review signatures must bind initiator signature bytes");
     }
 
-    // LOAS-16
+    /// @dev Verifies that `isERC1271SignatureAllowedByPolicy` fails closed when any required sub-check fails.
     function test_LOAS_16_isERC1271SignatureAllowedByPolicy_failsClosedOnAnyFailedSubCheck() public {
+        // Setup: prepare a baseline-valid proof set plus targeted variants that each break one policy sub-check.
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
         ValidationProofs memory validProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
+        // Call: run `isERC1271SignatureAllowedByPolicyViaLibrary` across the prepared variants.
         bool allowed =
             harness.isERC1271SignatureAllowedByPolicyViaLibrary(ACCOUNT, initiator1, DEFAULT_POLICY_ID, validProofs);
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(allowed, "baseline should be allowed");
 
         ValidationProofs memory badProof = validProofs;
@@ -688,14 +735,17 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         );
     }
 
-    // LOAS-17
+    /// @dev Verifies that hash builders are deterministic and field bound.
     function test_LOAS_17_hashBuildersAreDeterministicAndFieldBound() public {
+        // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
 
+        // Call: execute `getInitiatorSignatureHashViaLibrary` with the happy-path payload.
         bytes32 baseInitiatorHashA =
             harness.getInitiatorSignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, DEFAULT_POLICY_ID, expiration);
         bytes32 baseInitiatorHashB =
             harness.getInitiatorSignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, DEFAULT_POLICY_ID, expiration);
+        // Verify: assert the expected success result and state updates.
         assertEq(baseInitiatorHashA, baseInitiatorHashB, "initiator hash must be deterministic");
 
         assertTrue(
@@ -762,15 +812,19 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         assertTrue(baseReviewHashA != changedReviewHash, "review hash must bind initiator signature bytes");
     }
 
-    // LOAS-18 (desired behavior)
+    /// @dev Verifies that desired malformed signature data returns invalid without revert.
     function test_LOAS_18_desired_malformedSignatureDataReturnsInvalidWithoutRevert() public {
+        // Setup: configure a valid fixture for desired malformed signature data returns invalid without revert.
         bytes memory malformed = abi.encodePacked(uint8(0x01), hex"deadbeef");
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "malformed payload should fail closed");
     }
 
-    // LOAS-19 (desired behavior)
+    /// @dev Verifies that desired manual approval validation reverts must return invalid without revert.
     function test_LOAS_19_desired_manualApprovalValidationRevertsMustReturnInvalidWithoutRevert() public {
+        // Setup: configure a valid fixture for desired manual approval validation reverts must return invalid without revert.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
@@ -823,12 +877,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "reverting review validation should fail closed");
     }
 
-    // LOAS-20
+    /// @dev Verifies that root transition guard clear root invalidates old policy proof.
     function test_LOAS_20_rootTransitionGuard_clearRootInvalidatesOldPolicyProof() public {
+        // Setup: configure a valid fixture for root transition guard clear root invalidates old policy proof.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -861,7 +918,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 beforeClear = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(beforeClear, SignatureUtils.ERC1271_MAGIC_VALUE, "baseline should succeed before root clear");
 
         policyStateHarness.setPoliciesRoot(bytes32(0));
@@ -870,8 +929,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         assertEq(afterClear, SignatureUtils.ERC1271_INVALID_VALUE, "cleared root must invalidate old proofs");
     }
 
-    // LOAS-21
+    /// @dev Verifies that branch comparison auto approve magic manual without reviews invalid.
     function test_LOAS_21_branchComparison_autoApproveMagic_manualWithoutReviewsInvalid() public {
+        // Setup: configure a valid fixture for branch comparison auto approve magic manual without reviews invalid.
         policyStateHarness.setGuardian(guardianSigner);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -904,7 +964,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: autoProofs
         });
 
+        // Verify: assert the expected success result and state updates.
         assertEq(
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, autoSig),
             SignatureUtils.ERC1271_MAGIC_VALUE,
             "auto-approve should return magic"
@@ -937,8 +999,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         );
     }
 
-    // LOAS-22
+    /// @dev Verifies that branch comparison manual with reviews and auto with same payload both magic.
     function test_LOAS_22_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothMagic() public {
+        // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both magic.
         policyStateHarness.setGuardian(guardianSigner);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -980,7 +1043,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: manualProofs
         });
 
+        // Verify: assert the expected success result and state updates.
         assertEq(
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, manualSig),
             SignatureUtils.ERC1271_MAGIC_VALUE,
             "manual policy with valid reviews should return magic"
@@ -1013,8 +1078,9 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         );
     }
 
-    // LOAS-23
+    /// @dev Verifies that cross chain replay initiator signature returns invalid value.
     function test_LOAS_23_crossChainReplayInitiatorSignature_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for cross chain replay initiator signature returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -1051,12 +1117,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "chain replayed initiator signature should fail");
     }
 
-    // LOAS-24
+    /// @dev Verifies that cross chain replay guardian and reviewer signatures returns invalid value.
     function test_LOAS_24_crossChainReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for cross chain replay guardian and reviewer signatures returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
@@ -1103,27 +1172,36 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(
             actual, SignatureUtils.ERC1271_INVALID_VALUE, "chain replayed guardian/reviewer signatures should fail"
         );
     }
 
-    // LOAS-25
+    /// @dev Verifies that empty top level signature returns invalid value.
     function test_LOAS_25_emptyTopLevelSignature_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for empty top level signature returns invalid value.
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, bytes(""));
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "empty top-level signature should be invalid");
     }
 
-    // LOAS-26
+    /// @dev Verifies that unknown signature type prefix returns invalid value.
     function test_LOAS_26_unknownSignatureTypePrefix_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for unknown signature type prefix returns invalid value.
         bytes memory signature = abi.encodePacked(uint8(0x7F), hex"AABBCC");
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unknown signature prefix should be invalid");
     }
 
-    // LOAS-27
+    /// @dev Verifies that invalid approval policy type returns invalid value fail closed.
     function test_LOAS_27_invalidApprovalPolicyType_returnsInvalidValueFailClosed() public {
+        // Setup: configure a valid fixture for invalid approval policy type returns invalid value fail closed.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -1159,12 +1237,15 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
             proofs: proofs
         });
 
+        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "invalid approval enum should fail closed");
     }
 
-    // LOAS-28
+    /// @dev Verifies that cross organization replay initiator signature returns invalid value.
     function test_LOAS_28_crossOrganizationReplayInitiatorSignature_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for cross organization replay initiator signature returns invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
 
@@ -1207,11 +1288,13 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         });
 
         bytes4 actual = orgB.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "cross-org initiator replay should fail");
     }
 
-    // LOAS-29
+    /// @dev Verifies that cross organization replay guardian and reviewer signatures returns invalid value.
     function test_LOAS_29_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
+        // Setup: configure a valid fixture for cross organization replay guardian and reviewer signatures returns invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
 
@@ -1265,6 +1348,7 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
         });
 
         bytes4 actual = orgB.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+        // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "cross-org guardian/reviewer replay should fail");
     }
 

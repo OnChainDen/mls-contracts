@@ -30,7 +30,6 @@ import {
 
 /**
  * @dev Cross-file invariant tests for organization policy behavior.
- *      Covers Section 11.2 IDs `POL-I-1` through `POL-I-10`.
  */
 contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 6101;
@@ -62,18 +61,23 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         checkHarness.setGroupMemberStatus(700, reviewer2, true);
     }
 
-    // POL-I-1
+    /// @dev Verifies that policy root changes only through set policies.
     function invariant_POL_I_1_policyRootChangesOnlyThroughSetPolicies() public view {
+        // Setup: configure a valid fixture for policy root changes only through set policies.
+        // Call: execute `getPoliciesRoot` with the happy-path payload.
         assertEq(harness.getPoliciesRoot(), handler.modelPoliciesRoot(), "policy root must match handler model");
     }
 
-    // POL-I-2
+    /// @dev Verifies that policy and function leaves use double hash construction.
     function invariant_POL_I_2_policyAndFunctionLeavesUseDoubleHashConstruction() public view {
+        // Setup: configure a valid fixture for policy and function leaves use double hash construction.
         Policy memory policy = _buildBasePolicy();
         uint256 policyId = 6202;
 
         bytes32 expectedPolicyLeaf = keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
+        // Call: execute `computePolicyLeafViaLibrary` with the happy-path payload.
         bytes32 actualPolicyLeaf = harness.computePolicyLeafViaLibrary(policyId, policy);
+        // Verify: assert the expected success result and state updates.
         assertEq(actualPolicyLeaf, expectedPolicyLeaf, "policy leaf must use double hash");
 
         bytes4 selector = bytes4(0x12345678);
@@ -83,8 +87,9 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertEq(actualFunctionLeaf, expectedFunctionLeaf, "function leaf must use double hash");
     }
 
-    // POL-I-3
+    /// @dev Verifies that invalid policy proof cannot authorize transaction or signature.
     function invariant_POL_I_3_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
+        // Setup: build fixture inputs where invalid policy proof cannot authorize transaction or signature should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.Any;
         policy.config.initiator.anyInitiator = false;
@@ -92,6 +97,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         policy.config.initiator.initiatorMember = initiator1;
 
         bytes32 root = _computePolicyLeaf(DEFAULT_POLICY_ID, policy);
+        // Call: execute `setPoliciesRoot` and capture the authorization decision.
         checkHarness.setPoliciesRoot(root);
         signatureHarness.setPoliciesRoot(root);
 
@@ -110,6 +116,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             initiator: initiator1,
             proofs: proofs
         });
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(txAllowed, "invalid policy proof must not authorize transactions");
 
         bool sigAllowed = signatureHarness.isERC1271SignatureAllowedByPolicyViaLibrary({
@@ -118,18 +125,21 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertFalse(sigAllowed, "invalid policy proof must not authorize signatures");
     }
 
-    // POL-I-4
+    /// @dev Verifies that usage monotonic on successful updates.
     function invariant_POL_I_4_usageMonotonicOnSuccessfulUpdates() public view {
+        // Setup: build fixture inputs where usage monotonic on successful updates should be denied.
         assertFalse(handler.usageMonotonicViolation(), "usage should not decrease after successful updates");
     }
 
-    // POL-I-5
+    /// @dev Verifies that exceeded rate limit never mutates usage.
     function invariant_POL_I_5_exceededRateLimitNeverMutatesUsage() public view {
+        // Setup: build fixture inputs where exceeded rate limit never mutates usage should be denied.
         assertFalse(handler.exceededLimitMutationViolation(), "exceeded-limit updates must not mutate usage");
     }
 
-    // POL-I-6
+    /// @dev Verifies that manual policies cannot pass with fewer approvals than required.
     function invariant_POL_I_6_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
+        // Setup: build fixture inputs where manual policies cannot pass with fewer approvals than required should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.approval.policyType = PolicyType.RequireManualApproval;
         policy.config.approval.approverType = ApproverType.Group;
@@ -139,17 +149,22 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         bytes32 reviewHash = keccak256("manual-review-hash");
         bytes memory oneSignature = _signHash(REVIEWER_PK_1, reviewHash);
 
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
         bool approvalsValid = checkHarness.areApprovalsValidViaPolicyLibrary(policy, oneSignature, reviewHash);
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(approvalsValid, "fewer than required manual approvals must never pass");
     }
 
-    // POL-I-7
+    /// @dev Verifies that unknown enums fail closed across validation paths.
     function invariant_POL_I_7_unknownEnumsFailClosedAcrossValidationPaths() public {
         // ApproverType
+        // Setup: build fixture inputs where unknown enums fail closed across validation paths should be denied.
         Policy memory invalidApproverPolicy = _buildBasePolicy();
         _unsafeSetApproverTypeRaw(invalidApproverPolicy, 3);
+        // Call: execute `isSignerAuthorizedForPolicyViaPolicyLibrary` and capture the authorization decision.
         bool approverAllowed =
             checkHarness.isSignerAuthorizedForPolicyViaPolicyLibrary(invalidApproverPolicy, reviewer1);
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(approverAllowed, "invalid approver enum should fail closed");
 
         // DestinationType
@@ -209,29 +224,36 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertFalse(invalidRateScopeWithinLimit, "invalid rate-limit scopes should fail closed");
     }
 
-    // POL-I-8 (desired behavior)
+    /// @dev Verifies that desired any initiator must not authorize non members.
     function invariant_POL_I_8_desired_anyInitiatorMustNotAuthorizeNonMembers() public view {
+        // Setup: build fixture inputs where desired any initiator must not authorize non members should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = true;
 
         address nonMember = address(0xF0F0);
+        // Call: execute `isInitiatorAuthorizedViaPolicyLibrary` and capture the authorization decision.
         bool authorized = checkHarness.isInitiatorAuthorizedViaPolicyLibrary(policy, nonMember);
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(authorized, "anyInitiator should still require organization membership");
     }
 
-    // POL-I-9 (desired behavior)
+    /// @dev Verifies that desired token threshold should be inclusive max.
     function invariant_POL_I_9_desired_tokenThresholdShouldBeInclusiveMax() public view {
+        // Setup: configure a valid fixture for desired token threshold should be inclusive max.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;
 
         bytes memory data = _encodeERC20Transfer(address(0xF901), 100);
+        // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed = checkHarness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, data, 0);
+        // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "token threshold should allow amount == threshold");
     }
 
-    // POL-I-10 (desired behavior)
+    /// @dev Verifies that desired malformed constraints fail closed without unexpected revert.
     function invariant_POL_I_10_desired_malformedConstraintsFailClosedWithoutUnexpectedRevert() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired malformed constraints fail closed without unexpected revert.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.anyFunction = false;
@@ -252,6 +274,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         policy.roots.allowedFunctionsRoot = functionsRoot;
 
         bytes32 policyRoot = _computePolicyLeaf(DEFAULT_POLICY_ID, policy);
+        // Call: run `setPoliciesRoot` across the prepared variants.
         checkHarness.setPoliciesRoot(policyRoot);
 
         bytes32[] memory empty = new bytes32[](0);
@@ -269,6 +292,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         ) returns (
             bool allowed
         ) {
+        // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed constraints should fail closed with false");
         } catch {
             assertTrue(false, "malformed constraints should not revert in policy-check path");
