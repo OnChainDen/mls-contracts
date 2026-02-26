@@ -72,7 +72,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: malformed transfer calldata fails closed without ambiguous destination.
     function test_getActualDestination_malformedTransferCalldata_failsClosedToToAddress() public {
-        // Setup: configure a valid fixture for desired behavior: malformed transfer calldata fails closed without ambiguous destination.
+        // Setup: configure a valid fixture for desired behavior: malformed transfer calldata fails closed without
+        // ambiguous destination.
         address to = address(0xD506);
         bytes memory malformed = abi.encodePacked(IERC20.transfer.selector, bytes1(0xFF));
 
@@ -84,7 +85,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that ERC-20 transfer selector with calldata shorter than 68 bytes returns `to`.
     function test_getActualDestination_shortTransferCalldata_returnsTo() public {
-        // Setup: configure a valid fixture for ERC-20 transfer selector with calldata shorter than 68 bytes returns `to`.
+        // Setup: configure a valid fixture for ERC-20 transfer selector with calldata shorter than 68 bytes returns
+        // `to`.
         address to = address(0xD507);
         bytes memory shortTransfer = abi.encodePacked(IERC20.transfer.selector, bytes32(uint256(123)));
 
@@ -129,7 +131,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that customList rejects native-transfer destination with invalid proof.
     function test_isDestinationAllowed_customListNativeTransferInvalidProof_returnsFalse() public {
-        // Setup: build fixture inputs where customList rejects native-transfer destination with invalid proof should be denied.
+        // Setup: build fixture inputs where customList rejects native-transfer destination with invalid proof should be
+        // denied.
         address destination = address(0xD603);
         address other = address(0xD6AA);
         address[] memory values = buildArray(destination, other);
@@ -146,7 +149,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that customList checks ERC-20 transfer recipient (not token contract address).
     function test_isDestinationAllowed_customListErc20TransferChecksRecipient() public {
-        // Setup: configure a valid fixture for customList checks ERC-20 transfer recipient (not token contract address).
+        // Setup: configure a valid fixture for customList checks ERC-20 transfer recipient (not token contract
+        // address).
         address token = address(0xD604);
         address recipient = address(0xD6AB);
         address[] memory allowedDestinations = buildArray(recipient);
@@ -179,7 +183,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that proof for one destination cannot authorize a different destination.
     function test_isDestinationAllowed_proofForDifferentDestination_returnsFalse() public {
-        // Setup: build fixture inputs where proof for one destination cannot authorize a different destination should be denied.
+        // Setup: build fixture inputs where proof for one destination cannot authorize a different destination should
+        // be denied.
         address allowedDestination = address(0xD606);
         address actualDestination = address(0xD6AC);
         address[] memory allowedDestinations = buildArray(allowedDestination);
@@ -199,7 +204,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         // Setup: build fixture inputs where unknown destination enum fails closed should be denied.
         Policy memory policy = _buildBasePolicy();
 
-        // Call: execute `isDestinationAllowedByPolicyViaPolicyLibraryRawDestinationType` and capture the authorization decision.
+        // Call: execute `isDestinationAllowedByPolicyViaPolicyLibraryRawDestinationType` and capture the authorization
+        // decision.
         bool allowed = harness.isDestinationAllowedByPolicyViaPolicyLibraryRawDestinationType(
             policy, type(uint256).max, address(0xD607), 0, hex"", new bytes32[](0)
         );
@@ -209,7 +215,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that empty proof is valid only for single-leaf custom-destination trees.
     function test_isDestinationAllowed_emptyProofOnlySingleLeafTree_validityMatchesTreeShape() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for empty proof is valid only for single-leaf custom-destination trees.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for empty proof is valid only for
+        // single-leaf custom-destination trees.
         address destination = address(0xD608);
         address[] memory single = buildArray(destination);
         (bytes32 singleRoot,) = _buildAddressRootAndProof(single, 0);
@@ -252,7 +259,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that short transfer calldata validates `to`, not encoded recipient.
     function test_isDestinationAllowed_shortTransferCalldata_checksToNotEncodedRecipient() public {
-        // Setup: build fixture inputs where short transfer calldata validates `to`, not encoded recipient should be denied.
+        // Setup: build fixture inputs where short transfer calldata validates `to`, not encoded recipient should be
+        // denied.
         address token = address(0xD610);
         address encodedRecipient = address(0xD6B0);
         address[] memory allowedDestinations = buildArray(encodedRecipient);
@@ -271,7 +279,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that ERC20-like calldata with non-zero value validates `to`, not encoded recipient.
     function test_isDestinationAllowed_erc20LikeWithNonZeroValue_checksToNotRecipient() public {
-        // Setup: build fixture inputs where ERC20-like calldata with non-zero value validates `to`, not encoded recipient should be denied.
+        // Setup: build fixture inputs where ERC20-like calldata with non-zero value validates `to`, not encoded
+        // recipient should be denied.
         address token = address(0xD611);
         address recipient = address(0xD6B1);
         address[] memory allowedDestinations = buildArray(recipient);
@@ -289,7 +298,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that approve interaction checks `to`; proof for encoded spender does not authorize.
     function test_isDestinationAllowed_approveInteraction_checksToNotSpender() public {
-        // Setup: build fixture inputs where approve interaction checks `to`; proof for encoded spender does not authorize should be denied.
+        // Setup: build fixture inputs where approve interaction checks `to`; proof for encoded spender does not
+        // authorize should be denied.
         address token = address(0xD612);
         address spender = address(0xD6B2);
         address[] memory allowedDestinations = buildArray(spender);
@@ -307,7 +317,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that transferFrom interaction checks `to`; proof for encoded params does not authorize.
     function test_isDestinationAllowed_transferFromInteraction_checksToNotEncodedParams() public {
-        // Setup: build fixture inputs where transferFrom interaction checks `to`; proof for encoded params does not authorize should be denied.
+        // Setup: build fixture inputs where transferFrom interaction checks `to`; proof for encoded params does not
+        // authorize should be denied.
         address token = address(0xD613);
         address encodedFrom = address(0xD6B3);
         address encodedTo = address(0xD6B4);
@@ -327,7 +338,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that selector-only transfer calldata checks `to`; proof for intended recipient does not authorize.
     function test_isDestinationAllowed_selectorOnlyTransfer_checksToNotRecipient() public {
-        // Setup: build fixture inputs where selector-only transfer calldata checks `to`; proof for intended recipient does not authorize should be denied.
+        // Setup: build fixture inputs where selector-only transfer calldata checks `to`; proof for intended recipient
+        // does not authorize should be denied.
         address token = address(0xD614);
         address recipient = address(0xD6B5);
         address[] memory allowedDestinations = buildArray(recipient);
@@ -345,7 +357,8 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that calldata shorter than selector checks `to`; proof for unrelated address does not authorize.
     function test_isDestinationAllowed_calldataShorterThanSelector_checksToAndRejectsUnrelatedProof() public {
-        // Setup: build fixture inputs where calldata shorter than selector checks `to`; proof for unrelated address does not authorize should be denied.
+        // Setup: build fixture inputs where calldata shorter than selector checks `to`; proof for unrelated address
+        // does not authorize should be denied.
         address to = address(0xD615);
         address unrelated = address(0xD6B6);
         address[] memory allowedDestinations = buildArray(unrelated);
@@ -360,9 +373,11 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         assertFalse(allowed, "short calldata should check to-address and reject unrelated proof");
     }
 
-    /// @dev Verifies that zero-data, zero-value transaction checks `to`; proof for unrelated address does not authorize.
+    /// @dev Verifies that zero-data, zero-value transaction checks `to`; proof for unrelated address does not
+    /// authorize.
     function test_isDestinationAllowed_zeroDataZeroValue_checksToAndRejectsUnrelatedProof() public {
-        // Setup: build fixture inputs where zero-data, zero-value transaction checks `to`; proof for unrelated address does not authorize should be denied.
+        // Setup: build fixture inputs where zero-data, zero-value transaction checks `to`; proof for unrelated address
+        // does not authorize should be denied.
         address to = address(0xD616);
         address unrelated = address(0xD6B7);
         address[] memory allowedDestinations = buildArray(unrelated);

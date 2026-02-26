@@ -17,7 +17,8 @@ import {ApproverType, Policy, RateLimitType} from "types/PolicyTypes.sol";
 contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
     /// @dev Verifies that wrapper entry points return delegated-library results for representative success cases.
     function test_wrapperFunctions_delegateAndReturnSameResults() public {
-        // Setup: configure a valid fixture for wrapper entry points return delegated-library results for representative success cases.
+        // Setup: configure a valid fixture for wrapper entry points return delegated-library results for representative
+        // success cases.
         Policy memory policy = _buildBasePolicy();
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 24;
@@ -35,7 +36,7 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
 
         // Verify: assert the expected success result and state updates.
         assertEq(
-        // Call: execute `areApprovalsValidViaLibrary` with the happy-path payload.
+            // Call: execute `areApprovalsValidViaLibrary` with the happy-path payload.
             harness.areApprovalsValidViaLibrary(policy, signature, messageHash),
             harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash),
             "approval wrapper mismatch"
@@ -79,7 +80,8 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that wrapper bubbles delegated custom errors unchanged.
     function test_wrapperApprovals_bubblesDelegatedCustomErrors() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated custom errors unchanged.
+        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated custom errors
+        // unchanged.
         bytes32 messageHash = keccak256("lop-wrap-2-message");
 
         // Unauthorized signer path.
@@ -106,7 +108,8 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that wrapper bubbles delegated signature-decoding errors unchanged.
     function test_wrapperApprovals_bubblesSignatureRecoveryErrorsUnchanged() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated signature-decoding errors unchanged.
+        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated
+        // signature-decoding errors unchanged.
         Policy memory policy = _buildBasePolicy();
         policy.config.approval.approverType = ApproverType.Member;
         policy.config.approval.approverMember = reviewer1;
@@ -121,7 +124,8 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
     function test_wrapperCheckAndUpdateRateLimit_mutatesOnlyOnSuccess() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `checkAndUpdateRateLimit`
+        // mutates usage only when delegated result is true.
         Policy memory policy = _buildBasePolicy();
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 24;

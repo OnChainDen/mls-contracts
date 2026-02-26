@@ -132,9 +132,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     function test_LOAT_3_signaturePolicyCannotAuthorizeAccountTransactions() public {
         // Setup: assemble inputs expected to hit the guarded failure path for signature policy cannot authorize account
         // transactions.
-        Policy memory policy = _buildApprovalPolicy({
-            txType: TransactionType.Signatures, approvalType: PolicyType.AutoApprove
-        });
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.Signatures, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -176,9 +175,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     function test_LOAT_4_manualApprovalWithoutReviewers_revertsInsufficientApprovals() public {
         // Setup: assemble inputs expected to hit the guarded failure path for manual approval without reviewers reverts
         // insufficient approvals.
-        Policy memory policy = _buildApprovalPolicy({
-            txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval
-        });
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -554,9 +552,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     function test_LOAT_12_manualRejectWithoutThresholdApprovals_revertsInsufficientApprovals() public {
         // Setup: assemble inputs expected to hit the guarded failure path for manual reject without threshold approvals
         // reverts insufficient approvals.
-        Policy memory policy = _buildApprovalPolicy({
-            txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval
-        });
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         bytes memory data = abi.encodeWithSelector(bytes4(0x0B0B0B0B), uint256(12));
@@ -1494,9 +1491,8 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     function test_LOAT_26_desired_invalidRateLimitTypeMustFailClosed() public {
         // Setup: assemble inputs expected to hit the guarded failure path for desired invalid rate limit type must fail
         // closed.
-        Policy memory policy = _buildApprovalPolicy({
-            txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove
-        });
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1;
         _unsafeSetRateLimitTypeRaw(policy, 2);

@@ -3,6 +3,9 @@
 pragma solidity 0.8.33;
 
 import {
+    OrganizationPolicyInvariantHandler
+} from "test/organization/integration/policy/OrganizationPolicyInvariantHandler.sol";
+import {
     LibOrganizationAccountSignatureHarness
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureHarness.sol";
 import {
@@ -14,9 +17,6 @@ import {
 import {
     LibOrganizationPolicySuiteBase
 } from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicySuiteBase.sol";
-import {
-    OrganizationPolicyInvariantHandler
-} from "test/organization/integration/policy/OrganizationPolicyInvariantHandler.sol";
 import {
     ApproverType,
     ConstraintType,

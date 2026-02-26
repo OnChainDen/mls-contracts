@@ -61,7 +61,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that insufficient signatures revert via admin-auth validation.
     function test_setPolicies_insufficientSignatures_revertsViaAdminAuthValidation() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for insufficient signatures revert via admin-auth validation.
+        // Setup: assemble inputs expected to hit the guarded failure path for insufficient signatures revert via
+        // admin-auth validation.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         bytes32 newRoot = keccak256("opb-set-3-root");
@@ -140,7 +141,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that tampering `newPoliciesRoot` after signing invalidates auth and reverts.
     function test_setPolicies_rootTamperingAfterSigning_invalidatesAuthAndReverts() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for tampering `newPoliciesRoot` after signing invalidates auth and reverts.
+        // Setup: assemble inputs expected to hit the guarded failure path for tampering `newPoliciesRoot` after signing
+        // invalidates auth and reverts.
         bytes32 signedRoot = keccak256("opb-set-6-signed");
         bytes32 tamperedRoot = keccak256("opb-set-6-tampered");
         string memory ipfsCid = "ipfs://opb-set-6";
@@ -167,7 +169,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that tampering `ipfsCid` after signing invalidates auth and reverts.
     function test_setPolicies_ipfsCidTamperingAfterSigning_invalidatesAuthAndReverts() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for tampering `ipfsCid` after signing invalidates auth and reverts.
+        // Setup: assemble inputs expected to hit the guarded failure path for tampering `ipfsCid` after signing
+        // invalidates auth and reverts.
         bytes32 newRoot = keccak256("opb-set-7-root");
         string memory signedCid = "ipfs://opb-set-7-signed";
         string memory tamperedCid = "ipfs://opb-set-7-tampered";
@@ -230,7 +233,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that failed auth does not consume nonce; same salt can later succeed.
     function test_setPolicies_failedAuthDoesNotConsumeNonce_sameSaltCanLaterSucceed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for failed auth does not consume nonce; same salt can later succeed.
+        // Setup: assemble inputs expected to hit the guarded failure path for failed auth does not consume nonce; same
+        // salt can later succeed.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         bytes32 newRoot = keccak256("opb-set-10-root");
@@ -270,7 +274,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that after clearing root to zero, old proof reads must revert (no stale-root reads).
     function test_setPolicies_transitionClearRoot_oldProofReadReverts() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for after clearing root to zero, old proof reads must revert (no stale-root reads).
+        // Setup: assemble inputs expected to hit the guarded failure path for after clearing root to zero, old proof
+        // reads must revert (no stale-root reads).
         Policy memory policy = _buildRateLimitedPolicy();
         uint256 policyId = 9111;
 
@@ -295,7 +300,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that r1->0->R2 hardening transition rejects old proofs and accepts new proofs.
     function test_setPolicies_hardeningTransition_rejectsOldProofsAcceptsNewProofs() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for r1->0->R2 hardening transition rejects old proofs and accepts new proofs.
+        // Setup: assemble inputs expected to hit the guarded failure path for r1->0->R2 hardening transition rejects
+        // old proofs and accepts new proofs.
         uint256 policyId = 9112;
         Policy memory policyR1 = _buildRateLimitedPolicy();
         Policy memory policyR2 = _buildRateLimitedPolicy();
@@ -369,7 +375,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that invalid policy proof reverts with `PolicyVerificationFailed(policyId)`.
     function test_getPolicyUsage_invalidPolicyProof_revertsPolicyVerificationFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for invalid policy proof reverts with `PolicyVerificationFailed(policyId)`.
+        // Setup: assemble inputs expected to hit the guarded failure path for invalid policy proof reverts with
+        // `PolicyVerificationFailed(policyId)`.
         Policy memory policy = _buildRateLimitedPolicy();
         uint256 policyId = 9202;
 
@@ -391,7 +398,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that wrong `policyId` for otherwise-valid proof reverts.
     function test_getPolicyUsage_wrongPolicyIdForProof_revertsPolicyVerificationFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for wrong `policyId` for otherwise-valid proof reverts.
+        // Setup: assemble inputs expected to hit the guarded failure path for wrong `policyId` for otherwise-valid
+        // proof reverts.
         Policy memory policy = _buildRateLimitedPolicy();
         uint256 signedPolicyId = 9203;
         uint256 queriedPolicyId = 9204;
@@ -411,7 +419,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that `policiesRoot == 0` rejects non-empty policy via `PolicyVerificationFailed`.
     function test_getPolicyUsage_zeroPoliciesRoot_revertsPolicyVerificationFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for `policiesRoot == 0` rejects non-empty policy via `PolicyVerificationFailed`.
+        // Setup: assemble inputs expected to hit the guarded failure path for `policiesRoot == 0` rejects non-empty
+        // policy via `PolicyVerificationFailed`.
         Policy memory policy = _buildRateLimitedPolicy();
         uint256 policyId = 9205;
         bytes32[] memory emptyProof = new bytes32[](0);
@@ -443,7 +452,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that usage keying is correctly scoped by account/destination/initiator config.
     function test_getPolicyUsage_scopeKeying_separatesEntitiesCorrectly() public {
-        // Setup: configure a valid fixture for usage keying is correctly scoped by account/destination/initiator config.
+        // Setup: configure a valid fixture for usage keying is correctly scoped by account/destination/initiator
+        // config.
         Policy memory policy = _buildRateLimitedPolicy();
         policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
         policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
@@ -525,7 +535,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
     /// @dev Verifies that rotating root from R1 to R2 invalidates stale proofs and accepts fresh proofs.
     function test_getPolicyUsage_rootRotation_staleProofFailsFreshProofSucceeds() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for rotating root from R1 to R2 invalidates stale proofs and accepts fresh proofs.
+        // Setup: assemble inputs expected to hit the guarded failure path for rotating root from R1 to R2 invalidates
+        // stale proofs and accepts fresh proofs.
         uint256 policyId = 9210;
         Policy memory policyR1 = _buildRateLimitedPolicy();
         Policy memory policyR2 = _buildRateLimitedPolicy();

@@ -97,7 +97,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that usage above limit returns false and does not update usage.
     function test_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for usage above limit returns false and does not update usage.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for usage above limit returns false
+        // and does not update usage.
         uint256 policyId = 9005;
         Policy memory policy = _timeIntervalPolicy(1, 10);
 
@@ -119,7 +120,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that cumulative usage in the same window is enforced.
     function test_checkAndUpdateRateLimit_cumulativeUsageInSameWindow_enforced() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for cumulative usage in the same window is enforced.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for cumulative usage in the same
+        // window is enforced.
         uint256 policyId = 9006;
         Policy memory policy = _timeIntervalPolicy(1, 10);
 
@@ -227,7 +229,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: usage overflow fails closed (`false`) rather than reverting.
     function test_checkAndUpdateRateLimit_additionOverflow_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: usage overflow fails closed (`false`) rather than reverting should be denied.
+        // Setup: build fixture inputs where desired behavior: usage overflow fails closed (`false`) rather than
+        // reverting should be denied.
         uint256 policyId = 9010;
         Policy memory policy = _timeIntervalPolicy(1, type(uint256).max);
 
@@ -246,7 +249,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and usage stays unchanged.
     function test_checkAndUpdateRateLimit_zeroLimitAndZeroUsage_succeedsWithoutMutation() public {
-        // Setup: configure a valid fixture for `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and usage stays unchanged.
+        // Setup: configure a valid fixture for `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and usage stays
+        // unchanged.
         uint256 policyId = 9011;
         Policy memory policy = _timeIntervalPolicy(1, 0);
 
@@ -267,7 +271,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that `timeIntervalLimit == 0` and positive usage returns false and does not mutate.
     function test_checkAndUpdateRateLimit_zeroLimitAndPositiveUsage_returnsFalseWithoutMutation() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `timeIntervalLimit == 0` and positive usage returns false and does not mutate.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `timeIntervalLimit == 0` and
+        // positive usage returns false and does not mutate.
         uint256 policyId = 9012;
         Policy memory policy = _timeIntervalPolicy(1, 0);
 
@@ -288,7 +293,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: invalid `RateLimitType` fails closed and does not write usage.
     function test_checkAndUpdateRateLimit_invalidRateLimitType_failsClosed_desired() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired behavior: invalid `RateLimitType` fails closed and does not write usage.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired behavior: invalid
+        // `RateLimitType` fails closed and does not write usage.
         uint256 policyId = 9013;
         Policy memory policy = _timeIntervalPolicy(1, 10);
 

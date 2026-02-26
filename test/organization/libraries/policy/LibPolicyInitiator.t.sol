@@ -11,7 +11,8 @@ import {ApproverType, Policy} from "types/PolicyTypes.sol";
 contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
     /// @dev Verifies that member-typed initiator returns true for exact configured member that is an org member.
     function test_isInitiatorAuthorized_memberTypedMatchingMemberAndOrgMember_returnsTrue() public {
-        // Setup: configure a valid fixture for member-typed initiator returns true for exact configured member that is an org member.
+        // Setup: configure a valid fixture for member-typed initiator returns true for exact configured member that is
+        // an org member.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = false;
         policy.config.initiator.initiatorType = ApproverType.Member;
@@ -27,7 +28,8 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that member-typed initiator returns false for non-matching address.
     function test_isInitiatorAuthorized_memberTypedNonMatchingAddress_returnsFalse() public {
-        // Setup: build fixture inputs where member-typed initiator returns false for non-matching address should be denied.
+        // Setup: build fixture inputs where member-typed initiator returns false for non-matching address should be
+        // denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = false;
         policy.config.initiator.initiatorType = ApproverType.Member;
@@ -43,7 +45,8 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that member-typed initiator returns false when configured address is not an org member.
     function test_isInitiatorAuthorized_memberTypedMatchingAddressButNotOrgMember_returnsFalse() public {
-        // Setup: build fixture inputs where member-typed initiator returns false when configured address is not an org member should be denied.
+        // Setup: build fixture inputs where member-typed initiator returns false when configured address is not an org
+        // member should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = false;
         policy.config.initiator.initiatorType = ApproverType.Member;
@@ -76,7 +79,8 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that group-typed initiator returns false for non-member of existing group.
     function test_isInitiatorAuthorized_groupTypedExistingGroupNonMember_returnsFalse() public {
-        // Setup: build fixture inputs where group-typed initiator returns false for non-member of existing group should be denied.
+        // Setup: build fixture inputs where group-typed initiator returns false for non-member of existing group should
+        // be denied.
         uint256 initiatorGroupId = 1102;
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = false;
@@ -94,7 +98,8 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that group-typed initiator returns false for non-existent group.
     function test_isInitiatorAuthorized_groupTypedNonExistentGroup_returnsFalse() public {
-        // Setup: build fixture inputs where group-typed initiator returns false for non-existent group should be denied.
+        // Setup: build fixture inputs where group-typed initiator returns false for non-existent group should be
+        // denied.
         uint256 initiatorGroupId = 1103;
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = false;
@@ -111,7 +116,8 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: `anyInitiator` should still require organization membership.
     function test_isInitiatorAuthorized_anyInitiatorStillRequiresOrgMembership_desired() public {
-        // Setup: build fixture inputs where desired behavior: `anyInitiator` should still require organization membership should be denied.
+        // Setup: build fixture inputs where desired behavior: `anyInitiator` should still require organization
+        // membership should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = true;
 
