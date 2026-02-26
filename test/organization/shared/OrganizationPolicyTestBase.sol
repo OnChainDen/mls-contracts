@@ -13,10 +13,8 @@ import {OperationType} from "types/CommonTypes.sol";
 import {
     ApprovalConfig,
     ApproverType,
-    ConstraintType,
     DestinationType,
     InitiatorConfig,
-    ParamType,
     ParameterConstraint,
     Policy,
     PolicyConfig,
@@ -26,8 +24,7 @@ import {
     RateLimitScope,
     RateLimitType,
     TokenFilter,
-    TransactionType,
-    ValidationProofs
+    TransactionType
 } from "types/PolicyTypes.sol";
 
 import {Merkle} from "murky/Merkle.sol";
@@ -118,27 +115,6 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase {
             roots: PolicyRoots({
                 sourceAccountsRoot: bytes32(0), customDestinationsRoot: bytes32(0), allowedFunctionsRoot: bytes32(0)
             })
-        });
-    }
-
-    /**
-     * @dev Builds a baseline `ValidationProofs` bundle with caller-provided proofs/constraints.
-     */
-    function _buildValidationProofs(
-        Policy memory policy,
-        bytes32[] memory policyProof,
-        bytes32[] memory sourceAccountProof,
-        bytes32[] memory destinationProof,
-        bytes32[] memory functionProof,
-        bytes memory constraints
-    ) internal pure returns (ValidationProofs memory proofs) {
-        proofs = ValidationProofs({
-            policy: policy,
-            policyProof: policyProof,
-            sourceAccountProof: sourceAccountProof,
-            destinationProof: destinationProof,
-            functionProof: functionProof,
-            constraints: constraints
         });
     }
 
@@ -267,25 +243,6 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase {
      */
     function _encodeERC20TransferFrom(address from, address to, uint256 amount) internal pure returns (bytes memory) {
         return abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, amount);
-    }
-
-    /**
-     * @dev Builds a parameter-constraint object used by constraints-focused suites.
-     */
-    function _buildConstraint(
-        ParamType paramType,
-        ConstraintType constraintType,
-        uint8 headSlots,
-        bytes memory comparisonData,
-        bytes32[] memory paramValueInListProof
-    ) internal pure returns (ParameterConstraint memory) {
-        return ParameterConstraint({
-            paramType: paramType,
-            constraintType: constraintType,
-            paramCalldataHeadSlotCount: headSlots,
-            comparisonData: comparisonData,
-            paramValueInListProof: paramValueInListProof
-        });
     }
 
     /**

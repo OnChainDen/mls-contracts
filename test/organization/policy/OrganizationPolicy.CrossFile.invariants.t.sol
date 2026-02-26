@@ -89,7 +89,8 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
 
     /// @dev Verifies that invalid policy proof cannot authorize transaction or signature.
     function invariant_POL_I_3_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
-        // Setup: build fixture inputs where invalid policy proof cannot authorize transaction or signature should be denied.
+        // Setup: build fixture inputs where invalid policy proof cannot authorize transaction or signature should be
+        // denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.Any;
         policy.config.initiator.anyInitiator = false;
@@ -105,7 +106,14 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         badProof[0] = keccak256("invalid-proof");
         bytes32[] memory empty = new bytes32[](0);
 
-        ValidationProofs memory proofs = _buildValidationProofs(policy, badProof, empty, empty, empty, bytes(""));
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: badProof,
+            sourceAccountProof: empty,
+            destinationProof: empty,
+            functionProof: empty,
+            constraints: bytes("")
+        });
 
         bool txAllowed = checkHarness.isTransactionAllowedByPolicyViaLibrary({
             policyId: DEFAULT_POLICY_ID,
@@ -139,7 +147,8 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
 
     /// @dev Verifies that manual policies cannot pass with fewer approvals than required.
     function invariant_POL_I_6_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
-        // Setup: build fixture inputs where manual policies cannot pass with fewer approvals than required should be denied.
+        // Setup: build fixture inputs where manual policies cannot pass with fewer approvals than required should be
+        // denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.approval.policyType = PolicyType.RequireManualApproval;
         policy.config.approval.approverType = ApproverType.Group;
@@ -178,10 +187,10 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
 
         // ConstraintType + ParamType
         bytes32[] memory noProof = new bytes32[](0);
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(true),
             paramValueInListProof: noProof
         });
@@ -253,7 +262,8 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
 
     /// @dev Verifies that desired malformed constraints fail closed without unexpected revert.
     function invariant_POL_I_10_desired_malformedConstraintsFailClosedWithoutUnexpectedRevert() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired malformed constraints fail closed without unexpected revert.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired malformed constraints
+        // fail closed without unexpected revert.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.anyFunction = false;
@@ -278,8 +288,14 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         checkHarness.setPoliciesRoot(policyRoot);
 
         bytes32[] memory empty = new bytes32[](0);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, empty, empty, empty, functionProof, malformedConstraints);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: empty,
+            sourceAccountProof: empty,
+            destinationProof: empty,
+            functionProof: functionProof,
+            constraints: malformedConstraints
+        });
 
         try checkHarness.isTransactionAllowedByPolicyViaLibrary(
             DEFAULT_POLICY_ID,
@@ -292,7 +308,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed constraints should fail closed with false");
         } catch {
             assertTrue(false, "malformed constraints should not revert in policy-check path");

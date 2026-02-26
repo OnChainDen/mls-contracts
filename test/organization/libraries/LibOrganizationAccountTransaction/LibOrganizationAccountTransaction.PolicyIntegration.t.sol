@@ -44,7 +44,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that policy does not apply reverts policy does not apply.
     function test_LOAT_1_policyDoesNotApply_revertsPolicyDoesNotApply() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply reverts policy does not apply.
+        // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply reverts policy does
+        // not apply.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _emptyProofsForPolicy(policy);
 
@@ -67,7 +68,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
         );
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -84,7 +86,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that policy proof tampering reverts policy does not apply.
     function test_LOAT_2_policyProofTampering_revertsPolicyDoesNotApply() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for policy proof tampering reverts policy does not apply.
+        // Setup: assemble inputs expected to hit the guarded failure path for policy proof tampering reverts policy
+        // does not apply.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
         proofs.policyProof = new bytes32[](1);
@@ -109,7 +112,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
         );
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -126,9 +130,11 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that signature policy cannot authorize account transactions.
     function test_LOAT_3_signaturePolicyCannotAuthorizeAccountTransactions() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for signature policy cannot authorize account transactions.
-        Policy memory policy =
-            _buildApprovalPolicy({txType: TransactionType.Signatures, approvalType: PolicyType.AutoApprove});
+        // Setup: assemble inputs expected to hit the guarded failure path for signature policy cannot authorize account
+        // transactions.
+        Policy memory policy = _buildApprovalPolicy({
+            txType: TransactionType.Signatures, approvalType: PolicyType.AutoApprove
+        });
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -150,7 +156,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
         );
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -167,9 +174,11 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that manual approval without reviewers reverts insufficient approvals.
     function test_LOAT_4_manualApprovalWithoutReviewers_revertsInsufficientApprovals() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for manual approval without reviewers reverts insufficient approvals.
-        Policy memory policy =
-            _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
+        // Setup: assemble inputs expected to hit the guarded failure path for manual approval without reviewers reverts
+        // insufficient approvals.
+        Policy memory policy = _buildApprovalPolicy({
+            txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval
+        });
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -189,7 +198,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -292,7 +302,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that rate limit exceeded reverts rate limit exceeded.
     function test_LOAT_7_rateLimitExceeded_revertsRateLimitExceeded() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for rate limit exceeded reverts rate limit exceeded.
+        // Setup: assemble inputs expected to hit the guarded failure path for rate limit exceeded reverts rate limit
+        // exceeded.
         uint256 amount = 101;
 
         Policy memory policy =
@@ -322,7 +333,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
         );
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: TOKEN,
@@ -485,7 +497,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that auto reject requires authorized initiator signature.
     function test_LOAT_11_autoRejectRequiresAuthorizedInitiatorSignature() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for auto reject requires authorized initiator signature.
+        // Setup: assemble inputs expected to hit the guarded failure path for auto reject requires authorized initiator
+        // signature.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
@@ -521,7 +534,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(IOrganizationAccountTransaction.TransactionRejectionNotAllowed.selector);
-        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionRejectionOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -538,9 +552,11 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that manual reject without threshold approvals reverts insufficient approvals.
     function test_LOAT_12_manualRejectWithoutThresholdApprovals_revertsInsufficientApprovals() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for manual reject without threshold approvals reverts insufficient approvals.
-        Policy memory policy =
-            _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
+        // Setup: assemble inputs expected to hit the guarded failure path for manual reject without threshold approvals
+        // reverts insufficient approvals.
+        Policy memory policy = _buildApprovalPolicy({
+            txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval
+        });
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         bytes memory data = abi.encodeWithSelector(bytes4(0x0B0B0B0B), uint256(12));
@@ -561,7 +577,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
-        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionRejectionOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -578,7 +595,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that approval review signatures cannot replay as rejection.
     function test_LOAT_13_approvalReviewSignaturesCannotReplayAsRejection() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for approval review signatures cannot replay as rejection.
+        // Setup: assemble inputs expected to hit the guarded failure path for approval review signatures cannot replay
+        // as rejection.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -616,7 +634,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert();
-        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionRejectionOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -878,7 +897,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that policy does not apply does not mutate rate usage.
     function test_LOAT_16_policyDoesNotApply_doesNotMutateRateUsage() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply does not mutate rate usage.
+        // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply does not mutate
+        // rate usage.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
@@ -913,7 +933,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
         );
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -934,7 +955,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that insufficient approvals does not mutate rate usage.
     function test_LOAT_17_insufficientApprovals_doesNotMutateRateUsage() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for insufficient approvals does not mutate rate usage.
+        // Setup: assemble inputs expected to hit the guarded failure path for insufficient approvals does not mutate
+        // rate usage.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -967,7 +989,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -990,7 +1013,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that root transition guard clear root rejects old proofs.
     function test_LOAT_18_rootTransitionGuard_clearRootRejectsOldProofs() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for root transition guard clear root rejects old proofs.
+        // Setup: assemble inputs expected to hit the guarded failure path for root transition guard clear root rejects
+        // old proofs.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
@@ -1010,7 +1034,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         });
 
         // Under R1: succeeds.
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1047,7 +1072,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that branch comparison auto approve succeeds manual without reviews reverts.
     function test_LOAT_19_branchComparison_autoApproveSucceeds_manualWithoutReviewsReverts() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for branch comparison auto approve succeeds manual without reviews reverts.
+        // Setup: assemble inputs expected to hit the guarded failure path for branch comparison auto approve succeeds
+        // manual without reviews reverts.
         bytes memory data = abi.encodeWithSelector(bytes4(0x19191919), uint256(19));
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signInitiatorTx({
@@ -1067,7 +1093,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
             _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory autoProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, autoPolicy);
 
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1103,7 +1130,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that desired invalid approval policy type must fail closed.
     function test_LOAT_20_desired_invalidApprovalPolicyTypeMustFailClosed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for desired invalid approval policy type must fail closed.
+        // Setup: assemble inputs expected to hit the guarded failure path for desired invalid approval policy type must
+        // fail closed.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         _unsafeSetApprovalPolicyTypeRaw(policy, 2);
 
@@ -1126,7 +1154,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert();
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1143,7 +1172,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that branch comparison manual with reviews and auto with same payload both succeed.
     function test_LOAT_21_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothSucceed() public {
-        // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both succeed.
+        // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both
+        // succeed.
         bytes memory data = abi.encodeWithSelector(bytes4(0x21212121), uint256(21));
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signInitiatorTx({
@@ -1210,7 +1240,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that rejection branch comparison auto succeeds manual insufficient for same payload.
     function test_LOAT_22_rejectionBranchComparison_autoSucceeds_manualInsufficientForSamePayload() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for rejection branch comparison auto succeeds manual insufficient for same payload.
+        // Setup: assemble inputs expected to hit the guarded failure path for rejection branch comparison auto succeeds
+        // manual insufficient for same payload.
         bytes memory data = abi.encodeWithSelector(bytes4(0x22222222), uint256(22));
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signInitiatorTx({
@@ -1253,7 +1284,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         autoPolicy.config.approval.policyType = PolicyType.AutoApprove;
 
         ValidationProofs memory autoProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, autoPolicy);
-        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionRejectionOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1286,7 +1318,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that rejection branch comparison manual succeeds auto rejects same reviewer payload.
     function test_LOAT_23_rejectionBranchComparison_manualSucceeds_autoRejectsSameReviewerPayload() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for rejection branch comparison manual succeeds auto rejects same reviewer payload.
+        // Setup: assemble inputs expected to hit the guarded failure path for rejection branch comparison manual
+        // succeeds auto rejects same reviewer payload.
         bytes memory data = abi.encodeWithSelector(bytes4(0x23232323), uint256(23));
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signInitiatorTx({
@@ -1318,7 +1351,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         Policy memory manualPolicy =
             _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
         ValidationProofs memory manualProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, manualPolicy);
-        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionRejectionOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1354,7 +1388,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that cross chain replay initiator signature fails.
     function test_LOAT_24_crossChainReplayInitiatorSignatureFails() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for cross chain replay initiator signature fails.
+        // Setup: assemble inputs expected to hit the guarded failure path for cross chain replay initiator signature
+        // fails.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
@@ -1380,7 +1415,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
         );
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1397,7 +1433,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that cross chain replay reviewer signatures fail with valid chain b initiator.
     function test_LOAT_25_crossChainReplayReviewerSignaturesFailWithValidChainBInitiator() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for cross chain replay reviewer signatures fail with valid chain b initiator.
+        // Setup: assemble inputs expected to hit the guarded failure path for cross chain replay reviewer signatures
+        // fail with valid chain b initiator.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -1437,7 +1474,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
         vm.chainId(31_337);
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert();
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,
@@ -1454,9 +1492,11 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that desired invalid rate limit type must fail closed.
     function test_LOAT_26_desired_invalidRateLimitTypeMustFailClosed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for desired invalid rate limit type must fail closed.
-        Policy memory policy =
-            _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        // Setup: assemble inputs expected to hit the guarded failure path for desired invalid rate limit type must fail
+        // closed.
+        Policy memory policy = _buildApprovalPolicy({
+            txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove
+        });
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1;
         _unsafeSetRateLimitTypeRaw(policy, 2);
@@ -1480,7 +1520,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert();
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert branch.
+        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
+        // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: TOKEN,
@@ -1497,7 +1538,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that cross organization replay initiator signature fails.
     function test_LOAT_27_crossOrganizationReplayInitiatorSignatureFails() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay initiator signature fails.
+        // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay initiator
+        // signature fails.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();
 
         // Seed shared org state.
@@ -1545,7 +1587,8 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     /// @dev Verifies that cross organization replay reviewer signatures fail with valid org b initiator.
     function test_LOAT_28_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay reviewer signatures fail with valid org b initiator.
+        // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay reviewer
+        // signatures fail with valid org b initiator.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();
 
         // Seed shared org state.
@@ -1626,7 +1669,14 @@ contract LibOrganizationAccountTransactionPolicyIntegrationTest is LibOrganizati
 
     function _emptyProofsForPolicy(Policy memory policy) internal pure returns (ValidationProofs memory proofs) {
         bytes32[] memory empty = new bytes32[](0);
-        proofs = _buildValidationProofs(policy, empty, empty, empty, empty, bytes(""));
+        proofs = ValidationProofs({
+            policy: policy,
+            policyProof: empty,
+            sourceAccountProof: empty,
+            destinationProof: empty,
+            functionProof: empty,
+            constraints: bytes("")
+        });
     }
 
     function _setSinglePolicyRootAndBuildProofs(uint256 policyId, Policy memory policy)

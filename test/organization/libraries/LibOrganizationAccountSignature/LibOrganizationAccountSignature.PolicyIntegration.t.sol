@@ -824,7 +824,8 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
     /// @dev Verifies that desired manual approval validation reverts must return invalid without revert.
     function test_LOAS_19_desired_manualApprovalValidationRevertsMustReturnInvalidWithoutRevert() public {
-        // Setup: configure a valid fixture for desired manual approval validation reverts must return invalid without revert.
+        // Setup: configure a valid fixture for desired manual approval validation reverts must return invalid without
+        // revert.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
@@ -966,7 +967,7 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
         // Verify: assert the expected success result and state updates.
         assertEq(
-        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
+            // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, autoSig),
             SignatureUtils.ERC1271_MAGIC_VALUE,
             "auto-approve should return magic"
@@ -1001,7 +1002,8 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
     /// @dev Verifies that branch comparison manual with reviews and auto with same payload both magic.
     function test_LOAS_22_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothMagic() public {
-        // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both magic.
+        // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both
+        // magic.
         policyStateHarness.setGuardian(guardianSigner);
 
         uint256 expiration = block.timestamp + 1 days;
@@ -1045,7 +1047,7 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
         // Verify: assert the expected success result and state updates.
         assertEq(
-        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
+            // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, manualSig),
             SignatureUtils.ERC1271_MAGIC_VALUE,
             "manual policy with valid reviews should return magic"
@@ -1125,7 +1127,8 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
     /// @dev Verifies that cross chain replay guardian and reviewer signatures returns invalid value.
     function test_LOAS_24_crossChainReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
-        // Setup: configure a valid fixture for cross chain replay guardian and reviewer signatures returns invalid value.
+        // Setup: configure a valid fixture for cross chain replay guardian and reviewer signatures returns invalid
+        // value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
@@ -1294,7 +1297,8 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
     /// @dev Verifies that cross organization replay guardian and reviewer signatures returns invalid value.
     function test_LOAS_29_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
-        // Setup: configure a valid fixture for cross organization replay guardian and reviewer signatures returns invalid value.
+        // Setup: configure a valid fixture for cross organization replay guardian and reviewer signatures returns
+        // invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
 
@@ -1370,7 +1374,14 @@ contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganization
 
     function _emptyProofsForPolicy(Policy memory policy) internal pure returns (ValidationProofs memory proofs) {
         bytes32[] memory empty = new bytes32[](0);
-        proofs = _buildValidationProofs(policy, empty, empty, empty, empty, bytes(""));
+        proofs = ValidationProofs({
+            policy: policy,
+            policyProof: empty,
+            sourceAccountProof: empty,
+            destinationProof: empty,
+            functionProof: empty,
+            constraints: bytes("")
+        });
     }
 
     function _setSinglePolicyRootAndBuildProofs(uint256 policyId, Policy memory policy)

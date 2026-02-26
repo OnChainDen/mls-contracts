@@ -40,10 +40,10 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
     /// @dev Verifies that a single valid constraint returns true.
     function test_areParametersAllowedByConstraints_singleValidConstraint_returnsTrue() public view {
         // Setup: configure a valid fixture for a single valid constraint returns true.
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(42)),
             paramValueInListProof: _emptyProof()
         });
@@ -61,24 +61,24 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
     /// @dev Verifies that multiple passing constraints return true.
     function test_areParametersAllowedByConstraints_multiplePassingConstraints_returnsTrue() public view {
         // Setup: configure a valid fixture for multiple passing constraints return true.
-        ParameterConstraint memory uintConstraint = _buildConstraint({
+        ParameterConstraint memory uintConstraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(11)),
             paramValueInListProof: _emptyProof()
         });
-        ParameterConstraint memory addressConstraint = _buildConstraint({
+        ParameterConstraint memory addressConstraint = ParameterConstraint({
             paramType: ParamType.Address,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(reviewer1),
             paramValueInListProof: _emptyProof()
         });
-        ParameterConstraint memory boolConstraint = _buildConstraint({
+        ParameterConstraint memory boolConstraint = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(true),
             paramValueInListProof: _emptyProof()
         });
@@ -97,17 +97,17 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
     /// @dev Verifies that any failing constraint causes false.
     function test_areParametersAllowedByConstraints_anyFailingConstraint_returnsFalse() public view {
         // Setup: build fixture inputs where any failing constraint causes false should be denied.
-        ParameterConstraint memory passingConstraint = _buildConstraint({
+        ParameterConstraint memory passingConstraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(11)),
             paramValueInListProof: _emptyProof()
         });
-        ParameterConstraint memory failingConstraint = _buildConstraint({
+        ParameterConstraint memory failingConstraint = ParameterConstraint({
             paramType: ParamType.Address,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(reviewer2),
             paramValueInListProof: _emptyProof()
         });
@@ -125,7 +125,8 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed encoded constraints fail closed with false.
     function test_areParametersAllowedByConstraints_malformedEncodedConstraints_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed encoded constraints fail closed with false.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed encoded constraints
+        // fail closed with false.
         bytes memory malformedConstraints = hex"0001";
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1));
 
@@ -133,7 +134,7 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
         try harness.areParametersAllowedByConstraintsViaPolicyLibrary(malformedConstraints, data) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed constraints should fail closed with false");
         } catch {
             assertTrue(false, "malformed constraints should fail closed with false instead of reverting");
@@ -142,11 +143,12 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData in a constraint fails closed with false.
     function test_areParametersAllowedByConstraints_malformedComparisonData_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData in a constraint fails closed with false.
-        ParameterConstraint memory malformedConstraint = _buildConstraint({
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData in a
+        // constraint fails closed with false.
+        ParameterConstraint memory malformedConstraint = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: hex"01",
             paramValueInListProof: _emptyProof()
         });
@@ -159,7 +161,7 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed comparisonData should fail closed with false");
         } catch {
             assertTrue(false, "malformed comparisonData should fail closed with false instead of reverting");
@@ -169,10 +171,10 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
     /// @dev Verifies that identical inputs produce deterministic output.
     function test_areParametersAllowedByConstraints_deterministicForSameInputs() public view {
         // Setup: configure a valid fixture for identical inputs produce deterministic output.
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Range,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(10), uint256(20)),
             paramValueInListProof: _emptyProof()
         });
@@ -198,24 +200,24 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
         // Setup: configure a valid fixture for mixed head slot counts advance offsets correctly.
         bytes32[2] memory staticArray = [bytes32(uint256(11)), bytes32(uint256(22))];
 
-        ParameterConstraint memory uintConstraint = _buildConstraint({
+        ParameterConstraint memory uintConstraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(77)),
             paramValueInListProof: _emptyProof()
         });
-        ParameterConstraint memory arrayAnyConstraint = _buildConstraint({
+        ParameterConstraint memory arrayAnyConstraint = ParameterConstraint({
             paramType: ParamType.Array,
             constraintType: ConstraintType.Any,
-            headSlots: 2,
+            paramCalldataHeadSlotCount: 2,
             comparisonData: bytes(""),
             paramValueInListProof: _emptyProof()
         });
-        ParameterConstraint memory addressConstraint = _buildConstraint({
+        ParameterConstraint memory addressConstraint = ParameterConstraint({
             paramType: ParamType.Address,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(reviewer1),
             paramValueInListProof: _emptyProof()
         });
@@ -234,10 +236,10 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
     /// @dev Verifies that zero `paramCalldataHeadSlotCount` fails with false.
     function test_processConstraints_zeroHeadSlotCount_returnsFalse() public view {
         // Setup: build fixture inputs where zero `paramCalldataHeadSlotCount` fails with false should be denied.
-        ParameterConstraint memory invalidConstraint = _buildConstraint({
+        ParameterConstraint memory invalidConstraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 0,
+            paramCalldataHeadSlotCount: 0,
             comparisonData: abi.encode(uint256(1)),
             paramValueInListProof: _emptyProof()
         });
@@ -254,10 +256,10 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
     /// @dev Verifies that insufficient head bytes in calldata returns false.
     function test_processConstraints_dataShorterThanRequiredHead_returnsFalse() public view {
         // Setup: build fixture inputs where insufficient head bytes in calldata returns false should be denied.
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(1)),
             paramValueInListProof: _emptyProof()
         });
@@ -274,17 +276,17 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
     /// @dev Verifies that processing stops at first failing constraint.
     function test_processConstraints_stopsAtFirstFailingConstraint_returnsFalseWithoutReverting() public view {
         // Setup: build fixture inputs where processing stops at first failing constraint should be denied.
-        ParameterConstraint memory firstFailingConstraint = _buildConstraint({
+        ParameterConstraint memory firstFailingConstraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(2)),
             paramValueInListProof: _emptyProof()
         });
-        ParameterConstraint memory secondWouldRevertIfEvaluated = _buildConstraint({
+        ParameterConstraint memory secondWouldRevertIfEvaluated = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: hex"01",
             paramValueInListProof: _emptyProof()
         });
@@ -303,10 +305,10 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
     /// @dev Verifies that struct/tuple with Any can span multiple head slots.
     function test_processConstraints_structAnyMultipleHeadSlots_returnsTrue() public view {
         // Setup: configure a valid fixture for struct/tuple with Any can span multiple head slots.
-        ParameterConstraint memory structAnyConstraint = _buildConstraint({
+        ParameterConstraint memory structAnyConstraint = ParameterConstraint({
             paramType: ParamType.Struct,
             constraintType: ConstraintType.Any,
-            headSlots: 2,
+            paramCalldataHeadSlotCount: 2,
             comparisonData: bytes(""),
             paramValueInListProof: _emptyProof()
         });
@@ -324,10 +326,10 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
     /// @dev Verifies that primitive types with headSlots>1 fail closed.
     function test_processConstraints_primitiveTypeWithHeadSlotsGreaterThanOne_failClosedDesiredBehavior() public view {
         // Setup: build fixture inputs where primitive types with headSlots>1 fail closed should be denied.
-        ParameterConstraint memory primitiveConstraint = _buildConstraint({
+        ParameterConstraint memory primitiveConstraint = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Exact,
-            headSlots: 2,
+            paramCalldataHeadSlotCount: 2,
             comparisonData: abi.encode(true),
             paramValueInListProof: _emptyProof()
         });
@@ -362,31 +364,32 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         supportedTypes[8] = ParamType.Struct;
 
         for (uint256 i = 0; i < supportedTypes.length; ++i) {
-            ParameterConstraint memory anyConstraint = _buildConstraint({
+            ParameterConstraint memory anyConstraint = ParameterConstraint({
                 paramType: supportedTypes[i],
                 constraintType: ConstraintType.Any,
-                headSlots: 1,
+                paramCalldataHeadSlotCount: 1,
                 comparisonData: bytes(""),
                 paramValueInListProof: _emptyProof()
             });
 
-        // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
+            // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
             bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
                 anyConstraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
             );
 
-        // Verify: assert the expected success result and state updates.
+            // Verify: assert the expected success result and state updates.
             assertTrue(allowed, "Any constraint should allow every supported param type");
         }
     }
 
     /// @dev Verifies that unsupported constraint type for a parameter kind returns false.
     function test_isParameterAllowedByConstraint_unsupportedConstraintForType_returnsFalse() public view {
-        // Setup: build fixture inputs where unsupported constraint type for a parameter kind returns false should be denied.
-        ParameterConstraint memory invalidConstraint = _buildConstraint({
+        // Setup: build fixture inputs where unsupported constraint type for a parameter kind returns false should be
+        // denied.
+        ParameterConstraint memory invalidConstraint = ParameterConstraint({
             paramType: ParamType.Bool,
             constraintType: ConstraintType.Range,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(0), uint256(1)),
             paramValueInListProof: _emptyProof()
         });
@@ -403,10 +406,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
     /// @dev Verifies that `ParamType.Array` with non-Any constraint returns false.
     function test_isParameterAllowedByConstraint_arrayWithNonAnyConstraint_returnsFalse() public view {
         // Setup: build fixture inputs where `ParamType.Array` with non-Any constraint returns false should be denied.
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Array,
             constraintType: ConstraintType.Exact,
-            headSlots: 2,
+            paramCalldataHeadSlotCount: 2,
             comparisonData: abi.encode(bytes32(uint256(1))),
             paramValueInListProof: _emptyProof()
         });
@@ -423,10 +426,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
     /// @dev Verifies that `ParamType.Struct` with non-Any constraint returns false.
     function test_isParameterAllowedByConstraint_structWithNonAnyConstraint_returnsFalse() public view {
         // Setup: build fixture inputs where `ParamType.Struct` with non-Any constraint returns false should be denied.
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Struct,
             constraintType: ConstraintType.Exact,
-            headSlots: 2,
+            paramCalldataHeadSlotCount: 2,
             comparisonData: abi.encode(bytes32(uint256(1))),
             paramValueInListProof: _emptyProof()
         });
@@ -443,10 +446,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
     /// @dev Verifies that unknown `ParamType` fails closed with false.
     function test_isParameterAllowedByConstraint_unknownParamType_returnsFalse() public view {
         // Setup: build fixture inputs where unknown `ParamType` fails closed with false should be denied.
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(uint256(1)),
             paramValueInListProof: _emptyProof()
         });
@@ -467,10 +470,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         address[] memory members = buildArray(reviewer1, reviewer2, initiator1);
         (bytes32 root, bytes32[] memory proof) = _buildAddressRootAndProof(members, 1);
 
-        ParameterConstraint memory constraint = _buildConstraint({
+        ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Address,
             constraintType: ConstraintType.OneOf,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(root),
             paramValueInListProof: proof
         });
@@ -490,10 +493,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         bytes memory expectedBytes = hex"AABBCCDD";
         bytes memory bytesData = _encodeSingleBytesArg(expectedBytes);
 
-        ParameterConstraint memory bytesConstraint = _buildConstraint({
+        ParameterConstraint memory bytesConstraint = ParameterConstraint({
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(keccak256(expectedBytes)),
             paramValueInListProof: _emptyProof()
         });
@@ -507,10 +510,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         string memory expectedString = "policy-constraints";
         bytes memory stringData = _encodeSingleStringArg(expectedString);
 
-        ParameterConstraint memory stringConstraint = _buildConstraint({
+        ParameterConstraint memory stringConstraint = ParameterConstraint({
             paramType: ParamType.String,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(keccak256(bytes(expectedString))),
             paramValueInListProof: _emptyProof()
         });
@@ -525,10 +528,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         // Setup: build fixture inputs where invalid dynamic offset fails closed with false should be denied.
         bytes memory data = _encodeSingleBytesArg(bytes("abc"));
 
-        ParameterConstraint memory bytesConstraint = _buildConstraint({
+        ParameterConstraint memory bytesConstraint = ParameterConstraint({
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(keccak256(bytes("abc"))),
             paramValueInListProof: _emptyProof()
         });
@@ -543,7 +546,8 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
 
     /// @dev Verifies that unknown `ConstraintType` fails closed for supported dispatch paths.
     function test_isParameterAllowedByConstraint_unknownConstraintType_returnsFalseAcrossSupportedDispatch()
-        // Setup: build fixture inputs where unknown `ConstraintType` fails closed for supported dispatch paths should be denied.
+        // Setup: build fixture inputs where unknown `ConstraintType` fails closed for supported dispatch paths should
+        // be denied.
         public
         view
     {
@@ -559,21 +563,21 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         supportedTypes[8] = ParamType.Struct;
 
         for (uint256 i = 0; i < supportedTypes.length; ++i) {
-            ParameterConstraint memory constraint = _buildConstraint({
+            ParameterConstraint memory constraint = ParameterConstraint({
                 paramType: supportedTypes[i],
                 constraintType: ConstraintType.Exact,
-                headSlots: 1,
+                paramCalldataHeadSlotCount: 1,
                 comparisonData: abi.encode(uint256(1)),
                 paramValueInListProof: _emptyProof()
             });
             constraint = _unsafeSetConstraintType(constraint, type(uint8).max);
 
-        // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
+            // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
             bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
                 constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
             );
 
-        // Verify: assert that the request is denied and state remains unchanged.
+            // Verify: assert that the request is denied and state remains unchanged.
             assertFalse(allowed, "unknown constraint type should fail closed");
         }
     }
@@ -645,14 +649,15 @@ contract LibPolicyParameterConstraintsSection84Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails closed with false.
-        // Call: run `isBoolParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
+        // closed with false. Call: run `isBoolParameterAllowedByConstraintViaPolicyLibrary` across the prepared
+        // variants.
         try harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, hex"01", bytes32(uint256(1))
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed bool comparisonData should fail closed with false");
         } catch {
             assertTrue(false, "malformed bool comparisonData should fail closed with false instead of reverting");
@@ -666,8 +671,8 @@ contract LibPolicyParameterConstraintsSection84Test is LibPolicyParameterConstra
 contract LibPolicyParameterConstraintsSection85Test is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact match passes and exact mismatch fails.
     function test_isUintParameterAllowedByConstraint_exactMatchAndMismatch() public view {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact match passes and exact mismatch fails.
-        // Call: run `isUintParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact match passes and exact
+        // mismatch fails. Call: run `isUintParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
         bool matchAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(uint256(50)), bytes32(uint256(50))
         );
@@ -742,14 +747,15 @@ contract LibPolicyParameterConstraintsSection85Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isUintParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails closed with false.
-        // Call: run `isUintParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
+        // closed with false. Call: run `isUintParameterAllowedByConstraintViaPolicyLibrary` across the prepared
+        // variants.
         try harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, hex"01", bytes32(uint256(1))
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed uint comparisonData should fail closed with false");
         } catch {
             assertTrue(false, "malformed uint comparisonData should fail closed with false instead of reverting");
@@ -851,14 +857,15 @@ contract LibPolicyParameterConstraintsSection86Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails closed with false.
-        // Call: run `isIntParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
+        // closed with false. Call: run `isIntParameterAllowedByConstraintViaPolicyLibrary` across the prepared
+        // variants.
         try harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, hex"01", bytes32(uint256(int256(1)))
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed int comparisonData should fail closed with false");
         } catch {
             assertTrue(false, "malformed int comparisonData should fail closed with false instead of reverting");
@@ -872,8 +879,9 @@ contract LibPolicyParameterConstraintsSection86Test is LibPolicyParameterConstra
 contract LibPolicyParameterConstraintsSection87Test is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact match passes and exact mismatch fails.
     function test_isAddressParameterAllowedByConstraint_exactMatchAndMismatch() public view {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact match passes and exact mismatch fails.
-        // Call: run `isAddressParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact match passes and exact
+        // mismatch fails. Call: run `isAddressParameterAllowedByConstraintViaPolicyLibrary` across the prepared
+        // variants.
         bool matchAllowed = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(reviewer1), _encodeAddressHead(reviewer1), _emptyProof()
         );
@@ -944,14 +952,15 @@ contract LibPolicyParameterConstraintsSection87Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isAddressParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails closed with false.
-        // Call: run `isAddressParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
+        // closed with false. Call: run `isAddressParameterAllowedByConstraintViaPolicyLibrary` across the prepared
+        // variants.
         try harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, hex"01", _encodeAddressHead(reviewer1), _emptyProof()
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed address comparisonData should fail closed with false");
         } catch {
             assertTrue(false, "malformed address comparisonData should fail closed with false instead of reverting");
@@ -965,7 +974,8 @@ contract LibPolicyParameterConstraintsSection87Test is LibPolicyParameterConstra
 contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact bytes32 match passes and mismatch fails.
     function test_isFixedBytesParameterAllowedByConstraint_exactMatchAndMismatch() public view {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact bytes32 match passes and mismatch fails.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact bytes32 match passes and
+        // mismatch fails.
         bytes32 expected = keccak256("fixed-bytes");
 
         // Call: run `isFixedBytesParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
@@ -983,7 +993,8 @@ contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstra
 
     /// @dev Verifies that bytes1..bytes31 comparisons use ABI left-aligned semantics.
     function test_isFixedBytesParameterAllowedByConstraint_leftAlignedSemanticsForShorterFixedBytes() public view {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for bytes1..bytes31 comparisons use ABI left-aligned semantics.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for bytes1..bytes31 comparisons use
+        // ABI left-aligned semantics.
         bytes4 value = 0x11223344;
         bytes32 leftAligned = bytes32(value);
         bytes32 rightAligned = bytes32(uint256(uint32(value)));
@@ -1004,7 +1015,8 @@ contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstra
     /// @dev Verifies that non-Exact constraints return false.
     function test_isFixedBytesParameterAllowedByConstraint_nonExactConstraint_returnsFalse() public view {
         // Setup: build fixture inputs where non-Exact constraints return false should be denied.
-        // Call: execute `isFixedBytesParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
+        // Call: execute `isFixedBytesParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization
+        // decision.
         bool allowed = harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(bytes32(uint256(1))), bytes32(uint256(1))
         );
@@ -1015,14 +1027,15 @@ contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isFixedBytesParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails closed with false.
-        // Call: run `isFixedBytesParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
+        // closed with false. Call: run `isFixedBytesParameterAllowedByConstraintViaPolicyLibrary` across the prepared
+        // variants.
         try harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, hex"01", bytes32(uint256(1))
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed fixed-bytes comparisonData should fail closed with false");
         } catch {
             assertTrue(false, "malformed fixed-bytes comparisonData should fail closed with false instead of reverting");
@@ -1036,7 +1049,8 @@ contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstra
 contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that dynamic bytes exact hash matching works.
     function test_isBytesOrStringParameterAllowedByConstraint_dynamicBytesHashMatchAndMismatch() public view {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for dynamic bytes exact hash matching works.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for dynamic bytes exact hash
+        // matching works.
         bytes memory expectedBytes = hex"CAFEBABE";
         bytes memory data = _encodeSingleBytesArg(expectedBytes);
 
@@ -1055,7 +1069,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
 
     /// @dev Verifies that string exact hash matching works.
     function test_isBytesOrStringParameterAllowedByConstraint_stringHashMatchAndMismatch() public view {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for string exact hash matching works.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for string exact hash matching
+        // works.
         string memory expectedString = "den-policy";
         bytes memory data = _encodeSingleStringArg(expectedString);
 
@@ -1114,7 +1129,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         // Setup: build fixture inputs where offsets beyond calldata length return false should be denied.
         bytes memory data = _encodeSingleBytesArg(bytes("abc"));
 
-        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
+        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization
+        // decision.
         bool allowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(keccak256(bytes("abc"))), bytes32(uint256(9999)), data
         );
@@ -1129,7 +1145,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         // Setup: build fixture inputs where declared lengths extending beyond calldata return false should be denied.
         bytes memory malformedData = bytes.concat(BASE_SELECTOR, abi.encode(uint256(32), uint256(100)));
 
-        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
+        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization
+        // decision.
         bool allowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(keccak256(bytes("unused"))), bytes32(uint256(32)), malformedData
         );
@@ -1143,7 +1160,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         // Setup: build fixture inputs where non-Exact constraint types return false should be denied.
         bytes memory data = _encodeSingleBytesArg(bytes("abc"));
 
-        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
+        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization
+        // decision.
         bool allowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(keccak256(bytes("abc"))), bytes32(uint256(32)), data
         );
@@ -1165,7 +1183,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         // Desired behavior is to reject this as invalid instead of accepting head-region reads.
         bytes32 forgedExpectedHash = keccak256(abi.encode(uint256(payload.length)));
 
-        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
+        // Call: execute `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization
+        // decision.
         bool allowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(forgedExpectedHash), bytes32(uint256(0)), data
         );
@@ -1176,7 +1195,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
 
     /// @dev Verifies that offset/length arithmetic overflow fails closed.
     function test_isBytesOrStringParameterAllowedByConstraint_overflowingOffset_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for offset/length arithmetic overflow fails closed.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for offset/length arithmetic
+        // overflow fails closed.
         bytes memory data = _encodeSingleBytesArg(bytes("abc"));
 
         // Call: run `isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary` across the prepared variants.
@@ -1185,7 +1205,7 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "overflowing offset should fail closed with false");
         } catch {
             assertTrue(false, "overflowing offset should fail closed with false instead of reverting");
@@ -1194,7 +1214,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isBytesOrStringParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails closed with false.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
+        // closed with false.
         public
     {
         bytes memory data = _encodeSingleBytesArg(bytes("abc"));
@@ -1205,7 +1226,7 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         ) returns (
             bool allowed
         ) {
-        // Verify: assert each variant returns the expected branch outcome.
+            // Verify: assert each variant returns the expected branch outcome.
             assertFalse(allowed, "malformed bytes/string comparisonData should fail closed with false");
         } catch {
             assertTrue(

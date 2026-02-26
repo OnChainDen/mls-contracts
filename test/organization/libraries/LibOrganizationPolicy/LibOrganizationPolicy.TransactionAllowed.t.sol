@@ -38,13 +38,20 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that invalid policy proof returns false before downstream validation.
     function test_isTransactionAllowed_invalidPolicyProof_returnsFalse() public {
-        // Setup: build fixture inputs where invalid policy proof returns false before downstream validation should be denied.
+        // Setup: build fixture inputs where invalid policy proof returns false before downstream validation should be
+        // denied.
         Policy memory policy = _buildTokenTransferPolicy();
         bytes32[] memory badPolicyProof = new bytes32[](1);
         badPolicyProof[0] = keccak256("bad-proof");
 
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, badPolicyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: badPolicyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -66,8 +73,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policy.roots.sourceAccountsRoot = sourceRoot;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3002, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, sourceProof, _emptyProof(), _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: sourceProof,
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -86,8 +99,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policy.config.initiator.initiatorMember = initiator1;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3003, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -102,8 +121,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         // Setup: build fixture inputs where token-transfer policy rejects non-token transaction should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3004, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         bytes memory nonTokenData = abi.encodeWithSignature("foo(uint256)", 1);
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
@@ -116,7 +141,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that token-transfer policy accepts matching token/destination and rejects disallowed values.
     function test_isTransactionAllowed_tokenTransferPolicy_validAndInvalidCombinations() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for token-transfer policy accepts matching token/destination and rejects disallowed values.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for token-transfer policy accepts
+        // matching token/destination and rejects disallowed values.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = TOKEN_CONTRACT;
@@ -128,8 +154,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policy.roots.customDestinationsRoot = destinationRoot;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3005, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -151,7 +183,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that contract-interaction policy branch checks function proof and constraints.
     function test_isTransactionAllowed_contractInteractionBranch_checksFunctionAndConstraints() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for contract-interaction policy branch checks function proof and constraints.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for contract-interaction policy
+        // branch checks function proof and constraints.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.destinationType = DestinationType.CustomList;
@@ -165,8 +198,13 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         bytes4 selector = bytes4(keccak256("foo(uint256)"));
         bytes memory callData = abi.encodeWithSelector(selector, 5);
 
-        ParameterConstraint memory exactFive =
-            _buildConstraint(ParamType.Uint, ConstraintType.Exact, 1, abi.encode(uint256(5)), _emptyProof());
+        ParameterConstraint memory exactFive = ParameterConstraint({
+            paramType: ParamType.Uint,
+            constraintType: ConstraintType.Exact,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: abi.encode(uint256(5)),
+            paramValueInListProof: _emptyProof()
+        });
         bytes memory constraints = _encodeSingleConstraint(exactFive);
 
         bytes4[] memory selectors = new bytes4[](1);
@@ -178,8 +216,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policy.roots.allowedFunctionsRoot = functionsRoot;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3006, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, functionProof, constraints);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: functionProof,
+            constraints: constraints
+        });
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -195,9 +239,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
         bytes32[] memory invalidFunctionProof = new bytes32[](1);
         invalidFunctionProof[0] = keccak256("lop-tx-invalid-function-proof");
-        ValidationProofs memory badFunctionProofs = _buildValidationProofs(
-            policy, policyProof, _emptyProof(), destinationProof, invalidFunctionProof, constraints
-        );
+        ValidationProofs memory badFunctionProofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: invalidFunctionProof,
+            constraints: constraints
+        });
         bool badFunctionAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, callData, initiator1, badFunctionProofs
         );
@@ -212,7 +261,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that `Any` type destination checks and fail-closed enum handling.
     function test_isTransactionAllowed_anyTypeDestinationChecks_andFailClosedEnums() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `Any` type destination checks and fail-closed enum handling.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `Any` type destination checks
+        // and fail-closed enum handling.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.Any;
         policy.config.destinationType = DestinationType.CustomList;
@@ -223,8 +273,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policy.roots.customDestinationsRoot = destinationRoot;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3007, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool allowedDestination = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -241,9 +297,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         Policy memory signaturesOnly = policy;
         signaturesOnly.config.transactionType = TransactionType.Signatures;
         (bytes32[] memory signaturesPolicyProof,) = _setPolicyRootForSinglePolicy(3008, signaturesOnly);
-        ValidationProofs memory signaturesProofs = _buildValidationProofs(
-            signaturesOnly, signaturesPolicyProof, _emptyProof(), destinationProof, _emptyProof(), ""
-        );
+        ValidationProofs memory signaturesProofs = ValidationProofs({
+            policy: signaturesOnly,
+            policyProof: signaturesPolicyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
         bool signaturesTxAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3008, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, signaturesProofs
         );
@@ -252,8 +313,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         // forge-lint: disable-next-line(unsafe-typecast)
         policy.config.transactionType = TransactionType(uint8(type(uint8).max));
         (bytes32[] memory invalidEnumProof,) = _setPolicyRootForSinglePolicy(3009, policy);
-        ValidationProofs memory invalidEnumProofs =
-            _buildValidationProofs(policy, invalidEnumProof, _emptyProof(), destinationProof, _emptyProof(), "");
+        ValidationProofs memory invalidEnumProofs = ValidationProofs({
+            policy: policy,
+            policyProof: invalidEnumProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
         bool invalidEnumAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3009, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, invalidEnumProofs
         );
@@ -262,16 +329,22 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that desired behavior: malformed constraints payload fails closed (`false`) instead of revert.
     function test_isTransactionAllowed_desiredMalformedConstraints_payloadFailsClosed() public {
-        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed (`false`) instead of revert should be denied.
+        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed (`false`)
+        // instead of revert should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.anyFunction = true;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3010, policy);
         bytes memory malformedConstraints = hex"deadc0de";
-        ValidationProofs memory proofs = _buildValidationProofs(
-            policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), malformedConstraints
-        );
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: malformedConstraints
+        });
 
         // Desired behavior test: currently may revert because constraint decode bubbles up.
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
@@ -284,15 +357,22 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that malformed or non-transfer token calldata fails closed in token-transfer path.
     function test_isTransactionAllowed_tokenTransferMalformedCalldata_failClosed() public {
-        // Setup: build fixture inputs where malformed or non-transfer token calldata fails closed in token-transfer path should be denied.
+        // Setup: build fixture inputs where malformed or non-transfer token calldata fails closed in token-transfer
+        // path should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3011, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(
-        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
+            // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
             harness.isTransactionAllowedByPolicyViaLibrary(
                 3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, hex"a9059cbb", initiator1, proofs
             ),
@@ -350,7 +430,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that no partial success and deterministic outputs for unchanged inputs/state.
     function test_isTransactionAllowed_noPartialSuccess_andDeterministicResult() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for no partial success and deterministic outputs for unchanged inputs/state.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for no partial success and
+        // deterministic outputs for unchanged inputs/state.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.destinationType = DestinationType.CustomList;
 
@@ -360,8 +441,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policy.roots.customDestinationsRoot = destinationRoot;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3012, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: destinationProof,
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         bytes memory validTransfer = _encodeERC20Transfer(RECIPIENT, 10);
         // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
@@ -383,7 +470,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that single-leaf policy tree and single-leaf destination tree accept empty proofs.
     function test_isTransactionAllowed_singleLeafProofs_emptyProofAcceptedForPolicyAndDestination() public {
-        // Setup: configure a valid fixture for single-leaf policy tree and single-leaf destination tree accept empty proofs.
+        // Setup: configure a valid fixture for single-leaf policy tree and single-leaf destination tree accept empty
+        // proofs.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.destinationType = DestinationType.CustomList;
 
@@ -397,8 +485,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertEq(policyProof.length, 0, "single-policy tree should use empty policy proof");
 
         bytes32[] memory emptyDestinationProof = new bytes32[](0);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), emptyDestinationProof, _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: emptyDestinationProof,
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` with the happy-path payload.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3013, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
@@ -408,12 +502,19 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer policy.
     function testFuzz_isTransactionAllowed_tokenTransferPolicy_randomNonTransferSelectorFails(bytes4 selector) public {
-        // Setup: build fixture inputs where fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer policy should be denied.
+        // Setup: build fixture inputs where fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer
+        // policy should be denied.
         vm.assume(selector != bytes4(0xa9059cbb));
         Policy memory policy = _buildTokenTransferPolicy();
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3014, policy);
-        ValidationProofs memory proofs =
-            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
 
         bytes memory payload = abi.encodePacked(selector, bytes32(uint256(uint160(RECIPIENT))), bytes32(uint256(1)));
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
@@ -426,12 +527,13 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that `isSourceAccountAllowedByPolicy` source filter semantics.
     function test_isSourceAccountAllowedByPolicy_sourceFilterModes() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `isSourceAccountAllowedByPolicy` source filter semantics.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `isSourceAccountAllowedByPolicy`
+        // source filter semantics.
         Policy memory anyPolicy = _buildBasePolicy();
         anyPolicy.config.anySourceAccount = true;
         // Verify: assert each variant returns the expected branch outcome.
         assertTrue(
-        // Call: run `isSourceAccountAllowedByPolicyViaLibrary` across the prepared variants.
+            // Call: run `isSourceAccountAllowedByPolicyViaLibrary` across the prepared variants.
             harness.isSourceAccountAllowedByPolicyViaLibrary(anyPolicy, SOURCE_ACCOUNT, _emptyProof()),
             "any-source mode should allow any account"
         );
