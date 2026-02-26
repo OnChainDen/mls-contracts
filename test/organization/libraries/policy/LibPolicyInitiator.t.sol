@@ -160,5 +160,4 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
         // Verify: assert that malformed enum values fail with a revert/panic.
         assertFalse(success, "invalid initiator enum should revert");
     }
-
 }

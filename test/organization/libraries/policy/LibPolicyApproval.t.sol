@@ -326,7 +326,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
         bytes32 messageHash = keccak256("LPA-REQ-4");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
-        bytes memory callData = abi.encodeCall(harness.areApprovalsValidViaPolicyLibrary, (policy, signature, messageHash));
+        bytes memory callData =
+            abi.encodeCall(harness.areApprovalsValidViaPolicyLibrary, (policy, signature, messageHash));
         _setWord(callData, 4 + 5 * 32, 2);
 
         // Call: execute a low-level call with malformed enum calldata.
@@ -401,8 +402,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         // Setup: build fixture inputs where unknown approver enum values revert during signer-authorization decoding.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
-        bytes memory callData =
-            abi.encodeCall(harness.isSignerAuthorizedForPolicyViaPolicyLibrary, (policy, reviewer1));
+        bytes memory callData = abi.encodeCall(harness.isSignerAuthorizedForPolicyViaPolicyLibrary, (policy, reviewer1));
         _setWord(callData, 4 + 5 * 32, 2);
 
         // Call: execute a low-level call with malformed enum calldata.
