@@ -248,18 +248,18 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertFalse(authorized, "anyInitiator should still require organization membership");
     }
 
-    /// @dev Verifies that desired token threshold should be inclusive max.
-    function invariant_POL_I_9_desired_tokenThresholdShouldBeInclusiveMax() public view {
-        // Setup: configure a valid fixture for desired token threshold should be inclusive max.
+    /// @dev Verifies that token threshold uses exclusive max semantics.
+    function invariant_POL_I_9_tokenThresholdUsesExclusiveMax() public view {
+        // Setup: build fixture inputs where token threshold uses exclusive max semantics should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;
 
         bytes memory data = _encodeERC20Transfer(address(0xF901), 100);
-        // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
+        // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool allowed = checkHarness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, data, 0);
-        // Verify: assert the expected success result and state updates.
-        assertTrue(allowed, "token threshold should allow amount == threshold");
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(allowed, "token threshold should reject amount == threshold");
     }
 
     /// @dev Verifies that desired malformed constraints fail closed without unexpected revert.

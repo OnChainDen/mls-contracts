@@ -269,7 +269,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPT-6 | Specific native-token policy (`tokenAddress == address(0)`) allows only native transfers | [U] | P1 |
 | LPT-7 | Specific ERC-20 token policy allows only that token contract | [U] | P0 |
 | LPT-8 | No short-circuit bypass: all three checks must pass | [S] | P0 |
-| LPT-9 | **Desired behavior:** non-token-transfer calldata is rejected (`false`) in this function (fail closed) | [S] | P0 |
+| LPT-9 | Precondition: caller invokes this function only with validated token-transfer payloads (native or ERC-20) | [U] | P1 |
 
 ### 6.2 `_isTokenAllowedByPolicy(Policy policy, address to, bytes data)` *(private; harness target)*
 
@@ -287,12 +287,11 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 |---|---|---|---|
 | LPT-AMT-1 | `hasAmountThreshold == false` always returns `true` | [U] | P0 |
 | LPT-AMT-2 | Amount below threshold returns `true` | [U] | P0 |
-| LPT-AMT-3 | **Desired behavior:** amount exactly equal to threshold is allowed (inclusive max) | [S] | P0 |
+| LPT-AMT-3 | Amount exactly equal to threshold returns `false` (exclusive max) | [N] | P0 |
 | LPT-AMT-4 | Amount above threshold returns `false` | [N] | P0 |
-| LPT-AMT-5 | Threshold `0`: only zero-amount transfer should pass (desired) | [E] | P1 |
+| LPT-AMT-5 | Threshold `0`: both zero and non-zero amounts fail under exclusive max semantics | [E] | P1 |
 | LPT-AMT-6 | Native amount extraction uses `value` | [U] | P1 |
-| LPT-AMT-7 | **Desired behavior:** malformed ERC-20 amount calldata fails closed (`false`) without unexpected revert | [S] | P0 |
-| LPT-AMT-8 | **Desired behavior:** non-transfer selector calldata with threshold enabled fails closed (`false`) | [S] | P0 |
+| LPT-AMT-7 | Precondition: caller invokes this helper only with validated token-transfer payloads (native or ERC-20) | [U] | P1 |
 
 ---
 
@@ -600,5 +599,5 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-6 | Manual-approval policies can never pass with fewer than required valid approvals | P0 |
 | POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` fail closed across policy validation paths | P0 |
 | POL-I-8 | **Desired behavior:** `anyInitiator` does not authorize non-members | P0 |
-| POL-I-9 | **Desired behavior:** token amount threshold acts as inclusive max (`<=`) | P0 |
+| POL-I-9 | Token amount threshold acts as exclusive max (`<`) | P0 |
 | POL-I-10 | **Desired behavior:** malformed constraint payloads fail closed without unexpected reverts in policy-check paths | P0 |

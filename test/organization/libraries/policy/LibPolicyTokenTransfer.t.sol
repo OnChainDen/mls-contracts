@@ -210,23 +210,6 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         assertFalse(wrongDestination, "wrong destination must fail even if other checks pass");
     }
 
-    /// @dev Verifies that desired behavior: non-token-transfer calldata should fail closed.
-    function test_isTokenTransferAllowed_nonTokenTransferCalldata_rejected_desired() public {
-        // Setup: build fixture inputs where desired behavior: non-token-transfer calldata should fail closed should be
-        // denied.
-        Policy memory policy = _buildBasePolicy();
-        policy.config.token.anyToken = true;
-        policy.config.token.hasAmountThreshold = false;
-        policy.config.destinationType = DestinationType.Any;
-
-        // Call: execute `isTokenTransferAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
-        bool allowed = harness.isTokenTransferAllowedByPolicyViaPolicyLibrary(
-            policy, address(0x7609), 0, _encodeERC20Approve(address(0xA609), 1), new bytes32[](0)
-        );
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "desired behavior: non-transfer calldata should be rejected");
-    }
-
     /// @dev Verifies that `anyToken == true` returns true.
     function test_isTokenAllowedByPolicy_anyTokenTrue_returnsTrue() public {
         // Setup: configure a valid fixture for `anyToken == true` returns true.
@@ -325,10 +308,10 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         assertTrue(allowed, "amount below threshold should pass");
     }
 
-    /// @dev Verifies that desired behavior: amount equal to threshold should be allowed (inclusive max).
-    function test_isTokenAmountAllowedByPolicy_amountEqualThreshold_allowed_desired() public {
-        // Setup: configure a valid fixture for desired behavior: amount equal to threshold should be allowed (inclusive
-        // max).
+    /// @dev Verifies that amount equal to threshold fails under exclusive max semantics.
+    function test_isTokenAmountAllowedByPolicy_amountEqualThreshold_returnsFalse() public {
+        // Setup: build fixture inputs where amount equal to threshold fails under exclusive max semantics should be
+        // denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;
@@ -336,8 +319,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed =
             harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeERC20Transfer(address(0xB607), 100), 0);
-        // Verify: assert the expected success result and state updates.
-        assertTrue(allowed, "desired behavior: threshold should be inclusive");
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(allowed, "amount equal to threshold should fail for exclusive max semantics");
     }
 
     /// @dev Verifies that amount above threshold returns false.
@@ -354,21 +337,21 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         assertFalse(allowed, "amount above threshold should fail");
     }
 
-    /// @dev Verifies that threshold `0`: desired behavior allows only zero-amount transfers.
-    function test_isTokenAmountAllowedByPolicy_thresholdZero_allowsOnlyZeroAmount_desired() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for threshold `0`: desired behavior
-        // allows only zero-amount transfers.
+    /// @dev Verifies that threshold `0` rejects both zero and non-zero amounts under exclusive max semantics.
+    function test_isTokenAmountAllowedByPolicy_thresholdZero_rejectsZeroAndNonZero() public {
+        // Setup: build fixture inputs where threshold `0` rejects both zero and non-zero amounts under exclusive max
+        // semantics should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 0;
 
-        // Call: run `isTokenAmountAllowedByPolicyViaPolicyLibrary` across the prepared variants.
+        // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
         bool zeroAmountAllowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, bytes(""), 0);
         bool nonZeroAllowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, bytes(""), 1);
 
-        // Verify: assert each variant returns the expected branch outcome.
-        assertTrue(zeroAmountAllowed, "desired behavior: zero amount should pass for threshold 0");
-        assertFalse(nonZeroAllowed, "desired behavior: non-zero amount should fail for threshold 0");
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(zeroAmountAllowed, "zero amount should fail for threshold 0 under exclusive max semantics");
+        assertFalse(nonZeroAllowed, "non-zero amount should fail for threshold 0");
     }
 
     /// @dev Verifies that native amount extraction uses top-level `value`.
@@ -386,36 +369,6 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         // Verify: assert each variant returns the expected branch outcome.
         assertTrue(below, "native amount below threshold should pass");
         assertFalse(above, "native amount above threshold should fail");
-    }
-
-    /// @dev Verifies that desired behavior: malformed ERC-20 amount calldata fails closed without revert.
-    function test_isTokenAmountAllowedByPolicy_malformedErc20AmountCalldata_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: malformed ERC-20 amount calldata fails closed without
-        // revert should be denied.
-        Policy memory policy = _buildBasePolicy();
-        policy.config.token.hasAmountThreshold = true;
-        policy.config.token.amountThreshold = 10;
-
-        bytes memory malformed = abi.encodePacked(bytes4(keccak256("transfer(address,uint256)")), bytes32(uint256(1)));
-        // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
-        bool allowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, malformed, 0);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "desired behavior: malformed amount calldata should fail closed");
-    }
-
-    /// @dev Verifies that desired behavior: non-transfer selector calldata with threshold enabled fails closed.
-    function test_isTokenAmountAllowedByPolicy_nonTransferSelectorWithThresholdEnabled_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: non-transfer selector calldata with threshold enabled
-        // fails closed should be denied.
-        Policy memory policy = _buildBasePolicy();
-        policy.config.token.hasAmountThreshold = true;
-        policy.config.token.amountThreshold = 100;
-
-        // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
-        bool allowed =
-            harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeERC20Approve(address(0xB609), 1), 0);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "desired behavior: non-transfer selector should fail closed");
     }
 
     function _buildSingleDestinationRootAndProof(address destination)

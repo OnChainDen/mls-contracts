@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
-import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {PolicyLibrariesSuiteBase} from "test/organization/libraries/policy/PolicyLibrariesSuiteBase.sol";
 import {ApproverType, Policy} from "types/PolicyTypes.sol";
 
@@ -38,36 +35,34 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         assertTrue(ok, "authorized member signature should pass");
     }
 
-    /// @dev Verifies that member approver reverts `UnauthorizedApprovalSigner` for non-authorized signer.
-    function test_areApprovalsValid_memberApproverUnauthorizedSigner_revertsUnauthorizedApprovalSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for member approver reverts
-        // `UnauthorizedApprovalSigner` for non-authorized signer.
+    /// @dev Verifies that member approver with non-authorized signer returns false.
+    function test_areApprovalsValid_memberApproverUnauthorizedSigner_returnsFalse() public {
+        // Setup: build fixture inputs where member approver with non-authorized signer returns false should be denied.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1, reviewer2));
 
         bytes32 messageHash = keccak256("LPA-3");
         bytes memory signature = _signHash(REVIEWER_PK_2, messageHash);
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer2));
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "non-authorized member signer should fail closed");
     }
 
-    /// @dev Verifies that member approver reverts `UnauthorizedApprovalSigner` when signer is not in org.
-    function test_areApprovalsValid_memberApproverSignerNotInOrg_revertsUnauthorizedApprovalSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for member approver reverts
-        // `UnauthorizedApprovalSigner` when signer is not in org.
+    /// @dev Verifies that member approver signer not in organization returns false.
+    function test_areApprovalsValid_memberApproverSignerNotInOrg_returnsFalse() public {
+        // Setup: build fixture inputs where member approver signer not in organization returns false should be denied.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         policyStateHarness.setMemberStatus(reviewer1, false);
 
         bytes32 messageHash = keccak256("LPA-4");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer1));
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "signer outside organization should fail closed");
     }
 
     /// @dev Verifies that group approver with threshold N and exactly N valid sorted signatures returns true.
@@ -123,10 +118,9 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         assertFalse(ok, "fewer valid signatures than threshold must fail");
     }
 
-    /// @dev Verifies that group approver reverts `UnauthorizedApprovalSigner` when signer is not in approver group.
-    function test_areApprovalsValid_groupApproverSignerNotInGroup_revertsUnauthorizedApprovalSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for group approver reverts
-        // `UnauthorizedApprovalSigner` when signer is not in approver group.
+    /// @dev Verifies that group approver signer not in approver group returns false.
+    function test_areApprovalsValid_groupApproverSignerNotInGroup_returnsFalse() public {
+        // Setup: build fixture inputs where group approver signer not in approver group returns false should be denied.
         Policy memory policy = _groupApproverPolicy(2204, 1);
         _setActiveGroupWithMembers(2204, buildArray(reviewer1));
         _setMembersAsOrgMembers(buildArray(reviewer2));
@@ -134,32 +128,30 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         bytes32 messageHash = keccak256("LPA-8");
         bytes memory signature = _signHash(REVIEWER_PK_2, messageHash);
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer2));
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "signer outside approver group should fail closed");
     }
 
-    /// @dev Verifies that group approver reverts `GroupDoesNotExist` when approver group is missing.
-    function test_areApprovalsValid_groupApproverMissingGroup_revertsGroupDoesNotExist() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for group approver reverts
-        // `GroupDoesNotExist` when approver group is missing.
+    /// @dev Verifies that missing approver group returns false.
+    function test_areApprovalsValid_groupApproverMissingGroup_returnsFalse() public {
+        // Setup: build fixture inputs where missing approver group returns false should be denied.
         Policy memory policy = _groupApproverPolicy(2205, 1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
         bytes32 messageHash = keccak256("LPA-9");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, 2205));
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "missing approver group should fail closed");
     }
 
-    /// @dev Verifies that duplicate signer reverts `DuplicateOrOutOfOrderSigner`.
-    function test_areApprovalsValid_duplicateSigner_revertsDuplicateOrOutOfOrderSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for duplicate signer reverts
-        // `DuplicateOrOutOfOrderSigner`.
+    /// @dev Verifies that duplicate signer sequence returns false.
+    function test_areApprovalsValid_duplicateSigner_returnsFalse() public {
+        // Setup: build fixture inputs where duplicate signer sequence returns false should be denied.
         Policy memory policy = _groupApproverPolicy(2206, 2);
         _setActiveGroupWithMembers(2206, buildArray(reviewer1));
 
@@ -167,55 +159,39 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory signatures = abi.encodePacked(signature, signature);
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationPolicy.DuplicateOrOutOfOrderSigner.selector, reviewer1, reviewer1)
-        );
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "duplicate signer should fail closed");
     }
 
-    /// @dev Verifies that out-of-order signer sequence reverts `DuplicateOrOutOfOrderSigner`.
-    function test_areApprovalsValid_outOfOrderSigner_revertsDuplicateOrOutOfOrderSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for out-of-order signer sequence reverts
-        // `DuplicateOrOutOfOrderSigner`.
+    /// @dev Verifies that out-of-order signer sequence returns false.
+    function test_areApprovalsValid_outOfOrderSigner_returnsFalse() public {
+        // Setup: build fixture inputs where out-of-order signer sequence returns false should be denied.
         Policy memory policy = _groupApproverPolicy(2207, 2);
         _setActiveGroupWithMembers(2207, buildArray(reviewer1, reviewer2));
 
         bytes32 messageHash = keccak256("LPA-11");
         bytes memory sig1 = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory sig2 = _signHash(REVIEWER_PK_2, messageHash);
+        bytes memory signatures = reviewer2 > reviewer1 ? abi.encodePacked(sig2, sig1) : abi.encodePacked(sig1, sig2);
 
-        address high = reviewer1;
-        address low = reviewer2;
-        bytes memory highSig = sig1;
-        bytes memory lowSig = sig2;
-        if (reviewer2 > reviewer1) {
-            high = reviewer2;
-            low = reviewer1;
-            highSig = sig2;
-            lowSig = sig1;
-        }
-
-        bytes memory signatures = abi.encodePacked(highSig, lowSig);
-
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.DuplicateOrOutOfOrderSigner.selector, low, high));
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, signatures, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "out-of-order signers should fail closed");
     }
 
-    /// @dev Verifies that malformed packed signature data bubbles signature recovery revert.
-    function test_areApprovalsValid_malformedPackedSignature_revertsSignatureRecoveryFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for malformed packed signature data bubbles
-        // signature recovery revert.
+    /// @dev Verifies that malformed packed signature data returns false.
+    function test_areApprovalsValid_malformedPackedSignature_returnsFalse() public {
+        // Setup: build fixture inputs where malformed packed signature data returns false should be denied.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, hex"01", keccak256("LPA-12"));
+        // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, hex"01", keccak256("LPA-12"));
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "malformed packed signatures should fail closed");
     }
 
     /// @dev Verifies that mixed EOA + ERC-1271 signers are supported when sorted by signer address.
@@ -344,19 +320,18 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that unknown approver enum fails closed in caller usage.
     function test_getRequiredApprovals_invalidApproverType_failsClosedInCallerUsage() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for unknown approver enum fails closed in
-        // caller usage.
+        // Setup: build fixture inputs where unknown approver enum fails closed in caller usage should be denied.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
         bytes32 messageHash = keccak256("LPA-REQ-4");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer1));
-        // Call: invoke `areApprovalsValidViaPolicyLibraryRawApproverType` with the failing payload to exercise the
-        // revert branch.
-        harness.areApprovalsValidViaPolicyLibraryRawApproverType(policy, type(uint256).max, signature, messageHash);
+        // Call: execute `areApprovalsValidViaPolicyLibraryRawApproverType` and capture the authorization decision.
+        bool ok =
+            harness.areApprovalsValidViaPolicyLibraryRawApproverType(policy, type(uint256).max, signature, messageHash);
+        // Verify: assert that the request is denied and state remains unchanged.
+        assertFalse(ok, "invalid approver enum should fail closed in caller usage");
     }
 
     /// @dev Verifies that non-member signer returns false regardless of approver configuration.
