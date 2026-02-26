@@ -53,7 +53,7 @@ library LibPolicyParameterConstraints {
      * @return True if all constraints are satisfied, false otherwise
      */
     function _processConstraints(ParameterConstraint[] memory constraints, bytes calldata data)
-        private
+        internal
         pure
         returns (bool)
     {
@@ -108,7 +108,7 @@ library LibPolicyParameterConstraints {
         ParameterConstraint memory constraint,
         bytes32 paramHeadValue,
         bytes calldata data
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         ParamType pType = constraint.paramType;
         ConstraintType constraintType = constraint.constraintType;
 
@@ -168,7 +168,7 @@ library LibPolicyParameterConstraints {
         ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         if (constraintType != ConstraintType.Exact) return false;
         bool expectedValue = abi.decode(comparisonData, (bool));
         bool actualValue = uint256(paramHeadValue) != 0;
@@ -187,7 +187,7 @@ library LibPolicyParameterConstraints {
         ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         uint256 actualValue = uint256(paramHeadValue);
         if (constraintType == ConstraintType.Exact) {
             uint256 expectedValue = abi.decode(comparisonData, (uint256));
@@ -213,7 +213,7 @@ library LibPolicyParameterConstraints {
         ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         int256 actualValue = int256(uint256(paramHeadValue));
         if (constraintType == ConstraintType.Exact) {
             int256 expectedValue = abi.decode(comparisonData, (int256));
@@ -241,7 +241,7 @@ library LibPolicyParameterConstraints {
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes32[] memory addressListProof
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         address actualValue = address(uint160(uint256(paramHeadValue)));
         if (constraintType == ConstraintType.Exact) {
             address expectedValue = abi.decode(comparisonData, (address));
@@ -272,7 +272,7 @@ library LibPolicyParameterConstraints {
         ConstraintType constraintType,
         bytes memory comparisonData,
         bytes32 paramHeadValue
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         if (constraintType != ConstraintType.Exact) return false;
         bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
         return paramHeadValue == expectedValue;
@@ -296,7 +296,7 @@ library LibPolicyParameterConstraints {
         bytes memory comparisonData,
         bytes32 paramHeadValue,
         bytes calldata data
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         if (constraintType != ConstraintType.Exact) return false;
 
         // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)

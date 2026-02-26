@@ -292,7 +292,7 @@ library LibOrganizationPolicy {
      * @param policy The policy data
      * @return The computed merkle leaf
      */
-    function _computePolicyLeaf(uint256 policyId, Policy memory policy) private pure returns (bytes32) {
+    function _computePolicyLeaf(uint256 policyId, Policy memory policy) internal pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
     }
 }
