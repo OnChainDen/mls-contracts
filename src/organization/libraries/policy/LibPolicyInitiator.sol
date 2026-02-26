@@ -24,24 +24,24 @@ library LibPolicyInitiator {
      * @return True if the initiator is authorized, false otherwise
      */
     function isInitiatorAuthorized(Policy memory policy, address initiatorAddress) internal view returns (bool) {
-        // Case: The policy matches transactions with any initiator
-        if (policy.config.initiator.anyInitiator) return true;
-
         // First, verify the initiator is a member of the organization
         if (!LibOrganizationMembers.isMember(initiatorAddress)) {
             return false;
         }
 
-        ApproverType initType = policy.config.initiator.initiatorType;
+        // Case: The policy matches transactions with any initiator
+        if (policy.config.initiator.anyInitiator) return true;
+
+        ApproverType initiatorType = policy.config.initiator.initiatorType;
 
         // Case: The policy matches transactions made by a specific individual
-        if (initType == ApproverType.Member) {
+        if (initiatorType == ApproverType.Member) {
             // Check if the initiator is the specified member address
             return initiatorAddress == policy.config.initiator.initiatorMember;
         }
 
         // Case: The policy matches transactions made by any individual from a specific group
-        if (initType == ApproverType.Group) {
+        if (initiatorType == ApproverType.Group) {
             uint256 initiatorGroupId = policy.config.initiator.initiatorGroupId;
 
             // Verify the group exists
