@@ -14,7 +14,9 @@ import {
 import {
     LibOrganizationPolicySuiteBase
 } from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicySuiteBase.sol";
-import {OrganizationPolicyInvariantHandler} from "test/organization/policy/OrganizationPolicyInvariantHandler.sol";
+import {
+    OrganizationPolicyInvariantHandler
+} from "test/organization/integration/policy/OrganizationPolicyInvariantHandler.sol";
 import {
     ApproverType,
     ConstraintType,

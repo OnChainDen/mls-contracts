@@ -18,7 +18,7 @@ import {ApproverType, Policy, PolicyType, TransactionType, ValidationProofs} fro
 /**
  * @dev Policy-coupled ERC-1271 integration tests for `LibOrganizationAccountSignature`.
  */
-contract LibOrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAccountSignatureSuiteBase {
+contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAccountSignatureSuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 177;
 
     address internal constant ACCOUNT = address(0xAA7701);
