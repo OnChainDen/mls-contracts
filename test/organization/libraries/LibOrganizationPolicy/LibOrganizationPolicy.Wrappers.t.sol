@@ -15,8 +15,9 @@ import {ApproverType, Policy, RateLimitType} from "types/PolicyTypes.sol";
  * @dev Unit tests for `LibOrganizationPolicy` wrapper passthrough behavior.
  */
 contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
-    /// @dev LOP-WRAP-1: wrapper entry points return delegated-library results for representative success cases.
+    /// @dev Verifies that wrapper entry points return delegated-library results for representative success cases.
     function test_wrapperFunctions_delegateAndReturnSameResults() public {
+        // Setup: configure a valid fixture for wrapper entry points return delegated-library results for representative success cases.
         Policy memory policy = _buildBasePolicy();
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 24;
@@ -32,7 +33,9 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         bytes32 messageHash = keccak256("lop-wrap-1-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
+        // Verify: assert the expected success result and state updates.
         assertEq(
+        // Call: execute `areApprovalsValidViaLibrary` with the happy-path payload.
             harness.areApprovalsValidViaLibrary(policy, signature, messageHash),
             harness.areApprovalsValidViaPolicyLibrary(policy, signature, messageHash),
             "approval wrapper mismatch"
@@ -74,8 +77,9 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         );
     }
 
-    /// @dev LOP-WRAP-2: wrapper bubbles delegated custom errors unchanged.
+    /// @dev Verifies that wrapper bubbles delegated custom errors unchanged.
     function test_wrapperApprovals_bubblesDelegatedCustomErrors() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated custom errors unchanged.
         bytes32 messageHash = keccak256("lop-wrap-2-message");
 
         // Unauthorized signer path.
@@ -86,7 +90,9 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         policyStateHarness.setMemberStatus(reviewer2, true);
 
         bytes memory unauthorizedSignature = _signHash(REVIEWER_PK_2, messageHash);
+        // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer2));
+        // Call: invoke `areApprovalsValidViaLibrary` with the failing payload to exercise the revert branch.
         harness.areApprovalsValidViaLibrary(memberPolicy, unauthorizedSignature, messageHash);
 
         // Group-does-not-exist path.
@@ -98,20 +104,24 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         harness.areApprovalsValidViaLibrary(groupPolicy, _signHash(REVIEWER_PK_1, messageHash), messageHash);
     }
 
-    /// @dev LOP-WRAP-3: wrapper bubbles delegated signature-decoding errors unchanged.
+    /// @dev Verifies that wrapper bubbles delegated signature-decoding errors unchanged.
     function test_wrapperApprovals_bubblesSignatureRecoveryErrorsUnchanged() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated signature-decoding errors unchanged.
         Policy memory policy = _buildBasePolicy();
         policy.config.approval.approverType = ApproverType.Member;
         policy.config.approval.approverMember = reviewer1;
         policyStateHarness.setMemberStatus(reviewer1, true);
 
         bytes memory malformedSignatures = hex"01";
+        // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
+        // Call: invoke `areApprovalsValidViaLibrary` with the failing payload to exercise the revert branch.
         harness.areApprovalsValidViaLibrary(policy, malformedSignatures, keccak256("lop-wrap-3"));
     }
 
-    /// @dev LOP-WRAP-4: `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
+    /// @dev Verifies that `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
     function test_wrapperCheckAndUpdateRateLimit_mutatesOnlyOnSuccess() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
         Policy memory policy = _buildBasePolicy();
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 24;
@@ -124,7 +134,9 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         bytes32 usageKey = LibOrganizationPolicy.computeUsageKey(policyId, policy, account, destination, initiator);
         uint256 window = LibOrganizationPolicy.computeTimeWindow(policy);
 
+        // Call: run `checkAndUpdateRateLimitViaLibrary` across the prepared variants.
         bool first = harness.checkAndUpdateRateLimitViaLibrary(policyId, policy, account, destination, initiator, 7);
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(first, "first update should be within limit");
         assertEq(harness.getPolicyUsage(usageKey, window), 7, "usage should update on success");
 

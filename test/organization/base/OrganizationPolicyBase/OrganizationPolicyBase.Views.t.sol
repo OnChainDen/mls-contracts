@@ -31,19 +31,23 @@ contract OrganizationPolicyBaseViewsTest is OrganizationPolicyBaseSuiteBase {
         harness.setPolicies(newPoliciesRoot, ipfsCid, auth);
     }
 
-    /// @dev Verifies `policiesRoot()` returns zero before any successful `setPolicies` call.
+    /// @dev Verifies that `policiesRoot()` returns zero before any successful `setPolicies` call.
     function test_policiesRoot_beforeAnySuccessfulSetPolicies_returnsZero() public view {
+        // Setup: configure a valid fixture for `policiesRoot()` returns zero before any successful `setPolicies` call.
+        // Call: execute `policiesRoot` with the happy-path payload.
         assertEq(harness.policiesRoot(), bytes32(0), "initial policies root should be zero");
     }
 
-    /// @dev Verifies `policiesRoot()` returns the latest root after one and multiple updates.
+    /// @dev Verifies that `policiesRoot()` returns the latest root after one and multiple updates.
     function test_policiesRoot_afterOneAndMultipleUpdates_returnsLatestRoot() public {
+        // Setup: configure a valid fixture for `policiesRoot()` returns the latest root after one and multiple updates.
         _setSingleAdminConfig();
 
         bytes32 root1 = keccak256("views-root-1");
         bytes32 root2 = keccak256("views-root-2");
 
         _setPoliciesAsGuardian(root1, "ipfs://views-1", 2001);
+        // Call: execute `policiesRoot` with the happy-path payload.
         assertEq(harness.policiesRoot(), root1, "policies root should equal first update");
 
         _setPoliciesAsGuardian(root2, "ipfs://views-2", 2002);

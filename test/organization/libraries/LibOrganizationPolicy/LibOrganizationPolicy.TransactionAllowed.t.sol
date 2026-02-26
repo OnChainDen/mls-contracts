@@ -36,8 +36,9 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         policyStateHarness.setMemberStatus(initiator2, true);
     }
 
-    /// @dev LOP-TX-1: invalid policy proof returns false before downstream validation.
+    /// @dev Verifies that invalid policy proof returns false before downstream validation.
     function test_isTransactionAllowed_invalidPolicyProof_returnsFalse() public {
+        // Setup: build fixture inputs where invalid policy proof returns false before downstream validation should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         bytes32[] memory badPolicyProof = new bytes32[](1);
         badPolicyProof[0] = keccak256("bad-proof");
@@ -45,14 +46,17 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, badPolicyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
 
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3001, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
         );
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "invalid policy proof must fail closed");
     }
 
-    /// @dev LOP-TX-2: source-account mismatch returns false.
+    /// @dev Verifies that source-account mismatch returns false.
     function test_isTransactionAllowed_sourceAccountMismatch_returnsFalse() public {
+        // Setup: build fixture inputs where source-account mismatch returns false should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.anySourceAccount = false;
 
@@ -65,14 +69,17 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, sourceProof, _emptyProof(), _emptyProof(), "");
 
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3002, SOURCE_ACCOUNT_2, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
         );
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "source mismatch should fail");
     }
 
-    /// @dev LOP-TX-3: unauthorized initiator returns false.
+    /// @dev Verifies that unauthorized initiator returns false.
     function test_isTransactionAllowed_unauthorizedInitiator_returnsFalse() public {
+        // Setup: build fixture inputs where unauthorized initiator returns false should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.initiator.anyInitiator = false;
         policy.config.initiator.initiatorType = policy.config.approval.approverType;
@@ -82,28 +89,34 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
 
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3003, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator2, proofs
         );
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "unauthorized initiator should fail");
     }
 
-    /// @dev LOP-TX-4: token-transfer policy rejects non-token transaction.
+    /// @dev Verifies that token-transfer policy rejects non-token transaction.
     function test_isTransactionAllowed_tokenTransferPolicy_nonTokenTransactionReturnsFalse() public {
+        // Setup: build fixture inputs where token-transfer policy rejects non-token transaction should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3004, policy);
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
 
         bytes memory nonTokenData = abi.encodeWithSignature("foo(uint256)", 1);
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3004, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, nonTokenData, initiator1, proofs
         );
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "non-token transaction should not match token-transfer policy");
     }
 
-    /// @dev LOP-TX-5/6: token-transfer policy accepts matching token/destination and rejects disallowed values.
+    /// @dev Verifies that token-transfer policy accepts matching token/destination and rejects disallowed values.
     function test_isTransactionAllowed_tokenTransferPolicy_validAndInvalidCombinations() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for token-transfer policy accepts matching token/destination and rejects disallowed values.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = TOKEN_CONTRACT;
@@ -118,9 +131,11 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
 
+        // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
         );
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(validAllowed, "matching token/destination should be allowed");
 
         bool wrongToken = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -134,8 +149,9 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(wrongDestination, "disallowed recipient should fail");
     }
 
-    /// @dev LOP-TX-7/8/9/10: contract-interaction policy branch checks function proof and constraints.
+    /// @dev Verifies that contract-interaction policy branch checks function proof and constraints.
     function test_isTransactionAllowed_contractInteractionBranch_checksFunctionAndConstraints() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for contract-interaction policy branch checks function proof and constraints.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.destinationType = DestinationType.CustomList;
@@ -165,9 +181,11 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, functionProof, constraints);
 
+        // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, callData, initiator1, proofs
         );
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(validAllowed, "valid contract interaction should pass");
 
         bool tokenTransferInput = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -192,8 +210,9 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(badConstraintAllowed, "parameter mismatch should fail");
     }
 
-    /// @dev LOP-TX-11/12/13/14: `Any` type destination checks and fail-closed enum handling.
+    /// @dev Verifies that `Any` type destination checks and fail-closed enum handling.
     function test_isTransactionAllowed_anyTypeDestinationChecks_andFailClosedEnums() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `Any` type destination checks and fail-closed enum handling.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.Any;
         policy.config.destinationType = DestinationType.CustomList;
@@ -207,9 +226,11 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
 
+        // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool allowedDestination = harness.isTransactionAllowedByPolicyViaLibrary(
             3007, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, proofs
         );
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(allowedDestination, "allowed destination should pass");
 
         bool disallowedDestination = harness.isTransactionAllowedByPolicyViaLibrary(
@@ -239,8 +260,9 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(invalidEnumAllowed, "unknown transaction enum should fail closed");
     }
 
-    /// @dev LOP-TX-15: desired behavior malformed constraints payload fails closed (`false`) instead of revert.
+    /// @dev Verifies that desired behavior: malformed constraints payload fails closed (`false`) instead of revert.
     function test_isTransactionAllowed_desiredMalformedConstraints_payloadFailsClosed() public {
+        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed (`false`) instead of revert should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.anyFunction = true;
@@ -252,20 +274,25 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         );
 
         // Desired behavior test: currently may revert because constraint decode bubbles up.
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3010, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo(uint256)", 1), initiator1, proofs
         );
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "malformed constraints should fail closed");
     }
 
-    /// @dev LOP-TX-16/21-27: malformed or non-transfer token calldata fails closed in token-transfer path.
+    /// @dev Verifies that malformed or non-transfer token calldata fails closed in token-transfer path.
     function test_isTransactionAllowed_tokenTransferMalformedCalldata_failClosed() public {
+        // Setup: build fixture inputs where malformed or non-transfer token calldata fails closed in token-transfer path should be denied.
         Policy memory policy = _buildTokenTransferPolicy();
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3011, policy);
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
 
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
             harness.isTransactionAllowedByPolicyViaLibrary(
                 3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, hex"a9059cbb", initiator1, proofs
             ),
@@ -321,8 +348,9 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         );
     }
 
-    /// @dev LOP-TX-17/18: no partial success and deterministic outputs for unchanged inputs/state.
+    /// @dev Verifies that no partial success and deterministic outputs for unchanged inputs/state.
     function test_isTransactionAllowed_noPartialSuccess_andDeterministicResult() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for no partial success and deterministic outputs for unchanged inputs/state.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.destinationType = DestinationType.CustomList;
 
@@ -336,12 +364,14 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
 
         bytes memory validTransfer = _encodeERC20Transfer(RECIPIENT, 10);
+        // Call: run `isTransactionAllowedByPolicyViaLibrary` across the prepared variants.
         bool first = harness.isTransactionAllowedByPolicyViaLibrary(
             3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, validTransfer, initiator1, proofs
         );
         bool second = harness.isTransactionAllowedByPolicyViaLibrary(
             3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, validTransfer, initiator1, proofs
         );
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(first, "all required checks passing should allow");
         assertEq(first, second, "result should be deterministic");
 
@@ -351,8 +381,9 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(partialFailure, "single failed sub-check must fail full validation");
     }
 
-    /// @dev LOP-TX-19/20: single-leaf policy tree and single-leaf destination tree accept empty proofs.
+    /// @dev Verifies that single-leaf policy tree and single-leaf destination tree accept empty proofs.
     function test_isTransactionAllowed_singleLeafProofs_emptyProofAcceptedForPolicyAndDestination() public {
+        // Setup: configure a valid fixture for single-leaf policy tree and single-leaf destination tree accept empty proofs.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.destinationType = DestinationType.CustomList;
 
@@ -368,14 +399,16 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         bytes32[] memory emptyDestinationProof = new bytes32[](0);
         ValidationProofs memory proofs =
             _buildValidationProofs(policy, policyProof, _emptyProof(), emptyDestinationProof, _emptyProof(), "");
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` with the happy-path payload.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3013, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
         );
         assertTrue(allowed, "single-leaf policy and destination trees should accept empty proofs");
     }
 
-    /// @dev LOP-TX-28: fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer policy.
+    /// @dev Verifies that fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer policy.
     function testFuzz_isTransactionAllowed_tokenTransferPolicy_randomNonTransferSelectorFails(bytes4 selector) public {
+        // Setup: build fixture inputs where fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer policy should be denied.
         vm.assume(selector != bytes4(0xa9059cbb));
         Policy memory policy = _buildTokenTransferPolicy();
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3014, policy);
@@ -383,17 +416,22 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
 
         bytes memory payload = abi.encodePacked(selector, bytes32(uint256(uint160(RECIPIENT))), bytes32(uint256(1)));
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3014, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, payload, initiator1, proofs
         );
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "random non-transfer selector should fail");
     }
 
-    /// @dev LOP-SRC-1..6: `isSourceAccountAllowedByPolicy` source filter semantics.
+    /// @dev Verifies that `isSourceAccountAllowedByPolicy` source filter semantics.
     function test_isSourceAccountAllowedByPolicy_sourceFilterModes() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `isSourceAccountAllowedByPolicy` source filter semantics.
         Policy memory anyPolicy = _buildBasePolicy();
         anyPolicy.config.anySourceAccount = true;
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(
+        // Call: run `isSourceAccountAllowedByPolicyViaLibrary` across the prepared variants.
             harness.isSourceAccountAllowedByPolicyViaLibrary(anyPolicy, SOURCE_ACCOUNT, _emptyProof()),
             "any-source mode should allow any account"
         );

@@ -54,8 +54,9 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         policy.config.rateLimit.timeIntervalLimit = 1_000_000;
     }
 
-    /// @dev Verifies valid proof returns current usage from rate-limit storage.
+    /// @dev Verifies that valid proof returns current usage from rate-limit storage.
     function test_getPolicyUsage_validProof_returnsCurrentRateLimitUsage() public {
+        // Setup: configure a valid fixture for valid proof returns current usage from rate-limit storage.
         uint256 policyId = 3001;
         Policy memory policy = _buildTimeIntervalPolicy();
         bytes32[] memory policyProof = _setSinglePolicyRoot(policyId, policy);
@@ -68,6 +69,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
 
         policyStateHarness.setPolicyUsage(usageKey, timeWindow, 77);
 
+        // Call: execute `getPolicyUsage` with the happy-path payload.
         uint256 actualUsage = harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -77,11 +79,13 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
             policyProof: policyProof
         });
 
+        // Verify: assert the expected success result and state updates.
         assertEq(actualUsage, 77, "usage should match seeded storage value");
     }
 
-    /// @dev Verifies invalid policy proof reverts `PolicyVerificationFailed(policyId)`.
+    /// @dev Verifies that invalid policy proof reverts `PolicyVerificationFailed(policyId)`.
     function test_getPolicyUsage_invalidProof_revertsPolicyVerificationFailed() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for invalid policy proof reverts `PolicyVerificationFailed(policyId)`.
         uint256 policyId = 3002;
         Policy memory policy = _buildBasePolicy();
         _setSinglePolicyRoot(policyId, policy);
@@ -89,7 +93,9 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         bytes32[] memory invalidProof = new bytes32[](1);
         invalidProof[0] = keccak256("invalid-proof-node");
 
+        // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.PolicyVerificationFailed.selector, policyId));
+        // Call: invoke `getPolicyUsage` with the failing payload to exercise the revert branch.
         harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -100,14 +106,17 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         });
     }
 
-    /// @dev Verifies wrong `policyId` for an otherwise-valid proof reverts `PolicyVerificationFailed`.
+    /// @dev Verifies that wrong `policyId` for an otherwise-valid proof reverts `PolicyVerificationFailed`.
     function test_getPolicyUsage_wrongPolicyIdForValidProof_revertsPolicyVerificationFailed() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for wrong `policyId` for an otherwise-valid proof reverts `PolicyVerificationFailed`.
         uint256 signedPolicyId = 3003;
         uint256 queriedPolicyId = 3004;
         Policy memory policy = _buildBasePolicy();
         bytes32[] memory proof = _setSinglePolicyRoot(signedPolicyId, policy);
 
+        // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.PolicyVerificationFailed.selector, queriedPolicyId));
+        // Call: invoke `getPolicyUsage` with the failing payload to exercise the revert branch.
         harness.getPolicyUsage({
             policyId: queriedPolicyId,
             policy: policy,
@@ -118,13 +127,16 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         });
     }
 
-    /// @dev Verifies non-empty policy is rejected when `policiesRoot == 0`.
+    /// @dev Verifies that non-empty policy is rejected when `policiesRoot == 0`.
     function test_getPolicyUsage_zeroPoliciesRoot_rejectsPolicy() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for non-empty policy is rejected when `policiesRoot == 0`.
         uint256 policyId = 3005;
         Policy memory policy = _buildBasePolicy();
         bytes32[] memory emptyProof = new bytes32[](0);
 
+        // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.PolicyVerificationFailed.selector, policyId));
+        // Call: invoke `getPolicyUsage` with the failing payload to exercise the revert branch.
         harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -135,12 +147,14 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         });
     }
 
-    /// @dev Verifies policy without active rate limit returns zero usage.
+    /// @dev Verifies that policy without active rate limit returns zero usage.
     function test_getPolicyUsage_policyWithoutActiveRateLimit_returnsZero() public {
+        // Setup: configure a valid fixture for policy without active rate limit returns zero usage.
         uint256 policyId = 3006;
         Policy memory policy = _buildBasePolicy();
         bytes32[] memory proof = _setSinglePolicyRoot(policyId, policy);
 
+        // Call: execute `getPolicyUsage` with the happy-path payload.
         uint256 usage = harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -150,11 +164,13 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
             policyProof: proof
         });
 
+        // Verify: assert the expected success result and state updates.
         assertEq(usage, 0, "usage should be zero when rate limit is disabled");
     }
 
-    /// @dev Verifies usage is scoped by account/destination/initiator configuration.
+    /// @dev Verifies that usage is scoped by account/destination/initiator configuration.
     function test_getPolicyUsage_usageKey_scopedByAccountDestinationAndInitiator() public {
+        // Setup: configure a valid fixture for usage is scoped by account/destination/initiator configuration.
         uint256 policyId = 3007;
         Policy memory policy = _buildTimeIntervalPolicy();
         policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
@@ -171,6 +187,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         uint256 timeWindow = block.timestamp / 3600;
         policyStateHarness.setPolicyUsage(usageKey, timeWindow, 91);
 
+        // Call: execute `getPolicyUsage` with the happy-path payload.
         uint256 exactTupleUsage = harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -179,6 +196,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
             initiator: initiator,
             policyProof: proof
         });
+        // Verify: assert the expected success result and state updates.
         assertEq(exactTupleUsage, 91, "exact tuple should read the seeded usage");
 
         uint256 accountShiftedUsage = harness.getPolicyUsage({
@@ -212,8 +230,9 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         assertEq(initiatorShiftedUsage, 0, "different initiator should map to a different usage key");
     }
 
-    /// @dev Verifies usage from the prior window is not counted in the current window.
+    /// @dev Verifies that usage from the prior window is not counted in the current window.
     function test_getPolicyUsage_windowRollover_oldWindowUsageNotCounted() public {
+        // Setup: configure a valid fixture for usage from the prior window is not counted in the current window.
         vm.warp(100 hours);
 
         uint256 policyId = 3008;
@@ -228,6 +247,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         uint256 currentWindow = block.timestamp / 3600;
         policyStateHarness.setPolicyUsage(usageKey, currentWindow - 1, 123);
 
+        // Call: execute `getPolicyUsage` with the happy-path payload.
         uint256 currentUsage = harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -237,11 +257,13 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
             policyProof: proof
         });
 
+        // Verify: assert the expected success result and state updates.
         assertEq(currentUsage, 0, "old window usage should not be counted in the current window");
     }
 
-    /// @dev Verifies `getPolicyUsage` is view-only and does not mutate usage storage.
+    /// @dev Verifies that `getPolicyUsage` is view-only and does not mutate usage storage.
     function test_getPolicyUsage_viewCall_doesNotMutateUsageStorage() public {
+        // Setup: configure a valid fixture for `getPolicyUsage` is view-only and does not mutate usage storage.
         uint256 policyId = 3009;
         Policy memory policy = _buildTimeIntervalPolicy();
         bytes32[] memory proof = _setSinglePolicyRoot(policyId, policy);
@@ -255,6 +277,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         policyStateHarness.setPolicyUsage(usageKey, timeWindow, 33);
         uint256 usageBefore = policyStateHarness.getPolicyUsage(usageKey, timeWindow);
 
+        // Call: execute `getPolicyUsage` with the happy-path payload.
         uint256 viewedUsage = harness.getPolicyUsage({
             policyId: policyId,
             policy: policy,
@@ -265,12 +288,14 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
         });
         uint256 usageAfter = policyStateHarness.getPolicyUsage(usageKey, timeWindow);
 
+        // Verify: assert the expected success result and state updates.
         assertEq(viewedUsage, 33, "view should read seeded usage");
         assertEq(usageAfter, usageBefore, "view call must not mutate usage storage");
     }
 
-    /// @dev Verifies root-rotation guard: stale proof fails after root update, fresh proof succeeds.
+    /// @dev Verifies that root-rotation guard: stale proof fails after root update, fresh proof succeeds.
     function test_getPolicyUsage_rootRotation_staleProofRejectedFreshProofAccepted() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for root-rotation guard: stale proof fails after root update, fresh proof succeeds.
         uint256 policyId = 3010;
 
         Policy memory policyR1 = _buildBasePolicy();
@@ -284,6 +309,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
 
         policyStateHarness.setPoliciesRoot(rootR1);
 
+        // Call: invoke `getPolicyUsage` with the failing payload to exercise the revert branch.
         uint256 usageWithR1 = harness.getPolicyUsage({
             policyId: policyId,
             policy: policyR1,
@@ -292,6 +318,7 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
             initiator: address(0xC1010),
             policyProof: proofR1
         });
+        // Verify: assert that the revert reason matches the policy guard under test.
         assertEq(usageWithR1, 0, "proof should succeed under root R1");
 
         policyStateHarness.setPoliciesRoot(rootR2);

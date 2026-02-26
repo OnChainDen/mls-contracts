@@ -19,13 +19,13 @@ import {
 
 /**
  * @dev Cross-file fuzz tests for organization policy behaviors.
- *      Covers Section 11.1 IDs `POL-F-1` through `POL-F-7`.
  */
 contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 5001;
 
-    // POL-F-1
+    /// @dev Verifies that policy field mutation invalidates original proof.
     function testFuzz_POL_F_1_policyFieldMutationInvalidatesOriginalProof(uint256 policyIdSeed, uint8 mutationSelector)
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for policy field mutation invalidates original proof.
         public
     {
         uint256 policyId = bound(policyIdSeed, 1, type(uint96).max);
@@ -44,6 +44,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         policyStateHarness.setPoliciesRoot(root);
 
         bytes32[] memory empty = new bytes32[](0);
+        // Call: run `isPolicyInOrgViaLibrary` across the prepared variants.
         assertTrue(harness.isPolicyInOrgViaLibrary(policyId, policy, empty), "baseline proof should validate");
 
         Policy memory mutated = policy;
@@ -70,8 +71,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         assertFalse(harness.isPolicyInOrgViaLibrary(policyId, mutated, empty), "single-field mutation must break proof");
     }
 
-    // POL-F-2
+    /// @dev Verifies that source account proofs only pass for exact tuple.
     function testFuzz_POL_F_2_sourceAccountProofsOnlyPassForExactTuple(
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for source account proofs only pass for exact tuple.
         address accountA,
         address accountB,
         bool useFirst
@@ -90,7 +92,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         policy.config.anySourceAccount = false;
         policy.roots.sourceAccountsRoot = sourceRoot;
 
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(
+        // Call: run `isSourceAccountAllowedByPolicyViaLibrary` across the prepared variants.
             harness.isSourceAccountAllowedByPolicyViaLibrary(policy, sourceAccounts[targetIndex], proof),
             "exact account/root/proof tuple should pass"
         );
@@ -101,8 +105,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         );
     }
 
-    // POL-F-3
+    /// @dev Verifies that destination proofs validate only actual destination.
     function testFuzz_POL_F_3_destinationProofsValidateOnlyActualDestination(
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for destination proofs validate only actual destination.
         uint8 shape,
         address allowedDestination,
         address otherDestination,
@@ -129,6 +134,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
         if (mode == 0) {
             // Native transfer destination is `to`.
+        // Call: run `isDestinationAllowedByPolicyViaPolicyLibrary` across the prepared variants.
             allowedResult = harness.isDestinationAllowedByPolicyViaPolicyLibrary(
                 policy, allowedDestination, amount, bytes(""), destinationProof
             );
@@ -157,12 +163,14 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             );
         }
 
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(allowedResult, "exact actual destination should pass");
         assertFalse(deniedResult, "different actual destination should fail");
     }
 
-    // POL-F-4
+    /// @dev Verifies that function proofs bind selector and constraints.
     function testFuzz_POL_F_4_functionProofsBindSelectorAndConstraints(
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for function proofs bind selector and constraints.
         bytes4 selector,
         uint256 callArg,
         bytes32 constraintsSeed,
@@ -185,8 +193,10 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         policy.roots.allowedFunctionsRoot = functionRoot;
 
         bytes memory data = abi.encodeWithSelector(selector, callArg);
+        // Call: run `isFunctionAllowedByPolicyViaPolicyLibrary` across the prepared variants.
         bool exactPairAllowed =
             harness.isFunctionAllowedByPolicyViaPolicyLibrary(policy, data, functionProof, constraints);
+        // Verify: assert each variant returns the expected branch outcome.
         assertTrue(exactPairAllowed, "exact selector+constraints tuple should pass");
 
         bytes4 mutatedSelector = selector ^ bytes4(uint32(1));
@@ -201,8 +211,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         assertFalse(mutatedConstraintsAllowed, "constraints mutation should fail proof");
     }
 
-    // POL-F-5
+    /// @dev Verifies that duplicate or out of order signers always revert.
     function testFuzz_POL_F_5_duplicateOrOutOfOrderSignersAlwaysRevert(bool useDuplicate, bytes32 hashSeed) public {
+        // Setup: assemble inputs expected to hit the guarded failure path for duplicate or out of order signers always revert.
         policyStateHarness.setMemberStatus(reviewer1, true);
         policyStateHarness.setMemberStatus(reviewer2, true);
         policyStateHarness.setGroupStatus(55, true);
@@ -226,12 +237,15 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             packed = reviewer1 < reviewer2 ? abi.encodePacked(sig2, sig1) : abi.encodePacked(sig1, sig2);
         }
 
+        // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert();
+        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
         harness.areApprovalsValidViaPolicyLibrary(policy, packed, messageHash);
     }
 
-    // POL-F-6
+    /// @dev Verifies that rate limit scope collision matches scope model.
     function testFuzz_POL_F_6_rateLimitScopeCollisionMatchesScopeModel(
+        // Setup: configure a valid fixture for rate limit scope collision matches scope model.
         uint8 sourceScopeSeed,
         uint8 destinationScopeSeed,
         uint8 initiatorScopeSeed,
@@ -251,6 +265,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         address initiatorA = address(0xC101);
         address initiatorB = sameInitiator ? initiatorA : address(0xC202);
 
+        // Call: execute `computeUsageKeyViaPolicyLibrary` with the happy-path payload.
         bytes32 keyA =
             harness.computeUsageKeyViaPolicyLibrary(DEFAULT_POLICY_ID, policy, account1, destination1, initiatorA);
         bytes32 keyB =
@@ -260,11 +275,13 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             && (policy.config.rateLimit.destinationScope != RateLimitScope.PerEntity || destination1 == destination2)
             && (policy.config.rateLimit.initiatorScope != RateLimitScope.PerEntity || initiatorA == initiatorB);
 
+        // Verify: assert the expected success result and state updates.
         assertEq(keyA == keyB, expectCollision, "observed key collision should match scope model");
     }
 
-    // POL-F-7
+    /// @dev Verifies that dynamic bytes string out of bounds fail closed.
     function testFuzz_POL_F_7_dynamicBytesStringOutOfBoundsFailClosed(uint256 offsetSeed, uint256 lengthSeed) public {
+        // Setup: build fixture inputs where dynamic bytes string out of bounds fail closed should be denied.
         uint256 badOffset = bound(offsetSeed, 64, 10_000);
         uint256 badLength = bound(lengthSeed, 1, 10_000);
 
@@ -292,11 +309,13 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         // Case 1: Offset points beyond available calldata.
         bytes memory badOffsetData = abi.encodePacked(bytes4(0xABCD0001), bytes32(badOffset));
 
+        // Call: execute `areParametersAllowedByConstraintsViaPolicyLibrary` and capture the authorization decision.
         bool bytesOffsetResult =
             harness.areParametersAllowedByConstraintsViaPolicyLibrary(bytesConstraints, badOffsetData);
         bool stringOffsetResult =
             harness.areParametersAllowedByConstraintsViaPolicyLibrary(stringConstraints, badOffsetData);
 
+        // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(bytesOffsetResult, "bytes offset OOB should fail closed");
         assertFalse(stringOffsetResult, "string offset OOB should fail closed");
 
