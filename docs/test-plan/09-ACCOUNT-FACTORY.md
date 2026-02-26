@@ -40,6 +40,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 8 | Non-guardian caller — reverts (onlyGuardian modifier) | [N] | P0 |
 | 9 | Insufficient admin signatures — reverts | [N] | P0 |
 | 10 | Non-whitelisted implementation — reverts | [N] | P1 |
+| 80 | Reverts when `whitelistAddress` has no runtime code (undeployed contract / EOA), i.e. whitelist validation call cannot be trusted | [N] | P0 |
 | 11 | Whitelisted implementation — updates `accountImplementation` in storage | [U] | P1 |
 | 12 | Emits `AccountImplementationUpdated(newImplementation)` | [EV] | P1 |
 | 13 | `OperationType` is `UpgradeAccount` in admin auth | [U] | P1 |
@@ -192,7 +193,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | Category | New Tests | Priority |
 |----------|-----------|----------|
 | `deployAccount` (Base) | 8 | P0-P1 |
-| `setAccountImplementation` | 11 | P0-P1 |
+| `setAccountImplementation` | 12 | P0-P1 |
 | `computeAccountAddress` (external) | 3 | P1-P3 |
 | `implementation` (IBeacon) | 5 | P0-P1 |
 | `deployAccount` (Lib) | 12 | P0-P2 |
@@ -203,4 +204,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | AccountProxy (constructor/proxy) | 8 | P0-P1 |
 | Fuzz tests | 6 | P1 |
 | Invariant tests | 5 | P0 |
-| **Total** | **79** | |
+| **Total** | **80** | |
