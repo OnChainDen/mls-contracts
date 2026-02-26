@@ -126,7 +126,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that specific native-token policy allows only native transfers.
     function test_isTokenTransferAllowed_specificNativeTokenPolicy_allowsOnlyNative() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for specific native-token policy allows only native transfers.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for specific native-token policy
+        // allows only native transfers.
         address nativeRecipient = address(0xA606);
         address token = address(0x7606);
 
@@ -150,7 +151,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that specific ERC-20 token policy allows only that token contract.
     function test_isTokenTransferAllowed_specificErc20Policy_allowsOnlyConfiguredToken() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for specific ERC-20 token policy allows only that token contract.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for specific ERC-20 token policy
+        // allows only that token contract.
         address configuredToken = address(0x7607);
         address otherToken = address(0xB607);
         address recipient = address(0xA607);
@@ -210,7 +212,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: non-token-transfer calldata should fail closed.
     function test_isTokenTransferAllowed_nonTokenTransferCalldata_rejected_desired() public {
-        // Setup: build fixture inputs where desired behavior: non-token-transfer calldata should fail closed should be denied.
+        // Setup: build fixture inputs where desired behavior: non-token-transfer calldata should fail closed should be
+        // denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.anyToken = true;
         policy.config.token.hasAmountThreshold = false;
@@ -324,7 +327,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: amount equal to threshold should be allowed (inclusive max).
     function test_isTokenAmountAllowedByPolicy_amountEqualThreshold_allowed_desired() public {
-        // Setup: configure a valid fixture for desired behavior: amount equal to threshold should be allowed (inclusive max).
+        // Setup: configure a valid fixture for desired behavior: amount equal to threshold should be allowed (inclusive
+        // max).
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;
@@ -352,7 +356,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that threshold `0`: desired behavior allows only zero-amount transfers.
     function test_isTokenAmountAllowedByPolicy_thresholdZero_allowsOnlyZeroAmount_desired() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for threshold `0`: desired behavior allows only zero-amount transfers.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for threshold `0`: desired behavior
+        // allows only zero-amount transfers.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 0;
@@ -368,7 +373,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that native amount extraction uses top-level `value`.
     function test_isTokenAmountAllowedByPolicy_nativeAmountUsesValue() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for native amount extraction uses top-level `value`.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for native amount extraction uses
+        // top-level `value`.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 5;
@@ -384,7 +390,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: malformed ERC-20 amount calldata fails closed without revert.
     function test_isTokenAmountAllowedByPolicy_malformedErc20AmountCalldata_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: malformed ERC-20 amount calldata fails closed without revert should be denied.
+        // Setup: build fixture inputs where desired behavior: malformed ERC-20 amount calldata fails closed without
+        // revert should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 10;
@@ -398,7 +405,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: non-transfer selector calldata with threshold enabled fails closed.
     function test_isTokenAmountAllowedByPolicy_nonTransferSelectorWithThresholdEnabled_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: non-transfer selector calldata with threshold enabled fails closed should be denied.
+        // Setup: build fixture inputs where desired behavior: non-transfer selector calldata with threshold enabled
+        // fails closed should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;

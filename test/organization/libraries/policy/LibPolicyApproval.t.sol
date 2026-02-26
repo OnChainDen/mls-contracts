@@ -40,7 +40,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that member approver reverts `UnauthorizedApprovalSigner` for non-authorized signer.
     function test_areApprovalsValid_memberApproverUnauthorizedSigner_revertsUnauthorizedApprovalSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for member approver reverts `UnauthorizedApprovalSigner` for non-authorized signer.
+        // Setup: assemble inputs expected to hit the guarded failure path for member approver reverts
+        // `UnauthorizedApprovalSigner` for non-authorized signer.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1, reviewer2));
 
@@ -55,7 +56,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that member approver reverts `UnauthorizedApprovalSigner` when signer is not in org.
     function test_areApprovalsValid_memberApproverSignerNotInOrg_revertsUnauthorizedApprovalSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for member approver reverts `UnauthorizedApprovalSigner` when signer is not in org.
+        // Setup: assemble inputs expected to hit the guarded failure path for member approver reverts
+        // `UnauthorizedApprovalSigner` when signer is not in org.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         policyStateHarness.setMemberStatus(reviewer1, false);
 
@@ -70,7 +72,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that group approver with threshold N and exactly N valid sorted signatures returns true.
     function test_areApprovalsValid_groupApproverExactThresholdSortedSignatures_returnsTrue() public {
-        // Setup: configure a valid fixture for group approver with threshold N and exactly N valid sorted signatures returns true.
+        // Setup: configure a valid fixture for group approver with threshold N and exactly N valid sorted signatures
+        // returns true.
         Policy memory policy = _groupApproverPolicy(2201, 2);
         _setActiveGroupWithMembers(2201, buildArray(reviewer1, reviewer2));
 
@@ -106,7 +109,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that group approver with fewer than threshold valid signatures returns false.
     function test_areApprovalsValid_groupApproverFewerThanThreshold_returnsFalse() public {
-        // Setup: build fixture inputs where group approver with fewer than threshold valid signatures returns false should be denied.
+        // Setup: build fixture inputs where group approver with fewer than threshold valid signatures returns false
+        // should be denied.
         Policy memory policy = _groupApproverPolicy(2203, 2);
         _setActiveGroupWithMembers(2203, buildArray(reviewer1));
 
@@ -121,7 +125,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that group approver reverts `UnauthorizedApprovalSigner` when signer is not in approver group.
     function test_areApprovalsValid_groupApproverSignerNotInGroup_revertsUnauthorizedApprovalSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for group approver reverts `UnauthorizedApprovalSigner` when signer is not in approver group.
+        // Setup: assemble inputs expected to hit the guarded failure path for group approver reverts
+        // `UnauthorizedApprovalSigner` when signer is not in approver group.
         Policy memory policy = _groupApproverPolicy(2204, 1);
         _setActiveGroupWithMembers(2204, buildArray(reviewer1));
         _setMembersAsOrgMembers(buildArray(reviewer2));
@@ -137,7 +142,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that group approver reverts `GroupDoesNotExist` when approver group is missing.
     function test_areApprovalsValid_groupApproverMissingGroup_revertsGroupDoesNotExist() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for group approver reverts `GroupDoesNotExist` when approver group is missing.
+        // Setup: assemble inputs expected to hit the guarded failure path for group approver reverts
+        // `GroupDoesNotExist` when approver group is missing.
         Policy memory policy = _groupApproverPolicy(2205, 1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
@@ -152,7 +158,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that duplicate signer reverts `DuplicateOrOutOfOrderSigner`.
     function test_areApprovalsValid_duplicateSigner_revertsDuplicateOrOutOfOrderSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for duplicate signer reverts `DuplicateOrOutOfOrderSigner`.
+        // Setup: assemble inputs expected to hit the guarded failure path for duplicate signer reverts
+        // `DuplicateOrOutOfOrderSigner`.
         Policy memory policy = _groupApproverPolicy(2206, 2);
         _setActiveGroupWithMembers(2206, buildArray(reviewer1));
 
@@ -170,7 +177,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that out-of-order signer sequence reverts `DuplicateOrOutOfOrderSigner`.
     function test_areApprovalsValid_outOfOrderSigner_revertsDuplicateOrOutOfOrderSigner() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for out-of-order signer sequence reverts `DuplicateOrOutOfOrderSigner`.
+        // Setup: assemble inputs expected to hit the guarded failure path for out-of-order signer sequence reverts
+        // `DuplicateOrOutOfOrderSigner`.
         Policy memory policy = _groupApproverPolicy(2207, 2);
         _setActiveGroupWithMembers(2207, buildArray(reviewer1, reviewer2));
 
@@ -199,7 +207,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that malformed packed signature data bubbles signature recovery revert.
     function test_areApprovalsValid_malformedPackedSignature_revertsSignatureRecoveryFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for malformed packed signature data bubbles signature recovery revert.
+        // Setup: assemble inputs expected to hit the guarded failure path for malformed packed signature data bubbles
+        // signature recovery revert.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
@@ -211,7 +220,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that mixed EOA + ERC-1271 signers are supported when sorted by signer address.
     function test_areApprovalsValid_mixedEOAAndERC1271Sorted_returnsTrue() public {
-        // Setup: configure a valid fixture for mixed EOA + ERC-1271 signers are supported when sorted by signer address.
+        // Setup: configure a valid fixture for mixed EOA + ERC-1271 signers are supported when sorted by signer
+        // address.
         Policy memory policy = _groupApproverPolicy(2208, 2);
 
         address erc1271Signer = address(validSigner1271);
@@ -239,7 +249,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that early-exit after threshold is met ignores trailing malformed bytes and returns true.
     function test_areApprovalsValid_thresholdMetBeforeTrailingMalformedBytes_returnsTrue() public {
-        // Setup: configure a valid fixture for early-exit after threshold is met ignores trailing malformed bytes and returns true.
+        // Setup: configure a valid fixture for early-exit after threshold is met ignores trailing malformed bytes and
+        // returns true.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
@@ -255,7 +266,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: group threshold 0 should fail closed (false or explicit revert).
     function test_areApprovalsValid_groupThresholdZero_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: group threshold 0 should fail closed (false or explicit revert) should be denied.
+        // Setup: build fixture inputs where desired behavior: group threshold 0 should fail closed (false or explicit
+        // revert) should be denied.
         Policy memory policy = _groupApproverPolicy(2209, 0);
         _setActiveGroupWithMembers(2209, buildArray(reviewer1));
 
@@ -332,7 +344,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that unknown approver enum fails closed in caller usage.
     function test_getRequiredApprovals_invalidApproverType_failsClosedInCallerUsage() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for unknown approver enum fails closed in caller usage.
+        // Setup: assemble inputs expected to hit the guarded failure path for unknown approver enum fails closed in
+        // caller usage.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
@@ -341,13 +354,15 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer1));
-        // Call: invoke `areApprovalsValidViaPolicyLibraryRawApproverType` with the failing payload to exercise the revert branch.
+        // Call: invoke `areApprovalsValidViaPolicyLibraryRawApproverType` with the failing payload to exercise the
+        // revert branch.
         harness.areApprovalsValidViaPolicyLibraryRawApproverType(policy, type(uint256).max, signature, messageHash);
     }
 
     /// @dev Verifies that non-member signer returns false regardless of approver configuration.
     function test_isSignerAuthorizedForPolicy_nonMemberSigner_returnsFalseAcrossApproverModes() public {
-        // Setup: build fixture inputs where non-member signer returns false regardless of approver configuration should be denied.
+        // Setup: build fixture inputs where non-member signer returns false regardless of approver configuration should
+        // be denied.
         address nonMember = address(0xA401);
         Policy memory memberPolicy = _memberApproverPolicy(reviewer1);
         Policy memory groupPolicy = _groupApproverPolicy(2212, 1);
@@ -366,7 +381,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that member approver type authorizes only the configured approver member.
     function test_isSignerAuthorizedForPolicy_memberApprover_onlyConfiguredMemberAuthorized() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for member approver type authorizes only the configured approver member.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for member approver type authorizes
+        // only the configured approver member.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1, reviewer2));
 
@@ -410,7 +426,8 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
-        // Call: execute `isSignerAuthorizedForPolicyViaPolicyLibraryRawApproverType` and capture the authorization decision.
+        // Call: execute `isSignerAuthorizedForPolicyViaPolicyLibraryRawApproverType` and capture the authorization
+        // decision.
         bool authorized =
             harness.isSignerAuthorizedForPolicyViaPolicyLibraryRawApproverType(policy, type(uint256).max, reviewer1);
         // Verify: assert that the request is denied and state remains unchanged.

@@ -90,7 +90,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that `anyFunction == true` bypasses function-proof check but still enforces destination + params.
     function test_isContractInteractionAllowed_anyFunctionBypassesProofStillEnforcesDestinationAndParams() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `anyFunction == true` bypasses function-proof check but still enforces destination + params.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for `anyFunction == true` bypasses
+        // function-proof check but still enforces destination + params.
         address target = address(0xC705);
         bytes4 selector = bytes4(keccak256("setValue(uint256)"));
         bytes memory passingConstraints = _encodeUintExactConstraint(11);
@@ -117,7 +118,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that empty constraints can be valid when function leaf uses empty constraints hash.
     function test_isContractInteractionAllowed_emptyConstraintsValidWhenLeafUsesEmptyHash() public {
-        // Setup: configure a valid fixture for empty constraints can be valid when function leaf uses empty constraints hash.
+        // Setup: configure a valid fixture for empty constraints can be valid when function leaf uses empty constraints
+        // hash.
         address target = address(0xC706);
         bytes4 selector = bytes4(keccak256("ping()"));
         bytes memory constraints = bytes("");
@@ -135,7 +137,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that same selector with different constraints hash must not validate with old proof.
     function test_isContractInteractionAllowed_sameSelectorDifferentConstraintsHash_invalidatesProof() public {
-        // Setup: build fixture inputs where same selector with different constraints hash must not validate with old proof should be denied.
+        // Setup: build fixture inputs where same selector with different constraints hash must not validate with old
+        // proof should be denied.
         address target = address(0xC707);
         bytes4 selector = bytes4(keccak256("setValue(uint256)"));
         bytes memory constraintsA = _encodeUintExactConstraint(33);
@@ -155,7 +158,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that data shorter than selector is rejected when function filtering is required.
     function test_isContractInteractionAllowed_dataShorterThanSelector_rejectedWhenFunctionFiltered() public {
-        // Setup: build fixture inputs where data shorter than selector is rejected when function filtering is required should be denied.
+        // Setup: build fixture inputs where data shorter than selector is rejected when function filtering is required
+        // should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.destinationType = DestinationType.Any;
         policy.config.anyFunction = false;
@@ -170,7 +174,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that desired behavior: malformed constraints payload fails closed instead of reverting.
     function test_isContractInteractionAllowed_malformedConstraints_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed instead of reverting should be denied.
+        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed instead of
+        // reverting should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.destinationType = DestinationType.Any;
         policy.config.anyFunction = true;
@@ -203,7 +208,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that `anyFunction == false` and `data.length < 4` returns false.
     function test_isFunctionAllowed_anyFunctionFalseAndShortData_returnsFalse() public {
-        // Setup: build fixture inputs where `anyFunction == false` and `data.length < 4` returns false should be denied.
+        // Setup: build fixture inputs where `anyFunction == false` and `data.length < 4` returns false should be
+        // denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.anyFunction = false;
 
@@ -288,7 +294,8 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
 
     /// @dev Verifies that constraints tampering invalidates proof via changed constraints hash.
     function test_isFunctionAllowed_constraintsTampering_invalidatesProof() public {
-        // Setup: build fixture inputs where constraints tampering invalidates proof via changed constraints hash should be denied.
+        // Setup: build fixture inputs where constraints tampering invalidates proof via changed constraints hash should
+        // be denied.
         bytes4 selector = bytes4(keccak256("setValue(uint256)"));
         bytes memory constraintsA = _encodeUintExactConstraint(58);
         bytes memory constraintsB = _encodeUintExactConstraint(59);

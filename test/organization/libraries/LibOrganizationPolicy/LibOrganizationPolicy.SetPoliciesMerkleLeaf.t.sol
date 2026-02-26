@@ -23,7 +23,8 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
 
     /// @dev Verifies that `setPolicies` emits `PoliciesUpdated(newPoliciesRoot, ipfsCid)` with exact args.
     function test_setPolicies_emitsPoliciesUpdatedWithExactArgs() public {
-        // Setup: configure a valid fixture for `setPolicies` emits `PoliciesUpdated(newPoliciesRoot, ipfsCid)` with exact args.
+        // Setup: configure a valid fixture for `setPolicies` emits `PoliciesUpdated(newPoliciesRoot, ipfsCid)` with
+        // exact args.
         bytes32 newRoot = keccak256("lop-set-2-root");
         string memory ipfsCid = "ipfs://lop-set-2";
 
@@ -115,14 +116,16 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(
-        // Call: execute `isPolicyInOrgViaLibrary` and capture the authorization decision.
-            harness.isPolicyInOrgViaLibrary(1005, mutatedPolicy, proof), "mutating policy fields must invalidate proof"
+            // Call: execute `isPolicyInOrgViaLibrary` and capture the authorization decision.
+            harness.isPolicyInOrgViaLibrary(1005, mutatedPolicy, proof),
+            "mutating policy fields must invalidate proof"
         );
     }
 
     /// @dev Verifies that empty proof works only for single-leaf tree.
     function test_isPolicyInOrg_emptyProof_onlySingleLeafTreeCasePasses() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for empty proof works only for single-leaf tree.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for empty proof works only for
+        // single-leaf tree.
         Policy memory policy = _buildBasePolicy();
 
         uint256[] memory oneId = new uint256[](1);
@@ -134,8 +137,9 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
         bytes32[] memory emptyProof = new bytes32[](0);
         // Verify: assert each variant returns the expected branch outcome.
         assertTrue(
-        // Call: run `isPolicyInOrgViaLibrary` across the prepared variants.
-            harness.isPolicyInOrgViaLibrary(1006, policy, emptyProof), "single-leaf root should accept empty proof"
+            // Call: run `isPolicyInOrgViaLibrary` across the prepared variants.
+            harness.isPolicyInOrgViaLibrary(1006, policy, emptyProof),
+            "single-leaf root should accept empty proof"
         );
 
         Policy memory otherPolicy = _buildBasePolicy();
@@ -155,7 +159,8 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
 
     /// @dev Verifies that proof order matters (reordered siblings fail).
     function test_isPolicyInOrg_reorderedProofSiblings_failsVerification() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for proof order matters (reordered siblings fail).
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for proof order matters (reordered
+        // siblings fail).
         Policy memory policyA = _buildBasePolicy();
         Policy memory policyB = _buildBasePolicy();
         Policy memory policyC = _buildBasePolicy();

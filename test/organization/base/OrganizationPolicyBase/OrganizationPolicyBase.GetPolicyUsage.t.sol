@@ -85,7 +85,8 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
 
     /// @dev Verifies that invalid policy proof reverts `PolicyVerificationFailed(policyId)`.
     function test_getPolicyUsage_invalidProof_revertsPolicyVerificationFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for invalid policy proof reverts `PolicyVerificationFailed(policyId)`.
+        // Setup: assemble inputs expected to hit the guarded failure path for invalid policy proof reverts
+        // `PolicyVerificationFailed(policyId)`.
         uint256 policyId = 3002;
         Policy memory policy = _buildBasePolicy();
         _setSinglePolicyRoot(policyId, policy);
@@ -108,7 +109,8 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
 
     /// @dev Verifies that wrong `policyId` for an otherwise-valid proof reverts `PolicyVerificationFailed`.
     function test_getPolicyUsage_wrongPolicyIdForValidProof_revertsPolicyVerificationFailed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for wrong `policyId` for an otherwise-valid proof reverts `PolicyVerificationFailed`.
+        // Setup: assemble inputs expected to hit the guarded failure path for wrong `policyId` for an otherwise-valid
+        // proof reverts `PolicyVerificationFailed`.
         uint256 signedPolicyId = 3003;
         uint256 queriedPolicyId = 3004;
         Policy memory policy = _buildBasePolicy();
@@ -129,7 +131,8 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
 
     /// @dev Verifies that non-empty policy is rejected when `policiesRoot == 0`.
     function test_getPolicyUsage_zeroPoliciesRoot_rejectsPolicy() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for non-empty policy is rejected when `policiesRoot == 0`.
+        // Setup: assemble inputs expected to hit the guarded failure path for non-empty policy is rejected when
+        // `policiesRoot == 0`.
         uint256 policyId = 3005;
         Policy memory policy = _buildBasePolicy();
         bytes32[] memory emptyProof = new bytes32[](0);
@@ -295,7 +298,8 @@ contract OrganizationPolicyBaseGetPolicyUsageTest is OrganizationPolicyBaseSuite
 
     /// @dev Verifies that root-rotation guard: stale proof fails after root update, fresh proof succeeds.
     function test_getPolicyUsage_rootRotation_staleProofRejectedFreshProofAccepted() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for root-rotation guard: stale proof fails after root update, fresh proof succeeds.
+        // Setup: assemble inputs expected to hit the guarded failure path for root-rotation guard: stale proof fails
+        // after root update, fresh proof succeeds.
         uint256 policyId = 3010;
 
         Policy memory policyR1 = _buildBasePolicy();
