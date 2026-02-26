@@ -1,0 +1,334 @@
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
+pragma solidity 0.8.33;
+
+import {
+    LibOrganizationAccountSignatureHarness
+} from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureHarness.sol";
+import {
+    LibOrganizationAccountTransactionHarness
+} from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionHarness.sol";
+import {
+    LibOrganizationPolicyHarness
+} from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicyHarness.sol";
+import {
+    LibOrganizationPolicySuiteBase
+} from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicySuiteBase.sol";
+import {OrganizationPolicyInvariantHandler} from "test/organization/policy/OrganizationPolicyInvariantHandler.sol";
+import {
+    ApproverType,
+    ConstraintType,
+    DestinationType,
+    ParamType,
+    ParameterConstraint,
+    Policy,
+    PolicyType,
+    RateLimitType,
+    TransactionType,
+    ValidationProofs
+} from "types/PolicyTypes.sol";
+
+/**
+ * @dev Cross-file invariant tests for organization policy behavior.
+ *      Covers Section 11.2 IDs `POL-I-1` through `POL-I-10`.
+ */
+contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase {
+    uint256 internal constant DEFAULT_POLICY_ID = 6101;
+
+    OrganizationPolicyInvariantHandler internal handler;
+    LibOrganizationPolicyHarness internal checkHarness;
+    LibOrganizationAccountTransactionHarness internal txHarness;
+    LibOrganizationAccountSignatureHarness internal signatureHarness;
+
+    function setUp() public override {
+        super.setUp();
+
+        // Main handler mutates `harness` only.
+        handler = new OrganizationPolicyInvariantHandler(harness);
+        targetContract(address(handler));
+
+        // Independent harnesses used by invariant assertions that need custom roots/state.
+        checkHarness = new LibOrganizationPolicyHarness();
+        txHarness = new LibOrganizationAccountTransactionHarness();
+        signatureHarness = new LibOrganizationAccountSignatureHarness();
+
+        _seedMembers(address(harness));
+        _seedMembers(address(checkHarness));
+        _seedMembers(address(txHarness));
+        _seedMembers(address(signatureHarness));
+
+        checkHarness.setGroupStatus(700, true);
+        checkHarness.setGroupMemberStatus(700, reviewer1, true);
+        checkHarness.setGroupMemberStatus(700, reviewer2, true);
+    }
+
+    // POL-I-1
+    function invariant_POL_I_1_policyRootChangesOnlyThroughSetPolicies() public view {
+        assertEq(harness.getPoliciesRoot(), handler.modelPoliciesRoot(), "policy root must match handler model");
+    }
+
+    // POL-I-2
+    function invariant_POL_I_2_policyAndFunctionLeavesUseDoubleHashConstruction() public view {
+        Policy memory policy = _buildBasePolicy();
+        uint256 policyId = 6202;
+
+        bytes32 expectedPolicyLeaf = keccak256(bytes.concat(keccak256(abi.encode(policyId, policy))));
+        bytes32 actualPolicyLeaf = harness.computePolicyLeafViaLibrary(policyId, policy);
+        assertEq(actualPolicyLeaf, expectedPolicyLeaf, "policy leaf must use double hash");
+
+        bytes4 selector = bytes4(0x12345678);
+        bytes32 constraintsHash = keccak256("invariant-constraints");
+        bytes32 expectedFunctionLeaf = keccak256(bytes.concat(keccak256(abi.encode(selector, constraintsHash))));
+        bytes32 actualFunctionLeaf = harness.computeFunctionLeafViaPolicyLibrary(selector, constraintsHash);
+        assertEq(actualFunctionLeaf, expectedFunctionLeaf, "function leaf must use double hash");
+    }
+
+    // POL-I-3
+    function invariant_POL_I_3_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.Any;
+        policy.config.initiator.anyInitiator = false;
+        policy.config.initiator.initiatorType = ApproverType.Member;
+        policy.config.initiator.initiatorMember = initiator1;
+
+        bytes32 root = _computePolicyLeaf(DEFAULT_POLICY_ID, policy);
+        checkHarness.setPoliciesRoot(root);
+        signatureHarness.setPoliciesRoot(root);
+
+        bytes32[] memory badProof = new bytes32[](1);
+        badProof[0] = keccak256("invalid-proof");
+        bytes32[] memory empty = new bytes32[](0);
+
+        ValidationProofs memory proofs = _buildValidationProofs(policy, badProof, empty, empty, empty, bytes(""));
+
+        bool txAllowed = checkHarness.isTransactionAllowedByPolicyViaLibrary({
+            policyId: DEFAULT_POLICY_ID,
+            sourceAccount: address(0xA001),
+            to: address(0xB001),
+            value: 0,
+            data: abi.encodeWithSelector(bytes4(0xCAFEBABE), uint256(1)),
+            initiator: initiator1,
+            proofs: proofs
+        });
+        assertFalse(txAllowed, "invalid policy proof must not authorize transactions");
+
+        bool sigAllowed = signatureHarness.isERC1271SignatureAllowedByPolicyViaLibrary({
+            account: address(0xA001), initiator: initiator1, policyId: DEFAULT_POLICY_ID, proofs: proofs
+        });
+        assertFalse(sigAllowed, "invalid policy proof must not authorize signatures");
+    }
+
+    // POL-I-4
+    function invariant_POL_I_4_usageMonotonicOnSuccessfulUpdates() public view {
+        assertFalse(handler.usageMonotonicViolation(), "usage should not decrease after successful updates");
+    }
+
+    // POL-I-5
+    function invariant_POL_I_5_exceededRateLimitNeverMutatesUsage() public view {
+        assertFalse(handler.exceededLimitMutationViolation(), "exceeded-limit updates must not mutate usage");
+    }
+
+    // POL-I-6
+    function invariant_POL_I_6_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.approval.policyType = PolicyType.RequireManualApproval;
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = 700;
+        policy.config.approval.approvalThreshold = 2;
+
+        bytes32 reviewHash = keccak256("manual-review-hash");
+        bytes memory oneSignature = _signHash(REVIEWER_PK_1, reviewHash);
+
+        bool approvalsValid = checkHarness.areApprovalsValidViaPolicyLibrary(policy, oneSignature, reviewHash);
+        assertFalse(approvalsValid, "fewer than required manual approvals must never pass");
+    }
+
+    // POL-I-7
+    function invariant_POL_I_7_unknownEnumsFailClosedAcrossValidationPaths() public {
+        // ApproverType
+        Policy memory invalidApproverPolicy = _buildBasePolicy();
+        _unsafeSetApproverTypeRaw(invalidApproverPolicy, 3);
+        bool approverAllowed =
+            checkHarness.isSignerAuthorizedForPolicyViaPolicyLibrary(invalidApproverPolicy, reviewer1);
+        assertFalse(approverAllowed, "invalid approver enum should fail closed");
+
+        // DestinationType
+        Policy memory invalidDestinationPolicy = _buildBasePolicy();
+        _unsafeSetDestinationTypeRaw(invalidDestinationPolicy, 7);
+        bytes32[] memory emptyProof = new bytes32[](0);
+        bool destinationAllowed = checkHarness.isDestinationAllowedByPolicyViaPolicyLibrary(
+            invalidDestinationPolicy, address(0xD001), 1, bytes(""), emptyProof
+        );
+        assertFalse(destinationAllowed, "invalid destination enum should fail closed");
+
+        // ConstraintType + ParamType
+        bytes32[] memory noProof = new bytes32[](0);
+        ParameterConstraint memory constraint = _buildConstraint({
+            paramType: ParamType.Bool,
+            constraintType: ConstraintType.Exact,
+            headSlots: 1,
+            comparisonData: abi.encode(true),
+            paramValueInListProof: noProof
+        });
+
+        ParameterConstraint memory invalidConstraintType = constraint;
+        _unsafeSetConstraintTypeRaw(invalidConstraintType, 9);
+        bool invalidConstraintResult = checkHarness.isParameterAllowedByConstraintViaPolicyLibrary(
+            invalidConstraintType, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1))
+        );
+        assertFalse(invalidConstraintResult, "invalid constraint enum should fail closed");
+
+        ParameterConstraint memory invalidParamType = constraint;
+        _unsafeSetParamTypeRaw(invalidParamType, 11);
+        bool invalidParamResult = checkHarness.isParameterAllowedByConstraintViaPolicyLibrary(
+            invalidParamType, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1))
+        );
+        assertFalse(invalidParamResult, "invalid param enum should fail closed");
+
+        // RateLimitType
+        Policy memory invalidRateLimitTypePolicy = _buildBasePolicy();
+        invalidRateLimitTypePolicy.config.rateLimit.timeIntervalHours = 1;
+        invalidRateLimitTypePolicy.config.rateLimit.timeIntervalLimit = 1;
+        _unsafeSetRateLimitTypeRaw(invalidRateLimitTypePolicy, 3);
+
+        bool invalidRateTypeWithinLimit = checkHarness.checkAndUpdateRateLimitViaPolicyLibrary(
+            7001, invalidRateLimitTypePolicy, address(0xA7), address(0xB7), address(0xC7), 1
+        );
+        assertFalse(invalidRateTypeWithinLimit, "invalid rate-limit type should fail closed");
+
+        // RateLimitScope
+        Policy memory invalidRateScopePolicy = _buildBasePolicy();
+        invalidRateScopePolicy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        invalidRateScopePolicy.config.rateLimit.timeIntervalHours = 1;
+        invalidRateScopePolicy.config.rateLimit.timeIntervalLimit = 1;
+        _unsafeSetRateLimitScopesRaw(invalidRateScopePolicy, 8, 8, 8);
+
+        bool invalidRateScopeWithinLimit = checkHarness.checkAndUpdateRateLimitViaPolicyLibrary(
+            7002, invalidRateScopePolicy, address(0xA8), address(0xB8), address(0xC8), 1
+        );
+        assertFalse(invalidRateScopeWithinLimit, "invalid rate-limit scopes should fail closed");
+    }
+
+    // POL-I-8 (desired behavior)
+    function invariant_POL_I_8_desired_anyInitiatorMustNotAuthorizeNonMembers() public view {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.initiator.anyInitiator = true;
+
+        address nonMember = address(0xF0F0);
+        bool authorized = checkHarness.isInitiatorAuthorizedViaPolicyLibrary(policy, nonMember);
+        assertFalse(authorized, "anyInitiator should still require organization membership");
+    }
+
+    // POL-I-9 (desired behavior)
+    function invariant_POL_I_9_desired_tokenThresholdShouldBeInclusiveMax() public view {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.token.hasAmountThreshold = true;
+        policy.config.token.amountThreshold = 100;
+
+        bytes memory data = _encodeERC20Transfer(address(0xF901), 100);
+        bool allowed = checkHarness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, data, 0);
+        assertTrue(allowed, "token threshold should allow amount == threshold");
+    }
+
+    // POL-I-10 (desired behavior)
+    function invariant_POL_I_10_desired_malformedConstraintsFailClosedWithoutUnexpectedRevert() public {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.ContractInteractions;
+        policy.config.anyFunction = false;
+        policy.config.initiator.anyInitiator = false;
+        policy.config.initiator.initiatorType = ApproverType.Member;
+        policy.config.initiator.initiatorMember = initiator1;
+
+        bytes memory malformedConstraints = hex"01";
+        bytes4 selector = bytes4(0xF00DBAAD);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = selector;
+
+        bytes[] memory constraintsList = new bytes[](1);
+        constraintsList[0] = malformedConstraints;
+
+        (bytes32 functionsRoot, bytes32[] memory functionProof) =
+            _buildFunctionRootAndProof(selectors, constraintsList, 0);
+        policy.roots.allowedFunctionsRoot = functionsRoot;
+
+        bytes32 policyRoot = _computePolicyLeaf(DEFAULT_POLICY_ID, policy);
+        checkHarness.setPoliciesRoot(policyRoot);
+
+        bytes32[] memory empty = new bytes32[](0);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, empty, empty, empty, functionProof, malformedConstraints);
+
+        try checkHarness.isTransactionAllowedByPolicyViaLibrary(
+            DEFAULT_POLICY_ID,
+            address(0xA010),
+            address(0xB010),
+            0,
+            abi.encodeWithSelector(selector, uint256(1)),
+            initiator1,
+            proofs
+        ) returns (
+            bool allowed
+        ) {
+            assertFalse(allowed, "malformed constraints should fail closed with false");
+        } catch {
+            assertTrue(false, "malformed constraints should not revert in policy-check path");
+        }
+    }
+
+    // Helpers
+
+    function _unsafeSetApproverTypeRaw(Policy memory policy, uint256 rawValue) internal pure {
+        // `Policy.config.approval.approverType` offset: 0xA0.
+        assembly {
+            mstore(add(policy, 0xA0), rawValue)
+        }
+    }
+
+    function _unsafeSetDestinationTypeRaw(Policy memory policy, uint256 rawValue) internal pure {
+        // `Policy.config.destinationType` offset: 0x60.
+        assembly {
+            mstore(add(policy, 0x60), rawValue)
+        }
+    }
+
+    function _unsafeSetRateLimitTypeRaw(Policy memory policy, uint256 rawValue) internal pure {
+        // `Policy.config.rateLimit.limitType` offset: 0x220.
+        assembly {
+            mstore(add(policy, 0x220), rawValue)
+        }
+    }
+
+    function _unsafeSetRateLimitScopesRaw(
+        Policy memory policy,
+        uint256 initiatorScopeRaw,
+        uint256 sourceScopeRaw,
+        uint256 destinationScopeRaw
+    ) internal pure {
+        // `Policy.config.rateLimit.{initiatorScope,sourceScope,destinationScope}` offsets: 0x280/0x2A0/0x2C0.
+        assembly {
+            mstore(add(policy, 0x280), initiatorScopeRaw)
+            mstore(add(policy, 0x2A0), sourceScopeRaw)
+            mstore(add(policy, 0x2C0), destinationScopeRaw)
+        }
+    }
+
+    function _unsafeSetConstraintTypeRaw(ParameterConstraint memory constraint, uint256 rawValue) internal pure {
+        assembly {
+            mstore(add(constraint, 0x20), rawValue)
+        }
+    }
+
+    function _unsafeSetParamTypeRaw(ParameterConstraint memory constraint, uint256 rawValue) internal pure {
+        assembly {
+            mstore(constraint, rawValue)
+        }
+    }
+
+    function _seedMembers(address target) internal {
+        LibOrganizationPolicyHarness targetHarness = LibOrganizationPolicyHarness(target);
+        targetHarness.setMemberStatus(initiator1, true);
+        targetHarness.setMemberStatus(initiator2, true);
+        targetHarness.setMemberStatus(reviewer1, true);
+        targetHarness.setMemberStatus(reviewer2, true);
+    }
+}
