@@ -1,0 +1,469 @@
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
+pragma solidity 0.8.33;
+
+import {
+    LibOrganizationPolicySuiteBase
+} from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicySuiteBase.sol";
+import {
+    ConstraintType,
+    DestinationType,
+    ParamType,
+    ParameterConstraint,
+    Policy,
+    TransactionType,
+    ValidationProofs
+} from "types/PolicyTypes.sol";
+
+/**
+ * @dev Unit tests for `LibOrganizationPolicy.isTransactionAllowedByPolicy` and source-account filtering.
+ */
+contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySuiteBase {
+    /// @dev Deterministic fixture addresses for transaction-shape tests.
+    address internal constant SOURCE_ACCOUNT = address(0xA001);
+    address internal constant SOURCE_ACCOUNT_2 = address(0xA002);
+    address internal constant TOKEN_CONTRACT = address(0xA100);
+    address internal constant RECIPIENT = address(0xA200);
+    address internal constant OTHER_RECIPIENT = address(0xA201);
+    address internal constant INTERACTION_TARGET = address(0xA300);
+
+    /**
+     * @dev Initializes deterministic member fixture state for initiator authorization tests.
+     */
+    function setUp() public override {
+        super.setUp();
+        policyStateHarness.setMemberStatus(initiator1, true);
+        policyStateHarness.setMemberStatus(initiator2, true);
+    }
+
+    /// @dev LOP-TX-1: invalid policy proof returns false before downstream validation.
+    function test_isTransactionAllowed_invalidPolicyProof_returnsFalse() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        bytes32[] memory badPolicyProof = new bytes32[](1);
+        badPolicyProof[0] = keccak256("bad-proof");
+
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, badPolicyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3001, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
+        assertFalse(allowed, "invalid policy proof must fail closed");
+    }
+
+    /// @dev LOP-TX-2: source-account mismatch returns false.
+    function test_isTransactionAllowed_sourceAccountMismatch_returnsFalse() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.anySourceAccount = false;
+
+        address[] memory allowedAccounts = new address[](1);
+        allowedAccounts[0] = SOURCE_ACCOUNT;
+        (bytes32 sourceRoot, bytes32[] memory sourceProof) = _buildAddressRootAndProof(allowedAccounts, 0);
+        policy.roots.sourceAccountsRoot = sourceRoot;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3002, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, sourceProof, _emptyProof(), _emptyProof(), "");
+
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3002, SOURCE_ACCOUNT_2, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
+        assertFalse(allowed, "source mismatch should fail");
+    }
+
+    /// @dev LOP-TX-3: unauthorized initiator returns false.
+    function test_isTransactionAllowed_unauthorizedInitiator_returnsFalse() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.initiator.anyInitiator = false;
+        policy.config.initiator.initiatorType = policy.config.approval.approverType;
+        policy.config.initiator.initiatorMember = initiator1;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3003, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3003, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator2, proofs
+        );
+        assertFalse(allowed, "unauthorized initiator should fail");
+    }
+
+    /// @dev LOP-TX-4: token-transfer policy rejects non-token transaction.
+    function test_isTransactionAllowed_tokenTransferPolicy_nonTokenTransactionReturnsFalse() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3004, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+
+        bytes memory nonTokenData = abi.encodeWithSignature("foo(uint256)", 1);
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3004, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, nonTokenData, initiator1, proofs
+        );
+        assertFalse(allowed, "non-token transaction should not match token-transfer policy");
+    }
+
+    /// @dev LOP-TX-5/6: token-transfer policy accepts matching token/destination and rejects disallowed values.
+    function test_isTransactionAllowed_tokenTransferPolicy_validAndInvalidCombinations() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN_CONTRACT;
+        policy.config.destinationType = DestinationType.CustomList;
+
+        address[] memory destinations = new address[](1);
+        destinations[0] = RECIPIENT;
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) = _buildAddressRootAndProof(destinations, 0);
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3005, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
+
+        bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
+        assertTrue(validAllowed, "matching token/destination should be allowed");
+
+        bool wrongToken = harness.isTransactionAllowedByPolicyViaLibrary(
+            3005, SOURCE_ACCOUNT, address(0xBAD), 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
+        assertFalse(wrongToken, "disallowed token contract should fail");
+
+        bool wrongDestination = harness.isTransactionAllowedByPolicyViaLibrary(
+            3005, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(OTHER_RECIPIENT, 10), initiator1, proofs
+        );
+        assertFalse(wrongDestination, "disallowed recipient should fail");
+    }
+
+    /// @dev LOP-TX-7/8/9/10: contract-interaction policy branch checks function proof and constraints.
+    function test_isTransactionAllowed_contractInteractionBranch_checksFunctionAndConstraints() public {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.ContractInteractions;
+        policy.config.destinationType = DestinationType.CustomList;
+        policy.config.anyFunction = false;
+
+        address[] memory destinations = new address[](1);
+        destinations[0] = INTERACTION_TARGET;
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) = _buildAddressRootAndProof(destinations, 0);
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        bytes4 selector = bytes4(keccak256("foo(uint256)"));
+        bytes memory callData = abi.encodeWithSelector(selector, 5);
+
+        ParameterConstraint memory exactFive =
+            _buildConstraint(ParamType.Uint, ConstraintType.Exact, 1, abi.encode(uint256(5)), _emptyProof());
+        bytes memory constraints = _encodeSingleConstraint(exactFive);
+
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = selector;
+        bytes[] memory constraintsList = new bytes[](1);
+        constraintsList[0] = constraints;
+        (bytes32 functionsRoot, bytes32[] memory functionProof) =
+            _buildFunctionRootAndProof(selectors, constraintsList, 0);
+        policy.roots.allowedFunctionsRoot = functionsRoot;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3006, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, functionProof, constraints);
+
+        bool validAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, callData, initiator1, proofs
+        );
+        assertTrue(validAllowed, "valid contract interaction should pass");
+
+        bool tokenTransferInput = harness.isTransactionAllowedByPolicyViaLibrary(
+            3006, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
+        assertFalse(tokenTransferInput, "token-transfer input should fail contract-interaction policy");
+
+        bytes32[] memory invalidFunctionProof = new bytes32[](1);
+        invalidFunctionProof[0] = keccak256("lop-tx-invalid-function-proof");
+        ValidationProofs memory badFunctionProofs = _buildValidationProofs(
+            policy, policyProof, _emptyProof(), destinationProof, invalidFunctionProof, constraints
+        );
+        bool badFunctionAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, callData, initiator1, badFunctionProofs
+        );
+        assertFalse(badFunctionAllowed, "function proof mismatch should fail");
+
+        bytes memory mismatchedData = abi.encodeWithSelector(selector, 9);
+        bool badConstraintAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3006, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, mismatchedData, initiator1, proofs
+        );
+        assertFalse(badConstraintAllowed, "parameter mismatch should fail");
+    }
+
+    /// @dev LOP-TX-11/12/13/14: `Any` type destination checks and fail-closed enum handling.
+    function test_isTransactionAllowed_anyTypeDestinationChecks_andFailClosedEnums() public {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.Any;
+        policy.config.destinationType = DestinationType.CustomList;
+
+        address[] memory destinations = new address[](1);
+        destinations[0] = INTERACTION_TARGET;
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) = _buildAddressRootAndProof(destinations, 0);
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3007, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
+
+        bool allowedDestination = harness.isTransactionAllowedByPolicyViaLibrary(
+            3007, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, proofs
+        );
+        assertTrue(allowedDestination, "allowed destination should pass");
+
+        bool disallowedDestination = harness.isTransactionAllowedByPolicyViaLibrary(
+            3007, SOURCE_ACCOUNT, address(0xDEAD), 0, abi.encodeWithSignature("foo()"), initiator1, proofs
+        );
+        assertFalse(disallowedDestination, "disallowed destination should fail");
+
+        Policy memory signaturesOnly = policy;
+        signaturesOnly.config.transactionType = TransactionType.Signatures;
+        (bytes32[] memory signaturesPolicyProof,) = _setPolicyRootForSinglePolicy(3008, signaturesOnly);
+        ValidationProofs memory signaturesProofs = _buildValidationProofs(
+            signaturesOnly, signaturesPolicyProof, _emptyProof(), destinationProof, _emptyProof(), ""
+        );
+        bool signaturesTxAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3008, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, signaturesProofs
+        );
+        assertFalse(signaturesTxAllowed, "signature-only policy must not authorize account transactions");
+
+        // forge-lint: disable-next-line(unsafe-typecast)
+        policy.config.transactionType = TransactionType(uint8(type(uint8).max));
+        (bytes32[] memory invalidEnumProof,) = _setPolicyRootForSinglePolicy(3009, policy);
+        ValidationProofs memory invalidEnumProofs =
+            _buildValidationProofs(policy, invalidEnumProof, _emptyProof(), destinationProof, _emptyProof(), "");
+        bool invalidEnumAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3009, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, invalidEnumProofs
+        );
+        assertFalse(invalidEnumAllowed, "unknown transaction enum should fail closed");
+    }
+
+    /// @dev LOP-TX-15: desired behavior malformed constraints payload fails closed (`false`) instead of revert.
+    function test_isTransactionAllowed_desiredMalformedConstraints_payloadFailsClosed() public {
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.ContractInteractions;
+        policy.config.anyFunction = true;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3010, policy);
+        bytes memory malformedConstraints = hex"deadc0de";
+        ValidationProofs memory proofs = _buildValidationProofs(
+            policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), malformedConstraints
+        );
+
+        // Desired behavior test: currently may revert because constraint decode bubbles up.
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3010, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo(uint256)", 1), initiator1, proofs
+        );
+        assertFalse(allowed, "malformed constraints should fail closed");
+    }
+
+    /// @dev LOP-TX-16/21-27: malformed or non-transfer token calldata fails closed in token-transfer path.
+    function test_isTransactionAllowed_tokenTransferMalformedCalldata_failClosed() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3011, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, hex"a9059cbb", initiator1, proofs
+            ),
+            "selector-only calldata should fail"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, hex"a905", initiator1, proofs
+            ),
+            "data shorter than selector should fail"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, "", initiator1, proofs
+            ),
+            "zero-data zero-value should fail"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 1, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+            ),
+            "erc20-like calldata with non-zero top-level value should fail token-transfer branch"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Approve(RECIPIENT, 10), initiator1, proofs
+            ),
+            "approve selector should fail token-transfer branch"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011,
+                SOURCE_ACCOUNT,
+                TOKEN_CONTRACT,
+                0,
+                _encodeERC20TransferFrom(SOURCE_ACCOUNT, RECIPIENT, 10),
+                initiator1,
+                proofs
+            ),
+            "transferFrom selector should fail token-transfer branch"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                3011,
+                SOURCE_ACCOUNT,
+                TOKEN_CONTRACT,
+                0,
+                abi.encodePacked(bytes4(keccak256("bar(uint256)")), bytes32(uint256(1)), bytes32(uint256(2))),
+                initiator1,
+                proofs
+            ),
+            "non-transfer selector should fail token-transfer branch"
+        );
+    }
+
+    /// @dev LOP-TX-17/18: no partial success and deterministic outputs for unchanged inputs/state.
+    function test_isTransactionAllowed_noPartialSuccess_andDeterministicResult() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.destinationType = DestinationType.CustomList;
+
+        address[] memory allowedDestinations = new address[](1);
+        allowedDestinations[0] = RECIPIENT;
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) = _buildAddressRootAndProof(allowedDestinations, 0);
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3012, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), destinationProof, _emptyProof(), "");
+
+        bytes memory validTransfer = _encodeERC20Transfer(RECIPIENT, 10);
+        bool first = harness.isTransactionAllowedByPolicyViaLibrary(
+            3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, validTransfer, initiator1, proofs
+        );
+        bool second = harness.isTransactionAllowedByPolicyViaLibrary(
+            3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, validTransfer, initiator1, proofs
+        );
+        assertTrue(first, "all required checks passing should allow");
+        assertEq(first, second, "result should be deterministic");
+
+        bool partialFailure = harness.isTransactionAllowedByPolicyViaLibrary(
+            3012, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(OTHER_RECIPIENT, 10), initiator1, proofs
+        );
+        assertFalse(partialFailure, "single failed sub-check must fail full validation");
+    }
+
+    /// @dev LOP-TX-19/20: single-leaf policy tree and single-leaf destination tree accept empty proofs.
+    function test_isTransactionAllowed_singleLeafProofs_emptyProofAcceptedForPolicyAndDestination() public {
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.destinationType = DestinationType.CustomList;
+
+        address[] memory destinations = new address[](1);
+        destinations[0] = RECIPIENT;
+        (bytes32 destinationRoot,) = _buildAddressRootAndProof(destinations, 0);
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        (bytes32[] memory policyProof, bytes32 root) = _setPolicyRootForSinglePolicy(3013, policy);
+        assertEq(root, harness.getPoliciesRoot(), "precondition: root should be set");
+        assertEq(policyProof.length, 0, "single-policy tree should use empty policy proof");
+
+        bytes32[] memory emptyDestinationProof = new bytes32[](0);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), emptyDestinationProof, _emptyProof(), "");
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3013, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
+        assertTrue(allowed, "single-leaf policy and destination trees should accept empty proofs");
+    }
+
+    /// @dev LOP-TX-28: fuzz random non-`transfer` selectors in 68-byte payload fail token-transfer policy.
+    function testFuzz_isTransactionAllowed_tokenTransferPolicy_randomNonTransferSelectorFails(bytes4 selector) public {
+        vm.assume(selector != bytes4(0xa9059cbb));
+        Policy memory policy = _buildTokenTransferPolicy();
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3014, policy);
+        ValidationProofs memory proofs =
+            _buildValidationProofs(policy, policyProof, _emptyProof(), _emptyProof(), _emptyProof(), "");
+
+        bytes memory payload = abi.encodePacked(selector, bytes32(uint256(uint160(RECIPIENT))), bytes32(uint256(1)));
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3014, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, payload, initiator1, proofs
+        );
+        assertFalse(allowed, "random non-transfer selector should fail");
+    }
+
+    /// @dev LOP-SRC-1..6: `isSourceAccountAllowedByPolicy` source filter semantics.
+    function test_isSourceAccountAllowedByPolicy_sourceFilterModes() public {
+        Policy memory anyPolicy = _buildBasePolicy();
+        anyPolicy.config.anySourceAccount = true;
+        assertTrue(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(anyPolicy, SOURCE_ACCOUNT, _emptyProof()),
+            "any-source mode should allow any account"
+        );
+
+        Policy memory specificPolicy = _buildBasePolicy();
+        specificPolicy.config.anySourceAccount = false;
+        address[] memory allowedAccounts = new address[](1);
+        allowedAccounts[0] = SOURCE_ACCOUNT;
+        (bytes32 sourceRoot, bytes32[] memory sourceProof) = _buildAddressRootAndProof(allowedAccounts, 0);
+        specificPolicy.roots.sourceAccountsRoot = sourceRoot;
+
+        assertTrue(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(specificPolicy, SOURCE_ACCOUNT, sourceProof),
+            "valid source account proof should pass"
+        );
+        assertFalse(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(specificPolicy, SOURCE_ACCOUNT_2, sourceProof),
+            "proof for different account should fail"
+        );
+
+        bytes32[] memory invalidProof = new bytes32[](1);
+        invalidProof[0] = keccak256("bad-source-proof");
+        assertFalse(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(specificPolicy, SOURCE_ACCOUNT, invalidProof),
+            "invalid source proof should fail"
+        );
+
+        specificPolicy.roots.sourceAccountsRoot = keccak256("unknown-root");
+        assertFalse(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(specificPolicy, SOURCE_ACCOUNT, sourceProof),
+            "unknown source root should fail closed"
+        );
+
+        // Empty proof is valid only in single-leaf case (already covered by valid case above).
+        assertFalse(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(specificPolicy, SOURCE_ACCOUNT, _emptyProof()),
+            "empty proof should fail when root is not a single-leaf self root"
+        );
+    }
+
+    /**
+     * @dev Helper: builds a permissive token-transfer policy fixture.
+     */
+    function _buildTokenTransferPolicy() internal view returns (Policy memory policy) {
+        policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.TokenTransfers;
+        policy.config.anySourceAccount = true;
+        policy.config.destinationType = DestinationType.Any;
+        policy.config.token.anyToken = true;
+    }
+
+    /**
+     * @dev Helper: configures root/proof for a single policy leaf.
+     */
+    function _setPolicyRootForSinglePolicy(uint256 policyId, Policy memory policy)
+        internal
+        returns (bytes32[] memory proof, bytes32 root)
+    {
+        uint256[] memory policyIds = new uint256[](1);
+        policyIds[0] = policyId;
+        Policy[] memory policies = new Policy[](1);
+        policies[0] = policy;
+        (root, proof) = _buildPolicyRootAndProof(policyIds, policies, 0);
+        harness.setPoliciesRoot(root);
+    }
+
+    /**
+     * @dev Helper: returns an empty proof array.
+     */
+    function _emptyProof() internal pure returns (bytes32[] memory proof) {
+        proof = new bytes32[](0);
+    }
+}

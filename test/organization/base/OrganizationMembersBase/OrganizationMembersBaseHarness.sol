@@ -10,4 +10,8 @@ import {OrganizationAdminStateHarness} from "test/organization/shared/Organizati
  * @dev Base-contract-focused test harness for `OrganizationMembersBase`.
  *      Combines the shared state surface with the real external base contract entry points.
  */
-contract OrganizationMembersBaseHarness is OrganizationAdminStateHarness, OrganizationMembersBase, OrganizationAdminBase {}
+contract OrganizationMembersBaseHarness is
+    OrganizationAdminStateHarness,
+    OrganizationMembersBase,
+    OrganizationAdminBase
+{}

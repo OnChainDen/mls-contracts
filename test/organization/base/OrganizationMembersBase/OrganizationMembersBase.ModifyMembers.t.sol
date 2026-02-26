@@ -89,9 +89,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildArray(candidate),
-            membersToRemove: buildEmptyAddressArray(),
-            salt: 4101
+            membersToAdd: buildArray(candidate), membersToRemove: buildEmptyAddressArray(), salt: 4101
         });
 
         // Verify: added address should now be a member.
@@ -107,9 +105,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildArray(memberA, memberB),
-            membersToRemove: buildEmptyAddressArray(),
-            salt: 4102
+            membersToAdd: buildArray(memberA, memberB), membersToRemove: buildEmptyAddressArray(), salt: 4102
         });
 
         // Verify: both addresses should now be members.
@@ -149,9 +145,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildArray(existingMember),
-            membersToRemove: buildEmptyAddressArray(),
-            salt: 4104
+            membersToAdd: buildArray(existingMember), membersToRemove: buildEmptyAddressArray(), salt: 4104
         });
 
         // Verify: idempotent add keeps membership true.
@@ -170,9 +164,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildArray(candidate),
-            membersToRemove: buildEmptyAddressArray(),
-            salt: 4105
+            membersToAdd: buildArray(candidate), membersToRemove: buildEmptyAddressArray(), salt: 4105
         });
     }
 
@@ -185,9 +177,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         vm.recordLogs();
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildArray(existingMember),
-            membersToRemove: buildEmptyAddressArray(),
-            salt: 4106
+            membersToAdd: buildArray(existingMember), membersToRemove: buildEmptyAddressArray(), salt: 4106
         });
 
         Vm.Log[] memory actualLogs = vm.getRecordedLogs();
@@ -206,9 +196,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(memberToRemove),
-            salt: 4107
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(memberToRemove), salt: 4107
         });
 
         // Verify: removed address should no longer be a member.
@@ -224,9 +212,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(memberA, memberB),
-            salt: 4108
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(memberA, memberB), salt: 4108
         });
 
         // Verify: both removed addresses should no longer be members.
@@ -243,9 +229,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(nonMember),
-            salt: 4109
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(nonMember), salt: 4109
         });
 
         // Verify: non-member should remain non-member after idempotent removal.
@@ -290,9 +274,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(groupedMember),
-            salt: 4111
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(groupedMember), salt: 4111
         });
 
         // Verify: member removal should succeed regardless of group membership.
@@ -313,9 +295,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(memberToRemove),
-            salt: 4112
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(memberToRemove), salt: 4112
         });
     }
 
@@ -328,9 +308,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         vm.recordLogs();
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(nonMember),
-            salt: 4113
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(nonMember), salt: 4113
         });
 
         Vm.Log[] memory actualLogs = vm.getRecordedLogs();
@@ -389,9 +367,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: then remove the member.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildArray(adminMember),
-            salt: 4115
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), salt: 4115
         });
 
         // Verify: the address should no longer be a member.
@@ -443,9 +419,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildArray(memberToAdd),
-            membersToRemove: buildArray(memberToRemove),
-            salt: 4116
+            membersToAdd: buildArray(memberToAdd), membersToRemove: buildArray(memberToRemove), salt: 4116
         });
 
         // Verify: add target should be member and remove target should not.
@@ -463,9 +437,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         vm.recordLogs();
         // Call: invoke `modifyMembers` through the base-contract wrapper.
         _executeModifyMembers({
-            membersToAdd: buildEmptyAddressArray(),
-            membersToRemove: buildEmptyAddressArray(),
-            salt: 4117
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildEmptyAddressArray(), salt: 4117
         });
 
         // Verify: pre-existing membership remains unchanged.
