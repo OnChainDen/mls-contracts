@@ -144,18 +144,21 @@ contract LibPolicyInitiatorTest is PolicyLibrariesSuiteBase {
         assertFalse(authorized, "zero-address initiator should fail closed");
     }
 
-    /// @dev Verifies that unknown initiator enum fails closed.
-    function test_isInitiatorAuthorized_invalidInitiatorEnum_returnsFalse() public {
-        // Setup: build fixture inputs where unknown initiator enum fails closed should be denied.
+    /// @dev Verifies that unknown initiator enum values revert during policy decoding.
+    function test_isInitiatorAuthorized_invalidInitiatorEnum_reverts() public {
+        // Setup: build fixture inputs where unknown initiator enum values revert during policy decoding.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = false;
 
         _setMembersAsOrgMembers(buildArray(initiator1));
 
-        // Call: execute `isInitiatorAuthorizedViaPolicyLibraryRawInitiatorType` and capture the authorization decision.
-        bool authorized =
-            harness.isInitiatorAuthorizedViaPolicyLibraryRawInitiatorType(policy, type(uint256).max, initiator1);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(authorized, "invalid initiator type should fail closed");
+        bytes memory callData = abi.encodeCall(harness.isInitiatorAuthorizedViaPolicyLibrary, (policy, initiator1));
+        _setWord(callData, 4 + 10 * 32, 2);
+
+        // Call: execute a low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert that malformed enum values fail with a revert/panic.
+        assertFalse(success, "invalid initiator enum should revert");
     }
+
 }

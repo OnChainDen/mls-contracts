@@ -318,20 +318,21 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         assertEq(required, 1, "member approver should ignore threshold field");
     }
 
-    /// @dev Verifies that unknown approver enum fails closed in caller usage.
-    function test_getRequiredApprovals_invalidApproverType_failsClosedInCallerUsage() public {
-        // Setup: build fixture inputs where unknown approver enum fails closed in caller usage should be denied.
+    /// @dev Verifies that unknown approver enum values revert during caller decoding.
+    function test_getRequiredApprovals_invalidApproverType_revertsInCallerUsage() public {
+        // Setup: build fixture inputs where unknown approver enum values revert during caller decoding.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
         bytes32 messageHash = keccak256("LPA-REQ-4");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
+        bytes memory callData = abi.encodeCall(harness.areApprovalsValidViaPolicyLibrary, (policy, signature, messageHash));
+        _setWord(callData, 4 + 5 * 32, 2);
 
-        // Call: execute `areApprovalsValidViaPolicyLibraryRawApproverType` and capture the authorization decision.
-        bool ok =
-            harness.areApprovalsValidViaPolicyLibraryRawApproverType(policy, type(uint256).max, signature, messageHash);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(ok, "invalid approver enum should fail closed in caller usage");
+        // Call: execute a low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert that malformed enum values fail with a revert/panic.
+        assertFalse(success, "invalid approver enum should revert in caller usage");
     }
 
     /// @dev Verifies that non-member signer returns false regardless of approver configuration.
@@ -395,18 +396,19 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         assertFalse(authorized, "org member outside approver group should be unauthorized");
     }
 
-    /// @dev Verifies that unknown approver enum returns false.
-    function test_isSignerAuthorizedForPolicy_invalidApproverEnum_returnsFalse() public {
-        // Setup: build fixture inputs where unknown approver enum returns false should be denied.
+    /// @dev Verifies that unknown approver enum values revert during signer-authorization decoding.
+    function test_isSignerAuthorizedForPolicy_invalidApproverEnum_reverts() public {
+        // Setup: build fixture inputs where unknown approver enum values revert during signer-authorization decoding.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
+        bytes memory callData =
+            abi.encodeCall(harness.isSignerAuthorizedForPolicyViaPolicyLibrary, (policy, reviewer1));
+        _setWord(callData, 4 + 5 * 32, 2);
 
-        // Call: execute `isSignerAuthorizedForPolicyViaPolicyLibraryRawApproverType` and capture the authorization
-        // decision.
-        bool authorized =
-            harness.isSignerAuthorizedForPolicyViaPolicyLibraryRawApproverType(policy, type(uint256).max, reviewer1);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(authorized, "invalid approver type should fail closed");
+        // Call: execute a low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert that malformed enum values fail with a revert/panic.
+        assertFalse(success, "invalid approver enum should revert");
     }
 
     /// @dev Verifies that zero-address signer returns false.

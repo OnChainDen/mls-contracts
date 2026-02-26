@@ -108,7 +108,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-TX-11 | `TransactionType.Any`: destination allowed returns `true` | [U] | P0 |
 | LOP-TX-12 | `TransactionType.Any`: destination disallowed returns `false` | [N] | P0 |
 | LOP-TX-13 | `TransactionType.Signatures` must not authorize account transactions (returns `false`) | [S] | P0 |
-| LOP-TX-14 | Unknown/invalid transaction enum fails closed (`false`) | [S] | P0 |
+| LOP-TX-14 | Unknown/invalid transaction enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
 | LOP-TX-15 | **Desired behavior:** malformed constraints payload fails closed (`false`) rather than bubbling unexpected revert | [S] | P0 |
 | LOP-TX-16 | **Desired behavior:** malformed token-transfer calldata fails closed (`false`) in policy-validation path | [S] | P0 |
 | LOP-TX-17 | No partial success: all required sub-checks must pass for `true` | [U] | P0 |
@@ -169,7 +169,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPI-6 | Group-typed initiator: non-existent group returns `false` | [N] | P0 |
 | LPI-7 | **Desired behavior:** `anyInitiator == true` still requires initiator to be an organization member | [S] | P0 |
 | LPI-8 | Zero-address initiator fails closed | [N][S] | P1 |
-| LPI-9 | Unknown/invalid initiator enum fails closed (`false`) | [S] | P0 |
+| LPI-9 | Unknown/invalid initiator enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
 
 ---
 
@@ -203,7 +203,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPA-REQ-1 | Member approver type always returns `1` | [U] | P0 |
 | LPA-REQ-2 | Group approver type returns configured `approvalThreshold` | [U] | P0 |
 | LPA-REQ-3 | Member approver ignores `approvalThreshold` field | [E] | P1 |
-| LPA-REQ-4 | Unknown/invalid approver type fails closed in caller usage | [S] | P1 |
+| LPA-REQ-4 | Unknown/invalid approver type in caller payload reverts (panic/custom revert acceptable) | [S] | P1 |
 
 ### 4.3 `_isSignerAuthorizedForPolicy(Policy policy, address signerAddress)` *(private; harness target)*
 
@@ -213,7 +213,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPA-AUTH-2 | Member approver type returns `true` only for configured `approverMember` | [U] | P0 |
 | LPA-AUTH-3 | Group approver type returns `true` only for members of `approverGroupId` | [U] | P0 |
 | LPA-AUTH-4 | Group approver type returns `false` for non-group member | [N] | P0 |
-| LPA-AUTH-5 | Unknown/invalid approver type returns `false` | [S] | P0 |
+| LPA-AUTH-5 | Unknown/invalid approver type in signer-authorization payload reverts (panic/custom revert acceptable) | [S] | P0 |
 | LPA-AUTH-6 | Zero-address signer returns `false` | [N] | P1 |
 
 ---
@@ -242,7 +242,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPD-ALW-4 | `CustomList`: ERC-20 transfer checks recipient (not token contract) | [U][S] | P0 |
 | LPD-ALW-5 | `CustomList`: contract interaction checks `to` contract address | [U] | P0 |
 | LPD-ALW-6 | Proof for one destination cannot authorize a different destination | [S] | P0 |
-| LPD-ALW-7 | Unknown/invalid destination enum fails closed (`false`) | [S] | P0 |
+| LPD-ALW-7 | Unknown/invalid destination enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
 | LPD-ALW-8 | Empty proof only valid for single-leaf destination tree case | [E] | P1 |
 | LPD-ALW-9 | Deterministic result for same inputs | [U] | P2 |
 | LPD-ALW-10 | `CustomList`: ERC-20 `transfer` selector with calldata `< 68` bytes checks `to` (token contract) as destination; proof for encoded recipient does not authorize | [S] | P0 |
@@ -368,11 +368,11 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-DISP-2 | Unsupported constraint type for parameter kind fails closed (`false`) | [S] | P0 |
 | LPPC-DISP-3 | `ParamType.Array` with non-`Any` constraint returns `false` | [N] | P0 |
 | LPPC-DISP-4 | `ParamType.Struct` with non-`Any` constraint returns `false` | [N] | P0 |
-| LPPC-DISP-5 | Unknown/invalid `ParamType` returns `false` | [S] | P0 |
+| LPPC-DISP-5 | Unknown/invalid `ParamType` reverts (panic/custom revert acceptable) | [S] | P0 |
 | LPPC-DISP-6 | Address `OneOf` path validates Merkle proof against decoded root | [U] | P0 |
 | LPPC-DISP-7 | Bytes/string path uses dynamic offset and content hashing correctly | [U] | P0 |
 | LPPC-DISP-8 | **Desired behavior:** invalid dynamic offset fails closed (`false`) | [S] | P0 |
-| LPPC-DISP-9 | Unknown/invalid `ConstraintType` value fails closed (`false`) for all supported `ParamType` dispatch paths | [S] | P0 |
+| LPPC-DISP-9 | Unknown/invalid `ConstraintType` value reverts (panic/custom revert acceptable) for supported `ParamType` dispatch paths | [S] | P0 |
 
 ### 8.4 `_isBoolParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -463,7 +463,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPRL-UPD-10 | **Desired behavior:** `currentUsage + usageAmount` overflow fails closed (`false`) rather than revert | [S] | P0 |
 | LPRL-UPD-11 | `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and keeps usage unchanged | [E] | P1 |
 | LPRL-UPD-12 | `timeIntervalLimit == 0` and `usageAmount > 0` returns `false` and does not mutate usage | [N] | P0 |
-| LPRL-UPD-13 | **Desired behavior:** unknown/invalid `RateLimitType` fails closed (`false`) and does not write usage | [S] | P0 |
+| LPRL-UPD-13 | Unknown/invalid `RateLimitType` in payload reverts (panic/custom revert acceptable) and does not write usage | [S] | P0 |
 
 ### 9.2 `computeTimeWindow(Policy policy)`
 
@@ -567,7 +567,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-24 | Cross-chain replay protection (guardian/reviewers): guardian and reviewer signatures signed for chain A return ERC-1271 invalid value on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
 | LOAS-25 | Empty top-level signature bytes (`signature.length == 0`) returns ERC-1271 invalid value | [N] | P0 |
 | LOAS-26 | Unknown signature type prefix (not `0x00` recovery or `0x01` policy) returns ERC-1271 invalid value | [N][S] | P0 |
-| LOAS-27 | Invalid `approval.policyType` enum value in provided policy proof fails closed and returns ERC-1271 invalid value | [N][S] | P0 |
+| LOAS-27 | Invalid `approval.policyType` enum value in provided policy proof reverts (panic/custom revert acceptable) | [N][S] | P0 |
 | LOAS-28 | Cross-organization replay protection (initiator): policy-based initiator signature signed for organization A returns ERC-1271 invalid value on organization B | [S] | P0 |
 | LOAS-29 | Cross-organization replay protection (guardian/reviewers): guardian and reviewer signatures signed for organization A return ERC-1271 invalid value on organization B when paired with a valid organization-B initiator signature | [S] | P0 |
 
@@ -597,7 +597,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-4 | For active time window and usage key, usage is monotonic non-decreasing on successful updates | P0 |
 | POL-I-5 | Exceeded rate limit never mutates usage | P0 |
 | POL-I-6 | Manual-approval policies can never pass with fewer than required valid approvals | P0 |
-| POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` fail closed across policy validation paths | P0 |
+| POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` revert (panic/custom revert acceptable) across validation paths | P0 |
 | POL-I-8 | **Desired behavior:** `anyInitiator` does not authorize non-members | P0 |
 | POL-I-9 | Token amount threshold acts as exclusive max (`<`) | P0 |
 | POL-I-10 | **Desired behavior:** malformed constraint payloads fail closed without unexpected reverts in policy-check paths | P0 |

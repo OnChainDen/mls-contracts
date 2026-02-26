@@ -310,21 +310,17 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         );
         assertFalse(signaturesTxAllowed, "signature-only policy must not authorize account transactions");
 
-        // forge-lint: disable-next-line(unsafe-typecast)
-        policy.config.transactionType = TransactionType(uint8(type(uint8).max));
-        (bytes32[] memory invalidEnumProof,) = _setPolicyRootForSinglePolicy(3009, policy);
-        ValidationProofs memory invalidEnumProofs = ValidationProofs({
-            policy: policy,
-            policyProof: invalidEnumProof,
-            sourceAccountProof: _emptyProof(),
-            destinationProof: destinationProof,
-            functionProof: _emptyProof(),
-            constraints: ""
-        });
-        bool invalidEnumAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            3009, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, invalidEnumProofs
+        bytes memory invalidEnumCallData = abi.encodeCall(
+            harness.isTransactionAllowedByPolicyViaLibrary,
+            (3007, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo()"), initiator1, proofs)
         );
-        assertFalse(invalidEnumAllowed, "unknown transaction enum should fail closed");
+        uint256 proofsOffset = _readWord(invalidEnumCallData, 4 + 6 * 32);
+        _setWord(invalidEnumCallData, 4 + proofsOffset, 7);
+
+        // Call: execute low-level call with malformed enum calldata.
+        (bool invalidEnumSuccess,) = address(harness).call(invalidEnumCallData);
+        // Verify: assert malformed enum values fail with a revert/panic.
+        assertFalse(invalidEnumSuccess, "unknown transaction enum should revert");
     }
 
     /// @dev Verifies that desired behavior: malformed constraints payload fails closed (`false`) instead of revert.

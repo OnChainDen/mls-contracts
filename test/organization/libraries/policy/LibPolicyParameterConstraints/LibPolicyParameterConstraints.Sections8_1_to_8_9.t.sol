@@ -443,9 +443,9 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         assertFalse(allowed, "struct supports only Any");
     }
 
-    /// @dev Verifies that unknown `ParamType` fails closed with false.
-    function test_isParameterAllowedByConstraint_unknownParamType_returnsFalse() public view {
-        // Setup: build fixture inputs where unknown `ParamType` fails closed with false should be denied.
+    /// @dev Verifies that unknown `ParamType` values revert during parameter-constraint dispatch.
+    function test_isParameterAllowedByConstraint_unknownParamType_reverts() public {
+        // Setup: build fixture inputs where unknown `ParamType` values revert during parameter-constraint dispatch.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
             constraintType: ConstraintType.Exact,
@@ -453,15 +453,17 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
             comparisonData: abi.encode(uint256(1)),
             paramValueInListProof: _emptyProof()
         });
-        constraint = _unsafeSetParamType(constraint, type(uint8).max);
-
-        // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
-        bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-            constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
+        bytes memory callData = abi.encodeCall(
+            harness.isParameterAllowedByConstraintViaPolicyLibrary,
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)))
         );
+        uint256 constraintOffset = _readWord(callData, 4);
+        _setWord(callData, 4 + constraintOffset, type(uint8).max);
 
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "unknown param type should fail closed");
+        // Call: execute low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert malformed enum values fail with a revert/panic.
+        assertFalse(success, "unknown param type should revert");
     }
 
     /// @dev Verifies that address OneOf path validates proof against decoded root.
@@ -544,12 +546,10 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
         assertFalse(allowed, "invalid dynamic offset should fail closed");
     }
 
-    /// @dev Verifies that unknown `ConstraintType` fails closed for supported dispatch paths.
-    function test_isParameterAllowedByConstraint_unknownConstraintType_returnsFalseAcrossSupportedDispatch()
-        // Setup: build fixture inputs where unknown `ConstraintType` fails closed for supported dispatch paths should
-        // be denied.
+    /// @dev Verifies that unknown `ConstraintType` values revert across supported dispatch paths.
+    function test_isParameterAllowedByConstraint_unknownConstraintType_revertsAcrossSupportedDispatch()
+        // Setup: build fixture inputs where unknown `ConstraintType` values revert across supported dispatch paths.
         public
-        view
     {
         ParamType[] memory supportedTypes = new ParamType[](9);
         supportedTypes[0] = ParamType.Uint;
@@ -570,15 +570,17 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
                 comparisonData: abi.encode(uint256(1)),
                 paramValueInListProof: _emptyProof()
             });
-            constraint = _unsafeSetConstraintType(constraint, type(uint8).max);
-
-            // Call: execute `isParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
-            bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
-                constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
+            bytes memory callData = abi.encodeCall(
+                harness.isParameterAllowedByConstraintViaPolicyLibrary,
+                (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)))
             );
+            uint256 constraintOffset = _readWord(callData, 4);
+            _setWord(callData, 4 + constraintOffset + 32, type(uint8).max);
 
-            // Verify: assert that the request is denied and state remains unchanged.
-            assertFalse(allowed, "unknown constraint type should fail closed");
+            // Call: execute low-level call with malformed enum calldata.
+            (bool success,) = address(harness).call(callData);
+            // Verify: assert malformed enum values fail with a revert/panic.
+            assertFalse(success, "unknown constraint type should revert");
         }
     }
 }

@@ -5,6 +5,7 @@ pragma solidity 0.8.33;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
+import {BytesWordHelpers} from "test/helpers/BytesWordHelpers.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationGroupsTestBase} from "test/organization/shared/OrganizationGroupsTestBase.sol";
 import {OrganizationPolicyStateHarness} from "test/organization/shared/OrganizationPolicyStateHarness.sol";
@@ -33,7 +34,7 @@ import {Merkle} from "murky/Merkle.sol";
  * @dev Shared setup/builders for policy-focused organization tests.
  *      Centralizes deterministic policy structs, merkle proof builders, and auth/signature fixtures.
  */
-abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase {
+abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase, BytesWordHelpers {
     /// @dev Additional deterministic private keys used by policy/signature suites.
     uint256 internal constant INITIATOR_PK_1 = 0x91A0;
     uint256 internal constant INITIATOR_PK_2 = 0x91A1;

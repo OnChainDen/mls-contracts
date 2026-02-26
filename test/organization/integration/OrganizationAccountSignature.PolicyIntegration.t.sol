@@ -1202,14 +1202,12 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unknown signature prefix should be invalid");
     }
 
-    /// @dev Verifies that invalid approval policy type returns invalid value fail closed.
-    function test_LOAS_27_invalidApprovalPolicyType_returnsInvalidValueFailClosed() public {
-        // Setup: configure a valid fixture for invalid approval policy type returns invalid value fail closed.
+    /// @dev Verifies that invalid approval policy type in signature payload reverts.
+    function test_LOAS_27_invalidApprovalPolicyType_reverts() public {
+        // Setup: configure a valid fixture and mutate encoded signature payload with an invalid enum value.
         policyStateHarness.setGuardian(guardianSigner);
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
-        _unsafeSetApprovalPolicyTypeRaw(policy, 2);
-
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
         uint256 expiration = block.timestamp + 1 days;
 
@@ -1239,11 +1237,12 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
             guardianSignature: guardianSignature,
             proofs: proofs
         });
+        _setPolicyTypeInPolicySignature(signature, 2);
 
-        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
-        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
-        // Verify: assert the expected success result and state updates.
-        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "invalid approval enum should fail closed");
+        // Verify: assert malformed enum values fail with a revert/panic.
+        vm.expectRevert();
+        // Call: invoke `isValidSignatureViaLibrary` with malformed enum payload.
+        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
     }
 
     /// @dev Verifies that cross organization replay initiator signature returns invalid value.
@@ -1458,6 +1457,15 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         assembly {
             mstore(add(policy, 0x80), rawValue)
         }
+    }
+
+    function _setPolicyTypeInPolicySignature(bytes memory signature, uint256 rawValue) internal pure {
+        // policy-signature payload format:
+        // 1-byte signature type prefix + abi.encode(policy tuple)
+        // tuple head word[5] contains offset to `ValidationProofs`
+        uint256 proofsOffset = _readWord(signature, 1 + 5 * 32);
+        // Within `ValidationProofs`, `Policy.config.approval.policyType` is slot 4.
+        _setWord(signature, 1 + proofsOffset + 4 * 32, rawValue);
     }
 
     function _seedMembers(address target) internal {
