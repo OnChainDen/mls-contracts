@@ -148,6 +148,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 48 | Emits `GuardianUpdateCancelled(currentGuardian, cancelledGuardian)` | [EV] | P1 |
 | 49 | Cancel before finalize — clears pending state correctly | [U] | P1 |
 | 50 | Cancel after finalize but before accept — clears ready-for-acceptance state | [U] | P1 |
+| 113 | Cancel after finalize then call `acceptGuardian` — reverts `NoPendingGuardianUpdate` | [N] | P1 |
 
 ---
 
@@ -259,7 +260,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `initializeGuardian` | 5 | P0-P1 |
 | `initiateGuardianUpdate` (Lib) | 8 | P1-P2 |
 | `finalizeGuardianUpdate` (Lib) | 7 | P1-P2 |
-| `cancelGuardianUpdate` (Lib) | 7 | P1 |
+| `cancelGuardianUpdate` (Lib) | 8 | P1 |
 | `acceptGuardian` (Lib) | 9 | P1 |
 | `enforceOnlyGuardian` | 3 | P0-P1 |
 | `enforceOnlyPendingGuardian` | 4 | P0-P1 |
@@ -267,4 +268,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | Full lifecycle integration | 9 | P0-P1 |
 | Fuzz tests | 6 | P0-P1 |
 | Invariant tests | 8 | P0 |
-| **Total** | **113** | |
+| **Total** | **114** | |
