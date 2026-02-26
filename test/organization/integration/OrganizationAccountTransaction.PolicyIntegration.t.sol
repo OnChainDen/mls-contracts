@@ -1148,18 +1148,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         bytes memory callData = abi.encodeCall(
             harness.validateTransactionApprovalOrRevertViaLibrary,
-            (
-                ACCOUNT,
-                DESTINATION,
-                0,
-                data,
-                20,
-                expiration,
-                DEFAULT_POLICY_ID,
-                initiatorSignature,
-                bytes(""),
-                proofs
-            )
+            (ACCOUNT, DESTINATION, 0, data, 20, expiration, DEFAULT_POLICY_ID, initiatorSignature, bytes(""), proofs)
         );
         _setPolicyTypeInValidateApprovalCalldata(callData, 2);
 
@@ -1518,18 +1507,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         bytes memory callData = abi.encodeCall(
             harness.validateTransactionApprovalOrRevertViaLibrary,
-            (
-                ACCOUNT,
-                TOKEN,
-                0,
-                data,
-                26,
-                expiration,
-                DEFAULT_POLICY_ID,
-                initiatorSignature,
-                bytes(""),
-                proofs
-            )
+            (ACCOUNT, TOKEN, 0, data, 26, expiration, DEFAULT_POLICY_ID, initiatorSignature, bytes(""), proofs)
         );
         _setRateLimitTypeInValidateApprovalCalldata(callData, 2);
 

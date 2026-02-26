@@ -88,7 +88,8 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
 
         bytes memory unauthorizedSignature = _signHash(REVIEWER_PK_2, messageHash);
         // Call: evaluate approval validity for unauthorized signer payload.
-        bool unauthorizedSignerValid = harness.areApprovalsValidViaLibrary(memberPolicy, unauthorizedSignature, messageHash);
+        bool unauthorizedSignerValid =
+            harness.areApprovalsValidViaLibrary(memberPolicy, unauthorizedSignature, messageHash);
         // Verify: assert unauthorized member signatures fail closed.
         assertFalse(unauthorizedSignerValid, "unauthorized signer should fail closed");
 

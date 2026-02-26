@@ -171,8 +171,9 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         // Setup: build fixture inputs and mutate calldata words with unknown enum values.
         // ApproverType
         Policy memory invalidApproverPolicy = _buildBasePolicy();
-        bytes memory approverCall =
-            abi.encodeCall(checkHarness.isSignerAuthorizedForPolicyViaPolicyLibrary, (invalidApproverPolicy, reviewer1));
+        bytes memory approverCall = abi.encodeCall(
+            checkHarness.isSignerAuthorizedForPolicyViaPolicyLibrary, (invalidApproverPolicy, reviewer1)
+        );
         _setWord(approverCall, 4 + 5 * 32, 2);
 
         // Call: execute low-level call with malformed approver enum calldata.

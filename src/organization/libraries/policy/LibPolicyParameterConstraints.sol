@@ -68,8 +68,7 @@ library LibPolicyParameterConstraints {
         for (uint256 i = 0; i < constraints.length; ++i) {
             // Case: Primitive and dynamic single-head types cannot declare multi-slot heads.
             if (
-                constraints[i].paramCalldataHeadSlotCount > 1
-                    && constraints[i].paramType != ParamType.Array
+                constraints[i].paramCalldataHeadSlotCount > 1 && constraints[i].paramType != ParamType.Array
                     && constraints[i].paramType != ParamType.Struct
             ) {
                 return false;
