@@ -22,10 +22,11 @@ All `private` functions in the files under test will be refactored to `internal`
 |---|-----------|------|----------|
 | 1 | `msg.sender != account` — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
 | 2 | Account not deployed by this organization — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
-| 3 | `msg.sender == account` AND account deployed by org — delegates to `LibOrganizationAccountSignature.isValidSignature` | [U] | P0 |
-| 4 | Returns magic value when library returns magic | [U] | P0 |
-| 5 | Returns invalid value when library returns invalid | [U] | P0 |
-| 6 | Function is `view` — no state changes | [U] | P1 |
+| 3 | **Desired Behavior:** `anySourceAccount=true` in policy does NOT bypass org-account gate — non-org account still reverts `AccountNotDeployedByOrganization` | [S] | P0 |
+| 4 | `msg.sender == account` AND account deployed by org — delegates to `LibOrganizationAccountSignature.isValidSignature` | [U] | P0 |
+| 5 | Returns magic value when library returns magic | [U] | P0 |
+| 6 | Returns invalid value when library returns invalid | [U] | P0 |
+| 7 | Function is `view` — no state changes | [U] | P1 |
 
 ---
 
@@ -117,7 +118,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 47 | Policy `transactionType != Signatures` (is `ContractInteractions`) — returns false | [N] | P0 |
 | 48 | Policy `transactionType == Any` — returns false (must be exactly `Signatures`) | [S] | P0 |
 | 49 | Source account not allowed by policy (specific account, wrong account) — returns false | [N] | P0 |
-| 50 | Policy with `anySourceAccount=true` — allows any account | [U] | P0 |
+| 50 | Policy with `anySourceAccount=true` — bypasses source-account proof check (org-account deployment validation is enforced by `isValidSignatureForAccount`) | [U] | P0 |
 | 51 | Initiator not authorized by policy — returns false | [N] | P0 |
 | 52 | All four checks pass — returns true | [U] | P0 |
 | 53 | Checks are sequential: `isPolicyInOrg` checked first, short-circuits on failure | [U] | P1 |
@@ -201,7 +202,7 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `isValidSignatureForAccount` | 6 | P0-P1 |
+| `isValidSignatureForAccount` | 7 | P0-P1 |
 | `isValidSignature` (type routing) | 7 | P0-P1 |
 | `_validateRecoverySignature` | 8 | P0 |
 | `_validatePolicyBasedSignature` | 23 | P0 |
@@ -211,4 +212,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | `_getReviewSignatureHash` | 12 | P0-P1 |
 | Fuzz tests | 12 | P0 |
 | Invariant tests | 7 | P0 |
-| **Total** | **109** | |
+| **Total** | **110** | |
