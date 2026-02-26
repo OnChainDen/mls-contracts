@@ -25,7 +25,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that policy field mutation invalidates original proof.
     function testFuzz_POL_F_1_policyFieldMutationInvalidatesOriginalProof(uint256 policyIdSeed, uint8 mutationSelector)
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for policy field mutation invalidates original proof.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for policy field mutation
+        // invalidates original proof.
         public
     {
         uint256 policyId = bound(policyIdSeed, 1, type(uint96).max);
@@ -73,7 +74,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that source account proofs only pass for exact tuple.
     function testFuzz_POL_F_2_sourceAccountProofsOnlyPassForExactTuple(
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for source account proofs only pass for exact tuple.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for source account proofs only pass
+        // for exact tuple.
         address accountA,
         address accountB,
         bool useFirst
@@ -94,7 +96,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
         // Verify: assert each variant returns the expected branch outcome.
         assertTrue(
-        // Call: run `isSourceAccountAllowedByPolicyViaLibrary` across the prepared variants.
+            // Call: run `isSourceAccountAllowedByPolicyViaLibrary` across the prepared variants.
             harness.isSourceAccountAllowedByPolicyViaLibrary(policy, sourceAccounts[targetIndex], proof),
             "exact account/root/proof tuple should pass"
         );
@@ -107,7 +109,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that destination proofs validate only actual destination.
     function testFuzz_POL_F_3_destinationProofsValidateOnlyActualDestination(
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for destination proofs validate only actual destination.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for destination proofs validate only
+        // actual destination.
         uint8 shape,
         address allowedDestination,
         address otherDestination,
@@ -134,7 +137,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
         if (mode == 0) {
             // Native transfer destination is `to`.
-        // Call: run `isDestinationAllowedByPolicyViaPolicyLibrary` across the prepared variants.
+            // Call: run `isDestinationAllowedByPolicyViaPolicyLibrary` across the prepared variants.
             allowedResult = harness.isDestinationAllowedByPolicyViaPolicyLibrary(
                 policy, allowedDestination, amount, bytes(""), destinationProof
             );
@@ -170,7 +173,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that function proofs bind selector and constraints.
     function testFuzz_POL_F_4_functionProofsBindSelectorAndConstraints(
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for function proofs bind selector and constraints.
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for function proofs bind selector
+        // and constraints.
         bytes4 selector,
         uint256 callArg,
         bytes32 constraintsSeed,
@@ -213,7 +217,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
     /// @dev Verifies that duplicate or out of order signers always revert.
     function testFuzz_POL_F_5_duplicateOrOutOfOrderSignersAlwaysRevert(bool useDuplicate, bytes32 hashSeed) public {
-        // Setup: assemble inputs expected to hit the guarded failure path for duplicate or out of order signers always revert.
+        // Setup: assemble inputs expected to hit the guarded failure path for duplicate or out of order signers always
+        // revert.
         policyStateHarness.setMemberStatus(reviewer1, true);
         policyStateHarness.setMemberStatus(reviewer2, true);
         policyStateHarness.setGroupStatus(55, true);
@@ -288,19 +293,19 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         bytes32 expectedHash = keccak256("expected-dynamic-value");
         bytes32[] memory noProof = new bytes32[](0);
 
-        ParameterConstraint memory bytesConstraint = _buildConstraint({
+        ParameterConstraint memory bytesConstraint = ParameterConstraint({
             paramType: ParamType.Bytes,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(expectedHash),
             paramValueInListProof: noProof
         });
         bytes memory bytesConstraints = _encodeSingleConstraint(bytesConstraint);
 
-        ParameterConstraint memory stringConstraint = _buildConstraint({
+        ParameterConstraint memory stringConstraint = ParameterConstraint({
             paramType: ParamType.String,
             constraintType: ConstraintType.Exact,
-            headSlots: 1,
+            paramCalldataHeadSlotCount: 1,
             comparisonData: abi.encode(expectedHash),
             paramValueInListProof: noProof
         });
