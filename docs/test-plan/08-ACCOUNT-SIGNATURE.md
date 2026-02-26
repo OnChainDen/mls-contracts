@@ -172,7 +172,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 78 | Fuzz: Random recovery address signatures — valid signer returns magic, wrong signer returns invalid | [F] | P0 |
 | 79 | Fuzz: Random initiator signatures — all produce different review hashes (uniqueness) | [F] | P0 |
 | 80 | Fuzz: Random accounts — policy with `anySourceAccount=true` always allows, specific account rejects others | [F] | P0 |
-| 81 | Fuzz: Random message hashes — changing hash always changes initiator signature hash | [F] | P0 |
+| 81 | Fuzz: Random message hashes — changing `hash` always changes both initiator hash and review hash (review hash computed with the same initiator signature captured earlier in the test) | [F][S] | P0 |
 | 101 | Fuzz: Random malformed policy-based payloads for type `0x01` — always returns invalid value (never reverts) | [F][S] | P0 |
 | 102 | Fuzz: Random authorized signer mixes (EOA/ERC-1271) for initiator/reviewers — outcome depends on policy authorization, not signer encoding | [F] | P0 |
 
