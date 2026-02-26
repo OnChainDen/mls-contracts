@@ -149,7 +149,12 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 65 | Includes all fields from initiator hash (org, account, hash, policyId, expiration, chainId) | [U] | P0 |
+| 65 | Different organizations (`address(this)`) — produce different review hashes | [S] | P0 |
+| 105 | Different accounts — produce different review hashes | [U] | P0 |
+| 106 | Different message hashes — produce different review hashes | [U] | P0 |
+| 107 | Different `policyId` values — produce different review hashes | [U] | P0 |
+| 108 | Different `expirationTimestamp` values — produce different review hashes | [U] | P0 |
+| 109 | Different `block.chainid` values — produce different review hashes | [S] | P0 |
 | 66 | Additionally includes `keccak256(initiatorSignature)` | [S] | P0 |
 | 67 | Different initiator signatures → different review hashes | [S] | P0 |
 | 68 | Uses `REVIEW_SIGNATURE_VALIDATION_TYPEHASH` (distinct from initiator typehash) | [U] | P1 |
@@ -203,7 +208,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `_isValidGuardianSignature` | 11 | P0-P1 |
 | `_isERC1271SignatureAllowedByPolicy` | 13 | P0-P1 |
 | `_getInitiatorSignatureHash` | 10 | P0-P1 |
-| `_getReviewSignatureHash` | 7 | P0-P1 |
+| `_getReviewSignatureHash` | 12 | P0-P1 |
 | Fuzz tests | 12 | P0 |
 | Invariant tests | 7 | P0 |
-| **Total** | **104** | |
+| **Total** | **109** | |
