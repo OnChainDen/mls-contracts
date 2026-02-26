@@ -25,6 +25,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | 1 | Non-guardian caller — reverts (onlyGuardian modifier) | [N] | P0 |
 | 2 | Insufficient admin signatures — reverts | [N] | P0 |
 | 3 | Admin auth nonce consumed — replay with same nonce reverts | [S] | P0 |
+| 82 | Expired `authParams.expirationTimestamp` — reverts via admin auth validation (`AdminOperationExpired`) | [N] | P0 |
+| 83 | Any `create2Salt` tampering after signatures are produced invalidates auth and reverts (`InsufficientAdminAuthorization`) | [S] | P0 |
+| 84 | Auth-validation revert path (e.g., tampered payload / bad signatures) does not consume nonce; same salt+operation succeeds after corrected signatures | [S] | P0 |
 | 4 | Delegates to `LibOrganizationAccountFactory.deployAccount` — returns deployed address | [U] | P1 |
 | 5 | Returns the correct deployed account address | [U] | P1 |
 | 6 | `OperationType` is `DeployAccount` in admin auth | [U] | P1 |
@@ -192,7 +195,7 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `deployAccount` (Base) | 7 | P0-P1 |
+| `deployAccount` (Base) | 10 | P0-P1 |
 | `setAccountImplementation` | 12 | P0-P1 |
 | `computeAccountAddress` (external) | 3 | P1-P3 |
 | `implementation` (IBeacon) | 5 | P0-P1 |
@@ -204,4 +207,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | AccountProxy (constructor/proxy) | 8 | P0-P1 |
 | Fuzz tests | 6 | P1 |
 | Invariant tests | 5 | P0 |
-| **Total** | **80** | |
+| **Total** | **83** | |
