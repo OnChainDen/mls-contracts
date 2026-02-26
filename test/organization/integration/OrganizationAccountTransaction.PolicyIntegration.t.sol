@@ -1279,8 +1279,11 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         policyStateHarness.setGroupStatus(922, true);
         policyStateHarness.setGroupMemberStatus(922, initiator1, true);
 
-        Policy memory autoPolicy = manualPolicy;
-        autoPolicy.config.approval.policyType = PolicyType.AutoApprove;
+        Policy memory autoPolicy =
+            _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
+        autoPolicy.config.approval.approverType = ApproverType.Group;
+        autoPolicy.config.approval.approverGroupId = 922;
+        autoPolicy.config.approval.approvalThreshold = 2;
 
         ValidationProofs memory autoProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, autoPolicy);
         // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert

@@ -181,16 +181,16 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 |---|---|---|---|
 | LPA-1 | Empty `signatures` returns `false` | [N] | P0 |
 | LPA-2 | Member approver: authorized member signature returns `true` | [U] | P0 |
-| LPA-3 | Member approver: non-authorized signer reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
-| LPA-4 | Member approver: signer not in org reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
+| LPA-3 | Member approver: non-authorized signer fails closed (`false`) | [N][S] | P0 |
+| LPA-4 | Member approver: signer not in org fails closed (`false`) | [N][S] | P0 |
 | LPA-5 | Group approver: threshold `N` with exactly `N` valid sorted signatures returns `true` | [U] | P0 |
 | LPA-6 | Group approver: threshold `1` with `2` valid sorted signatures returns `true` (more-than-threshold accepted) | [U][E] | P1 |
 | LPA-7 | Group approver: fewer than threshold valid signatures returns `false` | [N] | P0 |
-| LPA-8 | Group approver: signer in org but not in approver group reverts `UnauthorizedApprovalSigner` | [N][S] | P0 |
-| LPA-9 | Group approver: non-existent group reverts `GroupDoesNotExist` | [N] | P0 |
-| LPA-10 | Duplicate signer reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
-| LPA-11 | Out-of-order signer sequence reverts `DuplicateOrOutOfOrderSigner` | [S] | P0 |
-| LPA-12 | Malformed packed signature data bubbles signature recovery revert | [N][S] | P0 |
+| LPA-8 | Group approver: signer in org but not in approver group fails closed (`false`) | [N][S] | P0 |
+| LPA-9 | Group approver: non-existent group fails closed (`false`) | [N] | P0 |
+| LPA-10 | Duplicate signer fails closed (`false`) | [S] | P0 |
+| LPA-11 | Out-of-order signer sequence fails closed (`false`) | [S] | P0 |
+| LPA-12 | Malformed packed signature data fails closed (`false`) | [N][S] | P0 |
 | LPA-13 | Mixed EOA + ERC-1271 signers (sorted by signer address) are supported | [U][S] | P0 |
 | LPA-14 | Early-exit behavior: threshold met before trailing malformed bytes still returns `true` (trailing bytes are not parsed) | [E][S] | P1 |
 | LPA-15 | **Desired behavior:** group threshold `0` is invalid and should fail closed (false or explicit revert) | [S] | P0 |
@@ -583,7 +583,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-F-2 | Random source account proofs: only correct account/root/proof tuples pass | [F] | P0 |
 | POL-F-3 | Random destination proofs across native/ERC20/contract-call shapes validate only exact actual destination | [F][S] | P0 |
 | POL-F-4 | Random function selector + constraints payloads: proof valid only for exact `(selector, constraintsHash)` pair | [F][S] | P0 |
-| POL-F-5 | Random signature bundles: duplicates/out-of-order signers always revert in approval validation | [F][S] | P0 |
+| POL-F-5 | Random signature bundles: duplicates/out-of-order signers fail closed (`false`) in approval validation | [F][S] | P0 |
 | POL-F-6 | Random rate-limit scopes: observed key-collision behavior matches scope model | [F] | P1 |
 | POL-F-7 | Random dynamic bytes/string constraints: out-of-bounds offsets/lengths fail closed | [F][S] | P0 |
 

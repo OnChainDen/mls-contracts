@@ -215,10 +215,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         assertFalse(mutatedConstraintsAllowed, "constraints mutation should fail proof");
     }
 
-    /// @dev Verifies that duplicate or out of order signers always revert.
-    function testFuzz_POL_F_5_duplicateOrOutOfOrderSignersAlwaysRevert(bool useDuplicate, bytes32 hashSeed) public {
-        // Setup: assemble inputs expected to hit the guarded failure path for duplicate or out of order signers always
-        // revert.
+    /// @dev Verifies that duplicate or out of order signers fail closed.
+    function testFuzz_POL_F_5_duplicateOrOutOfOrderSignersFailClosed(bool useDuplicate, bytes32 hashSeed) public {
+        // Setup: build group-approval fixture and prepare invalid signer ordering payloads.
         policyStateHarness.setMemberStatus(reviewer1, true);
         policyStateHarness.setMemberStatus(reviewer2, true);
         policyStateHarness.setGroupStatus(55, true);
@@ -242,10 +241,10 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             packed = reviewer1 < reviewer2 ? abi.encodePacked(sig2, sig1) : abi.encodePacked(sig1, sig2);
         }
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
-        // Call: invoke `areApprovalsValidViaPolicyLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaPolicyLibrary(policy, packed, messageHash);
+        // Call: evaluate approvals with duplicate/out-of-order signer bundle.
+        bool approvalsValid = harness.areApprovalsValidViaPolicyLibrary(policy, packed, messageHash);
+        // Verify: assert invalid signer ordering is rejected via fail-closed result.
+        assertFalse(approvalsValid, "duplicate/out-of-order signer bundles should fail closed");
     }
 
     /// @dev Verifies that rate limit scope collision matches scope model.

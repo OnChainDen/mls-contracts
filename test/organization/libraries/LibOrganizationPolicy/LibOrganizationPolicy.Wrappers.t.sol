@@ -2,9 +2,6 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
-import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationPolicy} from "organization/libraries/LibOrganizationPolicy.sol";
 import {
     LibOrganizationPolicySuiteBase
@@ -78,13 +75,11 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         );
     }
 
-    /// @dev Verifies that wrapper bubbles delegated custom errors unchanged.
-    function test_wrapperApprovals_bubblesDelegatedCustomErrors() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated custom errors
-        // unchanged.
+    /// @dev Verifies that wrapper approval checks fail closed for unauthorized signers and missing groups.
+    function test_wrapperApprovals_failClosedOnUnauthorizedSignerAndMissingGroup_returnsFalse() public {
+        // Setup: build member-approver fixture where signature is from a different org member.
         bytes32 messageHash = keccak256("lop-wrap-2-message");
 
-        // Unauthorized signer path.
         Policy memory memberPolicy = _buildBasePolicy();
         memberPolicy.config.approval.approverType = ApproverType.Member;
         memberPolicy.config.approval.approverMember = reviewer1;
@@ -92,22 +87,26 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         policyStateHarness.setMemberStatus(reviewer2, true);
 
         bytes memory unauthorizedSignature = _signHash(REVIEWER_PK_2, messageHash);
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationPolicy.UnauthorizedApprovalSigner.selector, reviewer2));
-        // Call: invoke `areApprovalsValidViaLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaLibrary(memberPolicy, unauthorizedSignature, messageHash);
+        // Call: evaluate approval validity for unauthorized signer payload.
+        bool unauthorizedSignerValid = harness.areApprovalsValidViaLibrary(memberPolicy, unauthorizedSignature, messageHash);
+        // Verify: assert unauthorized member signatures fail closed.
+        assertFalse(unauthorizedSignerValid, "unauthorized signer should fail closed");
 
-        // Group-does-not-exist path.
+        // Setup: build group-approver fixture that points to a non-existent group id.
         Policy memory groupPolicy = _buildBasePolicy();
         groupPolicy.config.approval.approverType = ApproverType.Group;
         groupPolicy.config.approval.approverGroupId = 99_123;
         groupPolicy.config.approval.approvalThreshold = 1;
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, 99_123));
-        harness.areApprovalsValidViaLibrary(groupPolicy, _signHash(REVIEWER_PK_1, messageHash), messageHash);
+        bytes memory reviewerSignature = _signHash(REVIEWER_PK_1, messageHash);
+
+        // Call: evaluate approval validity for non-existent approver group payload.
+        bool missingGroupValid = harness.areApprovalsValidViaLibrary(groupPolicy, reviewerSignature, messageHash);
+        // Verify: assert missing groups fail closed.
+        assertFalse(missingGroupValid, "missing approver group should fail closed");
     }
 
-    /// @dev Verifies that wrapper bubbles delegated duplicate/out-of-order signer errors unchanged.
-    function test_wrapperApprovals_bubblesDuplicateOrOutOfOrderSignerErrorUnchanged() public {
+    /// @dev Verifies that wrapper approval checks fail closed on duplicate or out-of-order signers.
+    function test_wrapperApprovals_duplicateOrOutOfOrderSigners_returnsFalse() public {
         // Setup: configure a group-approval policy and prepare duplicate signatures from the same authorized signer.
         uint256 approverGroupId = 99_124;
         Policy memory policy = _buildBasePolicy();
@@ -123,28 +122,26 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         bytes memory signerSignature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory duplicateSignatures = abi.encodePacked(signerSignature, signerSignature);
 
-        // Verify: assert that the duplicate-signer custom error is surfaced unchanged by the wrapper entry point.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationPolicy.DuplicateOrOutOfOrderSigner.selector, reviewer1, reviewer1)
-        );
-        // Call: invoke `areApprovalsValidViaLibrary` with duplicate signer payload to hit signer-order validation.
-        harness.areApprovalsValidViaLibrary(policy, duplicateSignatures, messageHash);
+        // Call: evaluate approval validity for duplicate-signer payload.
+        bool approvalsValid = harness.areApprovalsValidViaLibrary(policy, duplicateSignatures, messageHash);
+        // Verify: assert duplicate signer ordering fails closed.
+        assertFalse(approvalsValid, "duplicate/out-of-order signers should fail closed");
     }
 
-    /// @dev Verifies that wrapper bubbles delegated signature-decoding errors unchanged.
-    function test_wrapperApprovals_bubblesSignatureRecoveryErrorsUnchanged() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for wrapper bubbles delegated
-        // signature-decoding errors unchanged.
+    /// @dev Verifies that wrapper approval checks fail closed on malformed signature payloads.
+    function test_wrapperApprovals_malformedSignatures_returnsFalse() public {
+        // Setup: build member-approver fixture with malformed packed signature bytes.
         Policy memory policy = _buildBasePolicy();
         policy.config.approval.approverType = ApproverType.Member;
         policy.config.approval.approverMember = reviewer1;
         policyStateHarness.setMemberStatus(reviewer1, true);
 
         bytes memory malformedSignatures = hex"01";
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
-        // Call: invoke `areApprovalsValidViaLibrary` with the failing payload to exercise the revert branch.
-        harness.areApprovalsValidViaLibrary(policy, malformedSignatures, keccak256("lop-wrap-3"));
+        bytes32 messageHash = keccak256("lop-wrap-3");
+        // Call: evaluate approval validity for malformed signature bytes.
+        bool approvalsValid = harness.areApprovalsValidViaLibrary(policy, malformedSignatures, messageHash);
+        // Verify: assert malformed signature payloads fail closed.
+        assertFalse(approvalsValid, "malformed signatures should fail closed");
     }
 
     /// @dev Verifies that `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
