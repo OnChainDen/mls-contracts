@@ -81,6 +81,7 @@ All `private` functions in the files under test will be refactored to `internal`
 |---|-----------|------|----------|
 | 23 | Deploys account at deterministic CREATE2 address | [U] | P1 |
 | 24 | Deployed address matches `computeAccountAddress(create2Salt)` | [U] | P1 |
+| 79 | Runtime code at deployed address matches expected `AccountProxy` runtime code (reference proxy with same beacon/init data) | [U] | P1 |
 | 78 | Boundary salts (`bytes32(0)` and `bytes32(type(uint256).max)`) produce deployed addresses that match `computeAccountAddress(create2Salt)` | [E] | P2 |
 | 25 | Sets `deployedAccounts[accountAddress] = true` in storage | [U] | P1 |
 | 26 | Emits `AccountDeployed(accountAddress, address(this), create2Salt)` with correct parameters | [EV] | P1 |
@@ -194,7 +195,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | `setAccountImplementation` | 11 | P0-P1 |
 | `computeAccountAddress` (external) | 3 | P1-P3 |
 | `implementation` (IBeacon) | 5 | P0-P1 |
-| `deployAccount` (Lib) | 11 | P0-P2 |
+| `deployAccount` (Lib) | 12 | P0-P2 |
 | `computeAccountAddress` (Lib) | 7 | P1 |
 | `isAccountDeployedByOrganization` | 5 | P0-P1 |
 | `validateIsAccountDeployedByOrgOrRevert` | 3 | P0 |
@@ -202,4 +203,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | AccountProxy (constructor/proxy) | 8 | P0-P1 |
 | Fuzz tests | 6 | P1 |
 | Invariant tests | 5 | P0 |
-| **Total** | **78** | |
+| **Total** | **79** | |
