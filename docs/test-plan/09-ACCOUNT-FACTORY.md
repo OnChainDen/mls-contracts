@@ -28,7 +28,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 4 | Delegates to `LibOrganizationAccountFactory.deployAccount` — returns deployed address | [U] | P1 |
 | 5 | Returns the correct deployed account address | [U] | P1 |
 | 6 | `OperationType` is `DeployAccount` in admin auth | [U] | P1 |
-| 7 | `operationData` encodes `create2Salt` | [U] | P1 |
+| 7 | **Golden test:** for a fixed `create2Salt`, `operationData` is exactly `abi.encode(create2Salt)` (pin expected bytes/hash) | [U] | P1 |
 
 ---
 
