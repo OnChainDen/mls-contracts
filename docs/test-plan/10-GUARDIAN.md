@@ -184,6 +184,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 63 | `msg.sender == pendingGuardian` — no revert | [U] | P0 |
 | 64 | `msg.sender != pendingGuardian` — reverts `UnauthorizedGuardianAcceptance(msg.sender, pendingGuardian)` | [N] | P0 |
 | 65 | No pending update (`pendingGuardian == address(0)`) — any address reverts | [E] | P0 |
+| 112 | Error includes both caller address and expected pending guardian address | [U] | P1 |
 
 ---
 
@@ -261,9 +262,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | `cancelGuardianUpdate` (Lib) | 7 | P1 |
 | `acceptGuardian` (Lib) | 9 | P1 |
 | `enforceOnlyGuardian` | 3 | P0-P1 |
-| `enforceOnlyPendingGuardian` | 3 | P0 |
+| `enforceOnlyPendingGuardian` | 4 | P0-P1 |
 | View functions (Lib) | 8 | P3 |
 | Full lifecycle integration | 9 | P0-P1 |
 | Fuzz tests | 6 | P0-P1 |
 | Invariant tests | 8 | P0 |
-| **Total** | **112** | |
+| **Total** | **113** | |
