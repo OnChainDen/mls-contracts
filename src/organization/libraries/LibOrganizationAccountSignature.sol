@@ -130,6 +130,11 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4 magicValue)
     {
+        // Case: The top-level ABI payload is malformed (must include 6 head words).
+        if (signatureData.length < 6 * 32) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
         // Decode the packed signature data
         (
             uint256 policyId,

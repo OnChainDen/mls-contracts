@@ -117,9 +117,11 @@ library LibOrganizationAccountTransaction {
             revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
+        PolicyType approvalPolicyType = proofs.policy.config.approval.policyType;
+
         // Case: Policy requires manual approval
         // Validate that we have enough valid approvals
-        if (proofs.policy.config.approval.policyType == PolicyType.RequireManualApproval) {
+        if (approvalPolicyType == PolicyType.RequireManualApproval) {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
@@ -128,6 +130,9 @@ library LibOrganizationAccountTransaction {
                 proofs: proofs,
                 isApproval: true
             });
+        } else if (approvalPolicyType != PolicyType.AutoApprove) {
+            // Fail closed on unknown approval-policy enum values.
+            revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
 
         // Update rate limits if applicable (for all policy types)
@@ -151,9 +156,16 @@ library LibOrganizationAccountTransaction {
         address initiator,
         Policy calldata policy
     ) internal {
-        // Only process if policy has rate limits configured
-        if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) {
+        RateLimitType rateLimitType = policy.config.rateLimit.limitType;
+
+        // Case: Policy explicitly disables rate limiting.
+        if (rateLimitType == RateLimitType.None) {
             return;
+        }
+
+        // Case: Unknown rate-limit enum value fails closed.
+        if (rateLimitType != RateLimitType.TimeInterval) {
+            revert IOrganizationAccountTransaction.RateLimitExceeded(params.policyId);
         }
 
         // Determine the actual destination (may differ for token transfers)
@@ -252,16 +264,16 @@ library LibOrganizationAccountTransaction {
         }
 
         // Route to appropriate rejection validation based on policy type
-        PolicyType pType = proofs.policy.config.approval.policyType;
+        PolicyType policyType = proofs.policy.config.approval.policyType;
 
         // AutoApprove: Need an authorized initiator to sign the rejection
-        if (pType == PolicyType.AutoApprove) {
+        if (policyType == PolicyType.AutoApprove) {
             _validateAutoApproveRejectionOrRevert({
                 params: params, data: data, reviewSignatures: reviewSignatures, proofs: proofs
             });
         }
         // ManualApproval: Need threshold approvals for the rejection
-        else if (pType == PolicyType.RequireManualApproval) {
+        else if (policyType == PolicyType.RequireManualApproval) {
             _validateManualConfirmationOrRevert({
                 params: params,
                 data: data,
@@ -270,6 +282,8 @@ library LibOrganizationAccountTransaction {
                 proofs: proofs,
                 isApproval: false
             });
+        } else {
+            revert IOrganizationAccountTransaction.PolicyDoesNotApply(policyId);
         }
     }
 

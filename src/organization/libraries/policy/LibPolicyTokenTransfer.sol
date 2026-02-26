@@ -15,6 +15,8 @@ import {Policy} from "types/PolicyTypes.sol";
 library LibPolicyTokenTransfer {
     /**
      * @dev Checks if a token transfer transaction is allowed by the policy.
+     *      Assumes the caller has already validated that `(to, value, data)` describes
+     *      a token transfer (native or ERC-20).
      *      Validates that:
      *      1. The token being transferred is allowed by the policy
      *      2. The amount being transferred is within policy limits
@@ -69,6 +71,8 @@ library LibPolicyTokenTransfer {
 
     /**
      * @dev Checks if the token amount is allowed by the policy for a token transfer.
+     *      Assumes the caller has already validated that `(value, data)` describes
+     *      a token transfer (native or ERC-20).
      *      If hasAmountThreshold is false, always returns true.
      *      Otherwise, verifies the amount is below the threshold.
      * @param policy The policy to check against
@@ -84,8 +88,9 @@ library LibPolicyTokenTransfer {
         // Case: The policy has no amount threshold
         if (!policy.config.token.hasAmountThreshold) return true;
 
-        // Case: The policy has an amount threshold - verify amount is below it
         uint256 amount = TokenTransferUtils.extractTransferAmount(data, value);
+
+        // Case: The policy has an amount threshold - verify amount is below it (exclusive max).
         return amount < policy.config.token.amountThreshold;
     }
 }

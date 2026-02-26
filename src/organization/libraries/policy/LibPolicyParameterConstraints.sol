@@ -34,6 +34,10 @@ library LibPolicyParameterConstraints {
         // Case: No constraints defined, any parameters are accepted
         if (parameterConstraints.length == 0) return true;
 
+        // Case: Malformed top-level ABI encoding fails closed before decode.
+        // `abi.encode(ParameterConstraint[])` must contain at least offset + length (2 words).
+        if (parameterConstraints.length < 64) return false;
+
         // Decode the constraints array
         ParameterConstraint[] memory constraints = abi.decode(parameterConstraints, (ParameterConstraint[]));
 
@@ -62,6 +66,15 @@ library LibPolicyParameterConstraints {
         uint256 paramCalldataOffset = ContractInteractionUtils.SELECTOR_LENGTH;
 
         for (uint256 i = 0; i < constraints.length; ++i) {
+            // Case: Primitive and dynamic single-head types cannot declare multi-slot heads.
+            if (
+                constraints[i].paramCalldataHeadSlotCount > 1
+                    && constraints[i].paramType != ParamType.Array
+                    && constraints[i].paramType != ParamType.Struct
+            ) {
+                return false;
+            }
+
             // Number of bytes this parameter's head occupies in calldata
             uint256 paramCalldataHeadSize =
                 uint256(constraints[i].paramCalldataHeadSlotCount) * ContractInteractionUtils.SLOT_SIZE;
@@ -109,8 +122,8 @@ library LibPolicyParameterConstraints {
         bytes32 paramHeadValue,
         bytes calldata data
     ) internal pure returns (bool) {
-        ParamType pType = constraint.paramType;
         ConstraintType constraintType = constraint.constraintType;
+        ParamType pType = constraint.paramType;
 
         // Case: Constraint is a wildcard constraint (any value is accepted)
         if (constraintType == ConstraintType.Any) {
@@ -170,9 +183,15 @@ library LibPolicyParameterConstraints {
         bytes32 paramHeadValue
     ) internal pure returns (bool) {
         if (constraintType != ConstraintType.Exact) return false;
-        bool expectedValue = abi.decode(comparisonData, (bool));
-        bool actualValue = uint256(paramHeadValue) != 0;
-        return actualValue == expectedValue;
+        if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
+
+        uint256 expectedValueRaw = uint256(bytes32(comparisonData));
+        uint256 actualValueRaw = uint256(paramHeadValue);
+
+        // Enforce canonical bool encoding (0/1 only).
+        if (expectedValueRaw > 1 || actualValueRaw > 1) return false;
+
+        return expectedValueRaw == actualValueRaw;
     }
 
     /**
@@ -190,10 +209,12 @@ library LibPolicyParameterConstraints {
     ) internal pure returns (bool) {
         uint256 actualValue = uint256(paramHeadValue);
         if (constraintType == ConstraintType.Exact) {
+            if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
             uint256 expectedValue = abi.decode(comparisonData, (uint256));
             return actualValue == expectedValue;
         }
         if (constraintType == ConstraintType.Range) {
+            if (comparisonData.length != 2 * ContractInteractionUtils.SLOT_SIZE) return false;
             (uint256 minValue, uint256 maxValue) = abi.decode(comparisonData, (uint256, uint256));
             return actualValue >= minValue && actualValue <= maxValue;
         }
@@ -216,10 +237,12 @@ library LibPolicyParameterConstraints {
     ) internal pure returns (bool) {
         int256 actualValue = int256(uint256(paramHeadValue));
         if (constraintType == ConstraintType.Exact) {
+            if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
             int256 expectedValue = abi.decode(comparisonData, (int256));
             return actualValue == expectedValue;
         }
         if (constraintType == ConstraintType.Range) {
+            if (comparisonData.length != 2 * ContractInteractionUtils.SLOT_SIZE) return false;
             (int256 minValue, int256 maxValue) = abi.decode(comparisonData, (int256, int256));
             return actualValue >= minValue && actualValue <= maxValue;
         }
@@ -244,10 +267,12 @@ library LibPolicyParameterConstraints {
     ) internal pure returns (bool) {
         address actualValue = address(uint160(uint256(paramHeadValue)));
         if (constraintType == ConstraintType.Exact) {
+            if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
             address expectedValue = abi.decode(comparisonData, (address));
             return actualValue == expectedValue;
         }
         if (constraintType == ConstraintType.OneOf) {
+            if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
             // comparisonData contains the merkle root of allowed addresses
             bytes32 allowedAddressesRoot = abi.decode(comparisonData, (bytes32));
             // Compute leaf for the actual address using double-hashing
@@ -274,6 +299,7 @@ library LibPolicyParameterConstraints {
         bytes32 paramHeadValue
     ) internal pure returns (bool) {
         if (constraintType != ConstraintType.Exact) return false;
+        if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
         bytes32 expectedValue = abi.decode(comparisonData, (bytes32));
         return paramHeadValue == expectedValue;
     }
@@ -298,29 +324,37 @@ library LibPolicyParameterConstraints {
         bytes calldata data
     ) internal pure returns (bool) {
         if (constraintType != ConstraintType.Exact) return false;
+        if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
 
         // paramHeadValue is the offset (relative to start of encoded params, i.e., after selector)
         uint256 offset = uint256(paramHeadValue);
+
+        // Case: Offsets pointing into the ABI head region are invalid.
+        if (offset < ContractInteractionUtils.SLOT_SIZE) return false;
+
+        // Case: Offset arithmetic overflow fails closed.
+        if (offset > type(uint256).max - ContractInteractionUtils.SELECTOR_LENGTH) return false;
 
         // The offset is relative to the start of the encoded parameters (after selector)
         // So actual position in data = 4 (selector) + offset
         uint256 dataPosition = ContractInteractionUtils.SELECTOR_LENGTH + offset;
 
         // First 32 bytes at that position is the length
-        if (data.length < dataPosition + ContractInteractionUtils.SLOT_SIZE) return false;
+        if (dataPosition > data.length) return false;
+        if (data.length - dataPosition < ContractInteractionUtils.SLOT_SIZE) return false;
 
         uint256 length = uint256(bytes32(data[dataPosition:dataPosition + ContractInteractionUtils.SLOT_SIZE]));
 
+        if (dataPosition > type(uint256).max - ContractInteractionUtils.SLOT_SIZE) return false;
+        uint256 dataStart = dataPosition + ContractInteractionUtils.SLOT_SIZE;
+
         // Check we have enough data for the content
-        if (data.length < dataPosition + ContractInteractionUtils.SLOT_SIZE + length) return false;
+        if (length > data.length - dataStart) return false;
+        uint256 dataEnd = dataStart + length;
 
         // Hash the actual content
-        bytes32 actualHash = keccak256(
-            data[dataPosition
-                    + ContractInteractionUtils.SLOT_SIZE:dataPosition + ContractInteractionUtils.SLOT_SIZE + length
-            ]
-        );
-        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
+        bytes32 actualHash = keccak256(data[dataStart:dataEnd]);
+        bytes32 expectedHash = bytes32(comparisonData);
         return actualHash == expectedHash;
     }
 }
