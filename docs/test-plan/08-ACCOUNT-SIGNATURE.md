@@ -68,26 +68,27 @@ All `private` functions in the files under test will be refactored to `internal`
 | 21 | ABI decoding of `signatureData` into `(policyId, expirationTimestamp, initiatorSignature, reviewSignatures, guardianSignature, proofs)` | [U] | P0 |
 | 22 | Expired (`block.timestamp > expirationTimestamp`) — returns invalid value | [N] | P0 |
 | 23 | Expiration at exactly `block.timestamp` — succeeds (strict `>` comparison) | [E] | P0 |
-| 24 | Empty initiator signature (length 0) — returns invalid value | [N] | P0 |
-| 25 | Invalid initiator signature (`tryRecoverSigner` fails) — returns invalid value | [N] | P0 |
-| 26 | Invalid guardian signature — returns invalid value | [N] | P0 |
-| 27 | Policy not allowed by `_isERC1271SignatureAllowedByPolicy` — returns invalid value | [N] | P0 |
-| 28 | AutoApprove policy with valid initiator + guardian — returns magic value | [U] | P0 |
-| 29 | ManualApproval policy with valid initiator + guardian + sufficient review signatures — returns magic value | [U] | P0 |
-| 30 | ManualApproval policy with insufficient review signatures — returns invalid value | [N] | P0 |
-| 31 | ManualApproval policy with invalid review signatures (wrong message hash) — returns invalid value | [N] | P0 |
-| 32 | Review hash includes `initiatorSignature` — different initiator sigs produce different review hashes (binding) | [S] | P0 |
-| 33 | All failure cases return invalid value (never reverts) — function is graceful | [E] | P0 |
-| 88 | **Desired Behavior:** Malformed policy `signatureData` (ABI decode failure) — returns invalid value (never reverts) | [S] | P0 |
-| 89 | Initiator signature from an authorized ERC-1271 member contract — accepted | [U] | P0 |
-| 90 | ManualApproval policy with authorized ERC-1271 reviewer signatures meeting threshold — returns magic value | [U] | P0 |
-| 91 | ManualApproval policy with `approverType=Member` and valid designated reviewer signature — returns magic value | [U] | P0 |
-| 92 | **Desired Behavior:** Unknown/invalid `PolicyType` value fails closed — returns invalid value | [S] | P0 |
-| 93 | **Desired Behavior:** Malformed packed `reviewSignatures` bytes — returns invalid value (never reverts) | [N][S] | P0 |
-| 94 | **Desired Behavior:** Duplicate or out-of-order reviewer signers — returns invalid value (never reverts) | [S] | P0 |
-| 95 | **Desired Behavior:** Unauthorized reviewer signer — returns invalid value (never reverts) | [S] | P0 |
-| 96 | **Desired Behavior:** Approver group does not exist — returns invalid value (never reverts) | [S] | P0 |
-| 97 | **Desired Behavior:** Same valid packed signature can be verified repeatedly before expiration — always returns magic (no nonce/state consumption) | [S] | P0 |
+| 24 | Expiration at `block.timestamp + 1` — succeeds (strict `>` comparison) | [E] | P0 |
+| 25 | Empty initiator signature (length 0) — returns invalid value | [N] | P0 |
+| 26 | Invalid initiator signature (`tryRecoverSigner` fails) — returns invalid value | [N] | P0 |
+| 27 | Invalid guardian signature — returns invalid value | [N] | P0 |
+| 28 | Policy not allowed by `_isERC1271SignatureAllowedByPolicy` — returns invalid value | [N] | P0 |
+| 29 | AutoApprove policy with valid initiator + guardian — returns magic value | [U] | P0 |
+| 30 | ManualApproval policy with valid initiator + guardian + sufficient review signatures — returns magic value | [U] | P0 |
+| 31 | ManualApproval policy with insufficient review signatures — returns invalid value | [N] | P0 |
+| 32 | ManualApproval policy with invalid review signatures (wrong message hash) — returns invalid value | [N] | P0 |
+| 33 | Review hash includes `initiatorSignature` — different initiator sigs produce different review hashes (binding) | [S] | P0 |
+| 34 | All failure cases return invalid value (never reverts) — function is graceful | [E] | P0 |
+| 35 | **Desired Behavior:** Malformed policy `signatureData` (ABI decode failure) — returns invalid value (never reverts) | [S] | P0 |
+| 36 | Initiator signature from an authorized ERC-1271 member contract — accepted | [U] | P0 |
+| 37 | ManualApproval policy with authorized ERC-1271 reviewer signatures meeting threshold — returns magic value | [U] | P0 |
+| 38 | ManualApproval policy with `approverType=Member` and valid designated reviewer signature — returns magic value | [U] | P0 |
+| 39 | **Desired Behavior:** Unknown/invalid `PolicyType` value fails closed — returns invalid value | [S] | P0 |
+| 40 | **Desired Behavior:** Malformed packed `reviewSignatures` bytes — returns invalid value (never reverts) | [N][S] | P0 |
+| 41 | **Desired Behavior:** Duplicate or out-of-order reviewer signers — returns invalid value (never reverts) | [S] | P0 |
+| 42 | **Desired Behavior:** Unauthorized reviewer signer — returns invalid value (never reverts) | [S] | P0 |
+| 43 | **Desired Behavior:** Approver group does not exist — returns invalid value (never reverts) | [S] | P0 |
+| 44 | **Desired Behavior:** Same valid packed signature can be verified repeatedly before expiration — always returns magic (no nonce/state consumption) | [S] | P0 |
 
 ---
 
@@ -205,11 +206,11 @@ All `private` functions in the files under test will be refactored to `internal`
 | `isValidSignatureForAccount` | 7 | P0-P1 |
 | `isValidSignature` (type routing) | 7 | P0-P1 |
 | `_validateRecoverySignature` | 8 | P0 |
-| `_validatePolicyBasedSignature` | 23 | P0 |
+| `_validatePolicyBasedSignature` | 24 | P0 |
 | `_isValidGuardianSignature` | 11 | P0-P1 |
 | `_isERC1271SignatureAllowedByPolicy` | 13 | P0-P1 |
 | `_getInitiatorSignatureHash` | 10 | P0-P1 |
 | `_getReviewSignatureHash` | 12 | P0-P1 |
 | Fuzz tests | 12 | P0 |
 | Invariant tests | 7 | P0 |
-| **Total** | **110** | |
+| **Total** | **111** | |
