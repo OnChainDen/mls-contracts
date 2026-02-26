@@ -83,23 +83,6 @@ library LibPolicyApproval {
     }
 
     /**
-     * @dev Gets the number of required approvals for a policy.
-     *      For Member approver type, always returns 1.
-     *      For Group approver type, returns the approval threshold.
-     * @param policy The policy to check
-     * @return The number of required approvals
-     */
-    function getRequiredApprovals(Policy memory policy) internal pure returns (uint256) {
-        // Case: Policy requires a single approval from a member
-        if (policy.config.approval.approverType == ApproverType.Member) {
-            return 1;
-        }
-
-        // Case: Policy requires a threshold number of approvals from any individual in a group
-        return policy.config.approval.approvalThreshold;
-    }
-
-    /**
      * @dev Checks if a signer is authorized to approve for a policy.
      *      For Member approver type, the signer must be the specified member address.
      *      For Group approver type, the signer must be a member of the specified group.
@@ -128,5 +111,22 @@ library LibPolicyApproval {
         }
 
         return false;
+    }
+
+    /**
+     * @dev Gets the number of required approvals for a policy.
+     *      For Member approver type, always returns 1.
+     *      For Group approver type, returns the approval threshold.
+     * @param policy The policy to check
+     * @return The number of required approvals
+     */
+    function getRequiredApprovals(Policy memory policy) internal pure returns (uint256) {
+        // Case: Policy requires a single approval from a member
+        if (policy.config.approval.approverType == ApproverType.Member) {
+            return 1;
+        }
+
+        // Case: Policy requires a threshold number of approvals from any individual in a group
+        return policy.config.approval.approvalThreshold;
     }
 }
