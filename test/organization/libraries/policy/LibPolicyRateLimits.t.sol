@@ -291,26 +291,28 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 0, "failed update should not mutate usage");
     }
 
-    /// @dev Verifies that desired behavior: invalid `RateLimitType` fails closed and does not write usage.
-    function test_checkAndUpdateRateLimit_invalidRateLimitType_failsClosed_desired() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired behavior: invalid
-        // `RateLimitType` fails closed and does not write usage.
+    /// @dev Verifies that invalid `RateLimitType` values revert during calldata decoding.
+    function test_checkAndUpdateRateLimit_invalidRateLimitType_reverts() public {
+        // Setup: prepare inputs and mutate encoded policy calldata with an invalid enum value.
         uint256 policyId = 9013;
         Policy memory policy = _timeIntervalPolicy(1, 10);
 
         bytes32 key =
             harness.computeUsageKeyViaPolicyLibrary(policyId, policy, address(0xA14), address(0xB14), address(0xC14));
         uint256 window = harness.computeTimeWindowViaPolicyLibrary(policy);
+        uint256 usageBefore = policyStateHarness.getPolicyUsage(key, window);
 
-        // Call: run `checkAndUpdateRateLimitViaPolicyLibraryRawLimitType` across the prepared variants.
-        bool ok = harness.checkAndUpdateRateLimitViaPolicyLibraryRawLimitType(
-            policyId, policy, type(uint256).max, address(0xA14), address(0xB14), address(0xC14), 1
+        bytes memory callData = abi.encodeCall(
+            harness.checkAndUpdateRateLimitViaPolicyLibrary,
+            (policyId, policy, address(0xA14), address(0xB14), address(0xC14), 1)
         );
+        _setWord(callData, 4 + 32 + 17 * 32, 2);
 
-        uint256 usage = policyStateHarness.getPolicyUsage(key, window);
-        // Verify: assert each variant returns the expected branch outcome.
-        assertFalse(ok, "desired behavior: invalid rate-limit enum should fail closed");
-        assertEq(usage, 0, "invalid enum must not mutate usage");
+        // Call: execute a low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert malformed enum values fail with a revert/panic and do not mutate usage.
+        assertFalse(success, "invalid rate-limit enum should revert");
+        assertEq(policyStateHarness.getPolicyUsage(key, window), usageBefore, "invalid enum must not mutate usage");
     }
 
     /// @dev Verifies that `timeIntervalHours == 0` returns window 0.

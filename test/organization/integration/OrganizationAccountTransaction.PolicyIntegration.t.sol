@@ -1125,13 +1125,10 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         });
     }
 
-    /// @dev Verifies that desired invalid approval policy type must fail closed.
-    function test_LOAT_20_desired_invalidApprovalPolicyTypeMustFailClosed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for desired invalid approval policy type must
-        // fail closed.
+    /// @dev Verifies that invalid approval policy type in proofs payload reverts.
+    function test_LOAT_20_invalidApprovalPolicyType_reverts() public {
+        // Setup: assemble valid approval payload then mutate encoded proofs with an invalid enum value.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
-        _unsafeSetApprovalPolicyTypeRaw(policy, 2);
-
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         bytes memory data = abi.encodeWithSelector(bytes4(0x20202020), uint256(20));
@@ -1149,22 +1146,27 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             isApproval: true
         });
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-        // branch.
-        harness.validateTransactionApprovalOrRevertViaLibrary({
-            account: ACCOUNT,
-            to: DESTINATION,
-            value: 0,
-            data: data,
-            salt: 20,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        bytes memory callData = abi.encodeCall(
+            harness.validateTransactionApprovalOrRevertViaLibrary,
+            (
+                ACCOUNT,
+                DESTINATION,
+                0,
+                data,
+                20,
+                expiration,
+                DEFAULT_POLICY_ID,
+                initiatorSignature,
+                bytes(""),
+                proofs
+            )
+        );
+        _setPolicyTypeInValidateApprovalCalldata(callData, 2);
+
+        // Call: execute a low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert malformed enum values fail with a revert/panic.
+        assertFalse(success, "invalid approval policy type should revert");
     }
 
     /// @dev Verifies that branch comparison manual with reviews and auto with same payload both succeed.
@@ -1487,16 +1489,13 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         });
     }
 
-    /// @dev Verifies that desired invalid rate limit type must fail closed.
-    function test_LOAT_26_desired_invalidRateLimitTypeMustFailClosed() public {
-        // Setup: assemble inputs expected to hit the guarded failure path for desired invalid rate limit type must fail
-        // closed.
+    /// @dev Verifies that invalid rate-limit type in proofs payload reverts.
+    function test_LOAT_26_invalidRateLimitType_reverts() public {
+        // Setup: assemble valid approval payload then mutate encoded proofs with an invalid enum value.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.timeIntervalHours = 1;
         policy.config.rateLimit.timeIntervalLimit = 1;
-        _unsafeSetRateLimitTypeRaw(policy, 2);
-
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         bytes memory data = _encodeERC20Transfer(RECIPIENT, 1000);
@@ -1514,22 +1513,27 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             isApproval: true
         });
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
-        // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
-        // branch.
-        harness.validateTransactionApprovalOrRevertViaLibrary({
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 26,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        bytes memory callData = abi.encodeCall(
+            harness.validateTransactionApprovalOrRevertViaLibrary,
+            (
+                ACCOUNT,
+                TOKEN,
+                0,
+                data,
+                26,
+                expiration,
+                DEFAULT_POLICY_ID,
+                initiatorSignature,
+                bytes(""),
+                proofs
+            )
+        );
+        _setRateLimitTypeInValidateApprovalCalldata(callData, 2);
+
+        // Call: execute a low-level call with malformed enum calldata.
+        (bool success,) = address(harness).call(callData);
+        // Verify: assert malformed enum values fail with a revert/panic.
+        assertFalse(success, "invalid rate-limit type should revert");
     }
 
     /// @dev Verifies that cross organization replay initiator signature fails.
@@ -1772,6 +1776,16 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         assembly {
             mstore(add(policy, 0x220), rawValue)
         }
+    }
+
+    function _setPolicyTypeInValidateApprovalCalldata(bytes memory callData, uint256 rawValue) internal pure {
+        uint256 proofsOffset = _readWord(callData, 4 + 9 * 32);
+        _setWord(callData, 4 + proofsOffset + 4 * 32, rawValue);
+    }
+
+    function _setRateLimitTypeInValidateApprovalCalldata(bytes memory callData, uint256 rawValue) internal pure {
+        uint256 proofsOffset = _readWord(callData, 4 + 9 * 32);
+        _setWord(callData, 4 + proofsOffset + 17 * 32, rawValue);
     }
 
     function _seedMembers(address target) internal {

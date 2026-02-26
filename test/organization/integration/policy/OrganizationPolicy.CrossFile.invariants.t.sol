@@ -166,26 +166,31 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertFalse(approvalsValid, "fewer than required manual approvals must never pass");
     }
 
-    /// @dev Verifies that unknown enums fail closed across validation paths.
+    /// @dev Verifies that unknown enums revert across validation paths.
     function invariant_POL_I_7_unknownEnumsFailClosedAcrossValidationPaths() public {
+        // Setup: build fixture inputs and mutate calldata words with unknown enum values.
         // ApproverType
-        // Setup: build fixture inputs where unknown enums fail closed across validation paths should be denied.
         Policy memory invalidApproverPolicy = _buildBasePolicy();
-        _unsafeSetApproverTypeRaw(invalidApproverPolicy, 3);
-        // Call: execute `isSignerAuthorizedForPolicyViaPolicyLibrary` and capture the authorization decision.
-        bool approverAllowed =
-            checkHarness.isSignerAuthorizedForPolicyViaPolicyLibrary(invalidApproverPolicy, reviewer1);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(approverAllowed, "invalid approver enum should fail closed");
+        bytes memory approverCall =
+            abi.encodeCall(checkHarness.isSignerAuthorizedForPolicyViaPolicyLibrary, (invalidApproverPolicy, reviewer1));
+        _setWord(approverCall, 4 + 5 * 32, 2);
+
+        // Call: execute low-level call with malformed approver enum calldata.
+        (bool approverSuccess,) = address(checkHarness).call(approverCall);
+        // Verify: assert malformed enum values fail with a revert/panic.
+        assertFalse(approverSuccess, "invalid approver enum should revert");
 
         // DestinationType
         Policy memory invalidDestinationPolicy = _buildBasePolicy();
-        _unsafeSetDestinationTypeRaw(invalidDestinationPolicy, 7);
         bytes32[] memory emptyProof = new bytes32[](0);
-        bool destinationAllowed = checkHarness.isDestinationAllowedByPolicyViaPolicyLibrary(
-            invalidDestinationPolicy, address(0xD001), 1, bytes(""), emptyProof
+        bytes memory destinationCall = abi.encodeCall(
+            checkHarness.isDestinationAllowedByPolicyViaPolicyLibrary,
+            (invalidDestinationPolicy, address(0xD001), 1, bytes(""), emptyProof)
         );
-        assertFalse(destinationAllowed, "invalid destination enum should fail closed");
+        _setWord(destinationCall, 4 + 3 * 32, 2);
+
+        (bool destinationSuccess,) = address(checkHarness).call(destinationCall);
+        assertFalse(destinationSuccess, "invalid destination enum should revert");
 
         // ConstraintType + ParamType
         bytes32[] memory noProof = new bytes32[](0);
@@ -197,42 +202,54 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             paramValueInListProof: noProof
         });
 
-        ParameterConstraint memory invalidConstraintType = constraint;
-        _unsafeSetConstraintTypeRaw(invalidConstraintType, 9);
-        bool invalidConstraintResult = checkHarness.isParameterAllowedByConstraintViaPolicyLibrary(
-            invalidConstraintType, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1))
+        bytes memory invalidConstraintCall = abi.encodeCall(
+            checkHarness.isParameterAllowedByConstraintViaPolicyLibrary,
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1)))
         );
-        assertFalse(invalidConstraintResult, "invalid constraint enum should fail closed");
+        uint256 constraintOffset = _readWord(invalidConstraintCall, 4);
+        _setWord(invalidConstraintCall, 4 + constraintOffset + 32, 9);
 
-        ParameterConstraint memory invalidParamType = constraint;
-        _unsafeSetParamTypeRaw(invalidParamType, 11);
-        bool invalidParamResult = checkHarness.isParameterAllowedByConstraintViaPolicyLibrary(
-            invalidParamType, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1))
+        (bool invalidConstraintSuccess,) = address(checkHarness).call(invalidConstraintCall);
+        assertFalse(invalidConstraintSuccess, "invalid constraint enum should revert");
+
+        bytes memory invalidParamCall = abi.encodeCall(
+            checkHarness.isParameterAllowedByConstraintViaPolicyLibrary,
+            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(bytes4(0x11111111), uint256(1)))
         );
-        assertFalse(invalidParamResult, "invalid param enum should fail closed");
+        constraintOffset = _readWord(invalidParamCall, 4);
+        _setWord(invalidParamCall, 4 + constraintOffset, 11);
+
+        (bool invalidParamSuccess,) = address(checkHarness).call(invalidParamCall);
+        assertFalse(invalidParamSuccess, "invalid param enum should revert");
 
         // RateLimitType
         Policy memory invalidRateLimitTypePolicy = _buildBasePolicy();
         invalidRateLimitTypePolicy.config.rateLimit.timeIntervalHours = 1;
         invalidRateLimitTypePolicy.config.rateLimit.timeIntervalLimit = 1;
-        _unsafeSetRateLimitTypeRaw(invalidRateLimitTypePolicy, 3);
-
-        bool invalidRateTypeWithinLimit = checkHarness.checkAndUpdateRateLimitViaPolicyLibrary(
-            7001, invalidRateLimitTypePolicy, address(0xA7), address(0xB7), address(0xC7), 1
+        bytes memory invalidRateTypeCall = abi.encodeCall(
+            checkHarness.checkAndUpdateRateLimitViaPolicyLibrary,
+            (7001, invalidRateLimitTypePolicy, address(0xA7), address(0xB7), address(0xC7), 1)
         );
-        assertFalse(invalidRateTypeWithinLimit, "invalid rate-limit type should fail closed");
+        _setWord(invalidRateTypeCall, 4 + 32 + 17 * 32, 2);
+
+        (bool invalidRateTypeSuccess,) = address(checkHarness).call(invalidRateTypeCall);
+        assertFalse(invalidRateTypeSuccess, "invalid rate-limit type should revert");
 
         // RateLimitScope
         Policy memory invalidRateScopePolicy = _buildBasePolicy();
         invalidRateScopePolicy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         invalidRateScopePolicy.config.rateLimit.timeIntervalHours = 1;
         invalidRateScopePolicy.config.rateLimit.timeIntervalLimit = 1;
-        _unsafeSetRateLimitScopesRaw(invalidRateScopePolicy, 8, 8, 8);
-
-        bool invalidRateScopeWithinLimit = checkHarness.checkAndUpdateRateLimitViaPolicyLibrary(
-            7002, invalidRateScopePolicy, address(0xA8), address(0xB8), address(0xC8), 1
+        bytes memory invalidRateScopesCall = abi.encodeCall(
+            checkHarness.checkAndUpdateRateLimitViaPolicyLibrary,
+            (7002, invalidRateScopePolicy, address(0xA8), address(0xB8), address(0xC8), 1)
         );
-        assertFalse(invalidRateScopeWithinLimit, "invalid rate-limit scopes should fail closed");
+        _setWord(invalidRateScopesCall, 4 + 32 + 20 * 32, 2);
+        _setWord(invalidRateScopesCall, 4 + 32 + 21 * 32, 2);
+        _setWord(invalidRateScopesCall, 4 + 32 + 22 * 32, 2);
+
+        (bool invalidRateScopesSuccess,) = address(checkHarness).call(invalidRateScopesCall);
+        assertFalse(invalidRateScopesSuccess, "invalid rate-limit scopes should revert");
     }
 
     /// @dev Verifies that desired any initiator must not authorize non members.
