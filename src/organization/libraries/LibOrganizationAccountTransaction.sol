@@ -241,7 +241,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         address initiator,
         Policy calldata policy
-    ) private {
+    ) internal {
         // Only process if policy has rate limits configured
         if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) {
             return;
@@ -288,7 +288,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bytes memory reviewSignatures,
         ValidationProofs calldata proofs
-    ) private view {
+    ) internal view {
         // Compute the rejection hash (isApproval = false)
         bytes32 rejectionTxHash = _computeInitiatorHashFromParams(params, data, false);
 
@@ -325,7 +325,7 @@ library LibOrganizationAccountTransaction {
         bytes memory initiatorSignature,
         ValidationProofs calldata proofs,
         bool isApproval
-    ) private view {
+    ) internal view {
         // Get required approval count from policy
         uint256 requiredApprovals = LibOrganizationPolicy.getRequiredApprovals(proofs.policy);
 
@@ -354,7 +354,7 @@ library LibOrganizationAccountTransaction {
      * @return The EIP-712 typed data hash for signing
      */
     function _computeInitiatorHashFromParams(TxParams memory params, bytes calldata data, bool isApproval)
-        private
+        internal
         view
         returns (bytes32)
     {
@@ -392,7 +392,7 @@ library LibOrganizationAccountTransaction {
         bytes calldata data,
         bool isApproval,
         bytes memory initiatorSignature
-    ) private view returns (bytes32) {
+    ) internal view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
                 LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,

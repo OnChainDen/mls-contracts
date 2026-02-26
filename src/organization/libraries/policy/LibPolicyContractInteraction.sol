@@ -67,7 +67,7 @@ library LibPolicyContractInteraction {
         bytes calldata data,
         bytes32[] calldata functionProof,
         bytes calldata constraints
-    ) private pure returns (bool) {
+    ) internal pure returns (bool) {
         // Case: Policy matches any function
         if (policy.config.anyFunction) return true;
 
@@ -92,7 +92,7 @@ library LibPolicyContractInteraction {
      * @param constraintsHash The keccak256 hash of the parameter constraints
      * @return The computed merkle leaf
      */
-    function _computeFunctionLeaf(bytes4 selector, bytes32 constraintsHash) private pure returns (bytes32) {
+    function _computeFunctionLeaf(bytes4 selector, bytes32 constraintsHash) internal pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(selector, constraintsHash))));
     }
 }

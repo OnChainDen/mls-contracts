@@ -109,7 +109,7 @@ library LibPolicyApproval {
      * @param signerAddress The address of the signer
      * @return True if the signer is authorized, false otherwise
      */
-    function _isSignerAuthorizedForPolicy(Policy memory policy, address signerAddress) private view returns (bool) {
+    function _isSignerAuthorizedForPolicy(Policy memory policy, address signerAddress) internal view returns (bool) {
         // Case: Signer is not a member of the organization
         if (!LibOrganizationMembers.isMember(signerAddress)) return false;
 

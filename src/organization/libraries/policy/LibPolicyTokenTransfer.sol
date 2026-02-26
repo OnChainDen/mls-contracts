@@ -55,7 +55,7 @@ library LibPolicyTokenTransfer {
      * @return True if the token is allowed, false otherwise
      */
     function _isTokenAllowedByPolicy(Policy calldata policy, address to, bytes calldata data)
-        private
+        internal
         pure
         returns (bool)
     {
@@ -77,7 +77,7 @@ library LibPolicyTokenTransfer {
      * @return True if the amount is allowed, false otherwise
      */
     function _isTokenAmountAllowedByPolicy(Policy calldata policy, bytes calldata data, uint256 value)
-        private
+        internal
         pure
         returns (bool)
     {
