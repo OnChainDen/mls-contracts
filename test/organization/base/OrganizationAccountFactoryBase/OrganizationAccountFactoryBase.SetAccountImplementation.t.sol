@@ -95,11 +95,20 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: no-code whitelist addresses should be rejected.
-        vm.expectRevert();
         vm.prank(GUARDIAN);
         // Call: execute `setAccountImplementation` with no-code whitelist target.
-        harness.setAccountImplementation(accountImplementationV1, auth);
+        (bool success, bytes memory revertData) = address(harness).call(
+            abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, auth))
+        );
+
+        // Verify: no-code whitelist addresses should be rejected.
+        assertFalse(success, "no-code whitelist address should cause revert");
+        bytes memory expectedRevertData =
+            abi.encode("call to non-contract address 0x000000000000000000000000000000000000ABcD");
+        assertTrue(
+            revertData.length == 0 || keccak256(revertData) == keccak256(expectedRevertData),
+            "unexpected revert payload for non-contract whitelist address"
+        );
 
         uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6180);
         assertFalse(harness.getUsedNonce(nonce), "failed whitelist call should not consume nonce");
@@ -168,7 +177,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         });
 
         // Verify: signatures over a different operation type must fail.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         // Call: invoke upgrade-account path with deploy-account signatures.
         harness.setAccountImplementation(accountImplementationV1, wrongTypeAuth);
