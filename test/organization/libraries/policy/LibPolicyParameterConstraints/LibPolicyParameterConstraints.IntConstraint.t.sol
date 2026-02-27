@@ -136,7 +136,9 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
         // Setup: capture the extreme signed int values used for boundary validation.
         int256 minValue = type(int256).min;
         int256 maxValue = type(int256).max;
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes32 minHead = bytes32(uint256(minValue));
+        // forge-lint: disable-next-line(unsafe-typecast)
         bytes32 maxHead = bytes32(uint256(maxValue));
         bytes memory fullRange = abi.encode(minValue, maxValue);
 

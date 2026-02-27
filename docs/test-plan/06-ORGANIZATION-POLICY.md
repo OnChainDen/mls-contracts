@@ -534,6 +534,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-26 | **Desired behavior:** invalid `rateLimit.limitType` enum value in calldata/proofs fails closed (revert) and cannot bypass rate-limit enforcement | [N][S] | P0 |
 | LOAT-27 | Cross-organization replay protection (initiator): initiator signature signed for organization A cannot authorize the same transaction on organization B | [S] | P0 |
 | LOAT-28 | Cross-organization replay protection (reviewers): reviewer approval/rejection signatures signed for organization A cannot be replayed on organization B when paired with a valid organization-B initiator signature | [S] | P0 |
+| LOAT-29 | For `TransactionType.Any` ERC-20 transfers, after one successful transfer in the active window, a second transfer in the same window reverts `RateLimitExceeded`; failed second call does not mutate stored usage | [S] | P0 |
+| LOAT-30 | For `TransactionType.Any` contract interactions, after one successful interaction in the active window, a second interaction in the same window reverts `RateLimitExceeded`; failed second call does not mutate stored usage | [S] | P0 |
 
 ### 10.2 File: `src/organization/libraries/LibOrganizationAccountSignature.sol`
 
