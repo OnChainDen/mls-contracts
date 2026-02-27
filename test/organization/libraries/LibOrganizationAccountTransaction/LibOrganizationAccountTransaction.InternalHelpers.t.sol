@@ -3,8 +3,6 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
-import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {
     LibOrganizationAccountTransactionTestBase
 } from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionTestBase.sol";
@@ -377,8 +375,10 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         assertTrue(reviewHashA != reviewHashB, "review hash should bind initiator signature bytes");
     }
 
-    /// @dev Verifies desired behavior: duplicate/out-of-order reviewers should revert with dedicated policy error.
-    function test_validateManualConfirmation_desired_duplicateOrOutOfOrderReviewers_revertsDedicatedError() public {
+    /// @dev Verifies duplicate/out-of-order reviewers fail closed by reverting `InsufficientApprovals`.
+    function test_validateManualConfirmation_duplicateOrOutOfOrderReviewers_failClosedWithInsufficientApprovals()
+        public
+    {
         // Setup: threshold-two group policy with duplicate reviewer signatures.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;
@@ -409,16 +409,16 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         );
         bytes memory duplicated = abi.encodePacked(dupSig, dupSig);
 
-        // Verify: desired behavior expects dedicated duplicate-ordering revert.
-        vm.expectRevert(IOrganizationPolicy.DuplicateOrOutOfOrderSigner.selector);
+        // Verify: duplicate reviewer signatures fail closed as insufficient approvals.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 2, 0));
         // Call: validate manual confirmation helper.
         harness.validateManualConfirmationOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, 16, expiration, DEFAULT_POLICY_ID, data, duplicated, initiatorSig, proofs, true
         );
     }
 
-    /// @dev Verifies desired behavior: unauthorized reviewer should revert `UnauthorizedApprovalSigner`.
-    function test_validateManualConfirmation_desired_unauthorizedReviewer_revertsUnauthorizedApprovalSigner() public {
+    /// @dev Verifies unauthorized reviewer fails closed by reverting `InsufficientApprovals`.
+    function test_validateManualConfirmation_unauthorizedReviewer_failClosedWithInsufficientApprovals() public {
         // Setup: member-approver policy where reviewer2 is unauthorized signer.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Member;
@@ -444,8 +444,8 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
             initiatorSig
         );
 
-        // Verify: desired behavior expects explicit unauthorized signer revert.
-        vm.expectRevert(IOrganizationPolicy.UnauthorizedApprovalSigner.selector);
+        // Verify: unauthorized reviewer signature fails closed as insufficient approvals.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         // Call: validate manual confirmation helper.
         harness.validateManualConfirmationOrRevertViaLibrary(
             ACCOUNT,
@@ -462,8 +462,8 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
         );
     }
 
-    /// @dev Verifies desired behavior: non-existent approver group should revert `GroupDoesNotExist`.
-    function test_validateManualConfirmation_desired_nonExistentApproverGroup_revertsGroupDoesNotExist() public {
+    /// @dev Verifies non-existent approver group fails closed by reverting `InsufficientApprovals`.
+    function test_validateManualConfirmation_nonExistentApproverGroup_failClosedWithInsufficientApprovals() public {
         // Setup: group-approver policy references a missing group ID.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;
@@ -490,8 +490,8 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
             initiatorSig
         );
 
-        // Verify: desired behavior expects missing-group revert.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupDoesNotExist.selector, 905));
+        // Verify: missing approver group fails closed as insufficient approvals.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         // Call: validate manual confirmation helper.
         harness.validateManualConfirmationOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, 18, expiration, DEFAULT_POLICY_ID, data, reviewerSig, initiatorSig, proofs, true
