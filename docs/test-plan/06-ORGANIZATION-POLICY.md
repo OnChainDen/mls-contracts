@@ -140,7 +140,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
 | LOP-WRAP-1 | Each wrapper returns exactly the delegated library result for representative success cases | [U] | P1 |
-| LOP-WRAP-2 | Wrapper bubbles delegated custom errors unchanged (approval signer/order/group errors) | [N] | P0 |
+| LOP-WRAP-2 | Wrapper bubbles delegated custom errors unchanged (excluding `areApprovalsValid`) | [N] | P0 |
 | LOP-WRAP-3 | Wrapper bubbles delegated signature decoding errors unchanged | [N][S] | P0 |
 | LOP-WRAP-4 | `checkAndUpdateRateLimit` wrapper mutates usage only when delegated result is `true` | [U] | P1 |
 
