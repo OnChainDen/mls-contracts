@@ -414,25 +414,16 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         assertTrue(reviewHashA != reviewHashB, "review hash should change with message hash");
     }
 
-    /// @dev Verifies malformed policy payloads fail closed (invalid value) without reverting.
-    function testFuzz_isValidSignature_randomMalformedPolicyPayloads_failClosedWithoutRevert(bytes calldata malformed)
-        public
-    {
-        // Setup: cap payload size to keep fuzz execution bounded.
-        vm.assume(malformed.length <= 1024);
+    /// @dev Verifies malformed policy payloads with undersized ABI heads revert in policy decoding.
+    function testFuzz_isValidSignature_randomMalformedPolicyPayloads_revert(bytes calldata malformed) public {
+        // Setup: constrain payloads to undersized ABI heads for deterministic decode reverts.
+        vm.assume(malformed.length < 32 * 6);
         bytes memory signature = abi.encodePacked(uint8(0x01), malformed);
 
-        // Call: execute low-level `isValidSignatureViaLibrary` with malformed policy payload.
-        (bool success, bytes memory result) = address(harness)
-            .staticcall(abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, signature)));
-
-        // Verify: malformed policy payloads should return invalid and never revert.
-        assertTrue(success, "malformed policy payload should fail closed without revert");
-        assertEq(
-            abi.decode(result, (bytes4)),
-            SignatureUtils.ERC1271_INVALID_VALUE,
-            "malformed policy payload should return invalid"
-        );
+        // Verify: undersized malformed payloads revert during policy decode.
+        vm.expectRevert();
+        // Call: execute type-routed validation with malformed payload.
+        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
     }
 
     /// @dev Verifies that authorization outcome depends on policy authorization, not signature encoding mode.

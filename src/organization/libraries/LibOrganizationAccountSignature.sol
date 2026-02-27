@@ -130,11 +130,6 @@ library LibOrganizationAccountSignature {
         view
         returns (bytes4 magicValue)
     {
-        // Case: The top-level ABI payload is malformed (must include 6 head words).
-        if (signatureData.length < 6 * 32) {
-            return SignatureUtils.ERC1271_INVALID_VALUE;
-        }
-
         // Decode the packed signature data
         (
             uint256 policyId,
@@ -239,6 +234,7 @@ library LibOrganizationAccountSignature {
         (bool success, bytes memory result) =
             guardianAddress.staticcall(abi.encodeWithSignature("isModuleEnabled(address)", recoveredSignerAddress));
 
+        // Case: Module is enabled on Guardian Safe
         return success && result.length >= 32 && abi.decode(result, (bool));
     }
 
