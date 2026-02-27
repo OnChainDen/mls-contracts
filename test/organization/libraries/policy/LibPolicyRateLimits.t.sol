@@ -227,7 +227,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 3, "zero usage increment should not change tracked usage");
     }
 
-    /// @dev Verifies that desired behavior: usage overflow fails closed (`false`) rather than reverting.
+    /// @dev Verifies that desired behavior: usage overflow fails closed (`false`) rather than reverting and does not
+    /// mutate usage.
     function test_checkAndUpdateRateLimit_additionOverflow_failsClosed_desired() public {
         // Setup: build fixture inputs where desired behavior: usage overflow fails closed (`false`) rather than
         // reverting should be denied.
@@ -238,13 +239,17 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
             harness.computeUsageKeyViaPolicyLibrary(policyId, policy, address(0xA11), address(0xB11), address(0xC11));
         uint256 window = harness.computeTimeWindowViaPolicyLibrary(policy);
         policyStateHarness.setPolicyUsage(key, window, type(uint256).max);
+        uint256 usageBefore = policyStateHarness.getPolicyUsage(key, window);
 
         // Call: execute `checkAndUpdateRateLimitViaPolicyLibrary` and capture the authorization decision.
         bool ok = harness.checkAndUpdateRateLimitViaPolicyLibrary(
             policyId, policy, address(0xA11), address(0xB11), address(0xC11), 1
         );
+        uint256 usageAfter = policyStateHarness.getPolicyUsage(key, window);
+
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(ok, "desired behavior: overflow should fail closed");
+        assertEq(usageAfter, usageBefore, "overflow failure should not mutate usage");
     }
 
     /// @dev Verifies that `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and usage stays unchanged.

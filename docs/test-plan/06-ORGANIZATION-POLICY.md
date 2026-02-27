@@ -460,7 +460,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPRL-UPD-7 | New time window resets effective usage budget | [U] | P0 |
 | LPRL-UPD-8 | Scope-isolated entities do not share usage when configured `PerEntity` | [U] | P1 |
 | LPRL-UPD-9 | `usageAmount == 0` is a no-op success | [E] | P2 |
-| LPRL-UPD-10 | **Desired behavior:** `currentUsage + usageAmount` overflow fails closed (`false`) rather than revert | [S] | P0 |
+| LPRL-UPD-10 | **Desired behavior:** `currentUsage + usageAmount` overflow fails closed (`false`) rather than revert, and leaves usage unchanged in storage | [S] | P0 |
 | LPRL-UPD-11 | `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and keeps usage unchanged | [E] | P1 |
 | LPRL-UPD-12 | `timeIntervalLimit == 0` and `usageAmount > 0` returns `false` and does not mutate usage | [N] | P0 |
 | LPRL-UPD-13 | Unknown/invalid `RateLimitType` in payload reverts (panic/custom revert acceptable) and does not write usage | [S] | P0 |
