@@ -145,6 +145,82 @@ contract LibOrganizationPolicyWrappersTest is LibOrganizationPolicySuiteBase {
         assertFalse(approvalsValid, "malformed signatures should fail closed");
     }
 
+    /// @dev Verifies that `isInitiatorAuthorized` wrapper preserves delegated revert payloads.
+    function test_wrapperIsInitiatorAuthorized_invalidInitiatorEnum_bubblesRevertData() public {
+        // Setup: prepare invalid-enum calldata for wrapper and delegated-library paths.
+        Policy memory policy = _buildBasePolicy();
+        policy.config.initiator.anyInitiator = false;
+        policyStateHarness.setMemberStatus(initiator1, true);
+
+        bytes memory wrapperCallData = abi.encodeCall(harness.isInitiatorAuthorizedViaLibrary, (policy, initiator1));
+        _setWord(wrapperCallData, 4 + 10 * 32, 2);
+
+        bytes memory delegatedCallData =
+            abi.encodeCall(harness.isInitiatorAuthorizedViaPolicyLibrary, (policy, initiator1));
+        _setWord(delegatedCallData, 4 + 10 * 32, 2);
+
+        // Call: execute low-level calls to capture revert payloads.
+        (bool wrapperSuccess, bytes memory wrapperRevertData) = address(harness).call(wrapperCallData);
+        (bool delegatedSuccess, bytes memory delegatedRevertData) = address(harness).call(delegatedCallData);
+
+        // Verify: wrapper should revert and surface the same revert payload as the delegated path.
+        assertFalse(wrapperSuccess, "wrapper call should revert for invalid initiator enum");
+        assertFalse(delegatedSuccess, "delegated call should revert for invalid initiator enum");
+        assertEq(wrapperRevertData, delegatedRevertData, "wrapper should bubble delegated revert data");
+    }
+
+    /// @dev Verifies that `getRequiredApprovals` wrapper preserves delegated revert payloads.
+    function test_wrapperGetRequiredApprovals_invalidApproverEnum_bubblesRevertData() public {
+        // Setup: prepare invalid-enum calldata for wrapper and delegated-library paths.
+        Policy memory policy = _buildBasePolicy();
+
+        bytes memory wrapperCallData = abi.encodeCall(harness.getRequiredApprovalsViaLibrary, (policy));
+        _setWord(wrapperCallData, 4 + 5 * 32, 2);
+
+        bytes memory delegatedCallData = abi.encodeCall(harness.getRequiredApprovalsViaPolicyLibrary, (policy));
+        _setWord(delegatedCallData, 4 + 5 * 32, 2);
+
+        // Call: execute low-level calls to capture revert payloads.
+        (bool wrapperSuccess, bytes memory wrapperRevertData) = address(harness).call(wrapperCallData);
+        (bool delegatedSuccess, bytes memory delegatedRevertData) = address(harness).call(delegatedCallData);
+
+        // Verify: wrapper should revert and surface the same revert payload as the delegated path.
+        assertFalse(wrapperSuccess, "wrapper call should revert for invalid approver enum");
+        assertFalse(delegatedSuccess, "delegated call should revert for invalid approver enum");
+        assertEq(wrapperRevertData, delegatedRevertData, "wrapper should bubble delegated revert data");
+    }
+
+    /// @dev Verifies that `checkAndUpdateRateLimit` wrapper preserves delegated revert payloads.
+    function test_wrapperCheckAndUpdateRateLimit_invalidRateLimitEnum_bubblesRevertData() public {
+        // Setup: prepare invalid-enum calldata for wrapper and delegated-library paths.
+        uint256 policyId = 4003;
+        Policy memory policy = _buildBasePolicy();
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 24;
+        policy.config.rateLimit.timeIntervalLimit = 10;
+
+        bytes memory wrapperCallData = abi.encodeCall(
+            harness.checkAndUpdateRateLimitViaLibrary,
+            (policyId, policy, address(0xB101), address(0xB102), address(0xB103), 1)
+        );
+        _setWord(wrapperCallData, 4 + 32 + 17 * 32, 2);
+
+        bytes memory delegatedCallData = abi.encodeCall(
+            harness.checkAndUpdateRateLimitViaPolicyLibrary,
+            (policyId, policy, address(0xB101), address(0xB102), address(0xB103), 1)
+        );
+        _setWord(delegatedCallData, 4 + 32 + 17 * 32, 2);
+
+        // Call: execute low-level calls to capture revert payloads.
+        (bool wrapperSuccess, bytes memory wrapperRevertData) = address(harness).call(wrapperCallData);
+        (bool delegatedSuccess, bytes memory delegatedRevertData) = address(harness).call(delegatedCallData);
+
+        // Verify: wrapper should revert and surface the same revert payload as the delegated path.
+        assertFalse(wrapperSuccess, "wrapper call should revert for invalid rate-limit enum");
+        assertFalse(delegatedSuccess, "delegated call should revert for invalid rate-limit enum");
+        assertEq(wrapperRevertData, delegatedRevertData, "wrapper should bubble delegated revert data");
+    }
+
     /// @dev Verifies that `checkAndUpdateRateLimit` mutates usage only when delegated result is true.
     function test_wrapperCheckAndUpdateRateLimit_mutatesOnlyOnSuccess() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for `checkAndUpdateRateLimit`
