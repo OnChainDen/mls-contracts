@@ -159,7 +159,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         });
 
         // Verify: signatures over a different operation type must fail.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         // Call: invoke deploy path with mismatched operation-type signatures.
         harness.deployAccount(create2Salt, wrongTypeAuth);
@@ -238,7 +238,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         });
 
         // Verify: tampered deploy payload must fail authorization.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         // Call: execute `deployAccount` with tampered `create2Salt`.
         harness.deployAccount(tamperedCreate2Salt, auth);

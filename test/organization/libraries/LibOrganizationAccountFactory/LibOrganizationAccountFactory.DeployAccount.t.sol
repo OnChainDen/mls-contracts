@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {AccountProxy} from "account/AccountProxy.sol";
@@ -109,7 +110,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
         harness.deployAccountViaLibrary(create2Salt);
 
         // Verify: second deployment with same salt should revert.
-        vm.expectRevert();
+        vm.expectRevert(Errors.FailedDeployment.selector);
         // Call: redeploy using identical CREATE2 salt.
         harness.deployAccountViaLibrary(create2Salt);
     }
