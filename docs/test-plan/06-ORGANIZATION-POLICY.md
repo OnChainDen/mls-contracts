@@ -110,7 +110,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-TX-13 | `TransactionType.Signatures` must not authorize account transactions (returns `false`) | [S] | P0 |
 | LOP-TX-14 | Unknown/invalid transaction enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
 | LOP-TX-15 | Malformed constraints payload in contract-interaction policy path reverts (panic/custom revert acceptable) | [S] | P0 |
-| LOP-TX-16 | **Desired behavior:** malformed token-transfer calldata fails closed (`false`) in policy-validation path | [S] | P0 |
+| LOP-TX-16 | malformed token-transfer calldata fails closed (`false`) in policy-validation path | [S] | P0 |
 | LOP-TX-17 | No partial success: all required sub-checks must pass for `true` | [U] | P0 |
 | LOP-TX-18 | Deterministic result for same inputs and unchanged state | [U] | P2 |
 | LOP-TX-19 | Single-policy-tree case: empty `policyProof` is accepted when `policiesRoot` equals the computed policy leaf (otherwise-valid transaction returns `true`) | [E] | P1 |
@@ -167,7 +167,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPI-4 | Group-typed initiator: existing group member returns `true` | [U] | P0 |
 | LPI-5 | Group-typed initiator: existing group non-member returns `false` | [N] | P0 |
 | LPI-6 | Group-typed initiator: non-existent group returns `false` | [N] | P0 |
-| LPI-7 | **Desired behavior:** `anyInitiator == true` still requires initiator to be an organization member | [S] | P0 |
+| LPI-7 | `anyInitiator == true` still requires initiator to be an organization member | [S] | P0 |
 | LPI-8 | Zero-address initiator fails closed | [N][S] | P1 |
 | LPI-9 | Unknown/invalid initiator enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
 
@@ -193,7 +193,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPA-12 | Malformed packed signature data fails closed (`false`) | [N][S] | P0 |
 | LPA-13 | Mixed EOA + ERC-1271 signers (sorted by signer address) are supported | [U][S] | P0 |
 | LPA-14 | Early-exit behavior: threshold met before trailing malformed bytes still returns `true` (trailing bytes are not parsed) | [E][S] | P1 |
-| LPA-15 | **Desired behavior:** group threshold `0` is invalid and should fail closed (false or explicit revert) | [S] | P0 |
+| LPA-15 | group threshold `0` is invalid and should fail closed (false or explicit revert) | [S] | P0 |
 | LPA-16 | Deterministic output for same inputs and unchanged membership/group state | [U] | P2 |
 
 ### 4.2 `getRequiredApprovals(Policy policy)`
@@ -229,7 +229,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPD-GAD-3 | ERC-20 transfer calldata returns token recipient extracted from calldata | [U] | P0 |
 | LPD-GAD-4 | ERC-20 transfer selector + non-zero native `value` is treated as non-token interaction and returns `to` | [E] | P1 |
 | LPD-GAD-5 | Zero-value empty-data transaction returns `to` (not a transfer, but destination is still `to`) | [E] | P2 |
-| LPD-GAD-6 | **Desired behavior:** malformed transfer calldata fails closed without ambiguous destination | [S] | P1 |
+| LPD-GAD-6 | malformed transfer calldata fails closed without ambiguous destination | [S] | P1 |
 | LPD-GAD-7 | ERC-20 `transfer` selector with calldata `< 68` bytes is treated as non-token interaction and returns `to` | [E] | P1 |
 
 ### 5.2 `isDestinationAllowedByPolicy(...)`
@@ -345,7 +345,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-4 | Multiple constraints all passing returns `true` | [U] | P0 |
 | LPPC-5 | Any one failing constraint returns `false` | [N] | P0 |
 | LPPC-6 | Malformed `parameterConstraints` encoding reverts during ABI decoding (panic/custom revert acceptable) | [S] | P0 |
-| LPPC-7 | **Desired behavior:** malformed `comparisonData` inside a constraint fails closed (`false`) | [S] | P0 |
+| LPPC-7 | malformed `comparisonData` inside a constraint fails closed (`false`) | [S] | P0 |
 | LPPC-8 | Deterministic output for identical constraints and calldata | [U] | P2 |
 
 ### 8.2 `_processConstraints(ParameterConstraint[] constraints, bytes data)` *(private; harness target)*
@@ -358,7 +358,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-PROC-4 | Multi-constraint processing stops and returns `false` at first failing constraint | [U] | P1 |
 | LPPC-PROC-5 | Array/struct constraints with `Any` can span multiple head slots without decode errors | [E] | P1 |
 | LPPC-PROC-6 | No out-of-bounds reads on fuzzed offset/head-size combinations | [F][S] | P0 |
-| LPPC-PROC-8 | **Desired behavior:** primitive parameter types with `paramCalldataHeadSlotCount > 1` fail closed (`false`) rather than allowing shifted-offset interpretation | [S] | P0 |
+| LPPC-PROC-8 | primitive parameter types with `paramCalldataHeadSlotCount > 1` fail closed (`false`) rather than allowing shifted-offset interpretation | [S] | P0 |
 
 ### 8.3 `_isParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -371,7 +371,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-DISP-5 | Unknown/invalid `ParamType` reverts (panic/custom revert acceptable) | [S] | P0 |
 | LPPC-DISP-6 | Address `OneOf` path validates Merkle proof against decoded root | [U] | P0 |
 | LPPC-DISP-7 | Bytes/string path uses dynamic offset and content hashing correctly | [U] | P0 |
-| LPPC-DISP-8 | **Desired behavior:** invalid dynamic offset fails closed (`false`) | [S] | P0 |
+| LPPC-DISP-8 | invalid dynamic offset fails closed (`false`) | [S] | P0 |
 | LPPC-DISP-9 | Unknown/invalid `ConstraintType` value reverts (panic/custom revert acceptable) for supported `ParamType` dispatch paths | [S] | P0 |
 
 ### 8.4 `_isBoolParameterAllowedByConstraint(...)` *(private; harness target)*
@@ -382,8 +382,8 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-BOOL-2 | Exact `false` with canonical bool word `0` returns `true` | [U] | P0 |
 | LPPC-BOOL-3 | Exact mismatch returns `false` | [N] | P0 |
 | LPPC-BOOL-4 | Non-`Exact` constraint type returns `false` | [N] | P0 |
-| LPPC-BOOL-5 | **Desired behavior:** non-canonical non-zero bool word (not `1`) fails closed (`false`) | [S] | P0 |
-| LPPC-BOOL-6 | **Desired behavior:** malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
+| LPPC-BOOL-5 | non-canonical non-zero bool word (not `1`) fails closed (`false`) | [S] | P0 |
+| LPPC-BOOL-6 | malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
 
 ### 8.5 `_isUintParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -394,7 +394,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-UINT-3 | Out-of-range value returns `false` | [N] | P0 |
 | LPPC-UINT-4 | Range with `min > max` fails closed (`false`) | [E] | P0 |
 | LPPC-UINT-5 | Unsupported `ConstraintType.OneOf` for Uint returns `false` | [N] | P0 |
-| LPPC-UINT-6 | **Desired behavior:** malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
+| LPPC-UINT-6 | malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
 
 ### 8.6 `_isIntParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -406,7 +406,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-INT-4 | Out-of-range value returns `false` | [N] | P0 |
 | LPPC-INT-5 | Range with `min > max` fails closed (`false`) | [E] | P0 |
 | LPPC-INT-6 | Unsupported `ConstraintType.OneOf` for Int returns `false` | [N] | P0 |
-| LPPC-INT-7 | **Desired behavior:** malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
+| LPPC-INT-7 | malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
 
 ### 8.7 `_isAddressParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -417,7 +417,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-ADDR-3 | `OneOf`: invalid proof/root mismatch returns `false` | [N][S] | P0 |
 | LPPC-ADDR-4 | Unsupported `ConstraintType.Range` for Address returns `false` | [N] | P0 |
 | LPPC-ADDR-5 | Dirty upper 96 bits in `bytes32` param head do not alter extracted lower-160 address behavior | [E] | P1 |
-| LPPC-ADDR-6 | **Desired behavior:** malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
+| LPPC-ADDR-6 | malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
 
 ### 8.8 `_isFixedBytesParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -426,7 +426,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-FBYTES-1 | Exact bytes32 match returns `true`; mismatch returns `false` | [U][N] | P0 |
 | LPPC-FBYTES-2 | Fixed-size bytes values (e.g., bytes1..bytes31) enforce correct ABI left-aligned comparison semantics | [E] | P1 |
 | LPPC-FBYTES-3 | Non-`Exact` constraint type returns `false` | [N] | P0 |
-| LPPC-FBYTES-4 | **Desired behavior:** malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
+| LPPC-FBYTES-4 | malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
 
 ### 8.9 `_isBytesOrStringParameterAllowedByConstraint(...)` *(private; harness target)*
 
@@ -439,9 +439,9 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-BYSTR-5 | Offset beyond calldata length returns `false` | [N][S] | P0 |
 | LPPC-BYSTR-6 | Declared length extending beyond calldata returns `false` | [N][S] | P0 |
 | LPPC-BYSTR-7 | Non-`Exact` constraint type returns `false` | [N] | P0 |
-| LPPC-BYSTR-8 | **Desired behavior:** offset that points into ABI head region fails closed (`false`) | [S] | P0 |
-| LPPC-BYSTR-9 | **Desired behavior:** arithmetic overflow in offset/length math fails closed (`false`) without panic revert | [S] | P0 |
-| LPPC-BYSTR-10 | **Desired behavior:** malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
+| LPPC-BYSTR-8 | offset that points into ABI head region fails closed (`false`) | [S] | P0 |
+| LPPC-BYSTR-9 | arithmetic overflow in offset/length math fails closed (`false`) without panic revert | [S] | P0 |
+| LPPC-BYSTR-10 | malformed `comparisonData` fails closed (`false`) instead of bubbling decode revert | [S] | P0 |
 
 ---
 
@@ -460,7 +460,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPRL-UPD-7 | New time window resets effective usage budget | [U] | P0 |
 | LPRL-UPD-8 | Scope-isolated entities do not share usage when configured `PerEntity` | [U] | P1 |
 | LPRL-UPD-9 | `usageAmount == 0` is a no-op success | [E] | P2 |
-| LPRL-UPD-10 | **Desired behavior:** `currentUsage + usageAmount` overflow fails closed (`false`) rather than revert, and leaves usage unchanged in storage | [S] | P0 |
+| LPRL-UPD-10 | `currentUsage + usageAmount` overflow fails closed (`false`) rather than revert, and leaves usage unchanged in storage | [S] | P0 |
 | LPRL-UPD-11 | `timeIntervalLimit == 0` and `usageAmount == 0` succeeds and keeps usage unchanged | [E] | P1 |
 | LPRL-UPD-12 | `timeIntervalLimit == 0` and `usageAmount > 0` returns `false` and does not mutate usage | [N] | P0 |
 | LPRL-UPD-13 | Unknown/invalid `RateLimitType` in payload reverts (panic/custom revert acceptable) and does not write usage | [S] | P0 |
@@ -520,18 +520,18 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAT-12 | Rejection path for manual-approval requires threshold approvals over rejection hash (`isApproval=false`) | [S] | P0 |
 | LOAT-13 | Approval signatures cannot be replayed as rejection signatures (domain separation) | [S] | P0 |
 | LOAT-14 | Private hash builders (`_computeInitiatorHashFromParams`, `_computeReviewHashFromParams`) are deterministic and bind all fields (`data`, `salt`, `policyId`, `isApproval`, `chainId`, initiator signature for review hash) | [U][S] | P0 |
-| LOAT-15 | **Desired behavior:** for `TransactionType.Any` token transfers, rate-limit usage is count-based (`usageAmount = 1`), not token-amount-based | [S] | P0 |
+| LOAT-15 | for `TransactionType.Any` token transfers, rate-limit usage is count-based (`usageAmount = 1`), not token-amount-based | [S] | P0 |
 | LOAT-16 | Pre-rate-limit validation failure (`PolicyDoesNotApply`) leaves rate-limit usage state unchanged | [S] | P0 |
 | LOAT-17 | Pre-rate-limit validation failure (`InsufficientApprovals`) leaves rate-limit usage state unchanged | [S] | P0 |
 | LOAT-18 | Root transition guard: after policy succeeds under `R1`, clearing root to `0` makes same transaction + old proofs revert `PolicyDoesNotApply` (no stale-root authorization) | [S] | P0 |
 | LOAT-19 | Branch comparison: with identical transaction/policy inputs except `approval.policyType`, `AutoApprove` succeeds without reviewer signatures while `RequireManualApproval` reverts `InsufficientApprovals` | [U][S] | P0 |
-| LOAT-20 | **Desired Behavior:** Invalid `approval.policyType` enum value in calldata/proofs fails closed (revert) and cannot silently bypass manual-approval checks | [N][S] | P0 |
+| LOAT-20 | Invalid `approval.policyType` enum value in calldata/proofs fails closed (revert) and cannot silently bypass manual-approval checks | [N][S] | P0 |
 | LOAT-21 | Branch comparison (inverted setup): with identical transaction/policy inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid threshold reviewer approvals, and flipping to `AutoApprove` also succeeds with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
 | LOAT-22 | Rejection branch comparison: with identical rejection inputs except `approval.policyType`, `AutoApprove` succeeds with an authorized initiator rejection signature while `RequireManualApproval` reverts `InsufficientApprovals` for the same payload | [U][S] | P0 |
 | LOAT-23 | Rejection branch comparison (inverted setup): with identical rejection inputs except `approval.policyType`, `RequireManualApproval` succeeds with valid reviewer approvals, while `AutoApprove` rejects the same reviewer-signature payload via `TransactionRejectionNotAllowed` (reviewer is not an authorized initiator) | [U][S] | P1 |
 | LOAT-24 | Cross-chain replay protection (initiator): initiator signature signed for chain A cannot authorize the same transaction on chain B | [S] | P0 |
 | LOAT-25 | Cross-chain replay protection (reviewers): reviewer approval/rejection signatures signed for chain A cannot be replayed on chain B when paired with a valid chain-B initiator signature | [S] | P0 |
-| LOAT-26 | **Desired behavior:** invalid `rateLimit.limitType` enum value in calldata/proofs fails closed (revert) and cannot bypass rate-limit enforcement | [N][S] | P0 |
+| LOAT-26 | invalid `rateLimit.limitType` enum value in calldata/proofs fails closed (revert) and cannot bypass rate-limit enforcement | [N][S] | P0 |
 | LOAT-27 | Cross-organization replay protection (initiator): initiator signature signed for organization A cannot authorize the same transaction on organization B | [S] | P0 |
 | LOAT-28 | Cross-organization replay protection (reviewers): reviewer approval/rejection signatures signed for organization A cannot be replayed on organization B when paired with a valid organization-B initiator signature | [S] | P0 |
 | LOAT-29 | For `TransactionType.Any` ERC-20 transfers, after one successful transfer in the active window, a second transfer in the same window reverts `RateLimitExceeded`; failed second call does not mutate stored usage | [S] | P0 |
@@ -561,7 +561,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-16 | Private helper `_isERC1271SignatureAllowedByPolicy` fails closed for any failed sub-check | [S] | P0 |
 | LOAS-17 | Private hash builders (`_getInitiatorSignatureHash`, `_getReviewSignatureHash`) are deterministic and field-bound | [U][S] | P1 |
 | LOAS-18 | Malformed policy `signatureData` payload with invalid ABI offsets reverts during decoding (panic/custom revert acceptable) | [S] | P0 |
-| LOAS-19 | **Desired behavior:** manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
+| LOAS-19 | manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
 | LOAS-20 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
 | LOAS-21 | Branch comparison: with identical signature payload except `approval.policyType` and empty `reviewSignatures`, `AutoApprove` returns ERC-1271 magic value while `RequireManualApproval` returns ERC-1271 invalid value | [U][S] | P0 |
 | LOAS-22 | Branch comparison (inverted setup): with identical signature payload except `approval.policyType` and valid reviewer approvals, `RequireManualApproval` returns ERC-1271 magic value and flipping to `AutoApprove` also returns magic value with the same reviewer-signature payload (ignored by auto-approve path) | [U][S] | P1 |
@@ -600,6 +600,6 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-5 | Exceeded rate limit never mutates usage | P0 |
 | POL-I-6 | Manual-approval policies can never pass with fewer than required valid approvals | P0 |
 | POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` revert (panic/custom revert acceptable) across validation paths | P0 |
-| POL-I-8 | **Desired behavior:** `anyInitiator` does not authorize non-members | P0 |
+| POL-I-8 | `anyInitiator` does not authorize non-members | P0 |
 | POL-I-9 | Token amount threshold acts as exclusive max (`<`) | P0 |
 | POL-I-10 | Malformed constraint payloads in policy-check paths never authorize and may revert on decode errors | P0 |
