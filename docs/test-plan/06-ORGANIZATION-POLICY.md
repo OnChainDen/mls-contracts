@@ -101,6 +101,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-TX-4 | `TransactionType.TokenTransfers`: non-token transaction returns `false` | [U] | P0 |
 | LOP-TX-5 | `TransactionType.TokenTransfers`: valid transfer + matching token/amount/destination returns `true` | [U] | P0 |
 | LOP-TX-6 | `TransactionType.TokenTransfers`: disallowed token or destination returns `false` | [N] | P0 |
+| LOP-TX-6A | `TransactionType.TokenTransfers`: transfer amount greater than configured threshold returns `false` | [N] | P0 |
 | LOP-TX-7 | `TransactionType.ContractInteractions`: token transfer input returns `false` | [U] | P0 |
 | LOP-TX-8 | `TransactionType.ContractInteractions`: valid destination + function proof + constraints returns `true` | [U] | P0 |
 | LOP-TX-9 | `TransactionType.ContractInteractions`: function proof mismatch returns `false` | [N] | P0 |
