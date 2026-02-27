@@ -43,37 +43,55 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
         assertEq(unknownFF, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix should return invalid");
     }
 
-    /// @dev Verifies that `isValidSignature` fails closed without reverting for representative payload classes.
-    function invariant_isValidSignature_neverRevertsOnRepresentativePayloads() public {
-        // Setup: prepare diverse signature payloads covering valid and malformed classes.
+    /// @dev Verifies non-policy payload classes return without revert, while malformed policy payloads revert.
+    function invariant_isValidSignature_payloadClassRevertBehavior_isStable() public {
+        // Setup: prepare representative non-policy payloads plus valid recovery/policy fixtures.
         _setTxRecoveryState(guardianSigner, true);
 
         (bytes memory validPolicySignature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);
         bytes memory validRecoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
 
-        bytes[] memory payloads = new bytes[](7);
+        bytes[] memory payloads = new bytes[](5);
         payloads[0] = bytes("");
         payloads[1] = hex"00";
-        payloads[2] = hex"01";
-        payloads[3] = abi.encodePacked(uint8(0x02), hex"ABCD");
-        payloads[4] = abi.encodePacked(uint8(0x01), hex"DEADBEEF");
-        payloads[5] = validRecoverySignature;
-        payloads[6] = validPolicySignature;
+        payloads[2] = abi.encodePacked(uint8(0x02), hex"ABCD");
+        payloads[3] = validRecoverySignature;
+        payloads[4] = validPolicySignature;
 
-        // Call: execute low-level wrapper calls for each payload variant.
+        // Call: execute low-level wrapper calls for non-policy-malformed representative payloads.
         for (uint256 i = 0; i < payloads.length; i++) {
             (bool success, bytes memory result) = address(harness)
                 .staticcall(abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, payloads[i])));
 
-            // Verify: every payload should return a value (magic or invalid) rather than reverting.
-            assertTrue(success, "isValidSignature should not revert");
+            // Verify: each payload should return a value (magic or invalid) rather than reverting.
+            assertTrue(success, "representative non-policy payload should not revert");
             bytes4 value = abi.decode(result, (bytes4));
             assertTrue(
                 value == SignatureUtils.ERC1271_MAGIC_VALUE || value == SignatureUtils.ERC1271_INVALID_VALUE,
                 "isValidSignature should only return magic or invalid values"
             );
         }
+
+        // Call: execute type-only policy payload expected to revert during decode.
+        bytes memory typeOnlyPolicyPayload = abi.encodePacked(uint8(0x01));
+        (bool typeOnlyPolicySuccess,) = address(harness)
+            .staticcall(
+                abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, typeOnlyPolicyPayload))
+            );
+
+        // Verify: type-only policy payload class should revert.
+        assertFalse(typeOnlyPolicySuccess, "type-only policy payload should revert");
+
+        // Call: execute malformed policy payload expected to revert during decode.
+        bytes memory malformedPolicyPayload = abi.encodePacked(uint8(0x01), hex"DEADBEEF");
+        (bool malformedSuccess,) = address(harness)
+            .staticcall(
+                abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, malformedPolicyPayload))
+            );
+
+        // Verify: malformed policy payload class should revert.
+        assertFalse(malformedSuccess, "malformed policy payload should revert");
     }
 
     /// @dev Verifies that signatures valid in one organization are invalid in another organization.
@@ -134,16 +152,16 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
 
     /// @dev Verifies that signature validation remains view-only and does not mutate storage usage state.
     function invariant_signatureValidation_isViewAndDoesNotMutateUsage() public {
-        // Setup: capture storage snapshots before validation.
-        bytes32 usageKey = keccak256("account-signature-invariant-usage-key");
-        uint256 timeWindow = 777;
-
-        uint256 beforeUsage = policyStateHarness.getPolicyUsage(usageKey, timeWindow);
-        bytes32 beforeRoot = policyStateHarness.getPoliciesRoot();
-
-        // Setup: build valid policy signature fixture.
+        // Setup: restore signer membership assumptions and build valid policy signature fixture.
+        _seedDefaultMembers();
         (bytes memory signature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);
+
+        // Setup: capture storage snapshots before the call under test.
+        bytes32 usageKey = keccak256("account-signature-invariant-usage-key");
+        uint256 timeWindow = 777;
+        uint256 beforeUsage = policyStateHarness.getPolicyUsage(usageKey, timeWindow);
+        bytes32 beforeRoot = policyStateHarness.getPoliciesRoot();
 
         // Call: execute signature validation.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);

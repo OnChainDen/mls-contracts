@@ -7,6 +7,7 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {LibAccountOrganizationAddressStorage} from "account/libraries/storage/LibAccountOrganizationAddressStorage.sol";
 import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 
 /**
  * @title Account Implementation
@@ -58,7 +59,15 @@ contract AccountImplementation is IAccount {
         returns (bytes4 magicValue)
     {
         address organization = LibAccountOrganizationAddressStorage.getOrganizationAddress();
-        return IOrganizationAccountSignature(organization).isValidSignatureForAccount(address(this), hash, signature);
+        (bool success, bytes memory result) = organization.staticcall(
+            abi.encodeCall(IOrganizationAccountSignature.isValidSignatureForAccount, (address(this), hash, signature))
+        );
+
+        if (!success || result.length < 32) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
+        return abi.decode(result, (bytes4));
     }
 
     /**

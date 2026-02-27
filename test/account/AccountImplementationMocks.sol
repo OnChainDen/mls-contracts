@@ -10,8 +10,21 @@ import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizati
  * @dev Beacon + organization-signature mock used by account implementation tests.
  */
 contract AccountOrganizationBeaconMock is IBeacon, IOrganizationAccountSignature {
+    enum SignatureValidationMode {
+        ReturnConfigured,
+        RevertWithCustomError,
+        RevertWithString,
+        RevertWithPanic,
+        RevertWithoutData,
+        ReturnEmptyData,
+        ReturnShortData,
+        ReturnCustomWord
+    }
+
     address public beaconImplementation;
     bytes4 public signatureResult = IERC1271.isValidSignature.selector;
+    bytes32 public signatureResultWord = bytes32(IERC1271.isValidSignature.selector);
+    SignatureValidationMode public signatureValidationMode;
 
     bool public enforceExpectedCall;
     address public expectedAccount;
@@ -19,6 +32,7 @@ contract AccountOrganizationBeaconMock is IBeacon, IOrganizationAccountSignature
     bytes32 public expectedSignatureHash;
 
     error UnexpectedSignatureValidationCall();
+    error ForcedSignatureValidationRevert();
 
     constructor(address initialImplementation) {
         beaconImplementation = initialImplementation;
@@ -34,6 +48,14 @@ contract AccountOrganizationBeaconMock is IBeacon, IOrganizationAccountSignature
 
     function setSignatureResult(bytes4 newSignatureResult) external {
         signatureResult = newSignatureResult;
+    }
+
+    function setSignatureResultWord(bytes32 newSignatureResultWord) external {
+        signatureResultWord = newSignatureResultWord;
+    }
+
+    function setSignatureValidationMode(SignatureValidationMode newMode) external {
+        signatureValidationMode = newMode;
     }
 
     function setExpectedSignatureValidation(address account, bytes32 hash, bytes calldata signature) external {
@@ -61,6 +83,47 @@ contract AccountOrganizationBeaconMock is IBeacon, IOrganizationAccountSignature
         ) {
             revert UnexpectedSignatureValidationCall();
         }
+
+        if (signatureValidationMode == SignatureValidationMode.RevertWithCustomError) {
+            revert ForcedSignatureValidationRevert();
+        }
+
+        if (signatureValidationMode == SignatureValidationMode.RevertWithString) {
+            revert("forced-signature-validation-revert");
+        }
+
+        if (signatureValidationMode == SignatureValidationMode.RevertWithPanic) {
+            assert(false);
+        }
+
+        if (signatureValidationMode == SignatureValidationMode.RevertWithoutData) {
+            assembly {
+                revert(0, 0)
+            }
+        }
+
+        if (signatureValidationMode == SignatureValidationMode.ReturnEmptyData) {
+            assembly {
+                return(0, 0)
+            }
+        }
+
+        if (signatureValidationMode == SignatureValidationMode.ReturnShortData) {
+            bytes32 word = signatureResultWord;
+            assembly {
+                mstore(0, word)
+                return(0, 0x1f)
+            }
+        }
+
+        if (signatureValidationMode == SignatureValidationMode.ReturnCustomWord) {
+            bytes32 word = signatureResultWord;
+            assembly {
+                mstore(0, word)
+                return(0, 0x20)
+            }
+        }
+
         return signatureResult;
     }
 }

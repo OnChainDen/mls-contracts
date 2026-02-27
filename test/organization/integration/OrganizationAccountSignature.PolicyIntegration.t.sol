@@ -813,7 +813,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that malformed policy signature payload reverts during decoding.
-    function test_malformedPolicySignatureData_reverts() public {
+    function test_malformedPolicySignatureData_invalidOffsets_reverts() public {
         // Setup: build a policy-signature payload with invalid dynamic offsets.
         bytes memory malformedPolicySignatureData = abi.encode(
             uint256(1), uint256(block.timestamp + 1 days), type(uint256).max, uint256(0), uint256(0), uint256(0)
@@ -823,6 +823,17 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         // Verify: malformed payload should revert in the current implementation.
         vm.expectRevert();
         // Call: execute `isValidSignatureViaLibrary` with malformed policy-signature data.
+        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
+    }
+
+    /// @dev Verifies that malformed policy signature payloads revert during policy decode.
+    function test_malformedSignatureData_invalidAbiData_reverts() public {
+        // Setup: build malformed policy signature payload with insufficient ABI data.
+        bytes memory malformed = abi.encodePacked(uint8(0x01), hex"deadbeef");
+
+        // Verify: malformed policy payloads should revert.
+        vm.expectRevert();
+        // Call: execute `isValidSignatureViaLibrary` with malformed payload.
         harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
     }
 
@@ -1243,7 +1254,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         });
         _setPolicyTypeInPolicySignature(signature, 2);
 
-        // Verify: assert malformed enum values fail with a revert/panic.
+        // Verify: malformed enum values revert during decode.
         vm.expectRevert();
         // Call: invoke `isValidSignatureViaLibrary` with malformed enum payload.
         harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);

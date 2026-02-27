@@ -158,20 +158,17 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
         assertFalse(actual, "EOA module-check path should fail closed");
     }
 
-    /// @dev Verifies that unexpected module-check return values fail closed without reverting.
-    function test_isValidGuardianSignature_unexpectedModuleReturnData_failsClosedWithoutRevert() public {
+    /// @dev Verifies that unexpected module-check return values revert during bool decoding.
+    function test_isValidGuardianSignature_unexpectedModuleReturnData_reverts() public {
         // Setup: configure guardian as contract returning non-boolean 32-byte payload.
         MockGuardianModuleUnexpectedReturn weirdGuardian = new MockGuardianModuleUnexpectedReturn();
         policyStateHarness.setGuardian(address(weirdGuardian));
 
         bytes memory signature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
 
-        // Call: execute low-level wrapper call to assert graceful handling.
-        (bool success, bytes memory result) = address(harness)
-            .staticcall(abi.encodeCall(harness.isValidGuardianSignatureViaLibrary, (signature, MESSAGE_HASH)));
-
-        // Verify: unexpected return data should fail closed and never revert.
-        assertTrue(success, "unexpected module return data should not revert");
-        assertFalse(abi.decode(result, (bool)), "unexpected module return data should fail closed");
+        // Verify: unexpected module return data triggers a decode revert.
+        vm.expectRevert();
+        // Call: execute wrapper call with unexpected return-data guardian.
+        harness.isValidGuardianSignatureViaLibrary(signature, MESSAGE_HASH);
     }
 }

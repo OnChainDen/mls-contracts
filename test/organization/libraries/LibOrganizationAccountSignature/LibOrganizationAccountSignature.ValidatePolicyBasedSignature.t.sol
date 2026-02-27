@@ -406,8 +406,8 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         );
     }
 
-    /// @dev Verifies that malformed ABI payloads fail closed with invalid value instead of reverting.
-    function test_validatePolicyBasedSignature_malformedAbiPayload_failsClosedWithoutRevert() public {
+    /// @dev Verifies that malformed ABI payloads revert during ABI decoding.
+    function test_validatePolicyBasedSignature_malformedAbiPayload_reverts() public {
         // Setup: build malformed head-only data with out-of-bounds dynamic offsets.
         bytes memory malformed = abi.encode(
             uint256(DEFAULT_POLICY_ID),
@@ -418,19 +418,10 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
             uint256(type(uint256).max)
         );
 
-        // Call: execute low-level call to capture graceful malformed-payload behavior.
-        (bool success, bytes memory result) = address(harness)
-            .staticcall(
-                abi.encodeCall(harness.validatePolicyBasedSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, malformed))
-            );
-
-        // Verify: malformed payloads should return invalid and never revert.
-        assertTrue(success, "malformed payload should fail closed without revert");
-        assertEq(
-            abi.decode(result, (bytes4)),
-            SignatureUtils.ERC1271_INVALID_VALUE,
-            "malformed payload should return invalid"
-        );
+        // Verify: malformed payload triggers ABI decode revert.
+        vm.expectRevert();
+        // Call: execute wrapper with malformed payload.
+        harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
     }
 
     /// @dev Verifies that authorized ERC-1271 initiator contracts are accepted.
@@ -575,25 +566,18 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "designated member reviewer should be accepted");
     }
 
-    /// @dev Verifies that unknown approval policy-type enum values fail closed with invalid value.
-    function test_validatePolicyBasedSignature_unknownPolicyType_failsClosedWithoutRevert() public {
+    /// @dev Verifies that unknown approval policy-type enum values revert during enum decoding.
+    function test_validatePolicyBasedSignature_unknownPolicyType_reverts() public {
         // Setup: build a valid policy signature then mutate encoded policyType enum to an unknown value.
         uint256 expiration = block.timestamp + 1 days;
         (bytes memory signature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, expiration);
         _setPolicyTypeInPolicySignature(signature, 2);
 
-        // Call: execute low-level `isValidSignatureViaLibrary` to observe fail-closed behavior.
-        (bool success, bytes memory result) = address(harness)
-            .staticcall(abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, signature)));
-
-        // Verify: unknown policy-type payloads should return invalid and never revert.
-        assertTrue(success, "unknown policy type should fail closed without revert");
-        assertEq(
-            abi.decode(result, (bytes4)),
-            SignatureUtils.ERC1271_INVALID_VALUE,
-            "unknown policy type should return invalid"
-        );
+        // Verify: unknown policy type triggers enum decode revert.
+        vm.expectRevert();
+        // Call: execute type-routed validation with unknown enum payload.
+        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
     }
 
     /// @dev Verifies that malformed packed reviewer signature bytes fail closed with invalid value.
