@@ -2,24 +2,19 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {MerkleUtils} from "libraries/MerkleUtils.sol";
 import {LibPolicyApproval} from "organization/libraries/policy/LibPolicyApproval.sol";
-import {LibPolicyDestination} from "organization/libraries/policy/LibPolicyDestination.sol";
 import {LibPolicyInitiator} from "organization/libraries/policy/LibPolicyInitiator.sol";
 import {LibPolicyRateLimits} from "organization/libraries/policy/LibPolicyRateLimits.sol";
 import {
     LibOrganizationPolicyHarness
 } from "test/organization/libraries/LibOrganizationPolicy/LibOrganizationPolicyHarness.sol";
-import {DestinationType, Policy} from "types/PolicyTypes.sol";
-
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Policy} from "types/PolicyTypes.sol";
 
 /**
  * @dev Local policy-library harness for tests in `test/organization/libraries/policy`.
  *      Adds raw-enum wrappers used to test malformed enum calldata behavior.
  */
 contract PolicyLibrariesHarness is LibOrganizationPolicyHarness {
-    uint256 private constant _SLOT_DESTINATION_TYPE = 3;
     uint256 private constant _SLOT_APPROVER_TYPE = 5;
     uint256 private constant _SLOT_INITIATOR_TYPE = 10;
     uint256 private constant _SLOT_RATE_LIMIT_TYPE = 17;
@@ -74,34 +69,6 @@ contract PolicyLibrariesHarness is LibOrganizationPolicyHarness {
     ) external view returns (bool) {
         _unsafeSetPolicySlot(policy, _SLOT_APPROVER_TYPE, rawApproverType);
         return LibPolicyApproval._isSignerAuthorizedForPolicy(policy, signerAddress);
-    }
-
-    /**
-     * @dev Raw-enum wrapper for `LibPolicyDestination.isDestinationAllowedByPolicy`.
-     */
-    function isDestinationAllowedByPolicyViaPolicyLibraryRawDestinationType(
-        Policy calldata policy,
-        uint256 rawDestinationType,
-        address to,
-        uint256 value,
-        bytes calldata data,
-        bytes32[] calldata destinationProof
-    ) external pure returns (bool) {
-        Policy memory policyMemory = policy;
-        _unsafeSetPolicySlot(policyMemory, _SLOT_DESTINATION_TYPE, rawDestinationType);
-
-        if (rawDestinationType == uint256(DestinationType.Any)) {
-            return true;
-        }
-
-        if (rawDestinationType == uint256(DestinationType.CustomList)) {
-            address actualDestination = LibPolicyDestination.getActualDestination(to, data, value);
-            bytes32 destinationLeaf = MerkleUtils.computeAddressLeaf(actualDestination);
-            return
-                MerkleProof.verifyCalldata(destinationProof, policyMemory.roots.customDestinationsRoot, destinationLeaf);
-        }
-
-        return false;
     }
 
     /**

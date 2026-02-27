@@ -242,7 +242,6 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPD-ALW-4 | `CustomList`: ERC-20 transfer checks recipient (not token contract) | [U][S] | P0 |
 | LPD-ALW-5 | `CustomList`: contract interaction checks `to` contract address | [U] | P0 |
 | LPD-ALW-6 | Proof for one destination cannot authorize a different destination | [S] | P0 |
-| LPD-ALW-7 | Unknown/invalid destination enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
 | LPD-ALW-8 | Empty proof only valid for single-leaf destination tree case | [E] | P1 |
 | LPD-ALW-9 | Deterministic result for same inputs | [U] | P2 |
 | LPD-ALW-10 | `CustomList`: ERC-20 `transfer` selector with calldata `< 68` bytes checks `to` (token contract) as destination; proof for encoded recipient does not authorize | [S] | P0 |
@@ -598,7 +597,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-4 | For active time window and usage key, usage is monotonic non-decreasing on successful updates | P0 |
 | POL-I-5 | Exceeded rate limit never mutates usage | P0 |
 | POL-I-6 | Manual-approval policies can never pass with fewer than required valid approvals | P0 |
-| POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` revert (panic/custom revert acceptable) across validation paths | P0 |
+| POL-I-7 | Unknown enum values for `ApproverType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` revert (panic/custom revert acceptable) across validation paths | P0 |
 | POL-I-8 | `anyInitiator` does not authorize non-members | P0 |
 | POL-I-9 | Token amount threshold acts as exclusive max (`<`) | P0 |
 | POL-I-10 | Malformed constraint payloads in policy-check paths never authorize and may revert on decode errors | P0 |
