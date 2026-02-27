@@ -280,10 +280,9 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         assertFalse(allowed, "token threshold should reject amount == threshold");
     }
 
-    /// @dev Verifies that desired malformed constraints fail closed without unexpected revert.
-    function invariant_desired_malformedConstraintsFailClosedWithoutUnexpectedRevert() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired malformed constraints
-        // fail closed without unexpected revert.
+    /// @dev Verifies that malformed constraints revert in policy-check paths and never authorize.
+    function invariant_malformedConstraintsRevertInPolicyCheckPaths() public {
+        // Setup: configure a contract-interaction policy and inject malformed constraints that trigger decode failure.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.anyFunction = false;
@@ -291,7 +290,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
         policy.config.initiator.initiatorType = ApproverType.Member;
         policy.config.initiator.initiatorMember = initiator1;
 
-        bytes memory malformedConstraints = hex"01";
+        bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
         bytes4 selector = bytes4(0xF00DBAAD);
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = selector;
@@ -317,7 +316,10 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             constraints: malformedConstraints
         });
 
-        try checkHarness.isTransactionAllowedByPolicyViaLibrary(
+        // Verify: malformed constraints should revert and must not authorize.
+        vm.expectRevert();
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` with malformed constraints.
+        checkHarness.isTransactionAllowedByPolicyViaLibrary(
             DEFAULT_POLICY_ID,
             address(0xA010),
             address(0xB010),
@@ -325,14 +327,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
             abi.encodeWithSelector(selector, uint256(1)),
             initiator1,
             proofs
-        ) returns (
-            bool allowed
-        ) {
-            // Verify: assert each variant returns the expected branch outcome.
-            assertFalse(allowed, "malformed constraints should fail closed with false");
-        } catch {
-            assertTrue(false, "malformed constraints should not revert in policy-check path");
-        }
+        );
     }
 
     // Helpers
