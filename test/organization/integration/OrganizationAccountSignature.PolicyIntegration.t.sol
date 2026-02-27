@@ -22,7 +22,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     uint256 internal constant DEFAULT_POLICY_ID = 177;
 
     address internal constant ACCOUNT = address(0xAA7701);
-    bytes32 internal constant MESSAGE_HASH = keccak256("LOAS-policy-signature-message");
+    bytes32 internal constant MESSAGE_HASH = keccak256("policy-signature-message");
 
     function setUp() public override {
         super.setUp();
@@ -34,7 +34,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that valid policy guardian initiator and approvals returns magic value.
-    function test_LOAS_1_validPolicyGuardianInitiatorAndApprovals_returnsMagicValue() public {
+    function test_validPolicyGuardianInitiatorAndApprovals_returnsMagicValue() public {
         // Setup: configure a valid fixture for valid policy guardian initiator and approvals returns magic value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -87,7 +87,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that expired policy request returns invalid value.
-    function test_LOAS_2_expiredPolicyRequest_returnsInvalidValue() public {
+    function test_expiredPolicyRequest_returnsInvalidValue() public {
         // Setup: configure a valid fixture for expired policy request returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -129,7 +129,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that missing or invalid initiator signature returns invalid value.
-    function test_LOAS_3_missingOrInvalidInitiatorSignature_returnsInvalidValue() public {
+    function test_missingOrInvalidInitiatorSignature_returnsInvalidValue() public {
         // Setup: configure a valid fixture for missing or invalid initiator signature returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -163,7 +163,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that invalid guardian signature returns invalid value.
-    function test_LOAS_4_invalidGuardianSignature_returnsInvalidValue() public {
+    function test_invalidGuardianSignature_returnsInvalidValue() public {
         // Setup: configure a valid fixture for invalid guardian signature returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -206,7 +206,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that enabled guardian module signer is accepted.
-    function test_LOAS_5_enabledGuardianModuleSigner_isAccepted() public {
+    function test_enabledGuardianModuleSigner_isAccepted() public {
         // Setup: configure a valid fixture for enabled guardian module signer is accepted.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         guardianSafe.setModuleEnabled(guardianSigner, true);
@@ -250,7 +250,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that disabled guardian module signer returns invalid value.
-    function test_LOAS_6_disabledGuardianModuleSigner_returnsInvalidValue() public {
+    function test_disabledGuardianModuleSigner_returnsInvalidValue() public {
         // Setup: configure a valid fixture for disabled guardian module signer returns invalid value.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         policyStateHarness.setGuardian(address(guardianSafe));
@@ -293,7 +293,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that non safe guardian module path fails closed.
-    function test_LOAS_7_nonSafeGuardianModulePath_failsClosed() public {
+    function test_nonSafeGuardianModulePath_failsClosed() public {
         // Setup: configure a valid fixture for non safe guardian module path fails closed.
         policyStateHarness.setGuardian(address(0xBEEFCAFE));
 
@@ -335,7 +335,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that guardian module short return fails closed.
-    function test_LOAS_8_guardianModuleShortReturn_failsClosed() public {
+    function test_guardianModuleShortReturn_failsClosed() public {
         // Setup: configure a valid fixture for guardian module short return fails closed.
         MockGuardianSafeShortReturn shortReturnGuardian = new MockGuardianSafeShortReturn();
         policyStateHarness.setGuardian(address(shortReturnGuardian));
@@ -378,7 +378,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that invalid policy proof returns invalid value.
-    function test_LOAS_9_invalidPolicyProof_returnsInvalidValue() public {
+    function test_invalidPolicyProof_returnsInvalidValue() public {
         // Setup: configure a valid fixture for invalid policy proof returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -422,7 +422,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that non signature transaction type policy returns invalid value.
-    function test_LOAS_10_nonSignatureTransactionTypePolicy_returnsInvalidValue() public {
+    function test_nonSignatureTransactionTypePolicy_returnsInvalidValue() public {
         // Setup: configure a valid fixture for non signature transaction type policy returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -465,7 +465,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that source account not allowed returns invalid value.
-    function test_LOAS_11_sourceAccountNotAllowed_returnsInvalidValue() public {
+    function test_sourceAccountNotAllowed_returnsInvalidValue() public {
         // Setup: configure a valid fixture for source account not allowed returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -510,7 +510,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that unauthorized initiator returns invalid value.
-    function test_LOAS_12_unauthorizedInitiator_returnsInvalidValue() public {
+    function test_unauthorizedInitiator_returnsInvalidValue() public {
         // Setup: configure a valid fixture for unauthorized initiator returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -552,7 +552,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that auto approve policy without review signatures returns magic value.
-    function test_LOAS_13_autoApprovePolicyWithoutReviewSignatures_returnsMagicValue() public {
+    function test_autoApprovePolicyWithoutReviewSignatures_returnsMagicValue() public {
         // Setup: configure a valid fixture for auto approve policy without review signatures returns magic value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -594,7 +594,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that manual policy without required approvals returns invalid value.
-    function test_LOAS_14_manualPolicyWithoutRequiredApprovals_returnsInvalidValue() public {
+    function test_manualPolicyWithoutRequiredApprovals_returnsInvalidValue() public {
         // Setup: configure a valid fixture for manual policy without required approvals returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -636,7 +636,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that reviewer approvals bound to initiator signature bytes.
-    function test_LOAS_15_reviewerApprovalsBoundToInitiatorSignatureBytes() public {
+    function test_reviewerApprovalsBoundToInitiatorSignatureBytes() public {
         // Setup: configure a valid fixture for reviewer approvals bound to initiator signature bytes.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -688,7 +688,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that `isERC1271SignatureAllowedByPolicy` fails closed when any required sub-check fails.
-    function test_LOAS_16_isERC1271SignatureAllowedByPolicy_failsClosedOnAnyFailedSubCheck() public {
+    function test_isERC1271SignatureAllowedByPolicy_failsClosedOnAnyFailedSubCheck() public {
         // Setup: prepare a baseline-valid proof set plus targeted variants that each break one policy sub-check.
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
         ValidationProofs memory validProofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -736,7 +736,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_LOAS_17_hashBuildersAreDeterministicAndFieldBound() public {
+    function test_hashBuildersAreDeterministicAndFieldBound() public {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
 
@@ -813,7 +813,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that desired malformed signature data returns invalid without revert.
-    function test_LOAS_18_desired_malformedSignatureDataReturnsInvalidWithoutRevert() public {
+    function test_desired_malformedSignatureDataReturnsInvalidWithoutRevert() public {
         // Setup: configure a valid fixture for desired malformed signature data returns invalid without revert.
         bytes memory malformed = abi.encodePacked(uint8(0x01), hex"deadbeef");
         // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
@@ -823,7 +823,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that desired manual approval validation reverts must return invalid without revert.
-    function test_LOAS_19_desired_manualApprovalValidationRevertsMustReturnInvalidWithoutRevert() public {
+    function test_desired_manualApprovalValidationRevertsMustReturnInvalidWithoutRevert() public {
         // Setup: configure a valid fixture for desired manual approval validation reverts must return invalid without
         // revert.
         policyStateHarness.setGuardian(guardianSigner);
@@ -885,7 +885,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that root transition guard clear root invalidates old policy proof.
-    function test_LOAS_20_rootTransitionGuard_clearRootInvalidatesOldPolicyProof() public {
+    function test_rootTransitionGuard_clearRootInvalidatesOldPolicyProof() public {
         // Setup: configure a valid fixture for root transition guard clear root invalidates old policy proof.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -931,7 +931,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that branch comparison auto approve magic manual without reviews invalid.
-    function test_LOAS_21_branchComparison_autoApproveMagic_manualWithoutReviewsInvalid() public {
+    function test_branchComparison_autoApproveMagic_manualWithoutReviewsInvalid() public {
         // Setup: configure a valid fixture for branch comparison auto approve magic manual without reviews invalid.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1001,7 +1001,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that branch comparison manual with reviews and auto with same payload both magic.
-    function test_LOAS_22_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothMagic() public {
+    function test_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothMagic() public {
         // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both
         // magic.
         policyStateHarness.setGuardian(guardianSigner);
@@ -1081,7 +1081,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross chain replay initiator signature returns invalid value.
-    function test_LOAS_23_crossChainReplayInitiatorSignature_returnsInvalidValue() public {
+    function test_crossChainReplayInitiatorSignature_returnsInvalidValue() public {
         // Setup: configure a valid fixture for cross chain replay initiator signature returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1126,7 +1126,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross chain replay guardian and reviewer signatures returns invalid value.
-    function test_LOAS_24_crossChainReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
+    function test_crossChainReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
         // Setup: configure a valid fixture for cross chain replay guardian and reviewer signatures returns invalid
         // value.
         policyStateHarness.setGuardian(guardianSigner);
@@ -1184,7 +1184,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that empty top level signature returns invalid value.
-    function test_LOAS_25_emptyTopLevelSignature_returnsInvalidValue() public {
+    function test_emptyTopLevelSignature_returnsInvalidValue() public {
         // Setup: configure a valid fixture for empty top level signature returns invalid value.
         // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, bytes(""));
@@ -1193,7 +1193,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that unknown signature type prefix returns invalid value.
-    function test_LOAS_26_unknownSignatureTypePrefix_returnsInvalidValue() public {
+    function test_unknownSignatureTypePrefix_returnsInvalidValue() public {
         // Setup: configure a valid fixture for unknown signature type prefix returns invalid value.
         bytes memory signature = abi.encodePacked(uint8(0x7F), hex"AABBCC");
         // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
@@ -1203,7 +1203,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that invalid approval policy type in signature payload reverts.
-    function test_LOAS_27_invalidApprovalPolicyType_reverts() public {
+    function test_invalidApprovalPolicyType_reverts() public {
         // Setup: configure a valid fixture and mutate encoded signature payload with an invalid enum value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1246,7 +1246,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross organization replay initiator signature returns invalid value.
-    function test_LOAS_28_crossOrganizationReplayInitiatorSignature_returnsInvalidValue() public {
+    function test_crossOrganizationReplayInitiatorSignature_returnsInvalidValue() public {
         // Setup: configure a valid fixture for cross organization replay initiator signature returns invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
@@ -1295,7 +1295,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross organization replay guardian and reviewer signatures returns invalid value.
-    function test_LOAS_29_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
+    function test_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue() public {
         // Setup: configure a valid fixture for cross organization replay guardian and reviewer signatures returns
         // invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();

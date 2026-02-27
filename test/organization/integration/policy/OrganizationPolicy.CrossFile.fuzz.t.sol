@@ -24,7 +24,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 5001;
 
     /// @dev Verifies that policy field mutation invalidates original proof.
-    function testFuzz_POL_F_1_policyFieldMutationInvalidatesOriginalProof(uint256 policyIdSeed, uint8 mutationSelector)
+    function testFuzz_policyFieldMutationInvalidatesOriginalProof(uint256 policyIdSeed, uint8 mutationSelector)
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for policy field mutation
         // invalidates original proof.
         public
@@ -73,7 +73,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that source account proofs only pass for exact tuple.
-    function testFuzz_POL_F_2_sourceAccountProofsOnlyPassForExactTuple(
+    function testFuzz_sourceAccountProofsOnlyPassForExactTuple(
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for source account proofs only pass
         // for exact tuple.
         address accountA,
@@ -108,7 +108,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that destination proofs validate only actual destination.
-    function testFuzz_POL_F_3_destinationProofsValidateOnlyActualDestination(
+    function testFuzz_destinationProofsValidateOnlyActualDestination(
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for destination proofs validate only
         // actual destination.
         uint8 shape,
@@ -172,7 +172,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that function proofs bind selector and constraints.
-    function testFuzz_POL_F_4_functionProofsBindSelectorAndConstraints(
+    function testFuzz_functionProofsBindSelectorAndConstraints(
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for function proofs bind selector
         // and constraints.
         bytes4 selector,
@@ -216,7 +216,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that duplicate or out of order signers fail closed.
-    function testFuzz_POL_F_5_duplicateOrOutOfOrderSignersFailClosed(bool useDuplicate, bytes32 hashSeed) public {
+    function testFuzz_duplicateOrOutOfOrderSignersFailClosed(bool useDuplicate, bytes32 hashSeed) public {
         // Setup: build group-approval fixture and prepare invalid signer ordering payloads.
         policyStateHarness.setMemberStatus(reviewer1, true);
         policyStateHarness.setMemberStatus(reviewer2, true);
@@ -248,7 +248,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that rate limit scope collision matches scope model.
-    function testFuzz_POL_F_6_rateLimitScopeCollisionMatchesScopeModel(
+    function testFuzz_rateLimitScopeCollisionMatchesScopeModel(
         // Setup: configure a valid fixture for rate limit scope collision matches scope model.
         uint8 sourceScopeSeed,
         uint8 destinationScopeSeed,
@@ -284,7 +284,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that dynamic bytes string out of bounds fail closed.
-    function testFuzz_POL_F_7_dynamicBytesStringOutOfBoundsFailClosed(uint256 offsetSeed, uint256 lengthSeed) public {
+    function testFuzz_dynamicBytesStringOutOfBoundsFailClosed(uint256 offsetSeed, uint256 lengthSeed) public {
         // Setup: build fixture inputs where dynamic bytes string out of bounds fail closed should be denied.
         uint256 badOffset = bound(offsetSeed, 64, 10_000);
         uint256 badLength = bound(lengthSeed, 1, 10_000);
