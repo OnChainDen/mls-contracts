@@ -892,6 +892,170 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 1, "usage should be count-based for txType Any");
     }
 
+    /// @dev Verifies that any-policy token transfer cannot bypass rate limit and exceeded call keeps usage unchanged.
+    function test_anyPolicyTokenTransferCannotBypassRateLimitAndExceededCallKeepsUsageUnchanged() public {
+        // Setup: configure a one-per-window Any policy and use a zero-amount transfer that would bypass if usage were
+        // token-amount-based.
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 0);
+        uint256 expiration = block.timestamp + 1 days;
+
+        Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 1;
+        policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory firstInitiatorSignature = _signInitiatorTx({
+            txHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            to: TOKEN,
+            value: 0,
+            data: data,
+            salt: 29,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+        bytes memory secondInitiatorSignature = _signInitiatorTx({
+            txHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            to: TOKEN,
+            value: 0,
+            data: data,
+            salt: 30,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+
+        bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
+        uint256 window = _computeTimeWindow(policy);
+
+        // Call: execute a first successful transfer, then attempt a second transfer in the same window.
+        harness.validateTransactionApprovalOrRevertViaLibrary({
+            account: ACCOUNT,
+            to: TOKEN,
+            value: 0,
+            data: data,
+            salt: 29,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: firstInitiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: first call consumes exactly one unit under Any transaction type.
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 1, "first Any token transfer should consume one");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
+        );
+        harness.validateTransactionApprovalOrRevertViaLibrary({
+            account: ACCOUNT,
+            to: TOKEN,
+            value: 0,
+            data: data,
+            salt: 30,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: secondInitiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: exceeded call does not mutate stored usage.
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 1, "exceeded transfer must not mutate usage");
+    }
+
+    /// @dev Verifies that any-policy contract interaction cannot bypass rate limit and exceeded call keeps usage
+    /// unchanged.
+    function test_anyPolicyContractInteractionCannotBypassRateLimitAndExceededCallKeepsUsageUnchanged() public {
+        // Setup: configure a one-per-window Any policy for non-token calls where usage should stay count-based.
+        bytes memory data = abi.encodeWithSelector(bytes4(0x31313131), uint256(31));
+        uint256 expiration = block.timestamp + 1 days;
+
+        Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 1;
+        policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory firstInitiatorSignature = _signInitiatorTx({
+            txHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 31,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+        bytes memory secondInitiatorSignature = _signInitiatorTx({
+            txHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 32,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+
+        bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, DESTINATION, initiator1);
+        uint256 window = _computeTimeWindow(policy);
+
+        // Call: execute a first successful interaction, then attempt a second interaction in the same window.
+        harness.validateTransactionApprovalOrRevertViaLibrary({
+            account: ACCOUNT,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 31,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: firstInitiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: first call consumes one usage unit.
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 1, "first Any contract call should consume one");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
+        );
+        harness.validateTransactionApprovalOrRevertViaLibrary({
+            account: ACCOUNT,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 32,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: secondInitiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: exceeded call does not mutate stored usage.
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 1, "exceeded interaction must not mutate usage");
+    }
+
     /// @dev Verifies that policy does not apply does not mutate rate usage.
     function test_policyDoesNotApply_doesNotMutateRateUsage() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply does not mutate
