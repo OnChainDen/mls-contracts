@@ -27,8 +27,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         0xaff0b07e863791178158884ee127b7f0b0c710359762e0e20390537c4b2a20d0;
 
     /// @dev Precomputed off-chain review hash for the golden-vector test payload.
-    bytes32 internal constant GOLDEN_REVIEW_HASH =
-        0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
+    bytes32 internal constant GOLDEN_REVIEW_HASH = 0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
 
     /// @dev Verifies initiator hash uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct encoding.
     function test_LOAT_CIHFP_11_computeInitiatorHash_usesInitiatorTypehash() public view {
@@ -313,14 +312,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
 
         // Call: compute initiator hash for known tuple.
         bytes32 actual = goldenHarness.computeInitiatorHashFromParamsViaLibrary(
-            address(uint160(0xA1101)),
-            address(uint160(0xB2202)),
-            7,
-            94,
-            1_800_000_000,
-            DEFAULT_POLICY_ID,
-            data,
-            true
+            address(uint160(0xA1101)), address(uint160(0xB2202)), 7, 94, 1_800_000_000, DEFAULT_POLICY_ID, data, true
         );
 
         // Restore chain ID before assertions.
