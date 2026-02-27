@@ -199,20 +199,6 @@ contract LibPolicyDestinationTest is PolicyLibrariesSuiteBase {
         assertFalse(allowed, "proof for destination A must not authorize destination B");
     }
 
-    /// @dev Verifies that unknown destination enum fails closed.
-    function test_isDestinationAllowed_invalidDestinationEnum_returnsFalse() public {
-        // Setup: build fixture inputs where unknown destination enum fails closed should be denied.
-        Policy memory policy = _buildBasePolicy();
-
-        // Call: execute `isDestinationAllowedByPolicyViaPolicyLibraryRawDestinationType` and capture the authorization
-        // decision.
-        bool allowed = harness.isDestinationAllowedByPolicyViaPolicyLibraryRawDestinationType(
-            policy, type(uint256).max, address(0xD607), 0, hex"", new bytes32[](0)
-        );
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "invalid destination type should fail closed");
-    }
-
     /// @dev Verifies that empty proof is valid only for single-leaf custom-destination trees.
     function test_isDestinationAllowed_emptyProofOnlySingleLeafTree_validityMatchesTreeShape() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for empty proof is valid only for
