@@ -12,6 +12,9 @@ import {
 import {
     OrganizationAccountTransactionBaseSuiteBase
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseSuiteBase.sol";
+import {
+    OrganizationAccountTransactionInvariantHandler
+} from "test/organization/integration/OrganizationAccountTransactionInvariantHandler.sol";
 import {OperationType} from "types/CommonTypes.sol";
 import {
     Policy,
@@ -216,19 +219,5 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
         );
         assertTrue(hashA != hashB, "hash should bind organization address");
-    }
-}
-
-/**
- * @dev No-op handler used to stabilize invariant targets for account-transaction checks.
- */
-contract OrganizationAccountTransactionInvariantHandler {
-    uint256 public lastSeed;
-
-    /**
-     * @dev No-op stateful entrypoint for invariant engine target calls.
-     */
-    function noop(uint256 seed) external {
-        lastSeed = seed;
     }
 }
