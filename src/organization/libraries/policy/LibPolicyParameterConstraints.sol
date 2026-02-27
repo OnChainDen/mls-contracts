@@ -184,7 +184,7 @@ library LibPolicyParameterConstraints {
         if (constraintType != ConstraintType.Exact) return false;
         if (comparisonData.length != ContractInteractionUtils.SLOT_SIZE) return false;
 
-        uint256 expectedValueRaw = uint256(bytes32(comparisonData));
+        uint256 expectedValueRaw = abi.decode(comparisonData, (uint256));
         uint256 actualValueRaw = uint256(paramHeadValue);
 
         // Enforce canonical bool encoding (0/1 only).
@@ -353,7 +353,7 @@ library LibPolicyParameterConstraints {
 
         // Hash the actual content
         bytes32 actualHash = keccak256(data[dataStart:dataEnd]);
-        bytes32 expectedHash = bytes32(comparisonData);
+        bytes32 expectedHash = abi.decode(comparisonData, (bytes32));
         return actualHash == expectedHash;
     }
 }

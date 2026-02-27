@@ -1112,6 +1112,8 @@ contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstra
         // Setup: configure a valid fixture for large dynamic values are parsed and hashed correctly.
         bytes memory largeValue = new bytes(1024);
         for (uint256 i = 0; i < largeValue.length; ++i) {
+            // casting to `uint8` is safe because the fixture intentionally repeats a 0..255 byte pattern.
+            // forge-lint: disable-next-line(unsafe-typecast)
             largeValue[i] = bytes1(uint8(i));
         }
 
