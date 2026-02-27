@@ -16,6 +16,20 @@ import {
  * @dev Hash-construction tests for account-transaction initiator/review signatures.
  */
 contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTransactionTestBase {
+    /// @dev Deterministic organization address used by golden-vector hash checks.
+    address internal constant GOLDEN_ORGANIZATION = address(0x1111111111111111111111111111111111111111);
+
+    /// @dev Chain ID used for deterministic golden-vector hash checks.
+    uint256 internal constant GOLDEN_CHAIN_ID = 31_337;
+
+    /// @dev Precomputed off-chain initiator hash for the golden-vector test payload.
+    bytes32 internal constant GOLDEN_INITIATOR_HASH =
+        0xaff0b07e863791178158884ee127b7f0b0c710359762e0e20390537c4b2a20d0;
+
+    /// @dev Precomputed off-chain review hash for the golden-vector test payload.
+    bytes32 internal constant GOLDEN_REVIEW_HASH =
+        0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
+
     /// @dev Verifies initiator hash uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct encoding.
     function test_computeInitiatorHash_usesInitiatorTypehash() public view {
         // Setup: deterministic transaction tuple.
@@ -284,5 +298,67 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
 
         // Verify: different initiator signatures produce different review hashes.
         assertTrue(hashA != hashB, "review hash should include initiator signature hash");
+    }
+
+    /// @dev Verifies initiator hash matches a precomputed golden vector for known deterministic inputs.
+    function test_computeInitiatorHash_knownInputs_matchesPrecomputedGoldenHash() public {
+        // Setup: pin chain ID and organization address to deterministic values used by off-chain vector generation.
+        uint256 originalChainId = block.chainid;
+        vm.chainId(GOLDEN_CHAIN_ID);
+        vm.etch(GOLDEN_ORGANIZATION, address(harness).code);
+        LibOrganizationAccountTransactionHarness goldenHarness =
+            LibOrganizationAccountTransactionHarness(GOLDEN_ORGANIZATION);
+
+        bytes memory data = abi.encodeWithSelector(bytes4(0x63636363), uint256(3));
+
+        // Call: compute initiator hash for known tuple.
+        bytes32 actual = goldenHarness.computeInitiatorHashFromParamsViaLibrary(
+            address(uint160(0xA1101)),
+            address(uint160(0xB2202)),
+            7,
+            94,
+            1_800_000_000,
+            DEFAULT_POLICY_ID,
+            data,
+            true
+        );
+
+        // Restore chain ID before assertions.
+        vm.chainId(originalChainId);
+
+        // Verify: on-chain hash matches precomputed golden vector.
+        assertEq(actual, GOLDEN_INITIATOR_HASH, "initiator hash should match golden vector");
+    }
+
+    /// @dev Verifies review hash matches a precomputed golden vector for known deterministic inputs.
+    function test_computeReviewHash_knownInputs_matchesPrecomputedGoldenHash() public {
+        // Setup: pin chain ID and organization address to deterministic values used by off-chain vector generation.
+        uint256 originalChainId = block.chainid;
+        vm.chainId(GOLDEN_CHAIN_ID);
+        vm.etch(GOLDEN_ORGANIZATION, address(harness).code);
+        LibOrganizationAccountTransactionHarness goldenHarness =
+            LibOrganizationAccountTransactionHarness(GOLDEN_ORGANIZATION);
+
+        bytes memory data = abi.encodeWithSelector(bytes4(0x63636363), uint256(3));
+        bytes memory initiatorSignature = hex"010203";
+
+        // Call: compute review hash for known tuple.
+        bytes32 actual = goldenHarness.computeReviewHashFromParamsViaLibrary(
+            address(uint160(0xA1101)),
+            address(uint160(0xB2202)),
+            7,
+            94,
+            1_800_000_000,
+            DEFAULT_POLICY_ID,
+            data,
+            true,
+            initiatorSignature
+        );
+
+        // Restore chain ID before assertions.
+        vm.chainId(originalChainId);
+
+        // Verify: on-chain hash matches precomputed golden vector.
+        assertEq(actual, GOLDEN_REVIEW_HASH, "review hash should match golden vector");
     }
 }

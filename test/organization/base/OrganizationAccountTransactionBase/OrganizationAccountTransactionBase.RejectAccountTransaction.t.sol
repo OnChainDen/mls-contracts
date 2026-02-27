@@ -6,7 +6,8 @@ import {IOrganizationAccountFactory} from "interfaces/organization/IOrganization
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
-    MockAccountForOrganizationTransaction
+    MockAccountForOrganizationTransaction,
+    MockERC1271NonceConsumedSigner
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
 import {
     OrganizationAccountTransactionBaseSuiteBase
@@ -99,6 +100,48 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
 
         // Verify: both flows resolve to the exact same nonce.
         assertEq(rejectNonce, executeNonce, "reject and execute must share nonce space");
+    }
+
+    /**
+     * @dev Verifies nonce is consumed before rejection validation starts.
+     */
+    function test_rejectAccountTransaction_nonceConsumedBeforeRejectionValidation() public {
+        // Setup: configure deployed account and nonce-aware ERC-1271 signer for initiator/rejection signatures.
+        address account = address(0xAC003A);
+        harness.setDeployedAccount(account, true);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x033A3A3A), uint256(33));
+        uint256 salt = 33;
+        uint256 expiration = block.timestamp + 1 days;
+        uint256 nonce = _computeNonce(account, DESTINATION, 0, data, DEFAULT_POLICY_ID, salt);
+
+        MockERC1271NonceConsumedSigner nonceConsumedSigner = new MockERC1271NonceConsumedSigner(address(harness));
+        nonceConsumedSigner.setObservedNonce(nonce);
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        policy.config.initiator.initiatorMember = address(nonceConsumedSigner);
+        harness.setMemberStatus(address(nonceConsumedSigner), true);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory initiatorSignature = _buildContractSignature(address(nonceConsumedSigner), hex"A1A2");
+        bytes memory reviewSignature = _buildContractSignature(address(nonceConsumedSigner), hex"B1B2");
+
+        vm.prank(GUARDIAN);
+        // Call: reject transaction where validation checks nonce state during signature recovery.
+        harness.rejectAccountTransaction({
+            account: account,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignature,
+            proofs: proofs
+        });
+
+        // Verify: rejection succeeds, proving nonce was already consumed when validation began.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed");
     }
 
     /**
