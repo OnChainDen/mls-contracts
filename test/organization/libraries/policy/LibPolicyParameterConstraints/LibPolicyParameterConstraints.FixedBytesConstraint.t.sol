@@ -64,6 +64,54 @@ contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParam
         assertFalse(allowed, "fixed bytes supports only Exact");
     }
 
+    /// @dev Verifies that Any is unsupported for fixed-bytes validator and returns false.
+    function test_isFixedBytesParameterAllowedByConstraint_anyUnsupported_returnsFalse() public view {
+        // Setup: choose a representative bytes32 word for comparison.
+        bytes32 value = keccak256("fixed-any");
+
+        // Call: evaluate fixed-bytes validator with unsupported Any constraint.
+        bool allowed =
+            harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Any, bytes(""), value);
+
+        // Verify: fixed-bytes validator should reject Any.
+        assertFalse(allowed, "fixed-bytes Any should fail");
+    }
+
+    /// @dev Verifies that oversized comparison payloads fail closed for fixed bytes checks.
+    function test_isFixedBytesParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
+        // Setup: create a two-word comparison payload instead of the required single word.
+        bytes32 expected = keccak256("fixed-oversized");
+        bytes memory oversizedData = bytes.concat(abi.encode(expected), bytes32(uint256(1)));
+
+        // Call: evaluate Exact constraint with oversized payload.
+        bool allowed = harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, oversizedData, expected
+        );
+
+        // Verify: comparison data must be exactly 32 bytes.
+        assertFalse(allowed, "oversized fixed-bytes comparisonData should fail");
+    }
+
+    /// @dev Verifies that bytes31 values follow left-aligned ABI semantics.
+    function test_isFixedBytesParameterAllowedByConstraint_bytes31LeftAlignedSemantics() public view {
+        // Setup: derive a bytes31 value and construct left-/right-aligned 32-byte representations.
+        bytes31 value = bytes31(keccak256("bytes31-alignment"));
+        bytes32 leftAligned = bytes32(value);
+        bytes32 rightAligned = bytes32(uint256(leftAligned) >> 8);
+
+        // Call: compare both encodings against the expected left-aligned representation.
+        bool leftAlignedAllowed = harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(leftAligned), leftAligned
+        );
+        bool rightAlignedAllowed = harness.isFixedBytesParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(leftAligned), rightAligned
+        );
+
+        // Verify: only the ABI-correct left-aligned encoding should pass.
+        assertTrue(leftAlignedAllowed, "left-aligned bytes31 should pass");
+        assertFalse(rightAlignedAllowed, "right-aligned bytes31 should fail");
+    }
+
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isFixedBytesParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

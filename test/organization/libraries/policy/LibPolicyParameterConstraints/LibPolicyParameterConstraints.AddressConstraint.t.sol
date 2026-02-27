@@ -43,6 +43,22 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
         assertTrue(allowed, "valid OneOf proof should pass");
     }
 
+    /// @dev Verifies that OneOf with a single-leaf tree accepts an empty proof.
+    function test_isAddressParameterAllowedByConstraint_oneOfSingleLeafEmptyProof_returnsTrue() public {
+        // Setup: build a single-leaf tree where proof length is expected to be zero.
+        address[] memory values = new address[](1);
+        values[0] = reviewer1;
+        (bytes32 root,) = _buildAddressRootAndProof(values, 0);
+
+        // Call: validate reviewer1 against the single-leaf root using an empty proof.
+        bool allowed = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.OneOf, abi.encode(root), _encodeAddressHead(reviewer1), _emptyProof()
+        );
+
+        // Verify: single-leaf membership should succeed with an empty proof.
+        assertTrue(allowed, "single-leaf OneOf should accept empty proof");
+    }
+
     /// @dev Verifies that invalid OneOf proof/root mismatch returns false.
     function test_isAddressParameterAllowedByConstraint_oneOfInvalidProof_returnsFalse() public {
         // Setup: build fixture inputs where invalid OneOf proof/root mismatch returns false should be denied.
@@ -56,6 +72,21 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
 
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(allowed, "proof for another address should fail");
+    }
+
+    /// @dev Verifies that OneOf with a multi-leaf root rejects empty proofs.
+    function test_isAddressParameterAllowedByConstraint_oneOfMultiLeafEmptyProof_returnsFalse() public {
+        // Setup: build a two-leaf tree where a non-empty proof is required.
+        address[] memory values = buildArray(reviewer1, reviewer2);
+        (bytes32 root,) = _buildAddressRootAndProof(values, 0);
+
+        // Call: attempt membership validation without the required sibling proof.
+        bool allowed = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.OneOf, abi.encode(root), _encodeAddressHead(reviewer1), _emptyProof()
+        );
+
+        // Verify: empty proof should fail for multi-leaf trees.
+        assertFalse(allowed, "multi-leaf OneOf should reject empty proof");
     }
 
     /// @dev Verifies that unsupported Range returns false.
@@ -82,6 +113,34 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
 
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "address extraction should ignore dirty upper bits");
+    }
+
+    /// @dev Verifies that malformed OneOf root encoding fails closed.
+    function test_isAddressParameterAllowedByConstraint_oneOfMalformedComparisonData_returnsFalse() public view {
+        // Setup: provide malformed root bytes so OneOf root decoding cannot proceed.
+
+        // Call: run Address[OneOf] with malformed comparisonData.
+        bool allowed = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.OneOf, hex"0102", _encodeAddressHead(reviewer1), _emptyProof()
+        );
+
+        // Verify: malformed root encoding should fail closed.
+        assertFalse(allowed, "malformed OneOf root should fail");
+    }
+
+    /// @dev Verifies that Exact rejects oversized address comparison payloads.
+    function test_isAddressParameterAllowedByConstraint_exactOversizedComparisonData_returnsFalse() public view {
+        // Setup: append a second word to an otherwise valid encoded address.
+        bytes memory oversizedComparisonData =
+            bytes.concat(abi.encode(reviewer1), bytes32(uint256(uint160(reviewer2))));
+
+        // Call: evaluate Exact constraint with oversized comparison data.
+        bool allowed = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, oversizedComparisonData, _encodeAddressHead(reviewer1), _emptyProof()
+        );
+
+        // Verify: Exact expects exactly one word and should reject oversized payloads.
+        assertFalse(allowed, "oversized address comparisonData should fail");
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.

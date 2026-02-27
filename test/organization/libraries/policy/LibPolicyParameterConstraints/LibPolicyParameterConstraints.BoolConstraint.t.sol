@@ -71,6 +71,48 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
         assertFalse(allowed, "non-canonical non-zero bool words should fail closed");
     }
 
+    /// @dev Verifies that non-canonical expected bool values fail closed.
+    function test_isBoolParameterAllowedByConstraint_nonCanonicalExpectedValue_returnsFalse() public view {
+        // Setup: encode `2` as the expected bool word, which is not canonical ABI bool encoding.
+        bytes memory malformedExpected = abi.encode(uint256(2));
+
+        // Call: validate against a canonical true parameter value.
+        bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, malformedExpected, bytes32(uint256(1))
+        );
+
+        // Verify: non-canonical expected values must be rejected.
+        assertFalse(allowed, "expected bool value >1 should fail");
+    }
+
+    /// @dev Verifies that oversized comparison payloads fail closed.
+    function test_isBoolParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
+        // Setup: append an extra 32-byte word so comparison data is not exactly one slot.
+        bytes memory oversized = bytes.concat(abi.encode(true), bytes32(uint256(99)));
+
+        // Call: evaluate bool constraint with oversized comparison data.
+        bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, oversized, bytes32(uint256(1))
+        );
+
+        // Verify: bool comparison data must be exactly one ABI word.
+        assertFalse(allowed, "oversized bool comparisonData should fail");
+    }
+
+    /// @dev Verifies that maximal non-canonical bool words are rejected.
+    function test_isBoolParameterAllowedByConstraint_maxUintWord_returnsFalse() public view {
+        // Setup: use the largest possible 256-bit value in the parameter head.
+        bytes32 nonCanonicalHead = bytes32(type(uint256).max);
+
+        // Call: compare the non-canonical head against expected `true`.
+        bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(true), nonCanonicalHead
+        );
+
+        // Verify: only canonical 0/1 bool words are accepted.
+        assertFalse(allowed, "max uint head should fail canonical bool check");
+    }
+
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

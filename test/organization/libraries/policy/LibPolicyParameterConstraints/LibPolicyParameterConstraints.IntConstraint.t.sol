@@ -99,6 +99,62 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
         assertFalse(allowed, "int does not support OneOf");
     }
 
+    /// @dev Verifies that Any is unsupported for int-specific validator and returns false.
+    function test_isIntParameterAllowedByConstraint_anyUnsupported_returnsFalse() public view {
+        // Setup: choose a representative signed value.
+        bytes32 headValue = bytes32(uint256(int256(3)));
+
+        // Call: evaluate int validator with Any constraint type.
+        bool allowed =
+            harness.isIntParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Any, bytes(""), headValue);
+
+        // Verify: int validator should reject unsupported Any constraints.
+        assertFalse(allowed, "int Any should fail");
+    }
+
+    /// @dev Verifies that malformed range payload lengths fail closed for int constraints.
+    function test_isIntParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
+        // Setup: build short and oversized range payloads for signed range decoding.
+        bytes memory shortRangeData = abi.encode(int256(-5));
+        bytes memory oversizedRangeData = bytes.concat(abi.encode(int256(-5), int256(5)), bytes32(uint256(1)));
+
+        // Call: execute range checks with malformed signed range payload lengths.
+        bool shortAllowed = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, shortRangeData, bytes32(uint256(int256(0)))
+        );
+        bool oversizedAllowed = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, oversizedRangeData, bytes32(uint256(int256(0)))
+        );
+
+        // Verify: signed range comparison data must be exactly two words.
+        assertFalse(shortAllowed, "short int range payload should fail");
+        assertFalse(oversizedAllowed, "oversized int range payload should fail");
+    }
+
+    /// @dev Verifies that int min/max boundaries are processed correctly for exact and range checks.
+    function test_isIntParameterAllowedByConstraint_intMinAndMax_boundaryBehavior() public view {
+        // Setup: capture the extreme signed int values used for boundary validation.
+        int256 minValue = type(int256).min;
+        int256 maxValue = type(int256).max;
+        bytes32 minHead = bytes32(uint256(minValue));
+        bytes32 maxHead = bytes32(uint256(maxValue));
+        bytes memory fullRange = abi.encode(minValue, maxValue);
+
+        // Call: evaluate exact checks at both extremes and a full-range inclusion check at zero.
+        bool minExactAllowed =
+            harness.isIntParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Exact, abi.encode(minValue), minHead);
+        bool maxExactAllowed =
+            harness.isIntParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Exact, abi.encode(maxValue), maxHead);
+        bool zeroInFullRange = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, fullRange, bytes32(uint256(int256(0)))
+        );
+
+        // Verify: all boundary checks should pass at their exact values and within full range.
+        assertTrue(minExactAllowed, "int min exact should pass");
+        assertTrue(maxExactAllowed, "int max exact should pass");
+        assertTrue(zeroInFullRange, "zero should be inside [int.min, int.max]");
+    }
+
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails

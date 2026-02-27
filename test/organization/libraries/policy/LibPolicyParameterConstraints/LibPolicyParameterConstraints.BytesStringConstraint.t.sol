@@ -105,6 +105,60 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
         assertFalse(allowed, "offset beyond calldata should fail");
     }
 
+    /// @dev Verifies that small offsets into the ABI head region are rejected.
+    function test_isBytesOrStringParameterAllowedByConstraint_offsetOneAndThirtyOne_failClosed() public view {
+        // Setup: encode one dynamic bytes argument and reuse its expected hash.
+        bytes memory payload = bytes("abc");
+        bytes memory data = _encodeSingleBytesArg(payload);
+        bytes memory expectedHash = abi.encode(keccak256(payload));
+
+        // Call: run checks with offsets that point into the ABI head (1 and 31).
+        bool offsetOneAllowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, expectedHash, bytes32(uint256(1)), data
+        );
+        bool offsetThirtyOneAllowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, expectedHash, bytes32(uint256(31)), data
+        );
+
+        // Verify: offsets inside the head region must fail closed.
+        assertFalse(offsetOneAllowed, "offset=1 should fail");
+        assertFalse(offsetThirtyOneAllowed, "offset=31 should fail");
+    }
+
+    /// @dev Verifies that an offset equal to calldata length is rejected.
+    function test_isBytesOrStringParameterAllowedByConstraint_offsetEqualToCalldataLength_returnsFalse()
+        public
+        view
+    {
+        // Setup: compute an out-of-range offset that starts exactly at `data.length`.
+        bytes memory payload = bytes("abcdef");
+        bytes memory data = _encodeSingleBytesArg(payload);
+        uint256 offset = data.length;
+
+        // Call: execute validation with offset exactly at end-of-calldata.
+        bool allowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(keccak256(payload)), bytes32(offset), data
+        );
+
+        // Verify: there is no length word at that position, so validation must fail.
+        assertFalse(allowed, "offset equal to calldata length should fail");
+    }
+
+    /// @dev Verifies that unaligned dynamic offsets fail closed.
+    function test_isBytesOrStringParameterAllowedByConstraint_unalignedOffset_failClosed() public view {
+        // Setup: encode a valid payload but use an offset that lands mid-word.
+        bytes memory payload = bytes("alignment-check");
+        bytes memory data = _encodeSingleBytesArg(payload);
+
+        // Call: validate with offset 33 (one byte past the canonical 32-byte tail offset).
+        bool allowed = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(keccak256(payload)), bytes32(uint256(33)), data
+        );
+
+        // Verify: unaligned offsets should fail closed rather than interpret partial words.
+        assertFalse(allowed, "unaligned offsets should fail");
+    }
+
     /// @dev Verifies that declared lengths extending beyond calldata return false.
     function test_isBytesOrStringParameterAllowedByConstraint_declaredLengthBeyondCalldata_returnsFalse() public view {
         // Selector + head(offset=32) + length(100), but no payload bytes for the declared length.
@@ -175,6 +229,24 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
             assertFalse(allowed, "overflowing offset should fail closed with false");
         } catch {
             assertTrue(false, "overflowing offset should fail closed with false instead of reverting");
+        }
+    }
+
+    /// @dev Verifies that a maximal declared length fails closed without bubbling a revert.
+    function test_isBytesOrStringParameterAllowedByConstraint_maxDeclaredLength_failClosedWithoutRevert() public {
+        // Setup: construct calldata where offset is valid but declared length is uint256 max.
+        bytes memory malformedData = bytes.concat(BASE_SELECTOR, abi.encode(uint256(32), type(uint256).max));
+
+        // Call: run validation in a try/catch to pin non-reverting fail-closed behavior.
+        try harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(keccak256(bytes("unused"))), bytes32(uint256(32)), malformedData
+        ) returns (
+            bool allowed
+        ) {
+            // Verify: the oversized declared length must resolve to a denied decision.
+            assertFalse(allowed, "max declared length should fail closed");
+        } catch {
+            assertTrue(false, "max declared length should not revert");
         }
     }
 

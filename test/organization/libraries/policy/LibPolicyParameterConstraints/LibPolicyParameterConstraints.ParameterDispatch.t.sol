@@ -65,6 +65,60 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
         assertFalse(allowed, "unsupported bool-range combination should fail");
     }
 
+    /// @dev Verifies that Any short-circuits and does not decode malformed comparison payloads.
+    function test_isParameterAllowedByConstraint_anyShortCircuitsMalformedInputs_returnsTrue() public view {
+        // Setup: craft malformed fields that would fail decoding in type-specific paths,
+        // then pair them with Any to validate dispatcher short-circuit behavior.
+        bytes32[] memory malformedProof = new bytes32[](1);
+        malformedProof[0] = keccak256("not-used");
+        ParameterConstraint memory anyConstraint = ParameterConstraint({
+            paramType: ParamType.Address,
+            constraintType: ConstraintType.Any,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: hex"01020304",
+            paramValueInListProof: malformedProof
+        });
+
+        // Call: dispatch with Any using malformed comparison/proof fields.
+        bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            anyConstraint, bytes32(uint256(1234)), abi.encodeWithSelector(BASE_SELECTOR, reviewer1)
+        );
+
+        // Verify: Any should return true before entering type-specific decoding.
+        assertTrue(allowed, "Any should ignore malformed type-specific fields");
+    }
+
+    /// @dev Verifies that Array and Struct with Any are explicitly accepted by dispatcher.
+    function test_isParameterAllowedByConstraint_arrayAndStructWithAny_returnTrue() public view {
+        // Setup: build one Array[Any] and one Struct[Any] constraint with placeholder calldata.
+        ParameterConstraint memory arrayAny = ParameterConstraint({
+            paramType: ParamType.Array,
+            constraintType: ConstraintType.Any,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: bytes(""),
+            paramValueInListProof: _emptyProof()
+        });
+        ParameterConstraint memory structAny = ParameterConstraint({
+            paramType: ParamType.Struct,
+            constraintType: ConstraintType.Any,
+            paramCalldataHeadSlotCount: 2,
+            comparisonData: bytes(""),
+            paramValueInListProof: _emptyProof()
+        });
+
+        // Call: dispatch both constraints through the generic parameter validator.
+        bool arrayAllowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            arrayAny, bytes32(uint256(32)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1))
+        );
+        bool structAllowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            structAny, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1), uint256(2))
+        );
+
+        // Verify: Any should authorize both complex parameter categories.
+        assertTrue(arrayAllowed, "Array[Any] should pass");
+        assertTrue(structAllowed, "Struct[Any] should pass");
+    }
+
     /// @dev Verifies that `ParamType.Array` with non-Any constraint returns false.
     function test_isParameterAllowedByConstraint_arrayWithNonAnyConstraint_returnsFalse() public view {
         // Setup: build fixture inputs where `ParamType.Array` with non-Any constraint returns false should be denied.
@@ -149,6 +203,26 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
 
         // Verify: assert the expected success result and state updates.
         assertTrue(allowed, "valid address proof should pass");
+    }
+
+    /// @dev Verifies that Address OneOf with malformed root bytes fails closed.
+    function test_isParameterAllowedByConstraint_addressOneOfMalformedRoot_returnsFalse() public view {
+        // Setup: provide malformed root bytes so Address[OneOf] cannot decode the expected merkle root.
+        ParameterConstraint memory malformedRootConstraint = ParameterConstraint({
+            paramType: ParamType.Address,
+            constraintType: ConstraintType.OneOf,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: hex"ABCD",
+            paramValueInListProof: _emptyProof()
+        });
+
+        // Call: dispatch through Address[OneOf] with malformed root bytes.
+        bool allowed = harness.isParameterAllowedByConstraintViaPolicyLibrary(
+            malformedRootConstraint, _encodeAddressHead(reviewer1), abi.encodeWithSelector(BASE_SELECTOR, reviewer1)
+        );
+
+        // Verify: malformed OneOf root bytes must fail closed.
+        assertFalse(allowed, "malformed Address OneOf root should fail");
     }
 
     /// @dev Verifies that bytes/string dispatch uses dynamic offset and content hash correctly.
