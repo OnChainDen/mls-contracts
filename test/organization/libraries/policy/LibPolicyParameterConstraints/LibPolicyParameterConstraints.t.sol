@@ -10,7 +10,7 @@ import {ConstraintType, ParamType, ParameterConstraint} from "types/PolicyTypes.
 /**
  * @dev Section 8.1 tests for `areParametersAllowedByConstraints`.
  */
-contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that empty `parameterConstraints` bytes returns true.
     function test_areParametersAllowedByConstraints_emptyConstraintsBytes_returnsTrue() public view {
         // Setup: configure a valid fixture for empty `parameterConstraints` bytes returns true.
@@ -194,7 +194,7 @@ contract LibPolicyParameterConstraintsSection81Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.2 tests for `_processConstraints`.
  */
-contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that mixed head slot counts advance offsets correctly.
     function test_processConstraints_mixedHeadSlots_advancesOffsetsCorrectly() public view {
         // Setup: configure a valid fixture for mixed head slot counts advance offsets correctly.
@@ -348,7 +348,7 @@ contract LibPolicyParameterConstraintsSection82Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.3 tests for `_isParameterAllowedByConstraint` dispatcher.
  */
-contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that `ConstraintType.Any` returns true across supported parameter types.
     function test_isParameterAllowedByConstraint_anyConstraint_returnsTrueForAllSupportedTypes() public view {
         // Setup: configure a valid fixture for `ConstraintType.Any` returns true across supported parameter types.
@@ -588,7 +588,7 @@ contract LibPolicyParameterConstraintsSection83Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.4 tests for `_isBoolParameterAllowedByConstraint`.
  */
-contract LibPolicyParameterConstraintsSection84Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that canonical true word with exact true passes.
     function test_isBoolParameterAllowedByConstraint_exactTrueCanonicalWord_returnsTrue() public view {
         // Setup: configure a valid fixture for canonical true word with exact true passes.
@@ -670,7 +670,7 @@ contract LibPolicyParameterConstraintsSection84Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.5 tests for `_isUintParameterAllowedByConstraint`.
  */
-contract LibPolicyParameterConstraintsSection85Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact match passes and exact mismatch fails.
     function test_isUintParameterAllowedByConstraint_exactMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact match passes and exact
@@ -768,7 +768,7 @@ contract LibPolicyParameterConstraintsSection85Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.6 tests for `_isIntParameterAllowedByConstraint`.
  */
-contract LibPolicyParameterConstraintsSection86Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact matches for positive and negative values pass.
     function test_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue() public view {
         // Setup: configure a valid fixture for exact matches for positive and negative values pass.
@@ -878,7 +878,7 @@ contract LibPolicyParameterConstraintsSection86Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.7 tests for `_isAddressParameterAllowedByConstraint`.
  */
-contract LibPolicyParameterConstraintsSection87Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact match passes and exact mismatch fails.
     function test_isAddressParameterAllowedByConstraint_exactMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact match passes and exact
@@ -973,7 +973,7 @@ contract LibPolicyParameterConstraintsSection87Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.8 tests for `_isFixedBytesParameterAllowedByConstraint`.
  */
-contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact bytes32 match passes and mismatch fails.
     function test_isFixedBytesParameterAllowedByConstraint_exactMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact bytes32 match passes and
@@ -1048,7 +1048,7 @@ contract LibPolicyParameterConstraintsSection88Test is LibPolicyParameterConstra
 /**
  * @dev Section 8.9 tests for `_isBytesOrStringParameterAllowedByConstraint`.
  */
-contract LibPolicyParameterConstraintsSection89Test is LibPolicyParameterConstraintsSuiteBase {
+contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that dynamic bytes exact hash matching works.
     function test_isBytesOrStringParameterAllowedByConstraint_dynamicBytesHashMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for dynamic bytes exact hash
