@@ -141,10 +141,12 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
         bytes memory fullRange = abi.encode(minValue, maxValue);
 
         // Call: evaluate exact checks at both extremes and a full-range inclusion check at zero.
-        bool minExactAllowed =
-            harness.isIntParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Exact, abi.encode(minValue), minHead);
-        bool maxExactAllowed =
-            harness.isIntParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Exact, abi.encode(maxValue), maxHead);
+        bool minExactAllowed = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(minValue), minHead
+        );
+        bool maxExactAllowed = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(maxValue), maxHead
+        );
         bool zeroInFullRange = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, fullRange, bytes32(uint256(int256(0)))
         );

@@ -131,8 +131,7 @@ contract LibPolicyParameterConstraintsAddressConstraintTest is LibPolicyParamete
     /// @dev Verifies that Exact rejects oversized address comparison payloads.
     function test_isAddressParameterAllowedByConstraint_exactOversizedComparisonData_returnsFalse() public view {
         // Setup: append a second word to an otherwise valid encoded address.
-        bytes memory oversizedComparisonData =
-            bytes.concat(abi.encode(reviewer1), bytes32(uint256(uint160(reviewer2))));
+        bytes memory oversizedComparisonData = bytes.concat(abi.encode(reviewer1), bytes32(uint256(uint160(reviewer2))));
 
         // Call: evaluate Exact constraint with oversized comparison data.
         bool allowed = harness.isAddressParameterAllowedByConstraintViaPolicyLibrary(
