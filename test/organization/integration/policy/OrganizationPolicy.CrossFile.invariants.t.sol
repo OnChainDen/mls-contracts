@@ -64,14 +64,14 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that policy root changes only through set policies.
-    function invariant_POL_I_1_policyRootChangesOnlyThroughSetPolicies() public view {
+    function invariant_policyRootChangesOnlyThroughSetPolicies() public view {
         // Setup: configure a valid fixture for policy root changes only through set policies.
         // Call: execute `getPoliciesRoot` with the happy-path payload.
         assertEq(harness.getPoliciesRoot(), handler.modelPoliciesRoot(), "policy root must match handler model");
     }
 
     /// @dev Verifies that policy and function leaves use double hash construction.
-    function invariant_POL_I_2_policyAndFunctionLeavesUseDoubleHashConstruction() public view {
+    function invariant_policyAndFunctionLeavesUseDoubleHashConstruction() public view {
         // Setup: configure a valid fixture for policy and function leaves use double hash construction.
         Policy memory policy = _buildBasePolicy();
         uint256 policyId = 6202;
@@ -90,7 +90,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that invalid policy proof cannot authorize transaction or signature.
-    function invariant_POL_I_3_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
+    function invariant_invalidPolicyProofCannotAuthorizeTransactionOrSignature() public {
         // Setup: build fixture inputs where invalid policy proof cannot authorize transaction or signature should be
         // denied.
         Policy memory policy = _buildBasePolicy();
@@ -136,19 +136,19 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that usage monotonic on successful updates.
-    function invariant_POL_I_4_usageMonotonicOnSuccessfulUpdates() public view {
+    function invariant_usageMonotonicOnSuccessfulUpdates() public view {
         // Setup: build fixture inputs where usage monotonic on successful updates should be denied.
         assertFalse(handler.usageMonotonicViolation(), "usage should not decrease after successful updates");
     }
 
     /// @dev Verifies that exceeded rate limit never mutates usage.
-    function invariant_POL_I_5_exceededRateLimitNeverMutatesUsage() public view {
+    function invariant_exceededRateLimitNeverMutatesUsage() public view {
         // Setup: build fixture inputs where exceeded rate limit never mutates usage should be denied.
         assertFalse(handler.exceededLimitMutationViolation(), "exceeded-limit updates must not mutate usage");
     }
 
     /// @dev Verifies that manual policies cannot pass with fewer approvals than required.
-    function invariant_POL_I_6_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
+    function invariant_manualPoliciesCannotPassWithFewerApprovalsThanRequired() public view {
         // Setup: build fixture inputs where manual policies cannot pass with fewer approvals than required should be
         // denied.
         Policy memory policy = _buildBasePolicy();
@@ -167,7 +167,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that unknown enums revert across validation paths.
-    function invariant_POL_I_7_unknownEnumsFailClosedAcrossValidationPaths() public {
+    function invariant_unknownEnumsFailClosedAcrossValidationPaths() public {
         // Setup: build fixture inputs and mutate calldata words with unknown enum values.
         // ApproverType
         Policy memory invalidApproverPolicy = _buildBasePolicy();
@@ -254,7 +254,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that desired any initiator must not authorize non members.
-    function invariant_POL_I_8_desired_anyInitiatorMustNotAuthorizeNonMembers() public view {
+    function invariant_desired_anyInitiatorMustNotAuthorizeNonMembers() public view {
         // Setup: build fixture inputs where desired any initiator must not authorize non members should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.initiator.anyInitiator = true;
@@ -267,7 +267,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that token threshold uses exclusive max semantics.
-    function invariant_POL_I_9_tokenThresholdUsesExclusiveMax() public view {
+    function invariant_tokenThresholdUsesExclusiveMax() public view {
         // Setup: build fixture inputs where token threshold uses exclusive max semantics should be denied.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
@@ -281,7 +281,7 @@ contract OrganizationPolicyCrossFileInvariants is LibOrganizationPolicySuiteBase
     }
 
     /// @dev Verifies that desired malformed constraints fail closed without unexpected revert.
-    function invariant_POL_I_10_desired_malformedConstraintsFailClosedWithoutUnexpectedRevert() public {
+    function invariant_desired_malformedConstraintsFailClosedWithoutUnexpectedRevert() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for desired malformed constraints
         // fail closed without unexpected revert.
         Policy memory policy = _buildBasePolicy();

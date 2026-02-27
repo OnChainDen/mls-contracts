@@ -43,7 +43,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that policy does not apply reverts policy does not apply.
-    function test_LOAT_1_policyDoesNotApply_revertsPolicyDoesNotApply() public {
+    function test_policyDoesNotApply_revertsPolicyDoesNotApply() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply reverts policy does
         // not apply.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -85,7 +85,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that policy proof tampering reverts policy does not apply.
-    function test_LOAT_2_policyProofTampering_revertsPolicyDoesNotApply() public {
+    function test_policyProofTampering_revertsPolicyDoesNotApply() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy proof tampering reverts policy
         // does not apply.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -129,7 +129,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that signature policy cannot authorize account transactions.
-    function test_LOAT_3_signaturePolicyCannotAuthorizeAccountTransactions() public {
+    function test_signaturePolicyCannotAuthorizeAccountTransactions() public {
         // Setup: assemble inputs expected to hit the guarded failure path for signature policy cannot authorize account
         // transactions.
         Policy memory policy =
@@ -172,7 +172,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that manual approval without reviewers reverts insufficient approvals.
-    function test_LOAT_4_manualApprovalWithoutReviewers_revertsInsufficientApprovals() public {
+    function test_manualApprovalWithoutReviewers_revertsInsufficientApprovals() public {
         // Setup: assemble inputs expected to hit the guarded failure path for manual approval without reviewers reverts
         // insufficient approvals.
         Policy memory policy =
@@ -213,7 +213,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that manual approval with valid threshold succeeds.
-    function test_LOAT_5_manualApprovalWithValidThreshold_succeeds() public {
+    function test_manualApprovalWithValidThreshold_succeeds() public {
         // Setup: configure a valid fixture for manual approval with valid threshold succeeds.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.RequireManualApproval});
@@ -263,7 +263,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that auto approve ignores reviewer signatures.
-    function test_LOAT_6_autoApproveIgnoresReviewerSignatures() public {
+    function test_autoApproveIgnoresReviewerSignatures() public {
         // Setup: configure a valid fixture for auto approve ignores reviewer signatures.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -299,7 +299,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that rate limit exceeded reverts rate limit exceeded.
-    function test_LOAT_7_rateLimitExceeded_revertsRateLimitExceeded() public {
+    function test_rateLimitExceeded_revertsRateLimitExceeded() public {
         // Setup: assemble inputs expected to hit the guarded failure path for rate limit exceeded reverts rate limit
         // exceeded.
         uint256 amount = 101;
@@ -348,7 +348,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that token transfer rate limit usage tracks transfer amount.
-    function test_LOAT_8_tokenTransferRateLimitUsageTracksTransferAmount() public {
+    function test_tokenTransferRateLimitUsageTracksTransferAmount() public {
         // Setup: configure a valid fixture for token transfer rate limit usage tracks transfer amount.
         uint256 amount = 42;
 
@@ -396,7 +396,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that non token rate limit usage increments by one.
-    function test_LOAT_9_nonTokenRateLimitUsageIncrementsByOne() public {
+    function test_nonTokenRateLimitUsageIncrementsByOne() public {
         // Setup: configure a valid fixture for non token rate limit usage increments by one.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.ContractInteractions, approvalType: PolicyType.AutoApprove});
@@ -442,7 +442,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that rate limit key uses erc20 recipient as destination.
-    function test_LOAT_10_rateLimitKeyUsesERC20RecipientAsDestination() public {
+    function test_rateLimitKeyUsesERC20RecipientAsDestination() public {
         // Setup: configure a valid fixture for rate limit key uses erc20 recipient as destination.
         uint256 amount = 11;
 
@@ -494,7 +494,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that auto reject requires authorized initiator signature.
-    function test_LOAT_11_autoRejectRequiresAuthorizedInitiatorSignature() public {
+    function test_autoRejectRequiresAuthorizedInitiatorSignature() public {
         // Setup: assemble inputs expected to hit the guarded failure path for auto reject requires authorized initiator
         // signature.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -549,7 +549,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that manual reject without threshold approvals reverts insufficient approvals.
-    function test_LOAT_12_manualRejectWithoutThresholdApprovals_revertsInsufficientApprovals() public {
+    function test_manualRejectWithoutThresholdApprovals_revertsInsufficientApprovals() public {
         // Setup: assemble inputs expected to hit the guarded failure path for manual reject without threshold approvals
         // reverts insufficient approvals.
         Policy memory policy =
@@ -591,7 +591,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that approval review signatures cannot replay as rejection.
-    function test_LOAT_13_approvalReviewSignaturesCannotReplayAsRejection() public {
+    function test_approvalReviewSignaturesCannotReplayAsRejection() public {
         // Setup: assemble inputs expected to hit the guarded failure path for approval review signatures cannot replay
         // as rejection.
         Policy memory policy =
@@ -648,7 +648,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_LOAT_14_hashBuildersAreDeterministicAndFieldBound() public {
+    function test_hashBuildersAreDeterministicAndFieldBound() public {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory data = abi.encodeWithSelector(bytes4(0xCAFED00D), uint256(14));
@@ -846,7 +846,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that desired any policy token transfers use count based rate usage.
-    function test_LOAT_15_desired_anyPolicyTokenTransfersUseCountBasedRateUsage() public {
+    function test_desired_anyPolicyTokenTransfersUseCountBasedRateUsage() public {
         // Setup: configure a valid fixture for desired any policy token transfers use count based rate usage.
         uint256 amount = 500;
 
@@ -893,7 +893,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that policy does not apply does not mutate rate usage.
-    function test_LOAT_16_policyDoesNotApply_doesNotMutateRateUsage() public {
+    function test_policyDoesNotApply_doesNotMutateRateUsage() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply does not mutate
         // rate usage.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -951,7 +951,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that insufficient approvals does not mutate rate usage.
-    function test_LOAT_17_insufficientApprovals_doesNotMutateRateUsage() public {
+    function test_insufficientApprovals_doesNotMutateRateUsage() public {
         // Setup: assemble inputs expected to hit the guarded failure path for insufficient approvals does not mutate
         // rate usage.
         Policy memory policy =
@@ -1009,7 +1009,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that root transition guard clear root rejects old proofs.
-    function test_LOAT_18_rootTransitionGuard_clearRootRejectsOldProofs() public {
+    function test_rootTransitionGuard_clearRootRejectsOldProofs() public {
         // Setup: assemble inputs expected to hit the guarded failure path for root transition guard clear root rejects
         // old proofs.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -1068,7 +1068,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that branch comparison auto approve succeeds manual without reviews reverts.
-    function test_LOAT_19_branchComparison_autoApproveSucceeds_manualWithoutReviewsReverts() public {
+    function test_branchComparison_autoApproveSucceeds_manualWithoutReviewsReverts() public {
         // Setup: assemble inputs expected to hit the guarded failure path for branch comparison auto approve succeeds
         // manual without reviews reverts.
         bytes memory data = abi.encodeWithSelector(bytes4(0x19191919), uint256(19));
@@ -1126,7 +1126,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that invalid approval policy type in proofs payload reverts.
-    function test_LOAT_20_invalidApprovalPolicyType_reverts() public {
+    function test_invalidApprovalPolicyType_reverts() public {
         // Setup: assemble valid approval payload then mutate encoded proofs with an invalid enum value.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -1159,7 +1159,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that branch comparison manual with reviews and auto with same payload both succeed.
-    function test_LOAT_21_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothSucceed() public {
+    function test_branchComparison_manualWithReviewsAndAutoWithSamePayloadBothSucceed() public {
         // Setup: configure a valid fixture for branch comparison manual with reviews and auto with same payload both
         // succeed.
         bytes memory data = abi.encodeWithSelector(bytes4(0x21212121), uint256(21));
@@ -1227,7 +1227,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that rejection branch comparison auto succeeds manual insufficient for same payload.
-    function test_LOAT_22_rejectionBranchComparison_autoSucceeds_manualInsufficientForSamePayload() public {
+    function test_rejectionBranchComparison_autoSucceeds_manualInsufficientForSamePayload() public {
         // Setup: assemble inputs expected to hit the guarded failure path for rejection branch comparison auto succeeds
         // manual insufficient for same payload.
         bytes memory data = abi.encodeWithSelector(bytes4(0x22222222), uint256(22));
@@ -1308,7 +1308,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that rejection branch comparison manual succeeds auto rejects same reviewer payload.
-    function test_LOAT_23_rejectionBranchComparison_manualSucceeds_autoRejectsSameReviewerPayload() public {
+    function test_rejectionBranchComparison_manualSucceeds_autoRejectsSameReviewerPayload() public {
         // Setup: assemble inputs expected to hit the guarded failure path for rejection branch comparison manual
         // succeeds auto rejects same reviewer payload.
         bytes memory data = abi.encodeWithSelector(bytes4(0x23232323), uint256(23));
@@ -1378,7 +1378,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross chain replay initiator signature fails.
-    function test_LOAT_24_crossChainReplayInitiatorSignatureFails() public {
+    function test_crossChainReplayInitiatorSignatureFails() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross chain replay initiator signature
         // fails.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -1423,7 +1423,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross chain replay reviewer signatures fail with valid chain b initiator.
-    function test_LOAT_25_crossChainReplayReviewerSignaturesFailWithValidChainBInitiator() public {
+    function test_crossChainReplayReviewerSignaturesFailWithValidChainBInitiator() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross chain replay reviewer signatures
         // fail with valid chain b initiator.
         Policy memory policy =
@@ -1482,7 +1482,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that invalid rate-limit type in proofs payload reverts.
-    function test_LOAT_26_invalidRateLimitType_reverts() public {
+    function test_invalidRateLimitType_reverts() public {
         // Setup: assemble valid approval payload then mutate encoded proofs with an invalid enum value.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
@@ -1518,7 +1518,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross organization replay initiator signature fails.
-    function test_LOAT_27_crossOrganizationReplayInitiatorSignatureFails() public {
+    function test_crossOrganizationReplayInitiatorSignatureFails() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay initiator
         // signature fails.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();
@@ -1567,7 +1567,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross organization replay reviewer signatures fail with valid org b initiator.
-    function test_LOAT_28_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
+    function test_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay reviewer
         // signatures fail with valid org b initiator.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();

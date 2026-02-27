@@ -15,7 +15,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
-        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, bytes(""), keccak256("LPA-1"));
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, bytes(""), keccak256("policy-approval-message"));
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(ok, "empty signatures must fail");
     }
@@ -26,7 +26,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-2");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` with the happy-path payload.
@@ -41,7 +41,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1, reviewer2));
 
-        bytes32 messageHash = keccak256("LPA-3");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_2, messageHash);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
@@ -56,7 +56,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
         policyStateHarness.setMemberStatus(reviewer1, false);
 
-        bytes32 messageHash = keccak256("LPA-4");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
@@ -72,7 +72,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2201, 2);
         _setActiveGroupWithMembers(2201, buildArray(reviewer1, reviewer2));
 
-        bytes32 messageHash = keccak256("LPA-5");
+        bytes32 messageHash = keccak256("policy-approval-message");
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
@@ -90,7 +90,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2202, 1);
         _setActiveGroupWithMembers(2202, buildArray(reviewer1, reviewer2));
 
-        bytes32 messageHash = keccak256("LPA-6");
+        bytes32 messageHash = keccak256("policy-approval-message");
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
@@ -109,7 +109,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2203, 2);
         _setActiveGroupWithMembers(2203, buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-7");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
@@ -125,7 +125,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         _setActiveGroupWithMembers(2204, buildArray(reviewer1));
         _setMembersAsOrgMembers(buildArray(reviewer2));
 
-        bytes32 messageHash = keccak256("LPA-8");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_2, messageHash);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
@@ -140,7 +140,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2205, 1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-9");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
@@ -155,7 +155,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2206, 2);
         _setActiveGroupWithMembers(2206, buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-10");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory signatures = abi.encodePacked(signature, signature);
 
@@ -171,7 +171,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2207, 2);
         _setActiveGroupWithMembers(2207, buildArray(reviewer1, reviewer2));
 
-        bytes32 messageHash = keccak256("LPA-11");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory sig1 = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory sig2 = _signHash(REVIEWER_PK_2, messageHash);
         bytes memory signatures = reviewer2 > reviewer1 ? abi.encodePacked(sig2, sig1) : abi.encodePacked(sig1, sig2);
@@ -189,7 +189,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
         // Call: execute `areApprovalsValidViaPolicyLibrary` and capture the authorization decision.
-        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, hex"01", keccak256("LPA-12"));
+        bool ok = harness.areApprovalsValidViaPolicyLibrary(policy, hex"01", keccak256("policy-approval-message"));
         // Verify: assert that the request is denied and state remains unchanged.
         assertFalse(ok, "malformed packed signatures should fail closed");
     }
@@ -203,7 +203,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         address erc1271Signer = address(validSigner1271);
         _setActiveGroupWithMembers(2208, buildArray(reviewer1, erc1271Signer));
 
-        bytes32 messageHash = keccak256("LPA-13");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory eoaSig = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory contractSig = _buildContractSignature(erc1271Signer, hex"CAFE");
 
@@ -230,7 +230,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-14");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory signatures = abi.encodePacked(signature, hex"FF00");
 
@@ -247,7 +247,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2209, 0);
         _setActiveGroupWithMembers(2209, buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-15");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
 
         bytes memory callData =
@@ -269,7 +269,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _groupApproverPolicy(2210, 2);
         _setActiveGroupWithMembers(2210, buildArray(reviewer1, reviewer2));
 
-        bytes32 messageHash = keccak256("LPA-16");
+        bytes32 messageHash = keccak256("policy-approval-message");
         uint256[] memory keys = new uint256[](2);
         keys[0] = REVIEWER_PK_1;
         keys[1] = REVIEWER_PK_2;
@@ -324,7 +324,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
         Policy memory policy = _memberApproverPolicy(reviewer1);
         _setMembersAsOrgMembers(buildArray(reviewer1));
 
-        bytes32 messageHash = keccak256("LPA-REQ-4");
+        bytes32 messageHash = keccak256("policy-approval-message");
         bytes memory signature = _signHash(REVIEWER_PK_1, messageHash);
         bytes memory callData =
             abi.encodeCall(harness.areApprovalsValidViaPolicyLibrary, (policy, signature, messageHash));
