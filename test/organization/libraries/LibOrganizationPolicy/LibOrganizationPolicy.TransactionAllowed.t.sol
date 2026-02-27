@@ -181,6 +181,38 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(wrongDestination, "disallowed recipient should fail");
     }
 
+    /// @dev Verifies that token-transfer policy rejects transfers above configured amount threshold.
+    function test_isTransactionAllowed_tokenTransferPolicy_amountAboveThreshold_returnsFalse() public {
+        // Setup: configure a token-transfer policy with a strict amount threshold.
+        Policy memory policy = _buildTokenTransferPolicy();
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = TOKEN_CONTRACT;
+        policy.config.token.hasAmountThreshold = true;
+        policy.config.token.amountThreshold = 10;
+
+        (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3015, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: _emptyProof(),
+            destinationProof: _emptyProof(),
+            functionProof: _emptyProof(),
+            constraints: ""
+        });
+
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` for below-threshold and above-threshold transfers.
+        bool belowThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 9), initiator1, proofs
+        );
+        bool aboveThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 11), initiator1, proofs
+        );
+
+        // Verify: transfers above threshold fail closed in the top-level policy path.
+        assertTrue(belowThresholdAllowed, "below-threshold transfer should be allowed");
+        assertFalse(aboveThresholdAllowed, "above-threshold transfer should fail");
+    }
+
     /// @dev Verifies that contract-interaction policy branch checks function proof and constraints.
     function test_isTransactionAllowed_contractInteractionBranch_checksFunctionAndConstraints() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for contract-interaction policy
