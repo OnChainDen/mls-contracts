@@ -87,6 +87,74 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
         assertFalse(allowed, "uint does not support OneOf");
     }
 
+    /// @dev Verifies that Any is unsupported for uint-specific validator and returns false.
+    function test_isUintParameterAllowedByConstraint_anyUnsupported_returnsFalse() public view {
+        // Setup: use Any against uint-specific validator, which supports only Exact and Range.
+
+        // Call: evaluate uint validator with Any constraint type.
+        bool allowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Any, bytes(""), bytes32(uint256(12))
+        );
+
+        // Verify: uint validator must reject unsupported Any constraint type.
+        assertFalse(allowed, "uint Any should fail");
+    }
+
+    /// @dev Verifies that malformed range payload lengths fail closed.
+    function test_isUintParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
+        // Setup: provide short and oversized payloads for Range decoding.
+        bytes memory shortRangeData = abi.encode(uint256(10));
+        bytes memory oversizedRangeData = bytes.concat(abi.encode(uint256(10), uint256(20)), bytes32(uint256(30)));
+
+        // Call: evaluate Range constraints with malformed payload lengths.
+        bool shortAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, shortRangeData, bytes32(uint256(15))
+        );
+        bool oversizedAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, oversizedRangeData, bytes32(uint256(15))
+        );
+
+        // Verify: range payloads must be exactly two ABI words.
+        assertFalse(shortAllowed, "short uint range payload should fail");
+        assertFalse(oversizedAllowed, "oversized uint range payload should fail");
+    }
+
+    /// @dev Verifies that a single-point range (min==max) behaves as an equality constraint.
+    function test_isUintParameterAllowedByConstraint_rangeMinEqualsMax_boundaryBehavior() public view {
+        // Setup: create a range where both bounds are the same value.
+        bytes memory pointRange = abi.encode(uint256(7), uint256(7));
+
+        // Call: evaluate matching and non-matching inputs against the single-point range.
+        bool exactPointAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, pointRange, bytes32(uint256(7))
+        );
+        bool offPointAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, pointRange, bytes32(uint256(6))
+        );
+
+        // Verify: only the exact boundary value should pass.
+        assertTrue(exactPointAllowed, "min==max range should allow exact boundary");
+        assertFalse(offPointAllowed, "min==max range should reject other values");
+    }
+
+    /// @dev Verifies that uint max-value boundaries are handled correctly.
+    function test_isUintParameterAllowedByConstraint_uintMax_boundaryBehavior() public view {
+        // Setup: use the maximum uint256 as both expected exact value and range boundary.
+        uint256 maxValue = type(uint256).max;
+        bytes memory maxRange = abi.encode(maxValue, maxValue);
+
+        // Call: evaluate exact and range checks at the maximum uint value.
+        bool exactAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Exact, abi.encode(maxValue), bytes32(maxValue)
+        );
+        bool rangeAllowed =
+            harness.isUintParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Range, maxRange, bytes32(maxValue));
+
+        // Verify: max value should pass both exact and point-range checks.
+        assertTrue(exactAllowed, "uint max exact should pass");
+        assertTrue(rangeAllowed, "uint max point range should pass");
+    }
+
     /// @dev Verifies that malformed comparisonData fails closed with false.
     function test_isUintParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
