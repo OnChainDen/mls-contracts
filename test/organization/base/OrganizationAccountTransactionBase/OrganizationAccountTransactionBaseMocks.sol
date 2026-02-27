@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {IAccount} from "interfaces/IAccount.sol";
 
 interface OrganizationNonceReader {
@@ -153,5 +154,38 @@ contract MockRevertingDestination {
 
     function fail() external pure {
         revert ForcedRevert();
+    }
+}
+
+/**
+ * @dev ERC-1271 signer that validates signatures only when a specific nonce is already consumed.
+ *      Used to assert nonce-consumption ordering during validation flows.
+ */
+contract MockERC1271NonceConsumedSigner is IERC1271 {
+    /// @dev Organization contract exposing nonce-usage state.
+    address public immutable organization;
+
+    /// @dev Nonce that must be consumed for signatures to be considered valid.
+    uint256 public observedNonce;
+
+    constructor(address organization_) {
+        organization = organization_;
+    }
+
+    /**
+     * @dev Sets the nonce observed during signature checks.
+     */
+    function setObservedNonce(uint256 observedNonce_) external {
+        observedNonce = observedNonce_;
+    }
+
+    /**
+     * @dev Returns ERC-1271 magic value only if the observed nonce is already consumed.
+     */
+    function isValidSignature(bytes32, bytes memory) external view override returns (bytes4) {
+        if (OrganizationNonceReader(organization).getUsedNonce(observedNonce)) {
+            return IERC1271.isValidSignature.selector;
+        }
+        return bytes4(0xffffffff);
     }
 }

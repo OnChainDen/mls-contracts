@@ -12,6 +12,7 @@ import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganiza
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
     MockAccountForOrganizationTransaction,
+    MockERC1271NonceConsumedSigner,
     MockERC20ForAccountTransaction,
     MockInteractionTarget,
     MockNativeReceiver
@@ -140,6 +141,46 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
 
         // Verify: account call executed, proving nonce check passed at external-call entry.
         assertEq(account.executionCount(), 1, "account call should complete once");
+    }
+
+    /**
+     * @dev Verifies nonce is consumed before approval validation starts.
+     */
+    function test_executeAccountTransaction_nonceConsumedBeforeApprovalValidation() public {
+        // Setup: deploy account and configure nonce-aware ERC-1271 initiator signer.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        bytes memory data = abi.encodeWithSelector(bytes4(0x89898989), uint256(31));
+        uint256 salt = 31;
+        uint256 expiration = block.timestamp + 1 days;
+        uint256 nonce = _computeNonce(address(account), DESTINATION, 0, data, DEFAULT_POLICY_ID, salt);
+
+        MockERC1271NonceConsumedSigner nonceConsumedSigner = new MockERC1271NonceConsumedSigner(address(harness));
+        nonceConsumedSigner.setObservedNonce(nonce);
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        policy.config.initiator.initiatorMember = address(nonceConsumedSigner);
+        harness.setMemberStatus(address(nonceConsumedSigner), true);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory initiatorSignature = _buildContractSignature(address(nonceConsumedSigner), hex"CAFE");
+
+        vm.prank(GUARDIAN);
+        // Call: execute transaction where initiator signature validation checks nonce state.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: execution succeeds, proving nonce was already consumed at validation-time signature recovery.
+        assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed");
+        assertEq(account.executionCount(), 1, "account should execute once");
     }
 
     /**
