@@ -269,7 +269,6 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPT-6 | Specific native-token policy (`tokenAddress == address(0)`) allows only native transfers | [U] | P1 |
 | LPT-7 | Specific ERC-20 token policy allows only that token contract | [U] | P0 |
 | LPT-8 | No short-circuit bypass: all three checks must pass | [S] | P0 |
-| LPT-9 | Precondition: caller invokes this function only with validated token-transfer payloads (native or ERC-20) | [U] | P1 |
 
 ### 6.2 `_isTokenAllowedByPolicy(Policy policy, address to, bytes data)` *(private; harness target)*
 
