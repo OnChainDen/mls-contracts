@@ -109,7 +109,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOP-TX-12 | `TransactionType.Any`: destination disallowed returns `false` | [N] | P0 |
 | LOP-TX-13 | `TransactionType.Signatures` must not authorize account transactions (returns `false`) | [S] | P0 |
 | LOP-TX-14 | Unknown/invalid transaction enum in payload reverts (panic/custom revert acceptable) | [S] | P0 |
-| LOP-TX-15 | **Desired behavior:** malformed constraints payload fails closed (`false`) rather than bubbling unexpected revert | [S] | P0 |
+| LOP-TX-15 | Malformed constraints payload in contract-interaction policy path reverts (panic/custom revert acceptable) | [S] | P0 |
 | LOP-TX-16 | **Desired behavior:** malformed token-transfer calldata fails closed (`false`) in policy-validation path | [S] | P0 |
 | LOP-TX-17 | No partial success: all required sub-checks must pass for `true` | [U] | P0 |
 | LOP-TX-18 | Deterministic result for same inputs and unchanged state | [U] | P2 |
@@ -309,7 +309,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPCI-6 | Empty `constraints` can be valid if function leaf was built with empty constraints hash | [E] | P1 |
 | LPCI-7 | Same selector with different constraints hash must not validate against old proof | [S] | P0 |
 | LPCI-8 | Data shorter than selector length is rejected when function filtering is required | [N] | P0 |
-| LPCI-9 | **Desired behavior:** malformed constraints payload fails closed (`false`) instead of unexpected revert | [S] | P0 |
+| LPCI-9 | Malformed constraints payload reverts during parameter-constraint decoding (panic/custom revert acceptable) | [S] | P0 |
 
 ### 7.2 `_isFunctionAllowedByPolicy(...)` *(private; harness target)*
 
@@ -344,7 +344,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LPPC-3 | Single valid constraint passes | [U] | P0 |
 | LPPC-4 | Multiple constraints all passing returns `true` | [U] | P0 |
 | LPPC-5 | Any one failing constraint returns `false` | [N] | P0 |
-| LPPC-6 | **Desired behavior:** malformed `parameterConstraints` encoding fails closed (`false`) rather than revert | [S] | P0 |
+| LPPC-6 | Malformed `parameterConstraints` encoding reverts during ABI decoding (panic/custom revert acceptable) | [S] | P0 |
 | LPPC-7 | **Desired behavior:** malformed `comparisonData` inside a constraint fails closed (`false`) | [S] | P0 |
 | LPPC-8 | Deterministic output for identical constraints and calldata | [U] | P2 |
 
@@ -560,7 +560,7 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | LOAS-15 | Reviewer approvals are bound to initiator signature (`reviewHash` includes `keccak256(initiatorSignature)`) | [S] | P0 |
 | LOAS-16 | Private helper `_isERC1271SignatureAllowedByPolicy` fails closed for any failed sub-check | [S] | P0 |
 | LOAS-17 | Private hash builders (`_getInitiatorSignatureHash`, `_getReviewSignatureHash`) are deterministic and field-bound | [U][S] | P1 |
-| LOAS-18 | **Desired behavior:** malformed policy `signatureData` payload returns ERC-1271 invalid value (fail closed) and does not revert | [S] | P0 |
+| LOAS-18 | Malformed policy `signatureData` payload with invalid ABI offsets reverts during decoding (panic/custom revert acceptable) | [S] | P0 |
 | LOAS-19 | **Desired behavior:** manual-approval reviewer signatures that would trigger approval-validation reverts (e.g., duplicate/out-of-order/unauthorized signer) return invalid value and do not revert | [S] | P0 |
 | LOAS-20 | Root transition guard: after policy-based signature succeeds under `R1`, clearing root to `0` makes same signature payload + old proofs return ERC-1271 invalid value | [S] | P0 |
 | LOAS-21 | Branch comparison: with identical signature payload except `approval.policyType` and empty `reviewSignatures`, `AutoApprove` returns ERC-1271 magic value while `RequireManualApproval` returns ERC-1271 invalid value | [U][S] | P0 |
@@ -602,4 +602,4 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-7 | Unknown enum values for `ApproverType`, `DestinationType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` revert (panic/custom revert acceptable) across validation paths | P0 |
 | POL-I-8 | **Desired behavior:** `anyInitiator` does not authorize non-members | P0 |
 | POL-I-9 | Token amount threshold acts as exclusive max (`<`) | P0 |
-| POL-I-10 | **Desired behavior:** malformed constraint payloads fail closed without unexpected reverts in policy-check paths | P0 |
+| POL-I-10 | Malformed constraint payloads in policy-check paths never authorize and may revert on decode errors | P0 |

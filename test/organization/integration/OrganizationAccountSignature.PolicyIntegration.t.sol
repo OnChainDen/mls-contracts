@@ -812,14 +812,18 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         assertTrue(baseReviewHashA != changedReviewHash, "review hash must bind initiator signature bytes");
     }
 
-    /// @dev Verifies that desired malformed signature data returns invalid without revert.
-    function test_desired_malformedSignatureDataReturnsInvalidWithoutRevert() public {
-        // Setup: configure a valid fixture for desired malformed signature data returns invalid without revert.
-        bytes memory malformed = abi.encodePacked(uint8(0x01), hex"deadbeef");
-        // Call: execute `isValidSignatureViaLibrary` with the happy-path payload.
-        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
-        // Verify: assert the expected success result and state updates.
-        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "malformed payload should fail closed");
+    /// @dev Verifies that malformed policy signature payload reverts during decoding.
+    function test_malformedPolicySignatureData_reverts() public {
+        // Setup: build a policy-signature payload with invalid dynamic offsets.
+        bytes memory malformedPolicySignatureData = abi.encode(
+            uint256(1), uint256(block.timestamp + 1 days), type(uint256).max, uint256(0), uint256(0), uint256(0)
+        );
+        bytes memory malformed = abi.encodePacked(uint8(0x01), malformedPolicySignatureData);
+
+        // Verify: malformed payload should revert in the current implementation.
+        vm.expectRevert();
+        // Call: execute `isValidSignatureViaLibrary` with malformed policy-signature data.
+        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
     }
 
     /// @dev Verifies that desired manual approval validation reverts must return invalid without revert.

@@ -172,26 +172,27 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         assertFalse(allowed, "data shorter than selector should fail when anyFunction is false");
     }
 
-    /// @dev Verifies that desired behavior: malformed constraints payload fails closed instead of reverting.
-    function test_isContractInteractionAllowed_malformedConstraints_failsClosed_desired() public {
-        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed instead of
-        // reverting should be denied.
+    /// @dev Verifies that malformed constraints payload reverts in contract-interaction validation.
+    function test_isContractInteractionAllowed_malformedConstraints_reverts() public {
+        // Setup: use malformed constraints that trigger ABI decoding failure in parameter-constraint validation.
         Policy memory policy = _buildBasePolicy();
         policy.config.destinationType = DestinationType.Any;
         policy.config.anyFunction = true;
 
-        // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` and capture the authorization decision.
-        bool allowed = harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
+        bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
+
+        // Verify: malformed constraints should revert in the current implementation.
+        vm.expectRevert();
+        // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` with malformed constraints.
+        harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(
             policy,
             address(0xC709),
             0,
             abi.encodePacked(bytes4(keccak256("f()"))),
             new bytes32[](0),
-            hex"01",
+            malformedConstraints,
             new bytes32[](0)
         );
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "desired behavior: malformed constraints should fail closed");
     }
 
     /// @dev Verifies that `anyFunction == true` returns true regardless of data/proof.

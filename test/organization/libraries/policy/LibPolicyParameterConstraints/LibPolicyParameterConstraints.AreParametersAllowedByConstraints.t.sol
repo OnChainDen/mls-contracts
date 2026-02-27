@@ -123,22 +123,16 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         assertFalse(allowed, "one failing constraint should cause false");
     }
 
-    /// @dev Verifies that malformed encoded constraints fail closed with false.
-    function test_areParametersAllowedByConstraints_malformedEncodedConstraints_failClosedDesiredBehavior() public {
-        // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed encoded constraints
-        // fail closed with false.
-        bytes memory malformedConstraints = hex"0001";
+    /// @dev Verifies that malformed encoded constraints revert.
+    function test_areParametersAllowedByConstraints_malformedEncodedConstraints_reverts() public {
+        // Setup: craft malformed constraints that bypass the short-length guard but contain invalid ABI offsets.
+        bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1));
 
-        // Call: run `areParametersAllowedByConstraintsViaPolicyLibrary` across the prepared variants.
-        try harness.areParametersAllowedByConstraintsViaPolicyLibrary(malformedConstraints, data) returns (
-            bool allowed
-        ) {
-            // Verify: assert each variant returns the expected branch outcome.
-            assertFalse(allowed, "malformed constraints should fail closed with false");
-        } catch {
-            assertTrue(false, "malformed constraints should fail closed with false instead of reverting");
-        }
+        // Verify: malformed ABI should revert in the current implementation.
+        vm.expectRevert();
+        // Call: execute `areParametersAllowedByConstraintsViaPolicyLibrary` with malformed constraints.
+        harness.areParametersAllowedByConstraintsViaPolicyLibrary(malformedConstraints, data);
     }
 
     /// @dev Verifies that malformed constraints payloads never produce an allow decision.

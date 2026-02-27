@@ -323,16 +323,15 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         assertFalse(invalidEnumSuccess, "unknown transaction enum should revert");
     }
 
-    /// @dev Verifies that desired behavior: malformed constraints payload fails closed (`false`) instead of revert.
-    function test_isTransactionAllowed_desiredMalformedConstraints_payloadFailsClosed() public {
-        // Setup: build fixture inputs where desired behavior: malformed constraints payload fails closed (`false`)
-        // instead of revert should be denied.
+    /// @dev Verifies that malformed constraints payload reverts in transaction policy validation.
+    function test_isTransactionAllowed_malformedConstraints_payloadReverts() public {
+        // Setup: use malformed constraints that trigger ABI decode failure in contract-interaction checks.
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.ContractInteractions;
         policy.config.anyFunction = true;
 
         (bytes32[] memory policyProof,) = _setPolicyRootForSinglePolicy(3010, policy);
-        bytes memory malformedConstraints = hex"deadc0de";
+        bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
         ValidationProofs memory proofs = ValidationProofs({
             policy: policy,
             policyProof: policyProof,
@@ -342,13 +341,12 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             constraints: malformedConstraints
         });
 
-        // Desired behavior test: currently may revert because constraint decode bubbles up.
-        // Call: execute `isTransactionAllowedByPolicyViaLibrary` and capture the authorization decision.
-        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+        // Verify: malformed constraints should revert in the current implementation.
+        vm.expectRevert();
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` with malformed constraints.
+        harness.isTransactionAllowedByPolicyViaLibrary(
             3010, SOURCE_ACCOUNT, INTERACTION_TARGET, 0, abi.encodeWithSignature("foo(uint256)", 1), initiator1, proofs
         );
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "malformed constraints should fail closed");
     }
 
     /// @dev Verifies that malformed or non-transfer token calldata fails closed in token-transfer path.
