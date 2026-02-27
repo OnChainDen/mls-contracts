@@ -88,6 +88,59 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         assertFalse(harness.getUsedNonce(nonce), "failed auth should not consume nonce");
     }
 
+    /// @dev Verifies that malformed packed signatures revert via admin-auth validation.
+    function test_setPolicies_invalidPackedSignatures_revertsViaAdminAuthValidation() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for malformed packed signatures.
+        bytes32 newRoot = keccak256("opb-set-3-invalid-packed-root");
+        string memory ipfsCid = "ipfs://opb-set-3-invalid-packed";
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetPoliciesAuth({
+            newPoliciesRoot: newRoot,
+            ipfsCid: ipfsCid,
+            salt: 8130,
+            expirationTimestamp: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        auth.signatures = hex"1b";
+
+        // Verify: assert that malformed packed signatures fail signature recovery.
+        _expectSignatureRecoveryFailure();
+        vm.prank(GUARDIAN);
+        // Call: invoke `setPolicies` with malformed signatures to exercise the revert branch.
+        harness.setPolicies(newRoot, ipfsCid, auth);
+
+        uint256 nonce = _computeSetPoliciesNonce(operationData, 8130);
+        assertFalse(harness.getUsedNonce(nonce), "failed auth should not consume nonce");
+    }
+
+    /// @dev Verifies that non-admin signer signatures revert via admin-auth validation.
+    function test_setPolicies_nonAdminSignerSignature_revertsViaAdminAuthValidation() public {
+        // Setup: assemble inputs expected to hit the guarded failure path for non-admin signer signatures.
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1), threshold: 1});
+
+        bytes32 newRoot = keccak256("opb-set-3-invalid-signer-root");
+        string memory ipfsCid = "ipfs://opb-set-3-invalid-signer";
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetPoliciesAuth({
+            newPoliciesRoot: newRoot,
+            ipfsCid: ipfsCid,
+            salt: 8131,
+            expirationTimestamp: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_2)
+        });
+
+        // Verify: assert that signature from a non-admin account is rejected.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, admin2));
+        vm.prank(GUARDIAN);
+        // Call: invoke `setPolicies` with a non-admin signer signature to exercise the revert branch.
+        harness.setPolicies(newRoot, ipfsCid, auth);
+
+        uint256 nonce = _computeSetPoliciesNonce(operationData, 8131);
+        assertFalse(harness.getUsedNonce(nonce), "failed auth should not consume nonce");
+    }
+
     /// @dev Verifies that expired `authParams` revert.
     function test_setPolicies_expiredAuthParams_revertsAdminOperationExpired() public {
         // Setup: assemble inputs expected to hit the guarded failure path for expired `authParams` revert.
