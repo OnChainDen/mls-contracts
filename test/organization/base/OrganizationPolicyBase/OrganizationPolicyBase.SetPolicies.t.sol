@@ -9,6 +9,7 @@ import {
     OrganizationPolicyBaseSuiteBase
 } from "test/organization/base/OrganizationPolicyBase/OrganizationPolicyBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
 
 /**
@@ -156,8 +157,18 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
+        bytes memory tamperedOperationData = abi.encode(tamperedRoot, keccak256(bytes(ipfsCid)));
+        bytes32 tamperedOperationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyPolicies,
+            operationData: tamperedOperationData,
+            salt: auth.salt,
+            expirationTimestamp: auth.expirationTimestamp,
+            isApproval: true
+        });
+        address expectedRecoveredSigner = _recoverEOASignerFromPackedSignature(tamperedOperationHash, auth.signatures);
+
+        // Verify: assert that tampering invalidates the recovered signer and bubbles strict admin signer validation.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, expectedRecoveredSigner));
         vm.prank(GUARDIAN);
         // Call: invoke `setPolicies` with the failing payload to exercise the revert branch.
         harness.setPolicies(tamperedRoot, ipfsCid, auth);
@@ -184,8 +195,18 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
+        bytes memory tamperedOperationData = abi.encode(newRoot, keccak256(bytes(tamperedCid)));
+        bytes32 tamperedOperationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyPolicies,
+            operationData: tamperedOperationData,
+            salt: auth.salt,
+            expirationTimestamp: auth.expirationTimestamp,
+            isApproval: true
+        });
+        address expectedRecoveredSigner = _recoverEOASignerFromPackedSignature(tamperedOperationHash, auth.signatures);
+
+        // Verify: assert that tampering invalidates the recovered signer and bubbles strict admin signer validation.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, expectedRecoveredSigner));
         vm.prank(GUARDIAN);
         // Call: invoke `setPolicies` with the failing payload to exercise the revert branch.
         harness.setPolicies(newRoot, tamperedCid, auth);
@@ -577,6 +598,24 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
 
         vm.prank(GUARDIAN);
         harness.setPolicies(newRoot, ipfsCid, auth);
+    }
+
+    /**
+     * @dev Helper: recovers signer from one packed EOA signature (`v || r || s`) against `hash`.
+     */
+    function _recoverEOASignerFromPackedSignature(bytes32 hash, bytes memory signatures) internal pure returns (address) {
+        if (signatures.length < 65) return address(0);
+
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        assembly {
+            v := byte(0, mload(add(signatures, 0x20)))
+            r := mload(add(signatures, 0x21))
+            s := mload(add(signatures, 0x41))
+        }
+
+        return ecrecover(hash, v, r, s);
     }
 
     /**
