@@ -147,9 +147,8 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         // `length=2` without providing any element data.
         bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(5));
-        bytes memory callData = abi.encodeCall(
-            harness.areParametersAllowedByConstraintsViaPolicyLibrary, (malformedConstraints, data)
-        );
+        bytes memory callData =
+            abi.encodeCall(harness.areParametersAllowedByConstraintsViaPolicyLibrary, (malformedConstraints, data));
 
         // Call: invoke via low-level call so the test accepts either fail-closed `false`
         // or a decode revert for malformed ABI payloads.
@@ -203,9 +202,8 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(123));
 
         // Call: evaluate the malformed Any constraint payload.
-        bool allowed = harness.areParametersAllowedByConstraintsViaPolicyLibrary(
-            _encodeSingleConstraint(anyConstraint), data
-        );
+        bool allowed =
+            harness.areParametersAllowedByConstraintsViaPolicyLibrary(_encodeSingleConstraint(anyConstraint), data);
 
         // Verify: Any constraints should allow regardless of comparisonData contents.
         assertTrue(allowed, "Any constraint should not decode comparisonData");

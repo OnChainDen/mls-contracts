@@ -147,8 +147,9 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
         bool exactAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Exact, abi.encode(maxValue), bytes32(maxValue)
         );
-        bool rangeAllowed =
-            harness.isUintParameterAllowedByConstraintViaPolicyLibrary(ConstraintType.Range, maxRange, bytes32(maxValue));
+        bool rangeAllowed = harness.isUintParameterAllowedByConstraintViaPolicyLibrary(
+            ConstraintType.Range, maxRange, bytes32(maxValue)
+        );
 
         // Verify: max value should pass both exact and point-range checks.
         assertTrue(exactAllowed, "uint max exact should pass");

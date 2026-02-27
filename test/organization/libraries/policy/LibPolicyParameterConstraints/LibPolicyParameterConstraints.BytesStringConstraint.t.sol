@@ -126,10 +126,7 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
     }
 
     /// @dev Verifies that an offset equal to calldata length is rejected.
-    function test_isBytesOrStringParameterAllowedByConstraint_offsetEqualToCalldataLength_returnsFalse()
-        public
-        view
-    {
+    function test_isBytesOrStringParameterAllowedByConstraint_offsetEqualToCalldataLength_returnsFalse() public view {
         // Setup: compute an out-of-range offset that starts exactly at `data.length`.
         bytes memory payload = bytes("abcdef");
         bytes memory data = _encodeSingleBytesArg(payload);
