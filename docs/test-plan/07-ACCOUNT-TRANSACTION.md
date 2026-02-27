@@ -157,9 +157,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | 151 | Non-empty but below-threshold valid review signatures (e.g., required `2`, provided `1`) — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
 | 65 | Sufficient valid approvals — succeeds | [U] | P0 |
 | 66 | Different initiator signatures produce different review hashes (binding property) | [S] | P0 |
-| 136 | **Desired Behavior:** duplicate or out-of-order reviewer signers revert (not `InsufficientApprovals`) | [S] | P0 |
-| 137 | **Desired Behavior:** unauthorized reviewer signer reverts `UnauthorizedApprovalSigner` | [S] | P0 |
-| 138 | **Desired Behavior:** with `ApproverType.Group`, non-existent approver group reverts `GroupDoesNotExist` | [S] | P0 |
+| 136 | Duplicate or out-of-order reviewer signers fail closed — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
+| 137 | Unauthorized reviewer signer fails closed — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
+| 138 | With `ApproverType.Group`, non-existent approver group fails closed — reverts `InsufficientApprovals(required, 0)` | [N] | P0 |
 
 ---
 
