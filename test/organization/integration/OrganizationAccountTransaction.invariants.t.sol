@@ -133,7 +133,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: consumed nonce cannot be reused for execution or rejection.
-    function invariant_nonceConsumption_preventsExecuteAndRejectReplay() public {
+    function invariant_AT_INV_1_nonceConsumption_preventsExecuteAndRejectReplay() public {
         // Verify: execute replay fails on consumed nonce.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, usedNonce));
         vm.prank(GUARDIAN);
@@ -179,19 +179,19 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: rate-limit usage changes atomically (exact increment or full rollback).
-    function invariant_rateLimitAtomicity_noPartialUsageMutations() public view {
+    function invariant_AT_INV_2_rateLimitAtomicity_noPartialUsageMutations() public view {
         assertEq(
             harness.getPolicyUsage(usageKey, usageWindow), usageAfterSuccess, "usage must remain exact after revert"
         );
     }
 
     /// @dev Verifies invariant: nonce is already consumed before account external call entry (CEI ordering).
-    function invariant_ceiNonceConsumption_accountEntryObservedConsumedNonce() public view {
+    function invariant_AT_INV_3_ceiNonceConsumption_accountEntryObservedConsumedNonce() public view {
         assertEq(account.executionCount(), 1, "account call should have observed consumed nonce and succeeded once");
     }
 
     /// @dev Verifies invariant: execute/reject share the same nonce space for identical tuples.
-    function invariant_sharedNonceSpace_executeAndRejectUseSameNonce() public view {
+    function invariant_AT_INV_4_sharedNonceSpace_executeAndRejectUseSameNonce() public view {
         bytes memory operationData = abi.encode(address(account), DESTINATION, 0, keccak256(data), DEFAULT_POLICY_ID);
         uint256 executeNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, usedSalt);
         uint256 rejectNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, usedSalt);
@@ -199,7 +199,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: approval and rejection initiator hashes are always distinct.
-    function invariant_approvalRejectionHashSeparation() public view {
+    function invariant_AT_INV_5_approvalRejectionHashSeparation() public view {
         bytes32 approvalHash = harness.computeInitiatorHashFromParamsViaLibrary(
             address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
         );
@@ -210,7 +210,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: organization address is bound in initiator hash.
-    function invariant_organizationBinding_preventsCrossOrganizationReplay() public {
+    function invariant_AT_INV_6_organizationBinding_preventsCrossOrganizationReplay() public {
         OrganizationAccountTransactionBaseHarness orgB = new OrganizationAccountTransactionBaseHarness();
         bytes32 hashA = harness.computeInitiatorHashFromParamsViaLibrary(
             address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true

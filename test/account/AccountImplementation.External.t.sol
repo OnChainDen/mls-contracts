@@ -15,7 +15,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive accepts ETH from arbitrary senders.
      */
-    function test_receive_acceptsEthFromAnyone() public {
+    function test_AI_RCV_1_receive_acceptsEthFromAnyone() public {
         // Setup: fund a random sender and define transfer value.
         address sender = address(0xA101);
         uint256 value = 0.7 ether;
@@ -33,7 +33,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive emits `MLSWalletAccountNativeTokenReceived` with sender/value.
      */
-    function test_receive_emitsNativeTokenReceivedEvent() public {
+    function test_AI_RCV_2_receive_emitsNativeTokenReceivedEvent() public {
         // Setup: fund sender and configure event expectation.
         address sender = address(0xA102);
         uint256 value = 0.3 ether;
@@ -51,7 +51,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies zero-value receive still emits `MLSWalletAccountNativeTokenReceived`.
      */
-    function test_receive_zeroValueTransfer_emitsEvent() public {
+    function test_AI_RCV_3_receive_zeroValueTransfer_emitsEvent() public {
         // Setup: choose sender for zero-value call.
         address sender = address(0xA103);
 
@@ -69,7 +69,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    function test_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_ET_1_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization() public {
         // Setup: deploy target call receiver.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
 
@@ -84,7 +84,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies different organization caller (not bound beacon) reverts `OnlyOrganization`.
      */
-    function test_executeTransaction_differentOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_ET_2_executeTransaction_differentOrganizationCaller_revertsOnlyOrganization() public {
         // Setup: deploy target call receiver and use another beacon-like address as caller.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         address otherOrganization = address(0xBEEFCAFE);
@@ -100,7 +100,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies successful executeTransaction emits `TransactionExecuted`.
      */
-    function test_executeTransaction_success_emitsTransactionExecuted() public {
+    function test_AI_ET_3_executeTransaction_success_emitsTransactionExecuted() public {
         // Setup: deploy target and build calldata tuple.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("payload"), 33);
@@ -118,7 +118,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies failed downstream call reverts with `TransactionExecutionFailed`.
      */
-    function test_executeTransaction_failedCall_revertsTransactionExecutionFailed() public {
+    function test_AI_ET_4_executeTransaction_failedCall_revertsTransactionExecutionFailed() public {
         // Setup: deploy target and build reverting calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);
@@ -132,7 +132,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies value is forwarded to destination in executeTransaction.
      */
-    function test_executeTransaction_forwardsEthValue() public {
+    function test_AI_ET_5_executeTransaction_forwardsEthValue() public {
         // Setup: deploy receiver and fund account balance.
         AccountNativeReceiver receiver = new AccountNativeReceiver();
         uint256 value = 0.21 ether;
@@ -150,7 +150,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies calldata is forwarded unchanged to destination.
      */
-    function test_executeTransaction_forwardsCalldata() public {
+    function test_AI_ET_6_executeTransaction_forwardsCalldata() public {
         // Setup: deploy target and encode deterministic payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory innerPayload = hex"112233445566";
@@ -171,7 +171,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies emitted `TransactionExecuted` carries exact `(to,value,data,nonce,policyId)`.
      */
-    function test_executeTransaction_emitsTransactionExecutedWithExpectedTuple() public {
+    function test_AI_ET_7_executeTransaction_emitsTransactionExecutedWithExpectedTuple() public {
         // Setup: deploy target and deterministic tuple.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("tuple"), 90);
@@ -190,7 +190,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies getOrganizationAddress returns beacon (organization) address.
      */
-    function test_getOrganizationAddress_returnsBoundOrganizationAddress() public view {
+    function test_AI_GOA_1_getOrganizationAddress_returnsBoundOrganizationAddress() public view {
         // Call: read organization address through account proxy.
         address organization = account.getOrganizationAddress();
 
@@ -201,7 +201,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies getOrganizationAddress is callable by arbitrary callers.
      */
-    function test_getOrganizationAddress_callableByAnyone() public {
+    function test_AI_GOA_2_getOrganizationAddress_callableByAnyone() public {
         // Setup: choose arbitrary caller.
         address caller = address(0xA104);
 
@@ -216,7 +216,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature delegates `(account,hash,signature)` to organization contract.
      */
-    function test_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
+    function test_AI_IVS_1_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
         // Setup: configure beacon mock to enforce exact delegated call arguments.
         bytes32 hash = keccak256("account-signature-delegate");
         bytes memory signature = hex"0102030405";
@@ -233,7 +233,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns ERC-1271 magic value when organization approves.
      */
-    function test_isValidSignature_organizationApproves_returnsMagicValue() public {
+    function test_AI_IVS_2_isValidSignature_organizationApproves_returnsMagicValue() public {
         // Setup: configure organization to approve.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);
@@ -248,7 +248,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns non-magic value when organization rejects.
      */
-    function test_isValidSignature_organizationRejects_returnsNonMagicValue() public {
+    function test_AI_IVS_3_isValidSignature_organizationRejects_returnsNonMagicValue() public {
         // Setup: configure organization to reject.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(0xffffffff);
@@ -263,7 +263,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature is callable by arbitrary callers (fuzz).
      */
-    function testFuzz_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature) public {
+    function testFuzz_AI_IVS_4_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature) public {
         // Setup: configure deterministic organization response.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);

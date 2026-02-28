@@ -43,7 +43,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that policy does not apply reverts policy does not apply.
-    function test_policyDoesNotApply_revertsPolicyDoesNotApply() public {
+    function test_LOAT_VTAOR_8_policyDoesNotApply_revertsPolicyDoesNotApply() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply reverts policy does
         // not apply.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -129,7 +129,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that signature policy cannot authorize account transactions.
-    function test_signaturePolicyCannotAuthorizeAccountTransactions() public {
+    function test_LOAT_VTAOR_9_signaturePolicyCannotAuthorizeAccountTransactions() public {
         // Setup: assemble inputs expected to hit the guarded failure path for signature policy cannot authorize account
         // transactions.
         Policy memory policy =
@@ -494,7 +494,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that auto reject requires authorized initiator signature.
-    function test_autoRejectRequiresAuthorizedInitiatorSignature() public {
+    function test_LOAT_VAAROR_4_autoRejectRequiresAuthorizedInitiatorSignature() public {
         // Setup: assemble inputs expected to hit the guarded failure path for auto reject requires authorized initiator
         // signature.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -591,7 +591,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that approval review signatures cannot replay as rejection.
-    function test_approvalReviewSignaturesCannotReplayAsRejection() public {
+    function test_LOAT_VAAROR_7_approvalReviewSignaturesCannotReplayAsRejection() public {
         // Setup: assemble inputs expected to hit the guarded failure path for approval review signatures cannot replay
         // as rejection.
         Policy memory policy =
@@ -648,7 +648,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_hashBuildersAreDeterministicAndFieldBound() public {
+    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10_hashBuildersAreDeterministicAndFieldBound() public {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory data = abi.encodeWithSelector(bytes4(0xCAFED00D), uint256(14));
@@ -1731,7 +1731,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross organization replay reviewer signatures fail with valid org b initiator.
-    function test_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
+    function test_LOAT_CRHFP_1_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay reviewer
         // signatures fail with valid org b initiator.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();

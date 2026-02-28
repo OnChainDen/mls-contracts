@@ -22,7 +22,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies that a non-guardian caller is rejected by the `onlyGuardian` modifier.
      */
-    function test_rejectAccountTransaction_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_OATB_RAT_1_rejectAccountTransaction_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure a deployed account fixture and valid rejection payload.
         address account = address(0xAC001);
         harness.setDeployedAccount(account, true);
@@ -56,7 +56,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_rejectAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
+    function test_OATB_RAT_2_rejectAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
         // Setup: use a random non-deployed account address.
         address undeployedAccount = address(0xAC002);
         bytes memory data = abi.encodeWithSelector(bytes4(0x02030405), uint256(2));
@@ -88,7 +88,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies reject nonce matches execute nonce for the same operation tuple.
      */
-    function test_rejectAccountTransaction_nonceMatchesExecuteForSameTuple() public view {
+    function test_OATB_RAT_3_rejectAccountTransaction_nonceMatchesExecuteForSameTuple() public view {
         // Setup: define a deterministic tuple and build operation data hash.
         address account = address(0xAC003);
         bytes memory data = abi.encodeWithSelector(bytes4(0x03040506), uint256(3));
@@ -105,7 +105,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies nonce is consumed before rejection validation starts.
      */
-    function test_rejectAccountTransaction_nonceConsumedBeforeRejectionValidation() public {
+    function test_OATB_RAT_4_rejectAccountTransaction_nonceConsumedBeforeRejectionValidation() public {
         // Setup: configure deployed account and nonce-aware ERC-1271 signer for initiator/rejection signatures.
         address account = address(0xAC003A);
         harness.setDeployedAccount(account, true);
@@ -183,7 +183,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies replay with a previously used nonce reverts with `NonceAlreadyUsed`.
      */
-    function test_rejectAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
+    function test_OATB_RAT_5_rejectAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
         // Setup: execute one successful rejection.
         address account = address(0xAC005);
         harness.setDeployedAccount(account, true);
@@ -232,7 +232,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies rejection delegates validation to `validateTransactionRejectionOrRevert`.
      */
-    function test_rejectAccountTransaction_invalidValidationInput_revertsFromValidationLibrary() public {
+    function test_OATB_RAT_6_rejectAccountTransaction_invalidValidationInput_revertsFromValidationLibrary() public {
         // Setup: build payload with empty initiator signature to trigger validation guard.
         address account = address(0xAC006);
         harness.setDeployedAccount(account, true);
@@ -261,7 +261,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies success emits `AccountTransactionRejected` with expected payload.
      */
-    function test_rejectAccountTransaction_success_emitsAccountTransactionRejected() public {
+    function test_OATB_RAT_7_rejectAccountTransaction_success_emitsAccountTransactionRejected() public {
         // Setup: build valid auto-reject payload.
         address account = address(0xAC007);
         harness.setDeployedAccount(account, true);
@@ -299,7 +299,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies execute then reject with identical tuple reverts due to shared nonce space.
      */
-    function test_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed() public {
+    function test_OATB_RAT_8_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed() public {
         // Setup: deploy account and build one shared payload tuple.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -348,7 +348,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies reject then execute with identical tuple reverts due to shared nonce space.
      */
-    function test_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed() public {
+    function test_OATB_RAT_9_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed() public {
         // Setup: deploy account and build one shared payload tuple.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -397,7 +397,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies failed rejection validation does not burn nonce; fixed retry can succeed.
      */
-    function test_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed() public {
+    function test_OATB_RAT_10_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed() public {
         // Setup: configure auto-approve rejection where first review signature is unauthorized.
         address account = address(0xAC008);
         harness.setDeployedAccount(account, true);
