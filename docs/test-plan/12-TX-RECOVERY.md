@@ -330,10 +330,15 @@
 | Valid EOA signature from configured recovery address returns true | `[U]` | P0 |
 | Valid EOA signature from wrong signer returns false | `[N]` | P0 |
 | Malformed signature bytes return false (no revert) | `[N]` | P0 |
+| EOA signature with non-65-byte length (including malformed payloads with `v=27`/`v=28`) returns false (no revert) | `[N]` | P0 |
+| EOA signature with malleable `s` (upper half-order) returns false (no revert) | `[N]` | P0 |
 | Unknown signature type byte returns false | `[N]` | P0 |
 | Valid ERC-1271 contract signature from configured recovery address returns true | `[U]` | P0 |
 | ERC-1271 contract signer returning invalid magic returns false | `[N]` | P0 |
 | ERC-1271 signer contract reverting on `isValidSignature` returns false | `[N]` | P0 |
+| ERC-1271 signature with truncated header (<23 bytes) returns false (no revert) | `[N]` | P0 |
+| ERC-1271 signature with declared inner length greater than available bytes returns false (no revert) | `[N]` | P0 |
+| ERC-1271 signer returning less than 32 bytes from `isValidSignature` returns false (no revert) | `[N]` | P0 |
 | Same signature over different hash returns false | `[N]` | P1 |
 | Result is independent of `isEnabled` state | `[U]` | P1 |
 
@@ -423,7 +428,11 @@
 | After `disableTransactionAndERC1271Recovery`, previously-valid recovery signatures are rejected | `[S]` | P0 |
 | Re-enabling tx recovery re-allows valid recovery signatures | `[I]` | P1 |
 | Recovery signature path requires raw recovery signature only (no guardian signature, no policy proofs) | `[S]` | P0 |
-| Recovery signature path returns invalid value (not revert) for malformed raw recovery signature bytes | `[N]` | P0 |
+| Recovery signature path returns invalid value (not revert) for malformed raw EOA signature length payloads | `[N]` | P0 |
+| Recovery signature path returns invalid value (not revert) for malformed raw EOA signatures with high-`s` malleability | `[N]` | P0 |
+| Recovery signature path returns invalid value (not revert) for malformed raw ERC-1271 signatures with truncated header | `[N]` | P0 |
+| Recovery signature path returns invalid value (not revert) for malformed raw ERC-1271 signatures whose declared inner length exceeds available bytes | `[N]` | P0 |
+| Recovery signature path returns invalid value (not revert) when ERC-1271 `isValidSignature` returns less than 32 bytes | `[N]` | P0 |
 
 ---
 
