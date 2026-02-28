@@ -68,6 +68,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | OGRB-IIGR-9 | **Desired Behavior:** signed `operationData` is bound to `recoveryAddress`; signatures for `(recoveryAddress=A, timelock=T)` cannot execute with `(recoveryAddress=B, timelock=T)` | [S] | P0 |
 | OGRB-IIGR-10 | **Desired Behavior:** signed `operationData` is bound to `timelockDurationSeconds`; signatures for `(recoveryAddress=A, timelock=T1)` cannot execute with `(recoveryAddress=A, timelock=T2)` | [S] | P0 |
 | OGRB-IIGR-11 | **Desired Behavior:** expired admin auth (`expirationTimestamp < block.timestamp`) reverts and nonce is not burned (same `operationType` + `operationData` + `salt` remains usable with fresh signatures) | [N][S] | P0 |
+| OGRB-IIGR-12 | Rejection signatures (`isApproval=false`) cannot execute `initiateInitializeGuardianRecovery` | [S] | P0 |
+| OGRB-IIGR-13 | Signatures for a different `OperationType` (e.g., finalize/cancel) cannot authorize initiation | [S] | P0 |
 
 ---
 
@@ -87,6 +89,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | OGRB-FIGR-10 | **Desired Behavior:** signed finalize `operationData` is bound to `pendingRecoveryAddress`; signatures over stale pending address fail after pending address changes | [S] | P0 |
 | OGRB-FIGR-11 | **Desired Behavior:** signed finalize `operationData` is bound to `pendingTimelockDurationSeconds`; signatures over stale pending timelock fail after pending timelock changes | [S] | P0 |
 | OGRB-FIGR-12 | **Desired Behavior:** expired admin auth (`expirationTimestamp < block.timestamp`) reverts and nonce is not burned (same `operationType` + `operationData` + `salt` remains usable with fresh signatures) | [N][S] | P0 |
+| OGRB-FIGR-13 | Rejection signatures (`isApproval=false`) cannot execute `finalizeInitializeGuardianRecovery` | [S] | P0 |
+| OGRB-FIGR-14 | Signatures for a different `OperationType` (e.g., initiate/cancel) cannot authorize finalization | [S] | P0 |
 
 ---
 
@@ -142,6 +146,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-IGR-6 | Already configured (`recoveryAddress` non-zero) — reverts `GuardianRecoveryAlreadyConfigured` | [N] | P0 |
 | LOGR-IGR-7 | Already configured (`timelockDurationSeconds` non-zero) — reverts `GuardianRecoveryAlreadyConfigured` | [N] | P0 |
 | LOGR-IGR-8 | Values readable via `getGuardianRecoveryState()` after initialization | [U] | P1 |
+| LOGR-IGR-9 | Initialization only mutates config fields (`recoveryAddress`, `timelockDurationSeconds`) and does not modify pending update/init state | [S] | P0 |
 
 ---
 
@@ -158,6 +163,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-IRGU-7 | Event `currentGuardian` is read from normal guardian storage (not recovery storage) | [U] | P1 |
 | LOGR-IRGU-8 | Current guardian remains unchanged during pending state | [U] | P1 |
 | LOGR-IRGU-9 | Same address as current guardian — succeeds (no validation against current) | [E] | P2 |
+| LOGR-IRGU-10 | Initiate only mutates recovery-update pending fields; recovery config and deferred-init pending fields remain unchanged | [S] | P1 |
 
 ---
 
@@ -173,6 +179,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-FRGU-6 | Finalize does NOT change guardian — only marks ready for acceptance | [U] | P1 |
 | LOGR-FRGU-7 | `pendingGuardian` and `pendingGuardianTimestamp` remain unchanged after finalize | [U] | P1 |
 | LOGR-FRGU-8 | Double finalize — second call sets flag to true again (no-op effectively) | [E] | P2 |
+| LOGR-FRGU-9 | Finalize only mutates `isUpdateReadyForAcceptance`; recovery config and deferred-init pending fields remain unchanged | [S] | P1 |
 
 ---
 
@@ -188,6 +195,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-CRGU-6 | Cancel before finalize — clears pending state correctly | [U] | P1 |
 | LOGR-CRGU-7 | Cancel after finalize but before accept — clears ready-for-acceptance state | [U] | P1 |
 | LOGR-CRGU-8 | Recovery config (`recoveryAddress`, `timelockDurationSeconds`) unchanged after cancel | [U] | P1 |
+| LOGR-CRGU-9 | Cancel does not modify deferred-init pending fields (`pendingInit.*`) | [S] | P1 |
 
 ---
 
@@ -206,6 +214,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-AGR-9 | After acceptance, new guardian address is the guardian | [U] | P1 |
 | LOGR-AGR-10 | Recovery config (`recoveryAddress`, `timelockDurationSeconds`) unchanged after accept | [U] | P1 |
 | LOGR-AGR-11 | Pending guardian equals current guardian — accept still clears pending recovery state and emits `RecoveryGuardianUpdateAccepted` with `previousGuardian == newGuardian` | [E] | P2 |
+| LOGR-AGR-12 | Accept does not modify deferred-init pending fields (`pendingInit.*`) | [S] | P1 |
 
 ---
 
@@ -223,6 +232,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-IIGR-8 | Timelock above maximum — reverts `InvalidTimelockDuration` | [N] | P1 |
 | LOGR-IIGR-9 | Emits `GuardianRecoveryInitializationInitiated(recoveryAddress, timelockDurationSeconds, canFinalizeAtTimestamp)` | [EV] | P1 |
 | LOGR-IIGR-10 | Validation order: not-configured check before already-pending check | [U] | P1 |
+| LOGR-IIGR-11 | Validation order: already-pending check executes before parameter validation (when pending exists, invalid params still revert `GuardianRecoveryInitializationAlreadyPending`) | [U] | P1 |
+| LOGR-IIGR-12 | Initiate deferred init only mutates `pendingInit.*`; recovery config and recovery-update pending fields remain unchanged | [S] | P1 |
 
 ---
 
@@ -239,6 +250,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-FIGR-7 | Emits `GuardianRecoveryInitializationFinalized(pendingAddress, pendingTimelock)` | [EV] | P1 |
 | LOGR-FIGR-8 | After finalization, recovery flow (initiate/finalize/cancel/accept) can be used | [I] | P1 |
 | LOGR-FIGR-9 | **Desired Behavior:** if pending init fields are malformed and delegated `initializeGuardianRecovery` reverts, finalization is atomic: pending init fields and config remain unchanged (full rollback) | [S] | P0 |
+| LOGR-FIGR-10 | Successful finalize does not modify recovery-update pending fields (`pendingGuardian`, `pendingGuardianTimestamp`, `isUpdateReadyForAcceptance`) | [S] | P1 |
+| LOGR-FIGR-11 | Double finalize initialization — second call reverts `NoGuardianRecoveryInitializationPending` | [E] | P1 |
+| LOGR-FIGR-12 | On revert paths (`NoGuardianRecoveryInitializationPending` / `TimelockNotExpired`), pending init tuple and config remain unchanged | [S] | P0 |
 
 ---
 
@@ -253,6 +267,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-CIGR-5 | Emits `GuardianRecoveryInitializationCancelled()` | [EV] | P1 |
 | LOGR-CIGR-6 | Recovery config (`recoveryAddress`, `timelockDurationSeconds`) remain zero after cancel | [U] | P1 |
 | LOGR-CIGR-7 | Can initiate again after cancel | [U] | P1 |
+| LOGR-CIGR-8 | Double cancel initialization — second call reverts `NoGuardianRecoveryInitializationPending` | [E] | P1 |
+| LOGR-CIGR-9 | Cancel deferred init does not modify recovery-update pending fields (`pendingGuardian`, `pendingGuardianTimestamp`, `isUpdateReadyForAcceptance`) | [S] | P1 |
 
 ---
 
@@ -275,6 +291,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOGR-EORPG-2 | `msg.sender != pendingGuardian` — reverts `UnauthorizedRecoveryGuardianAcceptance(msg.sender, pendingGuardian)` | [N] | P0 |
 | LOGR-EORPG-3 | No pending update (`pendingGuardian == address(0)`) — any address reverts | [E] | P0 |
 | LOGR-EORPG-4 | Error includes both caller address and expected pending guardian address | [U] | P1 |
+| LOGR-EORPG-5 | After `cancelRecoveryGuardianUpdate` or `acceptGuardianRecovery`, previously pending guardian no longer passes the check | [S] | P1 |
 
 ---
 
@@ -332,6 +349,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | OGR-INT-10 | Multiple sequential recovery updates: complete first → start and complete second | [I] | P1 |
 | OGR-INT-11 | **Desired Behavior:** deferred-init finalize signatures become invalid after `cancelInitializeGuardianRecovery` + re-init with new params (`operationData` binding prevents stale-signature replay) | [I][S] | P0 |
 | OGR-INT-12 | **Desired Behavior:** deferred-init cancel signatures become invalid after pending params change (`operationData` binding to current pending tuple) | [I][S] | P0 |
+| OGR-INT-13 | Unconfigured recovery (`recoveryAddress == address(0)`): `initiate/finalize/cancelRecoveryGuardianUpdate` all revert via `onlyGuardianRecoveryAddress`; state remains unchanged | [I][S] | P0 |
+| OGR-INT-14 | After `cancelRecoveryGuardianUpdate`, old pending guardian still cannot call `acceptGuardianRecovery` even after original timelock window passes | [I][S] | P1 |
+| OGR-INT-15 | Deferred-init idempotency: successful finalize or cancel clears pending state such that immediate second finalize/cancel reverts `NoGuardianRecoveryInitializationPending` | [I][S] | P1 |
 
 ---
 
@@ -349,6 +369,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | OGR-FZ-8 | Fuzz: Random non-pending-guardian addresses always revert on `enforceOnlyRecoveryPendingGuardian` | [F] | P0 |
 | OGR-FZ-9 | Fuzz: Random guardian recovery timelock durations — `canFinalizeAtTimestamp` always equals `block.timestamp + duration` | [F] | P1 |
 | OGR-FZ-10 | Fuzz: `address(0)` always reverts `InvalidNewGuardianAddress` on `initiateRecoveryGuardianUpdate` | [F] | P1 |
+| OGR-FZ-11 | Stateful fuzz: random sequences of initiate/finalize/cancel/accept (+ time warps) never change `guardian` unless `acceptGuardianRecovery` succeeds | [F][S] | P0 |
+| OGR-FZ-12 | Fuzz config coherence: whenever `recoveryAddress != address(0)`, `timelockDurationSeconds` is non-zero and within `[2 days, 30 days]` | [F][S] | P0 |
+| OGR-FZ-13 | Fuzz unauthorized-caller matrix: non-recovery addresses always fail `initiate/finalize/cancelRecoveryGuardianUpdate` in base contract | [F][S] | P0 |
 
 ---
 
@@ -367,6 +390,10 @@ All `private` functions in the files under test will be refactored to `internal`
 | OGR-INV-9 | **Accept writes to normal storage**: `acceptGuardianRecovery` always writes to `LibOrganizationGuardianStorage.layout().guardian`, never to recovery storage's config fields | P0 |
 | OGR-INV-10 | **Ready-state consistency (reverse)**: If `isUpdateReadyForAcceptance == true`, then `pendingGuardian != address(0)` AND `pendingGuardianTimestamp != 0` | P0 |
 | OGR-INV-11 | **Deferred-init consistency (reverse)**: If `pendingInit.pendingTimestamp != 0`, then `pendingInit.pendingRecoveryAddress != address(0)` AND `pendingInit.pendingTimelockDurationSeconds` is within `[2 days, 30 days]` | P0 |
+| OGR-INV-12 | **Pending timestamp coherence (forward)**: If `pendingGuardian != address(0)`, then `pendingGuardianTimestamp != 0` | P0 |
+| OGR-INV-13 | **Config coherence**: `recoveryAddress == address(0)` iff `timelockDurationSeconds == 0`; when configured, timelock is in `[2 days, 30 days]` | P0 |
+| OGR-INV-14 | **Guardian mutation point**: Recovery functions other than `acceptGuardianRecovery` never modify `LibOrganizationGuardianStorage.layout().guardian` | P0 |
+| OGR-INV-15 | **Flow-field isolation**: Recovery-update operations never modify `pendingInit.*`, and deferred-init operations never modify (`pendingGuardian`, `pendingGuardianTimestamp`, `isUpdateReadyForAcceptance`) | P0 |
 
 ---
 
@@ -378,24 +405,24 @@ All `private` functions in the files under test will be refactored to `internal`
 | `finalizeRecoveryGuardianUpdate` (Base) | 2 | P0-P1 |
 | `cancelRecoveryGuardianUpdate` (Base) | 2 | P0-P1 |
 | `acceptGuardianRecovery` (Base) | 2 | P0-P1 |
-| `initiateInitializeGuardianRecovery` (Base) | 11 | P0-P1 |
-| `finalizeInitializeGuardianRecovery` (Base) | 12 | P0-P1 |
+| `initiateInitializeGuardianRecovery` (Base) | 13 | P0-P1 |
+| `finalizeInitializeGuardianRecovery` (Base) | 14 | P0-P1 |
 | `cancelInitializeGuardianRecovery` (Base) | 12 | P0-P1 |
 | `getGuardianRecoveryState` (Base) | 6 | P3 |
-| `initializeGuardianRecovery` (Lib) | 8 | P0-P1 |
-| `initiateRecoveryGuardianUpdate` (Lib) | 9 | P1-P2 |
-| `finalizeRecoveryGuardianUpdate` (Lib) | 8 | P1-P2 |
-| `cancelRecoveryGuardianUpdate` (Lib) | 8 | P1 |
-| `acceptGuardianRecovery` (Lib) | 11 | P0-P2 |
-| `initiateInitializeGuardianRecovery` (Lib) | 10 | P0-P1 |
-| `finalizeInitializeGuardianRecovery` (Lib) | 9 | P0-P1 |
-| `cancelInitializeGuardianRecovery` (Lib) | 7 | P1 |
+| `initializeGuardianRecovery` (Lib) | 9 | P0-P1 |
+| `initiateRecoveryGuardianUpdate` (Lib) | 10 | P1-P2 |
+| `finalizeRecoveryGuardianUpdate` (Lib) | 9 | P1-P2 |
+| `cancelRecoveryGuardianUpdate` (Lib) | 9 | P1 |
+| `acceptGuardianRecovery` (Lib) | 12 | P0-P2 |
+| `initiateInitializeGuardianRecovery` (Lib) | 12 | P0-P1 |
+| `finalizeInitializeGuardianRecovery` (Lib) | 12 | P0-P1 |
+| `cancelInitializeGuardianRecovery` (Lib) | 9 | P1 |
 | `enforceOnlyGuardianRecoveryAddress` | 4 | P0-P1 |
-| `enforceOnlyRecoveryPendingGuardian` | 4 | P0-P1 |
+| `enforceOnlyRecoveryPendingGuardian` | 5 | P0-P1 |
 | `_clearPendingGuardianRecoveryInitTimelock` | 5 | P1-P2 |
 | `_validateGuardianRecoveryNotConfiguredOrRevert` | 4 | P1 |
 | `_validateGuardianRecoveryParamsOrRevert` | 8 | P1 |
-| Full lifecycle integration | 12 | P0-P1 |
-| Fuzz tests | 10 | P0-P1 |
-| Invariant tests | 11 | P0 |
-| **Total** | **177** | |
+| Full lifecycle integration | 15 | P0-P1 |
+| Fuzz tests | 13 | P0-P1 |
+| Invariant tests | 15 | P0 |
+| **Total** | **204** | |
