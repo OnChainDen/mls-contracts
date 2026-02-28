@@ -67,6 +67,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 153 | **Desired Behavior:** if downstream library call reverts (e.g., invalid params/already configured), admin nonce is not permanently consumed; same signed request can succeed after fixing root cause | [S] | P0 |
 | 169 | **Desired Behavior:** signed `operationData` is bound to `recoveryAddress`; signatures for `(recoveryAddress=A, timelock=T)` cannot execute with `(recoveryAddress=B, timelock=T)` | [S] | P0 |
 | 170 | **Desired Behavior:** signed `operationData` is bound to `timelockDurationSeconds`; signatures for `(recoveryAddress=A, timelock=T1)` cannot execute with `(recoveryAddress=A, timelock=T2)` | [S] | P0 |
+| 175 | **Desired Behavior:** expired admin auth (`expirationTimestamp < block.timestamp`) reverts and nonce is not burned (same `operationType` + `operationData` + `salt` remains usable with fresh signatures) | [N][S] | P0 |
 
 ---
 
@@ -85,6 +86,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 156 | **Desired Behavior:** if downstream finalize reverts (`NoGuardianRecoveryInitializationPending` or `TimelockNotExpired`), admin nonce/state changes roll back (same signed request remains usable once conditions are met) | [S] | P0 |
 | 171 | **Desired Behavior:** signed finalize `operationData` is bound to `pendingRecoveryAddress`; signatures over stale pending address fail after pending address changes | [S] | P0 |
 | 172 | **Desired Behavior:** signed finalize `operationData` is bound to `pendingTimelockDurationSeconds`; signatures over stale pending timelock fail after pending timelock changes | [S] | P0 |
+| 176 | **Desired Behavior:** expired admin auth (`expirationTimestamp < block.timestamp`) reverts and nonce is not burned (same `operationType` + `operationData` + `salt` remains usable with fresh signatures) | [N][S] | P0 |
 
 ---
 
@@ -103,6 +105,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | 159 | **Desired Behavior:** if downstream cancel reverts (`NoGuardianRecoveryInitializationPending`), admin nonce/state changes roll back (same signed request remains usable after pending state exists) | [S] | P0 |
 | 173 | **Desired Behavior:** signed cancel `operationData` is bound to `pendingRecoveryAddress`; signatures over stale pending address fail after pending address changes | [S] | P0 |
 | 174 | **Desired Behavior:** signed cancel `operationData` is bound to `pendingTimelockDurationSeconds`; signatures over stale pending timelock fail after pending timelock changes | [S] | P0 |
+| 177 | **Desired Behavior:** expired admin auth (`expirationTimestamp < block.timestamp`) reverts and nonce is not burned (same `operationType` + `operationData` + `salt` remains usable with fresh signatures) | [N][S] | P0 |
 
 ---
 
@@ -375,9 +378,9 @@ All `private` functions in the files under test will be refactored to `internal`
 | `finalizeRecoveryGuardianUpdate` (Base) | 2 | P0-P1 |
 | `cancelRecoveryGuardianUpdate` (Base) | 2 | P0-P1 |
 | `acceptGuardianRecovery` (Base) | 2 | P0-P1 |
-| `initiateInitializeGuardianRecovery` (Base) | 10 | P0-P1 |
-| `finalizeInitializeGuardianRecovery` (Base) | 11 | P0-P1 |
-| `cancelInitializeGuardianRecovery` (Base) | 11 | P0-P1 |
+| `initiateInitializeGuardianRecovery` (Base) | 11 | P0-P1 |
+| `finalizeInitializeGuardianRecovery` (Base) | 12 | P0-P1 |
+| `cancelInitializeGuardianRecovery` (Base) | 12 | P0-P1 |
 | `getGuardianRecoveryState` (Base) | 6 | P3 |
 | `initializeGuardianRecovery` (Lib) | 8 | P0-P1 |
 | `initiateRecoveryGuardianUpdate` (Lib) | 9 | P1-P2 |
@@ -395,4 +398,4 @@ All `private` functions in the files under test will be refactored to `internal`
 | Full lifecycle integration | 12 | P0-P1 |
 | Fuzz tests | 10 | P0-P1 |
 | Invariant tests | 11 | P0 |
-| **Total** | **174** | |
+| **Total** | **177** | |
