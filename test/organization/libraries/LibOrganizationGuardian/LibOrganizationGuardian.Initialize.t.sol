@@ -56,7 +56,7 @@ contract LibOrganizationGuardianInitializeTest is LibOrganizationGuardianSuiteBa
         harness.initializeGuardianViaLibrary(NEW_GUARDIAN_A);
 
         // Call
-        vm.expectRevert();
+        vm.expectRevert(IOrganizationGuardian.GuardianAlreadyInitialized.selector);
         harness.initializeGuardianViaLibrary(NEW_GUARDIAN_B);
 
         // Verify

@@ -76,10 +76,14 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
     function invariant_GINV_3_timelockEnforcement_guardianCannotChangeOutsideAccept() public view {
         // Setup
         // Call
-        bool violation = handler.guardianChangedOutsideAcceptViolation();
+        bool outsideAcceptViolation = handler.guardianChangedOutsideAcceptViolation();
+        bool invalidAcceptPreconditionViolation = handler.acceptWithoutFinalizeOrTimelockViolation();
 
         // Verify
-        assertFalse(violation, "guardian changed in non-accept normal-flow operation");
+        assertFalse(outsideAcceptViolation, "guardian changed in non-accept normal-flow operation");
+        assertFalse(
+            invalidAcceptPreconditionViolation, "accept succeeded without finalize/timelock-ready preconditions"
+        );
     }
 
     /// @dev Verifies GINV-4: no pending guardian implies timestamp=0 and ready=false.
