@@ -16,7 +16,7 @@ import {ContractType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies random distinct salts compute to unique addresses.
-    function testFuzz_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(bytes32 saltA, bytes32 saltB)
+    function testFuzz_AF_FT_1_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(bytes32 saltA, bytes32 saltB)
         public
         view
     {
@@ -32,7 +32,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies random salts produce deployable account proxies.
-    function testFuzz_deployAccount_randomSalt_alwaysDeploysAccount(bytes32 salt) public {
+    function testFuzz_AF_FT_2_deployAccount_randomSalt_alwaysDeploysAccount(bytes32 salt) public {
         // Setup: seed valid implementation with runtime code.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -45,7 +45,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies random non-whitelisted implementations are rejected.
-    function testFuzz_setAccountImplementation_randomNonWhitelistedAddress_reverts(address candidate) public {
+    function testFuzz_AF_FT_3_setAccountImplementation_randomNonWhitelistedAddress_reverts(address candidate) public {
         // Setup: whitelist one known implementation and ensure candidate differs.
         whitelist.setImplementationWhitelisted(ContractType.Account, accountImplementationV1, true);
         vm.assume(candidate != accountImplementationV1);
@@ -57,7 +57,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies computed address matches deployed address for any valid salt.
-    function testFuzz_computeAndDeploy_randomSalt_deployedMatchesComputed(bytes32 salt) public {
+    function testFuzz_AF_FT_4_computeAndDeploy_randomSalt_deployedMatchesComputed(bytes32 salt) public {
         // Setup: seed valid implementation with runtime code.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -71,7 +71,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies random addresses that were not deployed return false in deployment tracking.
-    function testFuzz_isAccountDeployedByOrganization_randomAddressNotDeployed_returnsFalse(address candidate)
+    function testFuzz_AF_FT_5_isAccountDeployedByOrganization_randomAddressNotDeployed_returnsFalse(address candidate)
         public
         view
     {
@@ -84,7 +84,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies same salt across different organizations computes different addresses.
-    function testFuzz_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(bytes32 salt) public {
+    function testFuzz_AF_FT_6_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(bytes32 salt) public {
         // Setup: instantiate a second organization harness.
         LibOrganizationAccountFactoryHarness otherHarness = new LibOrganizationAccountFactoryHarness();
 

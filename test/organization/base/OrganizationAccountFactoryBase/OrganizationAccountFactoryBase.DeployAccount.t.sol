@@ -15,7 +15,7 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
  */
 contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountFactoryBaseSuiteBase {
     /// @dev Verifies non-guardian callers are rejected by the `onlyGuardian` modifier.
-    function test_deployAccount_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_OAFB_DA_1_deployAccount_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure a valid one-admin baseline and prepare empty auth payload.
         _setSingleAdminThresholdOne();
         AdminAuthParams memory auth;
@@ -28,7 +28,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies insufficient admin signatures revert through admin-auth validation.
-    function test_deployAccount_insufficientAdminSignatures_revertsViaAdminAuthValidation() public {
+    function test_OAFB_DA_2_deployAccount_insufficientAdminSignatures_revertsViaAdminAuthValidation() public {
         bytes32 create2Salt = bytes32(uint256(4102));
 
         // Setup: require two signatures but provide one.
@@ -53,7 +53,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution() public {
+    function test_OAFB_DA_3_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution() public {
         bytes32 create2Salt = bytes32(uint256(4103));
 
         // Setup: configure one-admin auth and a valid implementation for beacon deployment.
@@ -82,7 +82,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies guardian + valid auth delegates to library deployment path and marks the account deployed.
-    function test_deployAccount_guardianWithValidAuth_delegatesToLibraryAndMarksDeployed() public {
+    function test_OAFB_DA_7_deployAccount_guardianWithValidAuth_delegatesToLibraryAndMarksDeployed() public {
         bytes32 create2Salt = bytes32(uint256(4104));
 
         // Setup: configure one-admin auth and set a valid beacon implementation.
@@ -113,7 +113,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies `deployAccount` returns the exact deterministic address for the given salt.
-    function test_deployAccount_returnsCorrectDeterministicAddress() public {
+    function test_OAFB_DA_8_deployAccount_returnsCorrectDeterministicAddress() public {
         bytes32 create2Salt = bytes32(uint256(4105));
 
         // Setup: configure one-admin auth and set a valid beacon implementation.
@@ -140,7 +140,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies admin auth for deploy-account uses `OperationType.DeployAccount`.
-    function test_deployAccount_operationTypeIsDeployAccount_inAdminAuthValidation() public {
+    function test_OAFB_DA_9_deployAccount_operationTypeIsDeployAccount_inAdminAuthValidation() public {
         bytes32 create2Salt = bytes32(uint256(4106));
 
         // Setup: configure one-admin auth and set a valid beacon implementation.
@@ -181,7 +181,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies golden operation-data bytes are exactly `abi.encode(create2Salt)` for a fixed salt.
-    function test_deployAccount_operationDataGoldenVector_matchesExpectedBytesAndHash() public pure {
+    function test_OAFB_DA_10_deployAccount_operationDataGoldenVector_matchesExpectedBytesAndHash() public pure {
         bytes32 create2Salt = bytes32(uint256(0xA11CE5));
 
         // Setup: fixed golden vector for deterministic operation-data encoding checks.
@@ -198,7 +198,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies expired auth params revert with `AdminOperationExpired`.
-    function test_deployAccount_expiredAuthParams_revertsAdminOperationExpired() public {
+    function test_OAFB_DA_4_deployAccount_expiredAuthParams_revertsAdminOperationExpired() public {
         bytes32 create2Salt = bytes32(uint256(4182));
 
         // Setup: configure one-admin auth and sign with an already-expired timestamp.
@@ -223,7 +223,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies tampering `create2Salt` after signing invalidates auth and reverts.
-    function test_deployAccount_create2SaltTamperingAfterSigning_invalidatesAuthAndReverts() public {
+    function test_OAFB_DA_5_deployAccount_create2SaltTamperingAfterSigning_invalidatesAuthAndReverts() public {
         bytes32 signedCreate2Salt = bytes32(uint256(4183));
         bytes32 tamperedCreate2Salt = bytes32(uint256(4184));
 
@@ -249,7 +249,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies failed auth does not consume nonce and corrected signatures succeed on retry.
-    function test_deployAccount_failedAuth_doesNotConsumeNonceAndCanRetryWithCorrectedSignatures() public {
+    function test_OAFB_DA_6_deployAccount_failedAuth_doesNotConsumeNonceAndCanRetryWithCorrectedSignatures() public {
         bytes32 create2Salt = bytes32(uint256(4184));
 
         // Setup: require two signatures but provide one for the first attempt.
