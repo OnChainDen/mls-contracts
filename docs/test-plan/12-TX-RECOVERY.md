@@ -461,6 +461,10 @@
 | Stale admin signatures for deferred finalize/cancel fail if pending values changed | `[S]` | P0 |
 | Recovery flow bypasses guardian/policy execution path but still enforces organization-account ownership | `[S]` | P0 |
 | Recovery execution cannot be used to perform guardian-only Organization operations via account call chaining | `[S]` | P0 |
+| Recovery -> account -> organization call chain targeting `modifyAdmins` reverts and leaves admin set + voting threshold unchanged | `[S]` | P0 |
+| Recovery -> account -> organization call chain targeting `modifyMembers` reverts and leaves membership/admin status unchanged | `[S]` | P0 |
+| Recovery -> account -> organization call chain targeting `setPoliciesMerkleLeaf` reverts and leaves policy merkle root/state unchanged | `[S]` | P0 |
+| Recovery -> account -> organization call chain targeting tx-recovery management entrypoints (`disable` / `initiateEnable` / `finalizeEnable`) reverts and leaves tx-recovery state unchanged | `[S]` | P0 |
 
 ---
 
@@ -495,6 +499,10 @@
 | If `pendingInit.pendingTimestamp == 0`, then pending init address and timelock are also zero | P0 |
 | If tx recovery config is set, deferred-init pending fields remain cleared (no configured+pending-init overlap) | P0 |
 | Recovery transaction execution never mutates tx recovery config/pending fields | P0 |
+| Any tx-recovery-driven account call chain attempting `modifyAdmins` cannot mutate admin set or voting threshold | P0 |
+| Any tx-recovery-driven account call chain attempting `modifyMembers` cannot mutate member/admin membership mappings | P0 |
+| Any tx-recovery-driven account call chain attempting `setPoliciesMerkleLeaf` cannot mutate policy merkle root or policy config state | P0 |
+| Any tx-recovery-driven account call chain attempting tx-recovery management entrypoints cannot mutate tx-recovery config/enable/pending state | P0 |
 | `validateRecoveryAccountTransactionAllowedOrRevert` must revert whenever `isEnabled == false` | P0 |
 | Tx recovery state transitions never modify guardian recovery state | P0 |
 | Any successful recovery execution uses `nonce=0` and `policyId=0` | P0 |
