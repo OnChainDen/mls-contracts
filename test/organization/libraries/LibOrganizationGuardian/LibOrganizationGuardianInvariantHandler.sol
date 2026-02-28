@@ -21,6 +21,9 @@ contract LibOrganizationGuardianInvariantHandler is Test {
     /// @dev Sticky flag: successful accept did not clear all pending-state fields.
     bool public acceptDidNotClearPendingStateViolation;
 
+    /// @dev Sticky flag: accept succeeded without prior finalize/timelock-ready preconditions.
+    bool public acceptWithoutFinalizeOrTimelockViolation;
+
     /// @dev Candidate guardians used by stateful mutation calls.
     address internal constant CANDIDATE_A = address(0xD101);
     address internal constant CANDIDATE_B = address(0xD102);
@@ -64,11 +67,21 @@ contract LibOrganizationGuardianInvariantHandler is Test {
      * @dev Attempts to accept the current pending update.
      */
     function accept() external {
+        address pendingGuardianBefore = harness.getPendingGuardianViaLibrary();
+        uint256 pendingTimestampBefore = harness.getPendingGuardianUpdateTimestampViaLibrary();
+        bool isReadyBefore = harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary();
         address guardianBefore = harness.getGuardianViaLibrary();
         (bool success,) = address(harness).call(abi.encodeCall(harness.acceptGuardianViaLibrary, ()));
         address guardianAfter = harness.getGuardianViaLibrary();
 
         if (success) {
+            if (
+                pendingGuardianBefore == address(0) || !isReadyBefore || pendingTimestampBefore == 0
+                    || block.timestamp < pendingTimestampBefore
+            ) {
+                acceptWithoutFinalizeOrTimelockViolation = true;
+            }
+
             if (
                 harness.getPendingGuardianViaLibrary() != address(0)
                     || harness.getPendingGuardianUpdateTimestampViaLibrary() != 0
