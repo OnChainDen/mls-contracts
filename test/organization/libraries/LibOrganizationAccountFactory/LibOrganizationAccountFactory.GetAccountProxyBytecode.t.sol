@@ -15,7 +15,7 @@ import {
  */
 contract LibOrganizationAccountFactoryGetAccountProxyBytecodeTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies returned creation bytecode is valid and deployable.
-    function test_getAccountProxyBytecode_returnsValidAccountProxyCreationBytecode() public {
+    function test_LOAF_GAPB_1_getAccountProxyBytecode_returnsValidAccountProxyCreationBytecode() public {
         // Setup: seed valid implementation so constructor beacon validation succeeds.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -36,7 +36,7 @@ contract LibOrganizationAccountFactoryGetAccountProxyBytecodeTest is LibOrganiza
     }
 
     /// @dev Verifies bytecode includes organization address as beacon constructor parameter.
-    function test_getAccountProxyBytecode_includesOrganizationAddressAsBeaconParameter() public view {
+    function test_LOAF_GAPB_2_getAccountProxyBytecode_includesOrganizationAddressAsBeaconParameter() public view {
         // Setup: precompute expected creation bytecode and constructor args.
         // Call: fetch proxy creation bytecode from library wrapper.
         bytes memory actual = harness.getAccountProxyBytecodeViaLibrary();
@@ -47,7 +47,7 @@ contract LibOrganizationAccountFactoryGetAccountProxyBytecodeTest is LibOrganiza
     }
 
     /// @dev Verifies bytecode includes empty bytes as initialization data constructor parameter.
-    function test_getAccountProxyBytecode_includesEmptyInitializationData() public view {
+    function test_LOAF_GAPB_3_getAccountProxyBytecode_includesEmptyInitializationData() public view {
         // Call: fetch proxy creation bytecode from library wrapper.
         bytes memory actual = harness.getAccountProxyBytecodeViaLibrary();
 
@@ -65,7 +65,7 @@ contract LibOrganizationAccountFactoryGetAccountProxyBytecodeTest is LibOrganiza
     }
 
     /// @dev Verifies different organizations produce different bytecode due different beacon addresses.
-    function test_getAccountProxyBytecode_differentOrganizations_produceDifferentBytecode() public {
+    function test_LOAF_GAPB_4_getAccountProxyBytecode_differentOrganizations_produceDifferentBytecode() public {
         // Setup: deploy a second organization harness with a different address.
         LibOrganizationAccountFactoryHarness otherHarness = new LibOrganizationAccountFactoryHarness();
 
@@ -78,7 +78,7 @@ contract LibOrganizationAccountFactoryGetAccountProxyBytecodeTest is LibOrganiza
     }
 
     /// @dev Verifies bytecode is deterministic for repeated calls in the same organization.
-    function test_getAccountProxyBytecode_sameOrganization_repeatedCallsAreDeterministic() public view {
+    function test_LOAF_GAPB_5_getAccountProxyBytecode_sameOrganization_repeatedCallsAreDeterministic() public view {
         // Setup: use the same organization harness for repeated calls.
         // Call: fetch bytecode twice from the same harness.
         bytes memory first = harness.getAccountProxyBytecodeViaLibrary();
@@ -89,7 +89,7 @@ contract LibOrganizationAccountFactoryGetAccountProxyBytecodeTest is LibOrganiza
     }
 
     /// @dev Verifies bytecode is independent from current account implementation storage value.
-    function test_getAccountProxyBytecode_independentOfAccountImplementationValue() public {
+    function test_LOAF_GAPB_6_getAccountProxyBytecode_independentOfAccountImplementationValue() public {
         // Setup: compute bytecode before and after changing account implementation storage.
         harness.setAccountImplementationStorage(accountImplementationV1);
         bytes memory before = harness.getAccountProxyBytecodeViaLibrary();

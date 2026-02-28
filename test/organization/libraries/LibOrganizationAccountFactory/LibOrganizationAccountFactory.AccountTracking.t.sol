@@ -15,7 +15,7 @@ import {
  */
 contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies deployed accounts return true from `isAccountDeployedByOrganization`.
-    function test_isAccountDeployedByOrganization_deployedAccount_returnsTrue() public {
+    function test_LOAF_IADBO_1_isAccountDeployedByOrganization_deployedAccount_returnsTrue() public {
         bytes32 salt = bytes32(uint256(9135));
 
         // Setup: seed valid implementation and deploy deterministic account.
@@ -30,7 +30,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies unknown addresses return false from `isAccountDeployedByOrganization`.
-    function test_isAccountDeployedByOrganization_unknownAddress_returnsFalse() public view {
+    function test_LOAF_IADBO_2_isAccountDeployedByOrganization_unknownAddress_returnsFalse() public view {
         address unknown = address(0x9136);
 
         // Setup: pick a deterministic address with no deployment fixture.
@@ -42,7 +42,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies zero address returns false from `isAccountDeployedByOrganization`.
-    function test_isAccountDeployedByOrganization_zeroAddress_returnsFalse() public view {
+    function test_LOAF_IADBO_3_isAccountDeployedByOrganization_zeroAddress_returnsFalse() public view {
         // Setup: use `address(0)` as canonical non-deployed sentinel.
         // Call: read deployment-tracking status for `address(0)`.
         bool isDeployed = harness.isAccountDeployedByOrganizationViaLibrary(address(0));
@@ -52,7 +52,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies accounts deployed by another organization return false.
-    function test_isAccountDeployedByOrganization_accountDeployedByDifferentOrganization_returnsFalse() public {
+    function test_LOAF_IADBO_4_isAccountDeployedByOrganization_accountDeployedByDifferentOrganization_returnsFalse() public {
         bytes32 salt = bytes32(uint256(9138));
 
         // Setup: deploy account from another organization harness.
@@ -68,7 +68,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies computed address transitions from false to true only after successful deployment.
-    function test_isAccountDeployedByOrganization_computedAddress_falseBeforeAndTrueAfterDeployment() public {
+    function test_LOAF_IADBO_5_isAccountDeployedByOrganization_computedAddress_falseBeforeAndTrueAfterDeployment() public {
         bytes32 salt = bytes32(uint256(9173));
 
         // Setup: compute deterministic destination before deployment.
@@ -86,7 +86,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies `validateIsAccountDeployedByOrgOrRevert` succeeds for deployed accounts.
-    function test_validateIsAccountDeployedByOrgOrRevert_deployedAccount_succeeds() public {
+    function test_LOAF_VIADBOOR_1_validateIsAccountDeployedByOrgOrRevert_deployedAccount_succeeds() public {
         bytes32 salt = bytes32(uint256(9139));
 
         // Setup: seed valid implementation and deploy deterministic account.
@@ -101,7 +101,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies `validateIsAccountDeployedByOrgOrRevert` reverts for non-deployed accounts.
-    function test_validateIsAccountDeployedByOrgOrRevert_nonOrgAccount_reverts() public {
+    function test_LOAF_VIADBOOR_2_validateIsAccountDeployedByOrgOrRevert_nonOrgAccount_reverts() public {
         address nonOrgAccount = address(0x9140);
 
         // Setup: choose a deterministic address not marked as deployed.
@@ -114,7 +114,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies `validateIsAccountDeployedByOrgOrRevert` reverts for `address(0)`.
-    function test_validateIsAccountDeployedByOrgOrRevert_zeroAddress_reverts() public {
+    function test_LOAF_VIADBOOR_3_validateIsAccountDeployedByOrgOrRevert_zeroAddress_reverts() public {
         // Setup: use `address(0)` as canonical undeployed account address.
         // Verify: zero address should revert with canonical account-factory error.
         vm.expectRevert(

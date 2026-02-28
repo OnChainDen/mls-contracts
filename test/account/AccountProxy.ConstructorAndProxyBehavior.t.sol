@@ -30,7 +30,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies constructor accepts beacon and init-data parameters and deploys successfully.
-    function test_constructor_validBeaconAndData_deploysSuccessfully() public {
+    function test_APX_CPB_1_constructor_validBeaconAndData_deploysSuccessfully() public {
         // Setup: prepare initialization calldata consumed by constructor delegatecall.
         bytes memory initData = abi.encodeWithSelector(AccountProxyBehaviorImplementationV1.initialize.selector, 111);
 
@@ -43,7 +43,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies proxy delegates calls to current implementation returned by beacon.
-    function test_proxy_delegatesCallsToCurrentBeaconImplementation() public {
+    function test_APX_CPB_2_proxy_delegatesCallsToCurrentBeaconImplementation() public {
         // Setup: deploy proxy bound to beacon implementation V1.
         AccountProxy proxy = new AccountProxy(address(beacon), bytes(""));
 
@@ -55,7 +55,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies beacon implementation update changes behavior for all existing account proxies.
-    function test_proxy_beaconUpgrade_changesBehaviorForAllExistingAccounts() public {
+    function test_APX_CPB_3_proxy_beaconUpgrade_changesBehaviorForAllExistingAccounts() public {
         // Setup: deploy two proxies bound to the same beacon.
         AccountProxy proxyA = new AccountProxy(address(beacon), bytes(""));
         AccountProxy proxyB = new AccountProxy(address(beacon), bytes(""));
@@ -77,7 +77,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies account proxy accepts ETH via implementation `receive` path.
-    function test_proxy_receiveEth_forwardsToImplementationReceive() public {
+    function test_APX_CPB_4_proxy_receiveEth_forwardsToImplementationReceive() public {
         // Setup: deploy proxy and fund deterministic sender.
         AccountProxy proxy = new AccountProxy(address(beacon), bytes(""));
         address sender = address(0x5001);
@@ -99,7 +99,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies account proxy resolves organization address (beacon address) through delegated implementation.
-    function test_proxy_getOrganizationAddress_returnsBeaconAddress() public {
+    function test_APX_CPB_5_proxy_getOrganizationAddress_returnsBeaconAddress() public {
         // Setup: deploy proxy bound to beacon.
         AccountProxy proxy = new AccountProxy(address(beacon), bytes(""));
 
@@ -111,7 +111,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies constructor reverts when beacon address is not a contract.
-    function test_constructor_beaconAddressNotContract_revertsERC1967InvalidBeacon() public {
+    function test_APX_CPB_6_constructor_beaconAddressNotContract_revertsERC1967InvalidBeacon() public {
         // Setup: choose deterministic non-contract beacon address.
         address nonContractBeacon = address(0x7500);
 
@@ -122,7 +122,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies constructor reverts when beacon returns implementation with no runtime code.
-    function test_constructor_beaconImplementationHasNoCode_revertsERC1967InvalidImplementation() public {
+    function test_APX_CPB_7_constructor_beaconImplementationHasNoCode_revertsERC1967InvalidImplementation() public {
         address noCodeImplementation = address(0x7600);
 
         // Setup: deploy beacon mock configured to return a no-code implementation address.
@@ -137,7 +137,7 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     }
 
     /// @dev Verifies constructor with empty init data and non-zero value reverts `ERC1967NonPayable`.
-    function test_constructor_emptyDataWithNonZeroValue_revertsERC1967NonPayable() public {
+    function test_APX_CPB_8_constructor_emptyDataWithNonZeroValue_revertsERC1967NonPayable() public {
         // Setup: use valid beacon and empty init data with non-zero deployment value.
         // Verify: non-zero value with empty data should be rejected by ERC1967 non-payable guard.
         vm.expectRevert(ERC1967Utils.ERC1967NonPayable.selector);
