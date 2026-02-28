@@ -29,7 +29,13 @@ library LibOrganizationGuardian {
             revert IOrganizationGuardian.InvalidGuardianAddress();
         }
 
-        LibOrganizationGuardianStorage.layout().guardian = guardian;
+        LibOrganizationGuardianStorage.Layout storage guardianLayout = LibOrganizationGuardianStorage.layout();
+
+        if (guardianLayout.guardian != address(0)) {
+            revert IOrganizationGuardian.GuardianAlreadyInitialized();
+        }
+
+        guardianLayout.guardian = guardian;
     }
 
     /**

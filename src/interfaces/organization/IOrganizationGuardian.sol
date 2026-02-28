@@ -51,6 +51,11 @@ interface IOrganizationGuardian {
     error InvalidGuardianAddress();
 
     /**
+     * @notice Thrown when attempting to initialize guardian when guardian is already set
+     */
+    error GuardianAlreadyInitialized();
+
+    /**
      * @notice Thrown when a function is called by an unauthorized address (not the guardian)
      * @param caller The address that attempted to call the function
      * @param guardian The current guardian address
