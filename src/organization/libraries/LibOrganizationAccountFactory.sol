@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
@@ -33,6 +34,11 @@ library LibOrganizationAccountFactory {
                 ContractType.Account,
                 newImplementation
             );
+
+        // Case: The new implementation has no runtime code
+        if (newImplementation.code.length == 0) {
+            revert ERC1967Utils.ERC1967InvalidImplementation(newImplementation);
+        }
 
         // Update the account implementation in storage
         LibOrganizationAccountFactoryStorage.layout().accountImplementation = newImplementation;
