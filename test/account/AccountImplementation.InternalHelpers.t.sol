@@ -13,7 +13,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` returns true for a successful downstream call.
      */
-    function test_executeInternal_successfulCall_returnsTrue() public {
+    function test_AI_EXE_1_executeInternal_successfulCall_returnsTrue() public {
         // Setup: deploy target and encode successful calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ok"), uint256(1));
@@ -29,7 +29,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` returns false when downstream target reverts.
      */
-    function test_executeInternal_targetReverts_returnsFalse() public {
+    function test_AI_EXE_2_executeInternal_targetReverts_returnsFalse() public {
         // Setup: deploy target and encode reverting calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);
@@ -44,7 +44,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` call to an EOA with no code returns true.
      */
-    function test_executeInternal_callToEOA_returnsTrue() public {
+    function test_AI_EXE_3_executeInternal_callToEOA_returnsTrue() public {
         // Setup: choose deterministic EOA destination.
         address eoa = address(0xE0A1);
 
@@ -58,7 +58,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` forwards ETH value to target.
      */
-    function test_executeInternal_forwardsEthValue() public {
+    function test_AI_EXE_4_executeInternal_forwardsEthValue() public {
         // Setup: deploy receiver and fund account balance.
         AccountNativeReceiver receiver = new AccountNativeReceiver();
         uint256 value = 0.15 ether;
@@ -76,7 +76,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` forwards calldata to target contract unchanged.
      */
-    function test_executeInternal_forwardsCalldata() public {
+    function test_AI_EXE_5_executeInternal_forwardsCalldata() public {
         // Setup: deploy recorder target and encode deterministic payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payloadBytes = hex"11223344AABB";
@@ -95,7 +95,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` does not forward more gas than specified.
      */
-    function test_executeInternal_respectsGasParameterUpperBound() public {
+    function test_AI_EXE_6_executeInternal_respectsGasParameterUpperBound() public {
         // Setup: deploy target and encode payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("gas"), uint256(2));
@@ -112,7 +112,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_execute` supports empty calldata with value-only native transfer.
      */
-    function test_executeInternal_emptyDataWithValue_nativeTransferSucceeds() public {
+    function test_AI_EXE_7_executeInternal_emptyDataWithValue_nativeTransferSucceeds() public {
         // Setup: deploy receiver and fund account.
         AccountNativeReceiver receiver = new AccountNativeReceiver();
         uint256 value = 0.09 ether;
@@ -129,7 +129,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies target return data is not propagated by `_execute` (bool-only wrapper output).
      */
-    function test_executeInternal_targetReturnDataNotCaptured() public {
+    function test_AI_EXE_8_executeInternal_targetReturnDataNotCaptured() public {
         // Setup: deploy target that returns bytes32 from `record`.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ret"), uint256(99));
@@ -147,7 +147,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies execution uses CALL semantics (callee sees account as `msg.sender`, not external caller).
      */
-    function test_executeInternal_usesCallSemantics_notDelegatecallSemantics() public {
+    function test_AI_EXE_9_executeInternal_usesCallSemantics_notDelegatecallSemantics() public {
         // Setup: deploy target and encode payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("caller"), uint256(123));
@@ -163,7 +163,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` passes when caller equals bound organization.
      */
-    function test_onlyOrganizationInternal_organizationCaller_succeeds() public {
+    function test_AI_OO_1_onlyOrganizationInternal_organizationCaller_succeeds() public {
         // Setup: bound organization is the beacon address.
         vm.prank(address(beacon));
         // Call: execute wrapper around `_onlyOrganization`.
@@ -174,7 +174,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` reverts when caller is not the bound organization.
      */
-    function test_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_OO_2_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
         // Verify: non-organization caller is rejected.
         vm.expectRevert(IAccount.OnlyOrganization.selector);
         vm.prank(NON_ORGANIZATION);
@@ -185,7 +185,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` rejects a different organization caller.
      */
-    function test_onlyOrganizationInternal_differentOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_OO_3_onlyOrganizationInternal_differentOrganizationCaller_revertsOnlyOrganization() public {
         // Setup: pick a different organization-like address.
         address differentOrganization = address(0xF00D);
 
@@ -199,7 +199,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies `_onlyOrganization` rejects `msg.sender == address(0)`.
      */
-    function test_onlyOrganizationInternal_zeroAddressCaller_revertsOnlyOrganization() public {
+    function test_AI_OO_4_onlyOrganizationInternal_zeroAddressCaller_revertsOnlyOrganization() public {
         // Verify: zero-address caller is not authorized.
         vm.expectRevert(IAccount.OnlyOrganization.selector);
         vm.prank(address(0));

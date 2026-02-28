@@ -31,7 +31,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
 
     /// @dev Verifies initiator hash uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct encoding.
-    function test_computeInitiatorHash_usesInitiatorTypehash() public view {
+    function test_LOAT_CIHFP_11_computeInitiatorHash_usesInitiatorTypehash() public view {
         // Setup: deterministic transaction tuple.
         bytes memory data = abi.encodeWithSelector(bytes4(0x61616161), uint256(1));
         uint256 salt = 91;
@@ -75,7 +75,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash for empty calldata uses `keccak256(\"\")`.
-    function test_computeInitiatorHash_emptyData_usesKeccakOfEmptyBytes() public view {
+    function test_LOAT_CIHFP_13_computeInitiatorHash_emptyData_usesKeccakOfEmptyBytes() public view {
         // Setup: empty calldata input.
         bytes memory data = bytes("");
         uint256 salt = 92;
@@ -117,7 +117,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash changes when organization binding (`address(this)`) changes.
-    function test_computeInitiatorHash_organizationBinding_changesAcrossHarnesses() public {
+    function test_LOAT_CIHFP_1_computeInitiatorHash_organizationBinding_changesAcrossHarnesses() public {
         // Setup: deploy second harness and keep shared transaction tuple.
         bytes memory data = abi.encodeWithSelector(bytes4(0x62626262), uint256(2));
         uint256 expiration = block.timestamp + 1 days;
@@ -136,7 +136,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash uses `REVIEW_ACCOUNT_TRANSACTION_TYPEHASH`.
-    function test_computeReviewHash_usesReviewTypehash() public view {
+    function test_LOAT_CRHFP_12_computeReviewHash_usesReviewTypehash() public view {
         // Setup: deterministic tuple and initiator signature bytes.
         bytes memory data = abi.encodeWithSelector(bytes4(0x63636363), uint256(3));
         uint256 salt = 94;
@@ -180,7 +180,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges() public {
+    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges() public {
         // Setup: compute baseline review hash.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64646464), uint256(4));
         bytes memory initiatorSignature = hex"1122";
@@ -281,7 +281,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash includes `keccak256(initiatorSignature)` binding.
-    function test_computeReviewHash_initiatorSignatureBinding_changesHash() public view {
+    function test_LOAT_CRHFP_10__LOAT_CRHFP_11_computeReviewHash_initiatorSignatureBinding_changesHash() public view {
         // Setup: two different initiator-signature byte payloads.
         bytes memory data = abi.encodeWithSelector(bytes4(0x65656565), uint256(5));
         uint256 expiration = block.timestamp + 1 days;
@@ -301,7 +301,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash matches a precomputed golden vector for known deterministic inputs.
-    function test_computeInitiatorHash_knownInputs_matchesPrecomputedGoldenHash() public {
+    function test_LOAT_CIHFP_14_computeInitiatorHash_knownInputs_matchesPrecomputedGoldenHash() public {
         // Setup: pin chain ID and organization address to deterministic values used by off-chain vector generation.
         uint256 originalChainId = block.chainid;
         vm.chainId(GOLDEN_CHAIN_ID);
@@ -331,7 +331,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash matches a precomputed golden vector for known deterministic inputs.
-    function test_computeReviewHash_knownInputs_matchesPrecomputedGoldenHash() public {
+    function test_LOAT_CRHFP_14_computeReviewHash_knownInputs_matchesPrecomputedGoldenHash() public {
         // Setup: pin chain ID and organization address to deterministic values used by off-chain vector generation.
         uint256 originalChainId = block.chainid;
         vm.chainId(GOLDEN_CHAIN_ID);
