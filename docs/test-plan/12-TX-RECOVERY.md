@@ -206,8 +206,8 @@
 |---|---|---|
 | Valid state sets `pendingEnableTimestamp = block.timestamp + timelockDurationSeconds` | `[U]` | P1 |
 | Emits `TxRecoveryEnableInitiated(canFinalizeAtTimestamp)` with expected timestamp | `[EV]` | P1 |
-| `recoveryAddress=0` reverts (`TxRecoveryNotConfigured`) | `[N]` | P0 |
-| `timelockDurationSeconds=0` reverts (`TxRecoveryNotConfigured`) | `[N]` | P0 |
+| `recoveryAddress=0` with valid-range `timelockDurationSeconds` reverts (`TxRecoveryNotConfigured`) | `[N]` | P0 |
+| **Desired Behavior:** if `timelockDurationSeconds` is outside `[2 days, 30 days]`, `initiateEnableTxRecovery` reverts `InvalidTimelockDuration` regardless of configuration state | `[S]` | P0 |
 | `isEnabled=true` reverts (`TxRecoveryAlreadyEnabled`) | `[N]` | P1 |
 | Existing pending enable reverts (`TxRecoveryEnableAlreadyPending`) | `[N]` | P1 |
 | `isEnabled` remains false after initiate | `[U]` | P1 |
@@ -414,6 +414,8 @@
 | `transactionAndERC1271RecoveryAddress=0` leaves tx recovery unconfigured (deferred setup) | `[I]` | P1 |
 | Deferred setup path does not auto-enable tx recovery | `[I]` | P1 |
 | Non-zero recovery address with invalid tx recovery timelock reverts organization initialization | `[N]` | P0 |
+| Invalid `adminOperationTimelockDurationSeconds` (including `0` / below min / above max) reverts organization initialization with `InvalidTimelockDuration` | `[N]` | P0 |
+| **Desired Behavior:** cannot create an org with invalid admin-op timelock and then instantly finalize deferred tx-recovery initialization in the same block/window | `[I][S]` | P0 |
 | Zero recovery address does not require tx recovery timelock validation at init time | `[E]` | P1 |
 
 ---
