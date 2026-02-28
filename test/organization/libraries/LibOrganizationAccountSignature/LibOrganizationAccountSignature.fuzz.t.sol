@@ -14,7 +14,7 @@ import {ApproverType, Policy, PolicyType, ValidationProofs} from "types/PolicyTy
  */
 contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignatureTestBase {
     /// @dev Verifies that random message hashes validate under a fully valid policy-signature fixture.
-    function testFuzz_isValidSignature_randomHashesWithValidPolicySignature_returnsMagic(bytes32 randomMessageHash)
+    function testFuzz_AS_FUZ_1_isValidSignature_randomHashesWithValidPolicySignature_returnsMagic(bytes32 randomMessageHash)
         public
     {
         // Setup: configure valid auto-approve fixture bound to fuzzed message hash.
@@ -59,7 +59,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random unsupported type prefixes always return ERC-1271 invalid value.
-    function testFuzz_isValidSignature_randomUnsupportedTypePrefixes_returnInvalid(
+    function testFuzz_AS_FUZ_2_isValidSignature_randomUnsupportedTypePrefixes_returnInvalid(
         uint8 typePrefix,
         bytes calldata payload
     ) public {
@@ -76,7 +76,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies expiration behavior: future/equal timestamps pass, strictly past timestamps fail.
-    function testFuzz_validatePolicyBasedSignature_randomExpirationTimestamp_futurePassPastFail(uint256 expirationTimestamp)
+    function testFuzz_AS_FUZ_3_validatePolicyBasedSignature_randomExpirationTimestamp_futurePassPastFail(uint256 expirationTimestamp)
         public
     {
         // Setup: configure valid auto-approve fixture bound to fuzzed expiration timestamp.
@@ -123,7 +123,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random policy IDs validate when matched with corresponding valid roots/proofs.
-    function testFuzz_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw) public {
+    function testFuzz_AS_FUZ_4_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw) public {
         // Setup: bound policy id to a non-zero range and build valid fixture around it.
         uint256 policyId = bound(policyIdRaw, 1, type(uint96).max);
         policyStateHarness.setGuardian(guardianSigner);
@@ -167,7 +167,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random guardian EOA keys are accepted when signer matches configured guardian.
-    function testFuzz_isValidGuardianSignature_randomGuardianEOAKeyMatchingSigner_returnsTrue(uint256 guardianPkRaw)
+    function testFuzz_AS_FUZ_5_isValidGuardianSignature_randomGuardianEOAKeyMatchingSigner_returnsTrue(uint256 guardianPkRaw)
         public
     {
         // Setup: derive bounded guardian private key and configure matching guardian address.
@@ -185,7 +185,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that reviewer signature counts below threshold always fail manual approvals.
-    function testFuzz_validatePolicyBasedSignature_reviewSignerCountsBelowThreshold_returnInvalid(uint8 signerCountRaw)
+    function testFuzz_AS_FUZ_6_validatePolicyBasedSignature_reviewSignerCountsBelowThreshold_returnInvalid(uint8 signerCountRaw)
         public
     {
         // Setup: bound signer count below threshold and build manual group-approval fixture.
@@ -270,7 +270,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies random recovery signers: matching signer passes, non-matching signer fails.
-    function testFuzz_validateRecoverySignature_randomRecoverySigner_matchPassMismatchFail(
+    function testFuzz_AS_FUZ_7_validateRecoverySignature_randomRecoverySigner_matchPassMismatchFail(
         uint256 recoveryPkRaw,
         uint256 wrongPkRaw
     ) public {
@@ -295,7 +295,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that different initiator signatures produce different review hashes.
-    function testFuzz_getReviewSignatureHash_differentInitiatorSignatures_returnDifferentHashes(
+    function testFuzz_AS_FUZ_8_getReviewSignatureHash_differentInitiatorSignatures_returnDifferentHashes(
         uint256 initiatorPkARaw,
         uint256 initiatorPkBRaw
     ) public view {
@@ -332,7 +332,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies random account behavior for `anySourceAccount` versus specific-source policies.
-    function testFuzz_isERC1271SignatureAllowedByPolicy_randomAccounts_anySourceVsSpecificSource(
+    function testFuzz_AS_FUZ_9_isERC1271SignatureAllowedByPolicy_randomAccounts_anySourceVsSpecificSource(
         address accountA,
         address accountB
     ) public {
@@ -378,7 +378,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that changing message hash changes both initiator and review hashes.
-    function testFuzz_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(bytes32 hashA, bytes32 hashB)
+    function testFuzz_AS_FUZ_10_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(bytes32 hashA, bytes32 hashB)
         public
         view
     {
@@ -415,7 +415,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies malformed policy payloads with undersized ABI heads revert in policy decoding.
-    function testFuzz_isValidSignature_randomMalformedPolicyPayloads_revert(bytes calldata malformed) public {
+    function testFuzz_AS_FUZ_11_isValidSignature_randomMalformedPolicyPayloads_revert(bytes calldata malformed) public {
         // Setup: constrain payloads to undersized ABI heads for deterministic decode reverts.
         vm.assume(malformed.length < 32 * 6);
         bytes memory signature = abi.encodePacked(uint8(0x01), malformed);
@@ -427,7 +427,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that authorization outcome depends on policy authorization, not signature encoding mode.
-    function testFuzz_validatePolicyBasedSignature_authorizedSignerMixes_dependOnAuthorizationNotEncoding(
+    function testFuzz_AS_FUZ_12_validatePolicyBasedSignature_authorizedSignerMixes_dependOnAuthorizationNotEncoding(
         bool initiatorAsContract,
         bool reviewerAsContract,
         bool reviewerAuthorized

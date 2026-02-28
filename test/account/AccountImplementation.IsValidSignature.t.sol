@@ -11,7 +11,7 @@ import {AccountImplementationSuiteBase} from "test/account/AccountImplementation
  */
 contract AccountImplementationIsValidSignatureTest is AccountImplementationSuiteBase {
     /// @dev Verifies exact `(account, hash, signature)` delegation to organization signature validation.
-    function test_isValidSignature_delegatesExactArguments_returnsOrganizationResult() public {
+    function test_ACI_IVS_1__ACI_IVS_4_isValidSignature_delegatesExactArguments_returnsOrganizationResult() public {
         // Setup: configure expected delegated tuple and organization approval result.
         bytes32 hash = keccak256("account-signature-delegation-exact");
         bytes memory signature = hex"010203040506";
@@ -27,7 +27,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies delegation preserves empty signature payloads.
-    function test_isValidSignature_delegatesEmptySignature_returnsOrganizationResult() public {
+    function test_ACI_IVS_2_isValidSignature_delegatesEmptySignature_returnsOrganizationResult() public {
         // Setup: enforce exact empty-signature delegation tuple.
         bytes32 hash = keccak256("account-signature-empty");
         bytes memory signature = bytes("");
@@ -43,7 +43,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies delegation preserves long signature payloads.
-    function test_isValidSignature_delegatesLargeSignature_returnsOrganizationResult() public {
+    function test_ACI_IVS_3_isValidSignature_delegatesLargeSignature_returnsOrganizationResult() public {
         // Setup: build long signature payload and enforce exact delegation tuple.
         bytes32 hash = keccak256("account-signature-large");
         bytes memory signature = new bytes(1024);
@@ -62,7 +62,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization-provided invalid value is returned as-is.
-    function test_isValidSignature_organizationReturnsInvalidValue_bubblesInvalidValue() public {
+    function test_ACI_IVS_5_isValidSignature_organizationReturnsInvalidValue_bubblesInvalidValue() public {
         // Setup: configure organization return mode and invalid signature result.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.ReturnConfigured);
@@ -76,7 +76,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies arbitrary non-magic organization values are returned unchanged.
-    function test_isValidSignature_organizationReturnsCustomValue_bubblesCustomValue() public {
+    function test_ACI_IVS_6_isValidSignature_organizationReturnsCustomValue_bubblesCustomValue() public {
         // Setup: configure custom non-standard bytes4 return.
         bytes4 custom = 0xDEADBEEF;
         beacon.clearExpectedSignatureValidation();
@@ -106,7 +106,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization custom-error reverts are converted to invalid value.
-    function test_isValidSignature_organizationRevertsWithCustomError_returnsInvalidValue() public {
+    function test_ACI_IVS_7_isValidSignature_organizationRevertsWithCustomError_returnsInvalidValue() public {
         // Setup: configure organization to revert with a custom error.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.RevertWithCustomError);
@@ -119,7 +119,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization revert-string failures are converted to invalid value.
-    function test_isValidSignature_organizationRevertsWithString_returnsInvalidValue() public {
+    function test_ACI_IVS_8_isValidSignature_organizationRevertsWithString_returnsInvalidValue() public {
         // Setup: configure organization to revert with a string reason.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.RevertWithString);
@@ -132,7 +132,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization panic reverts are converted to invalid value.
-    function test_isValidSignature_organizationRevertsWithPanic_returnsInvalidValue() public {
+    function test_ACI_IVS_9_isValidSignature_organizationRevertsWithPanic_returnsInvalidValue() public {
         // Setup: configure organization to revert with a panic.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.RevertWithPanic);
@@ -145,7 +145,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies organization no-data reverts are converted to invalid value.
-    function test_isValidSignature_organizationRevertsWithoutData_returnsInvalidValue() public {
+    function test_ACI_IVS_10_isValidSignature_organizationRevertsWithoutData_returnsInvalidValue() public {
         // Setup: configure organization to revert with empty revert data.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.RevertWithoutData);
@@ -158,7 +158,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies empty successful return payloads are treated as invalid signatures.
-    function test_isValidSignature_organizationReturnsEmptyData_returnsInvalidValue() public {
+    function test_ACI_IVS_11_isValidSignature_organizationReturnsEmptyData_returnsInvalidValue() public {
         // Setup: configure organization to return empty data without reverting.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.ReturnEmptyData);
@@ -171,7 +171,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies short successful return payloads are treated as invalid signatures.
-    function test_isValidSignature_organizationReturnsShortData_returnsInvalidValue() public {
+    function test_ACI_IVS_12_isValidSignature_organizationReturnsShortData_returnsInvalidValue() public {
         // Setup: configure organization to return 31-byte payload.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureValidationMode(AccountOrganizationBeaconMock.SignatureValidationMode.ReturnShortData);
@@ -185,7 +185,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
     }
 
     /// @dev Verifies delegated-call argument mismatches in organization are converted to invalid value.
-    function test_isValidSignature_organizationArgumentGuardReverts_returnsInvalidValue() public {
+    function test_ACI_IVS_13_isValidSignature_organizationArgumentGuardReverts_returnsInvalidValue() public {
         // Setup: enforce mismatched expected delegated tuple so organization reverts.
         bytes32 hash = keccak256("org-argument-guard");
         bytes memory signature = hex"445566";
