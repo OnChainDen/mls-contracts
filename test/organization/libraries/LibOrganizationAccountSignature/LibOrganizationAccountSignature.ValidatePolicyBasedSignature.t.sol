@@ -681,6 +681,92 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         );
     }
 
+    /// @dev Verifies that strictly out-of-order reviewer signatures fail closed with invalid value.
+    function test_LOAS_VPBS_21_B_validatePolicyBasedSignature_outOfOrderReviewers_returnsInvalidValue() public {
+        // Setup: configure manual group approvals and build two valid reviewer signatures.
+        policyStateHarness.setGuardian(guardianSigner);
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = DEFAULT_GROUP_ID;
+        policy.config.approval.approvalThreshold = 2;
+
+        policyStateHarness.setGroupStatus(DEFAULT_GROUP_ID, true);
+        policyStateHarness.setGroupMemberStatus(DEFAULT_GROUP_ID, reviewer1, true);
+        policyStateHarness.setGroupMemberStatus(DEFAULT_GROUP_ID, reviewer2, true);
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 expiration = block.timestamp + 1 days;
+
+        bytes memory initiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory reviewSignature1 = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: REVIEWER_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+        bytes memory reviewSignature2 = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: REVIEWER_PK_2,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+
+        bytes[] memory outOfOrderSignatures = new bytes[](2);
+        if (uint160(reviewer1) < uint160(reviewer2)) {
+            outOfOrderSignatures[0] = reviewSignature2;
+            outOfOrderSignatures[1] = reviewSignature1;
+        } else {
+            outOfOrderSignatures[0] = reviewSignature1;
+            outOfOrderSignatures[1] = reviewSignature2;
+        }
+
+        bytes memory signatureData = _buildPolicySignatureData({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: _concatSignatures(outOfOrderSignatures),
+            guardianSignature: guardianSignature,
+            proofs: proofs
+        });
+
+        // Call: execute low-level wrapper call to assert no unexpected revert.
+        (bool success, bytes memory result) = address(harness)
+            .staticcall(
+                abi.encodeCall(harness.validatePolicyBasedSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, signatureData))
+            );
+
+        // Verify: out-of-order reviewer bundles should fail closed.
+        assertTrue(success, "out-of-order reviewer signatures should not revert");
+        assertEq(
+            abi.decode(result, (bytes4)),
+            SignatureUtils.ERC1271_INVALID_VALUE,
+            "out-of-order reviewer signatures should return invalid"
+        );
+    }
+
     /// @dev Verifies that unauthorized reviewer signers fail closed with invalid value.
     function test_LOAS_VPBS_22_validatePolicyBasedSignature_unauthorizedReviewerSigner_returnsInvalidValue() public {
         // Setup: configure manual member-approver policy and sign review by a different reviewer.
