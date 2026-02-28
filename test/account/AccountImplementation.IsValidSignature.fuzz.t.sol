@@ -11,7 +11,7 @@ import {AccountImplementationSuiteBase} from "test/account/AccountImplementation
  */
 contract AccountImplementationIsValidSignatureFuzzTest is AccountImplementationSuiteBase {
     /// @dev Verifies organization reverts never bubble for arbitrary callers and payloads.
-    function testFuzz_isValidSignature_organizationRevertNeverBubbles(
+    function testFuzz_ACI_IVS_14_isValidSignature_organizationRevertNeverBubbles(
         address caller,
         bytes32 hash,
         bytes calldata signature
@@ -29,7 +29,7 @@ contract AccountImplementationIsValidSignatureFuzzTest is AccountImplementationS
     }
 
     /// @dev Verifies exact delegation for arbitrary inputs and arbitrary organization `bytes4` results.
-    function testFuzz_isValidSignature_delegatesExactTupleAndBubblesConfiguredResult(
+    function testFuzz_ACI_IVS_15_isValidSignature_delegatesExactTupleAndBubblesConfiguredResult(
         address caller,
         bytes32 hash,
         bytes calldata signature,
@@ -50,7 +50,7 @@ contract AccountImplementationIsValidSignatureFuzzTest is AccountImplementationS
     }
 
     /// @dev Verifies successful 32-byte organization responses are interpreted using first four bytes.
-    function testFuzz_isValidSignature_successfulWordReturn_usesFirstFourBytes(
+    function testFuzz_ACI_IVS_16_isValidSignature_successfulWordReturn_usesFirstFourBytes(
         address caller,
         bytes32 hash,
         bytes calldata signature,
@@ -71,7 +71,7 @@ contract AccountImplementationIsValidSignatureFuzzTest is AccountImplementationS
     }
 
     /// @dev Verifies short successful organization responses always fail closed to invalid.
-    function testFuzz_isValidSignature_shortSuccessfulReturn_alwaysReturnsInvalid(
+    function testFuzz_ACI_IVS_17_isValidSignature_shortSuccessfulReturn_alwaysReturnsInvalid(
         address caller,
         bytes32 hash,
         bytes calldata signature,
@@ -92,7 +92,7 @@ contract AccountImplementationIsValidSignatureFuzzTest is AccountImplementationS
     }
 
     /// @dev Verifies every organization revert mode fails closed to invalid for arbitrary callers and payloads.
-    function testFuzz_isValidSignature_revertModeVariants_alwaysReturnInvalid(
+    function testFuzz_ACI_IVS_18_isValidSignature_revertModeVariants_alwaysReturnInvalid(
         address caller,
         bytes32 hash,
         bytes calldata signature,

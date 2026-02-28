@@ -13,7 +13,7 @@ import {
  */
 contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrganizationAccountSignatureTestBase {
     /// @dev Verifies that enabled recovery with a valid recovery signature returns ERC-1271 magic value.
-    function test_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue() public {
+    function test_LOAS_VRS_1_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue() public {
         // Setup: configure enabled recovery state for the deterministic guardian signer.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -26,7 +26,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that disabled recovery returns ERC-1271 invalid value.
-    function test_validateRecoverySignature_recoveryDisabled_returnsInvalidValue() public {
+    function test_LOAS_VRS_2_validateRecoverySignature_recoveryDisabled_returnsInvalidValue() public {
         // Setup: configure recovery address with `isEnabled=false`.
         _setTxRecoveryState(guardianSigner, false);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -39,7 +39,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that enabled recovery with an invalid signer returns ERC-1271 invalid value.
-    function test_validateRecoverySignature_enabledRecoveryWrongSigner_returnsInvalidValue() public {
+    function test_LOAS_VRS_3_validateRecoverySignature_enabledRecoveryWrongSigner_returnsInvalidValue() public {
         // Setup: configure enabled recovery for guardian signer and sign with a different key.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory signatureData = _signHash(REVIEWER_PK_1, MESSAGE_HASH);
@@ -52,7 +52,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that unconfigured recovery storage returns ERC-1271 invalid value.
-    function test_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue() public {
+    function test_LOAS_VRS_4_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue() public {
         // Setup: configure recovery as enabled but with zero recovery address.
         _setTxRecoveryState(address(0), true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -65,7 +65,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
-    function test_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue() public {
+    function test_LOAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue() public {
         // Setup: configure enabled recovery for `initiator2` and sign as guardian.
         _setTxRecoveryState(initiator2, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -78,7 +78,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that valid EOA recovery signatures are accepted.
-    function test_validateRecoverySignature_validEOASignature_returnsMagicValue() public {
+    function test_LOAS_VRS_6_validateRecoverySignature_validEOASignature_returnsMagicValue() public {
         // Setup: configure enabled recovery for deterministic guardian signer.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -91,7 +91,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that valid ERC-1271 recovery signatures are accepted.
-    function test_validateRecoverySignature_validERC1271Signature_returnsMagicValue() public {
+    function test_LOAS_VRS_7_validateRecoverySignature_validERC1271Signature_returnsMagicValue() public {
         // Setup: configure enabled recovery for an ERC-1271 signer contract.
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
         _setTxRecoveryState(address(contractRecovery), true);
@@ -106,7 +106,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that malformed recovery signature bytes fail closed with ERC-1271 invalid value.
-    function test_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue() public {
+    function test_LOAS_VRS_8_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue() public {
         // Setup: configure enabled recovery and build malformed packed signature bytes.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory malformed = hex"1b";
