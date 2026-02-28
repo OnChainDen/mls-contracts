@@ -136,11 +136,11 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
         new AccountProxy(address(badBeacon), bytes(""));
     }
 
-    /// @dev Verifies constructor with empty init data and non-zero value reverts `ERC1967NonPayable`.
-    function test_APX_CPB_8_constructor_emptyDataWithNonZeroValue_revertsERC1967NonPayable() public {
+    /// @dev Verifies non-zero constructor value is rejected when `AccountProxy` constructor is non-payable.
+    function test_APX_CPB_8_constructor_emptyDataWithNonZeroValue_revertsForNonPayableConstructor() public {
         // Setup: use valid beacon and empty init data with non-zero deployment value.
-        // Verify: non-zero value with empty data should be rejected by ERC1967 non-payable guard.
-        vm.expectRevert(ERC1967Utils.ERC1967NonPayable.selector);
+        // Verify: non-zero value should revert before constructor logic due non-payable constructor.
+        vm.expectRevert();
         // Call: deploy proxy bytecode with value and empty init data via low-level create.
         _deployProxyBytecodeOrBubbleRevert(address(beacon), bytes(""), 1 wei);
     }

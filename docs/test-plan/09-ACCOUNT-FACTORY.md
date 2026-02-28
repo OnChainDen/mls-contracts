@@ -162,7 +162,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | APX-CPB-5 | Account's `getOrganizationAddress()` returns correct organization through proxy | [I] | P1 |
 | APX-CPB-6 | Constructor reverts when beacon address is not a contract (`ERC1967InvalidBeacon`) | [N] | P0 |
 | APX-CPB-7 | Constructor reverts when beacon returns an implementation with no runtime code (`ERC1967InvalidImplementation`) | [N] | P0 |
-| APX-CPB-8 | Constructor with empty init data and non-zero `msg.value` reverts (`ERC1967NonPayable`) | [N] | P1 |
+| APX-CPB-8 | Constructor with empty init data and non-zero `msg.value` reverts (constructor is non-payable) | [N] | P1 |
 
 ---
 
