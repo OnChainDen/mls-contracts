@@ -97,6 +97,8 @@
 | Non-tx-recovery caller reverts via `onlyTxRecoveryAddress` | `[N]` | P0 |
 | Recovery not configured reverts (`TxRecoveryNotConfigured`) | `[N]` | P0 |
 | Recovery configured but not enabled reverts (`TxRecoveryNotEnabled`) | `[N]` | P0 |
+| Enable timelock initiated and NOT yet expired (`block.timestamp < pendingEnableTimestamp`) reverts with exact custom error `TxRecoveryNotEnabled` | `[N][E]` | P0 |
+| Enable timelock initiated and already expired but not finalized (`block.timestamp >= pendingEnableTimestamp`) reverts with exact custom error `TxRecoveryNotEnabled` | `[N][E]` | P0 |
 | Account not deployed by organization reverts (`AccountNotDeployedByOrganization`) | `[N]` | P0 |
 | Successful call emits `RecoveryAccountTransactionExecuted(account,to,value,data)` | `[EV]` | P1 |
 | Forwards exact `account`, `to`, `value`, `data` to `IAccount.executeTransaction` | `[U]` | P0 |
