@@ -199,6 +199,8 @@
 | 84 | Full flow: whitelist new Organization impl -> guardian + admins authorize -> Organization UUPS upgrade succeeds | [I] | P0 |
 | 85 | Full flow: whitelist new Account impl -> guardian + admins authorize -> beacon update upgrades all accounts | [I] | P0 |
 | 86 | Unwhitelisting an implementation blocks future upgrades to that implementation but does not mutate already-active implementation pointers | [I] | P1 |
+| 86.1 | Unwhitelisting an implementation does not prevent organizations using the unwhitelisted implementation from upgrading to a new whitelisted implementation | [I] | P1 |
+| 86.2 | Unwhitelisting an implementation does not prevent organizations using the unwhitelisted implementation from upgrading the account implementation to a new whitelisted implementation | [I] | P1 |
 | 87 | Upgrading Organization implementation does not bypass Account implementation whitelist/type checks | [S] | P0 |
 | 88 | Compromised guardian assumption test: without valid admin auth, neither Organization nor Account upgrade path executes | [S] | P0 |
 | 88.1 | If an implementation is unwhitelisted after signatures are collected but before execution, execution still fails (whitelist enforced at execution time) | [S] | P0 |
