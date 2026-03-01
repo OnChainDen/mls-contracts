@@ -209,7 +209,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that valid manual-approval signatures with threshold approvals return ERC-1271 magic value.
-    function test_LOAS_VPBS_10_validatePolicyBasedSignature_manualApprovalWithSufficientReviews_returnsMagicValue() public {
+    function test_LOAS_VPBS_10_validatePolicyBasedSignature_manualApprovalWithSufficientReviews_returnsMagicValue()
+        public
+    {
         // Setup: build a valid manual-approval fixture with one valid reviewer signature.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -223,7 +225,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual-approval payloads with insufficient reviewer signatures return invalid value.
-    function test_LOAS_VPBS_11_validatePolicyBasedSignature_manualApprovalInsufficientReviews_returnsInvalidValue() public {
+    function test_LOAS_VPBS_11_validatePolicyBasedSignature_manualApprovalInsufficientReviews_returnsInvalidValue()
+        public
+    {
         // Setup: build a valid manual fixture and clear review signatures.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -466,7 +470,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual approvals accept authorized ERC-1271 reviewer signatures when threshold is met.
-    function test_LOAS_VPBS_17_validatePolicyBasedSignature_manualApprovalWithERC1271Reviewers_returnsMagicValue() public {
+    function test_LOAS_VPBS_17_validatePolicyBasedSignature_manualApprovalWithERC1271Reviewers_returnsMagicValue()
+        public
+    {
         // Setup: configure manual group-approver policy with one EOA and one ERC-1271 reviewer.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -541,7 +547,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual member-approver policies accept the designated reviewer signature.
-    function test_LOAS_VPBS_18_validatePolicyBasedSignature_manualMemberApproverValidReviewer_returnsMagicValue() public {
+    function test_LOAS_VPBS_18_validatePolicyBasedSignature_manualMemberApproverValidReviewer_returnsMagicValue()
+        public
+    {
         // Setup: build manual fixture with member approver set to `reviewer1`.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
@@ -614,7 +622,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that duplicate or out-of-order reviewer signatures fail closed with invalid value.
-    function test_LOAS_VPBS_21_validatePolicyBasedSignature_duplicateOrOutOfOrderReviewers_returnsInvalidValue() public {
+    function test_LOAS_VPBS_21_validatePolicyBasedSignature_duplicateOrOutOfOrderReviewers_returnsInvalidValue()
+        public
+    {
         // Setup: configure manual group approvals and build duplicate reviewer signature bundle.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -895,7 +905,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that valid policy signatures are stateless and repeatable before expiration.
-    function test_LOAS_VPBS_24_validatePolicyBasedSignature_repeatedPreExpirationValidation_returnsStableMagic() public {
+    function test_LOAS_VPBS_24_validatePolicyBasedSignature_repeatedPreExpirationValidation_returnsStableMagic()
+        public
+    {
         // Setup: build a valid auto-approve fixture.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days

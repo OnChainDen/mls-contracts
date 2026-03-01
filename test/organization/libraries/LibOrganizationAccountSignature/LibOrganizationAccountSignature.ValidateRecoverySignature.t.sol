@@ -65,7 +65,9 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
-    function test_LOAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue() public {
+    function test_LOAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
+        public
+    {
         // Setup: configure enabled recovery for `initiator2` and sign as guardian.
         _setTxRecoveryState(initiator2, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
