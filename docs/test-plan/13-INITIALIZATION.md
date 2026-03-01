@@ -42,7 +42,7 @@
 | 13 | Same `(salt, implementationAddress, whitelistAddress)` deployed twice — second deploy reverts (CREATE2 collision) | [N] | P1 |
 | 14 | Same `salt` with different implementation — different address, both deployments can succeed | [U] | P1 |
 | 15 | Same `salt` with different whitelist — different address, both deployments can succeed | [U] | P1 |
-| 16 | Invalid init params (e.g. no members) — entire tx reverts and no contract code exists at computed address | [S] | P0 |
+| 16 | Invalid init params (e.g. no members, no admins, fewer admins than threshold -- add tests for all these cases) — entire tx reverts and no contract code exists at computed address | [S] | P0 |
 | 17 | If initialization reverts, `OrganizationDeployed` is not persisted in logs | [S] | P1 |
 | 18 | After failed deploy with a salt, retrying same tuple with valid params succeeds (no stuck salt) | [U] | P1 |
 | 19 | Successfully deployed organization is already initialized in same tx (`isInitialized() == true`) | [I] | P0 |
@@ -135,8 +135,8 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 57 | Non-zero `guardianRecoveryAddress` configures guardian recovery state | [U] | P1 |
-| 58 | Non-zero `transactionAndERC1271RecoveryAddress` configures tx recovery state | [U] | P1 |
+| 57 | Non-zero `guardianRecoveryAddress` and valid `guardianRecoveryTimelockDurationSeconds` configures guardian recovery state | [U] | P1 |
+| 58 | Non-zero `transactionAndERC1271RecoveryAddress` and valid `txRecoveryTimelockDurationSeconds` configures tx recovery state | [U] | P1 |
 | 59 | Tx recovery configured at initialization starts with `isEnabled == false` | [U] | P0 |
 | 60 | Both recovery addresses non-zero — both mechanisms configured in one initialization | [U] | P1 |
 | 60.1 | Guardian recovery configured with timelock exactly `2 days` succeeds | [E] | P1 |
@@ -162,6 +162,7 @@
 | 70 | Voting threshold = 0 — reverts `InvalidAdminVotingThreshold` | [N] | P0 |
 | 71 | Voting threshold > final admin count — reverts `InvalidAdminVotingThreshold` | [N] | P0 |
 | 72 | Guardian is zero address — reverts `InvalidGuardianAddress` | [N] | P0 |
+| 72.1 | Non whitelisted account implementation address — reverts `ImplementationNotWhitelisted` | [N] | P0 |
 | 73 | Admin-operation timelock < 2 days — reverts `InvalidTimelockDuration` | [N] | P0 |
 | 74 | Admin-operation timelock > 30 days — reverts `InvalidTimelockDuration` | [N] | P0 |
 | 75 | Non-zero guardian recovery address with invalid timelock — reverts `InvalidTimelockDuration` | [N] | P1 |
@@ -186,7 +187,7 @@
 | 82 | Revert in recovery setup rolls back all prior initialization writes | [S] | P0 |
 | 83 | Admins are always members immediately after successful initialization | [S] | P0 |
 | 84 | `OrganizationInitialized` is never emitted on reverting initialization attempts | [S] | P1 |
-| 85 | Initialization can only transition once (`false -> true`) | [S] | P0 |
+| 85 | Initialization can only transition once (`false -> true`) and reverts with error `AlreadyInitialized` if initialized already occurred | [S] | P0 |
 
 ---
 
