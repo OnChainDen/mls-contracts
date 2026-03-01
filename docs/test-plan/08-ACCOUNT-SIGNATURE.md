@@ -22,7 +22,7 @@ All `private` functions in the files under test will be refactored to `internal`
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| OASB-ISFA-1 | `msg.sender != account` — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
+| OASB-ISFA-1 | `msg.sender != account` — reverts `SenderIsNotAccount` | [N] | P0 |
 | OASB-ISFA-2 | Account not deployed by this organization — reverts `AccountNotDeployedByOrganization` | [N] | P0 |
 | OASB-ISFA-3 | **Desired Behavior:** `anySourceAccount=true` in policy does NOT bypass org-account gate — non-org account still reverts `AccountNotDeployedByOrganization` | [S] | P0 |
 | OASB-ISFA-4 | `msg.sender == account` AND account deployed by org — delegates to `LibOrganizationAccountSignature.isValidSignature` | [U] | P0 |
