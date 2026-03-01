@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {
     OrganizationAccountSignatureBaseSuiteBase
@@ -39,15 +40,13 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         libHarness.setMemberStatus(reviewer1, true);
     }
 
-    /// @dev Verifies that calls where `msg.sender != account` revert with `AccountNotDeployedByOrganization`.
-    function test_OASB_ISFA_1_isValidSignatureForAccount_senderNotAccount_revertsAccountNotDeployedByOrganization() public {
+    /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`.
+    function test_OASB_ISFA_1_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount() public {
         // Setup: mark the account as deployed to isolate the sender gate.
         harness.setDeployedAccount(ACCOUNT, true);
 
-        // Verify: expect sender/account mismatch to revert with the org-account error shape.
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationAccountFactory.AccountNotDeployedByOrganization.selector, ACCOUNT)
-        );
+        // Verify: expect sender/account mismatch to revert with the sender-gate error.
+        vm.expectRevert(IOrganizationAccountSignature.SenderIsNotAccount.selector);
         vm.prank(OTHER_CALLER);
         // Call: execute `isValidSignatureForAccount` through the base-contract entry point.
         harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, bytes(""));
