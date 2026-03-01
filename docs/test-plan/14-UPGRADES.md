@@ -85,6 +85,7 @@
 | 34 | Expired admin auth reverts | [N] | P0 |
 | 35 | Insufficient admin signatures reverts | [N] | P0 |
 | 36 | Replay with same admin auth nonce reverts | [S] | P0 |
+| 36.1 | Calling `setAccountImplemenation` with admin nonce that has already been rejected reverts | [S] | P0 |
 | 37 | Signatures for different target implementation cannot authorize current call | [S] | P0 |
 | 38 | Signatures for wrong operation type cannot authorize Account implementation upgrade | [S] | P0 |
 | 39 | Non-whitelisted target implementation reverts `ImplementationNotWhitelisted` | [N] | P0 |
