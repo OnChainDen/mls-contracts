@@ -92,6 +92,7 @@
 | 41 | Emits `AccountImplementationUpdated(newImplementation)` on success | [EV] | P1 |
 | 42 | All previously deployed accounts immediately execute code from new implementation | [I] | P0 |
 | 43 | Newly deployed accounts after upgrade also use the new implementation | [I] | P1 |
+| 43.1 | Sequential upgrades (V1 -> V2 -> V3) preserve state and functionality at each step for account contracts that use the organization as their beacon | [I] | P1 |
 | 44 | No per-account upgrade path exists (all accounts under an org share one implementation pointer) | [S] | P1 |
 | 45 | Upgrading account implementation does not alter Organization proxy implementation | [S] | P1 |
 | 46 | **Desired behavior:** upgrade fails closed if whitelist address has no code (EOA/zero/misconfigured) | [S] | P0 |
