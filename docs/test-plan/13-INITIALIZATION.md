@@ -211,9 +211,9 @@
 | 91 | Stores constructor `msg.sender` as deployer address in organization deployer slot | [U] | P0 |
 | 92 | Stores `whitelistAddress` in upgrade storage slot | [U] | P0 |
 | 93 | Sets ERC1967 implementation slot to `implementation` | [U] | P0 |
-| 94 | Deployment with non-contract implementation reverts (proxy safety expectation) | [N] | P0 |
-| 94.1 | Deployment with `whitelistAddress == address(0)` reverts (desired behavior: upgrade whitelist must be configured) | [S] | P0 |
-| 94.2 | Deployment with EOA/non-contract `whitelistAddress` reverts (desired behavior: upgrade whitelist target must have code) | [S] | P0 |
+| 94 | **Desired Behavior:** Deployment with non-contract implementation reverts (proxy safety expectation) | [N] | P0 |
+| 94.1 | Deployment with `whitelistAddress == address(0)` reverts with error ZeroAddress | [S] | P0 |
+| 94.2 | **Desired Behavior:** Deployment with EOA/non-contract `whitelistAddress` reverts | [S] | P0 |
 | 95 | Direct proxy deployment (without factory) sets deployer to direct deployer and enforces only that deployer can initialize | [S] | P1 |
 
 ---
@@ -262,12 +262,13 @@
 | # | Invariant | Priority |
 |---|-----------|----------|
 | 113 | **Initialization permanence:** `isInitialized()` can only transition `false -> true` | P0 |
-| 114 | **Admin/member consistency:** whenever initialized, every admin is also a member | P0 |
+| 114 | **Admin/member consistency:** whenever initialized, every admin is also a member, there's at least one admin in the org, and adminCount >= votingThreshold  | P0 |
 | 115 | **Factory deterministic deploy:** successful deployments always occur at computed CREATE2 address | P0 |
 | 116 | **No partial state on failed init:** reverting initialization never leaves persisted partial member/admin/group/recovery state | P0 |
 | 117 | **Proxy deployer immutability:** deployer address set by proxy constructor does not change | P0 |
 | 118 | **Tx recovery default safety:** tx recovery is never initialized as enabled; explicit enable flow is required | P1 |
 | 118.1 | **Group/member consistency:** for active groups, every group member address is also an organization member | P0 |
+| 118.2 | **Failed initialization deploy atomicity:** if `deployOrganization` hits an `initialize` revert, `deployOrganization` reverts and no organization proxy code exists at the computed address | P0 |
 
 ---
 
@@ -281,5 +282,5 @@
 | `OrganizationProxy.sol` | 11 | P0-P1 |
 | Cross-file integration | 6 | P0-P1 |
 | Fuzz tests | 8 | P1 |
-| Invariant tests | 7 | P0-P1 |
-| **Total** | **137** | |
+| Invariant tests | 8 | P0-P1 |
+| **Total** | **138** | |
