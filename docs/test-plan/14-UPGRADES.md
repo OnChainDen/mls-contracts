@@ -26,6 +26,7 @@
 | 4 | Expired admin auth reverts | [N] | P0 |
 | 5 | Insufficient admin signatures reverts `InsufficientAdminAuthorization` | [N] | P0 |
 | 6 | Replay with same admin auth nonce reverts | [S] | P0 |
+| 6.1 | Calling with an admin nonce that's already been rejected reverts | [S] | P0 |
 | 7 | Signatures generated for a different `newImplementation` cannot be replayed for the current call (operationData binding) | [S] | P0 |
 | 8 | Signatures generated for a different operation type (e.g. `UpgradeAccount`) cannot authorize Organization upgrade | [S] | P0 |
 | 9 | Non-whitelisted target implementation reverts `ImplementationNotWhitelisted` | [N] | P0 |
