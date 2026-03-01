@@ -131,7 +131,7 @@
 |---|-----------|------|----------|
 | 56 | Owner can add and remove implementations in a single call | [U] | P1 |
 | 57 | Non-owner caller reverts | [N] | P1 |
-| 58 | Organization and Account whitelists remain independent for same address | [S] | P1 |
+| 58 | Organization and Account whitelists are two independent whitelisted within the same whitelist contract| [S] | P1 |
 | 59 | Emits `ImplementationWhitelisted` and `ImplementationUnwhitelisted` for each processed address | [EV] | P2 |
 | 60 | **Desired behavior:** reject zero-address entries in whitelist updates | [S] | P0 |
 | 61 | **Desired behavior:** reject non-contract addresses in whitelist updates | [S] | P0 |
