@@ -123,7 +123,9 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that random policy IDs validate when matched with corresponding valid roots/proofs.
-    function testFuzz_AS_FUZ_4_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw) public {
+    function testFuzz_AS_FUZ_4_isValidSignature_randomPolicyIdsWithValidProofs_returnsMagic(uint256 policyIdRaw)
+        public
+    {
         // Setup: bound policy id to a non-zero range and build valid fixture around it.
         uint256 policyId = bound(policyIdRaw, 1, type(uint96).max);
         policyStateHarness.setGuardian(guardianSigner);
@@ -378,10 +380,10 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that changing message hash changes both initiator and review hashes.
-    function testFuzz_AS_FUZ_10_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(bytes32 hashA, bytes32 hashB)
-        public
-        view
-    {
+    function testFuzz_AS_FUZ_10_hashBuilders_messageHashMutation_changesInitiatorAndReviewHashes(
+        bytes32 hashA,
+        bytes32 hashB
+    ) public view {
         // Setup: ensure fuzzed message hashes are distinct.
         vm.assume(hashA != hashB);
         uint256 expiration = block.timestamp + 1 days;

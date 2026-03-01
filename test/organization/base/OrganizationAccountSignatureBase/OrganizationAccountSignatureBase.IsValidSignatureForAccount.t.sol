@@ -53,7 +53,9 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`.
-    function test_OASB_ISFA_2_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
+    function test_OASB_ISFA_2_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+        public
+    {
         // Setup: leave deployed-account mapping unset for the target account.
 
         // Verify: expect undeployed-account validation to revert.
@@ -66,7 +68,9 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that policy `anySourceAccount=true` does not bypass org-account deployment gating.
-    function test_OASB_ISFA_3_isValidSignatureForAccount_anySourceAccountPolicyStillRequiresOrgDeployedAccount() public {
+    function test_OASB_ISFA_3_isValidSignatureForAccount_anySourceAccountPolicyStillRequiresOrgDeployedAccount()
+        public
+    {
         // Setup: build a policy payload with `anySourceAccount=true` but do not mark the account as deployed.
         bytes memory policySignature = _buildAnySourcePolicySignature();
 

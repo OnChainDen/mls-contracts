@@ -648,7 +648,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10_hashBuildersAreDeterministicAndFieldBound() public {
+    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10_hashBuildersAreDeterministicAndFieldBound()
+        public
+    {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory data = abi.encodeWithSelector(bytes4(0xCAFED00D), uint256(14));

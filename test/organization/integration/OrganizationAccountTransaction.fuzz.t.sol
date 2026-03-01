@@ -65,7 +65,9 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random expiration timestamps: future passes, past fails.
-    function testFuzz_AT_FZ_2_validateApproval_expirationFuturePassPastFail(uint64 offsetSeconds, bool shouldBeFuture) public {
+    function testFuzz_AT_FZ_2_validateApproval_expirationFuturePassPastFail(uint64 offsetSeconds, bool shouldBeFuture)
+        public
+    {
         // Setup: build payload with fuzzed relative expiration.
         bytes memory data = abi.encodeWithSelector(bytes4(0x71717171), uint256(1));
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
@@ -108,7 +110,10 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random calldata produces deterministic initiator hash values.
-    function testFuzz_AT_FZ_4__LOAT_CIHFP_12_computeInitiatorHash_randomDataDeterministic(bytes calldata data, uint256 salt) public view {
+    function testFuzz_AT_FZ_4__LOAT_CIHFP_12_computeInitiatorHash_randomDataDeterministic(
+        bytes calldata data,
+        uint256 salt
+    ) public view {
         // Call: compute initiator hash twice with identical inputs.
         bytes32 hashA = harness.computeInitiatorHashFromParamsViaLibrary(
             ACCOUNT, DESTINATION, 0, salt, block.timestamp + 1 days, DEFAULT_POLICY_ID, data, true

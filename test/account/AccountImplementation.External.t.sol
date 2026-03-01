@@ -263,7 +263,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature is callable by arbitrary callers (fuzz).
      */
-    function testFuzz_AI_IVS_4_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature) public {
+    function testFuzz_AI_IVS_4_isValidSignature_callableByAnyone(address caller, bytes32 hash, bytes memory signature)
+        public
+    {
         // Setup: configure deterministic organization response.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);

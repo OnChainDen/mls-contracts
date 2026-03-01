@@ -179,7 +179,9 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges() public {
+    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
+        public
+    {
         // Setup: compute baseline review hash.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64646464), uint256(4));
         bytes memory initiatorSignature = hex"1122";

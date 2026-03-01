@@ -56,7 +56,9 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_OATB_RAT_2_rejectAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
+    function test_OATB_RAT_2_rejectAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+        public
+    {
         // Setup: use a random non-deployed account address.
         address undeployedAccount = address(0xAC002);
         bytes memory data = abi.encodeWithSelector(bytes4(0x02030405), uint256(2));
