@@ -29,6 +29,7 @@
 | 6.1 | Calling with an admin nonce that's already been rejected reverts | [S] | P0 |
 | 7 | Signatures generated for a different `newImplementation` cannot be replayed for the current call (operationData binding) | [S] | P0 |
 | 8 | Signatures generated for a different operation type (e.g. `UpgradeAccount`) cannot authorize Organization upgrade | [S] | P0 |
+| 8.1 | Signatures generated for `isApproval = false` (rejection intent) cannot be reused to execute upgrade (`isApproval = true` required) | [S] | P1 |
 | 9 | Non-whitelisted target implementation reverts `ImplementationNotWhitelisted` | [N] | P0 |
 | 10 | Implementation whitelisted only for `ContractType.Account` cannot be used for Organization upgrade | [N] | P0 |
 | 11 | Upgrade to non-UUPS target reverts (UUPS safety check) | [S] | P0 |
@@ -45,6 +46,7 @@
 | 20 | Direct `upgradeToAndCall` reverts even if caller is the guardian (must still go through authorized flow) | [S] | P0 |
 | 21 | **Desired behavior:** admin authorization must also bind the `data` payload (guardian cannot swap migration calldata after signatures are collected) | [S] | P0 |
 | 22 | **Desired behavior:** migration `data` cannot trigger a nested second upgrade to bypass whitelist/admin authorization | [S] | P0 |
+| 22.1 | **Desired behavior:** nested second upgrade still fails when second target is also whitelisted and UUPS-compatible (must fail for missing fresh admin+guardian authorization, not whitelist/UUPS mismatch) | [S] | P0 |
 | 23 | **Desired behavior:** upgrades fail closed if configured whitelist address has no code (EOA/zero/misconfigured address) | [S] | P0 |
 | 23.1 | **Desired behavior:** upgrades fail closed if whitelist validation call itself reverts or returns malformed data (implementation must remain unchanged) | [S] | P0 |
 | 24 | **Desired behavior:** `newImplementation` must be a non-zero contract address (even if mistakenly whitelisted) | [S] | P0 |
@@ -208,6 +210,7 @@
 | 88 | Compromised guardian assumption test: without valid admin auth, neither Organization nor Account upgrade path executes | [S] | P0 |
 | 88.1 | If an implementation is unwhitelisted after signatures are collected but before execution, execution still fails (whitelist enforced at execution time) | [S] | P0 |
 | 88.2 | Re-whitelisting a previously removed implementation re-enables upgrade paths only when fresh valid admin auth is provided | [I] | P1 |
+| 88.3 | Admin signatures created for Organization A cannot authorize the same upgrade call on Organization B (per-contract domain separation) | [S] | P0 |
 
 ---
 
@@ -233,6 +236,7 @@
 | 97 | All accounts under the same organization always resolve the same beacon implementation address | P0 |
 | 98 | Organization UUPS implementation pointer and Account beacon implementation pointer are independent state variables | P1 |
 | 98.1 | **Desired behavior:** Organization proxy-stored whitelist address used for upgrade checks remains immutable across Organization upgrades | P1 |
+| 98.2 | Direct calls to UUPS upgrade selectors on the Organization proxy (`upgradeToAndCall` and raw `upgradeTo` selector) never change implementation unless wrapper authorization succeeds in the same transaction | P0 |
 
 ---
 
@@ -240,10 +244,10 @@
 
 | Category | Tests | Priority |
 |----------|-------|----------|
-| `OrganizationImplementation.sol` | 34 | P0-P1 |
+| `OrganizationImplementation.sol` | 36 | P0-P1 |
 | `OrganizationAccountFactoryBase.sol` | 20 | P0-P1 |
 | `ImplementationWhitelistImplementation.sol` | 46 | P0-P2 |
-| Cross-file upgrade security | 7 | P0-P1 |
+| Cross-file upgrade security | 8 | P0-P1 |
 | Fuzz tests | 5 | P0-P1 |
-| Invariants | 6 | P0-P1 |
-| **Total** | **118** | |
+| Invariants | 7 | P0-P1 |
+| **Total** | **122** | |
