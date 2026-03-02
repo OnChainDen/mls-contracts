@@ -64,7 +64,8 @@ contract LibOrganizationGuardianInvariants is OrganizationAdminTestBase {
 
         // Call
         if (pendingGuardian != address(0)) {
-            (bool success,) = address(harness).call(abi.encodeCall(harness.initiateGuardianUpdateViaLibrary, (address(0xF001))));
+            (bool success,) =
+                address(harness).call(abi.encodeCall(harness.initiateGuardianUpdateViaLibrary, (address(0xF001))));
 
             // Verify
             assertFalse(success, "second initiate should fail while one update is already pending");

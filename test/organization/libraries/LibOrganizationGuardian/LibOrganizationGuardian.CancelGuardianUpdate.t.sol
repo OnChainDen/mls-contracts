@@ -106,8 +106,7 @@ contract LibOrganizationGuardianCancelGuardianUpdateTest is LibOrganizationGuard
 
         // Verify
         assertFalse(
-            harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(),
-            "ready-for-acceptance should clear after cancel"
+            harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(), "ready-for-acceptance should clear after cancel"
         );
         assertEq(harness.getPendingGuardianViaLibrary(), address(0), "pending guardian should clear");
     }
