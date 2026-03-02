@@ -81,6 +81,22 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending enable should remain zero");
     }
 
+    /// @dev Verifies `OrganizationTxRecoveryBase.initiateEnableTransactionAndERC1271Recovery` bubbles
+    /// `TxRecoveryNotConfigured` when storage has a zero recovery address with an in-range timelock.
+    function test_OTRB_IETR_4_A_initiateEnable_zeroRecoveryAddress_bubblesTxRecoveryNotConfigured() public {
+        // Setup: seed unconfigured recovery state with a valid timelock and use zero-address caller to satisfy
+        // `onlyTxRecoveryAddress` so execution reaches library-level configuration checks.
+        _setTxRecoveryState(address(0), false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+
+        // Call: initiate enable as `address(0)` and expect the not-configured custom error from library validation.
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
+        vm.prank(address(0));
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        // Verify: pending-enable state remains unchanged after the failed call.
+        assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending enable should remain zero");
+    }
+
     /// @dev Verifies OTRB-IETR-5 and OTRB-IETR-6: initiate bubbles `already-enabled` and `already-pending` guards.
     function test_OTRB_IETR_5__OTRB_IETR_6_initiateEnable_alreadyEnabledOrPending_reverts() public {
         // Setup
@@ -645,6 +661,77 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         // Verify
     }
 
+    /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` reverts when admin
+    /// signatures do not satisfy the current admin threshold.
+    function test_OTRB_FITR_2_finalizeInitialize_insufficientAdminAuthorization_reverts() public {
+        // Setup: require two admin signatures and seed a pending deferred-init tuple for finalize.
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        (AdminAuthParams memory insufficientAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 206,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: finalize deferred-init as guardian with a single admin signature while threshold requires two.
+        vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(insufficientAuth);
+
+        // Verify: pending deferred-init values remain intact after rejected authorization.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, ALT_TX_RECOVERY, "pending recovery address should remain");
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds, TX_RECOVERY_TIMELOCK, "pending timelock should remain"
+        );
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` rejects stale admin
+    /// signatures when current pending values differ from signed operation data.
+    function test_OTRB_FITR_6_finalizeInitialize_stalePendingValues_revert() public {
+        // Setup: build finalize auth for an initial pending tuple, then mutate the stored pending recovery address.
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        (AdminAuthParams memory staleAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 207,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        address mutatedPendingRecovery = address(0xFEEDC0DE);
+        _setTxRecoveryState(
+            address(0),
+            false,
+            0,
+            0,
+            mutatedPendingRecovery,
+            TX_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+
+        // Call: attempt finalize with signatures bound to stale pending values.
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(staleAuth);
+
+        // Verify: stale-signature rejection leaves the mutated pending tuple untouched.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(
+            state.pendingInit.pendingRecoveryAddress, mutatedPendingRecovery, "pending recovery should remain mutated"
+        );
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds, TX_RECOVERY_TIMELOCK, "pending timelock should remain"
+        );
+    }
+
     /// @dev Verifies OTRB-FITR-1, OTRB-FITR-2, OTRB-FITR-3, OTRB-FITR-4, OTRB-FITR-5, OTRB-FITR-6, OTRB-FITR-7,
     /// OTRB-FITR-8, OTRB-FITR-9, OTRB-FITR-10, OTRB-FITR-11, and OTRB-FITR-12 across finalize auth/state semantics.
     function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12_finalizeInitialize_authAndStateSemantics()
@@ -746,6 +833,152 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(afterFinalizeNoPendingAuth);
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` reverts for
+    /// insufficient admin authorization, `isApproval=false` signatures, and wrong operation type signatures.
+    function test_OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4_cancelInitialize_authValidation_reverts() public {
+        // Setup: seed pending deferred-init state, then require two admin signatures for the insufficient-auth branch.
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
+        (AdminAuthParams memory insufficientAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 331,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: attempt cancel with one signature under threshold=2, then with non-approval and wrong-op signatures.
+        vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(insufficientAuth);
+
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 1});
+        (AdminAuthParams memory rejectionAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 332,
+            isApproval: false,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(rejectionAuth);
+
+        (AdminAuthParams memory wrongTypeAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 333,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(wrongTypeAuth);
+
+        // Verify: rejected auth paths do not clear or alter pending deferred-init values.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, ALT_TX_RECOVERY, "pending recovery should remain");
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds, TX_RECOVERY_TIMELOCK, "pending timelock should remain"
+        );
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` rejects stale admin
+    /// signatures when pending values change after signature creation.
+    function test_OTRB_CITR_6_cancelInitialize_stalePendingValues_revert() public {
+        // Setup: sign cancel auth for initial pending values, then mutate pending recovery address in storage.
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        (AdminAuthParams memory staleAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 334,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        address mutatedPendingRecovery = address(0xF0F0);
+        _setTxRecoveryState(
+            address(0),
+            false,
+            0,
+            0,
+            mutatedPendingRecovery,
+            TX_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+
+        // Call: attempt cancel using stale signatures bound to old pending values.
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(staleAuth);
+
+        // Verify: stale-signature rejection keeps current pending tuple unchanged.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(
+            state.pendingInit.pendingRecoveryAddress, mutatedPendingRecovery, "pending recovery should remain mutated"
+        );
+        assertEq(state.pendingInit.pendingTimestamp, block.timestamp + ADMIN_OPERATION_TIMELOCK, "pending time remains");
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` reverts with
+    /// `NoTxRecoveryInitializationPending` when no deferred-init tuple is staged.
+    function test_OTRB_CITR_7_cancelInitialize_noPendingInit_revertsNoTxRecoveryInitializationPending() public {
+        // Setup: clear pending-init storage and build valid cancel auth bound to zero pending values.
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        (AdminAuthParams memory noPendingAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: address(0),
+            timelockDurationSeconds: 0,
+            salt: 335,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: execute cancel as guardian with valid auth while no pending deferred-init exists.
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(noPendingAuth);
+
+        // Verify: deferred-init tuple remains zeroed after the revert.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "pending recovery should stay zero");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "pending timelock should stay zero");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should stay zero");
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` succeeds before pending
+    /// timestamp expiry and does not require waiting for admin-op timelock.
+    function test_OTRB_CITR_9_cancelInitialize_beforePendingTimestamp_succeeds() public {
+        // Setup: stage pending deferred-init values with a future pending timestamp.
+        uint256 pendingTimestamp = block.timestamp + ADMIN_OPERATION_TIMELOCK;
+        _setTxRecoveryState(address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingTimestamp);
+        (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 336,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: cancel pending deferred-init immediately as guardian before the pending timestamp is reached.
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        // Verify: cancel clears all pending deferred-init fields without requiring timelock expiry.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "pending recovery should clear");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "pending timelock should clear");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should clear");
     }
 
     /// @dev Verifies OTRB-CITR-1, OTRB-CITR-2, OTRB-CITR-3, OTRB-CITR-4, OTRB-CITR-5, OTRB-CITR-6, OTRB-CITR-7,
