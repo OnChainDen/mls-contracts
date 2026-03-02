@@ -48,6 +48,7 @@ contract AccountImplementationIsValidSignatureTest is AccountImplementationSuite
         bytes32 hash = keccak256("account-signature-large");
         bytes memory signature = new bytes(1024);
         for (uint256 i = 0; i < signature.length; i++) {
+            // forge-lint: disable-next-line(unsafe-typecast)
             signature[i] = bytes1(uint8(i));
         }
         beacon.setExpectedSignatureValidation(address(account), hash, signature);

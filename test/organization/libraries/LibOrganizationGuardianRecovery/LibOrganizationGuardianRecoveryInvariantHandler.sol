@@ -188,6 +188,7 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
         }
 
         if (
+            // forge-lint: disable-next-line(unsafe-typecast)
             success && bytes4(callData) == bytes4(abi.encodeCall(harness.finalizeRecoveryGuardianUpdateViaLibrary, ()))
                 && (recoveryBefore.pendingGuardian == address(0)
                     || block.timestamp < recoveryBefore.pendingGuardianTimestamp)
