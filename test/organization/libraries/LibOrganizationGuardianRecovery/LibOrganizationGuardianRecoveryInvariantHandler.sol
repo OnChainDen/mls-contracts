@@ -35,6 +35,8 @@ contract LibOrganizationGuardianRecoveryInvariantHandler is Test {
 
     constructor(LibOrganizationGuardianRecoveryHarness harness_) {
         harness = harness_;
+        // Invariant target selection should treat this as a fuzz handler, not a test contract.
+        IS_TEST = false;
     }
 
     /**
