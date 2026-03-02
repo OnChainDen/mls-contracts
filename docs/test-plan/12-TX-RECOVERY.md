@@ -45,7 +45,7 @@
 | OTRB-IETR-1 | Non-tx-recovery caller reverts via `onlyTxRecoveryAddress` | `[N]` | P0 |
 | OTRB-IETR-2 | Guardian caller also reverts (role isolation) | `[S]` | P0 |
 | OTRB-IETR-3 | Authorized tx-recovery caller reaches library flow successfully | `[U]` | P1 |
-| OTRB-IETR-4 | Library revert bubbles when tx recovery is not configured (`TxRecoveryNotConfigured`) | `[N]` | P0 |
+| OTRB-IETR-4 | Library bubbles `TxRecoveryNotConfigured` when configuration is missing but `timelockDurationSeconds` is in valid range | `[N]` | P0 |
 | OTRB-IETR-5 | Library revert bubbles when recovery already enabled (`TxRecoveryAlreadyEnabled`) | `[N]` | P1 |
 | OTRB-IETR-6 | Library revert bubbles when enable already pending (`TxRecoveryEnableAlreadyPending`) | `[N]` | P1 |
 
@@ -214,7 +214,7 @@
 | LOTR-IETR-1 | Valid state sets `pendingEnableTimestamp = block.timestamp + timelockDurationSeconds` | `[U]` | P1 |
 | LOTR-IETR-2 | Emits `TxRecoveryEnableInitiated(canFinalizeAtTimestamp)` with expected timestamp | `[EV]` | P1 |
 | LOTR-IETR-3 | `recoveryAddress=0` with valid-range `timelockDurationSeconds` reverts (`TxRecoveryNotConfigured`) | `[N]` | P0 |
-| LOTR-IETR-4 | **Desired Behavior:** if `timelockDurationSeconds` is outside `[2 days, 30 days]`, `initiateEnableTxRecovery` reverts `InvalidTimelockDuration` regardless of configuration state | `[S]` | P0 |
+| LOTR-IETR-4 | Timelock validation is first: if `timelockDurationSeconds` is outside `[2 days, 30 days]`, `initiateEnableTxRecovery` reverts `InvalidTimelockDuration` regardless of configuration state | `[S]` | P0 |
 | LOTR-IETR-5 | `isEnabled=true` reverts (`TxRecoveryAlreadyEnabled`) | `[N]` | P1 |
 | LOTR-IETR-6 | Existing pending enable reverts (`TxRecoveryEnableAlreadyPending`) | `[N]` | P1 |
 | LOTR-IETR-7 | `isEnabled` remains false after initiate | `[U]` | P1 |
