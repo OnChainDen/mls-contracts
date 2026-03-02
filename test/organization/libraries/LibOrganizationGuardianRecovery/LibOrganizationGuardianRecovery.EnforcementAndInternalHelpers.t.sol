@@ -35,7 +35,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         vm.prank(NON_GUARDIAN);
         harness.enforceOnlyGuardianRecoveryAddressViaLibrary();
 
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationGuardianRecovery.UnauthorizedGuardianRecoveryAddress.selector, NON_GUARDIAN, address(0)
@@ -58,7 +58,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     {
         // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
         _resetAndConfigureRecovery();
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
 
         // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.enforceOnlyRecoveryPendingGuardian`,
         // `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`,
@@ -87,8 +87,9 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         vm.prank(NEW_GUARDIAN_A);
         harness.enforceOnlyRecoveryPendingGuardianViaLibrary();
 
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
-        _finalizeRecoveryUpdateAfterTimelock();
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
+        harness.finalizeRecoveryGuardianUpdateViaLibrary();
         harness.acceptGuardianRecoveryViaLibrary();
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -154,7 +155,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         public
     {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.validateGuardianRecoveryNotConfiguredOrRevert` and assert the
         // expected revert.

@@ -64,35 +64,6 @@ abstract contract LibOrganizationGuardianRecoverySuiteBase is OrganizationAdminT
     }
 
     /**
-     * @dev Clears only guardian-recovery state.
-     */
-    function _resetRecoveryState() internal {
-        harness.resetGuardianRecoveryStorageViaHarness();
-    }
-
-    /**
-     * @dev Creates pending recovery update via library wrapper.
-     */
-    function _initiateRecoveryUpdate(address newGuardian) internal {
-        harness.initiateRecoveryGuardianUpdateViaLibrary(newGuardian);
-    }
-
-    /**
-     * @dev Finalizes pending recovery update after warping to pending timestamp.
-     */
-    function _finalizeRecoveryUpdateAfterTimelock() internal {
-        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
-        harness.finalizeRecoveryGuardianUpdateViaLibrary();
-    }
-
-    /**
-     * @dev Creates pending deferred-init state via library wrapper.
-     */
-    function _initiateDeferredInit(address recoveryAddress, uint256 timelockDuration) internal {
-        harness.initiateInitializeGuardianRecoveryViaLibrary(recoveryAddress, timelockDuration);
-    }
-
-    /**
      * @dev Seeds tx-recovery storage with non-zero values for isolation checks.
      */
     function _seedNonZeroTxRecoveryState() internal {

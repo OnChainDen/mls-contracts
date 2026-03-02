@@ -126,7 +126,7 @@ contract LibOrganizationGuardianRecoveryInitiateRecoveryGuardianUpdateTest is Li
     /// timelock reverts and does not create pending update.
     function test_LOGR_IRGU_11_invalidConfiguredTimelock_revertsAndDoesNotCreatePendingUpdate() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, 1 days);
 
         // Call: invoke `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate` and assert the expected revert.

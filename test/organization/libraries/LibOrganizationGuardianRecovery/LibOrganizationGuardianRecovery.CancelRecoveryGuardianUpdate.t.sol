@@ -23,7 +23,7 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 7 days
         );
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
 
         // Call: invoke `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`.
@@ -80,8 +80,9 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
     function test_LOGR_CRGU_7_cancelAfterFinalize_clearsReadyForAcceptanceState() public {
         // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
         _resetAndConfigureRecovery();
-        _initiateRecoveryUpdate(NEW_GUARDIAN_B);
-        _finalizeRecoveryUpdateAfterTimelock();
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
+        harness.finalizeRecoveryGuardianUpdateViaLibrary();
         assertTrue(harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance, "precondition: ready=true");
 
         // Call: invoke `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`.
