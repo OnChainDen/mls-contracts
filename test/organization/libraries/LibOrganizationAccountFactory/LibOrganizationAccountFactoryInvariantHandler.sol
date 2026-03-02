@@ -5,9 +5,7 @@ pragma solidity 0.8.33;
 import {
     LibOrganizationAccountFactoryHarness
 } from "test/organization/libraries/LibOrganizationAccountFactory/LibOrganizationAccountFactoryHarness.sol";
-import {
-    ImplementationWhitelistMock
-} from "test/organization/shared/OrganizationAccountFactoryMocks.sol";
+import {ImplementationWhitelistMock} from "test/organization/shared/OrganizationAccountFactoryMocks.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
 /**

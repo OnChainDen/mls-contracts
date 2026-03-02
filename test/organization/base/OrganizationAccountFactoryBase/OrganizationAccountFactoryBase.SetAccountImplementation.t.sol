@@ -5,11 +5,11 @@ pragma solidity 0.8.33;
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {AdminAuthParams} from "types/AdminTypes.sol";
-import {ContractType, OperationType} from "types/CommonTypes.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {ContractType, OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Unit tests for `OrganizationAccountFactoryBase.setAccountImplementation` behavior.
@@ -97,9 +97,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
         vm.prank(GUARDIAN);
         // Call: execute `setAccountImplementation` with no-code whitelist target.
-        (bool success, bytes memory revertData) = address(harness).call(
-            abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, auth))
-        );
+        (bool success, bytes memory revertData) =
+            address(harness).call(abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, auth)));
 
         // Verify: no-code whitelist addresses should be rejected.
         assertFalse(success, "no-code whitelist address should cause revert");
@@ -207,8 +206,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         address newImplementation = 0x111122223333444455556666777788889999aAaa;
 
         // Setup: fixed golden vector for deterministic operation-data encoding checks.
-        bytes memory expectedOperationData =
-            hex"000000000000000000000000111122223333444455556666777788889999aaaa";
+        bytes memory expectedOperationData = hex"000000000000000000000000111122223333444455556666777788889999aaaa";
 
         // Call: encode operation data exactly as base contract does.
         bytes memory operationData = abi.encode(newImplementation);
@@ -233,7 +231,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
         // Verify: target should still fail because account-type whitelist entry is required.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV1)
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV1
+            )
         );
         vm.prank(GUARDIAN);
         // Call: attempt update when only Organization-type whitelist is set.
@@ -247,7 +247,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV1, auth);
 
         // Verify: update succeeds once Account-type whitelist entry exists.
-        assertEq(harness.getAccountImplementationStorage(), accountImplementationV1, "account-type whitelist should pass");
+        assertEq(
+            harness.getAccountImplementationStorage(), accountImplementationV1, "account-type whitelist should pass"
+        );
     }
 
     /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
@@ -278,7 +280,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies failed whitelist validation does not consume nonce and same signed request can later succeed.
-    function test_OAFB_SAI_11_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry() public {
+    function test_OAFB_SAI_11_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
+        public
+    {
         // Setup: configure one-admin auth and leave implementation un-whitelisted for first attempt.
         _setSingleAdminThresholdOne();
 
@@ -291,7 +295,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         });
 
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV2)
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV2
+            )
         );
         vm.prank(GUARDIAN);
         // Call: first attempt before whitelist entry exists.
@@ -308,7 +314,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV2, auth);
 
         // Verify: retry succeeds and now consumes nonce.
-        assertEq(harness.getAccountImplementationStorage(), accountImplementationV2, "retry should update implementation");
+        assertEq(
+            harness.getAccountImplementationStorage(), accountImplementationV2, "retry should update implementation"
+        );
         assertTrue(harness.getUsedNonce(nonce), "successful retry should consume nonce");
     }
 

@@ -16,10 +16,10 @@ import {ContractType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies random distinct salts compute to unique addresses.
-    function testFuzz_AF_FT_1_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(bytes32 saltA, bytes32 saltB)
-        public
-        view
-    {
+    function testFuzz_AF_FT_1_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(
+        bytes32 saltA,
+        bytes32 saltB
+    ) public view {
         // Setup: constrain fuzz inputs to distinct salts.
         vm.assume(saltA != saltB);
 
@@ -51,7 +51,9 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         vm.assume(candidate != accountImplementationV1);
 
         // Verify: non-whitelisted candidate should be rejected.
-        vm.expectRevert(abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate));
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate)
+        );
         // Call: attempt library-level implementation update.
         harness.setAccountImplementationViaLibrary(candidate);
     }

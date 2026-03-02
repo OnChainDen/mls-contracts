@@ -2,9 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {
-    LibAccountOrganizationAddressStorage
-} from "account/libraries/storage/LibAccountOrganizationAddressStorage.sol";
+import {LibAccountOrganizationAddressStorage} from "account/libraries/storage/LibAccountOrganizationAddressStorage.sol";
 
 /**
  * @dev Versioned account-proxy implementation used for constructor/delegation tests.

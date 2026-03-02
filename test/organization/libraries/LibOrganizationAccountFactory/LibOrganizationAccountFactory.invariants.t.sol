@@ -70,7 +70,8 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
         // Call: evaluate whether an un-whitelisted update ever succeeded during fuzzing.
         // Verify: un-whitelisted implementation updates should never succeed.
         assertFalse(
-            handler.successfulSetWithoutWhitelist(), "implementation update succeeded while implementation unwhitelisted"
+            handler.successfulSetWithoutWhitelist(),
+            "implementation update succeeded while implementation unwhitelisted"
         );
     }
 

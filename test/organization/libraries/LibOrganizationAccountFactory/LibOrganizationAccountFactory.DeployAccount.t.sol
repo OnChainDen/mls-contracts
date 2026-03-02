@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {Vm} from "forge-std/Vm.sol";
 
@@ -131,7 +131,9 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies defensive mismatch branch reverts `AccountDeploymentAddressMismatch` under fault injection.
-    function test_LOAF_DA_9_deployAccount_faultInjectedAddressMismatch_revertsAccountDeploymentAddressMismatch() public {
+    function test_LOAF_DA_9_deployAccount_faultInjectedAddressMismatch_revertsAccountDeploymentAddressMismatch()
+        public
+    {
         bytes32 create2Salt = bytes32(uint256(8029));
 
         // Setup: set a valid beacon implementation with runtime code.
@@ -144,7 +146,9 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies no-code implementation reverts and leaves mapping/events unchanged on failed deployment.
-    function test_LOAF_DA_10__LOAF_DA_12__LOAF_DA_13_deployAccount_noCodeImplementation_revertsAndDoesNotSetMappingOrEmitEvent() public {
+    function test_LOAF_DA_10__LOAF_DA_12__LOAF_DA_13_deployAccount_noCodeImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
+        public
+    {
         bytes32 create2Salt = bytes32(uint256(8068));
         address noCodeImplementation = address(0xBEEF);
 
@@ -168,7 +172,9 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies zero implementation reverts and leaves mapping/events unchanged on failed deployment.
-    function test_LOAF_DA_11__LOAF_DA_12__LOAF_DA_13_deployAccount_zeroImplementation_revertsAndDoesNotSetMappingOrEmitEvent() public {
+    function test_LOAF_DA_11__LOAF_DA_12__LOAF_DA_13_deployAccount_zeroImplementation_revertsAndDoesNotSetMappingOrEmitEvent()
+        public
+    {
         bytes32 create2Salt = bytes32(uint256(8081));
         address zeroImplementation = address(0);
 
