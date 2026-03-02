@@ -14,8 +14,7 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
 contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies that stale finalize signatures become invalid after cancel + re-init with new params.
     function test_OGR_INT_11_staleFinalizeSignaturesInvalidAfterCancelAndReInit() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; build signed
-        // admin-auth payloads.
+        // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -49,9 +48,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: run the multi-step flow (`OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery`,
-        // `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery`,
-        // `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery`) and assert the revert branch.
+        // Call: cancel deferred recovery initialization, initiate deferred recovery initialization, then finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(cancelAuthA);
 
@@ -71,7 +68,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(staleFinalizeAuth);
 
-        // Verify: confirm pending deferred-init fields.
+        // Verify: pending tuple remains the newly initialized tuple.
         assertEq(
             harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
             GUARDIAN_RECOVERY_ADDRESS_B,
@@ -81,8 +78,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
 
     /// @dev Verifies that stale cancel signatures become invalid once pending params change.
     function test_OGR_INT_12_staleCancelSignaturesInvalidAfterPendingParamsChange() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; build signed
-        // admin-auth payloads.
+        // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -131,13 +127,12 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, 4 days, initAuthB);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` as `GUARDIAN` and assert the
-        // expected revert.
+        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(staleCancelAuth);
 
-        // Verify: confirm pending deferred-init fields.
+        // Verify: pending tuple remains current tuple when stale cancel auth is used.
         assertEq(
             harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
             GUARDIAN_RECOVERY_ADDRESS_B,
@@ -148,12 +143,10 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
     /// @dev Verifies that unconfigured recovery address causes base recovery entry points to revert via
     /// onlyGuardianRecoveryAddress.
     function test_OGR_INT_13_unconfiguredRecoveryAddress_baseRecoveryEntryPointsAlwaysRevertAndStateUnchanged() public {
-        // Setup: reset guardian-recovery storage.
+        // Setup: start from clean recovery state.
         recoveryStateHarness.resetGuardianRecoveryStorage();
 
-        // Call: run the multi-step flow (`OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate`,
-        // `OrganizationGuardianRecoveryBase.finalizeRecoveryGuardianUpdate`,
-        // `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate`).
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then cancel recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`, expecting revert from the recovery-address gate.
         _expectOnlyGuardianRecoveryAddressRevert(GUARDIAN_RECOVERY_ADDRESS, address(0));
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
@@ -166,7 +159,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.cancelRecoveryGuardianUpdate();
 
-        // Verify: confirm pending recovery-update fields, recovery configuration fields.
+        // Verify: recovery address remains unset.
         assertEq(harness.getGuardianRecoveryState().recoveryAddress, address(0), "recovery address should remain unset");
         assertEq(
             harness.getGuardianRecoveryState().pendingGuardian,

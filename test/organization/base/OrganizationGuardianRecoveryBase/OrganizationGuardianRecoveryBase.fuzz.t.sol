@@ -12,12 +12,10 @@ import {
 contract OrganizationGuardianRecoveryBaseFuzzTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies that non-recovery callers always fail initiate/finalize/cancel recovery entry points.
     function testFuzz_OGR_FZ_13_nonRecoveryCallers_failRecoveryEntryPoints(address caller) public {
-        // Setup: use default fixture state.
+        // Setup: reuse suite baseline where guardian-recovery is configured.
         vm.assume(caller != GUARDIAN_RECOVERY_ADDRESS);
 
-        // Call: run the multi-step flow (`OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate`,
-        // `OrganizationGuardianRecoveryBase.finalizeRecoveryGuardianUpdate`,
-        // `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate`).
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then cancel recovery guardian update as `caller`, expecting revert from the recovery-address gate.
         _expectOnlyGuardianRecoveryAddressRevert(caller, GUARDIAN_RECOVERY_ADDRESS);
         vm.prank(caller);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
@@ -30,7 +28,7 @@ contract OrganizationGuardianRecoveryBaseFuzzTest is OrganizationGuardianRecover
         vm.prank(caller);
         harness.cancelRecoveryGuardianUpdate();
 
-        // Verify: confirm pending recovery-update state remains unchanged.
+        // Verify: pending guardian remains unchanged; pending guardian timestamp remains unchanged.
         assertEq(
             harness.getGuardianRecoveryState().pendingGuardian, address(0), "pending guardian should remain unchanged"
         );

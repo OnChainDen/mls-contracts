@@ -21,8 +21,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` reverts when called by a
     /// non-guardian.
     function test_OGRB_FIGR_1_nonGuardianCaller_revertsOnlyGuardian() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -38,13 +37,12 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: execute `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` via a non-guardian EOA
-        // and expect the guardian-only revert.
+        // Call: finalize deferred recovery initialization as `NON_GUARDIAN`, expecting revert from the guardian-only gate.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: recovery address remains unset after unauthorized call.
         assertEq(
             harness.getGuardianRecoveryState().recoveryAddress,
             address(0),
@@ -55,8 +53,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` insufficient admin
     /// signatures revert.
     function test_OGRB_FIGR_2_insufficientAdminSignatures_reverts() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -72,21 +69,19 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
-        // the expected revert.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting `InsufficientAdminAuthorization` revert.
         vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: recovery config remains unset.
         assertEq(harness.getGuardianRecoveryState().recoveryAddress, address(0), "recovery config should remain unset");
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` successful nonce replay
     /// reverts with `NonceAlreadyUsed`.
     function test_OGRB_FIGR_3_replaySameNonce_revertsNonceAlreadyUsed() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -104,11 +99,11 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         uint256 nonce = _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_003);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN`.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`.
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
 
-        // Verify: confirm nonce consumption/rollback behavior.
+        // Verify: nonce is consumed on successful finalization.
         assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on successful finalization");
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -123,8 +118,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     function test_OGRB_FIGR_4__OGRB_FIGR_5__OGRB_FIGR_6__OGRB_FIGR_7_finalizeApprovalPathBindsPendingTupleAndDelegates()
         public
     {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -148,11 +142,11 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, pendingTupleData, 12_004);
         uint256 staleNonce = _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, staleData, 12_004);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN`.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`.
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
 
-        // Verify: confirm the pending deferred-init tuple is fully cleared.
+        // Verify: finalize nonce is consumed; initiate nonce remains unused.
         assertTrue(harness.getUsedNonce(finalizeNonce), "finalize nonce should be consumed");
         assertFalse(harness.getUsedNonce(initiateNonce), "initiate nonce should remain unused");
         assertFalse(harness.getUsedNonce(staleNonce), "stale tuple nonce should remain unused");
@@ -179,8 +173,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     function test_OGRB_FIGR_8__OGRB_FIGR_10__OGRB_FIGR_11_stalePendingTupleSignatures_revertAfterPendingValuesChange()
         public
     {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -198,13 +191,12 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         recoveryStateHarness.setGuardianRecoveryPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
-        // the expected revert.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(staleAuth);
 
-        // Verify: confirm nonce consumption/rollback behavior.
+        // Verify: stale tuple nonce remains unused; current tuple nonce remains unused.
         bytes memory currentData = abi.encode(GUARDIAN_RECOVERY_ADDRESS_B, 3 days);
         uint256 staleNonce = _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, staleData, 12_008);
         uint256 currentNonce =
@@ -216,8 +208,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` downstream revert rolls back
     /// nonce and same signed request can succeed later.
     function test_OGRB_FIGR_9_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         uint256 canFinalizeAt = block.timestamp + 1 days;
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -236,8 +227,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         uint256 nonce = _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_009);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
-        // the expected revert.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
@@ -246,7 +236,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
 
-        // Verify: confirm nonce consumption/rollback behavior.
+        // Verify: nonce should rollback on downstream timelock revert; same signed request should succeed once timelock expires.
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream timelock revert");
 
         vm.warp(canFinalizeAt);
@@ -258,8 +248,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` expired auth reverts and
     /// nonce is not burned.
     function test_OGRB_FIGR_12_expiredAuth_revertsWithoutBurningNonce_andFreshSignaturesSucceed() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -277,8 +266,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         uint256 nonce = _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_012);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
-        // the expected revert.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationAdmin.AdminOperationExpired.selector, block.timestamp - 1, block.timestamp
@@ -287,7 +275,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(expiredAuth);
 
-        // Verify: confirm nonce consumption/rollback behavior.
+        // Verify: expired auth should not burn nonce; fresh signatures for same tuple+salt should succeed.
         assertFalse(harness.getUsedNonce(nonce), "expired auth should not burn nonce");
 
         (AdminAuthParams memory freshAuth,) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -307,8 +295,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` rejection signatures cannot
     /// execute finalization.
     function test_OGRB_FIGR_13_rejectionSignatures_cannotExecuteFinalization() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -324,13 +311,12 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
-        // the expected revert.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(rejectionAuth);
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: rejection signatures does not finalize initialization.
         assertEq(
             harness.getGuardianRecoveryState().recoveryAddress,
             address(0),
@@ -341,8 +327,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` signatures for a different
     /// operation type cannot authorize finalization.
     function test_OGRB_FIGR_14_signaturesForDifferentOperationType_cannotAuthorizeFinalization() public {
-        // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
-        // deferred-init timelock tuple.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
@@ -359,13 +344,12 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
-        // the expected revert.
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(wrongAuth);
 
-        // Verify: confirm nonce consumption/rollback behavior.
+        // Verify: finalize nonce remains unused.
         uint256 finalizeNonce =
             _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_014);
         assertFalse(harness.getUsedNonce(finalizeNonce), "finalize nonce should remain unused");

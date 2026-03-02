@@ -17,8 +17,7 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
     function test_LOGR_CRGU_1__LOGR_CRGU_2__LOGR_CRGU_3__LOGR_CRGU_5__LOGR_CRGU_6__LOGR_CRGU_8__LOGR_CRGU_9_cancelClearsPendingAndPreservesOtherState()
         public
     {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending deferred-init timelock tuple;
-        // seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 7 days
@@ -26,12 +25,12 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`.
+        // Call: cancel recovery guardian update.
         vm.expectEmit(true, true, true, true);
         emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateCancelled(NEW_GUARDIAN_A);
         harness.cancelRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm the pending deferred-init tuple is fully cleared.
+        // Verify: pending guardian clears; pending guardian timestamp clears.
         GuardianRecoveryState memory afterState = harness.getGuardianRecoveryStateViaStorage();
         assertEq(afterState.pendingGuardian, address(0), "pending guardian should clear");
         assertEq(afterState.pendingGuardianTimestamp, 0, "pending guardian timestamp should clear");
@@ -60,14 +59,14 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` no pending update reverts with
     /// `NoPendingRecoveryGuardianUpdate`.
     function test_LOGR_CRGU_4_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` and assert the expected revert.
+        // Call: cancel recovery guardian update, expecting `NoPendingRecoveryGuardianUpdate` revert.
         vm.expectRevert(IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate.selector);
         harness.cancelRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: pending guardian remains clear.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,
             address(0),
@@ -78,17 +77,17 @@ contract LibOrganizationGuardianRecoveryCancelRecoveryGuardianUpdateTest is LibO
     /// @dev Verifies `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate` cancel after finalize still clears
     /// pending and ready-for-acceptance state.
     function test_LOGR_CRGU_7_cancelAfterFinalize_clearsReadyForAcceptanceState() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         assertTrue(harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance, "precondition: ready=true");
 
-        // Call: invoke `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`.
+        // Call: cancel recovery guardian update.
         harness.cancelRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm pending recovery-update fields are fully cleared.
+        // Verify: pending guardian clears after cancel; ready flag clears after cancel.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,
             address(0),
