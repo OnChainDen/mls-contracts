@@ -68,6 +68,9 @@ library LibOrganizationGuardianRecovery {
             revert IOrganizationGuardianRecovery.InvalidNewGuardianAddress();
         }
 
+        // Validate that guardian recovery timelock duration is in valid range
+        TimelockUtils.validateTimelockDurationOrRevert(guardianRecovery.timelockDurationSeconds);
+
         uint256 canFinalizeAtTimestamp = block.timestamp + guardianRecovery.timelockDurationSeconds;
 
         // Set pending state in recovery storage
@@ -271,7 +274,7 @@ library LibOrganizationGuardianRecovery {
      * @dev Clears all pending initialization state fields.
      * @param guardianRecovery The guardian recovery storage state
      */
-    function _clearPendingGuardianRecoveryInitTimelock(GuardianRecoveryState storage guardianRecovery) private {
+    function _clearPendingGuardianRecoveryInitTimelock(GuardianRecoveryState storage guardianRecovery) internal {
         guardianRecovery.pendingInit.pendingRecoveryAddress = address(0);
         guardianRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
         guardianRecovery.pendingInit.pendingTimestamp = 0;
@@ -283,7 +286,7 @@ library LibOrganizationGuardianRecovery {
      * @param guardianRecovery The guardian recovery storage state
      */
     function _validateGuardianRecoveryNotConfiguredOrRevert(GuardianRecoveryState storage guardianRecovery)
-        private
+        internal
         view
     {
         if (guardianRecovery.recoveryAddress != address(0) || guardianRecovery.timelockDurationSeconds != 0) {
@@ -298,7 +301,7 @@ library LibOrganizationGuardianRecovery {
      * @param timelockDurationSeconds The timelock duration to validate
      */
     function _validateGuardianRecoveryParamsOrRevert(address recoveryAddress, uint256 timelockDurationSeconds)
-        private
+        internal
         pure
     {
         // Case: Recovery address is zero
