@@ -1,0 +1,849 @@
+// SPDX-License-Identifier: UNLICENSED
+// Copyright (c) 2026 Den Technologies Inc. All rights reserved.
+pragma solidity 0.8.33;
+
+import {IAccount} from "interfaces/IAccount.sol";
+import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
+import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
+import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
+import {
+    MockAccountForOrganizationTransaction,
+    MockInteractionTarget,
+    MockNativeReceiver
+} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
+import {
+    OrganizationTxRecoveryBaseSuiteBase
+} from "test/organization/base/OrganizationTxRecoveryBase/OrganizationTxRecoveryBaseSuiteBase.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
+import {TxRecoveryState} from "types/RecoveryTypes.sol";
+
+/**
+ * @dev Unit/integration tests for `OrganizationTxRecoveryBase` entry points.
+ */
+contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRecoveryBaseSuiteBase {
+    address internal constant ALT_TX_RECOVERY = address(0x710AA);
+
+    /// @dev Verifies OTRB-IETR-1 and OTRB-IETR-2: non-recovery callers (including guardian) revert via
+    /// `onlyTxRecoveryAddress`.
+    function test_OTRB_IETR_1__OTRB_IETR_2_nonRecoveryCallerAndGuardian_revertUnauthorizedTxRecoveryAddress() public {
+        // Setup
+
+        // Call
+        _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        _expectOnlyTxRecoveryRevert(GUARDIAN);
+        vm.prank(GUARDIAN);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending enable must stay unset");
+    }
+
+    /// @dev Verifies OTRB-IETR-3: authorized tx-recovery caller reaches library initiate-enable flow.
+    function test_OTRB_IETR_3_authorizedRecoveryCaller_initiatesEnableFlow() public {
+        // Setup
+        uint256 expectedPending = block.timestamp + TX_RECOVERY_TIMELOCK;
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertEq(
+            harness.getTxRecoveryState().pendingEnableTimestamp, expectedPending, "pending enable timestamp mismatch"
+        );
+    }
+
+    /// @dev Verifies OTRB-IETR-4: with zero timelock configuration, initiate bubbles invalid timelock validation.
+    function test_OTRB_IETR_4_initiateEnable_zeroTimelock_bubblesInvalidTimelockDuration() public {
+        // Setup
+        _setTxRecoveryState(TX_RECOVERY, false, 0, 0, address(0), 0, 0);
+
+        // Call
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending enable should remain zero");
+    }
+
+    /// @dev Verifies OTRB-IETR-5 and OTRB-IETR-6: initiate bubbles `already-enabled` and `already-pending` guards.
+    function test_OTRB_IETR_5__OTRB_IETR_6_initiateEnable_alreadyEnabledOrPending_reverts() public {
+        // Setup
+        _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+
+        // Call
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryAlreadyEnabled.selector);
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, block.timestamp + 1, address(0), 0, 0);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryEnableAlreadyPending.selector);
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertEq(
+            harness.getTxRecoveryState().pendingEnableTimestamp,
+            block.timestamp + 1,
+            "pending enable should remain unchanged"
+        );
+    }
+
+    /// @dev Verifies OTRB-FETR-1, OTRB-FETR-2, and OTRB-FETR-3: finalize access and timelock guards.
+    function test_OTRB_FETR_1__OTRB_FETR_2__OTRB_FETR_3_finalizeEnable_accessAndTimelockGuards_revert() public {
+        // Setup
+        _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+
+        // Call
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryEnablePending.selector);
+        vm.prank(TX_RECOVERY);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, pending, block.timestamp
+            )
+        );
+        vm.prank(TX_RECOVERY);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertFalse(harness.getTxRecoveryState().isEnabled, "recovery should remain disabled");
+    }
+
+    /// @dev Verifies OTRB-FETR-4, OTRB-FETR-5, and OTRB-FETR-6: finalize succeeds at boundary, clears pending, and
+    /// cannot be replayed.
+    function test_OTRB_FETR_4__OTRB_FETR_5__OTRB_FETR_6_finalizeEnable_boundarySuccessAndReplayGuard() public {
+        // Setup
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
+        vm.warp(pending);
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertTrue(state.isEnabled, "recovery should be enabled");
+        assertEq(state.pendingEnableTimestamp, 0, "pending enable must be cleared");
+
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryEnablePending.selector);
+        vm.prank(TX_RECOVERY);
+        harness.finalizeEnableTransactionAndERC1271Recovery();
+    }
+
+    /// @dev Verifies OTRB-CETR-1 and OTRB-CETR-2: cancel-enable access/no-pending guards.
+    function test_OTRB_CETR_1__OTRB_CETR_2_cancelEnable_accessAndNoPendingGuards_revert() public {
+        // Setup
+
+        // Call
+        _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.cancelEnableTransactionAndERC1271Recovery();
+
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryEnablePending.selector);
+        vm.prank(TX_RECOVERY);
+        harness.cancelEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertEq(harness.getTxRecoveryState().pendingEnableTimestamp, 0, "pending must remain zero");
+    }
+
+    /// @dev Verifies OTRB-CETR-3, OTRB-CETR-4, and OTRB-CETR-5: cancel clears pending, works after expiry, and never
+    /// enables recovery.
+    function test_OTRB_CETR_3__OTRB_CETR_4__OTRB_CETR_5_cancelEnable_clearsPendingAndDoesNotEnable() public {
+        // Setup
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
+        vm.warp(pending + 1);
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.cancelEnableTransactionAndERC1271Recovery();
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingEnableTimestamp, 0, "pending enable should be cleared");
+        assertFalse(state.isEnabled, "cancel should never enable recovery");
+    }
+
+    /// @dev Verifies OTRB-DTER-1: disable is protected by `onlyTxRecoveryAddress`.
+    function test_OTRB_DTER_1_disable_nonRecoveryCaller_revertsUnauthorizedTxRecoveryAddress() public {
+        // Setup
+
+        // Call
+        _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.disableTransactionAndERC1271Recovery();
+
+        // Verify
+        assertFalse(harness.getTxRecoveryState().isEnabled, "state should remain unchanged");
+    }
+
+    /// @dev Verifies OTRB-DTER-2, OTRB-DTER-3, OTRB-DTER-4, and OTRB-DTER-5: disable clears enabled/pending state, is
+    /// idempotent, and blocks recovery execution.
+    function test_OTRB_DTER_2__OTRB_DTER_3__OTRB_DTER_4__OTRB_DTER_5_disable_clearsStateAndBlocksExecution() public {
+        // Setup
+        _enableTxRecovery();
+        _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, block.timestamp + 1, address(0), 0, 0);
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.disableTransactionAndERC1271Recovery();
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertFalse(state.isEnabled, "disable must set isEnabled=false");
+        assertEq(state.pendingEnableTimestamp, 0, "disable must clear pending enable");
+
+        vm.prank(TX_RECOVERY);
+        harness.disableTransactionAndERC1271Recovery();
+        assertFalse(harness.getTxRecoveryState().isEnabled, "second disable should still be safe");
+
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+    }
+
+    /// @dev Verifies OTRB-ERAT-1, OTRB-ERAT-2, and OTRB-ERAT-3: execute-recovery access/config/enabled guards.
+    function test_OTRB_ERAT_1__OTRB_ERAT_2__OTRB_ERAT_3_executeRecovery_accessAndEnableGuards_revert() public {
+        // Setup
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        // Call
+        _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        _setTxRecoveryState(TX_RECOVERY, false, 0, 0, address(0), 0, 0);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        // Verify
+        assertEq(account.executionCount(), 0, "account execution should never be reached");
+    }
+
+    /// @dev Verifies OTRB-ERAT-4 and OTRB-ERAT-5: pending enable (pre/post-expiry) is not sufficient before finalize.
+    function test_OTRB_ERAT_4__OTRB_ERAT_5_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled()
+        public
+    {
+        // Setup
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        vm.prank(TX_RECOVERY);
+        harness.initiateEnableTransactionAndERC1271Recovery();
+
+        // Call
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        vm.warp(harness.getTxRecoveryState().pendingEnableTimestamp + 1);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        // Verify
+        assertEq(account.executionCount(), 0, "account execution should remain blocked");
+    }
+
+    /// @dev Verifies OTRB-ERAT-6 and OTRB-ERAT-13: deployed-account check occurs after recovery-enabled validation.
+    function test_OTRB_ERAT_6__OTRB_ERAT_13_executeRecovery_validationOrder_preserved() public {
+        // Setup
+        _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+
+        // Call
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(0xFEED01), DESTINATION, 0, bytes(""));
+
+        _enableTxRecovery();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAccountFactory.AccountNotDeployedByOrganization.selector, address(0xFEED01)
+            )
+        );
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(0xFEED01), DESTINATION, 0, bytes(""));
+
+        // Verify
+    }
+
+    /// @dev Verifies OTRB-ERAT-7, OTRB-ERAT-8, and OTRB-ERAT-9: successful execution emits event and forwards exact
+    /// tuple with nonce/policy fixed to zero.
+    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9_executeRecovery_success_emitsAndForwardsExpectedTuple() public {
+        // Setup
+        _enableTxRecovery();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        bytes memory payload = abi.encodeWithSelector(bytes4(0xCAFEBABE), uint256(11));
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.RecoveryAccountTransactionExecuted(address(account), DESTINATION, 0, payload);
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, payload);
+
+        // Verify
+        assertEq(account.lastTo(), DESTINATION, "destination should be forwarded");
+        assertEq(account.lastValue(), 0, "value should be forwarded");
+        assertEq(account.lastData(), payload, "payload should be forwarded");
+        assertEq(account.lastNonce(), 0, "recovery path must force nonce=0");
+        assertEq(account.lastPolicyId(), 0, "recovery path must force policyId=0");
+    }
+
+    /// @dev Verifies OTRB-ERAT-10 and OTRB-ERAT-11: native transfer and contract-call recovery execution succeed
+    /// end-to-end.
+    function test_OTRB_ERAT_10__OTRB_ERAT_11_executeRecovery_nativeTransferAndContractCall_succeed() public {
+        // Setup
+        _enableTxRecovery();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        MockNativeReceiver receiver = new MockNativeReceiver();
+        MockInteractionTarget target = new MockInteractionTarget();
+        uint256 value = 0.2 ether;
+        vm.deal(address(account), value);
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), address(receiver), value, bytes(""));
+
+        bytes memory payload = abi.encodeWithSelector(target.ping.selector, uint256(21));
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), address(target), 0, payload);
+
+        // Verify
+        assertEq(receiver.totalReceived(), value, "native transfer should reach receiver");
+        assertEq(target.calls(), 1, "contract interaction should execute once");
+        assertEq(target.lastCaller(), address(account), "account should call downstream target");
+        assertEq(target.total(), 21, "calldata should be processed by target");
+    }
+
+    /// @dev Verifies OTRB-ERAT-12 and OTRB-ERAT-20: downstream account revert bubbles and no recovery event persists.
+    function test_OTRB_ERAT_12__OTRB_ERAT_20_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists()
+        public
+    {
+        // Setup
+        _enableTxRecovery();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        account.setShouldRevertExecution(true);
+        harness.setDeployedAccount(address(account), true);
+
+        // Call
+        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        // Verify
+        assertEq(account.executionCount(), 0, "full revert should rollback account execution count");
+    }
+
+    /// @dev Verifies OTRB-ERAT-14: executing recovery tx does not mutate tx-recovery configuration fields.
+    function test_OTRB_ERAT_14_executeRecovery_doesNotMutateTxRecoveryConfigFields() public {
+        // Setup
+        _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+        TxRecoveryState memory beforeState = harness.getTxRecoveryState();
+
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        // Call
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes(""));
+
+        // Verify
+        TxRecoveryState memory afterState = harness.getTxRecoveryState();
+        assertEq(afterState.recoveryAddress, beforeState.recoveryAddress, "recovery address must not change");
+        assertEq(afterState.timelockDurationSeconds, beforeState.timelockDurationSeconds, "timelock must not change");
+        assertEq(afterState.isEnabled, beforeState.isEnabled, "enabled flag must not change");
+        assertEq(
+            afterState.pendingEnableTimestamp, beforeState.pendingEnableTimestamp, "pending enable must not change"
+        );
+        assertEq(
+            afterState.pendingInit.pendingRecoveryAddress,
+            beforeState.pendingInit.pendingRecoveryAddress,
+            "pending init address must not change"
+        );
+        assertEq(
+            afterState.pendingInit.pendingTimelockDurationSeconds,
+            beforeState.pendingInit.pendingTimelockDurationSeconds,
+            "pending init timelock must not change"
+        );
+        assertEq(
+            afterState.pendingInit.pendingTimestamp,
+            beforeState.pendingInit.pendingTimestamp,
+            "pending init timestamp must not change"
+        );
+    }
+
+    /// @dev Verifies OTRB-ERAT-15: recovery execution targeting organization state-changing selectors fails closed.
+    function test_OTRB_ERAT_15_executeRecovery_targetingOrganization_revertsTransactionExecutionFailed() public {
+        // Setup
+        _enableTxRecovery();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        // Call
+        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(
+            address(account),
+            address(harness),
+            0,
+            abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector)
+        );
+
+        // Verify
+        assertEq(account.executionCount(), 0, "organization target failure should fully revert account execution");
+    }
+
+    /// @dev Verifies OTRB-ERAT-16: recovery execution targeting account state-changing selectors fails closed.
+    function test_OTRB_ERAT_16_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
+        public
+    {
+        // Setup
+        _enableTxRecovery();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        bytes[] memory payloads = new bytes[](3);
+        payloads[0] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector, DESTINATION, 0, bytes("nested"), uint256(1), uint256(1)
+        );
+        payloads[1] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector, address(harness), 1, bytes("nested-2"), uint256(2), uint256(3)
+        );
+        payloads[2] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector, address(account), 0, bytes("nested-3"), uint256(4), uint256(5)
+        );
+
+        // Call
+        for (uint256 i = 0; i < payloads.length; i++) {
+            vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+            vm.prank(TX_RECOVERY);
+            harness.executeRecoveryAccountTransaction(address(account), address(account), 0, payloads[i]);
+        }
+
+        // Verify
+        assertEq(account.executionCount(), 0, "account self-target failure should fully revert account execution");
+    }
+
+    /// @dev Verifies OTRB-IITR-1 and OTRB-IITR-2: initiate-initialize is guardian-gated and enforces sufficient admin
+    /// authorization.
+    function test_OTRB_IITR_1__OTRB_IITR_2_initiateInitialize_nonGuardianOrInsufficientAuth_reverts() public {
+        // Setup
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+
+        (AdminAuthParams memory auth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 101,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
+
+        // Call
+        _expectOnlyGuardian(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, auth);
+
+        vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, auth);
+
+        // Verify
+        assertEq(
+            harness.getTxRecoveryState().pendingInit.pendingTimestamp,
+            0,
+            "pending init should remain unset on failed auth"
+        );
+    }
+
+    /// @dev Verifies OTRB-IITR-3, OTRB-IITR-4, OTRB-IITR-5, OTRB-IITR-6, OTRB-IITR-7, OTRB-IITR-8, and OTRB-IITR-9
+    /// across auth binding/replay and successful initiation.
+    function test_OTRB_IITR_3__OTRB_IITR_4__OTRB_IITR_5__OTRB_IITR_6__OTRB_IITR_7__OTRB_IITR_8__OTRB_IITR_9_initiateInitialize_authBindingReplayAndSuccess()
+        public
+    {
+        // Setup
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+
+        (AdminAuthParams memory validAuth, bytes memory validOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 102,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            operationData: validOperationData,
+            isApproval: false,
+            salt: 103,
+            expirationTimestamp: block.timestamp + 1 days,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        AdminAuthParams memory wrongTypeAuth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            operationData: validOperationData,
+            isApproval: true,
+            salt: 104,
+            expirationTimestamp: block.timestamp + 1 days,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, rejectionAuth);
+
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, wrongTypeAuth);
+
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(address(0xBAADF00D), TX_RECOVERY_TIMELOCK, validAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, validAuth);
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, ALT_TX_RECOVERY, "pending recovery address mismatch");
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds,
+            TX_RECOVERY_TIMELOCK,
+            "pending timelock should match signed payload"
+        );
+        assertEq(
+            state.pendingInit.pendingTimestamp,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK,
+            "pending init timestamp should respect admin-op timelock"
+        );
+
+        uint256 nonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, validOperationData, 102);
+        assertTrue(harness.getUsedNonce(nonce), "valid initiate should consume nonce");
+
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, validAuth);
+    }
+
+    /// @dev Verifies OTRB-IITR-10, OTRB-IITR-11, and OTRB-IITR-12: initiate-initialize bubbles downstream
+    /// already-configured/pending/invalid-param errors.
+    function test_OTRB_IITR_10__OTRB_IITR_11__OTRB_IITR_12_initiateInitialize_downstreamErrorsBubble() public {
+        // Setup
+        (AdminAuthParams memory configuredAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 105,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call
+        vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, configuredAuth);
+
+        _setTxRecoveryState(address(0), false, 0, 0, address(0xABC), TX_RECOVERY_TIMELOCK, block.timestamp + 1);
+        (AdminAuthParams memory pendingAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 106,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingAuth);
+
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        (AdminAuthParams memory invalidAddressAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: address(0),
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 107,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(address(0), TX_RECOVERY_TIMELOCK, invalidAddressAuth);
+
+        (AdminAuthParams memory invalidTimelockAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+            salt: 108,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(
+            ALT_TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, invalidTimelockAuth
+        );
+
+        // Verify
+    }
+
+    /// @dev Verifies OTRB-FITR-1, OTRB-FITR-2, OTRB-FITR-3, OTRB-FITR-4, OTRB-FITR-5, OTRB-FITR-6, OTRB-FITR-7,
+    /// OTRB-FITR-8, OTRB-FITR-9, OTRB-FITR-10, OTRB-FITR-11, and OTRB-FITR-12 across finalize auth/state semantics.
+    function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12_finalizeInitialize_authAndStateSemantics()
+        public
+    {
+        // Setup
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+
+        (AdminAuthParams memory noPendingAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: address(0),
+            timelockDurationSeconds: 0,
+            salt: 201,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call
+        _expectOnlyGuardian(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(noPendingAuth);
+
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(noPendingAuth);
+
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+
+        (AdminAuthParams memory rejectionAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 202,
+            isApproval: false,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(rejectionAuth);
+
+        (AdminAuthParams memory wrongTypeAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 203,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(wrongTypeAuth);
+
+        (AdminAuthParams memory finalizeAuth, bytes memory finalizeOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 204,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
+                block.timestamp + ADMIN_OPERATION_TIMELOCK,
+                block.timestamp
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
+
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.recoveryAddress, ALT_TX_RECOVERY, "finalize should write recovery address");
+        assertEq(state.timelockDurationSeconds, TX_RECOVERY_TIMELOCK, "finalize should write timelock");
+        assertFalse(state.isEnabled, "finalize should not auto-enable recovery");
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "pending address should clear");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "pending timelock should clear");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should clear");
+
+        uint256 nonce =
+            harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, finalizeOperationData, 204);
+        assertTrue(harness.getUsedNonce(nonce), "finalize nonce should be consumed");
+
+        (AdminAuthParams memory afterFinalizeNoPendingAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: address(0),
+            timelockDurationSeconds: 0,
+            salt: 205,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(afterFinalizeNoPendingAuth);
+    }
+
+    /// @dev Verifies OTRB-CITR-1, OTRB-CITR-2, OTRB-CITR-3, OTRB-CITR-4, OTRB-CITR-5, OTRB-CITR-6, OTRB-CITR-7,
+    /// OTRB-CITR-8, OTRB-CITR-9, OTRB-CITR-10, and OTRB-CITR-11 across cancel auth/state semantics.
+    function test_OTRB_CITR_1__OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4__OTRB_CITR_5__OTRB_CITR_6__OTRB_CITR_7__OTRB_CITR_8__OTRB_CITR_9__OTRB_CITR_10__OTRB_CITR_11_cancelInitialize_authAndStateSemantics()
+        public
+    {
+        // Setup
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+
+        (AdminAuthParams memory cancelAuth, bytes memory operationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 301,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call
+        _expectOnlyGuardian(NON_GUARDIAN);
+        vm.prank(NON_GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK + 1);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "pending recovery address should clear");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "pending timelock should clear");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should clear");
+        assertEq(state.recoveryAddress, address(0), "active config should remain unconfigured");
+
+        uint256 nonce = harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, operationData, 301);
+        assertTrue(harness.getUsedNonce(nonce), "cancel nonce should be consumed");
+
+        (AdminAuthParams memory reinitAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 302,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(TX_RECOVERY, TX_RECOVERY_TIMELOCK, reinitAuth);
+        assertEq(
+            harness.getTxRecoveryState().pendingInit.pendingRecoveryAddress,
+            TX_RECOVERY,
+            "re-initiation should be possible after cancel"
+        );
+    }
+
+    /// @dev Verifies OTRB-GTRS-1, OTRB-GTRS-2, OTRB-GTRS-3, OTRB-GTRS-4, OTRB-GTRS-5, and OTRB-GTRS-6:
+    /// `getTxRecoveryState` returns full snapshots across lifecycle transitions and is callable by anyone.
+    function test_OTRB_GTRS_1__OTRB_GTRS_2__OTRB_GTRS_3__OTRB_GTRS_4__OTRB_GTRS_5__OTRB_GTRS_6_getTxRecoveryState_reflectsLifecycleAndIsPermissionless()
+        public
+    {
+        // Setup
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+
+        // Call
+        vm.prank(NON_GUARDIAN);
+        TxRecoveryState memory zeroState = harness.getTxRecoveryState();
+
+        _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, block.timestamp + 77, address(0), 0, 0);
+        TxRecoveryState memory pendingEnableState = harness.getTxRecoveryState();
+
+        _setTxRecoveryState(
+            address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        TxRecoveryState memory pendingInitState = harness.getTxRecoveryState();
+
+        _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+        TxRecoveryState memory enabledState = harness.getTxRecoveryState();
+        _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+        TxRecoveryState memory disabledState = harness.getTxRecoveryState();
+
+        // Verify
+        assertEq(zeroState.recoveryAddress, address(0), "zero snapshot: recovery address");
+        assertEq(zeroState.timelockDurationSeconds, 0, "zero snapshot: timelock");
+        assertFalse(zeroState.isEnabled, "zero snapshot: disabled");
+
+        assertEq(
+            pendingEnableState.pendingEnableTimestamp,
+            block.timestamp + 77,
+            "pending-enable snapshot should include pending timestamp"
+        );
+        assertEq(
+            pendingInitState.pendingInit.pendingRecoveryAddress,
+            ALT_TX_RECOVERY,
+            "pending-init snapshot should include pending address"
+        );
+        assertTrue(enabledState.isEnabled, "enabled snapshot should report enabled=true");
+        assertFalse(disabledState.isEnabled, "disabled snapshot should report enabled=false");
+    }
+}
