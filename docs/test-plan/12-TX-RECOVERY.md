@@ -508,26 +508,26 @@
 
 ## 6. Invariants
 
-| Invariant | Priority |
-|---|---|
-| Only tx recovery address can call tx-recovery-protected state-changing entrypoints | P0 |
-| Tx recovery config (`recoveryAddress`, `timelockDurationSeconds`) is write-once after first successful initialization | P0 |
-| `isEnabled` transitions to `true` only through finalize-enable path | P0 |
-| `isEnabled` transitions to `false` only through disable path (or stays false from initialization) | P0 |
-| If `isEnabled == true`, then `recoveryAddress != address(0)`, `timelockDurationSeconds != 0`, and `pendingEnableTimestamp == 0` | P0 |
-| If `pendingEnableTimestamp != 0`, then `isEnabled` must be false | P0 |
-| If `pendingEnableTimestamp != 0`, then tx recovery config fields (`recoveryAddress`,`timelockDurationSeconds`) are both non-zero | P0 |
-| After any successful disable, `pendingEnableTimestamp == 0` | P0 |
-| If `pendingInit.pendingTimestamp == 0`, then pending init address and timelock are also zero | P0 |
-| If tx recovery config is set, deferred-init pending fields remain cleared (no configured+pending-init overlap) | P0 |
-| Recovery transaction execution never mutates tx recovery config/pending fields | P0 |
-| Any tx-recovery-driven account call chain attempting `modifyAdmins` cannot mutate admin set or voting threshold | P0 |
-| Any tx-recovery-driven account call chain attempting `modifyMembers` cannot mutate member/admin membership mappings | P0 |
-| Any tx-recovery-driven account call chain attempting `setPoliciesMerkleLeaf` cannot mutate policy merkle root or policy config state | P0 |
-| Any tx-recovery-driven account call chain attempting tx-recovery management entrypoints cannot mutate tx-recovery config/enable/pending state | P0 |
-| **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any state-changing (non-view) Organization function | P0 |
-| **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any state-changing (non-view) Account function | P0 |
-| **Desired Behavior:** for any reentrancy attempt via `to=organization` or `to=account`, end-of-tx Organization/Account/TxRecovery state equals pre-call snapshot | P0 |
-| `validateRecoveryAccountTransactionAllowedOrRevert` must revert whenever `isEnabled == false` | P0 |
-| Tx recovery state transitions never modify guardian recovery state | P0 |
-| Any successful recovery execution uses `nonce=0` and `policyId=0` | P0 |
+| ID | Invariant | Priority |
+|---|---|---|
+| TXR-INV-1 | Only tx recovery address can call tx-recovery-protected state-changing entrypoints | P0 |
+| TXR-INV-2 | Tx recovery config (`recoveryAddress`, `timelockDurationSeconds`) is write-once after first successful initialization | P0 |
+| TXR-INV-3 | `isEnabled` transitions to `true` only through finalize-enable path | P0 |
+| TXR-INV-4 | `isEnabled` transitions to `false` only through disable path (or stays false from initialization) | P0 |
+| TXR-INV-5 | If `isEnabled == true`, then `recoveryAddress != address(0)`, `timelockDurationSeconds != 0`, and `pendingEnableTimestamp == 0` | P0 |
+| TXR-INV-6 | If `pendingEnableTimestamp != 0`, then `isEnabled` must be false | P0 |
+| TXR-INV-7 | If `pendingEnableTimestamp != 0`, then tx recovery config fields (`recoveryAddress`,`timelockDurationSeconds`) are both non-zero | P0 |
+| TXR-INV-8 | After any successful disable, `pendingEnableTimestamp == 0` | P0 |
+| TXR-INV-9 | If `pendingInit.pendingTimestamp == 0`, then pending init address and timelock are also zero | P0 |
+| TXR-INV-10 | If tx recovery config is set, deferred-init pending fields remain cleared (no configured+pending-init overlap) | P0 |
+| TXR-INV-11 | Recovery transaction execution never mutates tx recovery config/pending fields | P0 |
+| TXR-INV-12 | Any tx-recovery-driven account call chain attempting `modifyAdmins` cannot mutate admin set or voting threshold | P0 |
+| TXR-INV-13 | Any tx-recovery-driven account call chain attempting `modifyMembers` cannot mutate member/admin membership mappings | P0 |
+| TXR-INV-14 | Any tx-recovery-driven account call chain attempting `setPoliciesMerkleLeaf` cannot mutate policy merkle root or policy config state | P0 |
+| TXR-INV-15 | Any tx-recovery-driven account call chain attempting tx-recovery management entrypoints cannot mutate tx-recovery config/enable/pending state | P0 |
+| TXR-INV-16 | **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any state-changing (non-view) Organization function | P0 |
+| TXR-INV-17 | **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any state-changing (non-view) Account function | P0 |
+| TXR-INV-18 | **Desired Behavior:** for any reentrancy attempt via `to=organization` or `to=account`, end-of-tx Organization/Account/TxRecovery state equals pre-call snapshot | P0 |
+| TXR-INV-19 | `validateRecoveryAccountTransactionAllowedOrRevert` must revert whenever `isEnabled == false` | P0 |
+| TXR-INV-20 | Tx recovery state transitions never modify guardian recovery state | P0 |
+| TXR-INV-21 | Any successful recovery execution uses `nonce=0` and `policyId=0` | P0 |
