@@ -20,7 +20,8 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: enforce recovery-address caller gate then reset guardian recovery storage via harness as `GUARDIAN_RECOVERY_ADDRESS`, expecting authorization/state-validation revert.
+        // Call: enforce recovery-address caller gate then reset guardian recovery storage via harness as
+        // `GUARDIAN_RECOVERY_ADDRESS`, expecting authorization/state-validation revert.
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.enforceOnlyGuardianRecoveryAddressViaLibrary();
 
@@ -59,7 +60,8 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
 
-        // Call: enforce pending-guardian caller gate, cancel recovery guardian update, then initiate recovery guardian update as `NEW_GUARDIAN_A`, expecting authorization/state-validation revert.
+        // Call: enforce pending-guardian caller gate, cancel recovery guardian update, then initiate recovery guardian
+        // update as `NEW_GUARDIAN_A`, expecting authorization/state-validation revert.
         vm.prank(NEW_GUARDIAN_A);
         harness.enforceOnlyRecoveryPendingGuardianViaLibrary();
 
@@ -110,7 +112,8 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     function test_LOGR_CPGRIT_1__LOGR_CPGRIT_2__LOGR_CPGRIT_3__LOGR_CPGRIT_4__LOGR_CPGRIT_5_clearPendingInit_helperBehavior()
         public
     {
-        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
+        // recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, block.timestamp + 8 days, true);
         recoveryStateHarness.setGuardianRecoveryPendingInit(

@@ -15,7 +15,8 @@ contract OrganizationGuardianRecoveryBaseFuzzTest is OrganizationGuardianRecover
         // Setup: reuse suite baseline where guardian-recovery is configured.
         vm.assume(caller != GUARDIAN_RECOVERY_ADDRESS);
 
-        // Call: initiate recovery guardian update, finalize recovery guardian update, then cancel recovery guardian update as `caller`, expecting revert from the recovery-address gate.
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then cancel recovery guardian
+        // update as `caller`, expecting revert from the recovery-address gate.
         _expectOnlyGuardianRecoveryAddressRevert(caller, GUARDIAN_RECOVERY_ADDRESS);
         vm.prank(caller);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);

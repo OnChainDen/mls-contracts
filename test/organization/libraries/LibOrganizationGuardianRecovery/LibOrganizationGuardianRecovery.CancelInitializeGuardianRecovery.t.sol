@@ -37,7 +37,8 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
     function test_LOGR_CIGR_2__LOGR_CIGR_3__LOGR_CIGR_4__LOGR_CIGR_5__LOGR_CIGR_6__LOGR_CIGR_9_cancelClearsPendingInitAndPreservesOtherState()
         public
     {
-        // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian update.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
+        // update.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 6 days, true);
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -83,7 +84,8 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
-        // Call: cancel deferred recovery initialization then initiate deferred recovery initialization, expecting `NoGuardianRecoveryInitializationPending` revert.
+        // Call: cancel deferred recovery initialization then initiate deferred recovery initialization, expecting
+        // `NoGuardianRecoveryInitializationPending` revert.
         harness.cancelInitializeGuardianRecoveryViaLibrary();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS_B, 4 days);
         harness.cancelInitializeGuardianRecoveryViaLibrary();

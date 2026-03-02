@@ -96,7 +96,8 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
         harness.initializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
-        // Verify: second scenario should preserve zero recovery address; second scenario should preserve preconfigured timelock.
+        // Verify: second scenario should preserve zero recovery address; second scenario should preserve preconfigured
+        // timelock.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().recoveryAddress,
             address(0),
@@ -112,7 +113,8 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` initialize only mutates config fields
     /// and does not change pending/update init state.
     function test_LOGR_IGR_9_initializeOnlyMutatesConfigFields_pendingStateUnchanged() public {
-        // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian update.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
+        // update.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 5 days, true);
         recoveryStateHarness.setGuardianRecoveryPendingInit(

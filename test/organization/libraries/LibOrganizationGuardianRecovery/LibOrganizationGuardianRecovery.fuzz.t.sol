@@ -76,7 +76,8 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, boundedTimelock);
 
-        // Call: initiate recovery guardian update then finalize recovery guardian update, expecting authorization/state-validation revert.
+        // Call: initiate recovery guardian update then finalize recovery guardian update, expecting
+        // authorization/state-validation revert.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 canFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
         assertEq(
@@ -117,7 +118,8 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update, expecting `InvalidNewGuardianAddress` revert.
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian
+        // update, expecting `InvalidNewGuardianAddress` revert.
         if (newGuardian == address(0)) {
             vm.expectRevert(IOrganizationGuardianRecovery.InvalidNewGuardianAddress.selector);
             harness.initiateRecoveryGuardianUpdateViaLibrary(address(0));
