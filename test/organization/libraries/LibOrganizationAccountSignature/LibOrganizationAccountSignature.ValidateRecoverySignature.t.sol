@@ -3,7 +3,7 @@
 pragma solidity 0.8.33;
 
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
-import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
+import {MockERC1271ShortReturnSigner, MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
@@ -118,5 +118,75 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
 
         // Verify: malformed recovery payloads should return invalid and never revert.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "malformed recovery payload should fail closed");
+    }
+
+    /// @dev Verifies that malformed ERC-1271 signatures with truncated headers fail closed.
+    function test_LOAS_VRS_9_validateRecoverySignature_malformedContractSignatureTruncatedHeader_returnsInvalidValue()
+        public
+    {
+        // Setup: configure enabled recovery and build a truncated ERC-1271 payload (<23 bytes).
+        _setTxRecoveryState(guardianSigner, true);
+        bytes memory truncatedHeader = abi.encodePacked(uint8(0), bytes10(0));
+
+        // Call: execute validation with malformed contract-signature bytes.
+        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, truncatedHeader);
+
+        // Verify: malformed truncated headers should fail closed.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "truncated ERC-1271 header should fail closed");
+    }
+
+    /// @dev Verifies that malformed ERC-1271 signatures with oversized declared inner length fail closed.
+    function test_LOAS_VRS_10_validateRecoverySignature_malformedContractSignatureOversizedLength_returnsInvalidValue()
+        public
+    {
+        // Setup: configure enabled recovery with a valid contract signer and craft invalid declared inner length.
+        MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
+        _setTxRecoveryState(address(contractRecovery), true);
+        bytes memory oversized = abi.encodePacked(uint8(0), address(contractRecovery), uint16(99), bytes("AA"));
+
+        // Call: execute validation with malformed oversized-length payload.
+        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, oversized);
+
+        // Verify: declared-inner-length overflow should fail closed.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "oversized ERC-1271 inner length should fail closed");
+    }
+
+    /// @dev Verifies that ERC-1271 signers returning <32 bytes fail closed.
+    function test_LOAS_VRS_11_validateRecoverySignature_shortReturnERC1271Signer_returnsInvalidValue() public {
+        // Setup: configure enabled recovery with short-return ERC-1271 signer and build a contract signature payload.
+        MockERC1271ShortReturnSigner contractRecovery = new MockERC1271ShortReturnSigner();
+        _setTxRecoveryState(address(contractRecovery), true);
+        bytes memory signatureData = _buildContractSignature(address(contractRecovery), hex"CAFE");
+
+        // Call: execute validation against short-return signer.
+        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
+
+        // Verify: <32-byte return data should fail closed.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "short-return ERC-1271 signer should fail closed");
+    }
+
+    /// @dev Verifies TXR-INT-4: signature lifecycle transitions with tx recovery enable/disable/re-enable.
+    function test_TXR_INT_4_recoverySignatureLifecycle_enableDisableReenable_tracksAcceptance() public {
+        // Setup
+        bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+
+        // Call
+        _setTxRecoveryState(guardianSigner, true);
+        bytes4 enabledResult = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
+
+        _setTxRecoveryState(guardianSigner, false);
+        bytes4 disabledResult = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
+
+        _setTxRecoveryState(guardianSigner, true);
+        bytes4 reenabledResult = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
+
+        // Verify
+        assertEq(enabledResult, SignatureUtils.ERC1271_MAGIC_VALUE, "enabled recovery should accept valid signatures");
+        assertEq(disabledResult, SignatureUtils.ERC1271_INVALID_VALUE, "disabled recovery should reject signatures");
+        assertEq(
+            reenabledResult,
+            SignatureUtils.ERC1271_MAGIC_VALUE,
+            "re-enabling recovery should accept signatures again"
+        );
     }
 }

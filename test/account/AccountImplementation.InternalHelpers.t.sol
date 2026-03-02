@@ -206,4 +206,65 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
         // Call: execute wrapper around `_onlyOrganization`.
         account.onlyOrganizationViaInternal();
     }
+
+    /**
+     * @dev Verifies AI-PH-1: `_onlyOrganization` reverts for non-organization caller.
+     */
+    function test_AI_PH_1_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
+        // Setup
+
+        // Call
+        vm.expectRevert(IAccount.OnlyOrganization.selector);
+        vm.prank(NON_ORGANIZATION);
+        account.onlyOrganizationViaInternal();
+
+        // Verify
+    }
+
+    /**
+     * @dev Verifies AI-PH-2: `_onlyOrganization` succeeds for configured organization caller.
+     */
+    function test_AI_PH_2_onlyOrganizationInternal_configuredOrganizationCaller_succeeds() public {
+        // Setup
+
+        // Call
+        vm.prank(address(beacon));
+        account.onlyOrganizationViaInternal();
+
+        // Verify
+    }
+
+    /**
+     * @dev Verifies AI-PH-3: `_execute` returns true for successful call and forwards exact tuple.
+     */
+    function test_AI_PH_3_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
+        // Setup
+        AccountCallRecorderTarget target = new AccountCallRecorderTarget();
+        bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ai-ph"), uint256(303));
+
+        // Call
+        bool success = account.executeViaInternal(address(target), 0, payload, 200_000);
+
+        // Verify
+        assertTrue(success, "successful call should return true");
+        assertEq(target.calls(), 1, "target should be called once");
+        assertEq(target.lastCaller(), address(account), "callee should see account caller");
+        assertEq(target.lastPayload(), bytes("ai-ph"), "payload should be forwarded");
+        assertEq(target.returnMarker(), 303, "marker should decode correctly");
+    }
+
+    /**
+     * @dev Verifies AI-PH-4: `_execute` returns false when downstream call fails.
+     */
+    function test_AI_PH_4_executeInternal_failedInnerCall_returnsFalseWithoutReverting() public {
+        // Setup
+        AccountCallRecorderTarget target = new AccountCallRecorderTarget();
+        bytes memory payload = abi.encodeWithSelector(target.fail.selector);
+
+        // Call
+        bool success = account.executeViaInternal(address(target), 0, payload, 200_000);
+
+        // Verify
+        assertFalse(success, "failed call should return false");
+    }
 }
