@@ -1253,11 +1253,14 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies TXR-FZ-1: fuzz valid non-zero recovery addresses and in-range timelocks always initialize
     /// successfully.
-    function testFuzz_TXR_FZ_1_initialize_validInputs_alwaysSucceed(address randomRecovery, uint256 rawTimelock) public {
+    function testFuzz_TXR_FZ_1_initialize_validInputs_alwaysSucceed(address randomRecovery, uint256 rawTimelock)
+        public
+    {
         // Setup
         vm.assume(randomRecovery != address(0));
-        uint256 timelock =
-            bound(rawTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
+        uint256 timelock = bound(
+            rawTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
         harness.resetTxRecoveryState();
 
         // Call

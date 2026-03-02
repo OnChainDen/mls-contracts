@@ -269,9 +269,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        _setTxRecoveryState(
-            address(0), false, 0, 0, mutatedPendingRecovery, TX_RECOVERY_TIMELOCK, block.timestamp
-        );
+        _setTxRecoveryState(address(0), false, 0, 0, mutatedPendingRecovery, TX_RECOVERY_TIMELOCK, block.timestamp);
 
         // Call
         vm.expectRevert();
@@ -289,7 +287,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     function test_TXR_INT_8_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment() public {
         // Setup
         _enableTxRecovery();
-        MockAccountForOrganizationTransaction deployedAccount = new MockAccountForOrganizationTransaction(address(harness));
+        MockAccountForOrganizationTransaction deployedAccount =
+            new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(deployedAccount), true);
 
         // Call
@@ -298,8 +297,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOrganizationAccountFactory.AccountNotDeployedByOrganization.selector,
-                address(0xF8F8F8)
+                IOrganizationAccountFactory.AccountNotDeployedByOrganization.selector, address(0xF8F8F8)
             )
         );
         vm.prank(TX_RECOVERY);
@@ -333,7 +331,8 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
             abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
         organizationPayloads[1] =
             abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
-        organizationPayloads[2] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
+        organizationPayloads[2] =
+            abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
         organizationPayloads[3] = abi.encodeWithSelector(
             IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x1234)), "ipfs://new-root", auth
         );
@@ -354,7 +353,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(harness.getPoliciesRoot(), policyRootBefore, "policy root should remain unchanged");
 
         TxRecoveryState memory txRecoveryAfter = harness.getTxRecoveryState();
-        assertEq(txRecoveryAfter.recoveryAddress, txRecoveryBefore.recoveryAddress, "tx recovery address should not change");
+        assertEq(
+            txRecoveryAfter.recoveryAddress, txRecoveryBefore.recoveryAddress, "tx recovery address should not change"
+        );
         assertEq(txRecoveryAfter.isEnabled, txRecoveryBefore.isEnabled, "tx recovery enabled flag should not change");
         assertEq(
             txRecoveryAfter.timelockDurationSeconds,
@@ -383,14 +384,12 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         bytes[] memory payloads = new bytes[](6);
         payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
         payloads[1] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
-        payloads[2] =
-            abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
+        payloads[2] = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
         payloads[3] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
         payloads[4] = abi.encodeWithSelector(
             IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x1234)), "ipfs://txr-int-14", auth
         );
-        payloads[5] =
-            abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
+        payloads[5] = abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
 
         // Call
         for (uint256 i = 0; i < payloads.length; i++) {
@@ -405,9 +404,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertEq(afterState.recoveryAddress, beforeState.recoveryAddress, "recovery address should remain unchanged");
         assertEq(afterState.isEnabled, beforeState.isEnabled, "enabled state should remain unchanged");
         assertEq(
-            afterState.timelockDurationSeconds,
-            beforeState.timelockDurationSeconds,
-            "timelock should remain unchanged"
+            afterState.timelockDurationSeconds, beforeState.timelockDurationSeconds, "timelock should remain unchanged"
         );
         assertEq(
             afterState.pendingEnableTimestamp,
@@ -426,12 +423,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         bytes[] memory accountPayloads = new bytes[](3);
         accountPayloads[0] = abi.encodeWithSelector(
-            IAccount.executeTransaction.selector,
-            DESTINATION,
-            uint256(0),
-            bytes("nested"),
-            uint256(1),
-            uint256(1)
+            IAccount.executeTransaction.selector, DESTINATION, uint256(0), bytes("nested"), uint256(1), uint256(1)
         );
         accountPayloads[1] = abi.encodeWithSelector(
             IAccount.executeTransaction.selector,
@@ -493,9 +485,10 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies TXR-FZ-7: fuzzed recovery-execution tuples forward exact `to/value/data` on successful targets.
-    function testFuzz_TXR_FZ_7_recoveryExecution_successfulTargets_forwardExactTuple(bytes calldata data, uint128 rawValue)
-        public
-    {
+    function testFuzz_TXR_FZ_7_recoveryExecution_successfulTargets_forwardExactTuple(
+        bytes calldata data,
+        uint128 rawValue
+    ) public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -533,14 +526,12 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         bytes[] memory payloads = new bytes[](6);
         payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
         payloads[1] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
-        payloads[2] =
-            abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
+        payloads[2] = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
         payloads[3] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
         payloads[4] = abi.encodeWithSelector(
             IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x5678)), "ipfs://txr-fz-8", auth
         );
-        payloads[5] =
-            abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
+        payloads[5] = abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
 
         bytes memory payload = payloads[bound(rawIndex, 0, payloads.length - 1)];
 
@@ -566,12 +557,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
         bytes memory payload = abi.encodeWithSelector(
-            IAccount.executeTransaction.selector,
-            nestedTo,
-            uint256(rawNestedValue),
-            nestedData,
-            nonce,
-            policyId
+            IAccount.executeTransaction.selector, nestedTo, uint256(rawNestedValue), nestedData, nonce, policyId
         );
 
         // Call
@@ -602,9 +588,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
             assertEq(enabledState.pendingEnableTimestamp, 0, "enabled state should clear pending enable");
             assertEq(enabledState.recoveryAddress, baseline.recoveryAddress, "recovery address must remain immutable");
             assertEq(
-                enabledState.timelockDurationSeconds,
-                baseline.timelockDurationSeconds,
-                "timelock must remain immutable"
+                enabledState.timelockDurationSeconds, baseline.timelockDurationSeconds, "timelock must remain immutable"
             );
 
             vm.prank(TX_RECOVERY);
@@ -625,9 +609,10 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies TXR-FZ-12: mixed enable/finalize/disable sequences maintain enabled-state invariants.
-    function testFuzz_TXR_FZ_12_mixedEnableFinalizeDisable_sequencesMaintainEnabledInvariants(bytes32 seed, uint8 rawSteps)
-        public
-    {
+    function testFuzz_TXR_FZ_12_mixedEnableFinalizeDisable_sequencesMaintainEnabledInvariants(
+        bytes32 seed,
+        uint8 rawSteps
+    ) public {
         // Setup
         uint8 steps = uint8(bound(rawSteps, 1, 64));
 
@@ -648,10 +633,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
             TxRecoveryState memory state = harness.getTxRecoveryState();
             if (state.isEnabled) {
                 assertTrue(state.recoveryAddress != address(0), "enabled state must have configured recovery address");
-                assertTrue(
-                    state.timelockDurationSeconds != 0,
-                    "enabled state must have configured timelock duration"
-                );
+                assertTrue(state.timelockDurationSeconds != 0, "enabled state must have configured timelock duration");
                 assertEq(state.pendingEnableTimestamp, 0, "enabled state must not have pending-enable timestamp");
             }
         }

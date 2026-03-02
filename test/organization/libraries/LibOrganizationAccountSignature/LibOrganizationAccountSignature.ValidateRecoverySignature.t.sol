@@ -184,9 +184,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
         assertEq(enabledResult, SignatureUtils.ERC1271_MAGIC_VALUE, "enabled recovery should accept valid signatures");
         assertEq(disabledResult, SignatureUtils.ERC1271_INVALID_VALUE, "disabled recovery should reject signatures");
         assertEq(
-            reenabledResult,
-            SignatureUtils.ERC1271_MAGIC_VALUE,
-            "re-enabling recovery should accept signatures again"
+            reenabledResult, SignatureUtils.ERC1271_MAGIC_VALUE, "re-enabling recovery should accept signatures again"
         );
     }
 }
