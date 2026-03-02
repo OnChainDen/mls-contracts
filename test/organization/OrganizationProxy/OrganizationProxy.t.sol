@@ -10,13 +10,15 @@ import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
-import {InitializationSuiteBase} from "test/organization/initialization/InitializationSuiteBase.sol";
+import {
+    InitializationSuiteBase
+} from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
 import {InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @dev Proxy constructor/delegation tests for initialization paths.
  */
-contract OrganizationProxyInitializationTest is InitializationSuiteBase {
+contract OrganizationProxyTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their
     /// expected storage slots.
     function test_OPX_CTOR_1__OPX_CTOR_2__OPX_CTOR_3_constructor_setsDeployerWhitelistAndImplementationSlots() public {

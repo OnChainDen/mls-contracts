@@ -16,16 +16,18 @@ import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {
     IncompatibleOrganizationImplementation,
     InitializationWhitelistMock,
-    OrganizationFactoryInitializationHarness,
-    OrganizationImplementationInitializationHarness
-} from "test/organization/initialization/InitializationHarnesses.sol";
-import {InitializationSuiteBase} from "test/organization/initialization/InitializationSuiteBase.sol";
+    OrganizationFactoryHarness,
+    OrganizationImplementationHarness
+} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
+import {
+    InitializationSuiteBase
+} from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
 import {ContractType, InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @dev Factory-level tests for initialization and deployment flows.
  */
-contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
+contract OrganizationFactoryTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationFactory.constructor` reverts with `ZeroAddress` when the deployer is zero.
     function test_OF_CTOR_1_constructor_zeroDeployer_revertsZeroAddress() public {
         // Setup: Prepare a zero deployer address for constructor input.
@@ -33,7 +35,7 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
 
         // Call: Deploy the factory harness with the zero deployer and expect a revert.
         vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
-        new OrganizationFactoryInitializationHarness(zeroDeployer);
+        new OrganizationFactoryHarness(zeroDeployer);
 
         // Verify: The constructor guard is enforced by the expected `ZeroAddress` revert.
     }
@@ -43,7 +45,7 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
     function test_OF_CTOR_2__OF_CTOR_3_constructor_nonZeroStoresAndRemainsImmutable() public {
         // Setup: Deploy a local factory with a custom deployer and valid initialization params.
         address deployer = address(0xDEAD01);
-        OrganizationFactoryInitializationHarness localFactory = new OrganizationFactoryInitializationHarness(deployer);
+        OrganizationFactoryHarness localFactory = new OrganizationFactoryHarness(deployer);
         InitializationParams memory params = _defaultInitializationParams();
 
         // Call: Deploy one organization through the local factory as the configured deployer.
@@ -233,8 +235,7 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         bytes32 salt = bytes32(uint256(2009));
         InitializationParams memory params = _defaultInitializationParams();
 
-        OrganizationImplementationInitializationHarness implementationV2 =
-            new OrganizationImplementationInitializationHarness();
+        OrganizationImplementationHarness implementationV2 = new OrganizationImplementationHarness();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementationV2), true);
 
         vm.prank(AUTHORIZED_DEPLOYER);
@@ -401,15 +402,13 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         bytes32 saltA = bytes32(uint256(3002));
         bytes32 saltB = bytes32(uint256(3003));
 
-        OrganizationImplementationInitializationHarness implementationV2 =
-            new OrganizationImplementationInitializationHarness();
+        OrganizationImplementationHarness implementationV2 = new OrganizationImplementationHarness();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementationV2), true);
 
         InitializationWhitelistMock whitelistV2 = new InitializationWhitelistMock();
         whitelistV2.setImplementationWhitelisted(ContractType.Organization, address(implementation), true);
 
-        OrganizationFactoryInitializationHarness factoryV2 =
-            new OrganizationFactoryInitializationHarness(AUTHORIZED_DEPLOYER);
+        OrganizationFactoryHarness factoryV2 = new OrganizationFactoryHarness(AUTHORIZED_DEPLOYER);
 
         // Call: Compute addresses across the base tuple and each modified tuple dimension.
         address base = factory.computeOrganizationAddress(saltA, address(implementation), address(whitelist));
@@ -461,7 +460,7 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
     {
         // Setup: Prepare baseline and variant implementation/whitelist addresses for bytecode comparisons.
         address implA = address(implementation);
-        address implB = address(new OrganizationImplementationInitializationHarness());
+        address implB = address(new OrganizationImplementationHarness());
         address whitelistA = address(whitelist);
         address whitelistB = address(new InitializationWhitelistMock());
 

@@ -5,21 +5,21 @@ pragma solidity 0.8.33;
 import {Test} from "forge-std/Test.sol";
 
 import {IOrganization} from "interfaces/IOrganization.sol";
-import {OrganizationFactoryInitializationHarness} from "test/organization/initialization/InitializationHarnesses.sol";
+import {OrganizationFactoryHarness} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
 import {
-    InitializationInvariantHandler
-} from "test/organization/initialization/InitializationInvariantHandler.sol";
+    OrganizationFactoryInvariantHandler
+} from "test/organization/OrganizationFactory/OrganizationFactoryInvariantHandler.sol";
 import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @dev Invariant checks for initialization atomicity, permanence, and cross-module consistency.
  */
-contract InitializationInvariantsTest is Test {
-    InitializationInvariantHandler internal handler;
+contract OrganizationFactoryInvariantsTest is Test {
+    OrganizationFactoryInvariantHandler internal handler;
 
     /// @dev Deploys the invariant handler, seeds baseline action coverage, and sets it as the fuzz target.
     function setUp() public {
-        handler = new InitializationInvariantHandler();
+        handler = new OrganizationFactoryInvariantHandler();
 
         // Seed baseline states so each invariant has data even if the fuzzer doesn't hit every action.
         handler.deployFactoryOrganization(bytes32(uint256(1)), 11);
@@ -37,20 +37,18 @@ contract InitializationInvariantsTest is Test {
 
         uint256 successfulLength = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < successfulLength; ++i) {
-            InitializationInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
+            OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
             assertTrue(
-                IOrganization(record.organization).isInitialized(),
-                "successful deployment must remain initialized"
+                IOrganization(record.organization).isInitialized(), "successful deployment must remain initialized"
             );
         }
 
         uint256 failedDirectLength = handler.failedDirectInitRecordsLength();
         for (uint256 i = 0; i < failedDirectLength; ++i) {
-            InitializationInvariantHandler.FailedDirectInitRecord memory record =
+            OrganizationFactoryInvariantHandler.FailedDirectInitRecord memory record =
                 handler.failedDirectInitRecordAt(i);
             assertFalse(
-                IOrganization(record.proxy).isInitialized(),
-                "failed direct initialize must remain uninitialized"
+                IOrganization(record.proxy).isInitialized(), "failed direct initialize must remain uninitialized"
             );
         }
     }
@@ -59,7 +57,7 @@ contract InitializationInvariantsTest is Test {
     function invariant_INIT_INV_2_initializedAdminMemberConsistency_holds() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
-            InitializationInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
+            OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
             IOrganization organization = IOrganization(record.organization);
 
             assertTrue(organization.isInitialized(), "recorded organization should be initialized");
@@ -69,28 +67,23 @@ contract InitializationInvariantsTest is Test {
             assertTrue(organization.isMember(record.adminB), "admin B must remain member");
             assertGt(organization.adminCount(), 0, "initialized org must keep at least one admin");
             assertGe(
-                organization.adminCount(),
-                organization.votingThreshold(),
-                "adminCount must remain >= votingThreshold"
+                organization.adminCount(), organization.votingThreshold(), "adminCount must remain >= votingThreshold"
             );
             assertEq(
-                organization.votingThreshold(),
-                record.votingThreshold,
-                "threshold should remain the initialized value"
+                organization.votingThreshold(), record.votingThreshold, "threshold should remain the initialized value"
             );
         }
     }
 
     /// @dev Verifies INIT-INV-3: successful factory deployments always match CREATE2 precompute.
     function invariant_INIT_INV_3_factoryDeployments_alwaysMatchComputedAddress() public view {
-        OrganizationFactoryInitializationHarness factory =
-            OrganizationFactoryInitializationHarness(handler.factoryAddress());
+        OrganizationFactoryHarness factory = OrganizationFactoryHarness(handler.factoryAddress());
         address implementation = handler.implementationAddress();
         address whitelist = handler.whitelistAddress();
 
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
-            InitializationInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
+            OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
             if (!record.viaFactory) {
                 continue;
             }
@@ -106,7 +99,7 @@ contract InitializationInvariantsTest is Test {
 
         uint256 length = handler.failedDirectInitRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
-            InitializationInvariantHandler.FailedDirectInitRecord memory record =
+            OrganizationFactoryInvariantHandler.FailedDirectInitRecord memory record =
                 handler.failedDirectInitRecordAt(i);
             IOrganization organization = IOrganization(record.proxy);
 
@@ -128,11 +121,7 @@ contract InitializationInvariantsTest is Test {
 
             GuardianRecoveryState memory guardianRecovery = organization.getGuardianRecoveryState();
             assertEq(guardianRecovery.recoveryAddress, address(0), "guardian recovery address should roll back");
-            assertEq(
-                guardianRecovery.timelockDurationSeconds,
-                0,
-                "guardian recovery timelock should roll back"
-            );
+            assertEq(guardianRecovery.timelockDurationSeconds, 0, "guardian recovery timelock should roll back");
         }
     }
 
@@ -140,7 +129,7 @@ contract InitializationInvariantsTest is Test {
     function invariant_INIT_INV_5_proxyDeployerAddress_remainsImmutable() public view {
         uint256 successfulLength = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < successfulLength; ++i) {
-            InitializationInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
+            OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
             assertEq(
                 IOrganization(record.organization).getDeployerAddress(),
                 record.expectedDeployer,
@@ -150,7 +139,7 @@ contract InitializationInvariantsTest is Test {
 
         uint256 failedDirectLength = handler.failedDirectInitRecordsLength();
         for (uint256 i = 0; i < failedDirectLength; ++i) {
-            InitializationInvariantHandler.FailedDirectInitRecord memory record =
+            OrganizationFactoryInvariantHandler.FailedDirectInitRecord memory record =
                 handler.failedDirectInitRecordAt(i);
             assertEq(
                 IOrganization(record.proxy).getDeployerAddress(),
@@ -164,7 +153,7 @@ contract InitializationInvariantsTest is Test {
     function invariant_INIT_INV_6_txRecoveryDefaultSafety_startsDisabled() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
-            InitializationInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
+            OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
             TxRecoveryState memory txRecovery = IOrganization(record.organization).getTxRecoveryState();
             assertFalse(txRecovery.isEnabled, "tx recovery must remain disabled after initialization");
         }
@@ -174,7 +163,7 @@ contract InitializationInvariantsTest is Test {
     function invariant_INIT_INV_7_groupMembers_areOrganizationMembers() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
-            InitializationInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
+            OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);
             IOrganization organization = IOrganization(record.organization);
 
             assertTrue(organization.isGroup(record.groupId), "tracked group should remain active");
@@ -187,12 +176,10 @@ contract InitializationInvariantsTest is Test {
                 "tracked group member B should remain in group"
             );
             assertTrue(
-                organization.isMember(record.groupMemberA),
-                "tracked group member A must remain organization member"
+                organization.isMember(record.groupMemberA), "tracked group member A must remain organization member"
             );
             assertTrue(
-                organization.isMember(record.groupMemberB),
-                "tracked group member B must remain organization member"
+                organization.isMember(record.groupMemberB), "tracked group member B must remain organization member"
             );
         }
     }

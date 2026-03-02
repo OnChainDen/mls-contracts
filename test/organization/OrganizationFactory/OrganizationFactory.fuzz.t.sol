@@ -6,13 +6,15 @@ import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
-import {InitializationSuiteBase} from "test/organization/initialization/InitializationSuiteBase.sol";
+import {
+    InitializationSuiteBase
+} from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
 import {GroupModification, InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @dev Fuzz coverage for initialization flows.
  */
-contract InitializationFuzzTest is InitializationSuiteBase {
+contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
     /// @dev Verifies fuzzed valid initialization params deploy successfully and preserve admin/member invariants.
     function test_INIT_FUZZ_1__INIT_FUZZ_3_fuzzValidParams_initializeSucceedsAndInvariantsHold(
         uint256 seed,
@@ -86,7 +88,9 @@ contract InitializationFuzzTest is InitializationSuiteBase {
         params.votingThreshold = badThreshold;
 
         // Call: Attempt deployment with the invalid threshold and expect `InvalidAdminVotingThreshold`.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminVotingThreshold.selector, badThreshold, adminCount));
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminVotingThreshold.selector, badThreshold, adminCount)
+        );
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), address(whitelist), params);
 
@@ -104,12 +108,17 @@ contract InitializationFuzzTest is InitializationSuiteBase {
     ) public {
         // Setup: Build valid params and bound all timelock fields inside `[2 days, 30 days]`.
         InitializationParams memory params = _buildFuzzParams(seed, 4, 2, 2);
-        params.adminOperationTimelockDurationSeconds =
-            bound(adminTimelockRaw, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
-        params.guardianRecoveryTimelockDurationSeconds =
-            bound(guardianTimelockRaw, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
-        params.txRecoveryTimelockDurationSeconds =
-            bound(txTimelockRaw, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
+        params.adminOperationTimelockDurationSeconds = bound(
+            adminTimelockRaw, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+        params.guardianRecoveryTimelockDurationSeconds = bound(
+            guardianTimelockRaw,
+            TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+            TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+        params.txRecoveryTimelockDurationSeconds = bound(
+            txTimelockRaw, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
 
         // Call: Deploy using in-range fuzzed timelocks.
         address deployed = _deployOrganization(salt, params);
@@ -155,7 +164,8 @@ contract InitializationFuzzTest is InitializationSuiteBase {
 
     /// @dev Verifies fuzzed salts keep `computeOrganizationAddress` aligned with actual deployment addresses.
     function test_INIT_FUZZ_7_fuzzComputeAddress_matchesActualDeployment(bytes32 salt) public {
-        // Setup: Prepare valid initialization params and precompute the expected deployment address for the fuzzed salt.
+        // Setup: Prepare valid initialization params and precompute the expected deployment address for the fuzzed
+        // salt.
         InitializationParams memory params = _defaultInitializationParams();
         address expected = _computeOrganizationAddress(salt);
 
