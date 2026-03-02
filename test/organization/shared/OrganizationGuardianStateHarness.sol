@@ -14,6 +14,13 @@ import {OrganizationAdminStateHarness} from "test/organization/shared/Organizati
  */
 contract OrganizationGuardianStateHarness is OrganizationAdminStateHarness {
     /**
+     * @dev Reads current guardian from storage.
+     */
+    function getGuardianStorage() external view returns (address) {
+        return LibOrganizationGuardianStorage.layout().guardian;
+    }
+
+    /**
      * @dev Sets the organization-wide admin operation timelock duration.
      */
     function setAdminOperationTimelockDurationSeconds(uint256 duration) external {
