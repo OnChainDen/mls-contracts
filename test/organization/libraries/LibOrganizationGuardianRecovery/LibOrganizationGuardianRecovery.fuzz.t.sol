@@ -236,7 +236,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
                     assertEq(harness.getGuardianViaLibrary(), guardianBefore, "failed accept must not change guardian");
                 }
             } else {
-                vm.warp(block.timestamp + (uint256(uint8(seed)) % 3 days));
+                vm.warp(block.timestamp + (seed % 3 days));
             }
         }
 
