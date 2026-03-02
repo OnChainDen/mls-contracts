@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {OrganizationTxRecoveryBase} from "organization/base/OrganizationTxRecoveryBase.sol";
+import {LibOrganizationTxRecovery} from "organization/libraries/LibOrganizationTxRecovery.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
@@ -71,5 +72,12 @@ contract OrganizationTxRecoveryBaseHarness is OrganizationGuardianStateHarness, 
      */
     function getAdminCount() external view returns (uint256) {
         return LibOrganizationAdminStorage.layout().adminCount;
+    }
+
+    /**
+     * @dev Exposes tx-recovery execution-guard validation for invariant checks.
+     */
+    function validateRecoveryAccountTransactionAllowedOrRevertViaHarness() external view {
+        LibOrganizationTxRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
     }
 }
