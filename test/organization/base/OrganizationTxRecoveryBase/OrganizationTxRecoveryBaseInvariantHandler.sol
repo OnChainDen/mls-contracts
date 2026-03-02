@@ -301,6 +301,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         } else if (selectorIndex == 7) {
             payload = abi.encodeWithSelector(
                 harness.initiateInitializeTransactionAndERC1271Recovery.selector,
+                // forge-lint: disable-next-line(unsafe-typecast)
                 address(uint160(seed) | 1),
                 2 days,
                 _dummyAuth(seed)
