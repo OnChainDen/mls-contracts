@@ -55,6 +55,9 @@ library LibOrganizationTxRecovery {
     function initiateEnableTxRecovery() public {
         TxRecoveryState storage txRecovery = LibOrganizationRecoveryStorage.layout().txRecovery;
 
+        // Validate timelock range first, even if recovery is otherwise misconfigured.
+        TimelockUtils.validateTimelockDurationOrRevert(txRecovery.timelockDurationSeconds);
+
         // Case: Recovery not configured (no recovery address or timelock duration set)
         if (txRecovery.recoveryAddress == address(0) || txRecovery.timelockDurationSeconds == 0) {
             revert IOrganizationTxRecovery.TxRecoveryNotConfigured();
@@ -277,7 +280,7 @@ library LibOrganizationTxRecovery {
      * @dev Clears all pending initialization state fields.
      * @param txRecovery The tx recovery storage state
      */
-    function _clearPendingTxRecoveryInitTimelock(TxRecoveryState storage txRecovery) private {
+    function _clearPendingTxRecoveryInitTimelock(TxRecoveryState storage txRecovery) internal {
         txRecovery.pendingInit.pendingRecoveryAddress = address(0);
         txRecovery.pendingInit.pendingTimelockDurationSeconds = 0;
         txRecovery.pendingInit.pendingTimestamp = 0;
@@ -288,7 +291,7 @@ library LibOrganizationTxRecovery {
      *      Reverts if recoveryAddress or timelockDurationSeconds is non-zero.
      * @param txRecovery The tx recovery storage state
      */
-    function _validateTxRecoveryNotConfiguredOrRevert(TxRecoveryState storage txRecovery) private view {
+    function _validateTxRecoveryNotConfiguredOrRevert(TxRecoveryState storage txRecovery) internal view {
         if (txRecovery.recoveryAddress != address(0) || txRecovery.timelockDurationSeconds != 0) {
             revert IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured();
         }
@@ -300,7 +303,7 @@ library LibOrganizationTxRecovery {
      * @param recoveryAddress The recovery address to validate
      * @param timelockDurationSeconds The timelock duration to validate
      */
-    function _validateTxRecoveryParamsOrRevert(address recoveryAddress, uint256 timelockDurationSeconds) private pure {
+    function _validateTxRecoveryParamsOrRevert(address recoveryAddress, uint256 timelockDurationSeconds) internal pure {
         // Case: Recovery address is zero
         if (recoveryAddress == address(0)) {
             revert IOrganizationTxRecovery.InvalidTxRecoveryAddress();
