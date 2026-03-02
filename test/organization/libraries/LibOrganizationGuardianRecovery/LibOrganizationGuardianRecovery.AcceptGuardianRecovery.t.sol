@@ -17,8 +17,7 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
     function test_LOGR_AGR_1__LOGR_AGR_2__LOGR_AGR_3__LOGR_AGR_4__LOGR_AGR_7__LOGR_AGR_8__LOGR_AGR_9__LOGR_AGR_10__LOGR_AGR_12_acceptUpdatesGuardianAndClearsPending()
         public
     {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending deferred-init timelock tuple;
-        // seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 8 days
@@ -30,12 +29,12 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
         address previousGuardian = harness.getGuardianViaLibrary();
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.acceptGuardianRecovery`.
+        // Call: accept recovery guardian update.
         vm.expectEmit(true, true, true, true);
         emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateAccepted(previousGuardian, NEW_GUARDIAN_A);
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm the pending deferred-init tuple is fully cleared.
+        // Verify: guardian updates in normal guardian storage; pending guardian clears.
         GuardianRecoveryState memory afterState = harness.getGuardianRecoveryStateViaStorage();
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_A, "guardian should update in normal guardian storage");
         assertEq(afterState.pendingGuardian, address(0), "pending guardian should clear");
@@ -66,48 +65,48 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` no pending update reverts with
     /// `NoPendingRecoveryGuardianUpdate`.
     function test_LOGR_AGR_5_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.acceptGuardianRecovery` and assert the expected revert.
+        // Call: accept recovery guardian update, expecting `NoPendingRecoveryGuardianUpdate` revert.
         vm.expectRevert(IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate.selector);
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: guardian remains unchanged.
         assertEq(harness.getGuardianViaLibrary(), GUARDIAN, "guardian should remain unchanged");
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` not-ready update reverts with
     /// `RecoveryGuardianUpdateNotReadyForAcceptance`.
     function test_LOGR_AGR_6_notReadyForAcceptance_revertsRecoveryGuardianUpdateNotReadyForAcceptance() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
 
-        // Call: invoke `LibOrganizationGuardianRecovery.acceptGuardianRecovery` and assert the expected revert.
+        // Call: accept recovery guardian update, expecting `RecoveryGuardianUpdateNotReadyForAcceptance` revert.
         vm.expectRevert(IOrganizationGuardianRecovery.RecoveryGuardianUpdateNotReadyForAcceptance.selector);
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: guardian remains unchanged.
         assertEq(harness.getGuardianViaLibrary(), GUARDIAN, "guardian should remain unchanged");
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` pending guardian equal to current
     /// guardian still clears pending and emits event with equal addresses.
     function test_LOGR_AGR_11_pendingGuardianEqualsCurrentGuardian_acceptStillClearsStateAndEmits() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardian(NEW_GUARDIAN_B);
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.acceptGuardianRecovery`.
+        // Call: accept recovery guardian update.
         vm.expectEmit(true, true, true, true);
         emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateAccepted(NEW_GUARDIAN_B, NEW_GUARDIAN_B);
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm pending recovery-update fields, guardian value in normal guardian storage.
+        // Verify: guardian remains the same address.
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_B, "guardian should remain the same address");
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,

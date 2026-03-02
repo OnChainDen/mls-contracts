@@ -18,8 +18,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     function test_LOGR_FRGU_1__LOGR_FRGU_5__LOGR_FRGU_6__LOGR_FRGU_7__LOGR_FRGU_9_finalizeSetsReadyAndPreservesOtherFields()
         public
     {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending deferred-init timelock tuple;
-        // seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 5 days, block.timestamp + 9 days
@@ -28,12 +27,12 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
         vm.warp(beforeState.pendingGuardianTimestamp);
 
-        // Call: invoke `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`.
+        // Call: finalize recovery guardian update.
         vm.expectEmit(true, true, true, true);
         emit IOrganizationGuardianRecovery.RecoveryGuardianUpdateFinalized(NEW_GUARDIAN_A);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm the pending deferred-init state remains unchanged.
+        // Verify: ready flag is true after finalize; pending guardian remains unchanged.
         GuardianRecoveryState memory afterState = harness.getGuardianRecoveryStateViaStorage();
         assertTrue(afterState.isUpdateReadyForAcceptance, "ready flag should be true after finalize");
         assertEq(afterState.pendingGuardian, beforeState.pendingGuardian, "pending guardian should remain unchanged");
@@ -71,12 +70,12 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` finalize reverts before expiry
     /// and succeeds exactly at expiry.
     function test_LOGR_FRGU_2__LOGR_FRGU_3_beforeExpiryReverts_exactlyAtExpirySucceeds() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 canFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
 
-        // Call: invoke `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` and assert the expected revert.
+        // Call: finalize recovery guardian update, expecting authorization/state-validation revert.
         vm.warp(canFinalizeAt - 1);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -88,7 +87,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
         vm.warp(canFinalizeAt);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: finalize at exact boundary should succeed.
         assertTrue(
             harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance,
             "finalize at exact boundary should succeed"
@@ -98,14 +97,14 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` no pending update reverts with
     /// `NoPendingRecoveryGuardianUpdate`.
     function test_LOGR_FRGU_4_noPendingUpdate_revertsNoPendingRecoveryGuardianUpdate() public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` and assert the expected revert.
+        // Call: finalize recovery guardian update, expecting `NoPendingRecoveryGuardianUpdate` revert.
         vm.expectRevert(IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate.selector);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: ready flag remains false.
         assertFalse(
             harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance, "ready flag should remain false"
         );
@@ -114,16 +113,16 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` double finalize is an idempotent
     /// no-op after first success.
     function test_LOGR_FRGU_8_doubleFinalize_secondCallIsNoOp() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`.
+        // Call: finalize recovery guardian update.
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: confirm pending recovery-update state remains unchanged.
+        // Verify: ready flag remains true after second finalize; pending guardian remains unchanged after second finalize.
         assertTrue(
             harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance,
             "ready flag should remain true after second finalize"

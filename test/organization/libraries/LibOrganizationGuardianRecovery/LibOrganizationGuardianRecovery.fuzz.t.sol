@@ -19,16 +19,16 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         address recoveryAddress,
         uint256 timelock
     ) public {
-        // Setup: reset library recovery state.
+        // Setup: start from clean recovery state.
         vm.assume(recoveryAddress != address(0));
         uint256 boundedTimelock =
             bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
         harness.resetGuardianRecoveryStorageViaHarness();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery`.
+        // Call: initialize guardian-recovery config.
         harness.initializeGuardianRecoveryViaLibrary(recoveryAddress, boundedTimelock);
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: recovery address should match fuzz input; timelock should match bounded fuzz input.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().recoveryAddress,
             recoveryAddress,
@@ -46,11 +46,10 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         address recoveryAddress,
         uint256 timelock
     ) public {
-        // Setup: use default fixture state.
+        // Setup: reuse suite baseline where recovery is preconfigured.
         vm.assume(recoveryAddress != address(0));
 
-        // Call: invoke `LibOrganizationGuardianRecovery.validateGuardianRecoveryParamsOrRevert` and assert the expected
-        // revert.
+        // Call: validate recovery params, expecting authorization/state-validation revert.
         if (
             timelock >= TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS
                 && timelock <= TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
@@ -61,7 +60,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
             harness.validateGuardianRecoveryParamsOrRevertViaLibrary(recoveryAddress, timelock);
         }
 
-        // Verify: confirm the asserted post-conditions.
+        // Verify: validation branch executed.
         assertTrue(true, "validation branch executed");
     }
 
@@ -71,14 +70,13 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         uint256 timelock,
         uint256 delta
     ) public {
-        // Setup: reset library recovery state.
+        // Setup: start from clean recovery state.
         uint256 boundedTimelock =
             bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, boundedTimelock);
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`) and assert the revert branch.
+        // Call: initiate recovery guardian update then finalize recovery guardian update, expecting authorization/state-validation revert.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 canFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
         assertEq(
@@ -110,18 +108,16 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
             );
         }
 
-        // Verify: confirm the asserted post-conditions.
+        // Verify: finalize branch behavior matched timestamp relation.
         assertTrue(true, "finalize branch behavior matched timestamp relation");
     }
 
     /// @dev Verifies that random non-zero guardians complete flow while zero guardian always reverts on initiate.
     function testFuzz_OGR_FZ_6__OGR_FZ_10_randomGuardiansOrZero_initiateBehavior(address newGuardian) public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.acceptGuardianRecovery`) and assert the revert branch.
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update, expecting `InvalidNewGuardianAddress` revert.
         if (newGuardian == address(0)) {
             vm.expectRevert(IOrganizationGuardianRecovery.InvalidNewGuardianAddress.selector);
             harness.initiateRecoveryGuardianUpdateViaLibrary(address(0));
@@ -132,7 +128,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
             harness.acceptGuardianRecoveryViaLibrary();
         }
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: guardian should become fuzzed non-zero guardian.
         if (newGuardian != address(0)) {
             assertEq(harness.getGuardianViaLibrary(), newGuardian, "guardian should become fuzzed non-zero guardian");
         }
@@ -142,12 +138,11 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     function testFuzz_OGR_FZ_7_randomNonRecoveryAddresses_revertOnEnforceOnlyGuardianRecoveryAddress(address caller)
         public
     {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         vm.assume(caller != GUARDIAN_RECOVERY_ADDRESS);
         _resetAndConfigureRecovery();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress` as `caller` and assert the
-        // expected revert.
+        // Call: enforce recovery-address caller gate as `caller`, expecting authorization/state-validation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationGuardianRecovery.UnauthorizedGuardianRecoveryAddress.selector,
@@ -158,7 +153,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         vm.prank(caller);
         harness.enforceOnlyGuardianRecoveryAddressViaLibrary();
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: config remains unchanged.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().recoveryAddress,
             GUARDIAN_RECOVERY_ADDRESS,
@@ -171,14 +166,13 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         address pendingGuardian,
         address caller
     ) public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         vm.assume(pendingGuardian != address(0));
         vm.assume(caller != pendingGuardian);
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(pendingGuardian, block.timestamp + 1 days, false);
 
-        // Call: invoke `LibOrganizationGuardianRecovery.enforceOnlyRecoveryPendingGuardian` as `caller` and assert the
-        // expected revert.
+        // Call: enforce pending-guardian caller gate as `caller`, expecting authorization/state-validation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationGuardianRecovery.UnauthorizedRecoveryGuardianAcceptance.selector, caller, pendingGuardian
@@ -187,7 +181,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         vm.prank(caller);
         harness.enforceOnlyRecoveryPendingGuardianViaLibrary();
 
-        // Verify: confirm pending recovery-update state remains unchanged.
+        // Verify: pending guardian remains unchanged.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,
             pendingGuardian,
@@ -199,7 +193,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
     function testFuzz_OGR_FZ_11_statefulSequence_guardianChangesOnlyOnSuccessfulAccept(uint256 seed, uint8 steps)
         public
     {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
         uint256 count = bound(steps, 1, 20);
         address[] memory candidates = new address[](3);
@@ -207,7 +201,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         candidates[1] = address(uint160(uint256(keccak256(abi.encode(seed, "b"))) | 1));
         candidates[2] = address(uint160(uint256(keccak256(abi.encode(seed, "c"))) | 1));
 
-        // Call: run a random operation sequence (initiate/finalize/cancel/accept/no-op) and track guardian changes.
+        // Call: execute randomized recovery operations and check guardian immutability between successful accepts.
         for (uint256 i = 0; i < count; i++) {
             uint8 op = uint8(uint256(keccak256(abi.encode(seed, i))) % 5);
             address guardianBefore = harness.getGuardianViaLibrary();
@@ -240,7 +234,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
             }
         }
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: guardian remains non-zero throughout sequence.
         assertTrue(harness.getGuardianViaLibrary() != address(0), "guardian should remain non-zero throughout sequence");
     }
 
@@ -249,10 +243,10 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         address recoveryAddress,
         uint256 timelock
     ) public {
-        // Setup: reset library recovery state.
+        // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery`.
+        // Call: initialize guardian-recovery config.
         if (recoveryAddress != address(0)) {
             uint256 bounded = bound(
                 timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
@@ -260,7 +254,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
             harness.initializeGuardianRecoveryViaLibrary(recoveryAddress, bounded);
         }
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: configured state must have non-zero timelock.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
         if (state.recoveryAddress != address(0)) {
             assertTrue(state.timelockDurationSeconds != 0, "configured state must have non-zero timelock");

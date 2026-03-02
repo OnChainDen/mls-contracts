@@ -17,30 +17,29 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` reverts when called by a
     /// non-recovery address.
     function test_OGRB_IRGU_1_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
-        // Setup: use default fixture state.
+        // Setup: reuse suite baseline where guardian-recovery is configured.
         address caller = address(0xCA11);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` as `caller`.
+        // Call: initiate recovery guardian update as `caller`, expecting revert from the recovery-address gate.
         _expectOnlyGuardianRecoveryAddressRevert(caller, GUARDIAN_RECOVERY_ADDRESS);
         vm.prank(caller);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: pending guardian remains clear.
         assertEq(harness.getGuardianRecoveryState().pendingGuardian, address(0), "pending guardian should remain clear");
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` recovery address caller
     /// delegates to library and writes pending state.
     function test_OGRB_IRGU_2_recoveryAddressCaller_delegatesToLibrary() public {
-        // Setup: use default fixture state.
+        // Setup: reuse suite baseline where guardian-recovery is configured.
         uint256 expectedFinalizeAt = block.timestamp + GUARDIAN_RECOVERY_TIMELOCK;
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` as
-        // `GUARDIAN_RECOVERY_ADDRESS`.
+        // Call: initiate recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`.
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: pending guardian is set.
         assertEq(harness.getGuardianRecoveryState().pendingGuardian, NEW_GUARDIAN_A, "pending guardian should be set");
         assertEq(
             harness.getGuardianRecoveryState().pendingGuardianTimestamp,
@@ -56,11 +55,10 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` out-of-range configured timelock
     /// reverts and does not create pending state.
     function test_OGRB_IRGU_3_invalidConfiguredTimelock_revertsInvalidTimelockAndDoesNotCreatePendingState() public {
-        // Setup: use default fixture state.
+        // Setup: reuse suite baseline where guardian-recovery is configured.
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, 1 days);
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` as `GUARDIAN_RECOVERY_ADDRESS`
-        // and assert the expected revert.
+        // Call: initiate recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`, expecting authorization/state-validation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
@@ -72,7 +70,7 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: pending guardian must remain clear; pending timestamp must remain clear.
         assertEq(harness.getGuardianRecoveryState().pendingGuardian, address(0), "pending guardian must remain clear");
         assertEq(harness.getGuardianRecoveryState().pendingGuardianTimestamp, 0, "pending timestamp must remain clear");
     }

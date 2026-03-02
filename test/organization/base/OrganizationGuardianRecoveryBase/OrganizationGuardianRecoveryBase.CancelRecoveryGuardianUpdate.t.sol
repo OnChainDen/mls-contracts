@@ -13,17 +13,17 @@ contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is Org
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` reverts when called by a
     /// non-recovery address.
     function test_OGRB_CRGU_1_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
-        // Setup: use default fixture state.
+        // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false
         );
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` as `NON_GUARDIAN`.
+        // Call: cancel recovery guardian update as `NON_GUARDIAN`, expecting revert from the recovery-address gate.
         _expectOnlyGuardianRecoveryAddressRevert(NON_GUARDIAN, GUARDIAN_RECOVERY_ADDRESS);
         vm.prank(NON_GUARDIAN);
         harness.cancelRecoveryGuardianUpdate();
 
-        // Verify: confirm pending recovery-update state remains unchanged.
+        // Verify: pending guardian remains unchanged.
         assertEq(
             harness.getGuardianRecoveryState().pendingGuardian,
             NEW_GUARDIAN_A,
@@ -34,16 +34,16 @@ contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is Org
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` recovery address caller delegates
     /// to library and clears pending state.
     function test_OGRB_CRGU_2_recoveryAddressCaller_delegatesToLibrary() public {
-        // Setup: use default fixture state.
+        // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, true
         );
 
-        // Call: invoke `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` as `GUARDIAN_RECOVERY_ADDRESS`.
+        // Call: cancel recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`.
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.cancelRecoveryGuardianUpdate();
 
-        // Verify: confirm pending recovery-update fields are fully cleared.
+        // Verify: pending guardian clears; pending timestamp clears.
         assertEq(harness.getGuardianRecoveryState().pendingGuardian, address(0), "pending guardian should clear");
         assertEq(harness.getGuardianRecoveryState().pendingGuardianTimestamp, 0, "pending timestamp should clear");
         assertFalse(harness.getGuardianRecoveryState().isUpdateReadyForAcceptance, "ready flag should clear");

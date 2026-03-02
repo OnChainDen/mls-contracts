@@ -17,11 +17,10 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     function test_LOGR_EOGRA_1__LOGR_EOGRA_2__LOGR_EOGRA_3__LOGR_EOGRA_4_enforceOnlyGuardianRecoveryAddress_behavesAsExpected()
         public
     {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress` as
-        // `GUARDIAN_RECOVERY_ADDRESS` and assert the expected revert.
+        // Call: enforce recovery-address caller gate then reset guardian recovery storage via harness as `GUARDIAN_RECOVERY_ADDRESS`, expecting authorization/state-validation revert.
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.enforceOnlyGuardianRecoveryAddressViaLibrary();
 
@@ -44,7 +43,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         vm.prank(NON_GUARDIAN);
         harness.enforceOnlyGuardianRecoveryAddressViaLibrary();
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: recovery address remains zero in unconfigured case.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().recoveryAddress,
             address(0),
@@ -56,13 +55,11 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     function test_LOGR_EORPG_1__LOGR_EORPG_2__LOGR_EORPG_3__LOGR_EORPG_4__LOGR_EORPG_5_enforceOnlyRecoveryPendingGuardian_behavesAsExpected()
         public
     {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.enforceOnlyRecoveryPendingGuardian`,
-        // `LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`) and assert the revert branch.
+        // Call: enforce pending-guardian caller gate, cancel recovery guardian update, then initiate recovery guardian update as `NEW_GUARDIAN_A`, expecting authorization/state-validation revert.
         vm.prank(NEW_GUARDIAN_A);
         harness.enforceOnlyRecoveryPendingGuardianViaLibrary();
 
@@ -101,7 +98,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         vm.prank(NEW_GUARDIAN_A);
         harness.enforceOnlyRecoveryPendingGuardianViaLibrary();
 
-        // Verify: confirm pending recovery-update fields are fully cleared.
+        // Verify: pending guardian is cleared after cancel/accept flows.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,
             address(0),
@@ -113,8 +110,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     function test_LOGR_CPGRIT_1__LOGR_CPGRIT_2__LOGR_CPGRIT_3__LOGR_CPGRIT_4__LOGR_CPGRIT_5_clearPendingInit_helperBehavior()
         public
     {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending deferred-init timelock tuple;
-        // seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, block.timestamp + 8 days, true);
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -122,11 +118,11 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         );
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
 
-        // Call: invoke `LibOrganizationGuardianRecovery._clearPendingGuardianRecoveryInitTimelock`.
+        // Call: clear pending deferred-init tuple.
         harness.clearPendingGuardianRecoveryInitTimelockViaLibrary();
         harness.clearPendingGuardianRecoveryInitTimelockViaLibrary();
 
-        // Verify: confirm the pending deferred-init tuple is fully cleared.
+        // Verify: pending-init address clears; pending-init timelock clears.
         GuardianRecoveryState memory afterState = harness.getGuardianRecoveryStateViaStorage();
         assertEq(afterState.pendingInit.pendingRecoveryAddress, address(0), "pending-init address should clear");
         assertEq(afterState.pendingInit.pendingTimelockDurationSeconds, 0, "pending-init timelock should clear");
@@ -154,11 +150,10 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     function test_LOGR_VGRNCOR_1__LOGR_VGRNCOR_2__LOGR_VGRNCOR_3__LOGR_VGRNCOR_4_validateNotConfigured_helperBehavior()
         public
     {
-        // Setup: reset library recovery state.
+        // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
-        // Call: invoke `LibOrganizationGuardianRecovery.validateGuardianRecoveryNotConfiguredOrRevert` and assert the
-        // expected revert.
+        // Call: validate not-configured precondition, expecting `GuardianRecoveryAlreadyConfigured` revert.
         harness.validateGuardianRecoveryNotConfiguredOrRevertViaLibrary();
 
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, 0);
@@ -173,7 +168,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
         harness.validateGuardianRecoveryNotConfiguredOrRevertViaLibrary();
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: configured state remains as set in final branch.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().timelockDurationSeconds,
             4 days,
@@ -185,10 +180,9 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
     function test_LOGR_VGRPOR_1__LOGR_VGRPOR_2__LOGR_VGRPOR_3__LOGR_VGRPOR_4__LOGR_VGRPOR_5__LOGR_VGRPOR_6__LOGR_VGRPOR_7__LOGR_VGRPOR_8_validateParams_helperBehavior()
         public
     {
-        // Setup: use default fixture state.
+        // Setup: reuse suite baseline where recovery is preconfigured.
 
-        // Call: invoke `LibOrganizationGuardianRecovery.validateGuardianRecoveryParamsOrRevert` and assert the expected
-        // revert.
+        // Call: validate recovery params, expecting `InvalidGuardianRecoveryAddress` revert.
         harness.validateGuardianRecoveryParamsOrRevertViaLibrary(GUARDIAN_RECOVERY_ADDRESS, 2 days);
         harness.validateGuardianRecoveryParamsOrRevertViaLibrary(GUARDIAN_RECOVERY_ADDRESS, 30 days);
 
@@ -228,7 +222,7 @@ contract LibOrganizationGuardianRecoveryEnforcementAndInternalHelpersTest is Lib
         vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
         harness.validateGuardianRecoveryParamsOrRevertViaLibrary(address(0), 31 days);
 
-        // Verify: confirm the asserted post-conditions.
+        // Verify: all validation branches executed as expected.
         assertTrue(true, "all validation branches executed as expected");
     }
 }

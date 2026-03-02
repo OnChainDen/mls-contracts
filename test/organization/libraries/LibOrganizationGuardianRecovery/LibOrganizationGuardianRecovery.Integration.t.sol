@@ -13,33 +13,30 @@ import {
 contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardianRecoverySuiteBase {
     /// @dev Verifies that complete recovery flow updates guardian in normal storage.
     function test_OGR_INT_1_completeRecoveryFlow_updatesGuardianInNormalStorage() public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.acceptGuardianRecovery`).
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: guardian updates after complete recovery flow.
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_A, "guardian should update after complete recovery flow");
     }
 
     /// @dev Verifies that cancel during pending then re-init with different address succeeds.
     function test_OGR_INT_2_cancelDuringPending_thenReInitiateWithDifferentAddress_succeeds() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`).
+        // Call: cancel recovery guardian update then initiate recovery guardian update.
         harness.cancelRecoveryGuardianUpdateViaLibrary();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
 
-        // Verify: confirm pending recovery-update fields.
+        // Verify: second pending guardian is set.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,
             NEW_GUARDIAN_B,
@@ -49,21 +46,20 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
 
     /// @dev Verifies that cancel after finalize clears state and old pending guardian cannot accept later.
     function test_OGR_INT_3__OGR_INT_14_cancelAfterFinalize_clearsStateAndOldPendingCannotAcceptLater() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         uint256 originalCanFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.acceptGuardianRecovery`) and assert the revert branch.
+        // Call: cancel recovery guardian update then accept recovery guardian update, expecting `NoPendingRecoveryGuardianUpdate` revert.
         harness.cancelRecoveryGuardianUpdateViaLibrary();
         vm.warp(originalCanFinalizeAt + 1 days);
         vm.expectRevert(IOrganizationGuardianRecovery.NoPendingRecoveryGuardianUpdate.selector);
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm pending recovery-update state remains unchanged.
+        // Verify: guardian remains unchanged.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingGuardian,
             address(0),
@@ -74,16 +70,15 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
 
     /// @dev Verifies that deferred-init lifecycle sets config after timelock finalize.
     function test_OGR_INT_4_deferredInitLifecycle_configuresRecovery() public {
-        // Setup: reset library recovery state.
+        // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`,
-        // `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery`).
+        // Call: initiate deferred recovery initialization then finalize deferred recovery initialization.
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp);
         harness.finalizeInitializeGuardianRecoveryViaLibrary();
 
-        // Verify: confirm recovery configuration fields.
+        // Verify: recovery address should configure after deferred finalize.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().recoveryAddress,
             GUARDIAN_RECOVERY_ADDRESS,
@@ -93,16 +88,15 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
 
     /// @dev Verifies that deferred-init cancel and retry works.
     function test_OGR_INT_5_deferredInitCancelThenRetry_succeeds() public {
-        // Setup: reset library recovery state; seed a pending deferred-init timelock tuple.
+        // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery`,
-        // `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`).
+        // Call: cancel deferred recovery initialization then initiate deferred recovery initialization.
         harness.cancelInitializeGuardianRecoveryViaLibrary();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS_B, 4 days);
 
-        // Verify: confirm pending deferred-init fields.
+        // Verify: retry should set new pending deferred-init tuple.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingRecoveryAddress,
             GUARDIAN_RECOVERY_ADDRESS_B,
@@ -112,22 +106,19 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
 
     /// @dev Verifies that deferred-init finalize followed by full recovery update flow succeeds.
     function test_OGR_INT_6_fullLifecycleAfterDeferredInit_succeeds() public {
-        // Setup: reset library recovery state; seed a pending deferred-init timelock tuple; move time to the required
-        // timelock point.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and position timestamp at timelock boundary.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp);
         harness.finalizeInitializeGuardianRecoveryViaLibrary();
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.acceptGuardianRecovery`).
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: guardian updates in post-deferred full lifecycle.
         assertEq(
             harness.getGuardianViaLibrary(), NEW_GUARDIAN_A, "guardian should update in post-deferred full lifecycle"
         );
@@ -135,12 +126,12 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
 
     /// @dev Verifies that recovery and normal guardian flows can run in parallel and complete independently.
     function test_OGR_INT_7_recoveryAndNormalFlows_parallelAndIndependent() public {
-        // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
 
-        // Call: complete the normal guardian flow, then finalize and accept the recovery flow in parallel.
+        // Call: finalize normal guardian update, accept normal guardian update, then finalize recovery guardian update.
         vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
         harness.finalizeGuardianUpdateViaLibrary();
         harness.acceptGuardianViaLibrary();
@@ -149,7 +140,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm pending recovery-update fields are fully cleared.
+        // Verify: normal pending state clears.
         assertEq(
             harness.getGuardianViaLibrary(),
             NEW_GUARDIAN_B,
@@ -165,12 +156,10 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
 
     /// @dev Verifies that completing one flow does not block later use of the other flow.
     function test_OGR_INT_8__OGR_INT_9_eachFlowStillUsableAfterOtherCompletes() public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.acceptGuardianRecovery`).
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
@@ -186,18 +175,16 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: both flows remain usable sequentially.
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_C, "both flows should remain usable sequentially");
     }
 
     /// @dev Verifies that multiple sequential recovery updates can complete.
     function test_OGR_INT_10_multipleSequentialRecoveryUpdates_complete() public {
-        // Setup: configure recovery address/timelock on a clean state.
+        // Setup: reconfigure baseline recovery address and timelock.
         _resetAndConfigureRecovery();
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`,
-        // `LibOrganizationGuardianRecovery.acceptGuardianRecovery`).
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
@@ -208,19 +195,17 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
         harness.acceptGuardianRecoveryViaLibrary();
 
-        // Verify: confirm guardian value in normal guardian storage.
+        // Verify: second recovery update should complete.
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_B, "second recovery update should complete");
     }
 
     /// @dev Verifies that deferred-init finalize/cancel are idempotent with second call reverting.
     function test_OGR_INT_15_deferredInitIdempotency_secondFinalizeOrCancelRevertsNoPending() public {
-        // Setup: reset library recovery state; seed a pending deferred-init timelock tuple.
+        // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
-        // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery`,
-        // `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`,
-        // `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery`) and assert the revert branch.
+        // Call: cancel deferred recovery initialization, initiate deferred recovery initialization, then finalize deferred recovery initialization, expecting `NoGuardianRecoveryInitializationPending` revert.
         harness.cancelInitializeGuardianRecoveryViaLibrary();
         vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
         harness.cancelInitializeGuardianRecoveryViaLibrary();
@@ -232,7 +217,7 @@ contract LibOrganizationGuardianRecoveryIntegrationTest is LibOrganizationGuardi
         vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
         harness.finalizeInitializeGuardianRecoveryViaLibrary();
 
-        // Verify: confirm pending deferred-init fields.
+        // Verify: pending init remains cleared after idempotent second calls.
         assertEq(
             harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp,
             0,
