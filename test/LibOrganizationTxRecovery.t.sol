@@ -204,10 +204,17 @@ contract LibOrganizationTxRecoveryTest is Test {
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
-    function test_initiateEnableTxRecovery_revertsIfNotConfigured() public {
+    function test_initiateEnableTxRecovery_revertsInvalidTimelockWhenNotConfiguredWithZeroTimelock() public {
         harness.resetRecoveryStorage();
 
-        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
         harness.initiateEnableTransactionAndERC1271Recovery();
     }
 
