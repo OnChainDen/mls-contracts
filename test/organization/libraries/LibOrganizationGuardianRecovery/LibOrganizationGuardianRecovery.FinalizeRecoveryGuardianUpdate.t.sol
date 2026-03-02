@@ -24,7 +24,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 5 days, block.timestamp + 9 days
         );
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
         vm.warp(beforeState.pendingGuardianTimestamp);
 
@@ -73,7 +73,7 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     function test_LOGR_FRGU_2__LOGR_FRGU_3_beforeExpiryReverts_exactlyAtExpirySucceeds() public {
         // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
         _resetAndConfigureRecovery();
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         uint256 canFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp;
 
         // Call: invoke `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` and assert the expected revert.
@@ -116,8 +116,9 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     function test_LOGR_FRGU_8_doubleFinalize_secondCallIsNoOp() public {
         // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
         _resetAndConfigureRecovery();
-        _initiateRecoveryUpdate(NEW_GUARDIAN_B);
-        _finalizeRecoveryUpdateAfterTimelock();
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
+        harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
         // Call: invoke `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate`.
         harness.finalizeRecoveryGuardianUpdateViaLibrary();

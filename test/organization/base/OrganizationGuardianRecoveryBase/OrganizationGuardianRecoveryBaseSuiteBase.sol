@@ -158,18 +158,4 @@ abstract contract OrganizationGuardianRecoveryBaseSuiteBase is OrganizationAdmin
             )
         );
     }
-
-    /**
-     * @dev Creates a pending deferred-init tuple directly in storage.
-     */
-    function _setPendingInit(address pendingAddress, uint256 pendingTimelock, uint256 pendingTimestamp) internal {
-        recoveryStateHarness.setGuardianRecoveryPendingInit(pendingAddress, pendingTimelock, pendingTimestamp);
-    }
-
-    /**
-     * @dev Creates a configured pending recovery-update tuple directly in storage.
-     */
-    function _setPendingRecoveryUpdate(address pendingGuardian, uint256 pendingTimestamp, bool isReady) internal {
-        recoveryStateHarness.setGuardianRecoveryPendingUpdate(pendingGuardian, pendingTimestamp, isReady);
-    }
 }

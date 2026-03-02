@@ -23,8 +23,9 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 8 days
         );
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
-        _finalizeRecoveryUpdateAfterTimelock();
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
+        harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
         address previousGuardian = harness.getGuardianViaLibrary();
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
@@ -81,7 +82,7 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
     function test_LOGR_AGR_6_notReadyForAcceptance_revertsRecoveryGuardianUpdateNotReadyForAcceptance() public {
         // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
         _resetAndConfigureRecovery();
-        _initiateRecoveryUpdate(NEW_GUARDIAN_A);
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
 
         // Call: invoke `LibOrganizationGuardianRecovery.acceptGuardianRecovery` and assert the expected revert.
         vm.expectRevert(IOrganizationGuardianRecovery.RecoveryGuardianUpdateNotReadyForAcceptance.selector);
@@ -97,8 +98,9 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
         // Setup: configure recovery address/timelock on a clean state; seed a pending recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardian(NEW_GUARDIAN_B);
-        _initiateRecoveryUpdate(NEW_GUARDIAN_B);
-        _finalizeRecoveryUpdateAfterTimelock();
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
+        harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
         // Call: invoke `LibOrganizationGuardianRecovery.acceptGuardianRecovery`.
         vm.expectEmit(true, true, true, true);

@@ -18,7 +18,7 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
     /// reverts.
     function test_LOGR_CIGR_1_noPendingInitialization_revertsNoGuardianRecoveryInitializationPending() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` and assert the expected
         // revert.
@@ -40,9 +40,9 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
     {
         // Setup: reset library recovery state; seed a pending deferred-init timelock tuple; seed a pending
         // recovery-guardian update.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 6 days, true);
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
         GuardianRecoveryState memory beforeState = harness.getGuardianRecoveryStateViaStorage();
 
         // Call: invoke `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery`.
@@ -82,13 +82,13 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
     /// and second cancel after clear reverts.
     function test_LOGR_CIGR_7__LOGR_CIGR_8_reInitiateAfterCancelWorks_andDoubleCancelReverts() public {
         // Setup: reset library recovery state; seed a pending deferred-init timelock tuple.
-        _resetRecoveryState();
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
         // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery`,
         // `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`) and assert the revert branch.
         harness.cancelInitializeGuardianRecoveryViaLibrary();
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS_B, 4 days);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS_B, 4 days);
         harness.cancelInitializeGuardianRecoveryViaLibrary();
 
         vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);

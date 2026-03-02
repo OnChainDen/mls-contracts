@@ -17,7 +17,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
     /// and timelock, and values are readable.
     function test_LOGR_IGR_1__LOGR_IGR_2__LOGR_IGR_8_validConfig_setsAndIsReadable() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery`.
         harness.initializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
@@ -32,7 +32,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
     /// `InvalidGuardianRecoveryAddress`.
     function test_LOGR_IGR_3_zeroAddress_revertsInvalidGuardianRecoveryAddress() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery` and assert the expected revert.
         vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
@@ -50,7 +50,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
     /// values revert `InvalidTimelockDuration`.
     function test_LOGR_IGR_4__LOGR_IGR_5_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery` and assert the expected revert.
         vm.expectRevert(
@@ -85,7 +85,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
     /// causes `GuardianRecoveryAlreadyConfigured`.
     function test_LOGR_IGR_6__LOGR_IGR_7_eitherPreconfiguredField_revertsGuardianRecoveryAlreadyConfigured() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS_B, 0);
 
         // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery` and assert the expected revert.
@@ -114,7 +114,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
     function test_LOGR_IGR_9_initializeOnlyMutatesConfigFields_pendingStateUnchanged() public {
         // Setup: reset library recovery state; seed a pending deferred-init timelock tuple; seed a pending
         // recovery-guardian update.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 5 days, true);
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 5 days, block.timestamp + 7 days

@@ -24,7 +24,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth,) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -56,7 +58,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         (AdminAuthParams memory auth,) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -84,7 +88,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth, bytes memory operationData) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -104,7 +110,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         // Verify: confirm nonce consumption/rollback behavior.
         assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on successful finalization");
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(auth);
@@ -118,7 +126,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth, bytes memory pendingTupleData) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -172,7 +182,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory staleAuth, bytes memory staleData) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -184,7 +196,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp);
 
         // Call: invoke `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` as `GUARDIAN` and assert
         // the expected revert.
@@ -208,7 +220,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         uint256 canFinalizeAt = block.timestamp + 1 days;
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, canFinalizeAt);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, canFinalizeAt
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth, bytes memory operationData) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -247,7 +261,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory expiredAuth, bytes memory operationData) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -294,7 +310,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory rejectionAuth,) = _buildFinalizeInitializeGuardianRecoveryAuth({
@@ -326,7 +344,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         bytes memory operationData = abi.encode(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);

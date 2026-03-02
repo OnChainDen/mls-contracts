@@ -14,7 +14,9 @@ contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is Org
     /// non-recovery address.
     function test_OGRB_CRGU_1_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: use default fixture state.
-        _setPendingRecoveryUpdate(NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false);
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(
+            NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false
+        );
 
         // Call: invoke `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` as `NON_GUARDIAN`.
         _expectOnlyGuardianRecoveryAddressRevert(NON_GUARDIAN, GUARDIAN_RECOVERY_ADDRESS);
@@ -33,7 +35,9 @@ contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is Org
     /// to library and clears pending state.
     function test_OGRB_CRGU_2_recoveryAddressCaller_delegatesToLibrary() public {
         // Setup: use default fixture state.
-        _setPendingRecoveryUpdate(NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, true);
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(
+            NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, true
+        );
 
         // Call: invoke `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` as `GUARDIAN_RECOVERY_ADDRESS`.
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);

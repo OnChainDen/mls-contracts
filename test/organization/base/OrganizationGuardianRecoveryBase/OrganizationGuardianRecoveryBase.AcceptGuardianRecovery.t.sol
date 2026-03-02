@@ -14,7 +14,7 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
     /// guardian.
     function test_OGRB_AGR_1_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian() public {
         // Setup: use default fixture state.
-        _setPendingRecoveryUpdate(NEW_GUARDIAN_A, block.timestamp, true);
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 
         // Call: execute `OrganizationGuardianRecoveryBase.acceptGuardianRecovery` from a non-pending guardian and
         // expect the pending-guardian gate revert.
@@ -30,7 +30,7 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
     /// delegates to library and completes acceptance.
     function test_OGRB_AGR_2_recoveryPendingGuardianCaller_delegatesAndAccepts() public {
         // Setup: use default fixture state.
-        _setPendingRecoveryUpdate(NEW_GUARDIAN_A, block.timestamp, true);
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 
         // Call: invoke `OrganizationGuardianRecoveryBase.acceptGuardianRecovery` as `NEW_GUARDIAN_A`.
         vm.prank(NEW_GUARDIAN_A);

@@ -23,7 +23,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth,) = _buildCancelInitializeGuardianRecoveryAuth({
@@ -55,7 +57,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
         (AdminAuthParams memory auth,) = _buildCancelInitializeGuardianRecoveryAuth({
@@ -87,7 +91,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth, bytes memory operationData) = _buildCancelInitializeGuardianRecoveryAuth({
@@ -108,7 +114,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Verify: confirm nonce consumption/rollback behavior.
         assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on successful cancel-initialize");
 
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(auth);
@@ -122,7 +130,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory auth, bytes memory pendingTupleData) = _buildCancelInitializeGuardianRecoveryAuth({
@@ -168,7 +178,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory staleCancelAuth, bytes memory staleData) = _buildCancelInitializeGuardianRecoveryAuth({
@@ -180,7 +192,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp + 2);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp + 2);
 
         // Call: invoke `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` as `GUARDIAN` and assert the
         // expected revert.
@@ -245,7 +257,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         // Setup: reset guardian-recovery storage; configure admin quorum for signature validation; seed a pending
         // deferred-init timelock tuple.
         recoveryStateHarness.resetGuardianRecoveryStorage();
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 1
+        );
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory expiredAuth, bytes memory operationData) = _buildCancelInitializeGuardianRecoveryAuth({

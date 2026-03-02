@@ -15,8 +15,10 @@ contract OrganizationGuardianRecoveryBaseViewsTest is OrganizationGuardianRecove
     /// is callable by any address.
     function test_OGRB_GGRS_1__OGRB_GGRS_2_getterReturnsFullStructAndIsPublic() public {
         // Setup: seed a pending deferred-init timelock tuple.
-        _setPendingRecoveryUpdate(NEW_GUARDIAN_A, block.timestamp + 3 days, true);
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp + 5 days);
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 3 days, true);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp + 5 days
+        );
 
         // Call: invoke `OrganizationGuardianRecoveryBase.getGuardianRecoveryState` as `NON_GUARDIAN`.
         vm.prank(NON_GUARDIAN);
@@ -65,8 +67,10 @@ contract OrganizationGuardianRecoveryBaseViewsTest is OrganizationGuardianRecove
     /// recovery-update pending, and deferred-init pending states.
     function test_OGRB_GGRS_4__OGRB_GGRS_5__OGRB_GGRS_6_getterReflectsConfiguredAndBothPendingFlows() public {
         // Setup: seed a pending deferred-init timelock tuple.
-        _setPendingRecoveryUpdate(NEW_GUARDIAN_B, block.timestamp + 2 days, false);
-        _setPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 7 days);
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, block.timestamp + 2 days, false);
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 7 days
+        );
 
         // Call: invoke `OrganizationGuardianRecoveryBase.getGuardianRecoveryState`.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryState();

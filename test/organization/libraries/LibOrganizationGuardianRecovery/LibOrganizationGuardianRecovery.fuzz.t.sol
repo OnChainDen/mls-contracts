@@ -23,7 +23,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         vm.assume(recoveryAddress != address(0));
         uint256 boundedTimelock =
             bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery`.
         harness.initializeGuardianRecoveryViaLibrary(recoveryAddress, boundedTimelock);
@@ -74,7 +74,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         // Setup: reset library recovery state.
         uint256 boundedTimelock =
             bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         harness.initializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, boundedTimelock);
 
         // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate`,
@@ -250,7 +250,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         uint256 timelock
     ) public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.initializeGuardianRecovery`.
         if (recoveryAddress != address(0)) {

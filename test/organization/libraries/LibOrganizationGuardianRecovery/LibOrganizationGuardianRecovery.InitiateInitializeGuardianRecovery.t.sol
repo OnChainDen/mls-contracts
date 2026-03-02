@@ -21,7 +21,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
         public
     {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
 
         // Call: invoke `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`.
@@ -29,7 +29,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
         emit IOrganizationGuardianRecovery.GuardianRecoveryInitializationInitiated(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, expectedCanFinalizeAt
         );
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
         // Verify: confirm pending deferred-init fields.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
@@ -48,7 +48,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
     /// configured state before already-pending state.
     function test_LOGR_IIGR_4__LOGR_IIGR_10_notConfiguredValidationRunsBeforeAlreadyPendingCheck() public {
         // Setup: reset library recovery state; seed a pending deferred-init timelock tuple.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 9 days
@@ -57,7 +57,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
         // Call: invoke `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` and assert the expected
         // revert.
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS_B, 3 days);
 
         // Verify: confirm pending deferred-init fields.
         assertEq(
@@ -71,7 +71,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
     /// before parameter validation.
     function test_LOGR_IIGR_5__LOGR_IIGR_11_alreadyPendingCheckRunsBeforeParameterValidation() public {
         // Setup: reset library recovery state; seed a pending deferred-init timelock tuple.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 4 days
         );
@@ -79,7 +79,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
         // Call: invoke `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` and assert the expected
         // revert.
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector);
-        _initiateDeferredInit(address(0), 1 days);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(address(0), 1 days);
 
         // Verify: confirm the pending deferred-init state remains unchanged.
         assertEq(
@@ -93,12 +93,12 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
     /// timelock values revert.
     function test_LOGR_IIGR_6__LOGR_IIGR_7__LOGR_IIGR_8_invalidParams_revert() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: invoke `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` and assert the expected
         // revert.
         vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
-        _initiateDeferredInit(address(0), GUARDIAN_RECOVERY_TIMELOCK);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(address(0), GUARDIAN_RECOVERY_TIMELOCK);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -108,7 +108,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
                 TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
             )
         );
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, 1 days);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, 1 days);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -118,7 +118,7 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
                 TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
             )
         );
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, 31 days);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, 31 days);
 
         // Verify: confirm pending deferred-init fields.
         assertEq(
@@ -132,11 +132,11 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
     /// pendingInit fields.
     function test_LOGR_IIGR_12_initiateInitOnlyMutatesPendingInitFields() public {
         // Setup: reset library recovery state; seed a pending recovery-guardian update.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp + 5 days, true);
 
         // Call: invoke `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`.
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
 
         // Verify: confirm pending recovery-update state remains unchanged.
         GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
@@ -153,13 +153,17 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
     /// 30 days) are accepted.
     function test_LOGR_IIGR_13_boundaryTimelocks_minAndMax_areAccepted() public {
         // Setup: reset library recovery state.
-        _resetRecoveryState();
+        harness.resetGuardianRecoveryStorageViaHarness();
 
         // Call: run the multi-step flow (`LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery`,
         // `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery`).
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(
+            GUARDIAN_RECOVERY_ADDRESS, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS
+        );
         harness.cancelInitializeGuardianRecoveryViaLibrary();
-        _initiateDeferredInit(GUARDIAN_RECOVERY_ADDRESS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
+        harness.initiateInitializeGuardianRecoveryViaLibrary(
+            GUARDIAN_RECOVERY_ADDRESS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
 
         // Verify: confirm pending deferred-init fields.
         assertEq(
