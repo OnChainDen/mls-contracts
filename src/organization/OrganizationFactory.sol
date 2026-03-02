@@ -81,7 +81,7 @@ contract OrganizationFactory is IOrganizationFactory {
     /// @param whitelistAddress The address of the implementation whitelist contract
     /// @return bytecode The creation bytecode to deploy via CREATE2
     function _getOrganizationProxyBytecode(address implementationAddress, address whitelistAddress)
-        private
+        internal
         pure
         returns (bytes memory bytecode)
     {
