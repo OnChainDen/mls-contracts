@@ -6,17 +6,17 @@ import {AccountImplementation} from "account/AccountImplementation.sol";
 import {Test, Vm} from "forge-std/Test.sol";
 
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
-import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
+import {ArrayBuilders} from "test/helpers/ArrayBuilders.sol";
 import {
     InitializationWhitelistMock,
-    OrganizationFactoryInitializationHarness,
-    OrganizationImplementationInitializationHarness
-} from "test/organization/initialization/InitializationHarnesses.sol";
-import {ArrayBuilders} from "test/helpers/ArrayBuilders.sol";
+    OrganizationFactoryHarness,
+    OrganizationImplementationHarness
+} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
 import {ContractType, GroupModification, GroupModificationType, InitializationParams} from "types/CommonTypes.sol";
 import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
 
@@ -26,9 +26,7 @@ import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
 abstract contract InitializationSuiteBase is Test, ArrayBuilders {
     bytes32 internal constant ORG_DEPLOYED_TOPIC = keccak256("OrganizationDeployed(address,bytes32,address)");
     bytes32 internal constant ORG_INITIALIZED_TOPIC =
-        keccak256(
-            "OrganizationInitialized(address[],uint256,address,address,uint256,address,uint256,address,uint256)"
-        );
+        keccak256("OrganizationInitialized(address[],uint256,address,address,uint256,address,uint256,address,uint256)");
 
     // ERC-1967 implementation slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1)
     bytes32 internal constant ERC1967_IMPLEMENTATION_SLOT =
@@ -50,8 +48,8 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
 
     uint256 internal constant GROUP_ID = 7001;
 
-    OrganizationFactoryInitializationHarness internal factory;
-    OrganizationImplementationInitializationHarness internal implementation;
+    OrganizationFactoryHarness internal factory;
+    OrganizationImplementationHarness internal implementation;
     AccountImplementation internal accountImplementation;
     InitializationWhitelistMock internal whitelist;
 
@@ -59,9 +57,9 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
     function setUp() public virtual {
         // Deploy shared mock/harness contracts for each test case.
         whitelist = new InitializationWhitelistMock();
-        implementation = new OrganizationImplementationInitializationHarness();
+        implementation = new OrganizationImplementationHarness();
         accountImplementation = new AccountImplementation();
-        factory = new OrganizationFactoryInitializationHarness(AUTHORIZED_DEPLOYER);
+        factory = new OrganizationFactoryHarness(AUTHORIZED_DEPLOYER);
 
         // Allow default organization/account implementations through whitelist checks.
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementation), true);
@@ -100,10 +98,12 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
     /// @param salt CREATE2 salt used by the factory deployment path.
     /// @param params Initialization payload forwarded to `deployOrganization`.
     /// @return organization Address of the deployed organization proxy.
-    function _deployOrganization(bytes32 salt, InitializationParams memory params) internal returns (address organization) {
+    function _deployOrganization(bytes32 salt, InitializationParams memory params)
+        internal
+        returns (address organization)
+    {
         vm.prank(AUTHORIZED_DEPLOYER);
-        organization =
-            factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+        organization = factory.deployOrganization(salt, address(implementation), address(whitelist), params);
     }
 
     /// @dev Computes the expected organization address for a given salt using shared fixture addresses.
@@ -166,9 +166,7 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
         // Verify transaction recovery configuration persisted correctly.
         TxRecoveryState memory txRecovery = organization.getTxRecoveryState();
         assertEq(
-            txRecovery.recoveryAddress,
-            params.transactionAndERC1271RecoveryAddress,
-            "tx recovery address mismatch"
+            txRecovery.recoveryAddress, params.transactionAndERC1271RecoveryAddress, "tx recovery address mismatch"
         );
         assertEq(
             txRecovery.timelockDurationSeconds,
@@ -190,7 +188,9 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
     /// @param proxyAddress Address expected to hold `OrganizationProxy` runtime bytecode.
     function _assertProxyRuntimeCode(address proxyAddress) internal {
         assertGt(proxyAddress.code.length, 0, "proxy should have runtime code");
-        assertTrue(proxyAddress.codehash != address(implementation).codehash, "proxy code must differ from implementation");
+        assertTrue(
+            proxyAddress.codehash != address(implementation).codehash, "proxy code must differ from implementation"
+        );
 
         // Deploy a reference proxy and compare runtime code hash.
         address referenceProxy = address(new OrganizationProxy(address(implementation), address(whitelist)));

@@ -7,15 +7,15 @@ import {IOrganizationInitialization} from "interfaces/organization/IOrganization
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {
     InitializationWhitelistMock,
-    OrganizationFactoryInitializationHarness,
-    OrganizationImplementationInitializationHarness
-} from "test/organization/initialization/InitializationHarnesses.sol";
+    OrganizationFactoryHarness,
+    OrganizationImplementationHarness
+} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
 import {ContractType, GroupModification, GroupModificationType, InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @dev Stateful handler for initialization invariants.
  */
-contract InitializationInvariantHandler {
+contract OrganizationFactoryInvariantHandler {
     struct DeploymentRecord {
         address organization;
         bytes32 salt;
@@ -43,8 +43,8 @@ contract InitializationInvariantHandler {
     uint256 internal constant MAX_FAILED_FACTORY_TRACKED = 24;
     uint256 internal constant MAX_FAILED_DIRECT_TRACKED = 24;
 
-    OrganizationFactoryInitializationHarness internal immutable FACTORY;
-    OrganizationImplementationInitializationHarness internal immutable IMPLEMENTATION;
+    OrganizationFactoryHarness internal immutable FACTORY;
+    OrganizationImplementationHarness internal immutable IMPLEMENTATION;
     AccountImplementation internal immutable ACCOUNT_IMPLEMENTATION;
     InitializationWhitelistMock internal immutable WHITELIST;
 
@@ -63,9 +63,9 @@ contract InitializationInvariantHandler {
     /// @dev Deploys invariant dependencies and configures whitelist entries used by handler actions.
     constructor() {
         WHITELIST = new InitializationWhitelistMock();
-        IMPLEMENTATION = new OrganizationImplementationInitializationHarness();
+        IMPLEMENTATION = new OrganizationImplementationHarness();
         ACCOUNT_IMPLEMENTATION = new AccountImplementation();
-        FACTORY = new OrganizationFactoryInitializationHarness(address(this));
+        FACTORY = new OrganizationFactoryHarness(address(this));
 
         WHITELIST.setImplementationWhitelisted(ContractType.Organization, address(IMPLEMENTATION), true);
         WHITELIST.setImplementationWhitelisted(ContractType.Account, address(ACCOUNT_IMPLEMENTATION), true);
@@ -288,7 +288,7 @@ contract InitializationInvariantHandler {
         address guardian = _deriveAddress(seed, 5);
 
         // Constrain group and threshold choices to valid ranges.
-        uint256 groupId = 10_000 + (seed % 5_000);
+        uint256 groupId = 10_000 + (seed % 5000);
         uint256 threshold = seed % 2 == 0 ? 1 : 2;
 
         // Build members/admins such that admins are always members.
@@ -322,12 +322,10 @@ contract InitializationInvariantHandler {
         params.accountImplementation = address(ACCOUNT_IMPLEMENTATION);
         params.adminOperationTimelockDurationSeconds = seed % 3 == 0 ? 30 days : 2 days;
 
-        params.transactionAndERC1271RecoveryAddress =
-            seed % 2 == 0 ? _deriveAddress(seed, 6) : address(0);
+        params.transactionAndERC1271RecoveryAddress = seed % 2 == 0 ? _deriveAddress(seed, 6) : address(0);
         params.txRecoveryTimelockDurationSeconds = 2 days;
 
-        params.guardianRecoveryAddress =
-            seed % 5 == 0 ? address(0) : _deriveAddress(seed, 7);
+        params.guardianRecoveryAddress = seed % 5 == 0 ? address(0) : _deriveAddress(seed, 7);
         params.guardianRecoveryTimelockDurationSeconds = 2 days;
     }
 

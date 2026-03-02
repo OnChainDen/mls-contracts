@@ -5,16 +5,18 @@ pragma solidity 0.8.33;
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {OrganizationFactory} from "organization/OrganizationFactory.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
-import {LibOrganizationAdminOperationTimelockStorage} from "organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol";
+import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {
+    LibOrganizationAdminOperationTimelockStorage
+} from "organization/libraries/storage/LibOrganizationAdminOperationTimelockStorage.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
 import {
     LibOrganizationDeployerAddressStorage
 } from "organization/libraries/storage/LibOrganizationDeployerAddressStorage.sol";
 import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
-import {LibOrganizationInitialization} from "organization/libraries/LibOrganizationInitialization.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
 import {LibOrganizationUpgradeStorage} from "organization/libraries/storage/LibOrganizationUpgradeStorage.sol";
 import {OrganizationPolicyStateHarness} from "test/organization/shared/OrganizationPolicyStateHarness.sol";
@@ -26,10 +28,7 @@ import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
  */
 contract InitializationWhitelistMock is IImplementationWhitelist {
     error UnexpectedValidationInput(
-        ContractType actualType,
-        address actualImplementation,
-        ContractType expectedType,
-        address expectedImplementation
+        ContractType actualType, address actualImplementation, ContractType expectedType, address expectedImplementation
     );
 
     mapping(ContractType => mapping(address => bool)) internal whitelisted;
@@ -179,7 +178,7 @@ contract IncompatibleOrganizationImplementation {
 /**
  * @dev Harness exposing internal `OrganizationFactory` helper for bytecode hash coverage.
  */
-contract OrganizationFactoryInitializationHarness is OrganizationFactory {
+contract OrganizationFactoryHarness is OrganizationFactory {
     /// @dev Forwards deployer configuration into the base factory constructor.
     /// @param deployerAddress Authorized deployer address stored immutably by the factory.
     constructor(address deployerAddress) OrganizationFactory(deployerAddress) {}
@@ -200,7 +199,7 @@ contract OrganizationFactoryInitializationHarness is OrganizationFactory {
 /**
  * @dev Organization implementation test harness exposing storage getters needed by proxy tests.
  */
-contract OrganizationImplementationInitializationHarness is OrganizationImplementation {
+contract OrganizationImplementationHarness is OrganizationImplementation {
     /// @dev Reads whitelist address directly from upgrade storage for slot-level assertions.
     /// @return Whitelist address currently stored in upgrade storage.
     function getWhitelistAddressStorageForTests() external view returns (address) {
