@@ -619,7 +619,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         // Call
         for (uint8 i = 0; i < steps; i++) {
             uint256 randomness = uint256(keccak256(abi.encode(seed, i)));
-            uint8 operation = uint8(randomness % 3);
+            uint256 operation = randomness % 3;
 
             if (operation == 0) {
                 _callAsTxRecovery(abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector));
