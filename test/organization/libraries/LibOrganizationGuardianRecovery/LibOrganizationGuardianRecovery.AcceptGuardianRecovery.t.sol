@@ -17,7 +17,8 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
     function test_LOGR_AGR_1__LOGR_AGR_2__LOGR_AGR_3__LOGR_AGR_4__LOGR_AGR_7__LOGR_AGR_8__LOGR_AGR_9__LOGR_AGR_10__LOGR_AGR_12_acceptUpdatesGuardianAndClearsPending()
         public
     {
-        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
+        // recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 4 days, block.timestamp + 8 days
@@ -94,7 +95,8 @@ contract LibOrganizationGuardianRecoveryAcceptGuardianRecoveryTest is LibOrganiz
     /// @dev Verifies `LibOrganizationGuardianRecovery.acceptGuardianRecovery` pending guardian equal to current
     /// guardian still clears pending and emits event with equal addresses.
     function test_LOGR_AGR_11_pendingGuardianEqualsCurrentGuardian_acceptStillClearsStateAndEmits() public {
-        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and position timestamp at timelock boundary.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and
+        // position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardian(NEW_GUARDIAN_B);
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);

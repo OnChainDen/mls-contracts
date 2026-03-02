@@ -58,7 +58,8 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
         // Setup: reuse suite baseline where guardian-recovery is configured.
         recoveryStateHarness.setGuardianRecoveryConfig(GUARDIAN_RECOVERY_ADDRESS, 1 days);
 
-        // Call: initiate recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`, expecting authorization/state-validation revert.
+        // Call: initiate recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`, expecting
+        // authorization/state-validation revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,

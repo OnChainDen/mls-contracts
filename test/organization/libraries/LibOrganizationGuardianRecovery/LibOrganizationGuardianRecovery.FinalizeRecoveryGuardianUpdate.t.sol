@@ -18,7 +18,8 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     function test_LOGR_FRGU_1__LOGR_FRGU_5__LOGR_FRGU_6__LOGR_FRGU_7__LOGR_FRGU_9_finalizeSetsReadyAndPreservesOtherFields()
         public
     {
-        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending recovery-guardian update.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending deferred-init tuple, and seed pending
+        // recovery-guardian update.
         _resetAndConfigureRecovery();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
             GUARDIAN_RECOVERY_ADDRESS_B, 5 days, block.timestamp + 9 days
@@ -113,7 +114,8 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` double finalize is an idempotent
     /// no-op after first success.
     function test_LOGR_FRGU_8_doubleFinalize_secondCallIsNoOp() public {
-        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and position timestamp at timelock boundary.
+        // Setup: reconfigure baseline recovery address and timelock, seed pending recovery-guardian update, and
+        // position timestamp at timelock boundary.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_B);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
@@ -122,7 +124,8 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
         // Call: finalize recovery guardian update.
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
 
-        // Verify: ready flag remains true after second finalize; pending guardian remains unchanged after second finalize.
+        // Verify: ready flag remains true after second finalize; pending guardian remains unchanged after second
+        // finalize.
         assertTrue(
             harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance,
             "ready flag should remain true after second finalize"

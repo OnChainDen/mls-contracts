@@ -33,7 +33,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `NON_GUARDIAN`, expecting revert from the guardian-only gate.
+        // Call: initiate deferred recovery initialization as `NON_GUARDIAN`, expecting revert from the guardian-only
+        // gate.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, auth);
@@ -61,7 +62,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `InsufficientAdminAuthorization` revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `InsufficientAdminAuthorization`
+        // revert.
         vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, auth);
@@ -166,12 +168,14 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         });
         uint256 nonce = _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, operationData, 11_008);
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `GuardianRecoveryAlreadyConfigured` revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `GuardianRecoveryAlreadyConfigured`
+        // revert.
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, auth);
 
-        // Verify: nonce should rollback on downstream library revert; same signed request should succeed once root cause is fixed.
+        // Verify: nonce should rollback on downstream library revert; same signed request should succeed once root
+        // cause is fixed.
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on downstream library revert");
 
         recoveryStateHarness.resetGuardianRecoveryStorage();
@@ -198,7 +202,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         bytes memory mutatedAddressData = abi.encode(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK);
         bytes memory mutatedTimelockData = abi.encode(GUARDIAN_RECOVERY_ADDRESS, 3 days);
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
+        // revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, auth);
@@ -236,7 +241,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         });
         uint256 nonce = _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, operationData, 11_011);
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
+        // revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationAdmin.AdminOperationExpired.selector, block.timestamp - 1, block.timestamp
@@ -279,7 +285,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
+        // revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, rejectionAuth);
@@ -308,7 +315,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
+        // revert.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, wrongAuth);
@@ -344,7 +352,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
+        // revert.
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,

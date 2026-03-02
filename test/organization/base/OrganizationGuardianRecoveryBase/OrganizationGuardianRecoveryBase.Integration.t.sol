@@ -48,7 +48,8 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: cancel deferred recovery initialization, initiate deferred recovery initialization, then finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
+        // Call: cancel deferred recovery initialization, initiate deferred recovery initialization, then finalize
+        // deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(cancelAuthA);
 
@@ -146,7 +147,8 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         // Setup: start from clean recovery state.
         recoveryStateHarness.resetGuardianRecoveryStorage();
 
-        // Call: initiate recovery guardian update, finalize recovery guardian update, then cancel recovery guardian update as `GUARDIAN_RECOVERY_ADDRESS`, expecting revert from the recovery-address gate.
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then cancel recovery guardian
+        // update as `GUARDIAN_RECOVERY_ADDRESS`, expecting revert from the recovery-address gate.
         _expectOnlyGuardianRecoveryAddressRevert(GUARDIAN_RECOVERY_ADDRESS, address(0));
         vm.prank(GUARDIAN_RECOVERY_ADDRESS);
         harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);

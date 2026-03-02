@@ -75,7 +75,8 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
             GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, block.timestamp + 4 days
         );
 
-        // Call: initiate deferred recovery initialization, expecting `GuardianRecoveryInitializationAlreadyPending` revert.
+        // Call: initiate deferred recovery initialization, expecting `GuardianRecoveryInitializationAlreadyPending`
+        // revert.
         vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector);
         harness.initiateInitializeGuardianRecoveryViaLibrary(address(0), 1 days);
 

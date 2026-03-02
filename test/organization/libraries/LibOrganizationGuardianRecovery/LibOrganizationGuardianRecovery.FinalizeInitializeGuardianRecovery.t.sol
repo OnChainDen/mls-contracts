@@ -48,7 +48,8 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
-        // Call: finalize deferred recovery initialization then initiate deferred recovery initialization, expecting `NoGuardianRecoveryInitializationPending` revert.
+        // Call: finalize deferred recovery initialization then initiate deferred recovery initialization, expecting
+        // `NoGuardianRecoveryInitializationPending` revert.
         vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
         harness.finalizeInitializeGuardianRecoveryViaLibrary();
 
@@ -83,13 +84,15 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalized deferred-init
     /// enables the full recovery update flow.
     function test_LOGR_FIGR_8_finalizeDeferredInit_enablesRecoveryFlowUsage() public {
-        // Setup: start from clean recovery state, seed pending deferred-init tuple, and position timestamp at timelock boundary.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and position timestamp at timelock
+        // boundary.
         harness.resetGuardianRecoveryStorageViaHarness();
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp);
         harness.finalizeInitializeGuardianRecoveryViaLibrary();
 
-        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian update.
+        // Call: initiate recovery guardian update, finalize recovery guardian update, then accept recovery guardian
+        // update.
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
         vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp);
         harness.finalizeRecoveryGuardianUpdateViaLibrary();
@@ -132,7 +135,8 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalize leaves
     /// recovery-update pending fields untouched and double-finalize reverts.
     function test_LOGR_FIGR_10__LOGR_FIGR_11_finalizePreservesRecoveryUpdateFields_andDoubleFinalizeReverts() public {
-        // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian update.
+        // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
+        // update.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, block.timestamp + 10 days, true);
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);

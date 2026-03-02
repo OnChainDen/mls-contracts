@@ -36,7 +36,8 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: cancel deferred recovery initialization as `NON_GUARDIAN`, expecting revert from the guardian-only gate.
+        // Call: cancel deferred recovery initialization as `NON_GUARDIAN`, expecting revert from the guardian-only
+        // gate.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
         harness.cancelInitializeGuardianRecovery(auth);
@@ -68,7 +69,8 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting `InsufficientAdminAuthorization` revert.
+        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting `InsufficientAdminAuthorization`
+        // revert.
         vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(auth);
@@ -232,7 +234,8 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
         uint256 nonce = _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, operationData, 13_009);
 
-        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting `NoGuardianRecoveryInitializationPending` revert.
+        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting
+        // `NoGuardianRecoveryInitializationPending` revert.
         vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(auth);
