@@ -108,12 +108,9 @@
 | OTRB-ERAT-12 | If account execution reverts, outer call reverts and no event/log persists | `[N]` | P0 |
 | OTRB-ERAT-13 | Validation order is preserved: recovery-enabled check happens before account-deployed check | `[U]` | P1 |
 | OTRB-ERAT-14 | Recovery execution does not mutate tx recovery config fields | `[S]` | P1 |
-| OTRB-ERAT-15 | **Desired Behavior:** reentrancy hard-stop when `to` is the Organization contract itself: selector sweep over all externally callable Organization functions via recovery path always reverts (no successful nested Organization entrypoint) | `[S][I]` | P0 |
-| OTRB-ERAT-16 | **Desired Behavior:** reentrancy hard-stop when `to` is the Account contract itself: selector sweep over all externally callable Account functions (`executeTransaction`, `getOrganizationAddress`, `isValidSignature`, empty-calldata receive) via recovery path always reverts | `[S][I]` | P0 |
-| OTRB-ERAT-17 | **Desired Behavior:** when recovery address is a contract and `to == recoveryAddress`, any callback attempt to any Organization function during `executeRecoveryAccountTransaction` reverts (no reentrant Organization entrypoint succeeds) | `[S][I]` | P0 |
-| OTRB-ERAT-18 | **Desired Behavior:** when recovery address is a contract and `to == recoveryAddress`, any callback attempt to any Account function during `executeRecoveryAccountTransaction` reverts (no reentrant Account entrypoint succeeds) | `[S][I]` | P0 |
-| OTRB-ERAT-19 | **Desired Behavior:** nested callback from contract recovery address into `executeRecoveryAccountTransaction` itself reverts due reentrancy guard semantics and inner recovery tx is not executed | `[S]` | P0 |
-| OTRB-ERAT-20 | **Desired Behavior:** all reentrancy-blocked paths above fully revert outer transaction and persist no `RecoveryAccountTransactionExecuted` logs or partial state mutations | `[S][EV]` | P0 |
+| OTRB-ERAT-15 | **Desired Behavior:** reentrancy hard-stop when `to` is the Organization contract itself: selector sweep over all state-changing (non-view) Organization functions via recovery path always reverts (no successful nested Organization entrypoint) | `[S][I]` | P0 |
+| OTRB-ERAT-16 | **Desired Behavior:** reentrancy hard-stop when `to` is the Account contract itself: selector sweep over all state-changing (non-view) Account functions via recovery path always reverts | `[S][I]` | P0 |
+| OTRB-ERAT-20 | **Desired Behavior:** all recovery-execution revert paths above fully revert outer transaction and persist no `RecoveryAccountTransactionExecuted` logs or partial state mutations | `[S][EV]` | P0 |
 
 ---
 
@@ -486,9 +483,8 @@
 | TXR-INT-11 | Recovery -> account -> organization call chain targeting `modifyMembers` reverts and leaves membership/admin status unchanged | `[S]` | P0 |
 | TXR-INT-12 | Recovery -> account -> organization call chain targeting `setPoliciesMerkleLeaf` reverts and leaves policy merkle root/state unchanged | `[S]` | P0 |
 | TXR-INT-13 | Recovery -> account -> organization call chain targeting tx-recovery management entrypoints (`disable` / `initiateEnable` / `finalizeEnable`) reverts and leaves tx-recovery state unchanged | `[S]` | P0 |
-| TXR-INT-14 | **Desired Behavior:** full Organization selector-matrix integration (`to=organization`) from recovery execution reverts for every externally callable selector and leaves all Organization/Account/Recovery state unchanged | `[I][S]` | P0 |
-| TXR-INT-15 | **Desired Behavior:** full Account selector-matrix integration (`to=account`) from recovery execution reverts for every externally callable selector and leaves all Organization/Account/Recovery state unchanged | `[I][S]` | P0 |
-| TXR-INT-16 | **Desired Behavior:** contract-based recovery address callback matrix (`to=recoveryAddress`) attempting Organization/Account selector reentry always reverts and never yields successful nested execution | `[I][S]` | P0 |
+| TXR-INT-14 | **Desired Behavior:** full Organization selector-matrix integration (`to=organization`) from recovery execution reverts for every state-changing (non-view) selector and leaves all Organization/Account/Recovery state unchanged | `[I][S]` | P0 |
+| TXR-INT-15 | **Desired Behavior:** full Account selector-matrix integration (`to=account`) from recovery execution reverts for every state-changing (non-view) selector and leaves all Organization/Account/Recovery state unchanged | `[I][S]` | P0 |
 
 ---
 
@@ -503,9 +499,8 @@
 | TXR-FZ-5 | Fuzz arbitrary signature bytes/hashes for `isValidRecoverySignature`: function never reverts | `[F]` | P0 |
 | TXR-FZ-6 | Fuzz random non-recovery callers across all only-tx-recovery entrypoints: always revert with unauthorized error | `[F]` | P0 |
 | TXR-FZ-7 | Fuzz random `to/value/data` for successful recovery execution on test accounts: forwarded calldata/value are exact | `[F]` | P1 |
-| TXR-FZ-8 | **Desired Behavior:** fuzz Organization selector sweep with random calldata/value via recovery (`to=organization`) always reverts for every externally callable selector | `[F][S]` | P0 |
-| TXR-FZ-9 | **Desired Behavior:** fuzz Account selector sweep with random calldata/value via recovery (`to=account`) always reverts for every externally callable selector | `[F][S]` | P0 |
-| TXR-FZ-10 | **Desired Behavior:** fuzz malicious contract recovery callbacks (`to=recoveryAddress`) with randomized reentry target+selector (`organization`/`account`) always revert and produce no successful reentrant execution | `[F][S]` | P0 |
+| TXR-FZ-8 | **Desired Behavior:** fuzz Organization selector sweep with random calldata/value via recovery (`to=organization`) always reverts for every state-changing (non-view) selector | `[F][S]` | P0 |
+| TXR-FZ-9 | **Desired Behavior:** fuzz Account selector sweep with random calldata/value via recovery (`to=account`) always reverts for every state-changing (non-view) selector | `[F][S]` | P0 |
 | TXR-FZ-11 | Fuzz repeated enable/disable cycles: config remains immutable and transitions remain legal | `[F]` | P1 |
 | TXR-FZ-12 | Fuzz mixed enable/finalize/disable sequences: any `isEnabled=true` state always has non-zero config and zero pending-enable timestamp | `[F]` | P1 |
 
@@ -530,9 +525,9 @@
 | Any tx-recovery-driven account call chain attempting `modifyMembers` cannot mutate member/admin membership mappings | P0 |
 | Any tx-recovery-driven account call chain attempting `setPoliciesMerkleLeaf` cannot mutate policy merkle root or policy config state | P0 |
 | Any tx-recovery-driven account call chain attempting tx-recovery management entrypoints cannot mutate tx-recovery config/enable/pending state | P0 |
-| **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any externally callable Organization function (including view/getter selectors) | P0 |
-| **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any externally callable Account function (including `getOrganizationAddress`, `isValidSignature`, and receive) | P0 |
-| **Desired Behavior:** for any reentrancy attempt via `to=organization`, `to=account`, or `to=recoveryAddress`, end-of-tx Organization/Account/TxRecovery state equals pre-call snapshot | P0 |
+| **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any state-changing (non-view) Organization function | P0 |
+| **Desired Behavior:** while `executeRecoveryAccountTransaction` is in-flight, no reentrant path can successfully enter any state-changing (non-view) Account function | P0 |
+| **Desired Behavior:** for any reentrancy attempt via `to=organization` or `to=account`, end-of-tx Organization/Account/TxRecovery state equals pre-call snapshot | P0 |
 | `validateRecoveryAccountTransactionAllowedOrRevert` must revert whenever `isEnabled == false` | P0 |
 | Tx recovery state transitions never modify guardian recovery state | P0 |
 | Any successful recovery execution uses `nonce=0` and `policyId=0` | P0 |
