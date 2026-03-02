@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
@@ -16,7 +17,8 @@ import {InitializationParams} from "types/CommonTypes.sol";
  * @dev Proxy constructor/delegation tests for initialization paths.
  */
 contract OrganizationProxyInitializationTest is InitializationSuiteBase {
-    /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their expected storage slots.
+    /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their
+    /// expected storage slots.
     function test_OPX_CTOR_1__OPX_CTOR_2__OPX_CTOR_3_constructor_setsDeployerWhitelistAndImplementationSlots() public {
         // Setup: Select a direct deployer account for deploying the proxy outside the factory flow.
         address directDeployer = address(0xFA01);
@@ -71,8 +73,8 @@ contract OrganizationProxyInitializationTest is InitializationSuiteBase {
         // Setup: Prepare a non-contract whitelist address for proxy construction.
         address nonContractWhitelist = address(0xF402);
 
-        // Call: Deploy the proxy with the EOA whitelist and expect a revert.
-        vm.expectRevert();
+        // Call: Deploy the proxy with the EOA whitelist and expect `AddressEmptyCode`.
+        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, nonContractWhitelist));
         new OrganizationProxy(address(implementation), nonContractWhitelist);
 
         // Verify: Revert behavior enforces that whitelist lookups must route through a contract.
@@ -86,7 +88,8 @@ contract OrganizationProxyInitializationTest is InitializationSuiteBase {
         InitializationParams memory params = _defaultInitializationParams();
 
         vm.prank(directDeployer);
-        IOrganization organization = IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        IOrganization organization =
+            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
 
         // Call: First attempt initialization from a non-deployer, then initialize from the direct deployer.
         vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
@@ -100,17 +103,21 @@ contract OrganizationProxyInitializationTest is InitializationSuiteBase {
         assertTrue(organization.isInitialized(), "direct deployer should be able to initialize once");
     }
 
-    /// @dev Verifies proxy delegation preserves `getDeployerAddress` and `isInitialized` behavior before and after initialization.
+    /// @dev Verifies proxy delegation preserves `getDeployerAddress` and `isInitialized` behavior before and after
+    /// initialization.
     function test_OPX_DEL_1_proxyDelegatesInitializationViewsAndState() public {
         // Setup: Deploy a proxy directly with valid initialization params.
         address deployer = address(0xF601);
         InitializationParams memory params = _defaultInitializationParams();
 
         vm.prank(deployer);
-        IOrganization organization = IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        IOrganization organization =
+            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
 
         // Call: Read delegated initialization views, then initialize through the proxy.
-        assertEq(organization.getDeployerAddress(), deployer, "getDeployerAddress should delegate to implementation logic");
+        assertEq(
+            organization.getDeployerAddress(), deployer, "getDeployerAddress should delegate to implementation logic"
+        );
         assertFalse(organization.isInitialized(), "isInitialized should be false before init");
 
         vm.prank(deployer);
@@ -135,10 +142,12 @@ contract OrganizationProxyInitializationTest is InitializationSuiteBase {
         paramsB.members = buildArray(MEMBER_3, ADMIN_1, ADMIN_2, MEMBER_1);
 
         vm.prank(deployerA);
-        IOrganization proxyA = IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        IOrganization proxyA =
+            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
 
         vm.prank(deployerB);
-        IOrganization proxyB = IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
+        IOrganization proxyB =
+            IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
 
         // Call: Initialize both proxies independently using their respective deployers and params.
         vm.prank(deployerA);
