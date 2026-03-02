@@ -144,7 +144,8 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
     /// @dev Verifies LOI-INIT-4 and LOI-INIT-5: zero tx recovery address keeps tx recovery deferred and disabled.
     function test_LOI_INIT_4__LOI_INIT_5_initialize_zeroRecoveryAddress_keepsTxRecoveryDeferredAndDisabled() public {
         // Setup
-        InitializationParams memory params = _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 3 days);
+        InitializationParams memory params =
+            _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 3 days);
 
         // Call
         harness.initialize(params);
@@ -159,7 +160,8 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
     /// @dev Verifies LOI-INIT-6: non-zero tx recovery address with invalid tx-recovery timelock reverts init.
     function test_LOI_INIT_6_initialize_nonZeroRecoveryAddress_invalidTxRecoveryTimelock_reverts() public {
         // Setup
-        InitializationParams memory params = _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, 3 days);
+        InitializationParams memory params =
+            _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, 3 days);
 
         // Call
         vm.expectRevert(
@@ -186,7 +188,8 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         LibOrganizationInitializationTxRecoveryHarness harnessAboveMax = _deployHarness();
 
         // Call
-        InitializationParams memory zeroParams = _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 0);
+        InitializationParams memory zeroParams =
+            _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 0);
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
@@ -197,8 +200,9 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         );
         harnessZero.initialize(zeroParams);
 
-        InitializationParams memory belowMinParams =
-            _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1);
+        InitializationParams memory belowMinParams = _buildParams(
+            address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1
+        );
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
@@ -209,8 +213,9 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         );
         harnessBelowMin.initialize(belowMinParams);
 
-        InitializationParams memory aboveMaxParams =
-            _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS + 1);
+        InitializationParams memory aboveMaxParams = _buildParams(
+            address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS + 1
+        );
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
@@ -222,13 +227,21 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         harnessAboveMax.initialize(aboveMaxParams);
 
         // Verify
-        assertEq(harnessZero.getTxRecoveryState().pendingInit.pendingTimestamp, 0, "failed init should not stage deferred tx recovery");
+        assertEq(
+            harnessZero.getTxRecoveryState().pendingInit.pendingTimestamp,
+            0,
+            "failed init should not stage deferred tx recovery"
+        );
         assertEq(
             harnessBelowMin.getTxRecoveryState().pendingInit.pendingTimestamp,
             0,
             "failed init should not open deferred-finalize window"
         );
-        assertEq(harnessAboveMax.getTxRecoveryState().pendingInit.pendingTimestamp, 0, "failed init should not stage deferred tx recovery");
+        assertEq(
+            harnessAboveMax.getTxRecoveryState().pendingInit.pendingTimestamp,
+            0,
+            "failed init should not stage deferred tx recovery"
+        );
     }
 
     /// @dev Verifies LOI-INIT-9: when recovery address is zero, tx-recovery timelock is not validated at init-time.
