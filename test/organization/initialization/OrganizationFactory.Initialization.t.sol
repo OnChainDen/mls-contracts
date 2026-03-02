@@ -2,15 +2,15 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
-import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {
@@ -38,7 +38,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         // Verify: The constructor guard is enforced by the expected `ZeroAddress` revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.constructor` stores a non-zero deployer in `DEPLOYER_ADDRESS` and keeps it immutable.
+    /// @dev Verifies `OrganizationFactory.constructor` stores a non-zero deployer in `DEPLOYER_ADDRESS` and keeps it
+    /// immutable.
     function test_OF_CTOR_2__OF_CTOR_3_constructor_nonZeroStoresAndRemainsImmutable() public {
         // Setup: Deploy a local factory with a custom deployer and valid initialization params.
         address deployer = address(0xDEAD01);
@@ -53,8 +54,11 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertEq(localFactory.DEPLOYER_ADDRESS(), deployer, "immutable deployer should remain unchanged");
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` returns the precomputed proxy address, initializes it atomically, and emits deployment events in order.
-    function test_OF_DO_1__OF_DO_2__OF_DO_3__OF_DO_18__OF_DO_19__OF_DO_20__OF_DO_21__CFI_FLOW_1_deployAuthorizedValidParams_succeedsAndMatchesPrecompute() public {
+    /// @dev Verifies `OrganizationFactory.deployOrganization` returns the precomputed proxy address, initializes it
+    /// atomically, and emits deployment events in order.
+    function test_OF_DO_1__OF_DO_2__OF_DO_3__OF_DO_18__OF_DO_19__OF_DO_20__OF_DO_21__CFI_FLOW_1_deployAuthorizedValidParams_succeedsAndMatchesPrecompute()
+        public
+    {
         // Setup: Build valid initialization params, precompute the CREATE2 address, and start log recording.
         bytes32 salt = bytes32(uint256(1001));
         InitializationParams memory params = _defaultInitializationParams();
@@ -66,7 +70,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         vm.prank(AUTHORIZED_DEPLOYER);
         address deployed = factory.deployOrganization(salt, address(implementation), address(whitelist), params);
 
-        // Verify: The deployment address, initialized state, runtime code, and event counts/order all match expectations.
+        // Verify: The deployment address, initialized state, runtime code, and event counts/order all match
+        // expectations.
         assertEq(deployed, expected, "returned address should match precomputed address");
 
         IOrganization organization = IOrganization(deployed);
@@ -85,7 +90,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         );
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized callers.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized
+    /// callers.
     function test_OF_DO_4_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer() public {
         // Setup: Prepare valid initialization params for an unauthorized caller attempt.
         InitializationParams memory params = _defaultInitializationParams();
@@ -98,7 +104,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         // Verify: Access control is enforced by the expected revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` reverts when the organization implementation is not whitelisted.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` reverts when the organization implementation is not
+    /// whitelisted.
     function test_OF_DO_5_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted() public {
         // Setup: Mark the organization implementation as not whitelisted and keep valid init params.
         InitializationParams memory params = _defaultInitializationParams();
@@ -106,7 +113,9 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
 
         // Call: Attempt deployment from the authorized deployer and expect `ImplementationNotWhitelisted`.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementation))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementation)
+            )
         );
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(bytes32(uint256(2002)), address(implementation), address(whitelist), params);
@@ -114,8 +123,11 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         // Verify: Whitelist enforcement is confirmed by the expected revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` validates whitelist inputs using `ContractType.Organization` and the exact implementation address.
-    function test_OF_DO_6__OF_DO_7_deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation() public {
+    /// @dev Verifies `OrganizationFactory.deployOrganization` validates whitelist inputs using
+    /// `ContractType.Organization` and the exact implementation address.
+    function test_OF_DO_6__OF_DO_7_deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation()
+        public
+    {
         // Setup: Configure the whitelist mock to expect one exact validation tuple and then reject it.
         bytes32 salt = bytes32(uint256(2003));
         InitializationParams memory params = _defaultInitializationParams();
@@ -125,7 +137,9 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
 
         // Call: Attempt deployment and expect the whitelist-not-whitelisted revert for the exact tuple.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementation))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementation)
+            )
         );
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), address(whitelist), params);
@@ -212,7 +226,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         // Verify: CREATE2 collision protection is enforced by the expected failed deployment revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` derives different addresses for the same salt when implementation changes.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` derives different addresses for the same salt when
+    /// implementation changes.
     function test_OF_DO_13_deployOrganization_sameSaltDifferentImplementation_producesDifferentAddresses() public {
         // Setup: Prepare a second valid organization implementation and whitelist it.
         bytes32 salt = bytes32(uint256(2009));
@@ -235,7 +250,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertGt(deployedB.code.length, 0, "second deployment should have code");
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` derives different addresses for the same salt when whitelist changes.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` derives different addresses for the same salt when
+    /// whitelist changes.
     function test_OF_DO_14_deployOrganization_sameSaltDifferentWhitelist_producesDifferentAddresses() public {
         // Setup: Prepare a second whitelist contract that approves the same implementation tuple.
         bytes32 salt = bytes32(uint256(2010));
@@ -258,7 +274,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertGt(deployedB.code.length, 0, "second deployment should have code");
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` rolls back atomically when initialization parameters are invalid.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` rolls back atomically when initialization parameters are
+    /// invalid.
     function test_OF_DO_15__CFI_FLOW_2_deployOrganization_invalidInitParams_revertAndLeaveNoCode() public {
         // Setup: Build three invalid initialization variants and precompute each target deployment address.
         InitializationParams memory noMembers = _defaultInitializationParams();
@@ -297,7 +314,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertEq(computedC.code.length, 0, "invalid-threshold revert should leave no deployed code");
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` does not persist deployment effects when initialization reverts.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` does not persist deployment effects when initialization
+    /// reverts.
     function test_OF_DO_16_deployOrganization_revertedInitialization_doesNotPersistOrganizationDeployedEvent() public {
         // Setup: Prepare invalid initialization input and precompute the deployment address.
         bytes32 salt = bytes32(uint256(2014));
@@ -314,7 +332,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertEq(computed.code.length, 0, "reverted deploy should not persist deployed code");
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` allows retrying the same tuple after a failed initialization attempt.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` allows retrying the same tuple after a failed
+    /// initialization attempt.
     function test_OF_DO_17__CFI_FLOW_3_deployOrganization_failedThenRetryWithSameTuple_succeeds() public {
         // Setup: Prepare invalid and valid initialization params for the same deployment tuple.
         bytes32 salt = bytes32(uint256(2015));
@@ -332,11 +351,14 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         address deployed = factory.deployOrganization(salt, address(implementation), address(whitelist), validParams);
 
         // Verify: The retry succeeds at the deterministic precomputed address and initializes the organization.
-        assertEq(deployed, _computeOrganizationAddress(salt), "retry should deploy at deterministic precomputed address");
+        assertEq(
+            deployed, _computeOrganizationAddress(salt), "retry should deploy at deterministic precomputed address"
+        );
         assertTrue(IOrganization(deployed).isInitialized(), "retry deployment should initialize organization");
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` reverts atomically for a whitelisted implementation with incompatible `initialize` behavior.
+    /// @dev Verifies `OrganizationFactory.deployOrganization` reverts atomically for a whitelisted implementation with
+    /// incompatible `initialize` behavior.
     function test_OF_DO_22_deployOrganization_incompatibleWhitelistedImplementation_revertsAtomically() public {
         // Setup: Deploy an incompatible implementation, whitelist it, and precompute its CREATE2 address.
         bytes32 salt = bytes32(uint256(2016));
@@ -356,7 +378,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertEq(expected.code.length, 0, "failed incompatible deployment must leave no code");
     }
 
-    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` is deterministic and independent of caller context.
+    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` is deterministic and independent of caller
+    /// context.
     function test_OF_COA_1__OF_COA_6_computeOrganizationAddress_deterministicAndCallerIndependent() public view {
         // Setup: Select a fixed tuple for repeated address computation.
         bytes32 salt = bytes32(uint256(3001));
@@ -369,8 +392,11 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertEq(computedA, computedB, "same inputs should return deterministic address");
     }
 
-    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` changes when salt, implementation, whitelist, or factory address changes.
-    function test_OF_COA_2__OF_COA_3__OF_COA_4__OF_COA_5_computeOrganizationAddress_changesAcrossTupleDimensions() public {
+    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` changes when salt, implementation, whitelist, or
+    /// factory address changes.
+    function test_OF_COA_2__OF_COA_3__OF_COA_4__OF_COA_5_computeOrganizationAddress_changesAcrossTupleDimensions()
+        public
+    {
         // Setup: Build alternate salt, implementation, whitelist, and factory inputs for tuple dimension checks.
         bytes32 saltA = bytes32(uint256(3002));
         bytes32 saltB = bytes32(uint256(3003));
@@ -401,7 +427,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertTrue(base != differentFactory, "different factory address should produce different computed address");
     }
 
-    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` matches manual CREATE2 derivation and remains stable before and after deployment.
+    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` matches manual CREATE2 derivation and remains
+    /// stable before and after deployment.
     function test_OF_COA_7__OF_COA_8__OF_COA_9_computeOrganizationAddress_matchesManualFormulaAndDeployment() public {
         // Setup: Build proxy init code hash and manual CREATE2 expectation for a fixed deployment tuple.
         bytes32 salt = bytes32(uint256(3004));
@@ -410,13 +437,8 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         bytes memory bytecode = factory.getOrganizationProxyBytecode(address(implementation), address(whitelist));
         bytes32 initCodeHash = keccak256(bytecode);
 
-        address manual = address(
-            uint160(
-                uint256(
-                    keccak256(abi.encodePacked(bytes1(0xff), address(factory), salt, initCodeHash))
-                )
-            )
-        );
+        address manual =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(factory), salt, initCodeHash)))));
 
         address computedBefore = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
 
@@ -432,8 +454,11 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         assertEq(computedAfter, computedBefore, "compute should remain unchanged after deployment");
     }
 
-    /// @dev Verifies `OrganizationFactory.getOrganizationProxyBytecode` returns deterministic constructor-encoded bytecode and stable init-code hashes.
-    function test_OF_GOPB_1__OF_GOPB_2__OF_GOPB_3__OF_GOPB_4__OF_GOPB_5_getOrganizationProxyBytecode_matchesExpectedEncodingAndHashBehavior() public {
+    /// @dev Verifies `OrganizationFactory.getOrganizationProxyBytecode` returns deterministic constructor-encoded
+    /// bytecode and stable init-code hashes.
+    function test_OF_GOPB_1__OF_GOPB_2__OF_GOPB_3__OF_GOPB_4__OF_GOPB_5_getOrganizationProxyBytecode_matchesExpectedEncodingAndHashBehavior()
+        public
+    {
         // Setup: Prepare baseline and variant implementation/whitelist addresses for bytecode comparisons.
         address implA = address(implementation);
         address implB = address(new OrganizationImplementationInitializationHarness());
@@ -446,12 +471,10 @@ contract OrganizationFactoryInitializationTest is InitializationSuiteBase {
         bytes memory bytecodeB = factory.getOrganizationProxyBytecode(implB, whitelistA);
         bytes memory bytecodeC = factory.getOrganizationProxyBytecode(implA, whitelistB);
 
-        bytes memory expected =
-            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implA, whitelistA));
+        bytes memory expected = abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implA, whitelistA));
 
         bytes32 computedHash = keccak256(bytecodeA1);
-        bytes32 expectedHash =
-            keccak256(factory.getOrganizationProxyBytecode(implA, whitelistA));
+        bytes32 expectedHash = keccak256(factory.getOrganizationProxyBytecode(implA, whitelistA));
 
         // Verify: Bytecode encoding, determinism, input sensitivity, and hash stability all match expected behavior.
         assertEq(bytecodeA1, expected, "proxy bytecode should match expected constructor encoding");
