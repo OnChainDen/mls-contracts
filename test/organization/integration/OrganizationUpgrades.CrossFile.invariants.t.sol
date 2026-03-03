@@ -176,7 +176,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
     }
 
     /// @dev Verifies the stored whitelist address remains immutable across successful Organization upgrades.
-    function test_UPG_INV_6_whitelistAddressRemainsImmutableAcrossUpgrades_desiredBehavior() public {
+    function test_UPG_INV_6_whitelistAddressRemainsImmutableAcrossUpgrades() public {
         // Setup: set whitelist address and execute successful Organization upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

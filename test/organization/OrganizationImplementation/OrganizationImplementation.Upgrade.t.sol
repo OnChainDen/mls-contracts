@@ -686,7 +686,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
     /// `data`.
-    function test_OI_UTACWA_25_adminAuthMustBindMigrationData_desiredBehavior() public {
+    function test_OI_UTACWA_25_adminAuthMustBindMigrationData() public {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -708,7 +708,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies migration calldata cannot trigger a nested second upgrade without fresh authorization.
-    function test_OI_UTACWA_26_nestedSecondUpgradeFromMigration_reverts_desiredBehavior() public {
+    function test_OI_UTACWA_26_nestedSecondUpgradeFromMigration_reverts() public {
         // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted
         // V3.
         _setSingleAdminThresholdOne();
@@ -733,7 +733,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies chained upgrades still fail when the second target is also whitelisted and UUPS-compatible.
-    function test_OI_UTACWA_27_nestedSecondUpgradeToWhitelistedTarget_revertsWithoutFreshAuth_desiredBehavior() public {
+    function test_OI_UTACWA_27_nestedSecondUpgradeToWhitelistedTarget_revertsWithoutFreshAuth() public {
         // Setup: whitelist both targets but provide fresh admin auth only for first upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -885,7 +885,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `_authorizeUpgrade` should be bound to a specific `newImplementation`, not only a boolean flag.
-    function test_OI_AU_3_authorizeUpgradeMustBindSpecificImplementation_desiredBehavior() public {
+    function test_OI_AU_3_authorizeUpgradeMustBindSpecificImplementation() public {
         // Setup: manually set an authorized target that does not match the requested implementation.
         organizationProxy.setUpgradeState(address(whitelist), address(0xBEEF));
 

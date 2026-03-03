@@ -116,7 +116,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed nested migration payloads cannot trigger an unauthorized second upgrade.
-    function test_UPG_FZ_5_fuzz_nestedUpgradeFromRandomPayload_reverts_desiredBehavior(bytes memory randomData) public {
+    function test_UPG_FZ_5_fuzz_nestedUpgradeFromRandomPayload_reverts(bytes memory randomData) public {
         // Setup: whitelist both V2 and V3 and craft migration payload that attempts nested second upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

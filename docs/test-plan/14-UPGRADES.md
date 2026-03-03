@@ -44,12 +44,12 @@
 | OI-UTACWA-22 | Failed upgrade path never leaves `isUpgradeAuthorized` stuck true | [S] | P0 |
 | OI-UTACWA-23 | Direct call to inherited `upgradeToAndCall` (bypassing wrapper) always reverts `UnauthorizedUpgrade` | [S] | P0 |
 | OI-UTACWA-24 | Direct `upgradeToAndCall` reverts even if caller is the guardian (must still go through authorized flow) | [S] | P0 |
-| OI-UTACWA-25 | **Desired behavior:** admin authorization must also bind the `data` payload (guardian cannot swap migration calldata after signatures are collected) | [S] | P0 |
-| OI-UTACWA-26 | **Desired behavior:** migration `data` cannot trigger a nested second upgrade to bypass whitelist/admin authorization | [S] | P0 |
-| OI-UTACWA-27 | **Desired behavior:** nested second upgrade still fails when second target is also whitelisted and UUPS-compatible (must fail for missing fresh admin+guardian authorization, not whitelist/UUPS mismatch) | [S] | P0 |
-| OI-UTACWA-28 | **Desired behavior:** upgrades fail closed if configured whitelist address has no code (EOA/zero/misconfigured address) | [S] | P0 |
-| OI-UTACWA-29 | **Desired behavior:** upgrade reverts when whitelist validation call reverts | [S] | P0 |
-| OI-UTACWA-30 | **Desired behavior:** `newImplementation` must be a non-zero contract address (even if mistakenly whitelisted) | [S] | P0 |
+| OI-UTACWA-25 | Admin authorization must also bind the `data` payload (guardian cannot swap migration calldata after signatures are collected) | [S] | P0 |
+| OI-UTACWA-26 | Migration `data` cannot trigger a nested second upgrade to bypass whitelist/admin authorization | [S] | P0 |
+| OI-UTACWA-27 | Nested second upgrade still fails when second target is also whitelisted and UUPS-compatible (must fail for missing fresh admin+guardian authorization, not whitelist/UUPS mismatch) | [S] | P0 |
+| OI-UTACWA-28 | Upgrades fail closed if configured whitelist address has no code (EOA/zero/misconfigured address) | [S] | P0 |
+| OI-UTACWA-29 | Upgrade reverts when whitelist validation call reverts | [S] | P0 |
+| OI-UTACWA-30 | `newImplementation` must be a non-zero contract address (even if mistakenly whitelisted) | [S] | P0 |
 
 ### 1.2 `implementation()` (IBeacon override)
 
@@ -66,7 +66,7 @@
 |---|-----------|------|----------|
 | OI-AU-1 | Reverts `UnauthorizedUpgrade` when authorization flag is false | [S] | P0 |
 | OI-AU-2 | Succeeds only when authorization flag is set by authorized wrapper flow | [S] | P0 |
-| OI-AU-3 | **Desired behavior:** authorization should be bound to the specific pre-approved `newImplementation` (not just a boolean flag) | [S] | P0 |
+| OI-AU-3 | Authorization should be bound to the specific pre-approved `newImplementation` (not just a boolean flag) | [S] | P0 |
 
 ### 1.4 Inherited UUPS Entry Points (`upgradeToAndCall`, `proxiableUUID`)
 
@@ -99,8 +99,8 @@
 | OAFB-SAI-14 | Sequential upgrades (V1 -> V2 -> V3) preserve state and functionality at each step for account contracts that use the organization as their beacon | [I] | P1 |
 | OAFB-SAI-15 | No per-account upgrade path exists (all accounts under an org share one implementation pointer) | [S] | P1 |
 | OAFB-SAI-16 | Upgrading account implementation does not alter Organization proxy implementation | [S] | P1 |
-| OAFB-SAI-17 | **Desired behavior:** upgrade fails closed if whitelist address has no code (EOA/zero/misconfigured) | [S] | P0 |
-| OAFB-SAI-18 | **Desired behavior:** `newImplementation` must be non-zero and have code (even if mistakenly whitelisted) | [S] | P0 |
+| OAFB-SAI-17 | Upgrade fails closed if whitelist address has no code (EOA/zero/misconfigured) | [S] | P0 |
+| OAFB-SAI-18 | `newImplementation` must be non-zero and have code (even if mistakenly whitelisted) | [S] | P0 |
 | OAFB-SAI-19 | Reverting account-implementation upgrade paths (whitelist/no-code checks) do not consume admin auth nonce and do not mutate beacon implementation state | [S] | P1 |
 
 ### 2.2 `implementation()` (beacon implementation getter)
@@ -217,7 +217,7 @@
 | UPG-FZ-2 | Fuzz Account implementation targets: any non-whitelisted candidate always rejected | [F] | P0 |
 | UPG-FZ-3 | Fuzz successful upgrade sequences (whitelisted targets + valid auth): state remains consistent across repeated upgrades | [F] | P1 |
 | UPG-FZ-4 | Fuzz migration calldata: malformed payloads revert atomically (no partial upgrade state) | [F] | P0 |
-| UPG-FZ-5 | **Desired behavior fuzz:** random calldata cannot trigger unauthorized nested second upgrade | [F] | P0 |
+| UPG-FZ-5 | Random calldata cannot trigger unauthorized nested second upgrade | [F] | P0 |
 
 ---
 
@@ -230,7 +230,7 @@
 | UPG-INV-3 | Account upgrades only target whitelisted Account implementations | P0 |
 | UPG-INV-4 | All accounts under the same organization always resolve the same beacon implementation address | P0 |
 | UPG-INV-5 | Organization UUPS implementation pointer and Account beacon implementation pointer are independent state variables | P1 |
-| UPG-INV-6 | **Desired behavior:** Organization proxy-stored whitelist address used for upgrade checks remains immutable across Organization upgrades | P1 |
+| UPG-INV-6 | Organization proxy-stored whitelist address used for upgrade checks remains immutable across Organization upgrades | P1 |
 | UPG-INV-7 | Direct calls to UUPS upgrade selectors on the Organization proxy (`upgradeToAndCall` and raw `upgradeTo` selector) never change implementation unless wrapper authorization succeeds in the same transaction | P0 |
 
 ---
