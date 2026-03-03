@@ -155,7 +155,7 @@
 | 75 | If whitelist call reverts (bad whitelist contract), deployment reverts | [N] | P0 |
 | 76 | `whitelistAddress == address(0)` causes deployment revert | [N] | P0 |
 | 77 | Whitelist check failure occurs before proxy deployment side effects (no deployed contract, no event) | [S] | P0 |
-| 78 | Deployed Organization proxy stores the exact `whitelistAddress` passed to factory | [I] | P1 |
+| 78 | Deployed Organization proxy stores the exact `whitelistAddress` and `implementationAddress` passed to factory | [I] | P1 |
 | 79 | [DESIRED] Reject implementation targets with no code, even if whitelist contract is permissive/malicious | [S] | P0 |
 | 80 | [DESIRED] Reject `implementationAddress == address(0)` explicitly | [N] | P0 |
 | 81 | If organization initialization fails after deploy, tx reverts atomically and no uninitialized org remains deployed | [S] | P0 |
