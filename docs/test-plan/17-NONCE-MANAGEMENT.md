@@ -202,77 +202,92 @@
 |---|----------|-----------|------|----------|
 | 73 | `deployAccount` | Replay with same signed params/salt reverts | [S] | P0 |
 | 74 | `deployAccount` | Different admin auth salt for same `create2Salt` yields independent nonce | [U] | P1 |
-| 75 | `setAccountImplementation` | Replay with same signed params/salt reverts | [S] | P0 |
-| 76 | `setAccountImplementation` | If whitelist validation reverts, nonce is rolled back | [S] | P0 |
-| 77 | `deployAccount` | If CREATE2 deployment reverts (e.g., duplicate salt), nonce is rolled back | [S] | P0 |
+| 75 | `deployAccount` | Same `create2Salt` with different admin auth salts cannot be executed twice on one org (second call reverts from CREATE2 collision); to keep both calls successful, run once per fresh organization instance with identical params | [S] | P1 |
+| 76 | `setAccountImplementation` | Replay with same signed params/salt reverts | [S] | P0 |
+| 77 | `setAccountImplementation` | Same `newImplementation` with different admin auth salts can both succeed (use a whitelisted implementation with runtime code so downstream validation passes both times) | [U] | P1 |
+| 78 | `setAccountImplementation` | If whitelist validation reverts, nonce is rolled back | [S] | P0 |
+| 79 | `deployAccount` | If CREATE2 deployment reverts (e.g., duplicate salt), nonce is rolled back | [S] | P0 |
 
 ### 6.2 `OrganizationMembersBase.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 78 | `modifyMembers` | Replay with same signed params/salt reverts | [S] | P0 |
-| 79 | `modifyMembers` | Same members set but different array order produces different nonce | [S] | P1 |
-| 80 | `modifyMembers` | If member mutation reverts (e.g., removing an admin member), nonce is rolled back | [S] | P0 |
+| 80 | `modifyMembers` | Replay with same signed params/salt reverts | [S] | P0 |
+| 81 | `modifyMembers` | Same members set but different array order produces different nonce | [S] | P1 |
+| 82 | `modifyMembers` | Same `membersToAdd` and `membersToRemove` arrays (same order) can both succeed with different admin auth salts; if direct back-to-back would fail for chosen fixtures, restore pre-state with an intermediate inverse member update, then repeat the exact original call | [S] | P1 |
+| 83 | `modifyMembers` | If member mutation reverts (e.g., removing an admin member), nonce is rolled back | [S] | P0 |
 
 ### 6.3 `OrganizationGroupsBase.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 81 | `modifyGroups` | Replay with same signed params/salt reverts | [S] | P0 |
-| 82 | `modifyGroups` | Same semantic modifications with different ordering produce different nonce | [S] | P1 |
-| 83 | `modifyGroups` | If group mutation reverts (invalid create/update/delete/member changes), nonce is rolled back | [S] | P0 |
+| 84 | `modifyGroups` | Replay with same signed params/salt reverts | [S] | P0 |
+| 85 | `modifyGroups` | Same semantic modifications with different ordering produce different nonce | [S] | P1 |
+| 86 | `modifyGroups` | Same `modifications` array (same order) can both succeed with different admin auth salts; when using non-repeatable create/delete shapes, insert an intermediate state-reset sequence (for example, delete/recreate or recreate/delete as appropriate) so the second call sees the same valid pre-state | [S] | P1 |
+| 87 | `modifyGroups` | If group mutation reverts (invalid create/update/delete/member changes), nonce is rolled back | [S] | P0 |
 
 ### 6.4 `OrganizationPolicyBase.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 84 | `setPolicies` | Replay with same signed params/salt reverts | [S] | P0 |
-| 85 | `setPolicies` | Same `newPoliciesRoot` but different `ipfsCid` yields different nonce (CID hash is bound) | [S] | P1 |
-| 86 | `setPolicies` | Same root + same CID bytes yields same nonce | [U] | P1 |
+| 88 | `setPolicies` | Replay with same signed params/salt reverts | [S] | P0 |
+| 89 | `setPolicies` | Same `newPoliciesRoot` but different `ipfsCid` yields different nonce (CID hash is bound) | [S] | P1 |
+| 90 | `setPolicies` | Same root + same CID bytes yields same nonce | [U] | P1 |
+| 91 | `setPolicies` | Same `(newPoliciesRoot, ipfsCid)` can both succeed with different admin auth salts (idempotent downstream write) | [U] | P1 |
 
 ### 6.5 `OrganizationGuardianBase.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 87 | `initiateGuardianUpdate` | Replay with same signed params/salt reverts | [S] | P0 |
-| 88 | `finalizeGuardianUpdate` | Replay with same signed params/salt reverts | [S] | P0 |
-| 89 | `cancelGuardianUpdate` | Replay with same signed params/salt reverts | [S] | P0 |
-| 90 | `initiate/finalize/cancel` | Signatures for one stage cannot be replayed for another stage (distinct `OperationType`) | [S] | P0 |
-| 91 | `finalize/cancel` | Signatures are bound to current pending guardian; stale signatures fail after pending value changes | [S] | P0 |
-| 92 | `initiateGuardianUpdate` | If downstream guardian validation fails (`newGuardian=0` or update already pending), nonce is rolled back | [S] | P0 |
-| 93 | `finalize/cancel` | If downstream pending/timelock checks fail, nonce is rolled back | [S] | P0 |
+| 92 | `initiateGuardianUpdate` | Replay with same signed params/salt reverts | [S] | P0 |
+| 93 | `initiateGuardianUpdate` | Same `newGuardian` can both succeed with different admin auth salts by doing `initiate(newGuardian)` -> `cancelGuardianUpdate(...)` -> `initiate(newGuardian)` again | [S] | P1 |
+| 94 | `finalizeGuardianUpdate` | Replay with same signed params/salt reverts | [S] | P0 |
+| 95 | `finalizeGuardianUpdate` | Same pending guardian can be finalized twice with different admin auth salts: initiate once, wait timelock once, call `finalizeGuardianUpdate` twice before accept/cancel | [S] | P1 |
+| 96 | `cancelGuardianUpdate` | Replay with same signed params/salt reverts | [S] | P0 |
+| 97 | `cancelGuardianUpdate` | Same pending guardian can be canceled twice with different admin auth salts by re-initiating the same guardian between cancels | [S] | P1 |
+| 98 | `initiate/finalize/cancel` | Signatures for one stage cannot be replayed for another stage (distinct `OperationType`) | [S] | P0 |
+| 99 | `finalize/cancel` | Signatures are bound to current pending guardian; stale signatures fail after pending value changes | [S] | P0 |
+| 100 | `initiateGuardianUpdate` | If downstream guardian validation fails (`newGuardian=0` or update already pending), nonce is rolled back | [S] | P0 |
+| 101 | `finalize/cancel` | If downstream pending/timelock checks fail, nonce is rolled back | [S] | P0 |
 
 ### 6.6 `OrganizationGuardianRecoveryBase.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 94 | `initiateInitializeGuardianRecovery` | Replay with same signed params/salt reverts | [S] | P0 |
-| 95 | `finalizeInitializeGuardianRecovery` | Replay with same signed params/salt reverts | [S] | P0 |
-| 96 | `cancelInitializeGuardianRecovery` | Replay with same signed params/salt reverts | [S] | P0 |
-| 97 | `initiate/finalize/cancel` | Signatures for one stage cannot be replayed for another stage (distinct `OperationType`) | [S] | P0 |
-| 98 | `finalize/cancel` | Signatures are bound to current pending `(recoveryAddress, timelock)` values | [S] | P0 |
-| 99 | `initiateInitializeGuardianRecovery` | If downstream init checks fail (invalid params/already configured/already pending), nonce is rolled back | [S] | P0 |
-| 100 | `finalize/cancel` | If downstream pending/timelock checks fail, nonce is rolled back | [S] | P0 |
+| 102 | `initiateInitializeGuardianRecovery` | Replay with same signed params/salt reverts | [S] | P0 |
+| 103 | `initiateInitializeGuardianRecovery` | Same `(recoveryAddress, timelockDurationSeconds)` can both succeed with different admin auth salts by using `initiate` -> `cancel` -> `initiate` (same params) | [S] | P1 |
+| 104 | `finalizeInitializeGuardianRecovery` | Replay with same signed params/salt reverts | [S] | P0 |
+| 105 | `finalizeInitializeGuardianRecovery` | Same pending init params can each finalize with different salts only on fresh org instances (single org cannot finalize init twice because first finalize permanently configures guardian recovery); run `initiate` + timelock wait + `finalize` once per fresh org | [S] | P1 |
+| 106 | `cancelInitializeGuardianRecovery` | Replay with same signed params/salt reverts | [S] | P0 |
+| 107 | `cancelInitializeGuardianRecovery` | Same pending init params can be canceled twice with different admin auth salts by re-initiating identical params between cancels | [S] | P1 |
+| 108 | `initiate/finalize/cancel` | Signatures for one stage cannot be replayed for another stage (distinct `OperationType`) | [S] | P0 |
+| 109 | `finalize/cancel` | Signatures are bound to current pending `(recoveryAddress, timelock)` values | [S] | P0 |
+| 110 | `initiateInitializeGuardianRecovery` | If downstream init checks fail (invalid params/already configured/already pending), nonce is rolled back | [S] | P0 |
+| 111 | `finalize/cancel` | If downstream pending/timelock checks fail, nonce is rolled back | [S] | P0 |
 
 ### 6.7 `OrganizationTxRecoveryBase.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 101 | `initiateInitializeTransactionAndERC1271Recovery` | Replay with same signed params/salt reverts | [S] | P0 |
-| 102 | `finalizeInitializeTransactionAndERC1271Recovery` | Replay with same signed params/salt reverts | [S] | P0 |
-| 103 | `cancelInitializeTransactionAndERC1271Recovery` | Replay with same signed params/salt reverts | [S] | P0 |
-| 104 | `initiate/finalize/cancel` | Signatures for one stage cannot be replayed for another stage (distinct `OperationType`) | [S] | P0 |
-| 105 | `finalize/cancel` | Signatures are bound to current pending `(recoveryAddress, timelock)` values | [S] | P0 |
-| 106 | `initiateInitializeTransactionAndERC1271Recovery` | If downstream init checks fail (invalid params/already configured/already pending), nonce is rolled back | [S] | P0 |
-| 107 | `finalize/cancel` | If downstream pending/timelock checks fail, nonce is rolled back | [S] | P0 |
+| 112 | `initiateInitializeTransactionAndERC1271Recovery` | Replay with same signed params/salt reverts | [S] | P0 |
+| 113 | `initiateInitializeTransactionAndERC1271Recovery` | Same `(recoveryAddress, timelockDurationSeconds)` can both succeed with different admin auth salts by using `initiate` -> `cancel` -> `initiate` (same params) | [S] | P1 |
+| 114 | `finalizeInitializeTransactionAndERC1271Recovery` | Replay with same signed params/salt reverts | [S] | P0 |
+| 115 | `finalizeInitializeTransactionAndERC1271Recovery` | Same pending init params can each finalize with different salts only on fresh org instances (single org cannot finalize init twice because first finalize permanently configures tx recovery); run `initiate` + timelock wait + `finalize` once per fresh org | [S] | P1 |
+| 116 | `cancelInitializeTransactionAndERC1271Recovery` | Replay with same signed params/salt reverts | [S] | P0 |
+| 117 | `cancelInitializeTransactionAndERC1271Recovery` | Same pending init params can be canceled twice with different admin auth salts by re-initiating identical params between cancels | [S] | P1 |
+| 118 | `initiate/finalize/cancel` | Signatures for one stage cannot be replayed for another stage (distinct `OperationType`) | [S] | P0 |
+| 119 | `finalize/cancel` | Signatures are bound to current pending `(recoveryAddress, timelock)` values | [S] | P0 |
+| 120 | `initiateInitializeTransactionAndERC1271Recovery` | If downstream init checks fail (invalid params/already configured/already pending), nonce is rolled back | [S] | P0 |
+| 121 | `finalize/cancel` | If downstream pending/timelock checks fail, nonce is rolled back | [S] | P0 |
 
 ### 6.8 `OrganizationImplementation.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 108 | `upgradeToAndCallWithAuthorization` | Replay with same signed params/salt reverts | [S] | P0 |
-| 109 | `upgradeToAndCallWithAuthorization` | **Desired behavior:** admin authorization/nonce domain binds both `newImplementation` and migration `data` (guardian cannot swap calldata) | [S] | P0 |
-| 110 | `upgradeToAndCallWithAuthorization` | If whitelist validation, UUPS upgrade checks, or migration call reverts, nonce is rolled back | [S] | P0 |
+| 122 | `upgradeToAndCallWithAuthorization` | Replay with same signed params/salt reverts | [S] | P0 |
+| 123 | `upgradeToAndCallWithAuthorization` | Same `(newImplementation, data)` can both succeed with different admin auth salts when `data` is idempotent/no-op migration calldata; avoid one-time initializer calldata that would revert on the second call | [S] | P1 |
+| 124 | `upgradeToAndCallWithAuthorization` | **Desired behavior:** admin authorization/nonce domain binds both `newImplementation` and migration `data` (guardian cannot swap calldata) | [S] | P0 |
+| 125 | `upgradeToAndCallWithAuthorization` | If whitelist validation, UUPS upgrade checks, or migration call reverts, nonce is rolled back | [S] | P0 |
 
 ---
 
@@ -282,23 +297,23 @@
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 111 | `_computeInitiatorHashFromParams` | `isApproval=true` and `isApproval=false` produce different hashes | [S] | P0 |
-| 112 | `_computeInitiatorHashFromParams` | Different `chainId` produces different hash (cross-chain replay protection) | [S] | P0 |
-| 113 | `_computeInitiatorHashFromParams` | Different organization address produces different hash (cross-org replay protection) | [S] | P0 |
-| 114 | `_computeReviewHashFromParams` | Different `initiatorSignature` produces different reviewer hash (`keccak256(initiatorSignature)` binding) | [S] | P0 |
-| 115 | `_computeReviewHashFromParams` | `isApproval` flip changes reviewer hash | [S] | P0 |
-| 116 | `_computeInitiatorHashFromParams` + `_computeReviewHashFromParams` | Golden vectors match expected typed-data hashes | [U] | P1 |
-| 117 | `_validateAutoApproveRejectionOrRevert` | Approval signature cannot be replayed as rejection authorization (`isApproval` domain separation) | [S] | P0 |
-| 118 | `_validateManualConfirmationOrRevert` | Reviewer signatures are bound to `(isApproval, initiatorSignature)`; replay across approval/rejection or different initiator signature fails | [S] | P0 |
+| 126 | `_computeInitiatorHashFromParams` | `isApproval=true` and `isApproval=false` produce different hashes | [S] | P0 |
+| 127 | `_computeInitiatorHashFromParams` | Different `chainId` produces different hash (cross-chain replay protection) | [S] | P0 |
+| 128 | `_computeInitiatorHashFromParams` | Different organization address produces different hash (cross-org replay protection) | [S] | P0 |
+| 129 | `_computeReviewHashFromParams` | Different `initiatorSignature` produces different reviewer hash (`keccak256(initiatorSignature)` binding) | [S] | P0 |
+| 130 | `_computeReviewHashFromParams` | `isApproval` flip changes reviewer hash | [S] | P0 |
+| 131 | `_computeInitiatorHashFromParams` + `_computeReviewHashFromParams` | Golden vectors match expected typed-data hashes | [U] | P1 |
+| 132 | `_validateAutoApproveRejectionOrRevert` | Approval signature cannot be replayed as rejection authorization (`isApproval` domain separation) | [S] | P0 |
+| 133 | `_validateManualConfirmationOrRevert` | Reviewer signatures are bound to `(isApproval, initiatorSignature)`; replay across approval/rejection or different initiator signature fails | [S] | P0 |
 
 ### 7.2 `LibOrganizationEIP712.sol`
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 119 | `getDomainSeparator` | Deterministic for same chain + same organization | [U] | P1 |
-| 120 | `getDomainSeparator` | Different chain IDs produce different domain separators | [S] | P0 |
-| 121 | `getDomainSeparator` | Different organization addresses produce different domain separators | [S] | P0 |
-| 122 | `computeTypedDataHash` | Matches EIP-712 reference output for known `(domain, structHash)` vector | [U] | P1 |
+| 134 | `getDomainSeparator` | Deterministic for same chain + same organization | [U] | P1 |
+| 135 | `getDomainSeparator` | Different chain IDs produce different domain separators | [S] | P0 |
+| 136 | `getDomainSeparator` | Different organization addresses produce different domain separators | [S] | P0 |
+| 137 | `computeTypedDataHash` | Matches EIP-712 reference output for known `(domain, structHash)` vector | [U] | P1 |
 
 ---
 
@@ -306,12 +321,12 @@
 
 | # | Test Case | Runs | Priority |
 |---|-----------|------|----------|
-| 123 | Random `(operationType, operationData, salt)` tuples produce collision-resistant nonces in practice | 1000 | P1 |
-| 124 | Random salts for fixed operation always produce independent nonces | 1000 | P1 |
-| 125 | Across mixed nonce-consuming entry points, replaying any successfully used nonce always reverts | 1000 | P0 |
-| 126 | Random invalid/expired admin auth attempts never leave nonce marked as used | 1000 | P0 |
-| 127 | Random mixed EOA/ERC-1271 admin signature streams parse offsets correctly and enforce ordering/admin checks | 1000 | P0 |
-| 128 | Random unauthorized-caller attempts against nonce-consuming entry points never burn nonce | 1000 | P0 |
+| 138 | Random `(operationType, operationData, salt)` tuples produce collision-resistant nonces in practice | 1000 | P1 |
+| 139 | Random salts for fixed operation always produce independent nonces | 1000 | P1 |
+| 140 | Across mixed nonce-consuming entry points, replaying any successfully used nonce always reverts | 1000 | P0 |
+| 141 | Random invalid/expired admin auth attempts never leave nonce marked as used | 1000 | P0 |
+| 142 | Random mixed EOA/ERC-1271 admin signature streams parse offsets correctly and enforce ordering/admin checks | 1000 | P0 |
+| 143 | Random unauthorized-caller attempts against nonce-consuming entry points never burn nonce | 1000 | P0 |
 
 ---
 
@@ -319,11 +334,11 @@
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 129 | **Nonce monotonicity:** once `isNonceUsed(nonce) == true`, it never returns `false` | P0 |
-| 130 | **No double-spend:** a nonce consumed by approve/execute cannot be consumed by reject (and vice versa) | P0 |
-| 131 | **Cross-org isolation:** same operation inputs across different organizations never share nonce/hash validity | P0 |
-| 132 | **Rollback safety:** failed paths that revert do not burn nonces | P0 |
-| 133 | **Admin reject domain isolation (desired):** `rejectAdminOperation` cannot consume nonces in account-transaction operation domains | P0 |
+| 144 | **Nonce monotonicity:** once `isNonceUsed(nonce) == true`, it never returns `false` | P0 |
+| 145 | **No double-spend:** a nonce consumed by approve/execute cannot be consumed by reject (and vice versa) | P0 |
+| 146 | **Cross-org isolation:** same operation inputs across different organizations never share nonce/hash validity | P0 |
+| 147 | **Rollback safety:** failed paths that revert do not burn nonces | P0 |
+| 148 | **Admin reject domain isolation (desired):** `rejectAdminOperation` cannot consume nonces in account-transaction operation domains | P0 |
 
 ---
 
@@ -331,7 +346,7 @@
 
 | Category | Tests | Priority Focus |
 |----------|-------|----------------|
-| File/function unit + security cases | 122 | P0/P1 |
+| File/function unit + security cases | 137 | P0/P1 |
 | Fuzz tests | 6 | P0/P1 |
 | Invariants | 5 | P0 |
-| **Total** | **133** | |
+| **Total** | **148** | |
