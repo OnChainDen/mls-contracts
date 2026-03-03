@@ -4,6 +4,10 @@ pragma solidity 0.8.33;
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {ContractType} from "types/CommonTypes.sol";
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {
     ImplementationWhitelistHarness,
     ImplementationWhitelistV2Harness
@@ -59,7 +63,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         address[] memory empty;
 
         // Verify: second initialize attempt reverts.
-        vm.expectRevert();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         // Call: attempt re-initialization.
         whitelistProxy.initialize(OWNER, empty, empty);
     }
@@ -70,7 +74,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         address[] memory empty;
 
         // Verify: direct initialize call on implementation reverts.
-        vm.expectRevert();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         // Call: attempt initialize on implementation contract itself.
         implementation.initialize(OWNER, empty, empty);
     }
@@ -98,7 +102,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         address[] memory empty;
 
         // Verify: zero-owner initialization is rejected.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableInvalidOwner.selector, address(0)));
         // Call: initialize with zero owner.
         proxy.initialize(address(0), empty, empty);
     }
@@ -184,7 +188,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         address[] memory empty;
 
         // Verify: only owner can call whitelist mutation endpoint.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER));
         vm.prank(NON_OWNER);
         // Call: non-owner attempts whitelist mutation.
         whitelistProxy.whitelistImplementations(ContractType.Organization, toAdd, empty);
@@ -281,7 +285,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.transferOwnership(NEW_OWNER);
 
         // Verify: pending owner cannot act until ownership acceptance.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NEW_OWNER));
         vm.prank(NEW_OWNER);
         // Call: pending owner attempts whitelist mutation before `acceptOwnership`.
         whitelistProxy.whitelistImplementations(
@@ -306,7 +310,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Verify: new owner mutation succeeded and old owner no longer has mutation rights.
         assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, OWNER));
         vm.prank(OWNER);
         // Call: old owner attempts post-transfer mutation.
         whitelistProxy.whitelistImplementations(
@@ -392,7 +396,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Setup: initialized proxy owned by OWNER.
 
         // Verify: non-owner upgrade attempt reverts.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NON_OWNER));
         vm.prank(NON_OWNER);
         // Call: unauthorized UUPS upgrade attempt.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
@@ -405,7 +409,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.transferOwnership(NEW_OWNER);
 
         // Verify: pending owner cannot upgrade before calling `acceptOwnership`.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NEW_OWNER));
         vm.prank(NEW_OWNER);
         // Call: pending owner attempts UUPS upgrade.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
@@ -426,7 +430,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Verify: upgrade succeeded, and old owner can no longer upgrade.
         assertEq(_readProxyImplementation(address(whitelistProxy)), address(implementationV2), "upgrade should succeed");
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, OWNER));
         vm.prank(OWNER);
         // Call: old owner attempts another upgrade after transfer.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementation), bytes(""));
@@ -469,12 +473,18 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Setup: initialized proxy.
 
         // Verify: non-UUPS target is rejected.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation)
+            )
+        );
         vm.prank(OWNER);
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(nonUupsImplementation), bytes(""));
 
         // Verify: incompatible UUPS UUID target is rejected.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(0xDEAD)))
+        );
         vm.prank(OWNER);
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(wrongUuidImplementation), bytes(""));
     }
@@ -484,7 +494,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Setup: implementation call context (not delegatecall via proxy).
 
         // Verify: direct implementation invocation is rejected by UUPS call-context guard.
-        vm.expectRevert();
+        vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         // Call: invoke UUPS entrypoint directly on implementation.
         IUUPSWhitelistEntrypoints(address(implementation)).upgradeToAndCall(address(implementationV2), bytes(""));
     }
@@ -494,7 +504,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Setup: proxy call context.
 
         // Verify: `proxiableUUID` cannot be called through proxy delegatecall context.
-        vm.expectRevert();
+        vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         // Call: invoke `proxiableUUID` through proxy.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).proxiableUUID();
     }
