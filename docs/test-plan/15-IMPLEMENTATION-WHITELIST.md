@@ -42,7 +42,6 @@
 | 12 | Empty organization/account arrays: initialize still succeeds and sets owner | [E] | P2 |
 | 13 | `initialOwner == address(0)` reverts | [N] | P0 |
 | 14 | Second initialization attempt reverts (initializer guard) | [N] | P0 |
-| 15 | [DESIRED] Init rejects `address(0)` implementation entries | [N] | P0 |
 | 16 | [DESIRED] Init rejects implementation entries with no code (EOA/non-contract) | [S] | P0 |
 
 ### 1.3 `whitelistImplementations`
@@ -62,8 +61,6 @@
 | 27 | Emits `ImplementationWhitelisted` with correct type/address for each added entry | [EV] | P2 |
 | 28 | Emits `ImplementationUnwhitelisted` with correct type/address for each removed entry | [EV] | P2 |
 | 29 | Type isolation: changing one `ContractType` does not modify the other mapping | [U] | P1 |
-| 30 | [DESIRED] Reject `address(0)` in `toWhitelist` | [N] | P0 |
-| 31 | [DESIRED] Reject no-code addresses in `toWhitelist` | [S] | P0 |
 
 ### 1.4 `isInitialized`
 
@@ -103,7 +100,7 @@
 | 46 | Upgrade preserves whitelist state for both contract types, even in the case of multiple sequential upgrades | [I] | P1 |
 | 47 | Upgrade preserves ownership state | [I] | P1 |
 | 48 | Upgrade with post-upgrade calldata executes successfully | [I] | P1 |
-| 49 | Upgrade to non-UUPS/no-code implementation reverts | [N] | P0 |
+| 49 | Upgrade to no-code implementation reverts | [N] | P0 |
 
 ### 1.8 Private Helpers (`_addToWhitelist`, `_removeFromWhitelist`)
 
@@ -116,8 +113,6 @@
 | 52 | `_addToWhitelist`: empty array is no-op | [E] | P2 |
 | 53 | `_addToWhitelist`: type independence preserved | [U] | P2 |
 | 54 | `_addToWhitelist`: emits `ImplementationWhitelisted` per processed element | [EV] | P2 |
-| 55 | [DESIRED] `_addToWhitelist`: reject `address(0)` | [N] | P0 |
-| 56 | [DESIRED] `_addToWhitelist`: reject no-code addresses | [S] | P0 |
 | 57 | `_removeFromWhitelist`: whitelisted entry becomes false | [U] | P2 |
 | 58 | `_removeFromWhitelist`: non-whitelisted entry stays false (idempotent) | [E] | P2 |
 | 59 | `_removeFromWhitelist`: type independence preserved (removing under one `ContractType` does not affect the other mapping) | [U] | P2 |
@@ -244,7 +239,7 @@
 | 117 | Whitelisted account implementation updates beacon implementation storage | [U] | P1 |
 | 118 | Emits `AccountImplementationUpdated(newImplementation)` on success | [EV] | P1 |
 | 119 | Whitelist-call failure reverts and does not update implementation state | [S] | P0 |
-| 120 | Invalid/no-code whitelist contract address causes revert | [N] | P0 |
+| 120 | address zero and no-code whitelist contract addresses causes revert | [N] | P0 |
 | 121 | [DESIRED] Reject account implementation with no code even if whitelist contract returns true | [S] | P0 |
 | 122 | [DESIRED] Reject `newImplementation == address(0)` explicitly | [N] | P0 |
 
@@ -260,7 +255,6 @@
 | 126 | Re-whitelisting previously removed implementation re-enables eligible flows | [I] | P1 |
 | 127 | Upgrading the whitelist contract preserves existing whitelist state and enforcement behavior in factory/org/account flows | [I] | P1 |
 | 128 | Ownership transfer of whitelist contract immediately changes who can alter allowed implementations system-wide | [I] | P1 |
-| 129 | Malicious/buggy whitelist contract behavior (revert/false positives) cannot bypass desired no-code-address protections | [S] | P0 |
 | 130 | Deployment path remains atomic with whitelist validation + initialization (no partial state exposure) | [S] | P0 |
 
 ---
@@ -273,7 +267,6 @@
 | 132 | Fuzz add/remove sequences per `ContractType`: onchain state matches reference model mapping | [F] | P1 |
 | 133 | Fuzz mixed `Account`/`Organization` operations: mappings remain independent | [F] | P1 |
 | 134 | Fuzz `(salt, implementation, whitelist)` tuples: `computeOrganizationAddress` remains deterministic and sensitivity-preserving | [F] | P1 |
-| 135 | [DESIRED] Fuzz zero/no-code implementation addresses: always rejected as valid implementations | [F] | P0 |
 | 136 | [DESIRED] Fuzz org-upgrade migration calldata: nested second-upgrade bypass attempts always fail | [F] | P0 |
 | 137 | Fuzz proxy initialization inputs: malformed init data never leaves partially initialized whitelist proxy | [F] | P1 |
 
