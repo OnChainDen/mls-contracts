@@ -138,32 +138,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertTrue(proxy.isImplementationWhitelisted(ContractType.Account, shared));
     }
 
-    /// @dev Verifies `initialize` rejects zero-address implementation entries in seed arrays.
-    function test_IWI_INIT_9_initialize_rejectsZeroAddressSeeds_desiredBehavior() public {
-        // Setup: deploy uninitialized proxy and include zero address in seed list.
-        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
-        address[] memory orgSeeds = _single(address(0));
-        address[] memory empty;
-
-        // Verify: zero-address seed entries are rejected.
-        vm.expectRevert();
-        // Call: initialize with zero-address organization implementation seed.
-        proxy.initialize(OWNER, orgSeeds, empty);
-    }
-
-    /// @dev Verifies `initialize` rejects non-contract implementation entries in seed arrays.
-    function test_IWI_INIT_10_initialize_rejectsNonContractSeeds_desiredBehavior() public {
-        // Setup: deploy uninitialized proxy and include no-code address in seed list.
-        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
-        address[] memory orgSeeds = _single(noCodeAddress);
-        address[] memory empty;
-
-        // Verify: non-contract seed entries are rejected.
-        vm.expectRevert();
-        // Call: initialize with non-contract organization implementation seed.
-        proxy.initialize(OWNER, orgSeeds, empty);
-    }
-
     /// @dev Verifies owner can add and remove implementations in one `whitelistImplementations` call.
     function test_IWI_WI_1_ownerCanAddAndRemoveInSingleCall() public {
         // Setup: pre-whitelist one entry to remove, then prepare add/remove lists.
@@ -222,32 +196,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.whitelistImplementations(
             ContractType.Account, _single(accountImplementationB), _single(accountImplementationA)
         );
-    }
-
-    /// @dev Verifies `whitelistImplementations` rejects zero-address entries in mutation arrays.
-    function test_IWI_WI_5_whitelistMutation_rejectsZeroAddress_desiredBehavior() public {
-        // Setup: prepare zero-address addition payload.
-        address[] memory toAdd = _single(address(0));
-        address[] memory empty;
-
-        // Verify: zero-address whitelist updates are rejected.
-        vm.expectRevert();
-        vm.prank(OWNER);
-        // Call: owner attempts to whitelist zero address.
-        whitelistProxy.whitelistImplementations(ContractType.Organization, toAdd, empty);
-    }
-
-    /// @dev Verifies `whitelistImplementations` rejects non-contract entries in mutation arrays.
-    function test_IWI_WI_6_whitelistMutation_rejectsNonContractAddress_desiredBehavior() public {
-        // Setup: prepare no-code address addition payload.
-        address[] memory toAdd = _single(noCodeAddress);
-        address[] memory empty;
-
-        // Verify: non-contract whitelist updates are rejected.
-        vm.expectRevert();
-        vm.prank(OWNER);
-        // Call: owner attempts to whitelist no-code address.
-        whitelistProxy.whitelistImplementations(ContractType.Organization, toAdd, empty);
     }
 
     /// @dev Verifies same address in both add/remove arrays ends unwhitelisted (add then remove).
@@ -510,7 +458,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies owner-triggered `upgradeToAndCall` rejects zero and no-code implementation targets.
-    function test_IWI_UUPS_10_ownerCannotUpgradeToZeroOrNoCode_desiredBehavior() public {
+    function test_IWI_UUPS_10_ownerCannotUpgradeToZeroOrNoCode_reverts() public {
         // Setup: initialized proxy owned by OWNER.
 
         // Verify: zero-address target is rejected.

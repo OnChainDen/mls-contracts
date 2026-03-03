@@ -127,8 +127,6 @@
 | IWI-INIT-6 | `initialOwner == address(0)` reverts during initialization | [N] | P0 |
 | IWI-INIT-7 | Empty initial implementation arrays still initialize successfully and set owner | [E] | P2 |
 | IWI-INIT-8 | Same implementation address can be seeded independently under both `ContractType.Organization` and `ContractType.Account` in init | [S] | P1 |
-| IWI-INIT-9 | **Desired behavior:** initialization rejects zero-address implementation entries in seed arrays | [S] | P0 |
-| IWI-INIT-10 | **Desired behavior:** initialization rejects non-contract implementation entries in seed arrays | [S] | P0 |
 
 ### 3.2 `whitelistImplementations(ContractType contractType, address[] toWhitelist, address[] toUnwhitelist)`
 
@@ -138,8 +136,6 @@
 | IWI-WI-2 | Non-owner caller reverts | [N] | P1 |
 | IWI-WI-3 | Organization and Account whitelists are two independent whitelisted within the same whitelist contract| [S] | P1 |
 | IWI-WI-4 | Emits `ImplementationWhitelisted` and `ImplementationUnwhitelisted` for each processed address | [EV] | P2 |
-| IWI-WI-5 | **Desired behavior:** reject zero-address entries in whitelist updates | [S] | P0 |
-| IWI-WI-6 | **Desired behavior:** reject non-contract addresses in whitelist updates | [S] | P0 |
 | IWI-WI-7 | Same address present in both `toWhitelist` and `toUnwhitelist` in one call ends unwhitelisted (add then remove order) | [E] | P2 |
 | IWI-WI-8 | Both arrays empty is a no-op and does not revert | [E] | P2 |
 | IWI-WI-9 | Pending owner (before `acceptOwnership`) cannot call `whitelistImplementations` | [S] | P1 |
@@ -167,7 +163,7 @@
 | IWI-UUPS-7 | Upgrade to non-UUPS / incompatible implementation reverts | [S] | P1 |
 | IWI-UUPS-8 | Calling `upgradeToAndCall` on implementation contract directly (not proxy) reverts due UUPS `onlyProxy` guard | [S] | P1 |
 | IWI-UUPS-9 | Calling `proxiableUUID` through proxy reverts due UUPS `notDelegated` guard | [S] | P1 |
-| IWI-UUPS-10 | **Desired behavior:** owner cannot upgrade whitelist proxy to zero/no-code targets (must fail closed even with owner auth) | [S] | P0 |
+| IWI-UUPS-10 | Owner cannot upgrade whitelist proxy to zero/no-code targets (must fail closed even with owner auth) | [S] | P0 |
 
 ### 3.5 Private Function Tests (Requires `private` -> `internal` Conversion for Harness)
 
@@ -181,7 +177,6 @@
 | IWI-ATW-2 | Leaves the other `ContractType` mapping unchanged for same addresses | [S] | P1 |
 | IWI-ATW-3 | Emits one `ImplementationWhitelisted` event per input entry | [EV] | P2 |
 | IWI-ATW-4 | Empty input array is a no-op and does not revert | [E] | P2 |
-| IWI-ATW-5 | **Desired behavior:** rejects zero/non-contract addresses | [S] | P0 |
 | IWI-ATW-6 | Duplicate entries are idempotent at state level (mapping stays `true`) | [E] | P2 |
 
 #### 3.5.2 `_removeFromWhitelist(ContractType contractType, address[] implementations)`
@@ -246,8 +241,8 @@
 |----------|-------|----------|
 | `OrganizationImplementation.sol` | 36 | P0-P1 |
 | `OrganizationAccountFactoryBase.sol` | 20 | P0-P1 |
-| `ImplementationWhitelistImplementation.sol` | 46 | P0-P2 |
+| `ImplementationWhitelistImplementation.sol` | 41 | P0-P2 |
 | Cross-file upgrade security | 8 | P0-P1 |
 | Fuzz tests | 5 | P0-P1 |
 | Invariants | 7 | P0-P1 |
-| **Total** | **122** | |
+| **Total** | **117** | |

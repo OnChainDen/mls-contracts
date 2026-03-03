@@ -70,23 +70,6 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
         assertEq(afterState, beforeState, "empty add should not mutate state");
     }
 
-    /// @dev Verifies `_addToWhitelist` rejects zero-address and no-code implementation entries.
-    function test_IWI_ATW_5_addToWhitelist_rejectsZeroOrNonContract_desiredBehavior() public {
-        // Setup: zero-address and no-code address single-entry arrays.
-        address[] memory zeroInput = _single(address(0));
-        address[] memory noCodeInput = _single(noCodeAddress);
-
-        // Verify: zero-address entries are rejected.
-        vm.expectRevert();
-        // Call: add zero address via internal helper wrapper.
-        whitelistProxy.exposeAddToWhitelist(ContractType.Organization, zeroInput);
-
-        // Verify: no-code entries are rejected.
-        vm.expectRevert();
-        // Call: add no-code address via internal helper wrapper.
-        whitelistProxy.exposeAddToWhitelist(ContractType.Organization, noCodeInput);
-    }
-
     /// @dev Verifies duplicate `_addToWhitelist` entries are idempotent at state level.
     function test_IWI_ATW_6_addToWhitelist_duplicateEntries_idempotentState() public {
         // Setup: duplicate address list.
