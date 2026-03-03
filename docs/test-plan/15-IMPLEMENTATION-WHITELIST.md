@@ -98,7 +98,7 @@
 |---|-----------|------|----------|
 | 44 | Owner can upgrade whitelist proxy to valid UUPS implementation | [I] | P1 |
 | 45 | Non-owner cannot upgrade whitelist proxy | [N] | P0 |
-| 46 | Upgrade preserves whitelist state for both contract types | [I] | P1 |
+| 46 | Upgrade preserves whitelist state for both contract types, even in the case of multiple sequential upgrades | [I] | P1 |
 | 47 | Upgrade preserves ownership state | [I] | P1 |
 | 48 | Upgrade with post-upgrade calldata executes successfully | [I] | P1 |
 | 49 | Upgrade to non-UUPS/no-code implementation reverts | [N] | P0 |
