@@ -233,6 +233,10 @@
 | 118 | Authorized Executor can execute Guardian-only Organization function via `SafeExecutorModule` | [I] | P0 |
 | 119 | Unauthorized caller cannot execute Guardian-only Organization function via module | [I][S] | P0 |
 | 120 | `SafeExecutorModule -> BatchedTransaction` cannot execute Safe management calls (owner/module/threshold mutation) | [I][S] | P0 |
+| 121 | Safe v1.4.1 with module enabled: Authorized Executor runs one `SafeExecutorModule -> BatchedTransaction` call that executes `modifyMembers` (add members) then `modifyGroups` (create/add groups), and verifies members are immediately usable by groups with consistent final state | [I] | P0 |
+| 122 | Negative ordering + atomicity: same payload encoded as `modifyGroups` (add non-members) before `modifyMembers` reverts atomically and leaves both member/group state unchanged | [I][S] | P0 |
+| 123 | Replay resistance in batched admin flow: second execution reusing consumed admin-auth nonce/salt for either sub-call reverts and applies no partial state changes | [I][S] | P0 |
+| 124 | Execution gating: disabling `SafeExecutorModule` on Safe v1.4.1 or using a non-authorized executor both prevent multi-admin batch execution and leave organization state unchanged | [I][S] | P0 |
 
 ---
 
@@ -240,14 +244,14 @@
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 121 | Fuzz `executeOnBehalf`: random targets (excluding `SAFE`) always choose `DELEGATECALL` iff `target == BATCHED_TRANSACTION` | [F] | P1 |
-| 122 | Fuzz `executeOnBehalf`: random calldata is forwarded byte-for-byte to Safe | [F] | P1 |
-| 123 | Fuzz `isValidSignature`: random malformed signatures never revert and never return magic unless signer is authorized | [F][S] | P0 |
-| 124 | Fuzz valid packed batches: successful execution matches sequential-call semantics | [F] | P1 |
-| 125 | Fuzz malformed packed batches: always revert and never partially apply state (**desired behavior**) | [F][S] | P0 |
-| 126 | Fuzz self-target position in batch: any occurrence always causes atomic revert | [F][S] | P0 |
-| 127 | Fuzz module enable/disable sequences: module-signature acceptance always matches current enabled set | [F][S] | P0 |
-| 128 | Fuzz random inner module signatures: only correctly signed Authorized Executor signatures validate | [F][S] | P0 |
+| 125 | Fuzz `executeOnBehalf`: random targets (excluding `SAFE`) always choose `DELEGATECALL` iff `target == BATCHED_TRANSACTION` | [F] | P1 |
+| 126 | Fuzz `executeOnBehalf`: random calldata is forwarded byte-for-byte to Safe | [F] | P1 |
+| 127 | Fuzz `isValidSignature`: random malformed signatures never revert and never return magic unless signer is authorized | [F][S] | P0 |
+| 128 | Fuzz valid packed batches: successful execution matches sequential-call semantics | [F] | P1 |
+| 129 | Fuzz malformed packed batches: always revert and never partially apply state (**desired behavior**) | [F][S] | P0 |
+| 130 | Fuzz self-target position in batch: any occurrence always causes atomic revert | [F][S] | P0 |
+| 131 | Fuzz module enable/disable sequences: module-signature acceptance always matches current enabled set | [F][S] | P0 |
+| 132 | Fuzz random inner module signatures: only correctly signed Authorized Executor signatures validate | [F][S] | P0 |
 
 ---
 
@@ -255,12 +259,12 @@
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 129 | Only `AUTHORIZED_EXECUTOR` can make `executeOnBehalf` succeed | P0 |
-| 130 | `SafeExecutorModule` never instructs Safe to send non-zero value | P0 |
-| 131 | `SafeExecutorModule` never allows direct `to == SAFE` execution | P0 |
-| 132 | `BatchedTransaction` never allows a sub-call to delegatecaller `address(this)` | P0 |
-| 133 | Batched execution is atomic: any failing sub-call leaves no persistent side effects | P0 |
-| 134 | Guardian module signatures are accepted iff signer is Guardian directly or an enabled Guardian module | P0 |
+| 133 | Only `AUTHORIZED_EXECUTOR` can make `executeOnBehalf` succeed | P0 |
+| 134 | `SafeExecutorModule` never instructs Safe to send non-zero value | P0 |
+| 135 | `SafeExecutorModule` never allows direct `to == SAFE` execution | P0 |
+| 136 | `BatchedTransaction` never allows a sub-call to delegatecaller `address(this)` | P0 |
+| 137 | Batched execution is atomic: any failing sub-call leaves no persistent side effects | P0 |
+| 138 | Guardian module signatures are accepted iff signer is Guardian directly or an enabled Guardian module | P0 |
 
 ---
 
@@ -279,7 +283,7 @@
 | `_isERC1271SignatureAllowedByPolicy` (safe-module subset) | 5 | P0 |
 | `_getInitiatorSignatureHash` (safe-module subset) | 4 | P0-P1 |
 | `_getReviewSignatureHash` (safe-module subset) | 4 | P0 |
-| End-to-end integration | 7 | P0-P1 |
+| End-to-end integration | 11 | P0-P1 |
 | Fuzz tests | 8 | P0-P1 |
 | Invariant tests | 6 | P0 |
-| **Total** | **134** | |
+| **Total** | **138** | |
