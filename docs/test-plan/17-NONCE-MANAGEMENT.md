@@ -133,6 +133,7 @@
 | 40 | Empty signatures returns `false` | [N] | P0 |
 | 41 | Duplicate signer reverts `DuplicateOrOutOfOrderAdminSigner` | [N] | P0 |
 | 42 | Out-of-order signer list reverts `DuplicateOrOutOfOrderAdminSigner` | [N] | P0 |
+| 42.2 | Insufficent admin signatures reverts `InsufficientAdminAuthorization` | [N] | P0 |
 | 43 | Non-admin signer reverts `SignerIsNotAdmin` | [N] | P0 |
 | 44 | Returns `true` once threshold is reached | [U] | P1 |
 | 45 | Mixed EOA->ERC1271->EOA packed signatures parsed correctly (offset accounting) | [S] | P0 |
