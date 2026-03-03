@@ -48,7 +48,7 @@
 | OI-UTACWA-26 | **Desired behavior:** migration `data` cannot trigger a nested second upgrade to bypass whitelist/admin authorization | [S] | P0 |
 | OI-UTACWA-27 | **Desired behavior:** nested second upgrade still fails when second target is also whitelisted and UUPS-compatible (must fail for missing fresh admin+guardian authorization, not whitelist/UUPS mismatch) | [S] | P0 |
 | OI-UTACWA-28 | **Desired behavior:** upgrades fail closed if configured whitelist address has no code (EOA/zero/misconfigured address) | [S] | P0 |
-| OI-UTACWA-29 | **Desired behavior:** upgrades fail closed if whitelist validation call itself reverts or returns malformed data (implementation must remain unchanged) | [S] | P0 |
+| OI-UTACWA-29 | **Desired behavior:** upgrade reverts when whitelist validation call reverts | [S] | P0 |
 | OI-UTACWA-30 | **Desired behavior:** `newImplementation` must be a non-zero contract address (even if mistakenly whitelisted) | [S] | P0 |
 
 ### 1.2 `implementation()` (IBeacon override)
