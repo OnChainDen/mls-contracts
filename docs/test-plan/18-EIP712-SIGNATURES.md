@@ -124,7 +124,7 @@
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | 41 | Exactly-threshold valid admin signatures over the provided operation hash returns `true` | [U] | P0 |
-| 42 | Reusing the same signatures against a different operation hash is rejected (never treated as valid authorization) | [S] | P0 |
+| 42 | Reusing the same signatures against a different operation hash is rejected (never treated as valid authorization) - test for both EOA signatures and ERC1271 contract signatures  | [S] | P0 |
 | 43 | Mixed EOA + ERC-1271 admin signatures are validated against the same EIP-712 operation hash | [U] | P0 |
 
 ---
