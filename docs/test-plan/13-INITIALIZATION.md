@@ -168,10 +168,10 @@
 | LOI-VAL-13 | Non-zero guardian recovery address with invalid timelock — reverts `InvalidTimelockDuration` | [N] | P1 |
 | LOI-VAL-14 | Non-zero tx recovery address with invalid timelock — reverts `InvalidTimelockDuration` | [N] | P1 |
 | LOI-VAL-15 | Group creation with non-empty `membersToRemove` inside init params — reverts `InvalidGroupCreationOperation` | [N] | P1 |
-| LOI-VAL-16 | Group update/delete on non-existent group during initialization — reverts `GroupDoesNotExist` | [N] | P1 |
+| LOI-VAL-16 | Group update on non-existent group during initialization — reverts `GroupDoesNotExist`; delete on non-existent group is a no-op | [N] | P1 |
 | LOI-VAL-17 | Group member includes `address(0)` during initialization — reverts `InvalidMemberAddress` | [N] | P1 |
 | LOI-VAL-18 | Duplicate group creation entries for the same `groupId` in one init batch — reverts `GroupAlreadyExists` | [N] | P1 |
-| LOI-VAL-19 | Group update removing an address that is not currently in the group — reverts `MemberNotInGroup` | [N] | P1 |
+| LOI-VAL-19 | Group update removing an address that is not currently in the group — no-op (no revert, no membership change) | [E] | P1 |
 | LOI-VAL-20 | Group delete with non-empty `membersToAdd`/`membersToRemove` — reverts `InvalidGroupDeletionOperation` | [N] | P1 |
 | LOI-VAL-21 | Group ID deleted earlier in init batch cannot be recreated later in same batch — reverts `GroupAlreadyDeleted` | [S] | P1 |
 | LOI-VAL-22 | Group member not present in organization `params.members` — reverts `MemberDoesNotExist` (desired behavior) | [S] | P0 |
