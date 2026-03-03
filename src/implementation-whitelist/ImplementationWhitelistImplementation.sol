@@ -92,7 +92,7 @@ contract ImplementationWhitelistImplementation is
      * @param contractType The type of contract (Account or Organization)
      * @param implementations The implementation addresses to whitelist
      */
-    function _addToWhitelist(ContractType contractType, address[] calldata implementations) private {
+    function _addToWhitelist(ContractType contractType, address[] calldata implementations) internal {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
         for (uint256 i = 0; i < implementations.length; ++i) {
@@ -106,7 +106,7 @@ contract ImplementationWhitelistImplementation is
      * @param contractType The type of contract (Account or Organization)
      * @param implementations The implementation addresses to remove from whitelist
      */
-    function _removeFromWhitelist(ContractType contractType, address[] calldata implementations) private {
+    function _removeFromWhitelist(ContractType contractType, address[] calldata implementations) internal {
         LibImplementationWhitelistStorage.Layout storage storageLayout = LibImplementationWhitelistStorage.layout();
 
         for (uint256 i = 0; i < implementations.length; ++i) {
