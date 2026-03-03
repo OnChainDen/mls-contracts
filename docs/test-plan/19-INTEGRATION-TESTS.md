@@ -242,6 +242,8 @@
 | 92 | Account execution path is CALL-only (no delegatecall semantics available to mutate account storage) | [S] | P1 |
 | 93 | Account receives ETH and emits receive event | [I] | P1 |
 | 94 | `Account.isValidSignature` delegates to Organization account-signature path and returns contract result | [I] | P0 |
+| 171 | `executeTransaction` called directly on the implementation contract (not via proxy) reverts `OnlyOrganization` (organization address is unset in implementation's own storage) | [S] | P0 |
+| 172 | `isValidSignature` called directly on the implementation contract returns ERC-1271 invalid value (organization address is unset in implementation's own storage, so `staticcall` to `address(0)` fails) | [S] | P0 |
 
 ### 8.4 Private helpers (private -> harness)
 
@@ -362,6 +364,15 @@
 | 141 | Authorization only succeeds inside validated upgrade window | [S] | P0 |
 | 142 | [DESIRED] Authorization should be bound to specific approved implementation, not only boolean flag | [DESIRED][S] | P0 |
 
+### 12.3 Implementation contract direct-call protection (uninitialized implementation attack vector)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 173 | `initialize()` called directly on the implementation contract (not via proxy) reverts (deployer address is unset in implementation's own storage, so `onlyDeployer` fails) | [S] | P0 |
+| 174 | Inherited `upgradeToAndCall()` called directly on the implementation contract reverts `UnauthorizedUpgrade` (`authorizedUpgradeImplementation` is unset in implementation's own storage) | [S] | P0 |
+| 175 | `upgradeToAndCallWithAuthorization()` called directly on the implementation contract reverts (guardian is unset in implementation's own storage, so `onlyGuardian` fails) | [S] | P0 |
+| 178 | [DESIRED] Constructor calls `_disableInitializers()` so `initialize()` on the implementation contract reverts `InvalidInitialization` (explicit defense-in-depth, not relying on `onlyDeployer` as an accidental guard) | [DESIRED][S] | P0 |
+
 ---
 
 ## 13) `src/implementation-whitelist/ImplementationWhitelistImplementation.sol`
@@ -378,7 +389,14 @@
 | 148 | Whitelist UUPS upgrade preserves allowlist state and ownership | [I] | P1 |
 | 149 | [DESIRED] Reject zero/no-code addresses when whitelisting | [DESIRED][S] | P0 |
 
-### 13.2 Private helpers (private -> harness)
+### 13.2 Implementation contract direct-call protection (uninitialized implementation attack vector)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 176 | `initialize()` called directly on the implementation contract reverts `InvalidInitialization` (`_disableInitializers()` in constructor permanently marks implementation's own storage as fully initialized) | [S] | P0 |
+| 177 | Inherited `upgradeToAndCall()` called directly on the implementation contract reverts `OwnableUnauthorizedAccount` (owner is unset in implementation's own storage, so `onlyOwner` in `_authorizeUpgrade` fails) | [S] | P0 |
+
+### 13.3 Private helpers (private -> harness)
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
