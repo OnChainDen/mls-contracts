@@ -297,12 +297,11 @@
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 126 | `_computeInitiatorHashFromParams` | `isApproval=true` and `isApproval=false` produce different hashes | [S] | P0 |
-| 127 | `_computeInitiatorHashFromParams` | Different `chainId` produces different hash (cross-chain replay protection) | [S] | P0 |
-| 128 | `_computeInitiatorHashFromParams` | Different organization address produces different hash (cross-org replay protection) | [S] | P0 |
-| 128.2 | `_computeInitiatorHashFromParams` | Different account address produces different hash (cross-account replay protection) | [S] | P0 |
-| 129 | `_computeReviewHashFromParams` | Different `initiatorSignature` produces different reviewer hash (`keccak256(initiatorSignature)` binding) | [S] | P0 |
-| 130 | `_computeReviewHashFromParams` | `isApproval` flip changes reviewer hash | [S] | P0 |
+| 126 | `_computeInitiatorHashFromParams` | Fuzz differential matrix: from one baseline input tuple, mutate exactly one bound field at a time and assert hash changes for each field: `organization (address(this))`, `account`, `to`, `value`, `data`, `salt`, `expirationTimestamp`, `policyId`, `isApproval`, `chainId` | [F] | P0 |
+| 127 | `_computeInitiatorHashFromParams` | Invariant: for any two initiator input tuples, if any bound field differs then hash must differ; when varying `data`, require `keccak256(dataA) != keccak256(dataB)` | [I] | P0 |
+| 128 | `_computeReviewHashFromParams` | Fuzz differential matrix: from one baseline input tuple, mutate exactly one bound field at a time and assert hash changes for each field: `organization (address(this))`, `account`, `to`, `value`, `data`, `salt`, `expirationTimestamp`, `policyId`, `isApproval`, `chainId`, `initiatorSignature` | [F] | P0 |
+| 129 | `_computeReviewHashFromParams` | Invariant: for any two review input tuples, if any bound field differs then hash must differ; when varying `data`/`initiatorSignature`, require differing `keccak256` values | [I] | P0 |
+| 130 | `_computeInitiatorHashFromParams` + `_computeReviewHashFromParams` | Baseline control: with identical inputs across repeated calls, hashes are deterministic and equal (guards against false positives in differential checks) | [U] | P1 |
 | 131 | `_computeInitiatorHashFromParams` + `_computeReviewHashFromParams` | Golden vectors match expected typed-data hashes | [U] | P1 |
 | 132 | `_validateAutoApproveRejectionOrRevert` | Approval signature cannot be replayed as rejection authorization (`isApproval` domain separation) | [S] | P0 |
 | 133 | `_validateManualConfirmationOrRevert` | Reviewer signatures are bound to `(isApproval, initiatorSignature)`; replay across approval/rejection or different initiator signature fails | [S] | P0 |
