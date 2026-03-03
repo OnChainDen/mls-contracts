@@ -137,11 +137,15 @@ contract StorageLayoutInvariants is StorageLayoutTestBase {
             "Tracked usedNonces value mutated unexpectedly"
         );
 
-        (address whitelistAddress, bool isAuthorized) = harness.getUpgradeState();
+        (address whitelistAddress, address authorizedUpgradeImplementation) = harness.getUpgradeState();
         assertEq(
             whitelistAddress, handler.expectedUpgradeWhitelistAddress(), "whitelistAddress scalar mutated unexpectedly"
         );
-        assertEq(isAuthorized, handler.expectedUpgradeAuthorized(), "isUpgradeAuthorized scalar mutated unexpectedly");
+        assertEq(
+            authorizedUpgradeImplementation,
+            handler.expectedAuthorizedUpgradeImplementation(),
+            "authorizedUpgradeImplementation scalar mutated unexpectedly"
+        );
 
         TxRecoveryState memory txRecovery = harness.getTxRecoveryState();
         assertEq(txRecovery.recoveryAddress, handler.expectedTxRecoveryAddress(), "txRecovery.recoveryAddress mismatch");

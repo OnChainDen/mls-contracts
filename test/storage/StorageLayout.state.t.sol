@@ -173,15 +173,19 @@ contract StorageLayoutStateTest is StorageLayoutTestBase {
     }
 
     /**
-     * @dev Verifies that whitelistAddress and isUpgradeAuthorized persist correctly after a write.
+     * @dev Verifies that whitelistAddress and authorizedUpgradeImplementation persist correctly after a write.
      */
-    function test_upgradeStorage_readWrite_whitelistAddressAndAuthorizationFlag() public {
-        harness.setUpgradeState(TEST_UPGRADE_WHITELIST, true);
+    function test_upgradeStorage_readWrite_whitelistAddressAndAuthorizedUpgradeImplementation() public {
+        harness.setUpgradeState(TEST_UPGRADE_WHITELIST, TEST_IMPLEMENTATION);
 
-        (address whitelistAddress, bool isUpgradeAuthorized) = harness.getUpgradeState();
+        (address whitelistAddress, address authorizedUpgradeImplementation) = harness.getUpgradeState();
 
         assertEq(whitelistAddress, TEST_UPGRADE_WHITELIST, "whitelistAddress value was not persisted");
-        assertTrue(isUpgradeAuthorized, "isUpgradeAuthorized value was not persisted");
+        assertEq(
+            authorizedUpgradeImplementation,
+            TEST_IMPLEMENTATION,
+            "authorizedUpgradeImplementation value was not persisted"
+        );
     }
 
     /**
@@ -217,7 +221,7 @@ contract StorageLayoutStateTest is StorageLayoutTestBase {
     function test_namespaceIsolation_writesInOneNamespace_doNotMutateOtherNamespaces() public {
         harness.setPoliciesRoot(TEST_POLICIES_ROOT);
         harness.setDeployerAddress(TEST_DEPLOYER);
-        harness.setUpgradeState(TEST_UPGRADE_WHITELIST, true);
+        harness.setUpgradeState(TEST_UPGRADE_WHITELIST, TEST_IMPLEMENTATION);
 
         harness.setAdminStatus(TEST_ADMIN, true);
         harness.setAdminCount(9);
@@ -226,9 +230,13 @@ contract StorageLayoutStateTest is StorageLayoutTestBase {
         assertEq(harness.getPoliciesRoot(), TEST_POLICIES_ROOT, "policy namespace was unexpectedly mutated");
         assertEq(harness.getDeployerAddress(), TEST_DEPLOYER, "deployer namespace was unexpectedly mutated");
 
-        (address whitelistAddress, bool isUpgradeAuthorized) = harness.getUpgradeState();
+        (address whitelistAddress, address authorizedUpgradeImplementation) = harness.getUpgradeState();
         assertEq(whitelistAddress, TEST_UPGRADE_WHITELIST, "upgrade whitelist was unexpectedly mutated");
-        assertTrue(isUpgradeAuthorized, "upgrade authorization flag was unexpectedly mutated");
+        assertEq(
+            authorizedUpgradeImplementation,
+            TEST_IMPLEMENTATION,
+            "authorized upgrade implementation was unexpectedly mutated"
+        );
     }
 
     /**

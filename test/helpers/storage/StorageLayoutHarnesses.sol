@@ -345,22 +345,22 @@ contract StorageLayoutHarness {
     /**
      * @dev Sets both upgrade namespace fields.
      * @param whitelistAddress Whitelist contract address.
-     * @param isUpgradeAuthorized Upgrade authorization flag.
+     * @param authorizedUpgradeImplementation Authorized Organization upgrade target.
      */
-    function setUpgradeState(address whitelistAddress, bool isUpgradeAuthorized) external {
+    function setUpgradeState(address whitelistAddress, address authorizedUpgradeImplementation) external {
         LibOrganizationUpgradeStorage.Layout storage layout = LibOrganizationUpgradeStorage.layout();
         layout.whitelistAddress = whitelistAddress;
-        layout.isUpgradeAuthorized = isUpgradeAuthorized;
+        layout.authorizedUpgradeImplementation = authorizedUpgradeImplementation;
     }
 
     /**
      * @dev Reads both upgrade namespace fields.
      * @return whitelistAddress Whitelist contract address.
-     * @return isUpgradeAuthorized Upgrade authorization flag.
+     * @return authorizedUpgradeImplementation Authorized Organization upgrade target.
      */
-    function getUpgradeState() external view returns (address, bool) {
+    function getUpgradeState() external view returns (address, address) {
         LibOrganizationUpgradeStorage.Layout storage layout = LibOrganizationUpgradeStorage.layout();
-        return (layout.whitelistAddress, layout.isUpgradeAuthorized);
+        return (layout.whitelistAddress, layout.authorizedUpgradeImplementation);
     }
 
     /**
@@ -565,8 +565,8 @@ contract StorageLayoutInvariantHandler {
     /// @dev Expected upgrade whitelist address scalar.
     address public expectedUpgradeWhitelistAddress;
 
-    /// @dev Expected upgrade authorization flag scalar.
-    bool public expectedUpgradeAuthorized;
+    /// @dev Expected authorized Organization upgrade target scalar.
+    address public expectedAuthorizedUpgradeImplementation;
 
     /// @dev Expected tx recovery address.
     address public expectedTxRecoveryAddress;
@@ -787,13 +787,13 @@ contract StorageLayoutInvariantHandler {
     /**
      * @dev Mutates upgrade namespace.
      * @param whitelistAddress Whitelist scalar value.
-     * @param isUpgradeAuthorized Authorization scalar value.
+     * @param authorizedUpgradeImplementation Authorized target scalar value.
      */
-    function writeUpgrade(address whitelistAddress, bool isUpgradeAuthorized) external {
-        harness.setUpgradeState(whitelistAddress, isUpgradeAuthorized);
+    function writeUpgrade(address whitelistAddress, address authorizedUpgradeImplementation) external {
+        harness.setUpgradeState(whitelistAddress, authorizedUpgradeImplementation);
 
         expectedUpgradeWhitelistAddress = whitelistAddress;
-        expectedUpgradeAuthorized = isUpgradeAuthorized;
+        expectedAuthorizedUpgradeImplementation = authorizedUpgradeImplementation;
     }
 
     /**
@@ -905,7 +905,7 @@ contract StorageLayoutInvariantHandler {
         expectedTrackedPolicyUsage = 77;
         expectedTrackedNonceUsed = true;
         expectedUpgradeWhitelistAddress = address(0x7001);
-        expectedUpgradeAuthorized = true;
+        expectedAuthorizedUpgradeImplementation = address(0x7002);
 
         expectedTxRecoveryAddress = address(0x8001);
         expectedTxRecoveryEnabled = true;
@@ -957,7 +957,7 @@ contract StorageLayoutInvariantHandler {
 
         harness.setUsedNonce(TRACKED_NONCE, expectedTrackedNonceUsed);
 
-        harness.setUpgradeState(expectedUpgradeWhitelistAddress, expectedUpgradeAuthorized);
+        harness.setUpgradeState(expectedUpgradeWhitelistAddress, expectedAuthorizedUpgradeImplementation);
 
         TxRecoveryState memory txRecoveryState = TxRecoveryState({
             recoveryAddress: expectedTxRecoveryAddress,

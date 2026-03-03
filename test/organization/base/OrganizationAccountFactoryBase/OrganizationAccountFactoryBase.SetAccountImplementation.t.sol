@@ -87,7 +87,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     function test_OAFB_SAI_4_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts() public {
         // Setup: configure one-admin auth and point upgrade whitelist to an EOA/no-code address.
         _setSingleAdminThresholdOne();
-        harness.setUpgradeState(address(0xABCD), false);
+        harness.setUpgradeState(address(0xABCD), address(0));
 
         (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV1,

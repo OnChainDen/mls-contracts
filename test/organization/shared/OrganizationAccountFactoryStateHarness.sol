@@ -44,17 +44,17 @@ contract OrganizationAccountFactoryStateHarness is OrganizationAdminStateHarness
     /**
      * @dev Sets organization-upgrade namespace values.
      */
-    function setUpgradeState(address whitelistAddress, bool isUpgradeAuthorized) external {
+    function setUpgradeState(address whitelistAddress, address authorizedUpgradeImplementation) external {
         LibOrganizationUpgradeStorage.layout().whitelistAddress = whitelistAddress;
-        LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized = isUpgradeAuthorized;
+        LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = authorizedUpgradeImplementation;
     }
 
     /**
      * @dev Reads organization-upgrade namespace values.
      */
-    function getUpgradeState() external view returns (address whitelistAddress, bool isUpgradeAuthorized) {
+    function getUpgradeState() external view returns (address whitelistAddress, address authorizedUpgradeImplementation) {
         whitelistAddress = LibOrganizationUpgradeStorage.layout().whitelistAddress;
-        isUpgradeAuthorized = LibOrganizationUpgradeStorage.layout().isUpgradeAuthorized;
+        authorizedUpgradeImplementation = LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation;
     }
 
     /**

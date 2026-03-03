@@ -127,7 +127,7 @@ abstract contract StorageLayoutTestBase is Test, StorageLayoutRecoveryBuilders, 
         target.setPoliciesRoot(TEST_POLICIES_ROOT);
         target.setPolicyUsage(TEST_POLICY_USAGE_KEY, TEST_POLICY_WINDOW, 8888);
         target.setUsedNonce(TEST_NONCE, true);
-        target.setUpgradeState(TEST_UPGRADE_WHITELIST, true);
+        target.setUpgradeState(TEST_UPGRADE_WHITELIST, TEST_IMPLEMENTATION);
 
         target.setTxRecoveryState(
             _buildTxRecoveryState(address(0xE001), true, 2 days, 111_222, address(0xE002), 3 days, 333_444)
@@ -180,9 +180,13 @@ abstract contract StorageLayoutTestBase is Test, StorageLayoutRecoveryBuilders, 
         );
         assertTrue(target.getUsedNonce(TEST_NONCE), "usedNonces test fixture mismatch");
 
-        (address whitelistAddress, bool isUpgradeAuthorized) = target.getUpgradeState();
+        (address whitelistAddress, address authorizedUpgradeImplementation) = target.getUpgradeState();
         assertEq(whitelistAddress, TEST_UPGRADE_WHITELIST, "whitelistAddress test fixture mismatch");
-        assertTrue(isUpgradeAuthorized, "isUpgradeAuthorized test fixture mismatch");
+        assertEq(
+            authorizedUpgradeImplementation,
+            TEST_IMPLEMENTATION,
+            "authorizedUpgradeImplementation test fixture mismatch"
+        );
 
         _assertTxRecoveryStateEquals(
             target.getTxRecoveryState(),

@@ -60,7 +60,7 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
         bool nonceUsed = _deriveBool(seedA, 26);
 
         address upgradeWhitelist = _deriveAddress(seedA, 27);
-        bool isUpgradeAuthorized = _deriveBool(seedA, 28);
+        address authorizedUpgradeImplementation = _deriveAddress(seedA, 28);
 
         TxRecoveryState memory txRecoveryState = _buildTxRecoveryState(
             _deriveAddress(seedB, 1),
@@ -99,7 +99,7 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
         harness.setPoliciesRoot(policiesRoot);
         harness.setPolicyUsage(usageKey, usageWindow, usageValue);
         harness.setUsedNonce(nonce, nonceUsed);
-        harness.setUpgradeState(upgradeWhitelist, isUpgradeAuthorized);
+        harness.setUpgradeState(upgradeWhitelist, authorizedUpgradeImplementation);
         harness.setTxRecoveryState(txRecoveryState);
         harness.setGuardianRecoveryState(guardianRecoveryState);
 
@@ -139,9 +139,13 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
         assertEq(harness.getPolicyUsage(usageKey, usageWindow), usageValue, "policyUsage mismatch");
         assertEq(harness.getUsedNonce(nonce), nonceUsed, "usedNonces mapping mismatch");
 
-        (address actualWhitelist, bool actualAuthorized) = harness.getUpgradeState();
+        (address actualWhitelist, address actualAuthorizedImplementation) = harness.getUpgradeState();
         assertEq(actualWhitelist, upgradeWhitelist, "whitelistAddress mismatch");
-        assertEq(actualAuthorized, isUpgradeAuthorized, "isUpgradeAuthorized mismatch");
+        assertEq(
+            actualAuthorizedImplementation,
+            authorizedUpgradeImplementation,
+            "authorizedUpgradeImplementation mismatch"
+        );
 
         _assertTxRecoveryStateEquals(harness.getTxRecoveryState(), txRecoveryState);
         _assertGuardianRecoveryStateEquals(harness.getGuardianRecoveryState(), guardianRecoveryState);

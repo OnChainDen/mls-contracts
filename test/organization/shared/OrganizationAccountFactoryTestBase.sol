@@ -35,7 +35,7 @@ abstract contract OrganizationAccountFactoryTestBase is OrganizationAdminTestBas
         accountFactoryStateHarness = OrganizationAccountFactoryStateHarness(address(stateHarness));
 
         whitelist = new ImplementationWhitelistMock();
-        accountFactoryStateHarness.setUpgradeState(address(whitelist), false);
+        accountFactoryStateHarness.setUpgradeState(address(whitelist), address(0));
 
         accountImplementationV1 = address(new AccountImplementation());
         accountImplementationV2 = address(new AccountImplementation());
