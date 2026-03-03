@@ -73,7 +73,7 @@ contract OrganizationImplementation is
         AdminAuthParams calldata authParams
     ) external override onlyGuardian {
         // Validate admin authorization (isApproval = true for execution)
-        bytes memory operationData = abi.encode(newImplementation);
+        bytes memory operationData = abi.encode(newImplementation, keccak256(data));
         LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
         });
