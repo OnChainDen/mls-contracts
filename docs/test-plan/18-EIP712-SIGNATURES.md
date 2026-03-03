@@ -249,7 +249,7 @@
 |---|-----------|------|----------|
 | 107 | Signature from Guardian address directly over the review hash is accepted | [U] | P0 |
 | 108 | Signature from an enabled Guardian module over the review hash is accepted | [U] | P0 |
-| 109 | Signature from a disabled module is rejected | [S] | P0 |
+| 109 | Signature from a disabled module is rejected - test by validating a signature from an enabled module is seen as valid, then disable the module from the safe, and confirm that the signature is then seen as invalid | [S] | P0 |
 | 110 | Signature over a different message hash is rejected even when signer/module is otherwise valid | [S] | P0 |
 
 ### 4.5 `_isERC1271SignatureAllowedByPolicy` (private -> internal via harness)
