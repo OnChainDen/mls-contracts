@@ -104,6 +104,8 @@
 | 21 | Expiration at exactly `block.timestamp` is accepted and, with valid signatures, consumes nonce | [E] | P0 |
 | 22 | Insufficient valid signatures reverts `InsufficientAdminAuthorization` and nonce is not consumed | [S] | P0 |
 | 23 | Malformed signature bytes revert and nonce is not consumed | [S] | P0 |
+| 23.2 | Signatures that sign different operation data than the operationData passed in to the function revert and nonce is not consumed | [S] | P0 |
+| 23.3 | Signatures that sign different operation type than the operationType passed in to the function revert and nonce is not consumed | [S] | P0 |
 | 24 | Non-admin signer reverts `SignerIsNotAdmin` and nonce is not consumed | [S] | P0 |
 | 25 | Duplicate/out-of-order signer set reverts `DuplicateOrOutOfOrderAdminSigner` and nonce is not consumed | [S] | P0 |
 | 26 | Same operation data/salt, `isApproval=true` then `isApproval=false`: second call fails due shared nonce space | [S] | P0 |
