@@ -253,7 +253,7 @@
 |---|-----------|------|----------|
 | 123 | Unwhitelisted implementation cannot be used in any entrypoint: org deploy, org upgrade, account upgrade | [I] | P0 |
 | 124 | Type separation end-to-end: `Account` whitelist never unlocks org deploy/upgrade, and vice versa | [I] | P0 |
-| 125 | Unwhitelisting an implementation blocks future use but does not break already-deployed contracts currently running it | [I] | P1 |
+| 125 | Unwhitelisting an implementation blocks future use when but does not break already-deployed contracts currently running it for both Organization and Account contracts | [I] | P1 |
 | 126 | Re-whitelisting previously removed implementation re-enables eligible flows | [I] | P1 |
 | 127 | Upgrading the whitelist contract preserves existing whitelist state and enforcement behavior in factory/org/account flows | [I] | P1 |
 | 128 | Ownership transfer of whitelist contract immediately changes who can alter allowed implementations system-wide | [I] | P1 |
