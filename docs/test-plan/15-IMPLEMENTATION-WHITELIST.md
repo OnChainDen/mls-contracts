@@ -82,6 +82,7 @@
 | 37 | Returns false for never-whitelisted address | [U] | P1 |
 | 38 | Returns false when address is whitelisted for the other `ContractType` only | [U] | P1 |
 | 39 | Returns false for all addresses before initialization | [U] | P2 |
+| 40 | Returns false addresses that were added to the whitelist, then later removed from the whitelist | [U] | P2 |
 
 ### 1.6 `validateIsImplementationWhitelistedOrRevert`
 
@@ -89,6 +90,7 @@
 |---|-----------|------|----------|
 | 40 | Succeeds for whitelisted address + matching `ContractType` | [U] | P1 |
 | 41 | Reverts `ImplementationNotWhitelisted(implementation)` for non-whitelisted address | [N] | P0 |
+| 41.2 | Reverts `ImplementationNotWhitelisted(implementation)` for address that were added to the whitelist, and then later removed from the whitelist | [N] | P0 |
 | 42 | Reverts when whitelisted under wrong `ContractType` | [N] | P0 |
 | 43 | Revert payload includes the exact rejected implementation address | [U] | P1 |
 
