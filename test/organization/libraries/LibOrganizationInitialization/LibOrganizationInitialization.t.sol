@@ -407,8 +407,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         // Verify: Group operation validation branches all revert as expected for the targeted failure condition.
     }
 
-    /// @dev Verifies current `LibOrganizationInitialization.initialize` behavior where deleting a non-existent group
-    /// no-ops and initialization still succeeds.
+    /// @dev Verifies `LibOrganizationInitialization.initialize` treats deleting a non-existent group as a no-op.
     function test_LOI_VAL_16_deleteNonExistentGroup_currentBehavior_isNoOp() public {
         // Setup: Build initialization params containing a delete operation for an undefined group id.
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
@@ -426,7 +425,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         // Call: Execute initialization with a delete for a non-existent group.
         harness.initializeViaLibrary(params);
 
-        // Verify: Initialization succeeds, group 999 remains inactive, and the initialized sentinel is set.
+        // Verify: Initialization succeeds, group 999 remains inactive, and initialized state is committed.
         assertTrue(
             harness.isInitializedViaLibrary(),
             "initialization should still succeed when delete targets non-existent group"
@@ -435,8 +434,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         assertEq(harness.getAdminCountStorage(), params.admins.length, "successful init should persist admin state");
     }
 
-    /// @dev Verifies current `LibOrganizationInitialization.initialize` behavior where removing a non-member from a
-    /// group update no-ops.
+    /// @dev Verifies `LibOrganizationInitialization.initialize` treats removing a non-member during group update as a
+    /// no-op.
     function test_LOI_VAL_19_updateRemovingMissingGroupMember_currentBehavior_isNoOp() public {
         // Setup: Build initialization params that create a group, then attempt to remove an address never added to that
         // group.
@@ -458,7 +457,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         });
         params.groups = groups;
 
-        // Call: Execute initialization where the update removes an address absent from the current group set.
+        // Call: Execute initialization where update removes an address absent from the current group set.
         harness.initializeViaLibrary(params);
 
         // Verify: Initialization succeeds, existing group membership persists, and absent-member removal has no side
