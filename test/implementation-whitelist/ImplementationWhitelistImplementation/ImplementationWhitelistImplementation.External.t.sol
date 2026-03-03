@@ -2,12 +2,11 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
-import {ContractType} from "types/CommonTypes.sol";
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     ImplementationWhitelistHarness,
     ImplementationWhitelistV2Harness
@@ -15,6 +14,7 @@ import {
 import {
     ImplementationWhitelistSuiteBase
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 interface IUUPSWhitelistEntrypoints {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
@@ -142,7 +142,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     function test_IWI_WI_1_ownerCanAddAndRemoveInSingleCall() public {
         // Setup: pre-whitelist one entry to remove, then prepare add/remove lists.
         vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Organization, _single(organizationImplementationA), new address[](0));
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, _single(organizationImplementationA), new address[](0)
+        );
 
         // Call: add B and remove A in one transaction.
         vm.prank(OWNER);
@@ -172,7 +174,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     function test_IWI_WI_3_contractTypeMappings_areIndependent() public {
         // Setup: whitelist same address under Organization type only.
         vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Organization, _single(organizationImplementationA), new address[](0));
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, _single(organizationImplementationA), new address[](0)
+        );
 
         // Verify: Organization entry is true while Account entry remains false.
         assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
@@ -214,7 +218,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     /// @dev Verifies empty add/remove arrays are a no-op and do not revert.
     function test_IWI_WI_8_emptyArrays_noopAndNoRevert() public {
         // Setup: capture baseline whitelist state.
-        bool beforeState = whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        bool beforeState =
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
         address[] memory empty;
 
         // Call: invoke mutation endpoint with both arrays empty.
@@ -222,7 +227,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.whitelistImplementations(ContractType.Organization, empty, empty);
 
         // Verify: state remains unchanged and call does not revert.
-        bool afterState = whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        bool afterState =
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
         assertEq(afterState, beforeState, "empty mutation should be a no-op");
     }
 
@@ -319,12 +325,12 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
         // Verify: Organization-type validation still reverts for Account-only entry.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationA)
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationA
+            )
         );
         // Call: validate target under wrong contract type namespace.
-        whitelistProxy.validateIsImplementationWhitelistedOrRevert(
-            ContractType.Organization, accountImplementationA
-        );
+        whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Organization, accountImplementationA);
     }
 
     /// @dev Verifies owner can perform UUPS upgrade through proxy `upgradeToAndCall`.
@@ -336,7 +342,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
 
         // Verify: proxy implementation slot points to V2.
-        assertEq(_readProxyImplementation(address(whitelistProxy)), address(implementationV2), "upgrade target mismatch");
+        assertEq(
+            _readProxyImplementation(address(whitelistProxy)), address(implementationV2), "upgrade target mismatch"
+        );
     }
 
     /// @dev Verifies non-owner cannot perform UUPS upgrade.
@@ -422,9 +430,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
         // Verify: non-UUPS target is rejected.
         vm.expectRevert(
-            abi.encodeWithSelector(
-                ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation)
-            )
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation))
         );
         vm.prank(OWNER);
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(nonUupsImplementation), bytes(""));

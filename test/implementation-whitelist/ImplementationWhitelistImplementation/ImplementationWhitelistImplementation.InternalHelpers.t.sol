@@ -3,13 +3,13 @@
 pragma solidity 0.8.33;
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
-import {ContractType} from "types/CommonTypes.sol";
 import {
     ImplementationWhitelistHarness
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
 import {
     ImplementationWhitelistSuiteBase
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
+import {ContractType} from "types/CommonTypes.sol";
 
 /**
  * @dev Internal-helper coverage for `_addToWhitelist` / `_removeFromWhitelist` via harness wrappers.
@@ -59,14 +59,16 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     /// @dev Verifies `_addToWhitelist` is a no-op for empty input arrays and does not revert.
     function test_IWI_ATW_4_addToWhitelist_emptyInput_noopAndNoRevert() public {
         // Setup: capture baseline state before empty call.
-        bool beforeState = whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        bool beforeState =
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
         address[] memory empty;
 
         // Call: invoke add helper with empty array.
         whitelistProxy.exposeAddToWhitelist(ContractType.Organization, empty);
 
         // Verify: state remains unchanged.
-        bool afterState = whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        bool afterState =
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
         assertEq(afterState, beforeState, "empty add should not mutate state");
     }
 
@@ -123,9 +125,13 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
 
         // Verify: expect one unwhitelist event per entry.
         vm.expectEmit(true, true, true, true, address(whitelistProxy));
-        emit IImplementationWhitelist.ImplementationUnwhitelisted(ContractType.Organization, organizationImplementationA);
+        emit IImplementationWhitelist.ImplementationUnwhitelisted(
+            ContractType.Organization, organizationImplementationA
+        );
         vm.expectEmit(true, true, true, true, address(whitelistProxy));
-        emit IImplementationWhitelist.ImplementationUnwhitelisted(ContractType.Organization, organizationImplementationB);
+        emit IImplementationWhitelist.ImplementationUnwhitelisted(
+            ContractType.Organization, organizationImplementationB
+        );
 
         // Call: remove via helper wrapper.
         whitelistProxy.exposeRemoveFromWhitelist(ContractType.Organization, inputs);
@@ -146,14 +152,16 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     /// @dev Verifies empty `_removeFromWhitelist` input is a no-op and does not revert.
     function test_IWI_RTW_5_removeFromWhitelist_emptyInput_noopAndNoRevert() public {
         // Setup: capture baseline state before empty remove.
-        bool beforeState = whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        bool beforeState =
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
         address[] memory empty;
 
         // Call: remove helper with empty input.
         whitelistProxy.exposeRemoveFromWhitelist(ContractType.Organization, empty);
 
         // Verify: state remains unchanged.
-        bool afterState = whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        bool afterState =
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
         assertEq(afterState, beforeState, "empty remove should not mutate state");
     }
 

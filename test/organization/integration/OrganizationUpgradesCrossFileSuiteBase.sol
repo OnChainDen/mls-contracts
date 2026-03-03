@@ -4,11 +4,11 @@ pragma solidity 0.8.33;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
-import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {
     OrganizationImplementationSuiteBase
 } from "test/organization/OrganizationImplementation/OrganizationImplementationSuiteBase.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
+import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -58,9 +58,8 @@ abstract contract OrganizationUpgradesCrossFileSuiteBase is OrganizationImplemen
         uint256[] memory privateKeys
     ) internal view returns (AdminAuthParams memory auth, bytes memory builtOperationData) {
         builtOperationData = operationData;
-        bytes32 operationHash = OrganizationAdminStateHarness(organization).getAdminOperationHash(
-            operationType, operationData, salt, expirationTimestamp, isApproval
-        );
+        bytes32 operationHash = OrganizationAdminStateHarness(organization)
+            .getAdminOperationHash(operationType, operationData, salt, expirationTimestamp, isApproval);
         bytes memory signatures = _buildSortedEOASignatures(operationHash, privateKeys);
         auth = AdminAuthParams({salt: salt, expirationTimestamp: expirationTimestamp, signatures: signatures});
     }

@@ -154,7 +154,9 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         });
         vm.prank(GUARDIAN);
         harness.setAccountImplementation(accountImplementationV1, setV1Auth);
-        assertEq(harness.implementation(), accountImplementationV1, "getter should return first configured implementation");
+        assertEq(
+            harness.implementation(), accountImplementationV1, "getter should return first configured implementation"
+        );
 
         (AdminAuthParams memory setV2Auth,) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV2,
@@ -168,7 +170,9 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         harness.setAccountImplementation(accountImplementationV2, setV2Auth);
 
         // Verify: getter now returns most recently configured implementation.
-        assertEq(harness.implementation(), accountImplementationV2, "getter should return latest configured implementation");
+        assertEq(
+            harness.implementation(), accountImplementationV2, "getter should return latest configured implementation"
+        );
     }
 
     /// @dev Verifies desired behavior that no-code stored implementation addresses are rejected.

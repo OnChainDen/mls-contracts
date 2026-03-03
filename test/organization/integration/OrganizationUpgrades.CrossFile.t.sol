@@ -4,13 +4,13 @@ pragma solidity 0.8.33;
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {
     AccountImplementationVersion1,
     AccountImplementationVersion2,
     IVersionedAccount,
     OrganizationUpgradesCrossFileSuiteBase
 } from "test/organization/integration/OrganizationUpgradesCrossFileSuiteBase.sol";
+import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -25,7 +25,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141001,
+            salt: 141_001,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -36,7 +36,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
         // Verify: proxy now points to whitelisted V2 implementation.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "upgrade should succeed");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "upgrade should succeed"
+        );
     }
 
     /// @dev Verifies full flow: whitelist Account impl + guardian/admin auth upgrades all deployed accounts.
@@ -53,7 +55,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141002,
+            salt: 141_002,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -66,7 +68,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.DeployAccount,
             operationData: abi.encode(bytes32(uint256(1))),
             isApproval: true,
-            salt: 141003,
+            salt: 141_003,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -75,7 +77,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.DeployAccount,
             operationData: abi.encode(bytes32(uint256(2))),
             isApproval: true,
-            salt: 141004,
+            salt: 141_004,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -93,7 +95,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV2),
             isApproval: true,
-            salt: 141005,
+            salt: 141_005,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -117,7 +119,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
         (AdminAuthParams memory orgUpgradeAuth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141006,
+            salt: 141_006,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -130,7 +132,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141007,
+            salt: 141_007,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -147,12 +149,14 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.Upgrade,
             operationData: _encodeOperationDataForUpgrade(address(implementationV2)),
             isApproval: true,
-            salt: 141008,
+            salt: 141_008,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), retryOrgAuth);
@@ -162,11 +166,13 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141009,
+            salt: 141_009,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        vm.expectRevert(abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplV1));
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplV1)
+        );
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(accountImplV1, retryAccountAuth);
 
@@ -175,7 +181,8 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         assertEq(organizationProxy.getAccountImplementationStorage(), accountImplV1, "account pointer changed");
     }
 
-    /// @dev Verifies unwhitelisting active Organization implementation does not block upgrading to new whitelisted impl.
+    /// @dev Verifies unwhitelisting active Organization implementation does not block upgrading to new whitelisted
+    /// impl.
     function test_UPG_CFS_4_unwhitelistedActiveOrgImpl_canUpgradeToNewWhitelistedImpl() public {
         // Setup: upgrade to V2, unwhitelist V2, and whitelist V3.
         _setSingleAdminThresholdOne();
@@ -184,7 +191,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
         (AdminAuthParams memory toV2Auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141010,
+            salt: 141_010,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -199,7 +206,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.Upgrade,
             operationData: _encodeOperationDataForUpgrade(address(implementationV3)),
             isApproval: true,
-            salt: 141011,
+            salt: 141_011,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -209,7 +216,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV3), bytes(""), toV3Auth);
 
         // Verify: upgrade succeeds because execution target is whitelisted at execution time.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV3), "upgrade to v3 failed");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV3), "upgrade to v3 failed"
+        );
     }
 
     /// @dev Verifies unwhitelisting active Account implementation does not block upgrade to a new whitelisted target.
@@ -226,7 +235,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141012,
+            salt: 141_012,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -240,7 +249,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV2),
             isApproval: true,
-            salt: 141013,
+            salt: 141_013,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -255,13 +264,14 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
     /// @dev Verifies Organization upgrades do not bypass Account implementation whitelist/type checks.
     function test_UPG_CFS_6_organizationUpgrade_doesNotBypassAccountWhitelistChecks() public {
-        // Setup: upgrade Organization to V2, then try account implementation update using Organization-type whitelist only.
+        // Setup: upgrade Organization to V2, then try account implementation update using Organization-type whitelist
+        // only.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
 
         (AdminAuthParams memory orgAuth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141014,
+            salt: 141_014,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -277,7 +287,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(target),
             isApproval: true,
-            salt: 141015,
+            salt: 141_015,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -318,7 +328,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141016,
+            salt: 141_016,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -327,7 +337,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
         // Verify: whitelist is enforced at execution time.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         // Call: execute with signatures collected before unwhitelisting.
@@ -341,7 +353,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         (AdminAuthParams memory oldAuth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141017,
+            salt: 141_017,
             expiration: block.timestamp + 1,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -349,7 +361,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
         _setOrganizationImplementationWhitelisted(address(implementationV2), false);
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), oldAuth);
@@ -363,7 +377,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
 
         (AdminAuthParams memory freshAuth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141018,
+            salt: 141_018,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -374,7 +388,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), freshAuth);
 
         // Verify: fresh auth succeeds.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "fresh auth should succeed");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "fresh auth should succeed"
+        );
     }
 
     /// @dev Verifies signatures for Organization A cannot authorize same call on Organization B.
@@ -387,7 +403,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         // Build auth for Organization A domain.
         (AdminAuthParams memory authForOrgA,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141019,
+            salt: 141_019,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)

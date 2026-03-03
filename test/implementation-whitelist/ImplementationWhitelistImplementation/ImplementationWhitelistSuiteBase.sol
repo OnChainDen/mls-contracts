@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Test} from "forge-std/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {
     ImplementationWhitelistHarness,
@@ -18,8 +18,7 @@ contract WhitelistCodeAddressMock {}
  * @dev Shared setup/helpers for ImplementationWhitelist test suites.
  */
 abstract contract ImplementationWhitelistSuiteBase is Test {
-    bytes32 internal constant IMPLEMENTATION_SLOT =
-        0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     address internal constant OWNER = address(0xA11CE);
     address internal constant NON_OWNER = address(0xB0B);

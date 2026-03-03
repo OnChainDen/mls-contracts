@@ -6,16 +6,16 @@ import {AccountImplementation} from "account/AccountImplementation.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {OperationType} from "types/CommonTypes.sol";
-import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
-import {AdminAuthParams} from "types/AdminTypes.sol";
+import {
+    OrganizationImplementationSuiteBase
+} from "test/organization/OrganizationImplementation/OrganizationImplementationSuiteBase.sol";
 import {
     OrganizationImplementationHarness,
     RevertingValidationWhitelistMock
 } from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
-import {
-    OrganizationImplementationSuiteBase
-} from "test/organization/OrganizationImplementation/OrganizationImplementationSuiteBase.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
+import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 interface IUUPSUpgradeableEntrypoints {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
@@ -46,7 +46,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
         // Verify: proxy implementation points to the newly approved Organization implementation.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "implementation mismatch");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "implementation mismatch"
+        );
     }
 
     /// @dev Verifies non-empty migration calldata executes successfully during authorized upgrade.
@@ -69,7 +71,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), migrationData, auth);
 
         // Verify: upgrade happened and migration side effect was persisted.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "implementation mismatch");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "implementation mismatch"
+        );
         assertEq(organizationProxy.migrationGetMarker(), 777, "migration call did not execute");
     }
 
@@ -270,7 +274,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
         // Verify: whitelist check should fail and nonce should rollback.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         // Call: execute upgrade wrapper without whitelist approval.
@@ -294,7 +300,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
         // Verify: Organization-type whitelist lookup still rejects the target.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         // Call: execute Organization upgrade with Account-only whitelist entry.
@@ -581,7 +589,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
         // Call: first attempt fails due whitelist validation.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
@@ -600,7 +610,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Setup: whitelist target and use migration helper that requires in-flight upgrade authorization.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
-        bytes memory migrationData = abi.encodeCall(OrganizationImplementationHarness.migrationRequireAuthAndSetMarker, (2121));
+        bytes memory migrationData =
+            abi.encodeCall(OrganizationImplementationHarness.migrationRequireAuthAndSetMarker, (2121));
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: migrationData,
@@ -686,7 +697,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        bytes memory tamperedMigrationData = abi.encodeCall(OrganizationImplementationHarness.migrationSetMarker, (2525));
+        bytes memory tamperedMigrationData =
+            abi.encodeCall(OrganizationImplementationHarness.migrationSetMarker, (2525));
 
         // Verify: swapping migration calldata after signatures are collected reverts.
         vm.expectRevert();
@@ -697,11 +709,13 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies migration calldata cannot trigger a nested second upgrade without fresh authorization.
     function test_OI_UTACWA_26_nestedSecondUpgradeFromMigration_reverts_desiredBehavior() public {
-        // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted V3.
+        // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted
+        // V3.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
-        bytes memory nestedData =
-            abi.encodeCall(OrganizationImplementationHarness.migrationNestedUpgrade, (address(implementationV3), bytes("")));
+        bytes memory nestedData = abi.encodeCall(
+            OrganizationImplementationHarness.migrationNestedUpgrade, (address(implementationV3), bytes(""))
+        );
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: nestedData,
@@ -724,8 +738,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         _setOrganizationImplementationWhitelisted(address(implementationV3), true);
-        bytes memory nestedData =
-            abi.encodeCall(OrganizationImplementationHarness.migrationNestedUpgrade, (address(implementationV3), bytes("")));
+        bytes memory nestedData = abi.encodeCall(
+            OrganizationImplementationHarness.migrationNestedUpgrade, (address(implementationV3), bytes(""))
+        );
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: nestedData,
@@ -864,7 +879,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
 
         // Verify: successful upgrade implies `_authorizeUpgrade` accepted authorized flow.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "upgrade should succeed");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "upgrade should succeed"
+        );
     }
 
     /// @dev Verifies `_authorizeUpgrade` should be bound to a specific `newImplementation`, not only a boolean flag.

@@ -142,9 +142,7 @@ contract StorageLayoutFuzzTest is StorageLayoutTestBase {
         (address actualWhitelist, address actualAuthorizedImplementation) = harness.getUpgradeState();
         assertEq(actualWhitelist, upgradeWhitelist, "whitelistAddress mismatch");
         assertEq(
-            actualAuthorizedImplementation,
-            authorizedUpgradeImplementation,
-            "authorizedUpgradeImplementation mismatch"
+            actualAuthorizedImplementation, authorizedUpgradeImplementation, "authorizedUpgradeImplementation mismatch"
         );
 
         _assertTxRecoveryStateEquals(harness.getTxRecoveryState(), txRecoveryState);

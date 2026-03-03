@@ -26,7 +26,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: data,
-            salt: 141300,
+            salt: 141_300,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -49,7 +49,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         _setSingleAdminThresholdOne();
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141301,
+            salt: 141_301,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -57,7 +57,9 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
 
         // Verify: upgrade is rejected while target remains unwhitelisted.
         vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2))
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
         );
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
@@ -74,7 +76,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(target),
             isApproval: true,
-            salt: 141302,
+            salt: 141_302,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -96,7 +98,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141303,
+            salt: 141_303,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -108,7 +110,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
             operationType: OperationType.DeployAccount,
             operationData: abi.encode(bytes32(uint256(3))),
             isApproval: true,
-            salt: 141304,
+            salt: 141_304,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -117,7 +119,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
             operationType: OperationType.DeployAccount,
             operationData: abi.encode(bytes32(uint256(4))),
             isApproval: true,
-            salt: 141305,
+            salt: 141_305,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -145,7 +147,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141306,
+            salt: 141_306,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -154,7 +156,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
 
         (AdminAuthParams memory orgAuth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141307,
+            salt: 141_307,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -165,8 +167,12 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), orgAuth);
 
         // Verify: Organization pointer changed while account implementation pointer remained intact.
-        assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "org pointer mismatch");
-        assertEq(organizationProxy.getAccountImplementationStorage(), accountImplV1, "account pointer should be unchanged");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "org pointer mismatch"
+        );
+        assertEq(
+            organizationProxy.getAccountImplementationStorage(), accountImplV1, "account pointer should be unchanged"
+        );
     }
 
     /// @dev Verifies the stored whitelist address remains immutable across successful Organization upgrades.
@@ -178,7 +184,7 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         organizationProxy.setUpgradeState(configuredWhitelist, address(0));
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141308,
+            salt: 141_308,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -202,12 +208,13 @@ contract OrganizationUpgradesCrossFileInvariants is OrganizationUpgradesCrossFil
         // Call: direct `upgradeToAndCall` should revert and not mutate implementation.
         vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
         IUUPSOrgEntrypoints(address(organizationProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
-        assertEq(_readProxyImplementation(address(organizationProxy)), beforeImpl, "impl changed via direct upgradeToAndCall");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), beforeImpl, "impl changed via direct upgradeToAndCall"
+        );
 
         // Call: raw `upgradeTo(address)` selector should also fail to mutate implementation.
-        (bool success,) = address(organizationProxy).call(
-            abi.encodeWithSelector(bytes4(keccak256("upgradeTo(address)")), address(implementationV2))
-        );
+        (bool success,) = address(organizationProxy)
+            .call(abi.encodeWithSelector(bytes4(keccak256("upgradeTo(address)")), address(implementationV2)));
 
         // Verify: raw selector path cannot mutate implementation.
         assertFalse(success, "raw upgradeTo should not succeed");

@@ -26,7 +26,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141416,
+            salt: 141_416,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -55,7 +55,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141382,
+            salt: 141_382,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -64,7 +64,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
             operationType: OperationType.UpgradeAccount,
             operationData: operationData,
             isApproval: false,
-            salt: 141382,
+            salt: 141_382,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -73,7 +73,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
         // Call: consume nonce via rejection path.
         organizationProxy.rejectAdminOperation(OperationType.UpgradeAccount, operationData, rejectionAuth);
 
-        uint256 nonce = organizationProxy.computeNonce(OperationType.UpgradeAccount, operationData, 141382);
+        uint256 nonce = organizationProxy.computeNonce(OperationType.UpgradeAccount, operationData, 141_382);
         assertTrue(organizationProxy.isNonceUsed(nonce), "rejected nonce should be consumed");
 
         // Verify: execution with same nonce is rejected.
@@ -96,7 +96,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(accountImplV1),
             isApproval: true,
-            salt: 141421,
+            salt: 141_421,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -105,7 +105,7 @@ contract OrganizationAccountFactoryBaseUpgradeIntegrationTest is OrganizationUpg
 
         (AdminAuthParams memory orgUpgradeAuth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
-            salt: 141422,
+            salt: 141_422,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)

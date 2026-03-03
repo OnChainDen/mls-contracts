@@ -52,7 +52,11 @@ contract OrganizationAccountFactoryStateHarness is OrganizationAdminStateHarness
     /**
      * @dev Reads organization-upgrade namespace values.
      */
-    function getUpgradeState() external view returns (address whitelistAddress, address authorizedUpgradeImplementation) {
+    function getUpgradeState()
+        external
+        view
+        returns (address whitelistAddress, address authorizedUpgradeImplementation)
+    {
         whitelistAddress = LibOrganizationUpgradeStorage.layout().whitelistAddress;
         authorizedUpgradeImplementation = LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation;
     }

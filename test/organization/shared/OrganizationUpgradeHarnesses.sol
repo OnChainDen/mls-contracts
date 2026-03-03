@@ -7,10 +7,12 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {OrganizationImplementation} from "organization/OrganizationImplementation.sol";
 import {LibOrganizationAdmin} from "organization/libraries/LibOrganizationAdmin.sol";
-import {LibOrganizationAccountFactoryStorage} from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
+import {
+    LibOrganizationAccountFactoryStorage
+} from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
 import {LibOrganizationAdminStorage} from "organization/libraries/storage/LibOrganizationAdminStorage.sol";
-import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationGroupsStorage} from "organization/libraries/storage/LibOrganizationGroupsStorage.sol";
+import {LibOrganizationGuardianStorage} from "organization/libraries/storage/LibOrganizationGuardianStorage.sol";
 import {LibOrganizationMembersStorage} from "organization/libraries/storage/LibOrganizationMembersStorage.sol";
 import {LibOrganizationPolicyStorage} from "organization/libraries/storage/LibOrganizationPolicyStorage.sol";
 import {LibOrganizationRecoveryStorage} from "organization/libraries/storage/LibOrganizationRecoveryStorage.sol";
@@ -112,7 +114,11 @@ contract OrganizationImplementationHarness is OrganizationImplementation {
         LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = authorizedUpgradeImplementation;
     }
 
-    function getUpgradeState() external view returns (address whitelistAddress, address authorizedUpgradeImplementation) {
+    function getUpgradeState()
+        external
+        view
+        returns (address whitelistAddress, address authorizedUpgradeImplementation)
+    {
         whitelistAddress = LibOrganizationUpgradeStorage.layout().whitelistAddress;
         authorizedUpgradeImplementation = LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation;
     }

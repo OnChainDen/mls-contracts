@@ -20,7 +20,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
 
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: candidate,
-            salt: uint256(uint160(candidate)) + 141020,
+            salt: uint256(uint160(candidate)) + 141_020,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -44,7 +44,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
             operationType: OperationType.UpgradeAccount,
             operationData: abi.encode(candidate),
             isApproval: true,
-            salt: uint256(uint160(candidate)) + 141021,
+            salt: uint256(uint160(candidate)) + 141_021,
             expirationTimestamp: block.timestamp + 1 hours,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
@@ -75,7 +75,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
                 operationType: OperationType.Upgrade,
                 operationData: _encodeOperationDataForUpgrade(target),
                 isApproval: true,
-                salt: 141100 + i,
+                salt: 141_100 + i,
                 expirationTimestamp: block.timestamp + 1 hours,
                 privateKeys: buildUint256Array(ADMIN_PK_1)
             });
@@ -99,7 +99,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: malformedData,
-            salt: 141200,
+            salt: 141_200,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -121,13 +121,12 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         _setOrganizationImplementationWhitelisted(address(implementationV3), true);
-        bytes memory nestedData = abi.encodeCall(
-            implementationV2.migrationNestedUpgrade, (address(implementationV3), randomData)
-        );
+        bytes memory nestedData =
+            abi.encodeCall(implementationV2.migrationNestedUpgrade, (address(implementationV3), randomData));
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             migrationData: nestedData,
-            salt: 141201,
+            salt: 141_201,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)

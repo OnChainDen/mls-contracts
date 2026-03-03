@@ -4,7 +4,9 @@ pragma solidity 0.8.33;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-import {ImplementationWhitelistImplementation} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
 /**
