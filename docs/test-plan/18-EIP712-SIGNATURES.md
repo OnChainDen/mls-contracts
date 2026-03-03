@@ -240,8 +240,9 @@
 | 102 | Cross-org replay: policy-based ERC-1271 signatures valid on org A fail on org B | [S] | P0 |
 | 103 | Cross-chain replay: policy-based ERC-1271 signatures valid on chain A fail on chain B | [S] | P0 |
 | 104 | Expiration at exactly `block.timestamp` is accepted (strict `>` check) | [E] | P0 |
+| 104 | Signature with expiration  < `block.timestamp` returns ERC1271_INVALID_VALUE | [N] | P0 |
 | 105 | AutoApprove policy ignores reviewer signatures; valid initiator + guardian signatures remain sufficient | [U] | P0 |
-| 106 | Manual-approval malformed/unauthorized review signatures fail gracefully with `ERC1271_INVALID_VALUE` (no revert) | [N] | P0 |
+| 106 | Manual-approval malformed/unauthorized review signatures fail (return `ERC1271_INVALID_VALUE` or revert) | [N] | P0 |
 
 ### 4.4 `_isValidGuardianSignature` (private -> internal via harness)
 
