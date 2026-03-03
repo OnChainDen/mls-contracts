@@ -164,7 +164,7 @@
 | 84 | Module inner signature signed by wrong executor returns `false` | [N] | P0 |
 | 85 | Malformed module inner signature returns `false` (no revert) | [E] | P0 |
 | 86 | Guardian contract that reverts on `isModuleEnabled` staticcall returns `false` gracefully | [E] | P0 |
-| 87 | Guardian contract that returns truncated data (`<32 bytes`) for `isModuleEnabled` returns `false` | [E] | P0 |
+| 87 | Guardian contract that returns truncated data (`<32 bytes`) or malformed data (not `true` or `false`) for `isModuleEnabled` returns `false` | [E] | P0 |
 | 88 | Guardian is EOA and recovered signer is not guardian returns `false` gracefully | [E] | P0 |
 | 89 | Module rotation behavior: old module disabled/new module enabled => old `false`, new `true` immediately | [I][S] | P0 |
 
