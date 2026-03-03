@@ -159,6 +159,7 @@
 | 79 | [DESIRED] Reject implementation targets with no code, even if whitelist contract is permissive/malicious | [S] | P0 |
 | 80 | [DESIRED] Reject `implementationAddress == address(0)` explicitly | [N] | P0 |
 | 81 | If organization initialization fails after deploy, tx reverts atomically and no uninitialized org remains deployed | [S] | P0 |
+| 81.2 | If organization initialization fails after deploy, can still redeploy organization at same address using same create2 inputs, but with different (valid) initialization data | [S] | P0 |
 | 82 | Same `(salt, implementationAddress, whitelistAddress)` cannot be deployed twice (CREATE2 collision) | [N] | P1 |
 
 ### 3.2 `computeOrganizationAddress`
