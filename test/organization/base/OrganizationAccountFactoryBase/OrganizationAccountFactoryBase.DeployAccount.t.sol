@@ -10,6 +10,28 @@ import {
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
+interface IOAFBVersionedAccount {
+    function version() external view returns (uint256);
+}
+
+contract OAFBAccountImplementationVersion1 {
+    function version() external pure returns (uint256) {
+        return 1;
+    }
+}
+
+contract OAFBAccountImplementationVersion2 {
+    function version() external pure returns (uint256) {
+        return 2;
+    }
+}
+
+contract OAFBAccountImplementationVersion3 {
+    function version() external pure returns (uint256) {
+        return 3;
+    }
+}
+
 /**
  * @dev Unit tests for `OrganizationAccountFactoryBase.deployAccount` behavior.
  */
@@ -289,5 +311,229 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         // Verify: corrected retry succeeds and consumes nonce.
         assertEq(deployedAccount, harness.computeAccountAddress(create2Salt), "corrected retry should deploy account");
         assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed after successful retry");
+    }
+
+    /// @dev Verifies previously deployed accounts execute new implementation code immediately after upgrade.
+    function test_OAFB_SAI_12_setAccountImplementation_previouslyDeployedAccountsImmediatelyUseNewImplementation()
+        public
+    {
+        // Setup: configure versioned implementations, set V1, and deploy two accounts.
+        _setSingleAdminThresholdOne();
+        address implV1 = address(new OAFBAccountImplementationVersion1());
+        address implV2 = address(new OAFBAccountImplementationVersion2());
+        _setAccountImplementationWhitelisted(implV1, true);
+        _setAccountImplementationWhitelisted(implV2, true);
+
+        (AdminAuthParams memory setV1Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV1,
+            salt: 5201,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV1, setV1Auth);
+
+        bytes32 saltA = bytes32(uint256(4201));
+        bytes32 saltB = bytes32(uint256(4202));
+        (AdminAuthParams memory deployAuthA,) = _buildDeployAccountAuth({
+            create2Salt: saltA,
+            salt: 5202,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory deployAuthB,) = _buildDeployAccountAuth({
+            create2Salt: saltB,
+            salt: 5203,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        address accountA = harness.deployAccount(saltA, deployAuthA);
+        vm.prank(GUARDIAN);
+        address accountB = harness.deployAccount(saltB, deployAuthB);
+        assertEq(IOAFBVersionedAccount(accountA).version(), 1, "account A should start on v1");
+        assertEq(IOAFBVersionedAccount(accountB).version(), 1, "account B should start on v1");
+
+        (AdminAuthParams memory setV2Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV2,
+            salt: 5204,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: update account implementation pointer to V2.
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV2, setV2Auth);
+
+        // Verify: previously deployed accounts now execute V2 code.
+        assertEq(IOAFBVersionedAccount(accountA).version(), 2, "account A should switch to v2");
+        assertEq(IOAFBVersionedAccount(accountB).version(), 2, "account B should switch to v2");
+    }
+
+    /// @dev Verifies accounts deployed after implementation upgrade use the latest implementation.
+    function test_OAFB_SAI_13_setAccountImplementation_newlyDeployedAccountsAfterUpgradeUseNewImplementation() public {
+        // Setup: set V1, then upgrade to V2 before deploying.
+        _setSingleAdminThresholdOne();
+        address implV1 = address(new OAFBAccountImplementationVersion1());
+        address implV2 = address(new OAFBAccountImplementationVersion2());
+        _setAccountImplementationWhitelisted(implV1, true);
+        _setAccountImplementationWhitelisted(implV2, true);
+
+        (AdminAuthParams memory setV1Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV1,
+            salt: 5205,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV1, setV1Auth);
+
+        (AdminAuthParams memory setV2Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV2,
+            salt: 5206,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV2, setV2Auth);
+
+        bytes32 create2Salt = bytes32(uint256(4203));
+        (AdminAuthParams memory deployAuth,) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 5207,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: deploy account after pointer update to V2.
+        vm.prank(GUARDIAN);
+        address account = harness.deployAccount(create2Salt, deployAuth);
+
+        // Verify: new account resolves latest V2 implementation.
+        assertEq(IOAFBVersionedAccount(account).version(), 2, "new account should use v2");
+    }
+
+    /// @dev Verifies sequential implementation upgrades preserve expected behavior across V1 -> V2 -> V3.
+    function test_OAFB_SAI_14_setAccountImplementation_sequentialUpgradesPreserveBehaviorAcrossVersions() public {
+        // Setup: whitelist three versions, set V1, and deploy account.
+        _setSingleAdminThresholdOne();
+        address implV1 = address(new OAFBAccountImplementationVersion1());
+        address implV2 = address(new OAFBAccountImplementationVersion2());
+        address implV3 = address(new OAFBAccountImplementationVersion3());
+        _setAccountImplementationWhitelisted(implV1, true);
+        _setAccountImplementationWhitelisted(implV2, true);
+        _setAccountImplementationWhitelisted(implV3, true);
+
+        (AdminAuthParams memory setV1Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV1,
+            salt: 5208,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV1, setV1Auth);
+
+        bytes32 create2Salt = bytes32(uint256(4204));
+        (AdminAuthParams memory deployAuth,) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 5209,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        address account = harness.deployAccount(create2Salt, deployAuth);
+        assertEq(IOAFBVersionedAccount(account).version(), 1, "account should start on v1");
+
+        (AdminAuthParams memory setV2Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV2,
+            salt: 5210,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        // Call: upgrade pointer to V2.
+        harness.setAccountImplementation(implV2, setV2Auth);
+        assertEq(IOAFBVersionedAccount(account).version(), 2, "account should resolve v2");
+
+        (AdminAuthParams memory setV3Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV3,
+            salt: 5211,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        // Call: upgrade pointer to V3.
+        harness.setAccountImplementation(implV3, setV3Auth);
+
+        // Verify: account resolves V3 after final upgrade.
+        assertEq(IOAFBVersionedAccount(account).version(), 3, "account should resolve v3");
+    }
+
+    /// @dev Verifies all accounts under one organization share a single implementation pointer.
+    function test_OAFB_SAI_15_setAccountImplementation_allAccountsShareSingleImplementationPointer() public {
+        // Setup: deploy two accounts under V1 and then move pointer to V2.
+        _setSingleAdminThresholdOne();
+        address implV1 = address(new OAFBAccountImplementationVersion1());
+        address implV2 = address(new OAFBAccountImplementationVersion2());
+        _setAccountImplementationWhitelisted(implV1, true);
+        _setAccountImplementationWhitelisted(implV2, true);
+
+        (AdminAuthParams memory setV1Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV1,
+            salt: 5212,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV1, setV1Auth);
+
+        bytes32 saltA = bytes32(uint256(4205));
+        bytes32 saltB = bytes32(uint256(4206));
+        (AdminAuthParams memory deployAuthA,) = _buildDeployAccountAuth({
+            create2Salt: saltA,
+            salt: 5213,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory deployAuthB,) = _buildDeployAccountAuth({
+            create2Salt: saltB,
+            salt: 5214,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        address accountA = harness.deployAccount(saltA, deployAuthA);
+        vm.prank(GUARDIAN);
+        address accountB = harness.deployAccount(saltB, deployAuthB);
+
+        (AdminAuthParams memory setV2Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: implV2,
+            salt: 5215,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: execute one global implementation update.
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(implV2, setV2Auth);
+
+        // Verify: both accounts now resolve the same updated implementation.
+        assertEq(IOAFBVersionedAccount(accountA).version(), 2, "account A should share global pointer");
+        assertEq(IOAFBVersionedAccount(accountB).version(), 2, "account B should share global pointer");
     }
 }

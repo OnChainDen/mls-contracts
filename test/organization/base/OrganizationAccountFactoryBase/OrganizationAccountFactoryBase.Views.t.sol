@@ -138,8 +138,41 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(implementationAddress, accountImplementationV1, "implementation should be publicly readable");
     }
 
+    /// @dev Verifies successive implementation updates are reflected by `implementation()` getter.
+    function test_OAFB_I_5_implementation_afterSuccessiveSetCalls_returnsLatest() public {
+        // Setup: configure one-admin baseline and whitelist both implementation versions.
+        _setSingleAdminThresholdOne();
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+        _setAccountImplementationWhitelisted(accountImplementationV2, true);
+
+        (AdminAuthParams memory setV1Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 7122,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, setV1Auth);
+        assertEq(harness.implementation(), accountImplementationV1, "getter should return first configured implementation");
+
+        (AdminAuthParams memory setV2Auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV2,
+            salt: 7123,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        // Call: execute second implementation update.
+        harness.setAccountImplementation(accountImplementationV2, setV2Auth);
+
+        // Verify: getter now returns most recently configured implementation.
+        assertEq(harness.implementation(), accountImplementationV2, "getter should return latest configured implementation");
+    }
+
     /// @dev Verifies desired behavior that no-code stored implementation addresses are rejected.
-    function test_OAFB_I_5_implementation_noCodeStoredImplementation_reverts() public {
+    function test_OAFB_I_6_implementation_noCodeStoredImplementation_reverts() public {
         address noCodeImplementation = address(0xCA67);
 
         // Setup: seed a non-zero implementation address with no runtime code.

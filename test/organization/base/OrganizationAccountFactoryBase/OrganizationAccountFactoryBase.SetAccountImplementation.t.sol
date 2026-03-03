@@ -356,4 +356,98 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6165);
         assertFalse(harness.getUsedNonce(nonce), "failed no-code implementation update should not consume nonce");
     }
+
+    /// @dev Verifies expired admin auth reverts and does not consume nonce.
+    function test_OAFB_SAI_13_setAccountImplementation_expiredAdminAuth_revertsAndDoesNotConsumeNonce() public {
+        // Setup: configure one-admin baseline and whitelist target implementation.
+        _setSingleAdminThresholdOne();
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+
+        (AdminAuthParams memory expiredAuth, bytes memory operationData) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6166,
+            expiration: block.timestamp - 1,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Verify: expired auth payload must be rejected.
+        vm.expectPartialRevert(IOrganizationAdmin.AdminOperationExpired.selector);
+        vm.prank(GUARDIAN);
+        // Call: execute implementation update with expired auth.
+        harness.setAccountImplementation(accountImplementationV1, expiredAuth);
+
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6166);
+        assertFalse(harness.getUsedNonce(nonce), "expired auth should not consume nonce");
+    }
+
+    /// @dev Verifies signatures for a different implementation cannot authorize current update call.
+    function test_OAFB_SAI_14_setAccountImplementation_signaturesForDifferentImplementation_reverts() public {
+        // Setup: whitelist both implementations and sign auth for V1 only.
+        _setSingleAdminThresholdOne();
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+        _setAccountImplementationWhitelisted(accountImplementationV2, true);
+
+        (AdminAuthParams memory authForV1, bytes memory opDataForV1) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6168,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Verify: operation-data mismatch invalidates auth for V2 update call.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        // Call: attempt update to V2 with signatures bound to V1.
+        harness.setAccountImplementation(accountImplementationV2, authForV1);
+
+        uint256 nonceForV2 = _computeSetAccountImplementationNonce(abi.encode(accountImplementationV2), 6168);
+        assertFalse(harness.getUsedNonce(nonceForV2), "failed mismatched auth should not consume V2 nonce");
+
+        uint256 nonceForV1 = _computeSetAccountImplementationNonce(opDataForV1, 6168);
+        assertFalse(harness.getUsedNonce(nonceForV1), "failed mismatched auth should not consume V1 nonce");
+    }
+
+    /// @dev Verifies no-code-target revert path preserves current implementation pointer and nonce state.
+    function test_OAFB_SAI_15_setAccountImplementation_noCodeTargetPath_doesNotConsumeNonceOrMutatePointer() public {
+        address noCodeImplementation = address(0xCA11);
+
+        // Setup: seed an active implementation and whitelist the no-code target.
+        _setSingleAdminThresholdOne();
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+        _setAccountImplementationWhitelisted(noCodeImplementation, true);
+
+        (AdminAuthParams memory seedAuth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6169,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, seedAuth);
+
+        (AdminAuthParams memory failingAuth, bytes memory operationData) = _buildSetAccountImplementationAuth({
+            newImplementation: noCodeImplementation,
+            salt: 6170,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Verify: no-code update path reverts and leaves state unchanged.
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        // Call: attempt no-code implementation update.
+        harness.setAccountImplementation(noCodeImplementation, failingAuth);
+
+        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6170);
+        assertFalse(harness.getUsedNonce(nonce), "no-code revert should not consume nonce");
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV1,
+            "active implementation pointer should remain unchanged"
+        );
+    }
 }
