@@ -124,7 +124,8 @@ All `private` functions in the files under test will be refactored to `internal`
 | LOAT-VAURLOR-7 | `getActualDestination` (contract interaction): returns `to` for non-token-transfer calldata | [U] | P0 |
 | LOAT-VAURLOR-8 | `checkAndUpdateRateLimit` returns false — reverts `RateLimitExceeded(policyId)` | [N] | P0 |
 | LOAT-VAURLOR-9 | `checkAndUpdateRateLimit` returns true — succeeds, usage updated in storage | [U] | P0 |
-| LOAT-VAURLOR-10 | After hitting `timeIntervalLimit` in current window, advancing to the next window allows usage again for the same `(policyId, account, destination, initiator)` | [U][E] | P0 |
+| LOAT-VAURLOR-10 | After hitting `timeIntervalLimit` in current anchored window, advancing past `windowAnchorTimestamp + N*interval` allows usage again for the same `(policyId, account, destination, initiator)` | [U][E] | P0 |
+| LOAT-VAURLOR-10A | With non-zero `windowAnchorTimestamp`, transactions before anchor and at/after anchor follow expected acceptance/rejection boundaries | [U][E] | P1 |
 | LOAT-VAURLOR-11 | Native ETH transfer: `extractTransferAmount` uses `value` parameter (data is empty) | [U] | P0 |
 | LOAT-VAURLOR-12 | ERC-20 transfer: `extractTransferAmount` reads amount from calldata | [U] | P0 |
 | LOAT-VAURLOR-13 | **Desired Behavior:** `TransactionType.Any` with rate limiting enabled uses count-based accounting (`usageAmount = 1`) even when tx shape is token transfer | [U][S] | P0 |

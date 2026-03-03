@@ -177,7 +177,12 @@ abstract contract OrganizationAccountTransactionTestBase is OrganizationPolicyTe
         if (policy.config.rateLimit.timeIntervalHours == 0) {
             return 0;
         }
-        return block.timestamp / (uint256(policy.config.rateLimit.timeIntervalHours) * 3600);
+        uint256 anchorTimestamp = uint256(policy.config.rateLimit.windowAnchorTimestamp);
+        if (block.timestamp < anchorTimestamp) {
+            return 0;
+        }
+
+        return (block.timestamp - anchorTimestamp) / (uint256(policy.config.rateLimit.timeIntervalHours) * 3600);
     }
 
     /**

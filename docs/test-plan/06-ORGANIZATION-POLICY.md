@@ -469,9 +469,11 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
 | LPRL-WIN-1 | `timeIntervalHours == 0` returns `0` | [U] | P0 |
-| LPRL-WIN-2 | Computes `block.timestamp / (hours * 3600)` exactly | [U] | P0 |
-| LPRL-WIN-3 | Window increments exactly on boundary timestamp | [E] | P1 |
-| LPRL-WIN-4 | Supports max `uint16` hour interval without arithmetic issues | [E] | P1 |
+| LPRL-WIN-2 | When `block.timestamp < windowAnchorTimestamp`, returns `0` (pre-anchor window) | [U] | P0 |
+| LPRL-WIN-3 | At/after anchor, computes `(block.timestamp - windowAnchorTimestamp) / (hours * 3600)` exactly | [U] | P0 |
+| LPRL-WIN-4 | Window increments exactly at `windowAnchorTimestamp + N * (hours * 3600)` boundaries | [E] | P1 |
+| LPRL-WIN-5 | Same wall-clock schedule does not drift across intervals (e.g., weekly payroll) | [E] | P1 |
+| LPRL-WIN-6 | Supports max `uint16` hour interval without arithmetic issues | [E] | P1 |
 
 ### 9.3 `getCurrentUsage(...)`
 

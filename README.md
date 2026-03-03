@@ -324,6 +324,8 @@ When using rate limiting, the following parameters can be configured:
 
 - **Time Interval (Hours)**: The duration of the time window in hours (e.g., 24 for daily limits, 168 for weekly limits, 720 for monthly limits). Usage tracking resets at the start of each new time window.
 
+- **Window Anchor Timestamp**: A Unix timestamp that defines when interval boundaries start for this policy. Use this to align windows to business schedules (for example, Monday 00:00 UTC for weekly payroll).
+
 - **Interval Limit**: The maximum allowed usage within each time window. For token transfer policies, this is the cumulative token amount. For contract interaction policies, this is the number of times the contract can be called during the time interval.
 
 **Scoping Options:**
@@ -348,6 +350,10 @@ Rate limits can be scoped in different ways for each of these dimensions:
 
 - For **Token Transfer** policies: Usage is tracked as the cumulative token amount transferred within the time window.
 - For **Contract Interaction** policies: Usage is tracked as the count of transactions (each transaction counts as 1).
+- Time windows are fixed and anchor-aligned, computed as:
+  - `0` when `block.timestamp < windowAnchorTimestamp`
+  - `(block.timestamp - windowAnchorTimestamp) / (timeIntervalHours * 3600)` otherwise
+  This avoids per-usage drift while still allowing configurable calendar alignment.
 
 See `src/types/PolicyTypes.sol` (specifically `RateLimitType`, `RateLimitScope`, and `RateLimitConfig`) and `src/organization/libraries/policy/LibPolicyRateLimits.sol` for implementation details.
 

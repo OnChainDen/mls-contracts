@@ -9,7 +9,7 @@ import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
  * @title Lib Policy Rate Limits
  * @dev Library for policy rate limit tracking and validation.
  *      Handles checking and updating usage limits for policies.
- *      Time windows are calculated as fixed intervals based on block.timestamp.
+ *      Time windows are calculated as fixed intervals anchored to policy configuration.
  * @author Den Technologies Inc
  */
 library LibPolicyRateLimits {
@@ -71,7 +71,9 @@ library LibPolicyRateLimits {
 
     /**
      * @dev Computes the current time window for a policy.
-     *      Time windows are calculated as: block.timestamp / (timeIntervalHours * 3600)
+     *      Time windows are calculated as:
+     *      - 0, when before anchor
+     *      - (block.timestamp - windowAnchorTimestamp) / (timeIntervalHours * 3600), at/after anchor
      * @param policy The policy data
      * @return The current time window, or 0 if timeIntervalHours is 0
      */
@@ -82,7 +84,11 @@ library LibPolicyRateLimits {
         // Avoid division by zero
         if (hours_ == 0) return 0;
 
-        return block.timestamp / (uint256(hours_) * SECONDS_PER_HOUR);
+        uint256 anchorTimestamp = uint256(policy.config.rateLimit.windowAnchorTimestamp);
+        // Case: Current timestamp is before the configured anchor.
+        if (block.timestamp < anchorTimestamp) return 0;
+
+        return (block.timestamp - anchorTimestamp) / (uint256(hours_) * SECONDS_PER_HOUR);
     }
 
     /**

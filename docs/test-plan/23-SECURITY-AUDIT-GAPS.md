@@ -119,7 +119,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 
 | # | Function | Test Case | Type | Priority |
 |---|----------|-----------|------|----------|
-| 31 | `computeTimeWindow` | Deterministic output for same timestamp/policy | [U] | P1 |
+| 31 | `computeTimeWindow` | Deterministic output for same timestamp/policy with anchor-aware semantics (pre-anchor `0`, post-anchor fixed intervals) | [U] | P1 |
 | 32 | `computeTimeWindow` | `timeIntervalHours = 0` returns `0` | [E] | P1 |
 | 33 | `computeUsageKey` | `AcrossAll` scope normalizes to `address(0)` for that dimension | [U] | P0 |
 | 34 | `computeUsageKey` | `PerEntity` scope isolates by concrete account/destination/initiator | [U] | P0 |

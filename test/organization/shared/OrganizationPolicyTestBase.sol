@@ -107,6 +107,7 @@ abstract contract OrganizationPolicyTestBase is OrganizationGroupsTestBase, Byte
                 rateLimit: RateLimitConfig({
                     limitType: RateLimitType.None,
                     timeIntervalHours: 0,
+                    windowAnchorTimestamp: 0,
                     timeIntervalLimit: 0,
                     initiatorScope: RateLimitScope.AcrossAll,
                     sourceScope: RateLimitScope.AcrossAll,
