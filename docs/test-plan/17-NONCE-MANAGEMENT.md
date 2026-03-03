@@ -300,6 +300,7 @@
 | 126 | `_computeInitiatorHashFromParams` | `isApproval=true` and `isApproval=false` produce different hashes | [S] | P0 |
 | 127 | `_computeInitiatorHashFromParams` | Different `chainId` produces different hash (cross-chain replay protection) | [S] | P0 |
 | 128 | `_computeInitiatorHashFromParams` | Different organization address produces different hash (cross-org replay protection) | [S] | P0 |
+| 128.2 | `_computeInitiatorHashFromParams` | Different account address produces different hash (cross-account replay protection) | [S] | P0 |
 | 129 | `_computeReviewHashFromParams` | Different `initiatorSignature` produces different reviewer hash (`keccak256(initiatorSignature)` binding) | [S] | P0 |
 | 130 | `_computeReviewHashFromParams` | `isApproval` flip changes reviewer hash | [S] | P0 |
 | 131 | `_computeInitiatorHashFromParams` + `_computeReviewHashFromParams` | Golden vectors match expected typed-data hashes | [U] | P1 |
