@@ -163,6 +163,7 @@
 | 56 | [DESIRED] Rate-limit arithmetic must fail safely (no overflow bypass / no wrapped usage) | [DESIRED][S] | P0 |
 | 57 | [DESIRED] Zero approval threshold in group-manual policy is rejected | [DESIRED][S] | P0 |
 | 58 | [DESIRED] `anyInitiator=true` still requires initiator to be an organization member | [DESIRED][S] | P0 |
+| 58a | Signatures collected under a valid policy become unexecutable after a policy/group change invalidates the authorization (e.g. policy root updated to remove the policy, or group deleted/member removed so approvals no longer meet threshold) | [I][S] | P0 |
 
 ### 6.4 Private helpers (private -> harness)
 
