@@ -213,6 +213,7 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 | Unconfigured state (`recoveryAddress=0` and `timelockDurationSeconds=0`) succeeds | `[U]` | P1 |
 | `recoveryAddress!=0` and `timelockDurationSeconds=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
 | `recoveryAddress=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+
 | `recoveryAddress!=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
 
 ---
@@ -225,6 +226,7 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 | Timelock below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
 | Timelock above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
 | Non-zero address + timelock at min boundary (`2 days`) succeeds | `[E]` | P1 |
+| Non-zero address + timelock within boundary (`2 days` < x < `30 days`) succeeds | `[E]` | P1 |
 | Non-zero address + timelock at max boundary (`30 days`) succeeds | `[E]` | P1 |
 
 ---
