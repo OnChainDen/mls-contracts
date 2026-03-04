@@ -184,7 +184,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | 65 | Policy `transactionType != Signatures` returns invalid value | [N] | P0 |
 | 66 | Unauthorized initiator for policy returns invalid value | [N] | P0 |
 | 67 | Auto-approval policy with valid initiator+guardian signatures returns magic value | [U] | P0 |
-| 68 | Manual-approval policy requires threshold reviewer signatures; insufficient reviewer signatures returns invalid value | [N] | P0 |
+| 68 | Manual-approval policy requires threshold reviewer signatures; insufficient reviewer signatures or malformed invalid review signatures should should fail | [N] | P0 |
 | 69 | Manual-approval reviewer signatures are bound to initiator signature (cannot replay with different initiator signature) | [S] | P0 |
 | 70 | [DESIRED] Any downstream approval-validation revert (duplicate/out-of-order/unauthorized reviewer) should map to invalid value, not revert | [S] | P0 |
 
