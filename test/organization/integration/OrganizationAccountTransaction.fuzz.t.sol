@@ -241,7 +241,9 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         );
 
         // Verify: below-threshold signatures always revert.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, threshold, 0)
+        );
         // Call: validate approval with insufficient manual signatures.
         harness.validateTransactionApprovalOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, data, 2, expiration, DEFAULT_POLICY_ID, initiatorSig, oneReviewSig, proofs
