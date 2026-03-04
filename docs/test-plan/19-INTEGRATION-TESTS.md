@@ -561,6 +561,7 @@ Critical: Test these through high-level external functions on our Base contracts
 | 168 | `computeNonce` / `isNonceUsed` public views match actual execution/rejection outcomes and rollback semantics across operation types | [I][S] | P1 |
 | 169 | Guardian update, recovery flows, and tx execution remain coherent through organization upgrade and account implementation upgrade | [I][S] | P0 |
 | 170 | Guardian Safe module rotation (disable old module/enable new) immediately changes valid guardian module signatures with no org state change | [I][S] | P0 |
+| 170a | Deploy and initialize an organization with 10,000 members in a single `initialize` call; verify gas stays within block limit and org state is correct | [E] | P1 |
 
 ---
 
