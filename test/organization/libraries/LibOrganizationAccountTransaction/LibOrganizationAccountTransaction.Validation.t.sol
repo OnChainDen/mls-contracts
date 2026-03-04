@@ -161,7 +161,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
 
         // Verify: rejection-hash review signature cannot satisfy approval flow.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         // Call: validate manual approval with wrong review hash flag.
         harness.validateTransactionApprovalOrRevertViaLibrary(
             ACCOUNT,
