@@ -209,6 +209,7 @@
 ## 8) `src/organization/base/OrganizationAccountTransactionBase.sol` + `src/organization/libraries/LibOrganizationAccountTransaction.sol` + `src/account/AccountImplementation.sol`
 
 ### 8.1 `executeAccountTransaction(...)`
+Critical: test these cases fully end-to-end using a guardian that is a v1.4.1 Safe that uses our SafeExecutorModule as the entry point for executing the test transactions as the guardian.
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
@@ -224,6 +225,8 @@
 | 84 | If account execution reverts after rate-limit update, rate-limit usage rolls back with the transaction | [S] | P0 |
 
 ### 8.2 `rejectAccountTransaction(...)`
+
+Critical: test these cases fully end-to-end using a guardian that is a v1.4.1 Safe that uses our SafeExecutorModule as the entry point for executing the test transactions as the guardian.
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
