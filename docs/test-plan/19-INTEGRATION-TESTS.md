@@ -61,7 +61,9 @@
 |---|-----------|------|----------|
 | 16 | Factory/deployer-only initialization succeeds once and sets core state (members/admins/groups/guardian/timelock) | [I] | P0 |
 | 17 | Non-deployer caller cannot initialize and reverts `UnauthorizedDeployer` | [N] | P0 |
-| 18 | Re-initialization reverts | [S] | P0 |
+| 18a | Re-initialization by the factory/deployer (same caller as original init) reverts on an already-initialized proxy (`initializer` modifier blocks second call) | [S] | P0 |
+| 18b | Re-initialization by an arbitrary caller on an already-initialized proxy reverts (both `initializer` and `onlyDeployer` block the call) | [S] | P0 |
+| 18c | After a failed initialization (e.g. invalid params that revert), the proxy remains uninitialised and a subsequent valid `initialize` call from the factory succeeds | [S] | P0 |
 | 19 | Invalid initialization (no members, invalid admins/threshold/guardian/timelock) reverts with full rollback | [S] | P0 |
 | 20 | Deferred recovery setup path works when recovery addresses are zero at init | [I] | P0 |
 | 21 | Immediate recovery setup path works when recovery addresses are provided at init | [I] | P1 |
