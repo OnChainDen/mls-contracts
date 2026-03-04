@@ -25,6 +25,8 @@ Helpers to expose include:
 - `LibOrganizationTxRecovery`: `_clearPendingTxRecoveryInitTimelock`, `_validateTxRecoveryNotConfiguredOrRevert`, `_validateTxRecoveryParamsOrRevert`
 - `ImplementationWhitelistImplementation`: `_addToWhitelist`, `_removeFromWhitelist`
 - `AccountImplementation`: `_execute`, `_onlyOrganization`
+- `SignatureUtils`: `_getVByte`, `_getContractSigner`, `_getContractSignatureLength`, `_extractContractInnerSignature`, `_tryRecoverEOASigner`, `_tryRecoverContractSigner`
+- `BytesUtils`: (all functions already `internal`; expose via harness for direct fuzz assertions)
 
 ---
 
@@ -110,6 +112,11 @@ Functions: `setPolicies`, `isPolicyInOrg`, `isTransactionAllowedByPolicy`, `isSo
 | 29 | **Desired behavior fail-closed:** malformed proofs/constraints payloads never authorize an operation | P0 |
 | 107 | **Desired behavior (token threshold semantics):** token amount thresholds are inclusive (`amount <= threshold`) | P0 |
 | 108 | **Function-filter helper correctness:** `_isFunctionAllowedByPolicy` enforces selector/proof checks when `anyFunction=false` and rejects calldata shorter than 4 bytes | P0 |
+| 145 | **Constraint calldata walking:** `_processConstraints` reads each parameter at the correct calldata offset `4 + Σ(headSlotCount × 32)` for all preceding params. Fuzz N constraints with varying `paramCalldataHeadSlotCount` and matching calldata; assert the i-th constraint validates against the correct slot | P0 |
+| 146 | **Short-calldata constraint rejection:** `areParametersAllowedByConstraints` returns `false` (no revert) when calldata is too short for any declared parameter head. Fuzz valid constraints, truncate calldata before the last parameter | P0 |
+| 147 | **Dynamic type offset resolution:** for `Bytes`/`String` constraints, the ABI offset in the parameter head correctly locates the dynamic data. Fuzz calldata with dynamic types at various offsets and an Exact hash constraint; assert `true` for correct offset, `false` for corrupted offset | P0 |
+| 148 | **ComparisonData length gating:** every type-specific validator (`Bool`, `Uint`, `Int`, `Address`, `FixedBytes`, `BytesOrString`) returns `false` when `comparisonData` has wrong byte length (e.g., ≠ 32 for Exact, ≠ 64 for Range). Fuzz each `ParamType` with wrong-length `comparisonData` | P0 |
+| 149 | **Undersized constraint payload rejection:** `areParametersAllowedByConstraints` returns `false` (no revert) for any `parameterConstraints` payload shorter than 64 bytes (minimum ABI-encoded empty array) | P0 |
 
 ---
 
@@ -244,6 +251,9 @@ Functions: signature routing and validation, Safe module execution, batched exec
 | 119 | **Account-caller binding:** `isValidSignatureForAccount` only succeeds when `msg.sender == account` and `account` is org-deployed | P0 |
 | 120 | **Safe executor caller gate:** `executeOnBehalf` succeeds only when caller is `AUTHORIZED_EXECUTOR` | P0 |
 | 121 | **Desired behavior (ERC-1271 compatibility):** malformed policy-signature payloads return invalid magic value (`0xffffffff`) instead of reverting | P1 |
+| 150 | **Batch field decoding:** each sub-tx in `BatchedTransaction.execute` calls the correct `to` with the correct `data`. Fuzz: pack N sub-txs as `[to(20)][dataLength(8)][data(N)]`, execute via delegatecall; verify each mock target received exactly its expected calldata | P0 |
+| 151 | **Batch offset walking:** a well-formed batch executes every sub-tx — none skipped, none repeated. Fuzz: pack N sub-txs targeting counter contracts; assert all N counters incremented exactly once | P0 |
+| 152 | **Truncated batch reverts atomically:** if the packed payload is cut short (mid-header or mid-data), the entire batch reverts and no sub-tx side effects persist | P0 |
 
 ---
 
@@ -298,17 +308,54 @@ Functions: `initialize`, `isInitialized`, modifier-enforced role boundaries
 
 ---
 
+## File 15: `src/libraries/BytesUtils.sol` / `src/libraries/SignatureUtils.sol` / `src/libraries/TokenTransferUtils.sol` / `src/libraries/ContractInteractionUtils.sol`
+
+Functions: `sliceFrom`, `sliceRange`, `tryRecoverSignerAtOffset`, `_getVByte`, `_getContractSigner`, `_getContractSignatureLength`, `_extractContractInnerSignature`, `_tryRecoverEOASigner`, `extractFunctionSelector`, `extractERC20TransferRecipient`, `extractTransferAmount`, `isTransactionERC20TokenTransfer`
+
+These are pure-function libraries with no storage — test via a harness contract that exposes each function and fuzz the inputs directly (no stateful handlers needed).
+
+### BytesUtils
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 129 | **Slice content fidelity:** `sliceFrom(buf, i)[j] == buf[i + j]` and `sliceRange(buf, i, len)[j] == buf[i + j]` for all valid `j`. Fuzz random buffer with random valid `i`/`len`; compare output byte-by-byte against the source | P0 |
+| 130 | **Slice OOB returns empty:** `sliceFrom` with `startIndex >= buf.length` returns `bytes("")`; `sliceRange` with `startIndex + length > buf.length` returns `bytes("")`. Neither reverts | P0 |
+| 131 | **Slice output length:** `sliceFrom(buf, i).length == buf.length - i`; `sliceRange(buf, i, len).length == len` (when in-range) | P0 |
+| 132 | **Slice trailing-byte isolation:** when `len % 32 != 0`, the last word of `sliceRange` output is zero-padded — no garbage bytes leak from adjacent source memory. Fuzz random buffer and non-aligned length; assert trailing bytes are zero | P0 |
+
+### SignatureUtils
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 133 | **EOA (v, r, s) extraction:** given a known 65-byte EOA sig placed at a fuzzed offset, `_getVByte` returns `sig[offset]`, and `_tryRecoverEOASigner` reads `r` from `[offset+1:+33]` and `s` from `[offset+33:+65]`. Fuzz: craft known `(v,r,s)`, embed at random offset in a larger buffer; assert extracted values match | P0 |
+| 134 | **Contract sig field extraction:** `_getContractSigner` returns the address at `[offset+1:+21]`, `_getContractSignatureLength` returns the uint16 at `[offset+21:+23]`, `_extractContractInnerSignature` returns the bytes at `[offset+23:+23+len]`. Fuzz: encode a contract sig with known signer/length/inner bytes, embed at random offset; assert all three fields match | P0 |
+| 135 | **Signature nextOffset correctness:** `tryRecoverSignerAtOffset` returns `nextOffset == offset + 65` for EOA sigs and `nextOffset == offset + 23 + sigLength` for contract sigs | P0 |
+| 136 | **Multi-sig iteration completeness:** concatenate N known sigs (mix of EOA and contract), iterate with `recoverSignerAtOffsetOrRevert` from offset 0; assert final `nextOffset == sigs.length` and all N signers are recovered in order | P0 |
+| 137 | **Signature OOB returns failure:** when `offset + headerSize > signatures.length`, `tryRecoverSignerAtOffset` returns `(false, address(0), 0)` — no panic, no garbage read | P0 |
+
+### TokenTransferUtils / ContractInteractionUtils
+
+| # | Invariant | Priority |
+|---|-----------|----------|
+| 138 | **ERC-20 recipient parsing:** `extractERC20TransferRecipient` returns the same address as `abi.decode(data[4:], (address, uint256))` for the first param. Fuzz: encode `transfer(address,uint256)` with a known recipient; assert match | P0 |
+| 139 | **ERC-20 amount parsing:** `extractTransferAmount` returns the same uint256 as `abi.decode(data[4:], (address, uint256))` for the second param. Fuzz: encode `transfer(address,uint256)` with a known amount; assert match | P0 |
+| 140 | **Token transfer short-calldata reverts:** `extractERC20TransferRecipient` reverts `MalformedTokenTransfer` for `data.length < 36`; `extractTransferAmount` reverts for `data.length < 68`; `isTransactionERC20TokenTransfer` returns `false` for `data.length < 68` | P0 |
+| 141 | **Selector extraction:** `extractFunctionSelector(data) == bytes4(data[:4])` for any `data.length >= 4` | P1 |
+
+---
+
 ## Summary
 
 | Category | Invariants | Priority Focus |
 |----------|------------|----------------|
 | Nonce and replay properties | 6 | P0 |
 | Admin/member/group consistency | 17 | P0-P1 |
-| Policy and rate-limit correctness | 22 | P0 |
+| Policy and rate-limit correctness | 27 | P0 |
 | Guardian and recovery state machines | 30 | P0 |
 | Account factory/account behavior | 16 | P0-P1 |
-| Signature and guardian-module security | 13 | P0 |
+| Signature and guardian-module security | 16 | P0-P1 |
 | Upgrade and whitelist controls | 10 | P0 |
 | EIP-712 separation properties | 7 | P0 |
 | Initialization and role boundaries | 7 | P0 |
-| **Total** | **128** | |
+| Bytes parsing and extraction primitives | 13 | P0-P1 |
+| **Total** | **149** | |
