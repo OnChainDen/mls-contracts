@@ -404,8 +404,8 @@ Each role holder must be rejected by every modifier it does not hold.
 | 165 | `onlyDeployer` rejects guardian, tx-recovery, guardian-recovery, pending guardian, and recovery pending guardian addresses | [S] | P0 |
 | 166 | `onlyTxRecoveryAddress` rejects guardian, guardian-recovery, deployer, pending guardian, and recovery pending guardian addresses | [S] | P0 |
 | 167 | `onlyGuardianRecoveryAddress` rejects guardian, tx-recovery, deployer, pending guardian, and recovery pending guardian addresses | [S] | P0 |
-| 168 | `onlyPendingGuardian` rejects guardian-recovery, tx-recovery, deployer, and recovery pending guardian addresses | [S] | P0 |
-| 169 | `onlyRecoveryPendingGuardian` rejects guardian, tx-recovery, deployer, and normal pending guardian addresses | [S] | P0 |
+| 168 | `onlyPendingGuardian` rejects current guardian, guardian-recovery, tx-recovery, deployer, and recovery pending guardian addresses | [S] | P0 |
+| 169 | `onlyRecoveryPendingGuardian` rejects current guardian, current guardian-recovery tx-recovery, deployer, and normal pending guardian addresses | [S] | P0 |
 | 170 | Same address intentionally assigned to two distinct roles (e.g., guardian and tx-recovery) passes both corresponding modifiers but no others | [E] | P1 |
 
 ### 11.8 Zero-Address / Uninitialized Fail-Closed
@@ -419,28 +419,30 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 | 172 | `onlyDeployer` reverts for non-zero callers when `deployerAddress` storage slot is `address(0)` | [S] | P0 |
 | 173 | `onlyTxRecoveryAddress` reverts for non-zero callers when `txRecovery.recoveryAddress` is `address(0)` (unconfigured); error includes `expected = address(0)` | [S] | P0 |
 | 174 | `onlyGuardianRecoveryAddress` reverts for non-zero callers when `guardianRecovery.recoveryAddress` is `address(0)` (unconfigured); error includes `expected = address(0)` | [S] | P0 |
+| 175 | `onlyPendingGuardian` reverts for non-zero callers when `pendingGuardian` is `address(0)` (no pending guardian update); error includes `pendingGuardian = address(0)` | [S] | P0 |
+| 176 | `onlyRecoveryPendingGuardian` reverts for non-zero callers when `guardianRecovery.pendingGuardian` is `address(0)` (no pending recovery update); error includes `pendingGuardian = address(0)` | [S] | P0 |
 
 ### 11.9 State Transition Atomicity
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 175 | Guardian transfer (propose + accept): after acceptance, only the new guardian passes `onlyGuardian`; old guardian cannot pass at any point after acceptance in the same transaction | [S] | P0 |
-| 176 | Pending guardian full lifecycle: propose → pending address passes `onlyPendingGuardian` → accept → pending slot cleared → pending address no longer passes | [I] | P0 |
-| 177 | Recovery pending guardian full lifecycle: initiate → pending address passes `onlyRecoveryPendingGuardian` → accept → pending slot cleared → pending address no longer passes | [I] | P0 |
+| 177 | Guardian transfer (propose + accept): after acceptance, only the new guardian passes `onlyGuardian`; old guardian cannot pass at any point after acceptance in the same transaction | [S] | P0 |
+| 178 | Pending guardian full lifecycle: propose → pending address passes `onlyPendingGuardian` → accept → pending slot cleared → pending address no longer passes | [I] | P0 |
+| 179 | Recovery pending guardian full lifecycle: initiate → pending address passes `onlyRecoveryPendingGuardian` → accept → pending slot cleared → pending address no longer passes | [I] | P0 |
 
 ### 11.10 Access-Control Fuzz Tests
 
 | # | Test Case | Runs | Type | Priority |
 |---|-----------|------|------|----------|
-| 178 | [AUDIT-FUZZ] Random `msg.sender` against each of the 6 modifiers always reverts unless caller exactly equals stored role address | 10000 | [F] | P0 |
-| 179 | [AUDIT-FUZZ] Random role address written to storage followed by random callers: only exact address match passes, all others revert with correct typed error | 10000 | [F] | P0 |
+| 180 | [AUDIT-FUZZ] Random `msg.sender` against each of the 6 modifiers always reverts unless caller exactly equals stored role address | 10000 | [F] | P0 |
+| 181 | [AUDIT-FUZZ] Random role address written to storage followed by random callers: only exact address match passes, all others revert with correct typed error | 10000 | [F] | P0 |
 
 ### 11.11 Access-Control Invariant Tests
 
 | # | Invariant | Type | Priority |
 |---|-----------|------|----------|
-| 180 | **Single-holder exclusivity:** at most one address can pass each access-control modifier at any given storage state (zero addresses pass when role is unset) | [INV] | P0 |
-| 181 | **Cross-role exclusion:** after any sequence of role mutations, no address can pass a modifier for a role it does not currently hold | [INV] | P0 |
+| 182 | **Single-holder exclusivity:** at most one address can pass each access-control modifier at any given storage state (zero addresses pass when role is unset) | [INV] | P0 |
+| 183 | **Cross-role exclusion:** after any sequence of role mutations, no address can pass a modifier for a role it does not currently hold | [INV] | P0 |
 
 ---
 
@@ -448,12 +450,12 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 182 | **Cross-org signature isolation:** signatures valid for one Organization are never valid for another | P0 |
-| 183 | **Recovery isolation:** tx-recovery operations do not mutate guardian-recovery state, and vice versa | P0 |
-| 184 | **Nonce monotonicity:** once a nonce is consumed, it is never reusable | P0 |
-| 185 | **Rate-limit atomicity:** reverted outer transaction cannot leave partial usage updates | P0 |
-| 186 | **Account beacon binding:** an Account’s Organization/beacon address is immutable post-deployment | P0 |
-| 187 | **ERC-1271 statelessness:** account signature validation never consumes nonces or mutates policy usage state | P0 |
+| 184 | **Cross-org signature isolation:** signatures valid for one Organization are never valid for another | P0 |
+| 185 | **Recovery isolation:** tx-recovery operations do not mutate guardian-recovery state, and vice versa | P0 |
+| 186 | **Nonce monotonicity:** once a nonce is consumed, it is never reusable | P0 |
+| 187 | **Rate-limit atomicity:** reverted outer transaction cannot leave partial usage updates | P0 |
+| 188 | **Account beacon binding:** an Account’s Organization/beacon address is immutable post-deployment | P0 |
+| 189 | **ERC-1271 statelessness:** account signature validation never consumes nonces or mutates policy usage state | P0 |
 
 ---
 
@@ -461,13 +463,13 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 
 | # | Test Case | Runs | Priority |
 |---|-----------|------|----------|
-| 188 | [AUDIT-FUZZ] Random parameter constraints (offset/head/length permutations) never panic and terminate safely | 10000 | P0 |
-| 189 | [AUDIT-FUZZ] Random malformed policy-signature payloads (`0x01`) return invalid (no revert) | 10000 | P0 |
-| 190 | [AUDIT-FUZZ] Random guardian module behaviors (EOA/contract/revert/truncated return data) never cause signature-validation revert | 5000 | P0 |
-| 191 | [AUDIT-FUZZ] Random mixed admin signature streams preserve strict ordering and threshold rules | 5000 | P0 |
-| 192 | [AUDIT-FUZZ] Random rate-limit scope configs produce expected key sharing/isolation | 10000 | P0 |
-| 193 | [AUDIT-FUZZ] Random execute/reject ordering preserves shared nonce replay protection | 5000 | P0 |
-| 194 | [AUDIT-FUZZ] [DESIRED] Random upgrade migration calldata cannot bypass wrapper whitelist/admin checks via nested upgrade | 2000 | P0 |
+| 190 | [AUDIT-FUZZ] Random parameter constraints (offset/head/length permutations) never panic and terminate safely | 10000 | P0 |
+| 191 | [AUDIT-FUZZ] Random malformed policy-signature payloads (`0x01`) return invalid (no revert) | 10000 | P0 |
+| 192 | [AUDIT-FUZZ] Random guardian module behaviors (EOA/contract/revert/truncated return data) never cause signature-validation revert | 5000 | P0 |
+| 193 | [AUDIT-FUZZ] Random mixed admin signature streams preserve strict ordering and threshold rules | 5000 | P0 |
+| 194 | [AUDIT-FUZZ] Random rate-limit scope configs produce expected key sharing/isolation | 10000 | P0 |
+| 195 | [AUDIT-FUZZ] Random execute/reject ordering preserves shared nonce replay protection | 5000 | P0 |
+| 196 | [AUDIT-FUZZ] [DESIRED] Random upgrade migration calldata cannot bypass wrapper whitelist/admin checks via nested upgrade | 2000 | P0 |
 
 ---
 
@@ -475,7 +477,7 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 
 | Category | Tests | Priority |
 |----------|-------|----------|
-| File/function scoped security gap cases | 177 | P0-P1 |
+| File/function scoped security gap cases | 179 | P0-P1 |
 | Invariants | 8 | P0 |
 | Fuzz tests | 9 | P0 |
-| **Total** | **194** | |
+| **Total** | **196** | |
