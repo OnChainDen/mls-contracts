@@ -338,18 +338,114 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 
 ## File 11: `src/organization/common/OrganizationModifiers.sol`
 
-### 11.1 Access-Control Modifiers
+All modifiers delegate to library `enforce*` functions that perform a single `msg.sender != storedAddress` check and revert with a typed error.
+None of the enforce functions contain special-case handling for `address(0)`, so zero-address fail-closed behavior must be tested explicitly.
+
+**Testing approach:** All tests in this section must exercise the **modifier itself** (by calling a function that uses the modifier) rather than calling the underlying `enforce*` library function directly. This ensures the modifier wiring, the `_;` continuation, and the full call-site integration are covered — not just the library logic in isolation.
+
+### 11.1 `onlyGuardian` — `LibOrganizationGuardian.enforceOnlyGuardian()`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 138 | `onlyGuardian` rejects tx-recovery and guardian-recovery roles (no cross-role escalation) | [S] | P0 |
-| 139 | `onlyTxRecoveryAddress` rejects guardian caller | [S] | P0 |
-| 139 | `onlyTxRecoveryAddress` rejects guardian-recovery caller | [S] | P0 |
-| 140 | `onlyGuardianRecoveryAddress` rejects tx-recovery caller | [S] | P0 |
-| 140.1 | `onlyGuardianRecoveryAddress` rejects guardian caller | [S] | P0 |
-| 141 | `onlyPendingGuardian` and `onlyRecoveryPendingGuardian` reject calls when pending address is unset | [S] | P0 |
-| 142 | All role modifiers fail closed when configured role address is zero | [S] | P0 |
-| 143 | `onlyDeployer` allows only configured deployer and rejects guardian/recovery/other callers | [S] | P0 |
+| 138 | Authorized guardian caller passes through the modifier | [U] | P0 |
+| 139 | Non-guardian caller reverts `UnauthorizedGuardian(caller, guardian)` | [N] | P0 |
+| 140 | After guardian transfer (propose + accept), previous guardian is rejected | [S] | P0 |
+| 141 | Pending guardian (proposed but not yet accepted) is rejected by `onlyGuardian` | [S] | P0 |
+| 142 | Revert error encodes actual `msg.sender` as first parameter and stored `guardian` as second parameter | [U] | P1 |
+
+### 11.2 `onlyDeployer` — `LibOrganizationInitialization.enforceOnlyDeployer()`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 143 | Authorized deployer caller passes through the modifier | [U] | P0 |
+| 144 | Non-deployer caller reverts `UnauthorizedDeployer()` | [N] | P0 |
+| 145 | `UnauthorizedDeployer()` error carries no parameters (does not leak stored deployer address) | [U] | P1 |
+
+### 11.3 `onlyTxRecoveryAddress` — `LibOrganizationTxRecovery.enforceOnlyTxRecoveryAddress()`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 146 | Authorized tx-recovery address passes through the modifier | [U] | P0 |
+| 147 | Non-recovery caller reverts `UnauthorizedTxRecoveryAddress(caller, expected)` | [N] | P0 |
+| 148 | After tx-recovery address rotation, old address is rejected and new address passes | [S] | P0 |
+| 149 | Revert error encodes actual `msg.sender` and stored `txRecovery.recoveryAddress` | [U] | P1 |
+
+### 11.4 `onlyGuardianRecoveryAddress` — `LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress()`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 150 | Authorized guardian-recovery address passes through the modifier | [U] | P0 |
+| 151 | Non-recovery caller reverts `UnauthorizedGuardianRecoveryAddress(caller, expected)` | [N] | P0 |
+| 152 | After guardian-recovery address rotation, old address is rejected and new address passes | [S] | P0 |
+| 153 | Revert error encodes actual `msg.sender` and stored `guardianRecovery.recoveryAddress` | [U] | P1 |
+
+### 11.5 `onlyPendingGuardian` — `LibOrganizationGuardian.enforceOnlyPendingGuardian()`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 154 | Designated pending guardian passes when a guardian update is pending | [U] | P0 |
+| 155 | Non-pending caller reverts `UnauthorizedGuardianAcceptance(caller, pendingGuardian)` | [N] | P0 |
+| 156 | When no guardian update is pending (`pendingGuardian == address(0)`), all callers are rejected | [S] | P0 |
+| 157 | After pending guardian accepts and pending state is cleared, previous pending address is rejected | [S] | P0 |
+| 158 | Current guardian is rejected by `onlyPendingGuardian` (guardian ≠ pending guardian) | [S] | P0 |
+
+### 11.6 `onlyRecoveryPendingGuardian` — `LibOrganizationGuardianRecovery.enforceOnlyRecoveryPendingGuardian()`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 159 | Designated recovery pending guardian passes when a recovery guardian update is pending | [U] | P0 |
+| 160 | Non-pending caller reverts `UnauthorizedRecoveryGuardianAcceptance(caller, pendingGuardian)` | [N] | P0 |
+| 161 | When no recovery update is pending (`pendingGuardian == address(0)`), all callers are rejected | [S] | P0 |
+| 162 | After recovery pending guardian accepts and state is cleared, previous pending address is rejected | [S] | P0 |
+| 163 | Guardian-recovery address itself is rejected by `onlyRecoveryPendingGuardian` (recoveryAddress ≠ pendingGuardian) | [S] | P0 |
+
+### 11.7 Cross-Role Isolation Matrix
+
+Each role holder must be rejected by every modifier it does not hold.
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 164 | `onlyGuardian` rejects tx-recovery, guardian-recovery, deployer, pending guardian, and recovery pending guardian addresses | [S] | P0 |
+| 165 | `onlyDeployer` rejects guardian, tx-recovery, guardian-recovery, pending guardian, and recovery pending guardian addresses | [S] | P0 |
+| 166 | `onlyTxRecoveryAddress` rejects guardian, guardian-recovery, deployer, pending guardian, and recovery pending guardian addresses | [S] | P0 |
+| 167 | `onlyGuardianRecoveryAddress` rejects guardian, tx-recovery, deployer, pending guardian, and recovery pending guardian addresses | [S] | P0 |
+| 168 | `onlyPendingGuardian` rejects guardian-recovery, tx-recovery, deployer, and recovery pending guardian addresses | [S] | P0 |
+| 169 | `onlyRecoveryPendingGuardian` rejects guardian, tx-recovery, deployer, and normal pending guardian addresses | [S] | P0 |
+| 170 | Same address intentionally assigned to two distinct roles (e.g., guardian and tx-recovery) passes both corresponding modifiers but no others | [E] | P1 |
+
+### 11.8 Zero-Address / Uninitialized Fail-Closed
+
+No enforce function special-cases `address(0)`. These tests verify that when a role is uninitialized or unconfigured, the modifier still rejects every caller rather than silently passing.
+Each test sets the stored role address to `address(0)` and calls the guarded function from one or more non-zero addresses, confirming they all revert. (`msg.sender == address(0)` is not a realistic scenario and is not tested.)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 171 | `onlyGuardian` reverts for non-zero callers when `guardian` storage slot is `address(0)` (pre-initialization state) | [S] | P0 |
+| 172 | `onlyDeployer` reverts for non-zero callers when `deployerAddress` storage slot is `address(0)` | [S] | P0 |
+| 173 | `onlyTxRecoveryAddress` reverts for non-zero callers when `txRecovery.recoveryAddress` is `address(0)` (unconfigured); error includes `expected = address(0)` | [S] | P0 |
+| 174 | `onlyGuardianRecoveryAddress` reverts for non-zero callers when `guardianRecovery.recoveryAddress` is `address(0)` (unconfigured); error includes `expected = address(0)` | [S] | P0 |
+
+### 11.9 State Transition Atomicity
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 175 | Guardian transfer (propose + accept): after acceptance, only the new guardian passes `onlyGuardian`; old guardian cannot pass at any point after acceptance in the same transaction | [S] | P0 |
+| 176 | Pending guardian full lifecycle: propose → pending address passes `onlyPendingGuardian` → accept → pending slot cleared → pending address no longer passes | [I] | P0 |
+| 177 | Recovery pending guardian full lifecycle: initiate → pending address passes `onlyRecoveryPendingGuardian` → accept → pending slot cleared → pending address no longer passes | [I] | P0 |
+
+### 11.10 Access-Control Fuzz Tests
+
+| # | Test Case | Runs | Type | Priority |
+|---|-----------|------|------|----------|
+| 178 | [AUDIT-FUZZ] Random `msg.sender` against each of the 6 modifiers always reverts unless caller exactly equals stored role address | 10000 | [F] | P0 |
+| 179 | [AUDIT-FUZZ] Random role address written to storage followed by random callers: only exact address match passes, all others revert with correct typed error | 10000 | [F] | P0 |
+
+### 11.11 Access-Control Invariant Tests
+
+| # | Invariant | Type | Priority |
+|---|-----------|------|----------|
+| 180 | **Single-holder exclusivity:** at most one address can pass each access-control modifier at any given storage state (zero addresses pass when role is unset) | [INV] | P0 |
+| 181 | **Cross-role exclusion:** after any sequence of role mutations, no address can pass a modifier for a role it does not currently hold | [INV] | P0 |
 
 ---
 
@@ -357,12 +453,12 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 
 | # | Invariant | Priority |
 |---|-----------|----------|
-| 144 | **Cross-org signature isolation:** signatures valid for one Organization are never valid for another | P0 |
-| 145 | **Recovery isolation:** tx-recovery operations do not mutate guardian-recovery state, and vice versa | P0 |
-| 146 | **Nonce monotonicity:** once a nonce is consumed, it is never reusable | P0 |
-| 147 | **Rate-limit atomicity:** reverted outer transaction cannot leave partial usage updates | P0 |
-| 148 | **Account beacon binding:** an Account’s Organization/beacon address is immutable post-deployment | P0 |
-| 149 | **ERC-1271 statelessness:** account signature validation never consumes nonces or mutates policy usage state | P0 |
+| 182 | **Cross-org signature isolation:** signatures valid for one Organization are never valid for another | P0 |
+| 183 | **Recovery isolation:** tx-recovery operations do not mutate guardian-recovery state, and vice versa | P0 |
+| 184 | **Nonce monotonicity:** once a nonce is consumed, it is never reusable | P0 |
+| 185 | **Rate-limit atomicity:** reverted outer transaction cannot leave partial usage updates | P0 |
+| 186 | **Account beacon binding:** an Account’s Organization/beacon address is immutable post-deployment | P0 |
+| 187 | **ERC-1271 statelessness:** account signature validation never consumes nonces or mutates policy usage state | P0 |
 
 ---
 
@@ -370,13 +466,13 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 
 | # | Test Case | Runs | Priority |
 |---|-----------|------|----------|
-| 150 | [AUDIT-FUZZ] Random parameter constraints (offset/head/length permutations) never panic and terminate safely | 10000 | P0 |
-| 151 | [AUDIT-FUZZ] Random malformed policy-signature payloads (`0x01`) return invalid (no revert) | 10000 | P0 |
-| 152 | [AUDIT-FUZZ] Random guardian module behaviors (EOA/contract/revert/truncated return data) never cause signature-validation revert | 5000 | P0 |
-| 153 | [AUDIT-FUZZ] Random mixed admin signature streams preserve strict ordering and threshold rules | 5000 | P0 |
-| 154 | [AUDIT-FUZZ] Random rate-limit scope configs produce expected key sharing/isolation | 10000 | P0 |
-| 155 | [AUDIT-FUZZ] Random execute/reject ordering preserves shared nonce replay protection | 5000 | P0 |
-| 156 | [AUDIT-FUZZ] [DESIRED] Random upgrade migration calldata cannot bypass wrapper whitelist/admin checks via nested upgrade | 2000 | P0 |
+| 188 | [AUDIT-FUZZ] Random parameter constraints (offset/head/length permutations) never panic and terminate safely | 10000 | P0 |
+| 189 | [AUDIT-FUZZ] Random malformed policy-signature payloads (`0x01`) return invalid (no revert) | 10000 | P0 |
+| 190 | [AUDIT-FUZZ] Random guardian module behaviors (EOA/contract/revert/truncated return data) never cause signature-validation revert | 5000 | P0 |
+| 191 | [AUDIT-FUZZ] Random mixed admin signature streams preserve strict ordering and threshold rules | 5000 | P0 |
+| 192 | [AUDIT-FUZZ] Random rate-limit scope configs produce expected key sharing/isolation | 10000 | P0 |
+| 193 | [AUDIT-FUZZ] Random execute/reject ordering preserves shared nonce replay protection | 5000 | P0 |
+| 194 | [AUDIT-FUZZ] [DESIRED] Random upgrade migration calldata cannot bypass wrapper whitelist/admin checks via nested upgrade | 2000 | P0 |
 
 ---
 
@@ -384,7 +480,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 
 | Category | Tests | Priority |
 |----------|-------|----------|
-| File/function scoped security gap cases | 143 | P0-P1 |
-| Invariants | 6 | P0 |
-| Fuzz tests | 7 | P0 |
-| **Total** | **156** | |
+| File/function scoped security gap cases | 177 | P0-P1 |
+| Invariants | 8 | P0 |
+| Fuzz tests | 9 | P0 |
+| **Total** | **194** | |
