@@ -213,8 +213,6 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | 79 | `_validateRecoverySignature` | Malformed or unauthorized recovery signatures return ERC-1271 invalid value (never revert) | [S] | P0 |
 | 80 | `_isERC1271SignatureAllowedByPolicy` | Returns true only when policy exists, `transactionType == Signatures`, source account is allowed, and initiator is authorized | [S] | P0 |
 | 81 | `_isERC1271SignatureAllowedByPolicy` | Returns false when any one policy-allowance precondition fails | [N] | P0 |
-| 82 | `_getInitiatorSignatureHash` | Hash is domain-bound; changing organization address or chain ID changes hash | [S] | P0 |
-| 83 | `_getReviewSignatureHash` | Hash includes `keccak256(initiatorSignature)` and is domain-bound across org/chain | [S] | P0 |
 
 ---
 
