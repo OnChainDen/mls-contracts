@@ -256,12 +256,14 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         address to,
         uint96 value,
         bytes calldata data,
-        uint256 salt
+        uint256 salt,
+        uint8 expirationBuffer
     ) public view {
         // Setup: constrain addresses and compute baseline hash.
         vm.assume(account != address(0));
         vm.assume(to != address(0));
-        uint256 expiration = block.timestamp + 1 days;
+        vm.assume(expirationBuffer > 0);
+        uint256 expiration = block.timestamp + uint256(expirationBuffer) * 1 days;
         bytes32 base = harness.computeInitiatorHashFromParamsViaLibrary(
             account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true
         );
@@ -288,47 +290,92 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
                 ),
             "value mutation should change hash"
         );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    account, to, value, _mutateUint256(salt), expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "salt mutation should change hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    account, to, value, salt, _mutateUint256(expiration), DEFAULT_POLICY_ID, data, true
+                ),
+            "expiration mutation should change hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, _mutateBytes(data), true
+                ),
+            "data mutation should change hash"
+        );
     }
 
     /// @dev Verifies changing transaction fields changes review hash for fixed initiator signature.
     function testFuzz_AT_FZ_9_computeReviewHash_fieldMutationsChangeHash(
         address account,
         address to,
+        uint96 value,
         bytes calldata data,
-        uint256 salt
+        uint256 salt,
+        uint8 expirationBuffer
     ) public view {
         // Setup: constrain addresses and derive fixed initiator signature.
         vm.assume(account != address(0));
         vm.assume(to != address(0));
-        uint256 expiration = block.timestamp + 1 days;
+        vm.assume(expirationBuffer > 0);
+        uint256 expiration = block.timestamp + uint256(expirationBuffer) * 1 days;
         bytes memory initiatorSig = _signInitiatorTx(
-            address(harness), INITIATOR_PK_1, account, to, 0, data, salt, expiration, DEFAULT_POLICY_ID, true
+            address(harness), INITIATOR_PK_1, account, to, value, data, salt, expiration, DEFAULT_POLICY_ID, true
         );
         bytes32 base = harness.computeReviewHashFromParamsViaLibrary(
-            account, to, 0, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+            account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
         );
 
         // Verify: mutating any core field changes review hash.
         assertTrue(
             base
                 != harness.computeReviewHashFromParamsViaLibrary(
-                    _mutateAddress(account), to, 0, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                    _mutateAddress(account), to, value, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
                 ),
             "account mutation should change review hash"
         );
         assertTrue(
             base
                 != harness.computeReviewHashFromParamsViaLibrary(
-                    account, _mutateAddress(to), 0, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                    account, _mutateAddress(to), value, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
                 ),
             "destination mutation should change review hash"
         );
         assertTrue(
             base
                 != harness.computeReviewHashFromParamsViaLibrary(
-                    account, to, 0, _mutateUint256(salt), expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                    account, to, uint256(value) + 1, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                ),
+            "value mutation should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, _mutateUint256(salt), expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
                 ),
             "salt mutation should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, salt, _mutateUint256(expiration), DEFAULT_POLICY_ID, data, true, initiatorSig
+                ),
+            "expiration mutation should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, _mutateBytes(data), true, initiatorSig
+                ),
+            "data mutation should change review hash"
         );
     }
 
@@ -397,5 +444,10 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         unchecked {
             mutated = value + 1;
         }
+    }
+
+    /// @dev Applies deterministic append mutation for fuzzed bytes values.
+    function _mutateBytes(bytes memory value) internal pure returns (bytes memory mutated) {
+        mutated = bytes.concat(value, hex"ff");
     }
 }
