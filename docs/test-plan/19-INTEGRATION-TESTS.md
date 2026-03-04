@@ -271,17 +271,76 @@
 | 105 | Cross-chain replay prevented (typed data binds `chainId`) | [S] | P0 |
 | 106 | [DESIRED] Malformed policy payload returns invalid value instead of reverting | [DESIRED][S] | P0 |
 
-### 9.2 Private helpers (private -> harness)
+### 9.2 Private helpers (tested through `isValidSignature` on Account / `isValidSignatureForAccount` on Organization)
+
+Critical: Test these through high-level external functions on our Base contracts, like `isValidSignature` on the account contract (which delegates to `isValidSignatureForAccount` on the org contract).
+
+#### 9.2.1 `_validateRecoverySignature`
 
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 107 | `_validateRecoverySignature`, `_validatePolicyBasedSignature`, `_isValidGuardianSignature`, `_isERC1271SignatureAllowedByPolicy`, `_getInitiatorSignatureHash`, `_getReviewSignatureHash` uphold integration security assumptions | [S] | P1 |
+| 107a | Recovery signature (`0x00` type) returns invalid when tx/ERC1271 recovery is not configured (zero address / zero timelock) | [S] | P0 |
+| 107b | Recovery signature returns invalid when recovery is configured but not enabled (enable flow not finalized) | [S] | P0 |
+| 107c | Recovery signature returns valid when recovery is configured, enabled, and signed by the stored recovery EOA address | [I] | P0 |
+| 107d | Recovery signature returns valid when recovery address is an ERC-1271 contract and its `isValidSignature` returns magic value | [I] | P1 |
+| 107e | Recovery signature returns invalid when signed by an address other than the stored recovery address | [S] | P0 |
+| 107f | Recovery signature returns invalid for malformed/truncated signature bytes (no revert) | [S] | P1 |
+
+#### 9.2.2 `_validatePolicyBasedSignature`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 107g | Policy signature (`0x01` type) returns invalid when `block.timestamp > expirationTimestamp` | [S] | P0 |
+| 107h | Policy signature returns valid when `block.timestamp == expirationTimestamp` (boundary) | [E] | P0 |
+| 107i | Policy signature returns invalid when initiator signature is empty (zero-length bytes) | [S] | P0 |
+| 107j | Policy signature returns invalid when initiator signature is malformed (recovery fails) | [S] | P0 |
+| 107k | AutoApprove policy signature succeeds without any review signatures (guardian + initiator + policy proof sufficient) | [I] | P0 |
+| 107l | ManualApproval policy signature requires reviewer threshold met on the review hash; insufficient reviewers returns invalid | [I] | P0 |
+| 107m | ManualApproval policy signature succeeds when reviewer threshold is met | [I] | P0 |
+| 107n | Unknown policy type (neither AutoApprove nor ManualApproval) returns invalid | [S] | P1 |
+| 107n1 | AutoApprove succeeds with EOA initiator + Safe-module guardian (mixed signer types across roles) | [I] | P0 |
+| 107n2 | AutoApprove succeeds with ERC-1271 contract initiator + EOA guardian (mixed signer types across roles) | [I] | P1 |
+| 107n3 | ManualApproval succeeds with EOA initiator + Safe-module guardian + mix of EOA and ERC-1271 contract reviewers | [I] | P0 |
+| 107n4 | ManualApproval succeeds when all reviewers are ERC-1271 contract signers (no EOA reviewers) | [I] | P1 |
+
+#### 9.2.3 `_isValidGuardianSignature`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 107o | Guardian EOA signature on the review hash is accepted | [I] | P0 |
+| 107p | Signature from an enabled Safe module (e.g. `SafeExecutorModule`) on the guardian Safe is accepted | [I] | P0 |
+| 107q | Signature from a disabled Safe module on the guardian Safe is rejected | [S] | P0 |
+| 107r | Signature from an arbitrary address that is neither guardian nor enabled module is rejected | [S] | P0 |
+| 107s | Guardian is an ERC-1271 contract (non-Safe); valid contract signature is accepted | [I] | P1 |
+| 107t | Malformed guardian signature returns false (no revert) | [S] | P1 |
+
+#### 9.2.4 `_isERC1271SignatureAllowedByPolicy`
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 107u | Returns false when policy Merkle proof is invalid (policy not in org's policy tree) | [S] | P0 |
+| 107v | Returns false when policy `transactionType` is not `TransactionType.Signatures` (e.g. `TokenTransfers` or `ContractInteractions`) | [S] | P0 |
+| 107w | Returns false when account is not an allowed source account for the policy (`anySourceAccount=false`, account not in subtree) | [S] | P0 |
+| 107x | Returns true when `anySourceAccount=true` regardless of which org account calls | [I] | P1 |
+| 107y | Returns false when recovered initiator is not authorized by the policy (not in initiator members/groups) | [S] | P0 |
+| 107z | Returns true when all four checks pass (valid proof, correct type, authorized source, authorized initiator) | [I] | P0 |
+
+#### 9.2.5 `_getInitiatorSignatureHash` / `_getReviewSignatureHash` (cross-domain binding)
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 107aa | Initiator hash binds `address(this)` — same params signed against a different org address produce a different hash (cross-org replay prevented) | [S] | P0 |
+| 107ab | Initiator hash binds `block.chainid` — signature produced on a fork/different chain is invalid | [S] | P0 |
+| 107ac | Review hash includes `keccak256(initiatorSignature)` — swapping the initiator signature invalidates all existing guardian/reviewer approvals | [S] | P0 |
+| 107ad | Review hash differs from initiator hash for the same parameters (distinct type hashes) | [S] | P1 |
+| 107ae | Changing any single parameter (`account`, `hash`, `policyId`, `expirationTimestamp`) produces a different initiator hash and review hash | [S] | P0 |
 
 ### 9.3 `src/libraries/SignatureUtils.sol` private helpers (private -> harness)
-
+Critical: Test these through high-level external functions on our Base contracts, like `executeAccountTransaction` on the org contract and `isValidSignature` on the account contract.
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 108 | `_isValidERC1271SignatureNow`, `_tryRecoverContractSigner`, `_tryRecoverEOASigner`, and parser helpers reject malformed/truncated/high-`s` signatures and accept valid EOA/ERC-1271 encodings | [S] | P0 |
+| 108 | `_isValidERC1271SignatureNow`, `_tryRecoverContractSigner`, `_tryRecoverEOASigner`, and parser helpers reject malformed/truncated/high-`s` signatures and accept valid EOA/ERC-1271 encodings.  This should involve writing many tests. | [S] | P0 |
+
 
 ---
 
