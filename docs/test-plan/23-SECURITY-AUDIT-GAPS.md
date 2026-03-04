@@ -252,7 +252,6 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | 95 | `_areAdminSignaturesValid` | Exact-threshold valid signatures succeed | [U] | P1 |
 | 96 | `modifyAdmins` | Removing the last admin always reverts `InvalidAdminConfig` | [S] | P0 |
 | 97 | `modifyAdmins` | Adding a non-member as admin reverts | [N] | P0 |
-| 98 | `modifyAdmins` | [DESIRED] Ambiguous add/remove inputs for same address in one call fail closed | [S] | P1 |
 | 99 | `_getAdminOperationHash` | Hash differs when only `isApproval` flips (approval/rejection domain separation) | [S] | P0 |
 | 100 | `_getAdminOperationHash` | Hash changes across organization address / chain ID (cross-org and cross-chain replay defense) | [S] | P0 |
 
