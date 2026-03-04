@@ -344,7 +344,9 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 |---|-----------|------|----------|
 | 138 | `onlyGuardian` rejects tx-recovery and guardian-recovery roles (no cross-role escalation) | [S] | P0 |
 | 139 | `onlyTxRecoveryAddress` rejects guardian caller | [S] | P0 |
+| 139 | `onlyTxRecoveryAddress` rejects guardian-recovery caller | [S] | P0 |
 | 140 | `onlyGuardianRecoveryAddress` rejects tx-recovery caller | [S] | P0 |
+| 140.1 | `onlyGuardianRecoveryAddress` rejects guardian caller | [S] | P0 |
 | 141 | `onlyPendingGuardian` and `onlyRecoveryPendingGuardian` reject calls when pending address is unset | [S] | P0 |
 | 142 | All role modifiers fail closed when configured role address is zero | [S] | P0 |
 | 143 | `onlyDeployer` allows only configured deployer and rejects guardian/recovery/other callers | [S] | P0 |
