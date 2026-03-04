@@ -130,6 +130,7 @@ Functions: `checkAndUpdateRateLimit`, `computeTimeWindow`, `computeUsageKey`, `_
 | 109 | **Policy-ID isolation:** rate-limit usage counters are isolated per `policyId` even when all scoped entities match | P0 |
 | 110 | **No-op when disabled:** non-`TimeInterval` limits (or `timeIntervalHours=0`) never write usage state | P1 |
 | 111 | **Destination-scope correctness:** token-transfer destination scoping uses actual recipient address, not token contract address | P0 |
+| 128 | **No org reentrancy via execution:** account transactions executed via `executeAccountTransaction` cannot re-enter and call privileged external functions on `OrganizationImplementation` | P0 |
 
 ---
 
@@ -303,11 +304,11 @@ Functions: `initialize`, `isInitialized`, modifier-enforced role boundaries
 |----------|------------|----------------|
 | Nonce and replay properties | 6 | P0 |
 | Admin/member/group consistency | 17 | P0-P1 |
-| Policy and rate-limit correctness | 21 | P0 |
+| Policy and rate-limit correctness | 22 | P0 |
 | Guardian and recovery state machines | 30 | P0 |
 | Account factory/account behavior | 16 | P0-P1 |
 | Signature and guardian-module security | 13 | P0 |
 | Upgrade and whitelist controls | 10 | P0 |
 | EIP-712 separation properties | 7 | P0 |
 | Initialization and role boundaries | 7 | P0 |
-| **Total** | **127** | |
+| **Total** | **128** | |
