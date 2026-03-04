@@ -271,15 +271,6 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 ---
 
-### 6.4 `finalizeEnableTxRecovery`
-
-| Test Case | Type | Priority |
-|---|---|---|
-| Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
-| Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
-| Uses shared `validateTimelockExpiredOrRevert` semantics: after timestamp succeeds | `[U]` | P1 |
-
----
 
 ### 6.5 `_clearPendingTxRecoveryInitTimelock` (private; harness-only)
 
