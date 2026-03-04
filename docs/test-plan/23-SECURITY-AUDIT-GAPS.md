@@ -366,7 +366,6 @@ None of the enforce functions contain special-case handling for `address(0)`, so
 |---|-----------|------|----------|
 | 146 | Authorized tx-recovery address passes through the modifier | [U] | P0 |
 | 147 | Non-recovery caller reverts `UnauthorizedTxRecoveryAddress(caller, expected)` | [N] | P0 |
-| 148 | After tx-recovery address rotation, old address is rejected and new address passes | [S] | P0 |
 | 149 | Revert error encodes actual `msg.sender` and stored `txRecovery.recoveryAddress` | [U] | P1 |
 
 ### 11.4 `onlyGuardianRecoveryAddress` — `LibOrganizationGuardianRecovery.enforceOnlyGuardianRecoveryAddress()`
@@ -375,7 +374,6 @@ None of the enforce functions contain special-case handling for `address(0)`, so
 |---|-----------|------|----------|
 | 150 | Authorized guardian-recovery address passes through the modifier | [U] | P0 |
 | 151 | Non-recovery caller reverts `UnauthorizedGuardianRecoveryAddress(caller, expected)` | [N] | P0 |
-| 152 | After guardian-recovery address rotation, old address is rejected and new address passes | [S] | P0 |
 | 153 | Revert error encodes actual `msg.sender` and stored `guardianRecovery.recoveryAddress` | [U] | P1 |
 
 ### 11.5 `onlyPendingGuardian` — `LibOrganizationGuardian.enforceOnlyPendingGuardian()`
