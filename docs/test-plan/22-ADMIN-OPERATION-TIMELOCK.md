@@ -302,6 +302,7 @@
 | Timelock below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
 | Timelock above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
 | Non-zero address + timelock at min boundary (`2 days`) succeeds | `[E]` | P1 |
+| Non-zero address + timelock within boundary (`2 days` < x < `30 days`) succeeds | `[E]` | P1 |
 | Non-zero address + timelock at max boundary (`30 days`) succeeds | `[E]` | P1 |
 
 ---
