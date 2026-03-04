@@ -236,6 +236,8 @@
 | Deferred-init pending timestamp does **not** use tx-recovery timelock duration input | `[S]` | P0 |
 | Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
 | `TxRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
+| Same-block finalize attempt reverts (TimelockNotExpired) | [S] | P0 |
+
 
 ---
 
