@@ -419,7 +419,9 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
 
         if (useManualPolicy) {
             // Verify: manual path without review signatures fails.
-            vm.expectRevert();
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0)
+            );
             // Call: validate rejection with manual policy and no review signatures.
             harness.validateTransactionRejectionOrRevertViaLibrary(
                 ACCOUNT, DESTINATION, 0, data, 1, expiration, DEFAULT_POLICY_ID, initiatorSig, bytes(""), proofs
