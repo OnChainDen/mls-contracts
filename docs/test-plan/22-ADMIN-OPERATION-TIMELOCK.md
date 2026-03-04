@@ -4,11 +4,14 @@
 - `src/organization/libraries/LibOrganizationAdminOperationTimelock.sol`
 - `src/organization/base/OrganizationAdminOperationTimelockBase.sol`
 
-**Related Timelock Interaction Files (integration behavior only):**
-- `src/organization/libraries/LibOrganizationInitialization.sol`
-- `src/organization/libraries/LibOrganizationGuardian.sol`
-- `src/organization/libraries/LibOrganizationGuardianRecovery.sol`
-- `src/organization/libraries/LibOrganizationTxRecovery.sol`
+**Admin Operation Timelock Consumer Files (integration behavior only):**
+
+These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFinalizeAtTimestamp`, `validateTimelockExpiredOrRevert`) to gate sensitive admin operations. This plan only covers the code paths where the admin operation timelock is consumed — it does **not** cover the full behavior of these files (e.g., access control, acceptance flows, domain-specific recovery timelocks). Full coverage for those concerns belongs in their respective dedicated test plans.
+
+- `src/organization/libraries/LibOrganizationInitialization.sol` — calls `initializeAdminOperationTimelock` during org setup
+- `src/organization/libraries/LibOrganizationGuardian.sol` — guardian update initiate/finalize/cancel use the admin operation timelock
+- `src/organization/libraries/LibOrganizationGuardianRecovery.sol` — deferred guardian-recovery initialization (`initiateInitializeGuardianRecovery` / `finalizeInitializeGuardianRecovery` / `cancelInitializeGuardianRecovery`) is gated by the admin operation timelock; `finalizeRecoveryGuardianUpdate` also calls the shared `validateTimelockExpiredOrRevert` helper. Note: the recovery guardian update flow itself (`initiateRecoveryGuardianUpdate`) uses its own guardian-recovery timelock, not the admin operation timelock — those paths are out of scope here.
+- `src/organization/libraries/LibOrganizationTxRecovery.sol` — deferred tx-recovery initialization (`initiateInitializeTxRecovery` / `finalizeInitializeTxRecovery` / `cancelInitializeTxRecovery`) is gated by the admin operation timelock; `finalizeEnableTxRecovery` also calls the shared `validateTimelockExpiredOrRevert` helper. Note: the enable tx-recovery flow itself (`initiateEnableTxRecovery`) uses its own tx-recovery timelock, not the admin operation timelock — those paths are out of scope here.
 
 **Out of Scope for This Plan:**
 - `src/interfaces/organization/IOrganizationAdminOperationTimelock.sol` (interface coverage tracked elsewhere)
