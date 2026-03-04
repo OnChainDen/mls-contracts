@@ -135,6 +135,7 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 | After pending timestamp succeeds | `[U]` | P1 |
 | Success sets `isGuardianUpdateReadyForAcceptance = true` while preserving pending guardian + pending timestamp until accept/cancel | `[U]` | P1 |
 | After cancellation, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
+| After accepting new guardian, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
 
 ---
 
