@@ -648,7 +648,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10_hashBuildersAreDeterministicAndFieldBound() public {
+    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10_hashBuildersAreDeterministicAndFieldBound()
+        public
+    {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory data = abi.encodeWithSelector(bytes4(0xCAFED00D), uint256(14));
@@ -1736,7 +1738,6 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         // signatures fail with valid org b initiator.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();
 
-        // Seed shared org state.
         _seedMembers(address(orgB));
 
         Policy memory policy =
@@ -1762,6 +1763,36 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             isApproval: true
         });
 
+        // Call: validate with an org B review signature to prove the happy path succeeds.
+        bytes memory reviewerSignatureOrgB = _signReviewTx({
+            txHarness: orgB,
+            privateKey: REVIEWER_PK_1,
+            account: ACCOUNT,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 28,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true,
+            initiatorSignature: initiatorSignatureOrgB
+        });
+
+        orgB.validateTransactionApprovalOrRevertViaLibrary({
+            account: ACCOUNT,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 28,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignatureOrgB,
+            reviewSignatures: reviewerSignatureOrgB,
+            proofs: proofs
+        });
+
+        // Verify: the same reviewer key signed against org A produces an invalid review hash on org B,
+        // isolating the different organization as the sole reason for failure.
         bytes memory reviewerSignatureOrgA = _signReviewTx({
             txHarness: harness,
             privateKey: REVIEWER_PK_1,
@@ -1776,8 +1807,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
             initiatorSignature: initiatorSignatureOrgB
         });
 
-        // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         orgB.validateTransactionApprovalOrRevertViaLibrary({
             account: ACCOUNT,
             to: DESTINATION,

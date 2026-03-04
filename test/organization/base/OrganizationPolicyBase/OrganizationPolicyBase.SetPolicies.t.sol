@@ -656,7 +656,11 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
     /**
      * @dev Helper: recovers signer from one packed EOA signature (`v || r || s`) against `hash`.
      */
-    function _recoverEOASignerFromPackedSignature(bytes32 hash, bytes memory signatures) internal pure returns (address) {
+    function _recoverEOASignerFromPackedSignature(bytes32 hash, bytes memory signatures)
+        internal
+        pure
+        returns (address)
+    {
         if (signatures.length < 65) return address(0);
 
         uint8 v;

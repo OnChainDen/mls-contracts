@@ -27,8 +27,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         0xaff0b07e863791178158884ee127b7f0b0c710359762e0e20390537c4b2a20d0;
 
     /// @dev Precomputed off-chain review hash for the golden-vector test payload.
-    bytes32 internal constant GOLDEN_REVIEW_HASH =
-        0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
+    bytes32 internal constant GOLDEN_REVIEW_HASH = 0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
 
     /// @dev Verifies initiator hash uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct encoding.
     function test_LOAT_CIHFP_11_computeInitiatorHash_usesInitiatorTypehash() public view {
@@ -180,7 +179,9 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges() public {
+    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
+        public
+    {
         // Setup: compute baseline review hash.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64646464), uint256(4));
         bytes memory initiatorSignature = hex"1122";
@@ -313,14 +314,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
 
         // Call: compute initiator hash for known tuple.
         bytes32 actual = goldenHarness.computeInitiatorHashFromParamsViaLibrary(
-            address(uint160(0xA1101)),
-            address(uint160(0xB2202)),
-            7,
-            94,
-            1_800_000_000,
-            DEFAULT_POLICY_ID,
-            data,
-            true
+            address(uint160(0xA1101)), address(uint160(0xB2202)), 7, 94, 1_800_000_000, DEFAULT_POLICY_ID, data, true
         );
 
         // Restore chain ID before assertions.

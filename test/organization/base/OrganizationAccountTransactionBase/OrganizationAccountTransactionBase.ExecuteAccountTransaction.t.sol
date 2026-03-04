@@ -60,7 +60,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_OATB_EAT_2_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization() public {
+    function test_OATB_EAT_2_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+        public
+    {
         // Setup: use a random non-deployed account address.
         address undeployedAccount = address(0xA11CE001);
         bytes memory data = abi.encodeWithSelector(bytes4(0x01020304), uint256(2));
@@ -599,7 +601,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies manual-approval policy with insufficient reviewers reverts.
      */
-    function test_OATB_EAT_16__LOAT_VTAOR_12_executeAccountTransaction_manualApprovalInsufficientReviewers_revertsInsufficientApprovals() public {
+    function test_OATB_EAT_16__LOAT_VTAOR_12_executeAccountTransaction_manualApprovalInsufficientReviewers_revertsInsufficientApprovals()
+        public
+    {
         // Setup: deploy account and manual-approval policy payload with no review signatures.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x15151515), uint256(15));
@@ -640,7 +644,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies failed pre-validation does not permanently burn nonce; fixed retry can succeed.
      */
-    function test_OATB_EAT_17__LOAT_VTAOR_14_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed() public {
+    function test_OATB_EAT_17__LOAT_VTAOR_14_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+        public
+    {
         // Setup: deploy account and build payload with first attempt signed by unauthorized initiator.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x16161616), uint256(16));
