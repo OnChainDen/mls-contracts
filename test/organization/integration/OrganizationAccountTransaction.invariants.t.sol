@@ -2,6 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Vm} from "forge-std/Vm.sol";
+
+import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
     OrganizationAccountTransactionBaseHarness
@@ -15,7 +18,6 @@ import {
 import {
     OrganizationAccountTransactionInvariantHandler
 } from "test/organization/integration/OrganizationAccountTransactionInvariantHandler.sol";
-import {OperationType} from "types/CommonTypes.sol";
 import {
     Policy,
     PolicyType,
@@ -37,7 +39,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     uint256 internal expiration;
     bytes internal initiatorSig;
     uint256 internal usedSalt;
-    uint256 internal usedNonce;
+    uint256 internal executedNonce;
     bytes32 internal usageKey;
     uint256 internal usageWindow;
     uint256 internal usageAfterSuccess;
@@ -80,6 +82,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
         );
 
         // Call: execute one valid transaction to consume nonce and update usage.
+        vm.recordLogs();
         vm.prank(GUARDIAN);
         harness.executeAccountTransaction({
             account: address(account),
@@ -93,9 +96,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             reviewSignatures: bytes(""),
             proofs: proofs
         });
-
-        bytes memory operationData = abi.encode(address(account), DESTINATION, 0, keccak256(data), DEFAULT_POLICY_ID);
-        usedNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, usedSalt);
+        executedNonce = _extractExecuteEventNonce(vm.getRecordedLogs());
         usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, address(account), DESTINATION, initiator1);
         usageWindow = _computeTimeWindow(policy);
         usageAfterSuccess = harness.getPolicyUsage(usageKey, usageWindow);
@@ -135,7 +136,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     /// @dev Verifies invariant: consumed nonce cannot be reused for execution or rejection.
     function invariant_AT_INV_1_nonceConsumption_preventsExecuteAndRejectReplay() public {
         // Verify: execute replay fails on consumed nonce.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, usedNonce));
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
         vm.prank(GUARDIAN);
         harness.executeAccountTransaction({
             account: address(account),
@@ -162,7 +163,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             DEFAULT_POLICY_ID,
             false
         );
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, usedNonce));
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
         vm.prank(GUARDIAN);
         harness.rejectAccountTransaction({
             account: address(account),
@@ -191,11 +192,36 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: execute/reject share the same nonce space for identical tuples.
-    function invariant_AT_INV_4_sharedNonceSpace_executeAndRejectUseSameNonce() public view {
-        bytes memory operationData = abi.encode(address(account), DESTINATION, 0, keccak256(data), DEFAULT_POLICY_ID);
-        uint256 executeNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, usedSalt);
-        uint256 rejectNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, usedSalt);
-        assertEq(executeNonce, rejectNonce, "execute and reject must share nonce space");
+    function invariant_AT_INV_4_sharedNonceSpace_executeAndRejectUseSameNonce() public {
+        // Setup: sign a rejection for the same tuple that was executed in setUp.
+        bytes memory rejectionSig = _signInitiatorTx(
+            address(harness),
+            INITIATOR_PK_1,
+            address(account),
+            DESTINATION,
+            0,
+            data,
+            usedSalt,
+            expiration,
+            DEFAULT_POLICY_ID,
+            false
+        );
+
+        // Verify: reject reverts with the nonce emitted by the execute path, proving shared derivation.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
+        vm.prank(GUARDIAN);
+        harness.rejectAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: usedSalt,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSig,
+            reviewSignatures: rejectionSig,
+            proofs: proofs
+        });
     }
 
     /// @dev Verifies invariant: approval and rejection initiator hashes are always distinct.
@@ -219,5 +245,16 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
         );
         assertTrue(hashA != hashB, "hash should bind organization address");
+    }
+
+    /// @dev Extracts nonce from the first `AccountTransactionExecuted` event in recorded logs.
+    function _extractExecuteEventNonce(Vm.Log[] memory logs) private pure returns (uint256) {
+        bytes32 topic = IOrganizationAccountTransaction.AccountTransactionExecuted.selector;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length > 0 && logs[i].topics[0] == topic) {
+                return uint256(logs[i].topics[3]);
+            }
+        }
+        revert("AccountTransactionExecuted event not found");
     }
 }

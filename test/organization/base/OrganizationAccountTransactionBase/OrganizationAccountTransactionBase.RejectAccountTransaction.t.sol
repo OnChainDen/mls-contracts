@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Vm} from "forge-std/Vm.sol";
+
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
@@ -88,20 +90,54 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     }
 
     /**
-     * @dev Verifies reject nonce matches execute nonce for the same operation tuple.
+     * @dev Verifies reject nonce matches execute nonce for the same operation tuple by going
+     *      through the actual execute and reject paths.
      */
-    function test_OATB_RAT_3_rejectAccountTransaction_nonceMatchesExecuteForSameTuple() public view {
-        // Setup: define a deterministic tuple and build operation data hash.
-        address account = address(0xAC003);
+    function test_OATB_RAT_3_rejectAccountTransaction_nonceMatchesExecuteForSameTuple() public {
+        // Setup: deploy account and build shared payload with both approval and rejection signatures.
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
         bytes memory data = abi.encodeWithSelector(bytes4(0x03040506), uint256(3));
-        bytes memory operationData = abi.encode(account, DESTINATION, 11, keccak256(data), DEFAULT_POLICY_ID);
+        (
+            ,
+            ValidationProofs memory proofs,
+            bytes memory initiatorSignature,
+            bytes memory rejectionSignature,
+            uint256 expiration
+        ) = _buildAutoRejectPayload(address(account), DESTINATION, 0, data, 3, DEFAULT_POLICY_ID);
 
-        // Call: compute nonce from the shared operation tuple.
-        uint256 rejectNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, 3);
-        uint256 executeNonce = harness.computeNonce(OperationType.AccountTransaction, operationData, 3);
+        // Call: execute the transaction and extract the nonce from the emitted event.
+        vm.recordLogs();
+        vm.prank(GUARDIAN);
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 3,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+        uint256 executeNonce = _extractExecuteEventNonce(vm.getRecordedLogs());
 
-        // Verify: both flows resolve to the exact same nonce.
-        assertEq(rejectNonce, executeNonce, "reject and execute must share nonce space");
+        // Verify: reject with the same tuple reverts with the nonce emitted by execute.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executeNonce));
+        vm.prank(GUARDIAN);
+        harness.rejectAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 3,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: rejectionSignature,
+            proofs: proofs
+        });
     }
 
     /**
@@ -519,6 +555,19 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
             policyId: policyId,
             isApproval: false
         });
+    }
+
+    /**
+     * @dev Extracts nonce from the first `AccountTransactionExecuted` event in recorded logs.
+     */
+    function _extractExecuteEventNonce(Vm.Log[] memory logs) internal pure returns (uint256) {
+        bytes32 topic = IOrganizationAccountTransaction.AccountTransactionExecuted.selector;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length > 0 && logs[i].topics[0] == topic) {
+                return uint256(logs[i].topics[3]);
+            }
+        }
+        revert("AccountTransactionExecuted event not found");
     }
 
     /**
