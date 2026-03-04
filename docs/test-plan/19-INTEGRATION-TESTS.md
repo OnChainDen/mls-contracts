@@ -151,19 +151,73 @@
 
 ### 6.3 Integrated policy constraint behavior
 
+Note: Destination, token, function, parameter-constraint, and rate-limit checks apply to `executeAccountTransaction` and `rejectAccountTransaction` only. They do not apply to the `isValidSignature` (ERC-1271) path, which only checks source account and initiator authorization. Source-account and initiator checks apply to all three entry points.
+
+#### Source-account filtering
+
 | # | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| 49 | Source-account filtering (`anySourceAccount` vs specific list) is enforced across multiple accounts | [I] | P0 |
-| 50 | Destination custom-list validation uses actual recipient for ERC-20 transfers (not token contract address) | [S] | P0 |
-| 51 | Token threshold boundary is strict `<` (amount == threshold rejected) | [E][S] | P0 |
-| 52 | Function allowlist binds selector + constraints hash; same selector with different constraints behaves differently | [S] | P0 |
-| 53 | Parameter constraints for dynamic bytes/string offsets reject malformed calldata without bypass | [S] | P0 |
-| 54 | Rate-limit scopes (per initiator/source/destination vs across-all) track independently as configured | [I] | P0 |
-| 55 | Rate-limit usage resets on time-window rollover and does not leak usage between windows | [I][E] | P1 |
-| 56 | [DESIRED] Rate-limit arithmetic must fail safely (no overflow bypass / no wrapped usage) | [DESIRED][S] | P0 |
-| 57 | [DESIRED] Zero approval threshold in group-manual policy is rejected | [DESIRED][S] | P0 |
-| 58 | [DESIRED] `anyInitiator=true` still requires initiator to be an organization member | [DESIRED][S] | P0 |
-| 58a | Signatures collected under a valid policy become unexecutable after a policy/group change invalidates the authorization (e.g. policy root updated to remove the policy, or group deleted/member removed so approvals no longer meet threshold) | [I][S] | P0 |
+| 49a | `executeAccountTransaction`: policy with `anySourceAccount=false` — account in the source-account Merkle subtree succeeds; account not in the subtree reverts | [I] | P0 |
+| 49b | `executeAccountTransaction`: policy with `anySourceAccount=true` — two different org accounts both execute successfully under the same policy | [I] | P0 |
+| 49c | `isValidSignature`: policy with `anySourceAccount=false` — account in subtree returns valid; account not in subtree returns invalid | [I] | P0 |
+
+#### Destination validation
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 50a | `executeAccountTransaction` (ETH transfer): `DestinationType.CustomList` checks `to` address against the custom-destinations Merkle subtree; unlisted `to` reverts | [I] | P0 |
+| 50b | `executeAccountTransaction` (ERC-20 `transfer`): `DestinationType.CustomList` checks the **recipient argument** extracted from calldata (not the token contract `to` address); unlisted recipient reverts | [S] | P0 |
+| 50c | `executeAccountTransaction` (ERC-20 `transferFrom`): `DestinationType.CustomList` checks the **recipient argument** extracted from calldata; unlisted recipient reverts | [S] | P0 |
+| 50d | `executeAccountTransaction`: `DestinationType.Any` allows any destination without proof | [I] | P1 |
+
+#### Token type and amount threshold
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 51a | `executeAccountTransaction` (ETH transfer): policy allows native token — succeeds; policy does not allow native token — reverts | [I] | P0 |
+| 51b | `executeAccountTransaction` (ERC-20 transfer): policy allows the specific token contract — succeeds; different token contract — reverts | [I] | P0 |
+| 51c | `executeAccountTransaction`: `hasAmountThreshold=true` with `amountThreshold=N` — transfer of `N-1` succeeds, transfer of exactly `N` reverts (strict `<` boundary) | [E][S] | P0 |
+| 51d | `executeAccountTransaction`: `hasAmountThreshold=false` — any amount succeeds | [I] | P1 |
+
+#### Function allowlist and parameter constraints
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 52a | `executeAccountTransaction` (contract interaction): `anyFunction=false` — allowed selector with matching constraints hash succeeds; same selector with different constraints hash reverts (leaf binds selector + constraints hash) | [S] | P0 |
+| 52b | `executeAccountTransaction` (contract interaction): `anyFunction=true` — any selector with any calldata succeeds | [I] | P1 |
+| 52c | `executeAccountTransaction` (contract interaction): calldata shorter than 4 bytes (no selector) reverts when `anyFunction=false` | [S] | P1 |
+| 53a | `executeAccountTransaction` (contract interaction): `ConstraintType.Exact` on a static `uint256` parameter — matching value succeeds; different value reverts | [I] | P0 |
+| 53b | `executeAccountTransaction` (contract interaction): `ConstraintType.Exact` on a dynamic `bytes` parameter — matching content succeeds; different content reverts | [I] | P0 |
+| 53c | `executeAccountTransaction` (contract interaction): dynamic `bytes`/`string` parameter with offset pointing into the ABI head region (offset < 32) reverts | [S] | P0 |
+| 53d | `executeAccountTransaction` (contract interaction): dynamic `bytes`/`string` parameter with truncated calldata (length word or content extends beyond `data.length`) reverts | [S] | P0 |
+
+#### Rate limits
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 54a | `executeAccountTransaction`: `PerEntity` initiator scope — two different initiators each get independent usage budgets under the same policy | [I] | P0 |
+| 54b | `executeAccountTransaction`: `PerEntity` source-account scope — two different accounts each get independent usage budgets under the same policy | [I] | P0 |
+| 54c | `executeAccountTransaction`: `PerEntity` destination scope — two different destinations each get independent usage budgets under the same policy | [I] | P0 |
+| 54d | `executeAccountTransaction`: `AcrossAll` on all three scopes — all transactions share a single usage budget regardless of initiator/source/destination | [I] | P0 |
+| 55a | `executeAccountTransaction`: usage accumulated in one time window does not carry over after the window boundary passes (fresh budget in new window) | [I][E] | P1 |
+| 55b | `executeAccountTransaction`: transaction at the exact time-window boundary uses the new window's fresh budget, not the old window's exhausted budget | [E] | P1 |
+| 55c | `rejectAccountTransaction`: rejection does not consume rate-limit usage; a subsequent `executeAccountTransaction` sees the same usage as before the rejection | [S] | P0 |
+| 56 | [DESIRED] `executeAccountTransaction`: rate-limit usage addition that would overflow `uint256` reverts instead of wrapping to a small value that passes the limit check | [DESIRED][S] | P0 |
+
+#### Approval and initiator authorization
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 57 | [DESIRED] `executeAccountTransaction`: ManualApproval policy with group approver whose `approvalThreshold=0` is rejected (zero threshold must not allow zero-signature approval) | [DESIRED][S] | P0 |
+| 58a | [DESIRED] `executeAccountTransaction`: `anyInitiator=true` policy — non-member initiator reverts (org membership is always required even when `anyInitiator` is set) | [DESIRED][S] | P0 |
+| 58b | [DESIRED] `isValidSignature`: `anyInitiator=true` policy — non-member initiator returns invalid | [DESIRED][S] | P0 |
+
+#### Policy/group mutation invalidates pre-collected signatures
+
+| # | Test Case | Type | Priority |
+|---|-----------|------|----------|
+| 58c | `executeAccountTransaction`: signatures collected under a valid policy become unexecutable after `setPolicies` updates the policy root to exclude that policy | [I][S] | P0 |
+| 58d | `executeAccountTransaction`: ManualApproval signatures collected before a group member removal (dropping below threshold) cause execution to revert | [I][S] | P0 |
 
 ### 6.4 Private helpers (private -> harness)
 
