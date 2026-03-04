@@ -183,20 +183,6 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     }
 
     /**
-     * @dev Verifies `_onlyOrganization` rejects a different organization caller.
-     */
-    function test_AI_OO_3_onlyOrganizationInternal_differentOrganizationCaller_revertsOnlyOrganization() public {
-        // Setup: pick a different organization-like address.
-        address differentOrganization = address(0xF00D);
-
-        // Verify: caller mismatch is rejected.
-        vm.expectRevert(IAccount.OnlyOrganization.selector);
-        vm.prank(differentOrganization);
-        // Call: execute wrapper around `_onlyOrganization`.
-        account.onlyOrganizationViaInternal();
-    }
-
-    /**
      * @dev Verifies `_onlyOrganization` rejects `msg.sender == address(0)`.
      */
     function test_AI_OO_4_onlyOrganizationInternal_zeroAddressCaller_revertsOnlyOrganization() public {

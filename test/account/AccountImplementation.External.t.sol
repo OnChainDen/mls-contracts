@@ -82,22 +82,6 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     }
 
     /**
-     * @dev Verifies different organization caller (not bound beacon) reverts `OnlyOrganization`.
-     */
-    function test_AI_ET_2_executeTransaction_differentOrganizationCaller_revertsOnlyOrganization() public {
-        // Setup: deploy target call receiver and use another beacon-like address as caller.
-        AccountCallRecorderTarget target = new AccountCallRecorderTarget();
-        address otherOrganization = address(0xBEEFCAFE);
-
-        vm.expectRevert(IAccount.OnlyOrganization.selector);
-        vm.prank(otherOrganization);
-        // Call: invoke executeTransaction from a different organization address.
-        account.executeTransaction(
-            address(target), 0, abi.encodeWithSelector(target.record.selector, bytes("y"), 2), 2, 2
-        );
-    }
-
-    /**
      * @dev Verifies successful executeTransaction emits `TransactionExecuted`.
      */
     function test_AI_ET_3_executeTransaction_success_emitsTransactionExecuted() public {

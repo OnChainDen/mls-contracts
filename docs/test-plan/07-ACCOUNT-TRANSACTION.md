@@ -226,7 +226,6 @@ All `private` functions in the files under test will be refactored to `internal`
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | AI-ET-1 | Non-organization caller — reverts `OnlyOrganization` | [N] | P0 |
-| AI-ET-2 | Different organization caller (not this account's bound organization/beacon organization) — reverts `OnlyOrganization` | [N][S] | P0 |
 | AI-ET-3 | Successful call (`_execute` returns true) — emits `TransactionExecuted` event | [U] | P0 |
 | AI-ET-4 | Failed call (`_execute` returns false) — reverts `TransactionExecutionFailed` | [N] | P0 |
 | AI-ET-5 | ETH value forwarded correctly to target | [U] | P0 |
@@ -277,7 +276,6 @@ All `private` functions in the files under test will be refactored to `internal`
 |---|-----------|------|----------|
 | AI-OO-1 | `msg.sender == organization` address — no revert | [U] | P0 |
 | AI-OO-2 | `msg.sender != organization` address — reverts `OnlyOrganization` | [N] | P0 |
-| AI-OO-3 | Different organization caller (not this account's bound organization/beacon organization) — reverts `OnlyOrganization` | [N][S] | P0 |
 | AI-OO-4 | `msg.sender == address(0)` — reverts `OnlyOrganization` | [E] | P0 |
 
 ---
