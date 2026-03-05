@@ -4,7 +4,14 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 import {IAccount} from "interfaces/IAccount.sol";
+import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
+import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {
@@ -14,6 +21,7 @@ import {
     OrganizationTxRecoveryBaseHarness
 } from "test/organization/base/OrganizationTxRecoveryBase/OrganizationTxRecoveryBaseHarness.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 import {GuardianRecoveryState, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 contract TxRecoveryInvariantReceiver {
@@ -264,11 +272,13 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      * @param seed Fuzz seed used for payload arguments and dummy auth params.
      */
     function attemptOrganizationStateChangingSelector(uint8 rawSelector, uint256 seed) external {
-        uint8 selectorIndex = uint8(bound(rawSelector, 0, 9));
+        uint8 selectorIndex = uint8(bound(rawSelector, 0, 29));
         bytes memory payload;
         OrganizationPayloadKind kind = OrganizationPayloadKind.Generic;
+        AdminAuthParams memory auth = _dummyAuth(seed);
+        address[] memory empty = new address[](0);
 
-        // Build a compact selector matrix that spans tx-recovery, admin, member, policy, and deferred-init paths.
+        // IOrganizationTxRecovery (8 selectors)
         if (selectorIndex == 0) {
             payload = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
             kind = OrganizationPayloadKind.TxRecoveryManagement;
@@ -282,38 +292,93 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
             payload = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
             kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 4) {
-            address[] memory emptyAdmins = new address[](0);
             payload = abi.encodeWithSelector(
-                IOrganizationAdmin.modifyAdmins.selector, emptyAdmins, emptyAdmins, uint256(1), _dummyAuth(seed)
+                harness.executeRecoveryAccountTransaction.selector, address(0), address(0), uint256(0), bytes("")
             );
-            kind = OrganizationPayloadKind.ModifyAdmins;
+            kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 5) {
-            address[] memory emptyMembers = new address[](0);
-            payload = abi.encodeWithSelector(
-                IOrganizationMembers.modifyMembers.selector, emptyMembers, emptyMembers, _dummyAuth(seed)
-            );
-            kind = OrganizationPayloadKind.ModifyMembers;
-        } else if (selectorIndex == 6) {
-            payload = abi.encodeWithSelector(
-                IOrganizationPolicy.setPolicies.selector, bytes32(seed), "ipfs://txr-selector", _dummyAuth(seed)
-            );
-            kind = OrganizationPayloadKind.SetPolicies;
-        } else if (selectorIndex == 7) {
             payload = abi.encodeWithSelector(
                 harness.initiateInitializeTransactionAndERC1271Recovery.selector,
                 // forge-lint: disable-next-line(unsafe-typecast)
                 address(uint160(seed) | 1),
                 2 days,
-                _dummyAuth(seed)
+                auth
             );
+        } else if (selectorIndex == 6) {
+            payload = abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
+        } else if (selectorIndex == 7) {
+            payload = abi.encodeWithSelector(harness.cancelInitializeTransactionAndERC1271Recovery.selector, auth);
+            // IOrganizationAdmin (2 selectors)
         } else if (selectorIndex == 8) {
+            payload = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
+            kind = OrganizationPayloadKind.ModifyAdmins;
+        } else if (selectorIndex == 9) {
             payload = abi.encodeWithSelector(
-                harness.finalizeInitializeTransactionAndERC1271Recovery.selector, _dummyAuth(seed)
+                IOrganizationAdmin.rejectAdminOperation.selector, OperationType.ModifyAdmins, bytes(""), auth
             );
+            // IOrganizationMembers (1 selector)
+        } else if (selectorIndex == 10) {
+            payload = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
+            kind = OrganizationPayloadKind.ModifyMembers;
+            // IOrganizationGroups (1 selector)
+        } else if (selectorIndex == 11) {
+            payload = abi.encodeWithSelector(IOrganizationGroups.modifyGroups.selector);
+            // IOrganizationPolicy (1 selector)
+        } else if (selectorIndex == 12) {
+            payload = abi.encodeWithSelector(
+                IOrganizationPolicy.setPolicies.selector, bytes32(seed), "ipfs://txr-selector", auth
+            );
+            kind = OrganizationPayloadKind.SetPolicies;
+            // IOrganizationGuardian (4 selectors)
+        } else if (selectorIndex == 13) {
+            payload = abi.encodeWithSelector(IOrganizationGuardian.initiateGuardianUpdate.selector, address(0x1), auth);
+        } else if (selectorIndex == 14) {
+            payload = abi.encodeWithSelector(IOrganizationGuardian.finalizeGuardianUpdate.selector, auth);
+        } else if (selectorIndex == 15) {
+            payload = abi.encodeWithSelector(IOrganizationGuardian.cancelGuardianUpdate.selector, auth);
+        } else if (selectorIndex == 16) {
+            payload = abi.encodeWithSelector(IOrganizationGuardian.acceptGuardian.selector);
+            // IOrganizationGuardianRecovery (7 selectors)
+        } else if (selectorIndex == 17) {
+            payload = abi.encodeWithSelector(
+                IOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate.selector, address(0x1)
+            );
+        } else if (selectorIndex == 18) {
+            payload = abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate.selector);
+        } else if (selectorIndex == 19) {
+            payload = abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate.selector);
+        } else if (selectorIndex == 20) {
+            payload = abi.encodeWithSelector(IOrganizationGuardianRecovery.acceptGuardianRecovery.selector);
+        } else if (selectorIndex == 21) {
+            payload = abi.encodeWithSelector(
+                IOrganizationGuardianRecovery.initiateInitializeGuardianRecovery.selector, address(0x1), 2 days, auth
+            );
+        } else if (selectorIndex == 22) {
+            payload =
+                abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery.selector, auth);
+        } else if (selectorIndex == 23) {
+            payload =
+                abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelInitializeGuardianRecovery.selector, auth);
+            // IOrganizationAccountFactory (2 selectors)
+        } else if (selectorIndex == 24) {
+            payload = abi.encodeWithSelector(IOrganizationAccountFactory.deployAccount.selector, bytes32(0), auth);
+        } else if (selectorIndex == 25) {
+            payload = abi.encodeWithSelector(
+                IOrganizationAccountFactory.setAccountImplementation.selector, address(0x1), auth
+            );
+            // IOrganizationAccountTransaction (2 selectors)
+        } else if (selectorIndex == 26) {
+            payload = abi.encodeWithSelector(IOrganizationAccountTransaction.executeAccountTransaction.selector);
+        } else if (selectorIndex == 27) {
+            payload = abi.encodeWithSelector(IOrganizationAccountTransaction.rejectAccountTransaction.selector);
+            // IOrganization (1 selector)
+        } else if (selectorIndex == 28) {
+            payload = abi.encodeWithSelector(
+                IOrganization.upgradeToAndCallWithAuthorization.selector, address(0x1), bytes(""), auth
+            );
+            // IOrganizationInitialization (1 selector)
         } else {
-            payload = abi.encodeWithSelector(
-                harness.cancelInitializeTransactionAndERC1271Recovery.selector, _dummyAuth(seed)
-            );
+            payload = abi.encodeWithSelector(IOrganizationInitialization.initialize.selector);
         }
 
         _attemptOrganizationPayload(payload, kind);

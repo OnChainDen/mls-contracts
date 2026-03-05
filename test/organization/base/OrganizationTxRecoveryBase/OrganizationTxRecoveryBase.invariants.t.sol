@@ -313,7 +313,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     /// cannot succeed during recovery execution.
     function invariant_TXR_INV_16_reentrantOrganizationSelectorsCannotSucceed() public {
         // Setup: attempt a broad organization selector sweep via recovery call-chaining.
-        for (uint8 i = 0; i < 10; i++) {
+        for (uint8 i = 0; i < 30; i++) {
             handler.attemptOrganizationStateChangingSelector(i, uint256(i) + 11);
         }
 
