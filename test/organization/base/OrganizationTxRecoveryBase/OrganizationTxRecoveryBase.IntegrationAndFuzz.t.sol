@@ -5,8 +5,6 @@ pragma solidity 0.8.33;
 import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {
     MockAccountForOrganizationTransaction
@@ -323,18 +321,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         AdminAuthParams memory auth = _dummyAuthParams(430);
         address[] memory empty = new address[](0);
-
-        bytes[] memory organizationPayloads = new bytes[](5);
-        organizationPayloads[0] =
-            abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
-        organizationPayloads[1] =
-            abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
-        organizationPayloads[2] =
-            abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
-        organizationPayloads[3] = abi.encodeWithSelector(
-            IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x1234)), "ipfs://new-root", auth
-        );
-        organizationPayloads[4] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
+        bytes[] memory organizationPayloads = _buildOrganizationStateChangingPayloads(auth, empty);
 
         // Call
         for (uint256 i = 0; i < organizationPayloads.length; i++) {
@@ -378,16 +365,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         AdminAuthParams memory auth = _dummyAuthParams(440);
         address[] memory empty = new address[](0);
-
-        bytes[] memory payloads = new bytes[](6);
-        payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
-        payloads[1] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
-        payloads[2] = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
-        payloads[3] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
-        payloads[4] = abi.encodeWithSelector(
-            IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x1234)), "ipfs://txr-int-14", auth
-        );
-        payloads[5] = abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
+        bytes[] memory payloads = _buildOrganizationStateChangingPayloads(auth, empty);
 
         // Call
         for (uint256 i = 0; i < payloads.length; i++) {
@@ -520,16 +498,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         harness.setDeployedAccount(address(account), true);
         AdminAuthParams memory auth = _dummyAuthParams(450 + uint256(rawIndex));
         address[] memory empty = new address[](0);
-
-        bytes[] memory payloads = new bytes[](6);
-        payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
-        payloads[1] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
-        payloads[2] = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
-        payloads[3] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
-        payloads[4] = abi.encodeWithSelector(
-            IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x5678)), "ipfs://txr-fz-8", auth
-        );
-        payloads[5] = abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
+        bytes[] memory payloads = _buildOrganizationStateChangingPayloads(auth, empty);
 
         bytes memory payload = payloads[bound(rawIndex, 0, payloads.length - 1)];
 

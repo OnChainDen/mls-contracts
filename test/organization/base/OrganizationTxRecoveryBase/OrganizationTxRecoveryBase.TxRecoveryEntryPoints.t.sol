@@ -6,17 +6,9 @@ import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol"
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {IAccount} from "interfaces/IAccount.sol";
-import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
-import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
-import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
-import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
-import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
-import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
-import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
-import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
@@ -1235,93 +1227,5 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(disabledState.pendingInit.pendingRecoveryAddress, address(0), "disabled snapshot: pendingInit address");
         assertEq(disabledState.pendingInit.pendingTimelockDurationSeconds, 0, "disabled snapshot: pendingInit timelock");
         assertEq(disabledState.pendingInit.pendingTimestamp, 0, "disabled snapshot: pendingInit timestamp");
-    }
-
-    /**
-     * @dev Builds payloads for every state-changing (non-view) Organization function selector.
-     *      Covers IOrganizationTxRecovery, IOrganizationAdmin, IOrganizationMembers, IOrganizationGroups,
-     *      IOrganizationPolicy, IOrganizationGuardian, IOrganizationGuardianRecovery, IOrganizationAccountFactory,
-     *      IOrganizationAccountTransaction, IOrganization, and IOrganizationInitialization.
-     */
-    function _buildOrganizationStateChangingPayloads(AdminAuthParams memory auth, address[] memory empty)
-        internal
-        view
-        returns (bytes[] memory payloads)
-    {
-        payloads = new bytes[](30);
-
-        // IOrganizationTxRecovery (8 selectors)
-        payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
-        payloads[1] = abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector);
-        payloads[2] = abi.encodeWithSelector(harness.cancelEnableTransactionAndERC1271Recovery.selector);
-        payloads[3] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
-        payloads[4] = abi.encodeWithSelector(
-            harness.executeRecoveryAccountTransaction.selector, address(0), address(0), uint256(0), bytes("")
-        );
-        payloads[5] = abi.encodeWithSelector(
-            harness.initiateInitializeTransactionAndERC1271Recovery.selector, address(0x1), 2 days, auth
-        );
-        // forgefmt: disable-next-item
-        payloads[6] = abi.encodeWithSelector(
-            harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth
-        );
-        // forgefmt: disable-next-item
-        payloads[7] = abi.encodeWithSelector(
-            harness.cancelInitializeTransactionAndERC1271Recovery.selector, auth
-        );
-
-        // IOrganizationAdmin (2 selectors)
-        payloads[8] = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
-        payloads[9] = abi.encodeWithSelector(
-            IOrganizationAdmin.rejectAdminOperation.selector, OperationType.ModifyAdmins, bytes(""), auth
-        );
-
-        // IOrganizationMembers (1 selector)
-        payloads[10] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
-
-        // IOrganizationGroups (1 selector) – selector-only; no GroupModification[] needed to trigger revert.
-        payloads[11] = abi.encodeWithSelector(IOrganizationGroups.modifyGroups.selector);
-
-        // IOrganizationPolicy (1 selector)
-        payloads[12] = abi.encodeWithSelector(
-            IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x1234)), "ipfs://sweep", auth
-        );
-
-        // IOrganizationGuardian (4 selectors)
-        payloads[13] = abi.encodeWithSelector(IOrganizationGuardian.initiateGuardianUpdate.selector, address(0x1), auth);
-        payloads[14] = abi.encodeWithSelector(IOrganizationGuardian.finalizeGuardianUpdate.selector, auth);
-        payloads[15] = abi.encodeWithSelector(IOrganizationGuardian.cancelGuardianUpdate.selector, auth);
-        payloads[16] = abi.encodeWithSelector(IOrganizationGuardian.acceptGuardian.selector);
-
-        // IOrganizationGuardianRecovery (7 selectors)
-        payloads[17] =
-            abi.encodeWithSelector(IOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate.selector, address(0x1));
-        payloads[18] = abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate.selector);
-        payloads[19] = abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate.selector);
-        payloads[20] = abi.encodeWithSelector(IOrganizationGuardianRecovery.acceptGuardianRecovery.selector);
-        payloads[21] = abi.encodeWithSelector(
-            IOrganizationGuardianRecovery.initiateInitializeGuardianRecovery.selector, address(0x1), 2 days, auth
-        );
-        payloads[22] =
-            abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery.selector, auth);
-        payloads[23] =
-            abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelInitializeGuardianRecovery.selector, auth);
-
-        // IOrganizationAccountFactory (2 selectors)
-        payloads[24] = abi.encodeWithSelector(IOrganizationAccountFactory.deployAccount.selector, bytes32(0), auth);
-        payloads[25] =
-            abi.encodeWithSelector(IOrganizationAccountFactory.setAccountImplementation.selector, address(0x1), auth);
-
-        // IOrganizationAccountTransaction (2 selectors) – selector-only; ValidationProofs omitted.
-        payloads[26] = abi.encodeWithSelector(IOrganizationAccountTransaction.executeAccountTransaction.selector);
-        payloads[27] = abi.encodeWithSelector(IOrganizationAccountTransaction.rejectAccountTransaction.selector);
-
-        // IOrganization (1 selector)
-        payloads[28] = abi.encodeWithSelector(
-            IOrganization.upgradeToAndCallWithAuthorization.selector, address(0x1), bytes(""), auth
-        );
-
-        // IOrganizationInitialization (1 selector) – selector-only; InitializationParams omitted.
-        payloads[29] = abi.encodeWithSelector(IOrganizationInitialization.initialize.selector);
     }
 }
