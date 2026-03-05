@@ -212,6 +212,8 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         // Verify
         uint256 finalizeNonce = _computeGuardianNonce(OperationType.FinalizeUpdateGuardian, operationData, salt);
         assertFalse(harness.getUsedNonce(finalizeNonce), "finalize nonce should remain unused");
+        uint256 wrongAuthNonce = _computeGuardianNonce(OperationType.InitiateUpdateGuardian, operationData, salt);
+        assertFalse(harness.getUsedNonce(wrongAuthNonce), "wrong auth nonce should remain unused");
     }
 
     /// @dev Verifies OGB-FGU-9: finalize signatures for pending guardian A fail after pending guardian changes to B.
