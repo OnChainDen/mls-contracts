@@ -159,6 +159,9 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         });
 
         // Verify: signatures over a different operation type must fail.
+        // The contract hardcodes `OperationType.DeployAccount` when computing the EIP-712 hash,
+        // so ECDSA recovery with a hash signed over `UpgradeAccount` yields an unrecognized address,
+        // which is correctly rejected as a non-admin signer.
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         // Call: invoke deploy path with mismatched operation-type signatures.
