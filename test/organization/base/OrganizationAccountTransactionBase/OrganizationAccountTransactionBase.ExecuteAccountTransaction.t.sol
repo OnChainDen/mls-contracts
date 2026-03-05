@@ -554,6 +554,58 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
+     * @dev Verifies contract interaction with non-zero value succeeds under a `TransactionType.ContractInteractions`
+     *      policy. A transaction with both calldata and `value > 0` is NOT a token transfer, so the
+     *      `ContractInteractions` policy type should match it.
+     */
+    function test_OATB_EAT_14_executeAccountTransaction_contractInteractionWithValue_contractInteractionsPolicy_endToEnd()
+        public
+    {
+        // Setup: deploy account + interaction target and fund account balance.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        uint256 callValue = 0.3 ether;
+        vm.deal(address(account), callValue);
+        bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(42));
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: address(account),
+            to: address(target),
+            value: callValue,
+            data: data,
+            salt: 141,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+
+        vm.prank(GUARDIAN);
+        // Call: execute value-carrying interaction call under ContractInteractions policy.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: callValue,
+            data: data,
+            salt: 141,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: target receives both value and calldata.
+        assertEq(target.calls(), 1, "target should be called once");
+        assertEq(target.lastValue(), callValue, "call value should be forwarded");
+        assertEq(target.total(), 42, "calldata should be forwarded");
+    }
+
+    /**
      * @dev Verifies expired transactions revert in the base execution path.
      */
     function test_OATB_EAT_15_executeAccountTransaction_expiredTransaction_revertsTransactionExpired() public {
