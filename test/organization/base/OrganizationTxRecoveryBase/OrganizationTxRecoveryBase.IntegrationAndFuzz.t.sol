@@ -271,7 +271,7 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
         _setTxRecoveryState(address(0), false, 0, 0, mutatedPendingRecovery, TX_RECOVERY_TIMELOCK, block.timestamp);
 
-        // Call
+        // Call + verify
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(staleFinalizeAuth);
@@ -279,8 +279,6 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(staleCancelAuth);
-
-        // Verify
     }
 
     /// @dev Verifies TXR-INT-8: recovery execution bypasses guardian/policy paths but still enforces account ownership.
