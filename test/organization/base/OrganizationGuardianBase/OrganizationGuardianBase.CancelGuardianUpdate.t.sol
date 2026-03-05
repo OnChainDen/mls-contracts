@@ -176,7 +176,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         });
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelGuardianUpdate(auth);
 
@@ -202,7 +202,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         });
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelGuardianUpdate(wrongAuth);
 
@@ -229,7 +229,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         bytes memory operationDataB = abi.encode(NEW_GUARDIAN_B);
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelGuardianUpdate(auth);
 

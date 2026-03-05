@@ -178,7 +178,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         });
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeGuardianUpdate(auth);
 
@@ -205,7 +205,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         });
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeGuardianUpdate(wrongAuth);
 
@@ -233,7 +233,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         bytes memory operationDataB = abi.encode(NEW_GUARDIAN_B);
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeGuardianUpdate(auth);
 

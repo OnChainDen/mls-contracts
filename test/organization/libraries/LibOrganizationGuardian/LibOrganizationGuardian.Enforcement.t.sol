@@ -30,7 +30,9 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         guardianStateHarness.setGuardian(NEW_GUARDIAN_A);
 
         // Call
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, NEW_GUARDIAN_B, NEW_GUARDIAN_A)
+        );
         vm.prank(NEW_GUARDIAN_B);
         harness.enforceOnlyGuardianViaLibrary();
 
@@ -73,7 +75,11 @@ contract LibOrganizationGuardianEnforcementTest is LibOrganizationGuardianSuiteB
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
 
         // Call
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, NEW_GUARDIAN_B, NEW_GUARDIAN_A
+            )
+        );
         vm.prank(NEW_GUARDIAN_B);
         harness.enforceOnlyPendingGuardianViaLibrary();
 
