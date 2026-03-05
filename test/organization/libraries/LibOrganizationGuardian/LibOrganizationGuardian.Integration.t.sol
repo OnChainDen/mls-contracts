@@ -51,6 +51,7 @@ contract LibOrganizationGuardianIntegrationTest is LibOrganizationGuardianSuiteB
         harness.cancelGuardianUpdateViaLibrary();
 
         // Verify
+        assertEq(harness.getGuardianViaLibrary(), GUARDIAN, "guardian should remain unchanged");
         assertEq(harness.getPendingGuardianViaLibrary(), address(0), "pending guardian should clear");
         assertEq(harness.getPendingGuardianUpdateTimestampViaLibrary(), 0, "pending timestamp should clear");
         assertFalse(harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(), "ready flag should clear");
