@@ -934,6 +934,21 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
         harness.validateRecoveryAccountTransactionAllowedOrRevert();
 
+        // Both NotConfigured and NotEnabled conditions are true; NotConfigured has precedence
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: address(0),
+                isEnabled: false,
+                timelockDurationSeconds: 0,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
+        harness.validateRecoveryAccountTransactionAllowedOrRevert();
+
         // Verify
     }
 
