@@ -32,6 +32,9 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
             implementationB_: accountImplementationV2
         });
 
+        // Setup: deploy 1 account so invariant checks start with a non-empty list.
+        handler.deployAccount(bytes32(uint256(1)));
+
         // Setup: route invariant fuzz calls to the account-factory handler.
         targetContract(address(handler));
     }
@@ -70,7 +73,8 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
         // Call: evaluate whether an un-whitelisted update ever succeeded during fuzzing.
         // Verify: un-whitelisted implementation updates should never succeed.
         assertFalse(
-            handler.successfulSetWithoutWhitelist(), "implementation update succeeded while implementation unwhitelisted"
+            handler.successfulSetWithoutWhitelist(),
+            "implementation update succeeded while implementation unwhitelisted"
         );
     }
 

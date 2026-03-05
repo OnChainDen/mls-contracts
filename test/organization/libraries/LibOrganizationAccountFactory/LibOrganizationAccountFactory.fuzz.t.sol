@@ -16,10 +16,10 @@ import {ContractType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies random distinct salts compute to unique addresses.
-    function testFuzz_AF_FT_1_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(bytes32 saltA, bytes32 saltB)
-        public
-        view
-    {
+    function testFuzz_AF_FT_1_computeAccountAddress_randomDistinctSalts_produceUniqueAddresses(
+        bytes32 saltA,
+        bytes32 saltB
+    ) public view {
         // Setup: constrain fuzz inputs to distinct salts.
         vm.assume(saltA != saltB);
 
@@ -51,7 +51,9 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         vm.assume(candidate != accountImplementationV1);
 
         // Verify: non-whitelisted candidate should be rejected.
-        vm.expectRevert(abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate));
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate)
+        );
         // Call: attempt library-level implementation update.
         harness.setAccountImplementationViaLibrary(candidate);
     }
@@ -70,13 +72,22 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         assertEq(deployed, computed, "deployed address should match computed address");
     }
 
-    /// @dev Verifies random addresses that were not deployed return false in deployment tracking.
+    /// @dev Verifies known-deployed accounts are tracked and random non-deployed addresses are not.
     function testFuzz_AF_FT_5_isAccountDeployedByOrganization_randomAddressNotDeployed_returnsFalse(address candidate)
         public
-        view
     {
-        // Setup: use arbitrary fuzzed candidate with no deployment fixture.
-        // Call: query deployment-tracking mapping for arbitrary candidate.
+        // Setup: seed implementation and deploy two accounts with fixed salts.
+        harness.setAccountImplementationStorage(accountImplementationV1);
+        address deployedA = harness.deployAccountViaLibrary(bytes32(uint256(1)));
+        address deployedB = harness.deployAccountViaLibrary(bytes32(uint256(2)));
+
+        vm.assume(candidate != deployedA && candidate != deployedB);
+
+        // Verify: known-deployed accounts should be tracked.
+        assertTrue(harness.isAccountDeployedByOrganizationViaLibrary(deployedA), "deployed A should be tracked");
+        assertTrue(harness.isAccountDeployedByOrganizationViaLibrary(deployedB), "deployed B should be tracked");
+
+        // Call: query deployment-tracking mapping for arbitrary non-deployed candidate.
         bool isTracked = harness.isAccountDeployedByOrganizationViaLibrary(candidate);
 
         // Verify: non-deployed addresses should not be tracked.
