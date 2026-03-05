@@ -124,6 +124,7 @@ contract AccountOrganizationBeaconMock is IBeacon, IOrganizationAccountSignature
             }
         }
 
+        // Case: signatureValidationMode == SignatureValidationMode.ReturnConfigured
         return signatureResult;
     }
 }
