@@ -3,9 +3,17 @@
 pragma solidity 0.8.33;
 
 import {IAccount} from "interfaces/IAccount.sol";
+import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
+import {IOrganizationGroups} from "interfaces/organization/IOrganizationGroups.sol";
+import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
+import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
+import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
+import {IOrganizationPolicy} from "interfaces/organization/IOrganizationPolicy.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
@@ -433,27 +441,34 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies OTRB-ERAT-15: recovery execution targeting organization state-changing selectors fails closed.
+    ///      Sweeps every non-view Organization function selector to ensure none can be invoked via recovery execution.
     function test_OTRB_ERAT_15_executeRecovery_targetingOrganization_revertsTransactionExecutionFailed() public {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
 
+        AdminAuthParams memory auth = AdminAuthParams({salt: 0, expirationTimestamp: 0, signatures: hex""});
+        address[] memory empty = new address[](0);
+
+        bytes[] memory payloads = _buildOrganizationStateChangingPayloads(auth, empty);
+
         // Call
-        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
-        vm.prank(TX_RECOVERY);
-        harness.executeRecoveryAccountTransaction(
-            address(account),
-            address(harness),
-            0,
-            abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector)
-        );
+        for (uint256 i = 0; i < payloads.length; i++) {
+            vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+            vm.prank(TX_RECOVERY);
+            harness.executeRecoveryAccountTransaction(address(account), address(harness), 0, payloads[i]);
+        }
 
         // Verify
         assertEq(account.executionCount(), 0, "organization target failure should fully revert account execution");
     }
 
     /// @dev Verifies OTRB-ERAT-16: recovery execution targeting account state-changing selectors fails closed.
+    ///      `IAccount.executeTransaction` is the only state-changing Account function; sweep varies nested call
+    /// arguments (to external, to organization, to self) and also attempts every Organization state-changing selector
+    /// on the
+    ///      account address to confirm the account rejects unknown selectors.
     function test_OTRB_ERAT_16_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
         public
     {
@@ -462,22 +477,55 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
 
-        bytes[] memory payloads = new bytes[](3);
-        payloads[0] = abi.encodeWithSelector(
-            IAccount.executeTransaction.selector, DESTINATION, 0, bytes("nested"), uint256(1), uint256(1)
+        AdminAuthParams memory auth = AdminAuthParams({salt: 0, expirationTimestamp: 0, signatures: hex""});
+        address[] memory empty = new address[](0);
+
+        bytes[] memory accountPayloads = new bytes[](5);
+        accountPayloads[0] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector, DESTINATION, uint256(0), bytes("nested"), uint256(1), uint256(1)
         );
-        payloads[1] = abi.encodeWithSelector(
-            IAccount.executeTransaction.selector, address(harness), 1, bytes("nested-2"), uint256(2), uint256(3)
+        accountPayloads[1] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector,
+            address(harness),
+            uint256(1),
+            bytes("nested-2"),
+            uint256(2),
+            uint256(3)
         );
-        payloads[2] = abi.encodeWithSelector(
-            IAccount.executeTransaction.selector, address(account), 0, bytes("nested-3"), uint256(4), uint256(5)
+        accountPayloads[2] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector,
+            address(account),
+            uint256(0),
+            bytes("nested-3"),
+            uint256(4),
+            uint256(5)
+        );
+        accountPayloads[3] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector, address(0), uint256(0), bytes(""), uint256(0), uint256(0)
+        );
+        accountPayloads[4] = abi.encodeWithSelector(
+            IAccount.executeTransaction.selector,
+            DESTINATION,
+            uint256(1 ether),
+            bytes("value-tx"),
+            uint256(99),
+            uint256(42)
         );
 
-        // Call
-        for (uint256 i = 0; i < payloads.length; i++) {
+        // Call: sweep executeTransaction (only state-changing Account selector) with varied nested params.
+        for (uint256 i = 0; i < accountPayloads.length; i++) {
             vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
             vm.prank(TX_RECOVERY);
-            harness.executeRecoveryAccountTransaction(address(account), address(account), 0, payloads[i]);
+            harness.executeRecoveryAccountTransaction(address(account), address(account), 0, accountPayloads[i]);
+        }
+
+        // Call: sweep every Organization state-changing selector on the account address to confirm the account rejects
+        // unrecognized function selectors.
+        bytes[] memory orgPayloads = _buildOrganizationStateChangingPayloads(auth, empty);
+        for (uint256 i = 0; i < orgPayloads.length; i++) {
+            vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+            vm.prank(TX_RECOVERY);
+            harness.executeRecoveryAccountTransaction(address(account), address(account), 0, orgPayloads[i]);
         }
 
         // Verify
@@ -1129,5 +1177,93 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(disabledState.pendingInit.pendingRecoveryAddress, address(0), "disabled snapshot: pendingInit address");
         assertEq(disabledState.pendingInit.pendingTimelockDurationSeconds, 0, "disabled snapshot: pendingInit timelock");
         assertEq(disabledState.pendingInit.pendingTimestamp, 0, "disabled snapshot: pendingInit timestamp");
+    }
+
+    /**
+     * @dev Builds payloads for every state-changing (non-view) Organization function selector.
+     *      Covers IOrganizationTxRecovery, IOrganizationAdmin, IOrganizationMembers, IOrganizationGroups,
+     *      IOrganizationPolicy, IOrganizationGuardian, IOrganizationGuardianRecovery, IOrganizationAccountFactory,
+     *      IOrganizationAccountTransaction, IOrganization, and IOrganizationInitialization.
+     */
+    function _buildOrganizationStateChangingPayloads(AdminAuthParams memory auth, address[] memory empty)
+        internal
+        view
+        returns (bytes[] memory payloads)
+    {
+        payloads = new bytes[](30);
+
+        // IOrganizationTxRecovery (8 selectors)
+        payloads[0] = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
+        payloads[1] = abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector);
+        payloads[2] = abi.encodeWithSelector(harness.cancelEnableTransactionAndERC1271Recovery.selector);
+        payloads[3] = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
+        payloads[4] = abi.encodeWithSelector(
+            harness.executeRecoveryAccountTransaction.selector, address(0), address(0), uint256(0), bytes("")
+        );
+        payloads[5] = abi.encodeWithSelector(
+            harness.initiateInitializeTransactionAndERC1271Recovery.selector, address(0x1), 2 days, auth
+        );
+        // forgefmt: disable-next-item
+        payloads[6] = abi.encodeWithSelector(
+            harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth
+        );
+        // forgefmt: disable-next-item
+        payloads[7] = abi.encodeWithSelector(
+            harness.cancelInitializeTransactionAndERC1271Recovery.selector, auth
+        );
+
+        // IOrganizationAdmin (2 selectors)
+        payloads[8] = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
+        payloads[9] = abi.encodeWithSelector(
+            IOrganizationAdmin.rejectAdminOperation.selector, OperationType.ModifyAdmins, bytes(""), auth
+        );
+
+        // IOrganizationMembers (1 selector)
+        payloads[10] = abi.encodeWithSelector(IOrganizationMembers.modifyMembers.selector, empty, empty, auth);
+
+        // IOrganizationGroups (1 selector) – selector-only; no GroupModification[] needed to trigger revert.
+        payloads[11] = abi.encodeWithSelector(IOrganizationGroups.modifyGroups.selector);
+
+        // IOrganizationPolicy (1 selector)
+        payloads[12] = abi.encodeWithSelector(
+            IOrganizationPolicy.setPolicies.selector, bytes32(uint256(0x1234)), "ipfs://sweep", auth
+        );
+
+        // IOrganizationGuardian (4 selectors)
+        payloads[13] = abi.encodeWithSelector(IOrganizationGuardian.initiateGuardianUpdate.selector, address(0x1), auth);
+        payloads[14] = abi.encodeWithSelector(IOrganizationGuardian.finalizeGuardianUpdate.selector, auth);
+        payloads[15] = abi.encodeWithSelector(IOrganizationGuardian.cancelGuardianUpdate.selector, auth);
+        payloads[16] = abi.encodeWithSelector(IOrganizationGuardian.acceptGuardian.selector);
+
+        // IOrganizationGuardianRecovery (7 selectors)
+        payloads[17] =
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.initiateRecoveryGuardianUpdate.selector, address(0x1));
+        payloads[18] = abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate.selector);
+        payloads[19] = abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelRecoveryGuardianUpdate.selector);
+        payloads[20] = abi.encodeWithSelector(IOrganizationGuardianRecovery.acceptGuardianRecovery.selector);
+        payloads[21] = abi.encodeWithSelector(
+            IOrganizationGuardianRecovery.initiateInitializeGuardianRecovery.selector, address(0x1), 2 days, auth
+        );
+        payloads[22] =
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery.selector, auth);
+        payloads[23] =
+            abi.encodeWithSelector(IOrganizationGuardianRecovery.cancelInitializeGuardianRecovery.selector, auth);
+
+        // IOrganizationAccountFactory (2 selectors)
+        payloads[24] = abi.encodeWithSelector(IOrganizationAccountFactory.deployAccount.selector, bytes32(0), auth);
+        payloads[25] =
+            abi.encodeWithSelector(IOrganizationAccountFactory.setAccountImplementation.selector, address(0x1), auth);
+
+        // IOrganizationAccountTransaction (2 selectors) – selector-only; ValidationProofs omitted.
+        payloads[26] = abi.encodeWithSelector(IOrganizationAccountTransaction.executeAccountTransaction.selector);
+        payloads[27] = abi.encodeWithSelector(IOrganizationAccountTransaction.rejectAccountTransaction.selector);
+
+        // IOrganization (1 selector)
+        payloads[28] = abi.encodeWithSelector(
+            IOrganization.upgradeToAndCallWithAuthorization.selector, address(0x1), bytes(""), auth
+        );
+
+        // IOrganizationInitialization (1 selector) – selector-only; InitializationParams omitted.
+        payloads[29] = abi.encodeWithSelector(IOrganizationInitialization.initialize.selector);
     }
 }
