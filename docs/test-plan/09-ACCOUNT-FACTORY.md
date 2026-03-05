@@ -26,7 +26,7 @@ All `private` functions in the files under test will be refactored to `internal`
 | OAFB-DA-2 | Insufficient admin signatures — reverts | [N] | P0 |
 | OAFB-DA-3 | Admin auth nonce consumed — replay with same nonce reverts | [S] | P0 |
 | OAFB-DA-4 | Expired `authParams.expirationTimestamp` — reverts via admin auth validation (`AdminOperationExpired`) | [N] | P0 |
-| OAFB-DA-5 | Any `create2Salt` tampering after signatures are produced invalidates auth and reverts (`InsufficientAdminAuthorization`) | [S] | P0 |
+| OAFB-DA-5 | Any `create2Salt` tampering after signatures are produced invalidates auth and reverts (`SignerIsNotAdmin`) | [S] | P0 |
 | OAFB-DA-6 | Auth-validation revert path (e.g., tampered payload / bad signatures) does not consume nonce; same salt+operation succeeds after corrected signatures | [S] | P0 |
 | OAFB-DA-7 | Delegates to `LibOrganizationAccountFactory.deployAccount` — returns deployed address | [U] | P1 |
 | OAFB-DA-8 | Returns the correct deployed account address | [U] | P1 |
