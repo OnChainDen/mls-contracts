@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
@@ -337,7 +339,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         });
 
         // Verify: no-code implementations should be rejected even when whitelisted.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, noCodeImplementation)
+        );
         vm.prank(GUARDIAN);
         // Call: execute implementation update with a no-code target.
         harness.setAccountImplementation(noCodeImplementation, auth);

@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
@@ -144,7 +146,9 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         harness.setAccountImplementationStorage(noCodeImplementation);
 
         // Verify: no-code implementation addresses should fail closed.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, noCodeImplementation)
+        );
         // Call: read beacon implementation with no-code target in storage.
         harness.implementation();
     }
