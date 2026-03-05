@@ -105,7 +105,7 @@
 | OTRB-ERAT-9 | Always calls account with `nonce=0` and `policyId=0` | `[S]` | P0 |
 | OTRB-ERAT-10 | ETH transfer via recovery execution succeeds when account has balance | `[I]` | P0 |
 | OTRB-ERAT-11 | Contract-call via recovery execution succeeds | `[I]` | P0 |
-| OTRB-ERAT-12 | If account execution reverts, outer call reverts and no event/log persists | `[N]` | P0 |
+| OTRB-ERAT-12 | If account execution reverts, outer call reverts | `[N]` | P0 |
 | OTRB-ERAT-13 | Validation order is preserved: recovery-enabled check happens before account-deployed check | `[U]` | P1 |
 | OTRB-ERAT-14 | Recovery execution does not mutate tx recovery config fields | `[S]` | P1 |
 | OTRB-ERAT-15 | **Desired Behavior:** reentrancy hard-stop when `to` is the Organization contract itself: selector sweep over all state-changing (non-view) Organization functions via recovery path always reverts (no successful nested Organization entrypoint) | `[S][I]` | P0 |
