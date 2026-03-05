@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";

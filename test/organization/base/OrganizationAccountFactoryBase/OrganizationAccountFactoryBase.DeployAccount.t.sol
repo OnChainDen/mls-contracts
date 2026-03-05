@@ -4,11 +4,11 @@ pragma solidity 0.8.33;
 
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {OperationType} from "types/CommonTypes.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Unit tests for `OrganizationAccountFactoryBase.deployAccount` behavior.
@@ -185,8 +185,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         bytes32 create2Salt = bytes32(uint256(0xA11CE5));
 
         // Setup: fixed golden vector for deterministic operation-data encoding checks.
-        bytes memory expectedOperationData =
-            hex"0000000000000000000000000000000000000000000000000000000000a11ce5";
+        bytes memory expectedOperationData = hex"0000000000000000000000000000000000000000000000000000000000a11ce5";
         bytes32 expectedOperationDataHash = 0x7c37bb08c7d93e782bdb69a12cdcb65172563367bd956b623cf7487543c1982c;
 
         // Call: encode operation data exactly as base contract does.

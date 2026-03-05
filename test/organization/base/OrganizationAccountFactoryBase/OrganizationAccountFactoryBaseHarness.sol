@@ -12,7 +12,10 @@ import {
  * @dev Base-contract-focused test harness for `OrganizationAccountFactoryBase`.
  *      Combines shared account-factory state setters with real external base-contract entry points.
  */
-contract OrganizationAccountFactoryBaseHarness is OrganizationAccountFactoryStateHarness, OrganizationAccountFactoryBase {
+contract OrganizationAccountFactoryBaseHarness is
+    OrganizationAccountFactoryStateHarness,
+    OrganizationAccountFactoryBase
+{
     /**
      * @dev Wrapper around `LibOrganizationAccountFactory.computeAccountAddress`.
      */

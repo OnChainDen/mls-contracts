@@ -3,13 +3,11 @@
 pragma solidity 0.8.33;
 
 import {AccountImplementation} from "account/AccountImplementation.sol";
-import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
+import {ImplementationWhitelistMock} from "test/organization/shared/OrganizationAccountFactoryMocks.sol";
 import {
     OrganizationAccountFactoryStateHarness
 } from "test/organization/shared/OrganizationAccountFactoryStateHarness.sol";
-import {
-    ImplementationWhitelistMock
-} from "test/organization/shared/OrganizationAccountFactoryMocks.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationAdminTestBase} from "test/organization/shared/OrganizationAdminTestBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {ContractType, OperationType} from "types/CommonTypes.sol";

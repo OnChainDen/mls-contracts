@@ -5,10 +5,8 @@ pragma solidity 0.8.33;
 import {
     OrganizationAccountFactoryBaseHarness
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseHarness.sol";
+import {OrganizationAccountFactoryTestBase} from "test/organization/shared/OrganizationAccountFactoryTestBase.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
-import {
-    OrganizationAccountFactoryTestBase
-} from "test/organization/shared/OrganizationAccountFactoryTestBase.sol";
 
 /**
  * @dev Shared deployment/setup helpers for `OrganizationAccountFactoryBase` unit suites.
