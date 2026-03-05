@@ -189,8 +189,8 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
         recoveryStateHarness.setGuardianRecoveryPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp + 2);
 
-        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
-        vm.expectRevert();
+        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(staleCancelAuth);
 
@@ -204,7 +204,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(wrongOpTypeAuth);
 

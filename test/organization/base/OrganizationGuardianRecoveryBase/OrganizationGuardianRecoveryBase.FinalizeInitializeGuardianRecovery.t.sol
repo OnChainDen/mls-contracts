@@ -193,9 +193,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
         recoveryStateHarness.setGuardianRecoveryPendingInit(GUARDIAN_RECOVERY_ADDRESS_B, 3 days, block.timestamp);
 
-        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert();
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(staleAuth);
 
@@ -317,9 +316,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert();
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(rejectionAuth);
 
@@ -351,9 +349,8 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert();
+        // Call: finalize deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(wrongAuth);
 

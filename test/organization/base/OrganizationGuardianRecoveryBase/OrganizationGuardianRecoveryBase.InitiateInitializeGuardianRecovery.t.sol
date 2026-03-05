@@ -202,13 +202,12 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         bytes memory mutatedAddressData = abi.encode(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK);
         bytes memory mutatedTimelockData = abi.encode(GUARDIAN_RECOVERY_ADDRESS, 3 days);
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert();
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, auth);
 
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, 3 days, auth);
 
@@ -285,9 +284,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert();
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, rejectionAuth);
 
@@ -315,9 +313,8 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation
-        // revert.
-        vm.expectRevert();
+        // Call: initiate deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, wrongAuth);
 

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {
     OrganizationGuardianRecoveryBaseSuiteBase
@@ -65,7 +66,7 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, 4 days, initAuthB);
 
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeGuardianRecovery(staleFinalizeAuth);
 
@@ -128,8 +129,8 @@ contract OrganizationGuardianRecoveryBaseIntegrationTest is OrganizationGuardian
         vm.prank(GUARDIAN);
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, 4 days, initAuthB);
 
-        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting authorization/state-validation revert.
-        vm.expectRevert();
+        // Call: cancel deferred recovery initialization as `GUARDIAN`, expecting `SignerIsNotAdmin` revert.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(staleCancelAuth);
 

@@ -56,7 +56,14 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         ) {
             harness.validateGuardianRecoveryParamsOrRevertViaLibrary(recoveryAddress, timelock);
         } else {
-            vm.expectRevert();
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    TimelockUtils.InvalidTimelockDuration.selector,
+                    timelock,
+                    TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                    TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+                )
+            );
             harness.validateGuardianRecoveryParamsOrRevertViaLibrary(recoveryAddress, timelock);
         }
 
