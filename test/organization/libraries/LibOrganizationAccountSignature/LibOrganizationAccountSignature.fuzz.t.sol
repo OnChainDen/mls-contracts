@@ -440,6 +440,8 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Member;
 
+        uint256 expiration = block.timestamp + 1 days;
+
         address initiatorSigner = initiator1;
         bytes memory initiatorSignature;
 
@@ -455,7 +457,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
                 account: ACCOUNT,
                 hash: MESSAGE_HASH,
                 policyId: DEFAULT_POLICY_ID,
-                expirationTimestamp: block.timestamp + 1 days
+                expirationTimestamp: expiration
             });
         }
 
@@ -476,7 +478,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
                 account: ACCOUNT,
                 hash: MESSAGE_HASH,
                 policyId: DEFAULT_POLICY_ID,
-                expirationTimestamp: block.timestamp + 1 days,
+                expirationTimestamp: expiration,
                 initiatorSignature: initiatorSignature
             });
         }
@@ -484,32 +486,6 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         policy.config.approval.approverMember = reviewerAuthorized ? reviewerSigner : reviewer1;
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
-        uint256 expiration = block.timestamp + 1 days;
-
-        // Re-sign initiator hash if we use EOA mode (to ensure exact expiration value binding).
-        if (!initiatorAsContract) {
-            initiatorSignature = _signInitiatorSignature({
-                sigHarness: harness,
-                privateKey: INITIATOR_PK_1,
-                account: ACCOUNT,
-                hash: MESSAGE_HASH,
-                policyId: DEFAULT_POLICY_ID,
-                expirationTimestamp: expiration
-            });
-        }
-
-        // Recompute review signature when using EOA reviewer to bind the final initiator signature bytes.
-        if (!reviewerAsContract) {
-            reviewSignature = _signReviewSignature({
-                sigHarness: harness,
-                privateKey: reviewerAuthorized ? REVIEWER_PK_1 : REVIEWER_PK_2,
-                account: ACCOUNT,
-                hash: MESSAGE_HASH,
-                policyId: DEFAULT_POLICY_ID,
-                expirationTimestamp: expiration,
-                initiatorSignature: initiatorSignature
-            });
-        }
 
         bytes memory guardianSignature = _signGuardianReviewHash({
             sigHarness: harness,
