@@ -2,6 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+
+import {AccountImplementation} from "account/AccountImplementation.sol";
 import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
@@ -353,6 +356,36 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(account.lastData(), payload, "payload should be forwarded");
         assertEq(account.lastNonce(), 0, "recovery path must force nonce=0");
         assertEq(account.lastPolicyId(), 0, "recovery path must force policyId=0");
+    }
+
+    /// @dev Verifies the real `AccountImplementation` emits `IAccount.TransactionExecuted` with nonce=0 and policyId=0
+    /// when invoked through the recovery execution path.
+    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9_executeRecovery_realAccount_emitsAccountTransactionExecuted()
+        public
+    {
+        // Setup: deploy real AccountImplementation behind a BeaconProxy pointing to the harness as beacon.
+        _enableTxRecovery();
+        harness.setAccountImplementation(address(new AccountImplementation()));
+        address realAccount = address(new BeaconProxy(address(harness), bytes("")));
+        harness.setDeployedAccount(realAccount, true);
+
+        MockInteractionTarget target = new MockInteractionTarget();
+        bytes memory payload = abi.encodeWithSelector(target.ping.selector, uint256(11));
+
+        // Call: expect both the organization-level recovery event and the account-level execution event.
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.RecoveryAccountTransactionExecuted(realAccount, address(target), 0, payload);
+
+        vm.expectEmit(true, true, true, true);
+        emit IAccount.TransactionExecuted(address(target), 0, payload, 0, 0);
+
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(realAccount, address(target), 0, payload);
+
+        // Verify: downstream target confirms the call arrived from the real account.
+        assertEq(target.calls(), 1, "target should be called once");
+        assertEq(target.lastCaller(), realAccount, "call should originate from real account");
+        assertEq(target.total(), 11, "calldata should be processed by target");
     }
 
     /// @dev Verifies OTRB-ERAT-10 and OTRB-ERAT-11: native transfer and contract-call recovery execution succeed
