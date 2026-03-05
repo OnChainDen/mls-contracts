@@ -205,6 +205,32 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
             _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, currentData, 12_008);
         assertFalse(harness.getUsedNonce(staleNonce), "stale tuple nonce should remain unused");
         assertFalse(harness.getUsedNonce(currentNonce), "current tuple nonce should remain unused");
+
+        assertEq(
+            harness.getGuardianRecoveryState().recoveryAddress,
+            address(0),
+            "recovery address should remain unset after stale-signature revert"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().timelockDurationSeconds,
+            0,
+            "timelock duration should remain unset after stale-signature revert"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS_B,
+            "current pending address should be preserved after stale-signature revert"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            3 days,
+            "current pending timelock should be preserved after stale-signature revert"
+        );
+        assertNotEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimestamp,
+            0,
+            "current pending timestamp should be preserved after stale-signature revert"
+        );
     }
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` downstream revert rolls back
