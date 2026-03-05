@@ -1061,22 +1061,73 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
         TxRecoveryState memory disabledState = harness.getTxRecoveryState();
 
-        // Verify
+        // Verify: zero state – all fields default
         assertEq(zeroState.recoveryAddress, address(0), "zero snapshot: recovery address");
+        assertFalse(zeroState.isEnabled, "zero snapshot: isEnabled");
         assertEq(zeroState.timelockDurationSeconds, 0, "zero snapshot: timelock");
-        assertFalse(zeroState.isEnabled, "zero snapshot: disabled");
+        assertEq(zeroState.pendingEnableTimestamp, 0, "zero snapshot: pendingEnableTimestamp");
+        assertEq(zeroState.pendingInit.pendingRecoveryAddress, address(0), "zero snapshot: pendingInit address");
+        assertEq(zeroState.pendingInit.pendingTimelockDurationSeconds, 0, "zero snapshot: pendingInit timelock");
+        assertEq(zeroState.pendingInit.pendingTimestamp, 0, "zero snapshot: pendingInit timestamp");
 
+        // Verify: pending-enable state
+        assertEq(pendingEnableState.recoveryAddress, TX_RECOVERY, "pending-enable snapshot: recovery address");
+        assertFalse(pendingEnableState.isEnabled, "pending-enable snapshot: isEnabled");
+        assertEq(pendingEnableState.timelockDurationSeconds, TX_RECOVERY_TIMELOCK, "pending-enable snapshot: timelock");
         assertEq(
             pendingEnableState.pendingEnableTimestamp,
             block.timestamp + 77,
-            "pending-enable snapshot should include pending timestamp"
+            "pending-enable snapshot: pendingEnableTimestamp"
         );
+        assertEq(
+            pendingEnableState.pendingInit.pendingRecoveryAddress,
+            address(0),
+            "pending-enable snapshot: pendingInit address"
+        );
+        assertEq(
+            pendingEnableState.pendingInit.pendingTimelockDurationSeconds,
+            0,
+            "pending-enable snapshot: pendingInit timelock"
+        );
+        assertEq(pendingEnableState.pendingInit.pendingTimestamp, 0, "pending-enable snapshot: pendingInit timestamp");
+
+        // Verify: pending-init state
+        assertEq(pendingInitState.recoveryAddress, address(0), "pending-init snapshot: recovery address");
+        assertFalse(pendingInitState.isEnabled, "pending-init snapshot: isEnabled");
+        assertEq(pendingInitState.timelockDurationSeconds, 0, "pending-init snapshot: timelock");
+        assertEq(pendingInitState.pendingEnableTimestamp, 0, "pending-init snapshot: pendingEnableTimestamp");
         assertEq(
             pendingInitState.pendingInit.pendingRecoveryAddress,
             ALT_TX_RECOVERY,
-            "pending-init snapshot should include pending address"
+            "pending-init snapshot: pendingInit address"
         );
-        assertTrue(enabledState.isEnabled, "enabled snapshot should report enabled=true");
-        assertFalse(disabledState.isEnabled, "disabled snapshot should report enabled=false");
+        assertEq(
+            pendingInitState.pendingInit.pendingTimelockDurationSeconds,
+            TX_RECOVERY_TIMELOCK,
+            "pending-init snapshot: pendingInit timelock"
+        );
+        assertEq(
+            pendingInitState.pendingInit.pendingTimestamp,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK,
+            "pending-init snapshot: pendingInit timestamp"
+        );
+
+        // Verify: enabled state
+        assertEq(enabledState.recoveryAddress, TX_RECOVERY, "enabled snapshot: recovery address");
+        assertTrue(enabledState.isEnabled, "enabled snapshot: isEnabled");
+        assertEq(enabledState.timelockDurationSeconds, TX_RECOVERY_TIMELOCK, "enabled snapshot: timelock");
+        assertEq(enabledState.pendingEnableTimestamp, 0, "enabled snapshot: pendingEnableTimestamp");
+        assertEq(enabledState.pendingInit.pendingRecoveryAddress, address(0), "enabled snapshot: pendingInit address");
+        assertEq(enabledState.pendingInit.pendingTimelockDurationSeconds, 0, "enabled snapshot: pendingInit timelock");
+        assertEq(enabledState.pendingInit.pendingTimestamp, 0, "enabled snapshot: pendingInit timestamp");
+
+        // Verify: disabled state
+        assertEq(disabledState.recoveryAddress, TX_RECOVERY, "disabled snapshot: recovery address");
+        assertFalse(disabledState.isEnabled, "disabled snapshot: isEnabled");
+        assertEq(disabledState.timelockDurationSeconds, TX_RECOVERY_TIMELOCK, "disabled snapshot: timelock");
+        assertEq(disabledState.pendingEnableTimestamp, 0, "disabled snapshot: pendingEnableTimestamp");
+        assertEq(disabledState.pendingInit.pendingRecoveryAddress, address(0), "disabled snapshot: pendingInit address");
+        assertEq(disabledState.pendingInit.pendingTimelockDurationSeconds, 0, "disabled snapshot: pendingInit timelock");
+        assertEq(disabledState.pendingInit.pendingTimestamp, 0, "disabled snapshot: pendingInit timestamp");
     }
 }
