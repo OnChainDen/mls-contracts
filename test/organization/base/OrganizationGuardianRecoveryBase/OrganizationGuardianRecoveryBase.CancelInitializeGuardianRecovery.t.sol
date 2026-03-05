@@ -208,6 +208,19 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         vm.prank(GUARDIAN);
         harness.cancelInitializeGuardianRecovery(wrongOpTypeAuth);
 
+        (AdminAuthParams memory rejectionAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: 3 days,
+            salt: 13_008,
+            expiration: block.timestamp + 1 days,
+            isApproval: false,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(rejectionAuth);
+
         // Verify: stale tuple nonce remains unused; current tuple nonce remains unused.
         uint256 staleNonce = _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, staleData, 13_008);
         uint256 currentNonce =
