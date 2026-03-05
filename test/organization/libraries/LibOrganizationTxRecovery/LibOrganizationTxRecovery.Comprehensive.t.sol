@@ -395,9 +395,9 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(harness.getTxRecoveryState().isEnabled, "state should remain disabled");
     }
 
-    /// @dev Verifies LOTR-FETR-3, LOTR-FETR-4, LOTR-FETR-5, LOTR-FETR-6, LOTR-FETR-7, and LOTR-FETR-8: finalize-enable
-    /// succeeds at boundary/post-expiry, enables recovery, clears pending, emits event, and preserves config.
-    function test_LOTR_FETR_3__LOTR_FETR_4__LOTR_FETR_5__LOTR_FETR_6__LOTR_FETR_7__LOTR_FETR_8_finalizeEnable_successTransitions()
+    /// @dev Verifies LOTR-FETR-3, LOTR-FETR-5, LOTR-FETR-6, LOTR-FETR-7, and LOTR-FETR-8: finalize-enable succeeds at
+    /// exact pending timestamp, enables recovery, clears pending, emits event, and preserves config.
+    function test_LOTR_FETR_3__LOTR_FETR_5__LOTR_FETR_6__LOTR_FETR_7__LOTR_FETR_8_finalizeEnable_atExactTimestamp()
         public
     {
         // Setup
@@ -421,6 +421,25 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             beforeState.timelockDurationSeconds,
             "timelock duration must remain unchanged"
         );
+    }
+
+    /// @dev Verifies LOTR-FETR-4: finalize-enable succeeds after the pending timestamp has passed.
+    function test_LOTR_FETR_4_finalizeEnable_afterExpiry() public {
+        // Setup
+        harness.initiateEnableTxRecovery();
+        TxRecoveryState memory beforeState = harness.getTxRecoveryState();
+
+        vm.warp(beforeState.pendingEnableTimestamp + 1);
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.TxRecoveryEnableFinalized();
+
+        // Call
+        harness.finalizeEnableTxRecovery();
+
+        // Verify
+        TxRecoveryState memory afterState = harness.getTxRecoveryState();
+        assertTrue(afterState.isEnabled, "finalize should enable recovery after expiry");
+        assertEq(afterState.pendingEnableTimestamp, 0, "pending timestamp must clear");
     }
 
     /// @dev Verifies LOTR-CETR-1: cancel-enable reverts when no pending enable exists.
