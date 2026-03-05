@@ -813,12 +813,25 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies OTRB-FITR-1, OTRB-FITR-2, OTRB-FITR-3, OTRB-FITR-4, OTRB-FITR-5, OTRB-FITR-6, OTRB-FITR-7,
-    /// OTRB-FITR-8, OTRB-FITR-9, OTRB-FITR-10, OTRB-FITR-11, and OTRB-FITR-12 across finalize auth/state semantics.
+    /// @dev Verifies OTRB-FITR-1 through OTRB-FITR-12: the full auth, timelock, and state lifecycle of
+    /// `finalizeInitializeTransactionAndERC1271Recovery`. Walks through every guard in sequence:
+    ///   - FITR-1:  Non-guardian caller reverts via `onlyGuardian`.
+    ///   - FITR-7:  Guardian with valid auth but no pending init reverts `NoTxRecoveryInitializationPending`.
+    ///   - FITR-3:  `isApproval=false` rejection signatures are rejected.
+    ///   - FITR-4:  Wrong `OperationType` (Cancel instead of Finalize) signatures are rejected.
+    ///   - FITR-5:  Correct `FinalizeInitializeTransactionRecovery` + `isApproval=true` passes auth.
+    ///   - FITR-6:  Auth `operationData` is derived from current pending storage values (stale-value
+    ///              variant tested in dedicated `test_OTRB_FITR_6_*`).
+    ///   - FITR-8:  Valid auth before admin-op timelock expiry reverts `TimelockNotExpired`.
+    ///   - FITR-9:  At exact admin-op timelock expiry, finalize succeeds.
+    ///   - FITR-10: Success writes `recoveryAddress` + `timelockDurationSeconds` and clears all pending fields.
+    ///   - FITR-11: `isEnabled` remains false after finalize (enable flow still required).
+    ///   - FITR-12: Second finalize reverts `NoTxRecoveryInitializationPending` (pending already cleared).
+    ///   - FITR-2:  Insufficient admin threshold variant tested in dedicated `test_OTRB_FITR_2_*`.
     function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12_finalizeInitialize_authAndStateSemantics()
         public
     {
-        // Setup
+        // Setup: start from a fully zeroed recovery state (no config, no pending init).
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
         (AdminAuthParams memory noPendingAuth,) = _buildTxRecoveryAuth({
@@ -830,19 +843,22 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call
+        // FITR-1: non-guardian caller is rejected before any auth or state checks.
         _expectOnlyGuardian(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(noPendingAuth);
 
+        // FITR-7: guardian with valid auth reverts because no pending init exists yet.
         vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(noPendingAuth);
 
+        // Seed a pending deferred-init tuple so the remaining checks can exercise auth validation.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
         );
 
+        // FITR-3: `isApproval=false` (rejection) signatures do not satisfy finalize auth.
         (AdminAuthParams memory rejectionAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
@@ -855,6 +871,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(rejectionAuth);
 
+        // FITR-4: signatures for wrong OperationType (Cancel instead of Finalize) are rejected.
         (AdminAuthParams memory wrongTypeAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.CancelInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
@@ -867,6 +884,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(wrongTypeAuth);
 
+        // FITR-5 + FITR-6: build valid auth with correct OperationType, isApproval=true, and operationData
+        // derived from the current pending storage values (ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK).
         (AdminAuthParams memory finalizeAuth, bytes memory finalizeOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
@@ -876,6 +895,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // FITR-8: valid auth before admin-op timelock expiry reverts with the pending and current timestamps.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
@@ -886,23 +906,28 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
 
+        // FITR-9: warp to exact admin-op timelock boundary — finalize now succeeds.
         vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
 
-        // Verify
+        // FITR-10: config written from pending values; all pending fields cleared.
         TxRecoveryState memory state = harness.getTxRecoveryState();
         assertEq(state.recoveryAddress, ALT_TX_RECOVERY, "finalize should write recovery address");
         assertEq(state.timelockDurationSeconds, TX_RECOVERY_TIMELOCK, "finalize should write timelock");
-        assertFalse(state.isEnabled, "finalize should not auto-enable recovery");
         assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "pending address should clear");
         assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "pending timelock should clear");
         assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should clear");
 
+        // FITR-11: finalize only writes config — recovery is NOT auto-enabled.
+        assertFalse(state.isEnabled, "finalize should not auto-enable recovery");
+
+        // FITR-5 (continued): the finalize nonce is consumed, preventing replay.
         uint256 nonce =
             harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, finalizeOperationData, 204);
         assertTrue(harness.getUsedNonce(nonce), "finalize nonce should be consumed");
 
+        // FITR-12: second finalize reverts because pending init was already cleared by the first.
         (AdminAuthParams memory afterFinalizeNoPendingAuth,) = _buildTxRecoveryAuth({
             operationType: OperationType.FinalizeInitializeTransactionRecovery,
             recoveryAddress: address(0),
