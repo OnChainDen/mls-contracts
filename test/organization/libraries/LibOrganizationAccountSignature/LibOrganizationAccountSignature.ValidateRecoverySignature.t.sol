@@ -12,8 +12,21 @@ import {
  * @dev Unit tests for `LibOrganizationAccountSignature._validateRecoverySignature`.
  */
 contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrganizationAccountSignatureTestBase {
-    /// @dev Verifies that enabled recovery with a valid recovery signature returns ERC-1271 magic value.
-    function test_LOAS_VRS_1_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue() public {
+    /// @dev Verifies LOAS-VRS-1: unconfigured recovery returns invalid value (not revert).
+    function test_LOAS_VRS_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue() public {
+        // Setup: configure recovery as enabled but with zero recovery address.
+        _setTxRecoveryState(address(0), true);
+        bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+
+        // Call: execute `validateRecoverySignatureViaLibrary` with an otherwise valid EOA signature.
+        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
+
+        // Verify: unconfigured recovery address must fail closed.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "zero recovery address should be invalid");
+    }
+
+    /// @dev Verifies LOAS-VRS-2: enabled recovery with a valid signer returns magic value.
+    function test_LOAS_VRS_2_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue() public {
         // Setup: configure enabled recovery state for the deterministic guardian signer.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -25,8 +38,8 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "valid recovery signature should return magic");
     }
 
-    /// @dev Verifies that disabled recovery returns ERC-1271 invalid value.
-    function test_LOAS_VRS_2_validateRecoverySignature_recoveryDisabled_returnsInvalidValue() public {
+    /// @dev Verifies LOAS-VRS-3: configured but disabled recovery returns invalid value.
+    function test_LOAS_VRS_3_validateRecoverySignature_recoveryDisabled_returnsInvalidValue() public {
         // Setup: configure recovery address with `isEnabled=false`.
         _setTxRecoveryState(guardianSigner, false);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -38,30 +51,20 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "disabled recovery should be invalid");
     }
 
-    /// @dev Verifies that enabled recovery with an invalid signer returns ERC-1271 invalid value.
-    function test_LOAS_VRS_3_validateRecoverySignature_enabledRecoveryWrongSigner_returnsInvalidValue() public {
-        // Setup: configure enabled recovery for guardian signer and sign with a different key.
+    /// @dev Verifies LOAS-VRS-4: after disabling recovery, previously-valid recovery signatures are rejected.
+    function test_LOAS_VRS_4_validateRecoverySignature_afterDisable_previouslyValidSignatureRejected() public {
+        // Setup: enable recovery and confirm signature is accepted.
         _setTxRecoveryState(guardianSigner, true);
-        bytes memory signatureData = _signHash(REVIEWER_PK_1, MESSAGE_HASH);
-
-        // Call: execute `validateRecoverySignatureViaLibrary` with a wrong-signer signature.
-        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
-
-        // Verify: signatures from non-recovery signers should be rejected.
-        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "wrong signer should be invalid");
-    }
-
-    /// @dev Verifies that unconfigured recovery storage returns ERC-1271 invalid value.
-    function test_LOAS_VRS_4_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue() public {
-        // Setup: configure recovery as enabled but with zero recovery address.
-        _setTxRecoveryState(address(0), true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+        bytes4 enabledResult = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
+        assertEq(enabledResult, SignatureUtils.ERC1271_MAGIC_VALUE, "pre-condition: enabled recovery should accept");
 
-        // Call: execute `validateRecoverySignatureViaLibrary` with an otherwise valid EOA signature.
+        // Call: disable recovery and re-validate the same signature.
+        _setTxRecoveryState(guardianSigner, false);
         bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, signatureData);
 
-        // Verify: unconfigured recovery address must fail closed.
-        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "zero recovery address should be invalid");
+        // Verify: previously-valid signature must be rejected after disable.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "signature should be rejected after disable");
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
