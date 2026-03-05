@@ -139,8 +139,8 @@ contract AccountProxyConstructorAndBehaviorTest is Test {
     /// @dev Verifies non-zero constructor value is rejected when `AccountProxy` constructor is non-payable.
     function test_APX_CPB_8_constructor_emptyDataWithNonZeroValue_revertsForNonPayableConstructor() public {
         // Setup: use valid beacon and empty init data with non-zero deployment value.
-        // Verify: non-zero value should revert before constructor logic due non-payable constructor.
-        vm.expectRevert();
+        // Verify: non-zero value should revert with empty data (compiler-generated callvalue check).
+        vm.expectRevert(bytes(""));
         // Call: deploy proxy bytecode with value and empty init data via low-level create.
         _deployProxyBytecodeOrBubbleRevert(address(beacon), bytes(""), 1 wei);
     }
