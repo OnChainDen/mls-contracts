@@ -136,6 +136,11 @@ contract LibOrganizationGuardianIntegrationTest is LibOrganizationGuardianSuiteB
 
         vm.prank(NEW_GUARDIAN_B);
         harness.enforceOnlyGuardianViaLibrary();
+        assertEq(
+            harness.getPendingGuardianViaLibrary(),
+            NEW_GUARDIAN_A,
+            "normal flow pending guardian should still be intact before cancel"
+        );
         harness.cancelGuardianUpdateViaLibrary();
 
         // Verify
