@@ -470,6 +470,34 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Setup
         harness.initiateEnableTxRecovery();
         uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
+
+        // LOTR-DTR-5: disable during pending enable BEFORE expiry
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: recoveryAddress,
+                isEnabled: true,
+                timelockDurationSeconds: TX_TIMELOCK,
+                pendingEnableTimestamp: pending,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit IOrganizationTxRecovery.TxRecoveryDisabled();
+
+        // Call
+        harness.disableTxRecovery();
+
+        // Verify
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertFalse(state.isEnabled, "disable before expiry should set enabled=false");
+        assertEq(state.pendingEnableTimestamp, 0, "disable before expiry should clear pending enable");
+        assertEq(state.recoveryAddress, recoveryAddress, "disable before expiry should not alter recovery address");
+        assertEq(state.timelockDurationSeconds, TX_TIMELOCK, "disable before expiry should not alter timelock");
+
+        // LOTR-DTR-6: disable during pending enable AFTER expiry (before finalize)
         vm.warp(pending + 1);
 
         harness.setTxRecoveryState(
@@ -491,12 +519,13 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         harness.disableTxRecovery();
 
         // Verify
-        TxRecoveryState memory state = harness.getTxRecoveryState();
-        assertFalse(state.isEnabled, "disable should set enabled=false");
-        assertEq(state.pendingEnableTimestamp, 0, "disable should clear pending enable");
-        assertEq(state.recoveryAddress, recoveryAddress, "disable should not alter recovery address");
-        assertEq(state.timelockDurationSeconds, TX_TIMELOCK, "disable should not alter timelock");
+        state = harness.getTxRecoveryState();
+        assertFalse(state.isEnabled, "disable after expiry should set enabled=false");
+        assertEq(state.pendingEnableTimestamp, 0, "disable after expiry should clear pending enable");
+        assertEq(state.recoveryAddress, recoveryAddress, "disable after expiry should not alter recovery address");
+        assertEq(state.timelockDurationSeconds, TX_TIMELOCK, "disable after expiry should not alter timelock");
 
+        // LOTR-DTR-4: idempotent
         harness.disableTxRecovery();
         assertFalse(harness.getTxRecoveryState().isEnabled, "second disable should remain idempotent");
     }
@@ -1328,18 +1357,48 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     }
 
     /// @dev Verifies TXR-FZ-4: fuzz timestamps at/after pending-enable timestamp succeed when pending exists.
+    ///      Explicitly tests both the exact boundary (pending) and pending + 1 to verify GTE, then fuzzes
+    ///      strictly-after offsets.
     function testFuzz_TXR_FZ_4_finalizeEnable_atOrAfterPendingTimestamp_succeeds(uint256 rawSecondsAfter) public {
-        // Setup
+        // Setup — exact boundary: warp to `pending` (the "at" case)
         harness.initiateEnableTxRecovery();
         uint256 pending = harness.getTxRecoveryState().pendingEnableTimestamp;
-        uint256 secondsAfter = bound(rawSecondsAfter, 0, 30 days);
-        vm.warp(pending + secondsAfter);
+        vm.warp(pending);
 
         // Call
         harness.finalizeEnableTxRecovery();
 
         // Verify
         TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertTrue(state.isEnabled, "finalize at exact pending timestamp should enable recovery");
+        assertEq(state.pendingEnableTimestamp, 0, "finalize at exact pending should clear pending timestamp");
+
+        // Setup — boundary + 1: warp to `pending + 1` (the first "after" value, verifies GTE)
+        harness.disableTxRecovery();
+        harness.initiateEnableTxRecovery();
+        pending = harness.getTxRecoveryState().pendingEnableTimestamp;
+        vm.warp(pending + 1);
+
+        // Call
+        harness.finalizeEnableTxRecovery();
+
+        // Verify
+        state = harness.getTxRecoveryState();
+        assertTrue(state.isEnabled, "finalize at pending + 1 should enable recovery");
+        assertEq(state.pendingEnableTimestamp, 0, "finalize at pending + 1 should clear pending timestamp");
+
+        // Setup — fuzz: warp to `pending + secondsAfter` where secondsAfter >= 1
+        harness.disableTxRecovery();
+        harness.initiateEnableTxRecovery();
+        pending = harness.getTxRecoveryState().pendingEnableTimestamp;
+        uint256 secondsAfter = bound(rawSecondsAfter, 1, 30 days);
+        vm.warp(pending + secondsAfter);
+
+        // Call
+        harness.finalizeEnableTxRecovery();
+
+        // Verify
+        state = harness.getTxRecoveryState();
         assertTrue(state.isEnabled, "post-expiry finalize should enable recovery");
         assertEq(state.pendingEnableTimestamp, 0, "successful finalize should clear pending timestamp");
     }
