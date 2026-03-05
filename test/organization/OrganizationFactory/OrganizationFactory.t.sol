@@ -188,8 +188,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         bytes32 salt = bytes32(uint256(2006));
         InitializationParams memory params = _defaultInitializationParams();
 
-        // Call: Attempt deployment with zero whitelist and expect a revert.
-        vm.expectRevert();
+        // Call: Attempt deployment with zero whitelist and expect a bare EVM revert (Solidity extcodesize check
+        // fails when calling a function on address(0) which has no code).
+        vm.expectRevert(bytes(""));
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), address(0), params);
 
@@ -203,8 +204,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         InitializationParams memory params = _defaultInitializationParams();
         address eoaWhitelist = address(0xEE01);
 
-        // Call: Attempt deployment against the EOA whitelist and expect a revert.
-        vm.expectRevert();
+        // Call: Attempt deployment against the EOA whitelist and expect a bare EVM revert (Solidity extcodesize
+        // check fails when calling a function on an EOA which has no code).
+        vm.expectRevert(bytes(""));
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), eoaWhitelist, params);
 
@@ -370,8 +372,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
         address expected = factory.computeOrganizationAddress(salt, address(badImplementation), address(whitelist));
 
-        // Call: Attempt deployment with the incompatible implementation and expect a revert.
-        vm.expectRevert();
+        // Call: Attempt deployment with the incompatible implementation and expect a bare EVM revert
+        // (delegatecall to an implementation without `initialize` function or fallback).
+        vm.expectRevert(bytes(""));
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(badImplementation), address(whitelist), params);
 

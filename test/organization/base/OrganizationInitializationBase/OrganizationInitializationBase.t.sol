@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {IOrganization} from "interfaces/IOrganization.sol";
@@ -96,11 +97,11 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
         vm.prank(AUTHORIZED_DEPLOYER);
         organization.initialize(params);
 
-        vm.expectRevert();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         vm.prank(UNAUTHORIZED_CALLER);
         organization.initialize(params);
 
-        vm.expectRevert();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         vm.prank(AUTHORIZED_DEPLOYER);
         organization.initialize(params);
     }
