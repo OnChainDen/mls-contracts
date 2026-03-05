@@ -165,6 +165,19 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "short-return ERC-1271 signer should fail closed");
     }
 
+    /// @dev Verifies that a high-s (malleable) EOA recovery signature returns ERC-1271 invalid value.
+    function test_LOAS_VRS_12_validateRecoverySignature_highSEOASignature_returnsInvalidValue() public {
+        // Setup: configure enabled recovery and build a malleable high-s signature from the guardian key.
+        _setTxRecoveryState(guardianSigner, true);
+        bytes memory highSSig = _makeHighSSignature(GUARDIAN_PK, MESSAGE_HASH);
+
+        // Call: execute `validateRecoverySignatureViaLibrary` with a high-s signature.
+        bytes4 actual = harness.validateRecoverySignatureViaLibrary(MESSAGE_HASH, highSSig);
+
+        // Verify: malleable signatures should be rejected at the wrapper level.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "high-s recovery signature should fail closed");
+    }
+
     /// @dev Verifies TXR-INT-4: signature lifecycle transitions with tx recovery enable/disable/re-enable.
     function test_TXR_INT_4_recoverySignatureLifecycle_enableDisableReenable_tracksAcceptance() public {
         // Setup
