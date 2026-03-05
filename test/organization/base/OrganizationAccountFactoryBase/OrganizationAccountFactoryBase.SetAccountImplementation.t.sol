@@ -107,7 +107,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         bytes memory expectedRevertData =
             abi.encode("call to non-contract address 0x000000000000000000000000000000000000ABcD");
         assertTrue(
-            revertData.length == 0 || keccak256(revertData) == keccak256(expectedRevertData),
+            keccak256(revertData) == keccak256(expectedRevertData),
             "unexpected revert payload for non-contract whitelist address"
         );
 
