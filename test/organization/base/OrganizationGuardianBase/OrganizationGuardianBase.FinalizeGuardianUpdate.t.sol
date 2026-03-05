@@ -261,7 +261,9 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
 
         // Call
         vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp)
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+            )
         );
         vm.prank(GUARDIAN);
         harness.finalizeGuardianUpdate(auth);

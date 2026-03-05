@@ -2,13 +2,13 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {
     OrganizationGuardianBaseHarness
 } from "test/organization/base/OrganizationGuardianBase/OrganizationGuardianBaseHarness.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationAdminTestBase} from "test/organization/shared/OrganizationAdminTestBase.sol";
 import {OrganizationGuardianStateHarness} from "test/organization/shared/OrganizationGuardianStateHarness.sol";
-import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -157,7 +157,9 @@ abstract contract OrganizationGuardianBaseSuiteBase is OrganizationAdminTestBase
      */
     function _expectOnlyPendingGuardianRevert(address caller, address pendingGuardian) internal {
         vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, pendingGuardian)
+            abi.encodeWithSelector(
+                IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, pendingGuardian
+            )
         );
     }
 }

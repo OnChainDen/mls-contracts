@@ -140,7 +140,9 @@ contract LibOrganizationGuardianIntegrationTest is LibOrganizationGuardianSuiteB
 
         // Verify
         assertEq(harness.getGuardianViaLibrary(), NEW_GUARDIAN_B, "new guardian should remain authorized");
-        assertEq(harness.getPendingGuardianViaLibrary(), address(0), "new guardian-controlled cancel should clear pending");
+        assertEq(
+            harness.getPendingGuardianViaLibrary(), address(0), "new guardian-controlled cancel should clear pending"
+        );
     }
 
     /// @dev Verifies GINT-8: canceled pending update cannot be accepted even after original timelock passes.

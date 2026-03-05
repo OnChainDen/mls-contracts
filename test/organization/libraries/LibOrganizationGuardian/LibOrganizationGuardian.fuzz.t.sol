@@ -30,9 +30,11 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
     }
 
     /// @dev Verifies GFZ-2: finalize reverts before timelock and succeeds at/after timelock.
-    function testFuzz_GFZ_2_randomBeforeAfterTimelock_finalizePassFail(address newGuardian, bool beforeTimelock, uint256 delta)
-        public
-    {
+    function testFuzz_GFZ_2_randomBeforeAfterTimelock_finalizePassFail(
+        address newGuardian,
+        bool beforeTimelock,
+        uint256 delta
+    ) public {
         // Setup
         vm.assume(newGuardian != address(0));
         _clearPendingGuardianState();
@@ -94,7 +96,9 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
 
         // Call
         vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, pendingGuardian)
+            abi.encodeWithSelector(
+                IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, pendingGuardian
+            )
         );
         vm.prank(caller);
         harness.enforceOnlyPendingGuardianViaLibrary();
@@ -142,7 +146,9 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
         harness.enforceOnlyGuardianViaLibrary();
 
         if (caller != guardian) {
-            vm.expectRevert(abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, caller, guardian));
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, caller, guardian)
+            );
             vm.prank(caller);
             harness.enforceOnlyGuardianViaLibrary();
         }

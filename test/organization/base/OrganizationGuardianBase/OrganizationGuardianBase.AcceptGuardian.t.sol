@@ -76,7 +76,9 @@ contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseS
         assertEq(harness.guardian(), NEW_GUARDIAN_A, "guardian should have transitioned");
 
         vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, NEW_GUARDIAN_A, address(0))
+            abi.encodeWithSelector(
+                IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, NEW_GUARDIAN_A, address(0)
+            )
         );
         vm.prank(NEW_GUARDIAN_A);
         harness.acceptGuardian();

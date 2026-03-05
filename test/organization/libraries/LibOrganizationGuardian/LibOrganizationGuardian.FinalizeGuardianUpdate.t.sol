@@ -36,7 +36,9 @@ contract LibOrganizationGuardianFinalizeGuardianUpdateTest is LibOrganizationGua
 
         // Call
         vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp)
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+            )
         );
         harness.finalizeGuardianUpdateViaLibrary();
 

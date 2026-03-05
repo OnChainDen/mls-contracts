@@ -76,8 +76,7 @@ contract LibOrganizationGuardianInitializeTest is LibOrganizationGuardianSuiteBa
         assertEq(harness.getPendingGuardianViaLibrary(), address(0), "pending guardian should stay cleared");
         assertEq(harness.getPendingGuardianUpdateTimestampViaLibrary(), 0, "pending timestamp should stay cleared");
         assertFalse(
-            harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(),
-            "ready-for-acceptance flag should stay cleared"
+            harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(), "ready-for-acceptance flag should stay cleared"
         );
     }
 }
