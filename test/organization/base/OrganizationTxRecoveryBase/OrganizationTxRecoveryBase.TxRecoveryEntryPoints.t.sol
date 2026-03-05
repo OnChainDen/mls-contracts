@@ -235,7 +235,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     function test_OTRB_DTER_2__OTRB_DTER_3__OTRB_DTER_4__OTRB_DTER_5_disable_clearsStateAndBlocksExecution() public {
         // Setup
         _enableTxRecovery();
-        _setTxRecoveryState(TX_RECOVERY, true, TX_RECOVERY_TIMELOCK, block.timestamp + 1, address(0), 0, 0);
+        _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, block.timestamp + 1, address(0), 0, 0);
 
         // Call
         vm.prank(TX_RECOVERY);
