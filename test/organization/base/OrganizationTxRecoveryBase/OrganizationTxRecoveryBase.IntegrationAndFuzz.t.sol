@@ -272,11 +272,11 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         _setTxRecoveryState(address(0), false, 0, 0, mutatedPendingRecovery, TX_RECOVERY_TIMELOCK, block.timestamp);
 
         // Call
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.finalizeInitializeTransactionAndERC1271Recovery(staleFinalizeAuth);
 
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         harness.cancelInitializeTransactionAndERC1271Recovery(staleCancelAuth);
 

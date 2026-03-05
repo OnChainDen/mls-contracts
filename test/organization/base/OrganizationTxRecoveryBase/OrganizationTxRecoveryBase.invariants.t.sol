@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
 import {
     MockAccountForOrganizationTransaction
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
@@ -365,7 +366,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
         // Call: read tx-recovery state and invoke validation when disabled.
         TxRecoveryState memory state = harness.getTxRecoveryState();
         if (!state.isEnabled) {
-            vm.expectRevert();
+            vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
             harness.validateRecoveryAccountTransactionAllowedOrRevertViaHarness();
         }
 
