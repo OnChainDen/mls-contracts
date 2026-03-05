@@ -134,6 +134,12 @@ contract LibOrganizationGuardianIntegrationTest is LibOrganizationGuardianSuiteB
         vm.prank(GUARDIAN);
         harness.enforceOnlyGuardianViaLibrary();
 
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, NEW_GUARDIAN_A, NEW_GUARDIAN_B)
+        );
+        vm.prank(NEW_GUARDIAN_A);
+        harness.enforceOnlyGuardianViaLibrary();
+
         vm.prank(NEW_GUARDIAN_B);
         harness.enforceOnlyGuardianViaLibrary();
         assertEq(
