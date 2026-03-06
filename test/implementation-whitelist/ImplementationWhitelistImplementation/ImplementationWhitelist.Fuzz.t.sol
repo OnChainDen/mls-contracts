@@ -6,10 +6,12 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
-import {ImplementationWhitelistHarness}
-    from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
-import {ImplementationWhitelistSuiteBase}
-    from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
+import {
+    ImplementationWhitelistHarness
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
+import {
+    ImplementationWhitelistSuiteBase
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
 /// @dev Fuzz tests for implementation whitelist controls.
@@ -140,10 +142,11 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         assertTrue(computedA1 != differentWhitelist, "different whitelist should change computed address");
     }
 
-    /// @dev IWC-FUZZ-6: Fuzz proxy initialization inputs — malformed init data never leaves partially initialized proxy.
-    function test_IWC_FUZZ_6_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(
-        bytes calldata randomInitData
-    ) public {
+    /// @dev IWC-FUZZ-6: Fuzz proxy initialization inputs — malformed init data never leaves partially initialized
+    /// proxy.
+    function test_IWC_FUZZ_6_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(bytes calldata randomInitData)
+        public
+    {
         // Setup: filter out valid initialize selector to ensure data is malformed.
         vm.assume(randomInitData.length > 0);
         // casting to 'bytes4' is safe because the short-circuit guard ensures length >= 4 before the cast
@@ -175,12 +178,10 @@ contract OrganizationFactoryForFuzz {
         returns (address computed)
     {
         // Mirrors OrganizationFactory._getOrganizationProxyBytecode + computeOrganizationAddress logic.
-        bytes memory bytecode = abi.encodePacked(
-            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress)
-        );
+        bytes memory bytecode =
+            abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress));
         bytes32 initCodeHash = keccak256(bytecode);
-        computed = address(
-            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initCodeHash))))
-        );
+        computed =
+            address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initCodeHash)))));
     }
 }

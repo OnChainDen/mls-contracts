@@ -191,7 +191,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         // Verify: already-active pointers remain unchanged.
         assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "org pointer changed");
         assertEq(organizationProxy.getAccountImplementationStorage(), accountImplV1, "account pointer changed");
-        assertEq(IVersionedAccount(deployedAccount).version(), 1, "deployed account should keep running its active code");
+        assertEq(
+            IVersionedAccount(deployedAccount).version(), 1, "deployed account should keep running its active code"
+        );
     }
 
     /// @dev Verifies unwhitelisting active Organization implementation does not block upgrading to new whitelisted
@@ -450,7 +452,9 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         organizationProxy.setAccountImplementation(accountImplV2, setV2Auth);
 
         // Verify: re-whitelisting restores the ability to move the account implementation pointer to V2.
-        assertEq(organizationProxy.getAccountImplementationStorage(), accountImplV2, "re-whitelisted update should succeed");
+        assertEq(
+            organizationProxy.getAccountImplementationStorage(), accountImplV2, "re-whitelisted update should succeed"
+        );
     }
 
     /// @dev Verifies signatures for Organization A cannot authorize same call on Organization B.

@@ -6,7 +6,9 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Test} from "forge-std/Test.sol";
 
-import {ImplementationWhitelistImplementation} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
+import {
+    ImplementationWhitelistImplementation
+} from "implementation-whitelist/ImplementationWhitelistImplementation.sol";
 import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {ContractType} from "types/CommonTypes.sol";

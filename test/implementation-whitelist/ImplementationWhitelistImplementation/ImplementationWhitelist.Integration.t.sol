@@ -4,10 +4,13 @@ pragma solidity 0.8.33;
 
 import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
-import {ImplementationWhitelistHarness, ImplementationWhitelistV2Harness}
-    from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
-import {ImplementationWhitelistSuiteBase}
-    from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
+import {
+    ImplementationWhitelistHarness,
+    ImplementationWhitelistV2Harness
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
+import {
+    ImplementationWhitelistSuiteBase
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistSuiteBase.sol";
 import {ContractType} from "types/CommonTypes.sol";
 
 interface IUUPSUpgradeEntrypoints {
@@ -48,8 +51,8 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     }
 
     // forgefmt: disable-next-item
-    /// @dev Verifies type separation end-to-end: Account whitelist never unlocks Organization validation and vice versa,
-    // across the real whitelist proxy.
+    /// @dev Verifies type separation end-to-end: Account whitelist never unlocks Organization validation and vice
+    // versa, across the real whitelist proxy.
     function test_IWC_INT_2_typeSeparation_accountWhitelistDoesNotUnlockOrganizationAndViceVersa() public {
         // Setup: whitelist impl A under Account only, impl B under Organization only.
         vm.prank(OWNER);
@@ -178,17 +181,11 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
 
         // Setup + Call: repeat the add-remove-re-add cycle for Account type.
         vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(
-            ContractType.Account, _single(accountImplementationA), new address[](0)
-        );
+        whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
         vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(
-            ContractType.Account, new address[](0), _single(accountImplementationA)
-        );
+        whitelistProxy.whitelistImplementations(ContractType.Account, new address[](0), _single(accountImplementationA));
         vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(
-            ContractType.Account, _single(accountImplementationA), new address[](0)
-        );
+        whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
 
         // Verify: Account re-whitelist also re-enables.
         whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Account, accountImplementationA);
@@ -202,7 +199,9 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
     function test_IWC_INT_5_whitelistUpgrade_preservesStateAndEnforcement() public {
         // Setup: seed whitelist state with one Organization and one Account implementation.
         vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Organization, _single(organizationImplementationA), new address[](0));
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, _single(organizationImplementationA), new address[](0)
+        );
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
 
@@ -230,7 +229,9 @@ contract ImplementationWhitelistIntegrationTest is ImplementationWhitelistSuiteB
                 IImplementationWhitelist.ImplementationNotWhitelisted.selector, organizationImplementationB
             )
         );
-        whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Organization, organizationImplementationB);
+        whitelistProxy.validateIsImplementationWhitelistedOrRevert(
+            ContractType.Organization, organizationImplementationB
+        );
     }
 
     /// @dev IWC-INT-6: Ownership transfer of whitelist contract immediately changes who can alter implementations.

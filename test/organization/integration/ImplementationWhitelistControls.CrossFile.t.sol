@@ -7,11 +7,11 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     ImplementationWhitelistHarness,
     ImplementationWhitelistV2Harness
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
-import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
 import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
@@ -80,7 +80,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         // Setup: deploy a baseline organization while leaving the candidate org/account upgrade targets unwhitelisted.
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
         OrganizationImplementationHarness organization = _deployOrganizationProxy({
-            salt: bytes32(uint256(15100)),
+            salt: bytes32(uint256(15_100)),
             implementationAddress: address(baseOrganizationImplementation),
             params: params
         });
@@ -88,45 +88,45 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             organization: organization,
             newImplementation: address(upgradeOrganizationImplementation),
             data: bytes(""),
-            salt: 15101
+            salt: 15_101
         });
         AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
-            organization: organization,
-            newImplementation: address(upgradeAccountImplementation),
-            salt: 15102
+            organization: organization, newImplementation: address(upgradeAccountImplementation), salt: 15_102
         });
 
         // Verify: factory deployment rejects an unwhitelisted Organization implementation.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
             )
         );
         // Call: attempt to deploy a new organization from an unwhitelisted Organization implementation target.
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(
-            bytes32(uint256(15103)),
-            address(upgradeOrganizationImplementation),
-            address(whitelistProxy),
-            params
+            bytes32(uint256(15_103)), address(upgradeOrganizationImplementation), address(whitelistProxy), params
         );
 
         // Verify: organization UUPS upgrade rejects an unwhitelisted target and preserves the active implementation.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
             )
         );
         // Call: attempt to upgrade the deployed organization to an unwhitelisted implementation.
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth
+        );
         assertEq(
             _readProxyImplementation(address(organization)),
             address(baseOrganizationImplementation),
             "unwhitelisted org upgrade should not change the active implementation"
         );
 
-        // Verify: account implementation upgrade rejects an unwhitelisted Account target and preserves the beacon pointer.
+        // Verify: account implementation upgrade rejects an unwhitelisted Account target and preserves the beacon
+        // pointer.
         vm.expectRevert(
             abi.encodeWithSelector(
                 IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeAccountImplementation)
@@ -154,7 +154,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
         OrganizationImplementationHarness organization = _deployOrganizationProxy({
-            salt: bytes32(uint256(15200)),
+            salt: bytes32(uint256(15_200)),
             implementationAddress: address(baseOrganizationImplementation),
             params: params
         });
@@ -162,38 +162,37 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             organization: organization,
             newImplementation: address(upgradeOrganizationImplementation),
             data: bytes(""),
-            salt: 15201
+            salt: 15_201
         });
         AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
-            organization: organization,
-            newImplementation: address(upgradeAccountImplementation),
-            salt: 15202
+            organization: organization, newImplementation: address(upgradeAccountImplementation), salt: 15_202
         });
 
         // Verify: Account-only whitelist entries never unlock Organization deployment.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
             )
         );
         // Call: attempt to deploy with an Organization target whitelisted only for Account contracts.
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(
-            bytes32(uint256(15203)),
-            address(upgradeOrganizationImplementation),
-            address(whitelistProxy),
-            params
+            bytes32(uint256(15_203)), address(upgradeOrganizationImplementation), address(whitelistProxy), params
         );
 
         // Verify: Account-only whitelist entries never unlock Organization UUPS upgrades.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
             )
         );
         // Call: attempt to upgrade the baseline organization using an Account-only whitelist entry.
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth
+        );
 
         // Verify: Organization-only whitelist entries never unlock Account implementation updates.
         vm.expectRevert(
@@ -206,8 +205,8 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         organization.setAccountImplementation(address(upgradeAccountImplementation), accountUpgradeAuth);
     }
 
-    /// @dev Verifies whitelist UUPS upgrades preserve state and enforcement in factory, org-upgrade, and account-upgrade
-    ///      flows. [IWC-INT-5]
+    /// @dev Verifies whitelist UUPS upgrades preserve state and enforcement in factory, org-upgrade, and
+    /// account-upgrade flows. [IWC-INT-5]
     function test_IWC_INT_5_whitelistUpgrade_preservesFactoryOrgAndAccountEnforcement() public {
         // Setup: whitelist alternate org/account implementations, then deploy a baseline organization before the
         // whitelist proxy upgrade.
@@ -216,27 +215,30 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
         OrganizationImplementationHarness organization = _deployOrganizationProxy({
-            salt: bytes32(uint256(15500)),
+            salt: bytes32(uint256(15_500)),
             implementationAddress: address(baseOrganizationImplementation),
             params: params
         });
 
         // Call: upgrade the shared whitelist proxy in place to the V2 implementation.
         vm.prank(WHITELIST_OWNER);
-        ImplementationWhitelistV2Harness(address(whitelistProxy)).upgradeToAndCall(address(whitelistImplementationV2), bytes(""));
+        ImplementationWhitelistV2Harness(address(whitelistProxy))
+            .upgradeToAndCall(address(whitelistImplementationV2), bytes(""));
 
         // Verify: whitelist upgrade switched logic while preserving previously allowed implementations.
         assertEq(ImplementationWhitelistV2Harness(address(whitelistProxy)).version(), 2, "whitelist upgrade failed");
 
         // Call: deploy a new organization with a pre-whitelisted post-upgrade implementation.
         OrganizationImplementationHarness deployedAfterWhitelistUpgrade = _deployOrganizationProxy({
-            salt: bytes32(uint256(15501)),
+            salt: bytes32(uint256(15_501)),
             implementationAddress: address(upgradeOrganizationImplementation),
             params: params
         });
 
         // Verify: factory deployment still respects preserved whitelist state after the whitelist upgrade.
-        assertTrue(deployedAfterWhitelistUpgrade.isInitialized(), "factory deployment should still succeed post-upgrade");
+        assertTrue(
+            deployedAfterWhitelistUpgrade.isInitialized(), "factory deployment should still succeed post-upgrade"
+        );
 
         // Verify: non-whitelisted factory deploy targets still fail after the whitelist upgrade.
         vm.expectRevert(
@@ -247,10 +249,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         // Call: attempt a factory deployment with an Organization implementation that remained unwhitelisted.
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(
-            bytes32(uint256(15502)),
-            address(otherOrganizationImplementation),
-            address(whitelistProxy),
-            params
+            bytes32(uint256(15_502)), address(otherOrganizationImplementation), address(whitelistProxy), params
         );
 
         // Call: execute a whitelisted Organization implementation upgrade after the whitelist upgrade.
@@ -258,10 +257,12 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             organization: organization,
             newImplementation: address(upgradeOrganizationImplementation),
             data: bytes(""),
-            salt: 15503
+            salt: 15_503
         });
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth
+        );
 
         // Verify: the organization upgrade path still honors preserved whitelist state post-upgrade.
         assertEq(
@@ -275,7 +276,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             organization: organization,
             newImplementation: address(otherOrganizationImplementation),
             data: bytes(""),
-            salt: 15504
+            salt: 15_504
         });
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -284,13 +285,13 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         );
         // Call: attempt to upgrade the organization to an implementation that was never whitelisted.
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(otherOrganizationImplementation), bytes(""), blockedOrgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(otherOrganizationImplementation), bytes(""), blockedOrgUpgradeAuth
+        );
 
         // Call: execute a whitelisted account implementation update after the whitelist upgrade.
         AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
-            organization: organization,
-            newImplementation: address(upgradeAccountImplementation),
-            salt: 15505
+            organization: organization, newImplementation: address(upgradeAccountImplementation), salt: 15_505
         });
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(upgradeAccountImplementation), accountUpgradeAuth);
@@ -304,9 +305,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
         // Verify: non-whitelisted account implementation targets still fail post-upgrade.
         AdminAuthParams memory blockedAccountUpgradeAuth = _buildAccountImplementationAuth({
-            organization: organization,
-            newImplementation: address(otherAccountImplementation),
-            salt: 15506
+            organization: organization, newImplementation: address(otherAccountImplementation), salt: 15_506
         });
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -325,7 +324,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         // candidate org/account targets unwhitelisted.
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
         OrganizationImplementationHarness organization = _deployOrganizationProxy({
-            salt: bytes32(uint256(15600)),
+            salt: bytes32(uint256(15_600)),
             implementationAddress: address(baseOrganizationImplementation),
             params: params
         });
@@ -336,62 +335,53 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         whitelistProxy.acceptOwnership();
 
         // Verify: the previous whitelist owner can no longer alter whitelist state.
-        vm.expectRevert(
-            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, WHITELIST_OWNER)
-        );
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, WHITELIST_OWNER));
         // Call: old owner attempts to whitelist a new Organization implementation.
         vm.prank(WHITELIST_OWNER);
         whitelistProxy.whitelistImplementations(
-            ContractType.Organization,
-            _singleAddressArray(address(upgradeOrganizationImplementation)),
-            new address[](0)
+            ContractType.Organization, _singleAddressArray(address(upgradeOrganizationImplementation)), new address[](0)
         );
 
-        vm.expectRevert(
-            abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, WHITELIST_OWNER)
-        );
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, WHITELIST_OWNER));
         // Call: old owner attempts to whitelist a new Account implementation.
         vm.prank(WHITELIST_OWNER);
         whitelistProxy.whitelistImplementations(
-            ContractType.Account,
-            _singleAddressArray(address(upgradeAccountImplementation)),
-            new address[](0)
+            ContractType.Account, _singleAddressArray(address(upgradeAccountImplementation)), new address[](0)
         );
 
         // Verify: system entrypoints remain blocked while the new owner has not whitelisted the targets yet.
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
             )
         );
         // Call: attempt to deploy an organization using the still-unwhitelisted Organization target.
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(
-            bytes32(uint256(15601)),
-            address(upgradeOrganizationImplementation),
-            address(whitelistProxy),
-            params
+            bytes32(uint256(15_601)), address(upgradeOrganizationImplementation), address(whitelistProxy), params
         );
 
         AdminAuthParams memory blockedOrgUpgradeAuth = _buildUpgradeAuth({
             organization: organization,
             newImplementation: address(upgradeOrganizationImplementation),
             data: bytes(""),
-            salt: 15602
+            salt: 15_602
         });
         vm.expectRevert(
             abi.encodeWithSelector(
-                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(upgradeOrganizationImplementation)
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(upgradeOrganizationImplementation)
             )
         );
         // Call: attempt to upgrade the deployed organization before the new owner whitelists the target.
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(upgradeOrganizationImplementation), bytes(""), blockedOrgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(upgradeOrganizationImplementation), bytes(""), blockedOrgUpgradeAuth
+        );
 
         AdminAuthParams memory blockedAccountUpgradeAuth = _buildAccountImplementationAuth({
-            organization: organization,
-            newImplementation: address(upgradeAccountImplementation),
-            salt: 15603
+            organization: organization, newImplementation: address(upgradeAccountImplementation), salt: 15_603
         });
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -405,20 +395,16 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         // Call: the new owner whitelists the Organization and Account targets system-wide.
         vm.prank(NEW_WHITELIST_OWNER);
         whitelistProxy.whitelistImplementations(
-            ContractType.Organization,
-            _singleAddressArray(address(upgradeOrganizationImplementation)),
-            new address[](0)
+            ContractType.Organization, _singleAddressArray(address(upgradeOrganizationImplementation)), new address[](0)
         );
         vm.prank(NEW_WHITELIST_OWNER);
         whitelistProxy.whitelistImplementations(
-            ContractType.Account,
-            _singleAddressArray(address(upgradeAccountImplementation)),
-            new address[](0)
+            ContractType.Account, _singleAddressArray(address(upgradeAccountImplementation)), new address[](0)
         );
 
         // Verify: factory deployment is now unlocked by the new whitelist owner.
         OrganizationImplementationHarness deployedAfterOwnershipTransfer = _deployOrganizationProxy({
-            salt: bytes32(uint256(15604)),
+            salt: bytes32(uint256(15_604)),
             implementationAddress: address(upgradeOrganizationImplementation),
             params: params
         });
@@ -432,10 +418,12 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
             organization: organization,
             newImplementation: address(upgradeOrganizationImplementation),
             data: bytes(""),
-            salt: 15605
+            salt: 15_605
         });
         vm.prank(GUARDIAN);
-        organization.upgradeToAndCallWithAuthorization(address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth);
+        organization.upgradeToAndCallWithAuthorization(
+            address(upgradeOrganizationImplementation), bytes(""), orgUpgradeAuth
+        );
         assertEq(
             _readProxyImplementation(address(organization)),
             address(upgradeOrganizationImplementation),
@@ -444,9 +432,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
         // Verify: account implementation updates are now unlocked by the new whitelist owner.
         AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
-            organization: organization,
-            newImplementation: address(upgradeAccountImplementation),
-            salt: 15606
+            organization: organization, newImplementation: address(upgradeAccountImplementation), salt: 15_606
         });
         vm.prank(GUARDIAN);
         organization.setAccountImplementation(address(upgradeAccountImplementation), accountUpgradeAuth);
@@ -554,7 +540,9 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
     /// @param contractType Whitelist namespace being mutated.
     /// @param implementationAddress Implementation whose status is being changed.
     /// @param isWhitelisted Whether the implementation should end the call whitelisted or unwhitelisted.
-    function _setWhitelistStatus(ContractType contractType, address implementationAddress, bool isWhitelisted) internal {
+    function _setWhitelistStatus(ContractType contractType, address implementationAddress, bool isWhitelisted)
+        internal
+    {
         vm.prank(whitelistProxy.owner());
         whitelistProxy.whitelistImplementations(
             contractType,

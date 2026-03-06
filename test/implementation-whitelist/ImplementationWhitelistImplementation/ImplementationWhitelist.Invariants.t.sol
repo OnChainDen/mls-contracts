@@ -135,9 +135,12 @@ contract ImplementationWhitelistInvariantHandler is Test {
 
         // Attempt Organization add from non-owner.
         vm.prank(nonOwner);
-        (bool success,) = address(whitelist).call(
-            abi.encodeCall(whitelist.whitelistImplementations, (ContractType.Organization, _single(target), new address[](0)))
-        );
+        (bool success,) = address(whitelist)
+            .call(
+                abi.encodeCall(
+                    whitelist.whitelistImplementations, (ContractType.Organization, _single(target), new address[](0))
+                )
+            );
         if (success) nonOwnerMutationSucceeded = true;
     }
 

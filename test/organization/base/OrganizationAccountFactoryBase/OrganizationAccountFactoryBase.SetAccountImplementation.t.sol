@@ -10,13 +10,10 @@ import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol"
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-<<<<<<< HEAD
-=======
 import {
     ImplementationWhitelistHarness,
     ImplementationWhitelistV2Harness
 } from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
->>>>>>> d4d4eb57 ([TEST] Close test plan gaps)
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
@@ -417,12 +414,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies desired behavior that no-code implementation addresses are rejected even if whitelisted.
-<<<<<<< HEAD
-    function test_OAFB_SAI_18__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
-=======
     /// [OAFB-SAI-9]
     function test_OAFB_SAI_12__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
->>>>>>> d4d4eb57 ([TEST] Close test plan gaps)
         public
     {
         address noCodeImplementation = address(0xCA11);
@@ -476,11 +469,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies signatures for a different implementation cannot authorize current update call. [OAFB-SAI-2]
-<<<<<<< HEAD
-    function test_OAFB_SAI_7__OAFB_SAI_2_setAccountImplementation_signaturesForDifferentImplementation_reverts()
-=======
     function test_OAFB_SAI_14__OAFB_SAI_2_setAccountImplementation_signaturesForDifferentImplementation_reverts()
->>>>>>> d4d4eb57 ([TEST] Close test plan gaps)
         public
     {
         // Setup: whitelist both implementations and sign auth for V1 only.

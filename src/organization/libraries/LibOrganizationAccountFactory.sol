@@ -7,8 +7,8 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
-import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
+import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
