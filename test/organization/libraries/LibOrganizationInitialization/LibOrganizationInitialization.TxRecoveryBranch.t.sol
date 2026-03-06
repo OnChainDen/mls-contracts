@@ -85,8 +85,9 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         });
     }
 
-    /// @dev Verifies LOI-INIT-1: non-zero tx recovery address + valid timelock configures tx recovery at init.
-    function test_LOI_INIT_1_initialize_nonZeroRecoveryAndValidTimelock_configuresTxRecovery() public {
+    /// @dev Verifies LOI-REC-2 and LOI-REC-3: non-zero tx recovery address + valid timelock configures tx recovery
+    /// and keeps it disabled at init.
+    function test_LOI_REC_2__LOI_REC_3_initialize_nonZeroRecoveryAndValidTimelock_configuresTxRecovery() public {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS + 1, 3 days);
@@ -105,8 +106,8 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         assertFalse(state.isEnabled, "init should not auto-enable tx recovery");
     }
 
-    /// @dev Verifies LOI-INIT-2: tx recovery timelock min boundary is accepted at initialization.
-    function test_LOI_INIT_2_initialize_nonZeroRecoveryAndMinBoundaryTimelock_configuresTxRecovery() public {
+    /// @dev Verifies LOI-REC-7: tx recovery timelock min boundary is accepted at initialization and remains disabled.
+    function test_LOI_REC_7_initialize_nonZeroRecoveryAndMinBoundaryTimelock_configuresTxRecovery() public {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -121,10 +122,11 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
             TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
             "min boundary timelock should be accepted"
         );
+        assertFalse(state.isEnabled, "tx recovery should remain disabled at min timelock boundary");
     }
 
-    /// @dev Verifies LOI-INIT-3: tx recovery timelock max boundary is accepted at initialization.
-    function test_LOI_INIT_3_initialize_nonZeroRecoveryAndMaxBoundaryTimelock_configuresTxRecovery() public {
+    /// @dev Verifies LOI-REC-8: tx recovery timelock max boundary is accepted at initialization and remains disabled.
+    function test_LOI_REC_8_initialize_nonZeroRecoveryAndMaxBoundaryTimelock_configuresTxRecovery() public {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -139,10 +141,11 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
             TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS,
             "max boundary timelock should be accepted"
         );
+        assertFalse(state.isEnabled, "tx recovery should remain disabled at max timelock boundary");
     }
 
-    /// @dev Verifies LOI-INIT-4 and LOI-INIT-5: zero tx recovery address keeps tx recovery deferred and disabled.
-    function test_LOI_INIT_4__LOI_INIT_5_initialize_zeroRecoveryAddress_keepsTxRecoveryDeferredAndDisabled() public {
+    /// @dev Verifies LOI-REC-10: zero tx recovery address keeps tx recovery deferred and disabled.
+    function test_LOI_REC_10_initialize_zeroRecoveryAddress_keepsTxRecoveryDeferredAndDisabled() public {
         // Setup
         InitializationParams memory params =
             _buildParams(address(0), TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -157,8 +160,8 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         assertFalse(state.isEnabled, "deferred init must not auto-enable tx recovery");
     }
 
-    /// @dev Verifies LOI-INIT-6: non-zero tx recovery address with invalid tx-recovery timelock reverts init.
-    function test_LOI_INIT_6_initialize_nonZeroRecoveryAddress_invalidTxRecoveryTimelock_reverts() public {
+    /// @dev Verifies LOI-VAL-14: non-zero tx recovery address with invalid tx-recovery timelock reverts init.
+    function test_LOI_VAL_14_initialize_nonZeroRecoveryAddress_invalidTxRecoveryTimelock_reverts() public {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, 3 days);
@@ -177,9 +180,9 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         // Verify
     }
 
-    /// @dev Verifies LOI-INIT-7 and LOI-INIT-8: invalid admin-op timelock always reverts init, preventing a same-window
-    /// deferred tx-recovery finalize path.
-    function test_LOI_INIT_7__LOI_INIT_8_initialize_invalidAdminOperationTimelock_revertsAndPreventsDeferredFinalizeWindow()
+    /// @dev Verifies LOI-VAL-11 and LOI-VAL-12: invalid admin-op timelock always reverts init, preventing a
+    /// same-window deferred tx-recovery finalize path.
+    function test_LOI_VAL_11__LOI_VAL_12_initialize_invalidAdminOperationTimelock_revertsAndPreventsDeferredFinalizeWindow()
         public
     {
         // Setup
@@ -244,8 +247,8 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
         );
     }
 
-    /// @dev Verifies LOI-INIT-9: when recovery address is zero, tx-recovery timelock is not validated at init-time.
-    function test_LOI_INIT_9_initialize_zeroRecoveryAddress_doesNotValidateTxRecoveryTimelock() public {
+    /// @dev Verifies LOI-REC-10: when recovery address is zero, tx-recovery timelock is not validated at init-time.
+    function test_LOI_REC_10_initialize_zeroRecoveryAddress_doesNotValidateTxRecoveryTimelock() public {
         // Setup
         InitializationParams memory params = _buildParams(address(0), 0, 3 days);
 

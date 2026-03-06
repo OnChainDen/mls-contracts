@@ -23,8 +23,9 @@ import {GroupModification, GroupModificationType, InitializationParams} from "ty
  */
 contract LibOrganizationInitializationTest is InitializationSuiteBase {
     /// @dev Verifies `LibOrganizationInitialization.initialize` happy path configures
-    /// members/admins/groups/guardian/recovery state and emits `OrganizationInitialized`.
-    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4_initializeLibrary_happyPathConfiguresState()
+    /// members/admins/groups/guardian/recovery state, emits `OrganizationInitialized`, and accepts the min-boundary
+    /// guardian recovery timelock.
+    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4__LOI_REC_5_initializeLibrary_happyPathConfiguresState()
         public
     {
         // Setup: Deploy a library harness, build valid params, and set the expected initialization event payload.
@@ -96,9 +97,9 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         );
     }
 
-    /// @dev Verifies `LibOrganizationInitialization.initialize` handles boundary timelocks, duplicate members, empty
-    /// groups, and deferred recovery configuration.
-    function test_LOI_HPS_8__LOI_HPS_10__LOI_HPS_11__LOI_REC_5__LOI_REC_6__LOI_REC_7__LOI_REC_8__LOI_REC_9__LOI_REC_10__LOI_REC_11_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
+    /// @dev Verifies `LibOrganizationInitialization.initialize` handles max-boundary timelocks, duplicate members,
+    /// empty groups, and deferred recovery configuration.
+    function test_LOI_HPS_8__LOI_HPS_10__LOI_HPS_11__LOI_REC_6__LOI_REC_8__LOI_REC_9__LOI_REC_10__LOI_REC_11_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
         public
     {
         // Setup: Build one params set with duplicate members/max timelocks/empty groups and one deferred-recovery
@@ -468,9 +469,9 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         assertFalse(harness.getGroupMemberStatus(1000, MEMBER_2), "non-member removal should remain a no-op");
     }
 
-    /// @dev Verifies library deployer/view helpers plus initialization atomicity, event suppression on revert, and
+    /// @dev Verifies library deployer/view helpers plus guardian-revert atomicity, event suppression on revert, and
     /// one-way initialization transition.
-    function test_LOI_AOG_1__LOI_AOG_2__LOI_AOG_3__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5_initializeLibrary_atomicityAndViewGuards()
+    function test_LOI_AOG_1__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5_initializeLibrary_atomicityAndViewGuards()
         public
     {
         // Setup: Deploy a harness and seed deployer storage for enforce-only-deployer checks.
@@ -512,6 +513,72 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
         vm.expectRevert(IOrganizationInitialization.AlreadyInitialized.selector);
         harness.initializeViaLibrary(valid);
+    }
+
+    /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back member/admin writes when the groups step
+    /// reverts, leaving no partial initialization state.
+    function test_LOI_AOG_2_initializeLibrary_revertInGroupsStep_rollsBackMembersAndAdmins() public {
+        // Setup: Build params with valid members/admins but a group containing a non-member address to trigger
+        // `MemberDoesNotExist` during group processing (step 3 of initialize).
+        LibOrganizationInitializationHarness harness = _newLibraryHarness();
+        InitializationParams memory params = _defaultInitializationParams();
+
+        GroupModification[] memory groups = new GroupModification[](1);
+        groups[0] = GroupModification({
+            groupId: GROUP_ID,
+            modificationType: GroupModificationType.Create,
+            membersToAdd: buildArray(MEMBER_3),
+            membersToRemove: buildEmptyAddressArray()
+        });
+        params.groups = groups;
+
+        // Call: Attempt initialization that succeeds through members/admins but reverts at group processing.
+        vm.recordLogs();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, MEMBER_3));
+        harness.initializeViaLibrary(params);
+
+        // Verify: Member and admin writes from earlier steps are rolled back and no event is emitted.
+        assertFalse(harness.isInitializedViaLibrary(), "groups revert should leave state uninitialized");
+        assertFalse(harness.getMemberStatus(MEMBER_1), "member writes should roll back on groups revert");
+        assertFalse(harness.getAdminStatus(ADMIN_1), "admin writes should roll back on groups revert");
+        assertEq(
+            _countTopic(vm.getRecordedLogs(), ORG_INITIALIZED_TOPIC), 0, "groups revert must not emit initialized event"
+        );
+    }
+
+    /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back all prior writes (members, admins, groups,
+    /// guardian, timelock) when recovery setup reverts.
+    function test_LOI_AOG_3_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites() public {
+        // Setup: Build params with valid members/admins/groups/guardian but an invalid guardian recovery timelock to
+        // trigger `InvalidTimelockDuration` during recovery initialization (step 7 of initialize).
+        LibOrganizationInitializationHarness harness = _newLibraryHarness();
+        InitializationParams memory params = _defaultInitializationParams();
+        params.guardianRecoveryTimelockDurationSeconds = 2 days - 1;
+
+        // Call: Attempt initialization that succeeds through all steps up to recovery but reverts at guardian recovery
+        // timelock validation.
+        vm.recordLogs();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                params.guardianRecoveryTimelockDurationSeconds,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        harness.initializeViaLibrary(params);
+
+        // Verify: All prior initialization writes are rolled back and no event is emitted.
+        assertFalse(harness.isInitializedViaLibrary(), "recovery revert should leave state uninitialized");
+        assertFalse(harness.getMemberStatus(MEMBER_1), "member writes should roll back on recovery revert");
+        assertFalse(harness.getAdminStatus(ADMIN_1), "admin writes should roll back on recovery revert");
+        assertFalse(harness.getGroupStatus(GROUP_ID), "group writes should roll back on recovery revert");
+        assertEq(harness.getGuardianStorage(), address(0), "guardian write should roll back on recovery revert");
+        assertEq(
+            _countTopic(vm.getRecordedLogs(), ORG_INITIALIZED_TOPIC),
+            0,
+            "recovery revert must not emit initialized event"
+        );
     }
 
     /// @dev Deploys a library harness with deployer/whitelist/timelock storage primed for initialization tests.
