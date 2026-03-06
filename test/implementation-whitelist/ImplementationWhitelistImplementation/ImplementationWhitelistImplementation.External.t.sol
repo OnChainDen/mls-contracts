@@ -26,10 +26,6 @@ interface IUUPSWhitelistEntrypoints {
  * @dev External-flow tests for `ImplementationWhitelistImplementation`.
  */
 contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase {
-    // -----------------------------------------------------------------------
-    //  Constructor
-    // -----------------------------------------------------------------------
-
     // forgefmt: disable-next-item
     /// @dev Verifies implementation constructor disables initializers (direct initialize reverts).
     function test_IWI_INIT_4_IWI_CON_1_IWI_CON_2_constructorDisablesInitializers_directCallReverts() public {
@@ -41,10 +37,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Call: attempt initialize on implementation contract itself.
         implementation.initialize(OWNER, empty, empty);
     }
-
-    // -----------------------------------------------------------------------
-    //  Initialize
-    // -----------------------------------------------------------------------
 
     // forgefmt: disable-next-item
     /// @dev Verifies proxy initialization sets owner and seeds both type-specific whitelists.
@@ -224,10 +216,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         proxy.initialize(OWNER, orgSeeds, empty);
     }
 
-    // -----------------------------------------------------------------------
-    //  isInitialized
-    // -----------------------------------------------------------------------
-
     // forgefmt: disable-next-item
     /// @dev Verifies `isInitialized()` remains true after ownership transfer via `transferOwnership` +
     // `acceptOwnership`.
@@ -259,10 +247,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Verify: isInitialized remains true after failed re-initialization.
         assertTrue(proxy.isInitialized(), "should remain initialized after failed re-init");
     }
-
-    // -----------------------------------------------------------------------
-    //  whitelistImplementations
-    // -----------------------------------------------------------------------
 
     /// @dev Verifies owner can add and remove implementations in one `whitelistImplementations` call.
     function test_IWI_WI_1_IWI_WI_4_IWI_WI_6_ownerCanAddAndRemoveInSingleCall() public {
@@ -471,10 +455,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
-    // -----------------------------------------------------------------------
-    //  isImplementationWhitelisted
-    // -----------------------------------------------------------------------
-
     // forgefmt: disable-next-item
     /// @dev Verifies `isImplementationWhitelisted` is true only for matching contract type entries.
     function test_IWI_VIW_1_IWI_IIW_1_IWI_IIW_2_IWI_IIW_3_isImplementationWhitelisted_typeScopedTruthTable()
@@ -552,10 +532,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
-    // -----------------------------------------------------------------------
-    //  validateIsImplementationWhitelistedOrRevert
-    // -----------------------------------------------------------------------
-
     // forgefmt: disable-next-item
     /// @dev Verifies `validateIsImplementationWhitelistedOrRevert` reverts for non-whitelisted targets.
     function test_IWI_VIW_2_IWI_VIIWOR_2_IWI_VIIWOR_5_validateWhitelisted_revertsWhenNotWhitelisted() public {
@@ -626,10 +602,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
             ContractType.Organization, organizationImplementationA
         );
     }
-
-    // -----------------------------------------------------------------------
-    //  UUPS Upgrade
-    // -----------------------------------------------------------------------
 
     /// @dev Verifies owner can perform UUPS upgrade through proxy `upgradeToAndCall`.
     function test_IWI_UUPS_1_IWI_AU_1_ownerCanUpgradeProxyViaUUPS() public {
