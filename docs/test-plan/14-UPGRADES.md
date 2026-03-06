@@ -40,8 +40,8 @@
 | OI-UTACWA-18 | Sequential upgrades (V1 -> V2 -> V3) preserve state and functionality at each step | [I] | P1 |
 | OI-UTACWA-19 | If post-upgrade `data` call reverts, transaction fully reverts and implementation remains unchanged | [S] | P0 |
 | OI-UTACWA-20 | Reverting upgrade paths (whitelist/UUPS/migration failure) do not consume admin auth nonce (same auth can be retried after root cause is fixed) | [S] | P1 |
-| OI-UTACWA-21 | `isUpgradeAuthorized` flag is true only during authorized upgrade execution window and false before/after | [S] | P0 |
-| OI-UTACWA-22 | Failed upgrade path never leaves `isUpgradeAuthorized` stuck true | [S] | P0 |
+| OI-UTACWA-21 | `authorizedUpgradeImplementation` flag is only set during authorized upgrade execution window and is addreses zero before/after | [S] | P0 |
+| OI-UTACWA-22 | Failed upgrade path never leaves `authorizedUpgradeImplementation` stuck to an address that isn't address zero | [S] | P0 |
 | OI-UTACWA-23 | Direct call to inherited `upgradeToAndCall` (bypassing wrapper) always reverts `UnauthorizedUpgrade` | [S] | P0 |
 | OI-UTACWA-24 | Direct `upgradeToAndCall` reverts even if caller is the guardian (must still go through authorized flow) | [S] | P0 |
 | OI-UTACWA-25 | Admin authorization must also bind the `data` payload (guardian cannot swap migration calldata after signatures are collected) | [S] | P0 |
