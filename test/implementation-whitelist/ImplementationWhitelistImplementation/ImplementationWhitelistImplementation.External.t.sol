@@ -468,12 +468,15 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         // Setup: initialized proxy owned by OWNER.
 
         // Verify: zero-address target is rejected.
+        // Note: proxiableUUID() STATICCALL returns empty data; the ABI decoder fails decoding it as bytes32.
+        // Per Solidity docs, ABI decode failures inside `try` are NOT caught by `catch`, producing revert(0,0).
         vm.expectRevert();
         vm.prank(OWNER);
         // Call: attempt UUPS upgrade to zero address.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(0), bytes(""));
 
         // Verify: no-code target is rejected.
+        // Note: same ABI decode failure path as address(0) — empty returndata cannot decode as bytes32.
         vm.expectRevert();
         vm.prank(OWNER);
         // Call: attempt UUPS upgrade to no-code address.

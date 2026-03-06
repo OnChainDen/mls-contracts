@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganization} from "interfaces/IOrganization.sol";
 import {
     OrganizationUpgradesCrossFileSuiteBase
 } from "test/organization/integration/OrganizationUpgradesCrossFileSuiteBase.sol";
@@ -27,7 +29,9 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
 
         // Verify: candidate is rejected before any implementation pointer change.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate)
+        );
         vm.prank(GUARDIAN);
         // Call: attempt wrapper upgrade to non-whitelisted candidate.
         organizationProxy.upgradeToAndCallWithAuthorization(candidate, bytes(""), auth);
@@ -50,7 +54,9 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
 
         // Verify: account implementation update rejects non-whitelisted candidates.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, candidate)
+        );
         vm.prank(GUARDIAN);
         // Call: attempt account implementation update with non-whitelisted target.
         organizationProxy.setAccountImplementation(candidate, auth);
@@ -107,6 +113,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         address implementationBefore = _readProxyImplementation(address(organizationProxy));
 
         // Verify: malformed data path reverts and implementation pointer remains unchanged.
+        // Note: malformed bytes are delegatecalled as migration data — the error varies by fuzz input.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         // Call: execute upgrade with malformed migration payload.
@@ -133,7 +140,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
 
         // Verify: nested second-upgrade attempts are rejected.
-        vm.expectRevert();
+        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
         vm.prank(GUARDIAN);
         // Call: execute first upgrade with nested-upgrade migration payload.
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);

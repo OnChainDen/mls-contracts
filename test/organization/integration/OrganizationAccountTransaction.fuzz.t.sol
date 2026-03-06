@@ -87,7 +87,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
             );
         } else {
             // Verify: past expiration reverts.
-            vm.expectRevert();
+            vm.expectPartialRevert(IOrganizationAccountTransaction.TransactionExpired.selector);
             // Call: validate approval with past expiration.
             harness.validateTransactionApprovalOrRevertViaLibrary(
                 ACCOUNT, DESTINATION, 0, data, 1, expiration, DEFAULT_POLICY_ID, initiatorSig, bytes(""), proofs

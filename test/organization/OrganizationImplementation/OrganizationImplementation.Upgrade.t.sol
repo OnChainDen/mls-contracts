@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
@@ -323,7 +325,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Verify: UUPS upgrade path rejects non-UUPS implementations.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation))
+        );
         vm.prank(GUARDIAN);
         // Call: execute authorized upgrade to non-UUPS target.
         organizationProxy.upgradeToAndCallWithAuthorization(address(nonUupsImplementation), bytes(""), auth);
@@ -343,7 +347,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Verify: UUPS UUID compatibility enforcement should revert.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(123)))
+        );
         vm.prank(GUARDIAN);
         // Call: execute upgrade to incompatible UUPS implementation.
         organizationProxy.upgradeToAndCallWithAuthorization(address(wrongUuidImplementation), bytes(""), auth);
@@ -701,7 +707,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
             abi.encodeCall(OrganizationImplementationHarness.migrationSetMarker, (2525));
 
         // Verify: swapping migration calldata after signatures are collected reverts.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
         // Call: execute wrapper with tampered migration calldata under unchanged auth payload.
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), tamperedMigrationData, auth);
@@ -726,7 +732,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Verify: nested second-upgrade attempts from migration calldata are rejected.
-        vm.expectRevert();
+        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
         vm.prank(GUARDIAN);
         // Call: execute first upgrade with nested second-upgrade payload.
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
@@ -751,7 +757,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Verify: each upgrade step requires its own guardian/admin authorization.
-        vm.expectRevert();
+        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
         vm.prank(GUARDIAN);
         // Call: attempt first upgrade with migration payload that chains a second upgrade.
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
@@ -771,6 +777,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Verify: misconfigured whitelist address must block upgrades and leave nonce unused.
+        // Note: Solidity's extcodesize check on the no-code whitelist address produces revert(0,0) with no error data.
         vm.expectRevert();
         vm.prank(GUARDIAN);
         // Call: execute wrapper with whitelist target lacking runtime code.
@@ -797,7 +804,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Call: revert path should fail closed.
-        vm.expectRevert();
+        vm.expectRevert("VALIDATION_REVERT");
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), authReverting);
     }
@@ -816,7 +823,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         });
 
         // Verify: zero/no-code implementations must fail during UUPS upgrade safety checks.
-        vm.expectRevert();
+        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
         vm.prank(GUARDIAN);
         // Call: attempt upgrade to zero address even though whitelisted.
         organizationProxy.upgradeToAndCallWithAuthorization(address(0), bytes(""), auth);
@@ -890,7 +897,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.setUpgradeState(address(whitelist), address(0xBEEF));
 
         // Verify: `_authorizeUpgrade` should reject arbitrary targets under mismatched target authorization state.
-        vm.expectRevert();
+        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
         // Call: invoke authorization hook for an implementation that does not match the authorized target.
         organizationProxy.exposeAuthorizeUpgrade(address(implementationV2));
     }
@@ -900,7 +907,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Setup: implementation contract call context (not proxy/delegatecall).
 
         // Verify: UUPS entrypoint enforces proxy-only call context.
-        vm.expectRevert();
+        vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         // Call: invoke UUPS upgrade entrypoint directly on implementation contract.
         IUUPSUpgradeableEntrypoints(address(implementationV1)).upgradeToAndCall(address(implementationV2), bytes(""));
     }
@@ -910,7 +917,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Setup: proxy call path into UUPS `proxiableUUID`.
 
         // Verify: `proxiableUUID` cannot be called through delegatecall/proxy context.
-        vm.expectRevert();
+        vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         // Call: invoke `proxiableUUID` through the Organization proxy.
         IUUPSUpgradeableEntrypoints(address(organizationProxy)).proxiableUUID();
     }

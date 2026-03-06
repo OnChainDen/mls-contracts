@@ -437,7 +437,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         });
 
         // Verify: no-code update path reverts and leaves state unchanged.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, noCodeImplementation)
+        );
         vm.prank(GUARDIAN);
         // Call: attempt no-code implementation update.
         harness.setAccountImplementation(noCodeImplementation, failingAuth);

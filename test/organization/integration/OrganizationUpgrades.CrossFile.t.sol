@@ -309,13 +309,13 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         AdminAuthParams memory invalidAuth;
 
         // Verify: Organization upgrade path rejects invalid auth.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.AdminOperationExpired.selector);
         vm.prank(GUARDIAN);
         // Call: wrapper-based Organization upgrade with invalid auth.
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), invalidAuth);
 
         // Verify: Account implementation upgrade path also rejects invalid auth.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.AdminOperationExpired.selector);
         vm.prank(GUARDIAN);
         // Call: account implementation update with invalid auth.
         organizationProxy.setAccountImplementation(accountImplV1, invalidAuth);

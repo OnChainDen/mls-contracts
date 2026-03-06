@@ -182,6 +182,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
         bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
 
         // Verify: malformed constraints should revert in the current implementation.
+        // Note: compiler-generated ABI decoder emits revert(0,0) on bounds-check failure — no error selector.
         vm.expectRevert();
         // Call: execute `isContractInteractionAllowedByPolicyViaPolicyLibrary` with malformed constraints.
         harness.isContractInteractionAllowedByPolicyViaPolicyLibrary(

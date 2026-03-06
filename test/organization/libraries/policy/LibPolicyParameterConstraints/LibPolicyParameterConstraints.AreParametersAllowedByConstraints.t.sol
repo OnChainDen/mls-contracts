@@ -130,6 +130,7 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1));
 
         // Verify: malformed ABI should revert in the current implementation.
+        // Note: compiler-generated ABI decoder emits revert(0,0) on bounds-check failure — no error selector.
         vm.expectRevert();
         // Call: execute `areParametersAllowedByConstraintsViaPolicyLibrary` with malformed constraints.
         harness.areParametersAllowedByConstraintsViaPolicyLibrary(malformedConstraints, data);

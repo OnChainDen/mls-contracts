@@ -423,6 +423,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         bytes memory signature = abi.encodePacked(uint8(0x01), malformed);
 
         // Verify: undersized malformed payloads revert during policy decode.
+        // Note: compiler-generated ABI decoder emits revert(0,0) when head is too short — no error selector.
         vm.expectRevert();
         // Call: execute type-routed validation with malformed payload.
         harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);

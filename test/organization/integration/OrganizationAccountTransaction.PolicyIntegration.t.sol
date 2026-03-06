@@ -630,7 +630,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         });
 
         // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         // Call: invoke `validateTransactionRejectionOrRevertViaLibrary` with the failing payload to exercise the revert
         // branch.
         harness.validateTransactionRejectionOrRevertViaLibrary({
@@ -1630,7 +1630,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         vm.chainId(31_337);
         // Verify: assert that the revert reason matches the policy guard under test.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
         // branch.
         harness.validateTransactionApprovalOrRevertViaLibrary({

@@ -236,7 +236,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
 
         // Verify: this scenario should revert with the expected failure mode.
 
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         // Call: invoke admin-auth validation and nonce-consumption logic.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,

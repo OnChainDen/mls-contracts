@@ -591,7 +591,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
         // `isApproval` is part of the typed-data domain, so this must fail.
         // Verify: confirm this branch reverts for the intended failure condition.
-        vm.expectRevert();
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         // Call: run `validateAdminAuthAndConsumeNonceOrRevert` for the prepared operation payload and auth params.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,

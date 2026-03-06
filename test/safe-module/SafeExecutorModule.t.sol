@@ -218,7 +218,11 @@ contract SafeExecutorModuleTest is Test {
 
         // Unauthorized user should fail
         vm.prank(unauthorizedUser);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISafeExecutorModule.UnauthorizedCaller.selector, unauthorizedUser, authorizedExecutor
+            )
+        );
         module.executeOnBehalf(address(mockTarget), data);
 
         // Authorized executor should succeed

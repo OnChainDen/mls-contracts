@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {
     LibOrganizationAccountTransactionTestBase
 } from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionTestBase.sol";
@@ -95,7 +96,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
 
         // Verify: wrong approval flag in signed hash causes validation failure.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
+        );
         // Call: validate approval with mismatch signature.
         harness.validateTransactionApprovalOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, data, 4, expiration, DEFAULT_POLICY_ID, wrongSignature, bytes(""), proofs
@@ -269,7 +272,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
         // Verify: malformed signature should revert during signer recovery.
-        vm.expectRevert();
+        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
         // Call: validate approval with malformed signature.
         harness.validateTransactionApprovalOrRevertViaLibrary(
             ACCOUNT,
@@ -369,7 +372,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
 
         // Verify: mismatch initiator hash flag causes failure.
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.PolicyDoesNotApply.selector, DEFAULT_POLICY_ID)
+        );
         // Call: validate rejection.
         harness.validateTransactionRejectionOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, data, 15, expiration, DEFAULT_POLICY_ID, wrongInitiatorSig, rejectionSig, proofs
@@ -471,7 +476,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
 
         // Verify: approval-hash review signature cannot satisfy rejection flow.
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
         // Call: validate rejection.
         harness.validateTransactionRejectionOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, data, 19, expiration, DEFAULT_POLICY_ID, initiatorSig, wrongReviewSig, proofs
@@ -542,7 +547,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         bytes memory data = abi.encodeWithSelector(bytes4(0x30303030), uint256(10));
 
         // Verify: malformed initiator signature should revert signer recovery.
-        vm.expectRevert();
+        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
         // Call: validate rejection with malformed signature.
         harness.validateTransactionRejectionOrRevertViaLibrary(
             ACCOUNT, DESTINATION, 0, data, 22, block.timestamp + 1 days, DEFAULT_POLICY_ID, hex"01", hex"02", proofs

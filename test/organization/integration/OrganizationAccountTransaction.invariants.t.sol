@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {Vm} from "forge-std/Vm.sol";
 
+import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {
@@ -116,7 +117,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             DEFAULT_POLICY_ID,
             true
         );
-        vm.expectRevert();
+        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
         vm.prank(GUARDIAN);
         harness.executeAccountTransaction({
             account: address(account),

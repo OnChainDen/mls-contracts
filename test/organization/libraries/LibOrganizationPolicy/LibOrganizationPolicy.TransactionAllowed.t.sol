@@ -374,6 +374,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
         });
 
         // Verify: malformed constraints should revert in the current implementation.
+        // Note: compiler-generated ABI decoder emits revert(0,0) on bounds-check failure — no error selector.
         vm.expectRevert();
         // Call: execute `isTransactionAllowedByPolicyViaLibrary` with malformed constraints.
         harness.isTransactionAllowedByPolicyViaLibrary(
