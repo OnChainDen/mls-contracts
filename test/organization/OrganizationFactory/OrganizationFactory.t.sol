@@ -2,17 +2,23 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {Vm} from "forge-std/Vm.sol";
 
+import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
+import {
+    ImplementationWhitelistHarness,
+    ImplementationWhitelistV2Harness
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
 import {
     IncompatibleOrganizationImplementation,
     InitializationWhitelistMock,
@@ -23,6 +29,10 @@ import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
 import {ContractType, InitializationParams} from "types/CommonTypes.sol";
+
+interface IWhitelistUUPSUpgradeEntrypoints {
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
+}
 
 /**
  * @dev Factory-level tests for initialization and deployment flows.
@@ -125,7 +135,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts when the organization implementation is not
     /// whitelisted. [OF-DO-2]
-    function test_OF_DO_5__OF_DO_2_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted() public {
+    function test_OF_DO_5__OF_DO_2_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted()
+        public
+    {
         // Setup: Mark the organization implementation as not whitelisted and keep valid init params.
         InitializationParams memory params = _defaultInitializationParams();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementation), false);
@@ -237,7 +249,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         public
     {
         // Setup: configure a reverting whitelist payload and precompute the address that would otherwise be deployed.
-        bytes32 salt = bytes32(uint256(2007_1));
+        bytes32 salt = bytes32(uint256(20_071));
         InitializationParams memory params = _defaultInitializationParams();
         address expected = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
         bytes memory revertData = bytes("WHITELIST_REVERT");
@@ -363,7 +375,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` does not persist deployment effects when initialization
     /// reverts. [OF-DO-8]
-    function test_OF_DO_16__OF_DO_8_deployOrganization_revertedInitialization_doesNotPersistOrganizationDeployedEvent() public {
+    function test_OF_DO_16__OF_DO_8_deployOrganization_revertedInitialization_doesNotPersistOrganizationDeployedEvent()
+        public
+    {
         // Setup: Prepare invalid initialization input and precompute the deployment address.
         bytes32 salt = bytes32(uint256(2014));
         InitializationParams memory params = _defaultInitializationParams();
@@ -424,6 +438,99 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
         // Verify: Atomic rollback leaves no code at the computed address.
         assertEq(expected.code.length, 0, "failed incompatible deployment must leave no code");
+    }
+
+    /// @dev Verifies factory deployment still uses the upgraded whitelist proxy and stores the exact
+    ///      implementation/whitelist tuple in the deployed Organization proxy. [OF-DO-9, IWC-INT-5]
+    function test_OF_DO_25__OF_DO_9__IWC_INT_5_deployOrganization_upgradedWhitelistPreservesStoredTupleAndEnforcement()
+        public
+    {
+        // Setup: deploy a real whitelist proxy, seed the Organization implementation, and prepare a V2 whitelist
+        // upgrade target.
+        address whitelistOwner = address(0xD351);
+        ImplementationWhitelistHarness realWhitelist = _deployRealWhitelistProxy(
+            whitelistOwner, _singleAddress(address(implementation)), _singleAddress(address(accountImplementation))
+        );
+        ImplementationWhitelistV2Harness whitelistV2 = new ImplementationWhitelistV2Harness();
+        InitializationParams memory params = _defaultInitializationParams();
+
+        // Call: upgrade the whitelist proxy, then deploy an Organization through the factory using that upgraded
+        // whitelist endpoint.
+        vm.prank(whitelistOwner);
+        IWhitelistUUPSUpgradeEntrypoints(address(realWhitelist)).upgradeToAndCall(address(whitelistV2), bytes(""));
+
+        vm.prank(AUTHORIZED_DEPLOYER);
+        address deployed =
+            factory.deployOrganization(bytes32(uint256(2017)), address(implementation), address(realWhitelist), params);
+
+        // Verify: the deployed proxy stores the exact whitelist and implementation addresses passed through the
+        // factory, and the upgraded whitelist still rejects unapproved Organization implementations.
+        assertEq(
+            OrganizationImplementationHarness(payable(deployed)).getWhitelistAddressStorageForTests(),
+            address(realWhitelist),
+            "deployed organization stored wrong whitelist address"
+        );
+        assertEq(
+            address(uint160(uint256(vm.load(deployed, ERC1967_IMPLEMENTATION_SLOT)))),
+            address(implementation),
+            "deployed organization stored wrong implementation address"
+        );
+
+        OrganizationImplementationHarness unapprovedImplementation = new OrganizationImplementationHarness();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(unapprovedImplementation)
+            )
+        );
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(
+            bytes32(uint256(2018)), address(unapprovedImplementation), address(realWhitelist), params
+        );
+    }
+
+    /// @dev Verifies transferring whitelist ownership immediately changes who can unlock factory deployments.
+    ///      [IWC-INT-6]
+    function test_OF_DO_26__IWC_INT_6_whitelistOwnershipTransfer_immediatelyControlsFactoryDeployments() public {
+        // Setup: deploy a real whitelist proxy without the Organization implementation approved, then prepare a valid
+        // factory deployment tuple.
+        address whitelistOwner = address(0xD352);
+        address newWhitelistOwner = address(0xD353);
+        ImplementationWhitelistHarness realWhitelist =
+            _deployRealWhitelistProxy(whitelistOwner, new address[](0), _singleAddress(address(accountImplementation)));
+        InitializationParams memory params = _defaultInitializationParams();
+
+        // Call: attempt deployment before whitelisting, transfer whitelist ownership, and then try to mutate from the
+        // old and new whitelist owners.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementation)
+            )
+        );
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(bytes32(uint256(2019)), address(implementation), address(realWhitelist), params);
+
+        vm.prank(whitelistOwner);
+        realWhitelist.transferOwnership(newWhitelistOwner);
+        vm.prank(newWhitelistOwner);
+        realWhitelist.acceptOwnership();
+
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, whitelistOwner));
+        vm.prank(whitelistOwner);
+        realWhitelist.whitelistImplementations(
+            ContractType.Organization, _singleAddress(address(implementation)), new address[](0)
+        );
+
+        vm.prank(newWhitelistOwner);
+        realWhitelist.whitelistImplementations(
+            ContractType.Organization, _singleAddress(address(implementation)), new address[](0)
+        );
+
+        // Verify: only the new whitelist owner can enable the Organization implementation, and that change
+        // immediately unlocks the factory deployment path.
+        vm.prank(AUTHORIZED_DEPLOYER);
+        address deployed =
+            factory.deployOrganization(bytes32(uint256(2019)), address(implementation), address(realWhitelist), params);
+        assertTrue(IOrganization(deployed).isInitialized(), "new whitelist owner should unlock deployment");
     }
 
     /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` is deterministic and independent of caller
@@ -537,5 +644,35 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
             factoryAddr,
             "keccak256 of public bytecode should match init code hash in computeOrganizationAddress"
         );
+    }
+
+    /// @dev Deploys a real implementation-whitelist proxy configured with deterministic seed arrays.
+    /// @param initialOwner Address that becomes whitelist owner during proxy initialization.
+    /// @param organizationImplementations Initial Organization-type whitelist seeds.
+    /// @param accountImplementations Initial Account-type whitelist seeds.
+    /// @return proxyInstance Proxy-backed whitelist harness used by integration-style tests.
+    function _deployRealWhitelistProxy(
+        address initialOwner,
+        address[] memory organizationImplementations,
+        address[] memory accountImplementations
+    ) internal returns (ImplementationWhitelistHarness proxyInstance) {
+        ImplementationWhitelistHarness whitelistImplementation = new ImplementationWhitelistHarness();
+        bytes memory initData = abi.encodeWithSelector(
+            whitelistImplementation.initialize.selector,
+            initialOwner,
+            organizationImplementations,
+            accountImplementations
+        );
+        proxyInstance = ImplementationWhitelistHarness(
+            payable(address(new ImplementationWhitelistProxy(address(whitelistImplementation), initData)))
+        );
+    }
+
+    /// @dev Wraps an address in a single-entry array for whitelist helper calls.
+    /// @param value Address to place at index zero.
+    /// @return values One-element address array containing `value`.
+    function _singleAddress(address value) internal pure returns (address[] memory values) {
+        values = new address[](1);
+        values[0] = value;
     }
 }

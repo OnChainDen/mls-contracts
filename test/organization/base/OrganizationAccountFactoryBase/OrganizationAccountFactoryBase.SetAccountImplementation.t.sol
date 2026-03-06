@@ -2,17 +2,31 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
+import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
+<<<<<<< HEAD
+=======
+import {
+    ImplementationWhitelistHarness,
+    ImplementationWhitelistV2Harness
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
+>>>>>>> d4d4eb57 ([TEST] Close test plan gaps)
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
+import {RevertingImplementationWhitelistMock} from "test/organization/shared/OrganizationAccountFactoryMocks.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {ContractType, OperationType} from "types/CommonTypes.sol";
+
+interface IWhitelistProxyUpgradeEntrypoints {
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
+}
 
 /**
  * @dev Unit tests for `OrganizationAccountFactoryBase.setAccountImplementation` behavior.
@@ -403,7 +417,12 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies desired behavior that no-code implementation addresses are rejected even if whitelisted.
+<<<<<<< HEAD
     function test_OAFB_SAI_18__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
+=======
+    /// [OAFB-SAI-9]
+    function test_OAFB_SAI_12__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
+>>>>>>> d4d4eb57 ([TEST] Close test plan gaps)
         public
     {
         address noCodeImplementation = address(0xCA11);
@@ -457,7 +476,11 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies signatures for a different implementation cannot authorize current update call. [OAFB-SAI-2]
+<<<<<<< HEAD
     function test_OAFB_SAI_7__OAFB_SAI_2_setAccountImplementation_signaturesForDifferentImplementation_reverts()
+=======
+    function test_OAFB_SAI_14__OAFB_SAI_2_setAccountImplementation_signaturesForDifferentImplementation_reverts()
+>>>>>>> d4d4eb57 ([TEST] Close test plan gaps)
         public
     {
         // Setup: whitelist both implementations and sign auth for V1 only.
@@ -551,5 +574,185 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(address(0), auth);
 
         // Verify: zero-address implementation should be explicitly rejected before whitelist/code-length checks.
+    }
+
+    /// @dev Verifies reverting whitelist contracts fail closed and preserve nonce/state for account implementation
+    /// updates. [OAFB-SAI-7]
+    function test_OAFB_SAI_17__OAFB_SAI_7_setAccountImplementation_revertingWhitelistContract_revertsAndPreservesState()
+        public
+    {
+        // Setup: seed an active account implementation pointer, swap in a whitelist that always reverts, and prepare
+        // an otherwise-valid implementation update payload.
+        _setSingleAdminThresholdOne();
+        harness.setAccountImplementationStorage(accountImplementationV1);
+        RevertingImplementationWhitelistMock revertingWhitelist = new RevertingImplementationWhitelistMock();
+        harness.setUpgradeState(address(revertingWhitelist), address(0));
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV2,
+            salt: 6172,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: execute `setAccountImplementation` while the whitelist contract itself reverts.
+        vm.expectRevert(bytes("VALIDATION_REVERT"));
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV2, auth);
+
+        // Verify: the whitelist-call failure leaves the active implementation pointer unchanged and does not consume
+        // the signed nonce.
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV1,
+            "reverting whitelist should preserve the active implementation pointer"
+        );
+        assertFalse(
+            harness.getUsedNonce(_computeSetAccountImplementationNonce(operationData, 6172)),
+            "reverting whitelist should not consume nonce"
+        );
+    }
+
+    /// @dev Verifies upgrading the real whitelist proxy preserves account implementation enforcement behavior.
+    ///      [IWC-INT-5]
+    function test_OAFB_SAI_18__IWC_INT_5_setAccountImplementation_upgradedWhitelistPreservesEnforcement() public {
+        // Setup: route account implementation checks through a real whitelist proxy that already approves V1, then
+        // prepare a whitelist upgrade target plus success/failure auth payloads.
+        address whitelistOwner = address(0xD551);
+        ImplementationWhitelistHarness realWhitelist = _deployRealWhitelistProxy(
+            whitelistOwner, new address[](0), _singleAddress(address(accountImplementationV1))
+        );
+        ImplementationWhitelistV2Harness whitelistV2 = new ImplementationWhitelistV2Harness();
+        harness.setUpgradeState(address(realWhitelist), address(0));
+        _setSingleAdminThresholdOne();
+
+        (AdminAuthParams memory allowedAuth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6173,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory rejectedAuth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV2,
+            salt: 6174,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: upgrade the whitelist proxy itself, then execute account implementation updates against that upgraded
+        // whitelist endpoint.
+        vm.prank(whitelistOwner);
+        IWhitelistProxyUpgradeEntrypoints(address(realWhitelist)).upgradeToAndCall(address(whitelistV2), bytes(""));
+
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, allowedAuth);
+
+        // Verify: the preserved Account-type whitelist entry still authorizes V1, while the upgraded whitelist
+        // continues to reject unapproved account implementations.
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV1,
+            "upgraded whitelist should preserve V1 approval"
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV2
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV2, rejectedAuth);
+    }
+
+    /// @dev Verifies transferring whitelist ownership immediately changes who can unlock account implementation
+    /// updates. [IWC-INT-6]
+    function test_OAFB_SAI_19__IWC_INT_6_setAccountImplementation_whitelistOwnershipTransfer_changesMutationRights()
+        public
+    {
+        // Setup: route account implementation checks through a real whitelist proxy that starts without V1 approved,
+        // then prepare a reusable account implementation update payload.
+        address whitelistOwner = address(0xD552);
+        address newWhitelistOwner = address(0xD553);
+        ImplementationWhitelistHarness realWhitelist =
+            _deployRealWhitelistProxy(whitelistOwner, new address[](0), new address[](0));
+        harness.setUpgradeState(address(realWhitelist), address(0));
+        _setSingleAdminThresholdOne();
+
+        (AdminAuthParams memory auth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6175,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: fail once while V1 is unapproved, transfer whitelist ownership, and then attempt whitelist mutations
+        // from the old and new owners.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplementationV1
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, auth);
+
+        vm.prank(whitelistOwner);
+        realWhitelist.transferOwnership(newWhitelistOwner);
+        vm.prank(newWhitelistOwner);
+        realWhitelist.acceptOwnership();
+
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, whitelistOwner));
+        vm.prank(whitelistOwner);
+        realWhitelist.whitelistImplementations(
+            ContractType.Account, _singleAddress(address(accountImplementationV1)), new address[](0)
+        );
+
+        vm.prank(newWhitelistOwner);
+        realWhitelist.whitelistImplementations(
+            ContractType.Account, _singleAddress(address(accountImplementationV1)), new address[](0)
+        );
+
+        // Verify: only the new whitelist owner can unlock account implementation updates, and the original signed
+        // request still succeeds because the failed pre-transfer attempt did not consume its nonce.
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, auth);
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV1,
+            "new whitelist owner should unlock account implementation updates"
+        );
+    }
+
+    /// @dev Deploys a real implementation-whitelist proxy configured with deterministic seed arrays.
+    /// @param initialOwner Address that becomes whitelist owner during proxy initialization.
+    /// @param organizationImplementations Initial Organization-type whitelist seeds.
+    /// @param accountImplementations Initial Account-type whitelist seeds.
+    /// @return proxyInstance Proxy-backed whitelist harness used by account implementation tests.
+    function _deployRealWhitelistProxy(
+        address initialOwner,
+        address[] memory organizationImplementations,
+        address[] memory accountImplementations
+    ) internal returns (ImplementationWhitelistHarness proxyInstance) {
+        ImplementationWhitelistHarness whitelistImplementation = new ImplementationWhitelistHarness();
+        bytes memory initData = abi.encodeWithSelector(
+            whitelistImplementation.initialize.selector,
+            initialOwner,
+            organizationImplementations,
+            accountImplementations
+        );
+        proxyInstance = ImplementationWhitelistHarness(
+            payable(address(new ImplementationWhitelistProxy(address(whitelistImplementation), initData)))
+        );
+    }
+
+    /// @dev Wraps an address in a single-entry array for whitelist helper calls.
+    /// @param value Address to place at index zero.
+    /// @return values One-element address array containing `value`.
+    function _singleAddress(address value) internal pure returns (address[] memory values) {
+        values = new address[](1);
+        values[0] = value;
     }
 }

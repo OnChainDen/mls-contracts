@@ -2,28 +2,38 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {AccountImplementation} from "account/AccountImplementation.sol";
+import {ImplementationWhitelistProxy} from "implementation-whitelist/ImplementationWhitelistProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
 import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
+    ImplementationWhitelistHarness,
+    ImplementationWhitelistV2Harness
+} from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
+import {
     OrganizationImplementationSuiteBase
 } from "test/organization/OrganizationImplementation/OrganizationImplementationSuiteBase.sol";
 import {
     OrganizationImplementationHarness,
-    ValidationOrderWhitelistMock,
-    RevertingValidationWhitelistMock
+    RevertingValidationWhitelistMock,
+    ValidationOrderWhitelistMock
 } from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {OperationType} from "types/CommonTypes.sol";
+import {ContractType, OperationType} from "types/CommonTypes.sol";
 import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 interface IUUPSUpgradeableEntrypoints {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
     function proxiableUUID() external view returns (bytes32);
+}
+
+interface IWhitelistUpgradeEntrypoints {
+    function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
 }
 
 /**
@@ -34,7 +44,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies valid guardian + admin auth + whitelisted implementation + empty data upgrades successfully.
     /// [OI-UTCWA-3]
-    function test_OI_UTACWA_1__OI_UTCWA_3_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation() public {
+    function test_OI_UTACWA_1__OI_UTCWA_3_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation()
+        public
+    {
         // Setup: configure valid admin auth and whitelist a UUPS-compatible Organization target.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -292,7 +304,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies implementations whitelisted only for `ContractType.Account` cannot upgrade Organization proxy.
     /// [OI-UTCWA-2]
-    function test_OI_UTACWA_12__OI_UTCWA_2_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade() public {
+    function test_OI_UTACWA_12__OI_UTCWA_2_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade()
+        public
+    {
         // Setup: whitelist the target under Account type only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(implementationV2), true);
@@ -828,9 +842,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies whitelist validation runs before the authorization target is exposed in upgrade storage.
     /// [OI-UTCWA-6, OI-UTCWA-7]
-    function test_OI_UTACWA_31__OI_UTCWA_6__OI_UTCWA_7_whitelistValidation_runsBeforeAuthorizationFlagIsSet()
-        public
-    {
+    function test_OI_UTACWA_31__OI_UTCWA_6__OI_UTCWA_7_whitelistValidation_runsBeforeAuthorizationFlagIsSet() public {
         // Setup: route validation through a mock that inspects upgrade storage during the whitelist call.
         _setSingleAdminThresholdOne();
         ValidationOrderWhitelistMock validatingWhitelist = new ValidationOrderWhitelistMock(organizationProxy);
@@ -902,6 +914,113 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         assertFalse(
             stateHarness.getUsedNonce(_computeUpgradeNonce(noCodeOperationData, 14_032)),
             "no-code-target revert should not consume nonce"
+        );
+    }
+
+    /// @dev Verifies upgrading the real whitelist proxy preserves Organization upgrade enforcement for current and
+    ///      future targets. [IWC-INT-5]
+    function test_OI_UTACWA_32__IWC_INT_5_whitelistUpgrade_preservesOrganizationUpgradeEnforcement() public {
+        // Setup: point Organization upgrade storage at a real whitelist proxy that already allows V2, then prepare a
+        // whitelist upgrade target and Organization upgrade auth.
+        address whitelistOwner = address(0xD451);
+        ImplementationWhitelistHarness realWhitelist =
+            _deployRealWhitelistProxy(whitelistOwner, _singleAddress(address(implementationV2)), new address[](0));
+        ImplementationWhitelistV2Harness whitelistV2 = new ImplementationWhitelistV2Harness();
+        organizationProxy.setUpgradeState(address(realWhitelist), address(0));
+        _setSingleAdminThresholdOne();
+
+        (AdminAuthParams memory upgradeAuth,) = _buildUpgradeAuth({
+            newImplementation: address(implementationV2),
+            salt: 14_033,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory rejectedAuth,) = _buildUpgradeAuth({
+            newImplementation: address(implementationV3),
+            salt: 14_034,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: upgrade the whitelist proxy itself, then run the Organization upgrade against that upgraded
+        // whitelist endpoint.
+        vm.prank(whitelistOwner);
+        IWhitelistUpgradeEntrypoints(address(realWhitelist)).upgradeToAndCall(address(whitelistV2), bytes(""));
+
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), upgradeAuth);
+
+        // Verify: the Organization upgrade still succeeds for the preserved whitelist entry, and the upgraded
+        // whitelist continues to reject unapproved implementations.
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "upgrade should succeed"
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV3)
+            )
+        );
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV3), bytes(""), rejectedAuth);
+    }
+
+    /// @dev Verifies transferring whitelist ownership immediately changes who can unlock Organization upgrades.
+    ///      [IWC-INT-6]
+    function test_OI_UTACWA_33__IWC_INT_6_whitelistOwnershipTransfer_immediatelyControlsOrganizationUpgrades() public {
+        // Setup: route Organization upgrade checks through a real whitelist proxy that starts without V2 approved,
+        // then prepare a reusable authorized upgrade payload.
+        address whitelistOwner = address(0xD452);
+        address newWhitelistOwner = address(0xD453);
+        ImplementationWhitelistHarness realWhitelist =
+            _deployRealWhitelistProxy(whitelistOwner, new address[](0), new address[](0));
+        organizationProxy.setUpgradeState(address(realWhitelist), address(0));
+        _setSingleAdminThresholdOne();
+
+        (AdminAuthParams memory auth,) = _buildUpgradeAuth({
+            newImplementation: address(implementationV2),
+            salt: 14_035,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: fail once while V2 is unapproved, transfer whitelist ownership, then attempt whitelist mutations from
+        // the old and new owners.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV2)
+            )
+        );
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
+
+        vm.prank(whitelistOwner);
+        realWhitelist.transferOwnership(newWhitelistOwner);
+        vm.prank(newWhitelistOwner);
+        realWhitelist.acceptOwnership();
+
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, whitelistOwner));
+        vm.prank(whitelistOwner);
+        realWhitelist.whitelistImplementations(
+            ContractType.Organization, _singleAddress(address(implementationV2)), new address[](0)
+        );
+
+        vm.prank(newWhitelistOwner);
+        realWhitelist.whitelistImplementations(
+            ContractType.Organization, _singleAddress(address(implementationV2)), new address[](0)
+        );
+
+        // Verify: only the new whitelist owner can unlock the Organization upgrade path, and the original signed
+        // upgrade request still succeeds because the failed pre-transfer attempt did not consume its nonce.
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)),
+            address(implementationV2),
+            "new owner should unlock upgrade"
         );
     }
 
@@ -995,5 +1114,35 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Verify: `proxiableUUID` on the implementation directly returns the correct ERC-1967 slot.
         bytes32 uuid = IUUPSUpgradeableEntrypoints(address(implementationV1)).proxiableUUID();
         assertEq(uuid, ERC1967Utils.IMPLEMENTATION_SLOT);
+    }
+
+    /// @dev Deploys a real implementation-whitelist proxy configured with deterministic seed arrays.
+    /// @param initialOwner Address that becomes whitelist owner during proxy initialization.
+    /// @param organizationImplementations Initial Organization-type whitelist seeds.
+    /// @param accountImplementations Initial Account-type whitelist seeds.
+    /// @return proxyInstance Proxy-backed whitelist harness used by Organization upgrade tests.
+    function _deployRealWhitelistProxy(
+        address initialOwner,
+        address[] memory organizationImplementations,
+        address[] memory accountImplementations
+    ) internal returns (ImplementationWhitelistHarness proxyInstance) {
+        ImplementationWhitelistHarness whitelistImplementation = new ImplementationWhitelistHarness();
+        bytes memory initData = abi.encodeWithSelector(
+            whitelistImplementation.initialize.selector,
+            initialOwner,
+            organizationImplementations,
+            accountImplementations
+        );
+        proxyInstance = ImplementationWhitelistHarness(
+            payable(address(new ImplementationWhitelistProxy(address(whitelistImplementation), initData)))
+        );
+    }
+
+    /// @dev Wraps an address in a single-entry array for whitelist helper calls.
+    /// @param value Address to place at index zero.
+    /// @return values One-element address array containing `value`.
+    function _singleAddress(address value) internal pure returns (address[] memory values) {
+        values = new address[](1);
+        values[0] = value;
     }
 }

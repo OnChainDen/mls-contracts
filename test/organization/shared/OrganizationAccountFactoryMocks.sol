@@ -89,3 +89,22 @@ contract ImplementationWhitelistMock is IImplementationWhitelist {
         }
     }
 }
+
+/**
+ * @dev Minimal whitelist stub that always reverts during validation.
+ */
+contract RevertingImplementationWhitelistMock {
+    /**
+     * @dev Reverts unconditionally so tests can assert fail-closed behavior when the whitelist call itself fails.
+     * @param contractType Contract type argument accepted for signature compatibility.
+     * @param implementation Implementation argument accepted for signature compatibility.
+     */
+    function validateIsImplementationWhitelistedOrRevert(ContractType contractType, address implementation)
+        external
+        pure
+    {
+        contractType;
+        implementation;
+        revert("VALIDATION_REVERT");
+    }
+}
