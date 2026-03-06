@@ -778,7 +778,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
         // Verify: misconfigured whitelist address must block upgrades and leave nonce unused.
         // Note: Solidity's extcodesize check on the no-code whitelist address produces revert(0,0) with no error data.
-        vm.expectRevert();
+        vm.expectRevert(bytes(""));
         vm.prank(GUARDIAN);
         // Call: execute wrapper with whitelist target lacking runtime code.
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);

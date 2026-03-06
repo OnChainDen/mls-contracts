@@ -112,13 +112,16 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
         });
         address implementationBefore = _readProxyImplementation(address(organizationProxy));
 
-        // Verify: malformed data path reverts and implementation pointer remains unchanged.
-        // Note: malformed bytes are delegatecalled as migration data — the error varies by fuzz input.
-        vm.expectRevert();
-        vm.prank(GUARDIAN);
         // Call: execute upgrade with malformed migration payload.
-        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), malformedData, auth);
+        vm.prank(GUARDIAN);
+        (bool success,) = address(organizationProxy).call(
+            abi.encodeCall(
+                IOrganization.upgradeToAndCallWithAuthorization, (address(implementationV2), malformedData, auth)
+            )
+        );
 
+        // Verify: malformed data path reverts and implementation pointer remains unchanged.
+        assertFalse(success, "malformed migration payload should revert");
         assertEq(_readProxyImplementation(address(organizationProxy)), implementationBefore, "impl changed on revert");
     }
 
