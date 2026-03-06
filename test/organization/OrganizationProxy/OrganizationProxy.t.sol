@@ -93,6 +93,9 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         IOrganization organization =
             IOrganization(address(new OrganizationProxy(address(implementation), address(whitelist))));
 
+        // Verify: The proxy is not initialized yet
+        assertFalse(organization.isInitialized(), "proxy should start uninitialized");
+
         // Call: First attempt initialization from a non-deployer, then initialize from the direct deployer.
         vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
         vm.prank(otherCaller);
