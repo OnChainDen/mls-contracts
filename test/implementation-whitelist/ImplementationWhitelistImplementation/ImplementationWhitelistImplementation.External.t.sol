@@ -172,15 +172,19 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
     /// @dev Verifies Organization and Account whitelists are independent namespaces.
     function test_IWI_WI_3_contractTypeMappings_areIndependent() public {
-        // Setup: whitelist same address under Organization type only.
+        // Setup: whitelist one Organization and one Account implementation independently.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
             ContractType.Organization, _single(organizationImplementationA), new address[](0)
         );
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
 
-        // Verify: Organization entry is true while Account entry remains false.
+        // Verify: each address is true only under its matching contract type.
         assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
         assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Account, organizationImplementationA));
+        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA));
+        assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, accountImplementationA));
     }
 
     /// @dev Verifies whitelist mutation emits events for each added/removed implementation.
@@ -403,6 +407,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
         // Verify: migration logic executed in proxy storage context.
         assertEq(ImplementationWhitelistV2Harness(address(whitelistProxy)).getMigrationMarker(), 505, "marker mismatch");
+        assertEq(_readProxyImplementation(address(whitelistProxy)), address(implementationV2));
     }
 
     /// @dev Verifies whitelist storage persists across UUPS upgrades.
