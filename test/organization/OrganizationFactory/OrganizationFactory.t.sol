@@ -220,7 +220,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         InitializationParams memory params = _defaultInitializationParams();
 
         vm.prank(AUTHORIZED_DEPLOYER);
-        factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+        address deployed = factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+        assertGt(deployed.code.length, 0, "first deployment should produce a contract");
 
         // Call: Re-deploy the same tuple and expect CREATE2 deployment failure.
         vm.expectRevert(Errors.FailedDeployment.selector);
