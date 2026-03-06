@@ -31,7 +31,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     event Upgraded(address indexed implementation);
 
     /// @dev Verifies valid guardian + admin auth + whitelisted implementation + empty data upgrades successfully.
-    function test_OI_UTACWA_1_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation() public {
+    /// [OI-UTCWA-3]
+    function test_OI_UTACWA_1__OI_UTCWA_3_upgradesSuccessfullyWithValidGuardianAuthAndWhitelistedImplementation() public {
         // Setup: configure valid admin auth and whitelist a UUPS-compatible Organization target.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -53,8 +54,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         );
     }
 
-    /// @dev Verifies non-empty migration calldata executes successfully during authorized upgrade.
-    function test_OI_UTACWA_2_upgradesSuccessfullyAndExecutesMigrationCall() public {
+    /// @dev Verifies non-empty migration calldata executes successfully during authorized upgrade. [OI-UTCWA-11]
+    function test_OI_UTACWA_2__OI_UTCWA_11_upgradesSuccessfullyAndExecutesMigrationCall() public {
         // Setup: configure auth/whitelist and migration payload for the post-upgrade delegatecall.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -262,8 +263,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), rejectionAuth);
     }
 
-    /// @dev Verifies non-whitelisted Organization implementation reverts `ImplementationNotWhitelisted`.
-    function test_OI_UTACWA_11_nonWhitelistedImplementation_reverts() public {
+    /// @dev Verifies non-whitelisted Organization implementation reverts `ImplementationNotWhitelisted`. [OI-UTCWA-1]
+    function test_OI_UTACWA_11__OI_UTCWA_1_nonWhitelistedImplementation_reverts() public {
         // Setup: configure valid auth but leave target implementation un-whitelisted.
         _setSingleAdminThresholdOne();
         (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
@@ -288,7 +289,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies implementations whitelisted only for `ContractType.Account` cannot upgrade Organization proxy.
-    function test_OI_UTACWA_12_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade() public {
+    /// [OI-UTCWA-2]
+    function test_OI_UTACWA_12__OI_UTCWA_2_accountTypeOnlyWhitelistedImplementation_revertsForOrganizationUpgrade() public {
         // Setup: whitelist the target under Account type only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(implementationV2), true);
@@ -612,7 +614,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies authorized-upgrade target is non-zero only during upgrade execution and zero before/after.
-    function test_OI_UTACWA_21_upgradeAuthorizationFlag_scopedToExecutionWindow() public {
+    /// [OI-UTCWA-6, OI-UTCWA-8]
+    function test_OI_UTACWA_21__OI_UTCWA_6__OI_UTCWA_8_upgradeAuthorizationFlag_scopedToExecutionWindow() public {
         // Setup: whitelist target and use migration helper that requires in-flight upgrade authorization.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -640,8 +643,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         assertEq(afterAuthorizedTarget, address(0), "authorized target should reset after execution");
     }
 
-    /// @dev Verifies failed upgrade paths never leave authorized-upgrade target stuck set.
-    function test_OI_UTACWA_22_failedUpgrade_neverLeavesAuthorizationFlagTrue() public {
+    /// @dev Verifies failed upgrade paths never leave authorized-upgrade target stuck set. [OI-UTCWA-7, OI-UTCWA-9]
+    function test_OI_UTACWA_22__OI_UTCWA_7__OI_UTCWA_9_failedUpgrade_neverLeavesAuthorizationFlagTrue() public {
         // Setup: use reverting migration payload to force rollback path.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -665,8 +668,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         assertEq(authorizedTargetAfterFailure, address(0), "authorized target should not remain set after failure");
     }
 
-    /// @dev Verifies direct calls to inherited `upgradeToAndCall` always revert `UnauthorizedUpgrade`.
-    function test_OI_UTACWA_23_directUpgradeToAndCall_revertsUnauthorizedUpgrade() public {
+    /// @dev Verifies direct calls to inherited `upgradeToAndCall` always revert `UnauthorizedUpgrade`. [OI-UTCWA-10]
+    function test_OI_UTACWA_23__OI_UTCWA_10_directUpgradeToAndCall_revertsUnauthorizedUpgrade() public {
         // Setup: ensure target is UUPS-compatible and whitelisted to isolate bypass check.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -691,8 +694,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
-    /// `data`.
-    function test_OI_UTACWA_25_adminAuthMustBindMigrationData() public {
+    /// `data`. [OI-UTCWA-12]
+    function test_OI_UTACWA_25__OI_UTCWA_12_adminAuthMustBindMigrationData() public {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -714,7 +717,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies migration calldata cannot trigger a nested second upgrade without fresh authorization.
-    function test_OI_UTACWA_26_nestedSecondUpgradeFromMigration_reverts() public {
+    /// [OI-UTCWA-13]
+    function test_OI_UTACWA_26__OI_UTCWA_13_nestedSecondUpgradeFromMigration_reverts() public {
         // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted
         // V3.
         _setSingleAdminThresholdOne();
@@ -763,8 +767,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), nestedData, auth);
     }
 
-    /// @dev Verifies upgrades fail closed when the configured whitelist address has no code.
-    function test_OI_UTACWA_28_whitelistAddressWithoutCode_revertsFailClosed() public {
+    /// @dev Verifies upgrades fail closed when the configured whitelist address has no code. [OI-UTCWA-5]
+    function test_OI_UTACWA_28__OI_UTCWA_5_whitelistAddressWithoutCode_revertsFailClosed() public {
         // Setup: configure upgrade storage with an EOA/no-code whitelist address.
         _setSingleAdminThresholdOne();
         organizationProxy.setUpgradeState(address(0xABCD), address(0));
@@ -789,8 +793,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         );
     }
 
-    /// @dev Verifies upgrade reverts when the whitelist validation call reverts.
-    function test_OI_UTACWA_29_whitelistValidationRevert_reverts() public {
+    /// @dev Verifies upgrade reverts when the whitelist validation call reverts, confirming the upgrade path reads
+    ///      the stored whitelist address from proxy storage. [OI-UTCWA-4, ORP-CON-2]
+    function test_OI_UTACWA_29__OI_UTCWA_4__ORP_CON_2_whitelistValidationRevert_provesStoredWhitelistIsUsed() public {
         // Setup: configure revert-on-validate whitelist behavior.
         _setSingleAdminThresholdOne();
         RevertingValidationWhitelistMock revertingWhitelist = new RevertingValidationWhitelistMock();
@@ -810,7 +815,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` rejects zero and no-code targets even when whitelisted.
-    function test_OI_UTACWA_30_zeroImplementationEvenIfWhitelisted_reverts() public {
+    /// [OI-UTCWA-14, OI-UTCWA-15]
+    function test_OI_UTACWA_30__OI_UTCWA_14__OI_UTCWA_15_zeroImplementationEvenIfWhitelisted_reverts() public {
         // Setup: whitelist zero address under Organization type and build matching auth.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(0), true);

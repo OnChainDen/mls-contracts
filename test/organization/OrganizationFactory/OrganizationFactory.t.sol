@@ -57,8 +57,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` returns the precomputed proxy address, initializes it
-    /// atomically, and emits deployment events in order.
-    function test_OF_DO_1__OF_DO_2__OF_DO_3__OF_DO_18__OF_DO_19__OF_DO_20__OF_DO_21__CFI_FLOW_1_deployAuthorizedValidParams_succeedsAndMatchesPrecompute()
+    /// atomically, and emits deployment events in order. [OF-DO-4, OF-DO-5, OF-DO-9]
+    function test_OF_DO_1__OF_DO_2__OF_DO_3__OF_DO_18__OF_DO_19__OF_DO_20__OF_DO_21__CFI_FLOW_1__OF_DO_4__OF_DO_5__OF_DO_9_deployAuthorizedValidParams_succeedsAndMatchesPrecompute()
         public
     {
         // Setup: Build valid initialization params, precompute the CREATE2 address, and start log recording.
@@ -93,8 +93,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized
-    /// callers.
-    function test_OF_DO_4_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer() public {
+    /// callers. [OF-DO-1]
+    function test_OF_DO_4__OF_DO_1_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer() public {
         // Setup: Prepare valid initialization params for an unauthorized caller attempt.
         InitializationParams memory params = _defaultInitializationParams();
 
@@ -107,8 +107,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts when the organization implementation is not
-    /// whitelisted.
-    function test_OF_DO_5_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted() public {
+    /// whitelisted. [OF-DO-2]
+    function test_OF_DO_5__OF_DO_2_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted() public {
         // Setup: Mark the organization implementation as not whitelisted and keep valid init params.
         InitializationParams memory params = _defaultInitializationParams();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementation), false);
@@ -126,8 +126,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` validates whitelist inputs using
-    /// `ContractType.Organization` and the exact implementation address.
-    function test_OF_DO_6__OF_DO_7_deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation()
+    /// `ContractType.Organization` and the exact implementation address. [OF-DO-3]
+    function test_OF_DO_6__OF_DO_7__OF_DO_3_deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation()
         public
     {
         // Setup: Configure the whitelist mock to expect one exact validation tuple and then reject it.
@@ -149,8 +149,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Reaching the expected revert confirms the factory passed the intended whitelist validation inputs.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `implementationAddress == address(0)`.
-    function test_OF_DO_8_deployOrganization_zeroImplementation_reverts() public {
+    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `implementationAddress == address(0)`. [OF-DO-11]
+    function test_OF_DO_8__OF_DO_11_deployOrganization_zeroImplementation_reverts() public {
         // Setup: Prepare deployment inputs with a zero implementation while keeping whitelist checks enabled.
         bytes32 salt = bytes32(uint256(2004));
         InitializationParams memory params = _defaultInitializationParams();
@@ -165,8 +165,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Invalid implementation inputs are rejected by the expected revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects an EOA implementation address.
-    function test_OF_DO_9_deployOrganization_eoaImplementation_revertsInvalidImplementation() public {
+    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects an EOA implementation address. [OF-DO-10]
+    function test_OF_DO_9__OF_DO_10_deployOrganization_eoaImplementation_revertsInvalidImplementation() public {
         // Setup: Use an EOA as the implementation address and whitelist it to isolate proxy safety validation.
         bytes32 salt = bytes32(uint256(2005));
         InitializationParams memory params = _defaultInitializationParams();
@@ -182,8 +182,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Non-contract implementation addresses are rejected by the expected revert.
     }
 
-    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `whitelistAddress == address(0)`.
-    function test_OF_DO_10_deployOrganization_zeroWhitelist_reverts() public {
+    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `whitelistAddress == address(0)`. [OF-DO-7]
+    function test_OF_DO_10__OF_DO_7_deployOrganization_zeroWhitelist_reverts() public {
         // Setup: Prepare valid deployment inputs except for a zero whitelist address.
         bytes32 salt = bytes32(uint256(2006));
         InitializationParams memory params = _defaultInitializationParams();
@@ -198,7 +198,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects an EOA whitelist address as a safety requirement.
-    function test_OF_DO_11_deployOrganization_eoaWhitelist_revertsDesiredBehavior() public {
+    /// [OF-DO-6]
+    function test_OF_DO_11__OF_DO_6_deployOrganization_eoaWhitelist_revertsDesiredBehavior() public {
         // Setup: Prepare valid deployment params with an EOA used as whitelist address.
         bytes32 salt = bytes32(uint256(2007));
         InitializationParams memory params = _defaultInitializationParams();
@@ -214,7 +215,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts on a second deployment of the same CREATE2 tuple.
-    function test_OF_DO_12_deployOrganization_sameTupleTwice_secondDeployRevertsCreate2Collision() public {
+    /// [OF-DO-14]
+    function test_OF_DO_12__OF_DO_14_deployOrganization_sameTupleTwice_secondDeployRevertsCreate2Collision() public {
         // Setup: Deploy once with a fixed tuple to consume the CREATE2 address.
         bytes32 salt = bytes32(uint256(2008));
         InitializationParams memory params = _defaultInitializationParams();
@@ -279,8 +281,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` rolls back atomically when initialization parameters are
-    /// invalid.
-    function test_OF_DO_15__CFI_FLOW_2_deployOrganization_invalidInitParams_revertAndLeaveNoCode() public {
+    /// invalid. [OF-DO-12]
+    function test_OF_DO_15__CFI_FLOW_2__OF_DO_12_deployOrganization_invalidInitParams_revertAndLeaveNoCode() public {
         // Setup: Build three invalid initialization variants and precompute each target deployment address.
         InitializationParams memory noMembers = _defaultInitializationParams();
         noMembers.members = buildEmptyAddressArray();
@@ -319,8 +321,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` does not persist deployment effects when initialization
-    /// reverts.
-    function test_OF_DO_16_deployOrganization_revertedInitialization_doesNotPersistOrganizationDeployedEvent() public {
+    /// reverts. [OF-DO-8]
+    function test_OF_DO_16__OF_DO_8_deployOrganization_revertedInitialization_doesNotPersistOrganizationDeployedEvent() public {
         // Setup: Prepare invalid initialization input and precompute the deployment address.
         bytes32 salt = bytes32(uint256(2014));
         InitializationParams memory params = _defaultInitializationParams();
@@ -337,8 +339,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` allows retrying the same tuple after a failed
-    /// initialization attempt.
-    function test_OF_DO_17__CFI_FLOW_3_deployOrganization_failedThenRetryWithSameTuple_succeeds() public {
+    /// initialization attempt. [OF-DO-13]
+    function test_OF_DO_17__CFI_FLOW_3__OF_DO_13_deployOrganization_failedThenRetryWithSameTuple_succeeds() public {
         // Setup: Prepare invalid and valid initialization params for the same deployment tuple.
         bytes32 salt = bytes32(uint256(2015));
         InitializationParams memory invalidParams = _defaultInitializationParams();

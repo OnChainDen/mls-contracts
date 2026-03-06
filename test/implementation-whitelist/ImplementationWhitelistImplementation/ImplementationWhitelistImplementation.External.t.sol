@@ -6,6 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     ImplementationWhitelistHarness,
@@ -25,8 +26,31 @@ interface IUUPSWhitelistEntrypoints {
  * @dev External-flow tests for `ImplementationWhitelistImplementation`.
  */
 contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase {
+    // -----------------------------------------------------------------------
+    //  Constructor
+    // -----------------------------------------------------------------------
+
+    // forgefmt: disable-next-item
+    /// @dev Verifies implementation constructor disables initializers (direct initialize reverts).
+    function test_IWI_INIT_4_IWI_CON_1_IWI_CON_2_constructorDisablesInitializers_directCallReverts() public {
+        // Setup: implementation contract is deployed once in suite setup and is initializer-disabled.
+        address[] memory empty;
+
+        // Verify: direct initialize call on implementation reverts.
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        // Call: attempt initialize on implementation contract itself.
+        implementation.initialize(OWNER, empty, empty);
+    }
+
+    // -----------------------------------------------------------------------
+    //  Initialize
+    // -----------------------------------------------------------------------
+
+    // forgefmt: disable-next-item
     /// @dev Verifies proxy initialization sets owner and seeds both type-specific whitelists.
-    function test_IWI_INIT_1_initialize_setsOwnerAndSeedsWhitelists() public {
+    function test_IWI_INIT_1_IWI_INIT_2_IWI_INIT_3_IWI_INIT_4_IWI_INIT_5_initialize_setsOwnerAndSeedsWhitelists()
+        public
+    {
         // Setup: deploy uninitialized proxy and deterministic organization/account seed arrays.
         ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
         address[] memory orgSeeds = _pair(organizationImplementationA, organizationImplementationB);
@@ -37,14 +61,26 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
         // Verify: owner and type-specific whitelist entries are correctly initialized.
         assertEq(proxy.owner(), OWNER, "owner mismatch");
-        assertTrue(proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
-        assertTrue(proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationB));
-        assertTrue(proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA));
-        assertTrue(proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationB));
+        assertTrue(
+            proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be whitelisted"
+        );
+        assertTrue(
+            proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationB),
+            "orgB should be whitelisted"
+        );
+        assertTrue(
+            proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should be whitelisted"
+        );
+        assertTrue(
+            proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationB),
+            "accountB should be whitelisted"
+        );
     }
 
     /// @dev Verifies initialization emits `ImplementationWhitelistInitialized(initialOwner)`.
-    function test_IWI_INIT_2_initialize_emitsInitializedEvent() public {
+    function test_IWI_INIT_2_IWI_INIT_9_initialize_emitsInitializedEvent() public {
         // Setup: deploy uninitialized proxy with empty seed arrays.
         ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
         address[] memory empty;
@@ -58,7 +94,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies proxy cannot be initialized twice.
-    function test_IWI_INIT_3_initialize_cannotBeCalledTwice() public {
+    function test_IWI_INIT_3_IWI_INIT_12_initialize_cannotBeCalledTwice() public {
         // Setup: proxy from suite setup is already initialized.
         address[] memory empty;
 
@@ -68,19 +104,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.initialize(OWNER, empty, empty);
     }
 
-    /// @dev Verifies implementation constructor disables initializers (direct initialize reverts).
-    function test_IWI_INIT_4_implementationDirectInitialize_reverts() public {
-        // Setup: implementation contract is deployed once in suite setup and is initializer-disabled.
-        address[] memory empty;
-
-        // Verify: direct initialize call on implementation reverts.
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-        // Call: attempt initialize on implementation contract itself.
-        implementation.initialize(OWNER, empty, empty);
-    }
-
+    // forgefmt: disable-next-item
     /// @dev Verifies `isInitialized()` transitions false -> true on successful proxy initialization.
-    function test_IWI_INIT_5_isInitialized_tracksInitializationState() public {
+    function test_IWI_INIT_5_IWI_INIT_1_IWI_ISI_1_IWI_ISI_2_isInitialized_tracksInitializationState() public {
         // Setup: deploy uninitialized proxy with empty arrays.
         ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
         address[] memory empty;
@@ -96,7 +122,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies `initialOwner == address(0)` reverts initialization.
-    function test_IWI_INIT_6_initialize_zeroOwner_reverts() public {
+    function test_IWI_INIT_6_IWI_INIT_11_initialize_zeroOwner_reverts() public {
         // Setup: deploy uninitialized proxy.
         ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
         address[] memory empty;
@@ -108,7 +134,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies empty initial arrays still initialize successfully and set owner.
-    function test_IWI_INIT_7_initialize_withEmptyArrays_succeeds() public {
+    function test_IWI_INIT_7_IWI_INIT_10_initialize_withEmptyArrays_succeeds() public {
         // Setup: deploy uninitialized proxy with no seed entries.
         ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
         address[] memory empty;
@@ -118,12 +144,52 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
         // Verify: owner is set and no whitelist entries are implicitly enabled.
         assertEq(proxy.owner(), OWNER, "owner mismatch");
-        assertFalse(proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
-        assertFalse(proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA));
+        assertFalse(
+            proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should not be whitelisted"
+        );
+        assertFalse(
+            proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should not be whitelisted"
+        );
+    }
+
+    /// @dev Verifies `initialize` emits `ImplementationWhitelisted` for each organization implementation in init array.
+    function test_IWI_INIT_7_initialize_emitsWhitelistedEventPerOrgImplementation() public {
+        // Setup: deploy uninitialized proxy with organization seed entries.
+        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
+        address[] memory orgSeeds = _pair(organizationImplementationA, organizationImplementationB);
+        address[] memory empty;
+
+        // Verify: expect one `ImplementationWhitelisted` event per org entry.
+        vm.expectEmit(true, true, true, true, address(proxy));
+        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
+        vm.expectEmit(true, true, true, true, address(proxy));
+        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Organization, organizationImplementationB);
+
+        // Call: initialize proxy with org seed entries.
+        proxy.initialize(OWNER, orgSeeds, empty);
+    }
+
+    /// @dev Verifies `initialize` emits `ImplementationWhitelisted` for each account implementation in init array.
+    function test_IWI_INIT_8_initialize_emitsWhitelistedEventPerAccountImplementation() public {
+        // Setup: deploy uninitialized proxy with account seed entries.
+        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
+        address[] memory empty;
+        address[] memory accountSeeds = _pair(accountImplementationA, accountImplementationB);
+
+        // Verify: expect one `ImplementationWhitelisted` event per account entry.
+        vm.expectEmit(true, true, true, true, address(proxy));
+        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Account, accountImplementationA);
+        vm.expectEmit(true, true, true, true, address(proxy));
+        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Account, accountImplementationB);
+
+        // Call: initialize proxy with account seed entries.
+        proxy.initialize(OWNER, empty, accountSeeds);
     }
 
     /// @dev Verifies same address can be seeded under both Organization and Account contract types.
-    function test_IWI_INIT_8_initialize_sameAddressCanBeSeededForBothTypes() public {
+    function test_IWI_INIT_8_IWI_INIT_6_initialize_sameAddressCanBeSeededForBothTypes() public {
         // Setup: deploy uninitialized proxy and use same seed in both arrays.
         ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
         address shared = organizationImplementationA;
@@ -134,12 +200,72 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         proxy.initialize(OWNER, orgSeeds, accountSeeds);
 
         // Verify: same address is independently whitelisted for both contract types.
-        assertTrue(proxy.isImplementationWhitelisted(ContractType.Organization, shared));
-        assertTrue(proxy.isImplementationWhitelisted(ContractType.Account, shared));
+        assertTrue(
+            proxy.isImplementationWhitelisted(ContractType.Organization, shared),
+            "shared should be whitelisted under Organization"
+        );
+        assertTrue(
+            proxy.isImplementationWhitelisted(ContractType.Account, shared),
+            "shared should be whitelisted under Account"
+        );
     }
 
+    /// @dev Verifies `initialize` rejects implementation entries with no code. [DESIRED]
+    function test_IWI_INIT_13_initialize_rejectsNoCodeEntries() public {
+        // Setup: deploy uninitialized proxy with a no-code address in the org seed array.
+        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
+        address[] memory orgSeeds = _single(noCodeAddress);
+        address[] memory empty;
+
+        // Verify: desired behavior is to reject no-code entries during initialization.
+        // NOTE: Current implementation does NOT enforce this. Test documents desired behavior.
+        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, noCodeAddress));
+        // Call: initialize with no-code implementation in seed array.
+        proxy.initialize(OWNER, orgSeeds, empty);
+    }
+
+    // -----------------------------------------------------------------------
+    //  isInitialized
+    // -----------------------------------------------------------------------
+
+    // forgefmt: disable-next-item
+    /// @dev Verifies `isInitialized()` remains true after ownership transfer via `transferOwnership` +
+    // `acceptOwnership`.
+    function test_IWI_ISI_3_isInitialized_remainsTrueAfterOwnershipTransfer() public {
+        // Setup: proxy is initialized from suite setup. Transfer ownership.
+        vm.prank(OWNER);
+        whitelistProxy.transferOwnership(NEW_OWNER);
+        vm.prank(NEW_OWNER);
+        whitelistProxy.acceptOwnership();
+
+        // Verify: isInitialized still returns true after ownership transfer.
+        assertTrue(whitelistProxy.isInitialized(), "isInitialized should remain true after ownership transfer");
+    }
+
+    /// @dev Verifies initialization state is monotonic (false -> true only once; no return to false). [DESIRED]
+    function test_IWI_ISI_4_initializationState_isPermanent() public {
+        // Setup: deploy and initialize proxy.
+        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
+        address[] memory empty;
+        assertFalse(proxy.isInitialized(), "should start uninitialized");
+
+        proxy.initialize(OWNER, empty, empty);
+        assertTrue(proxy.isInitialized(), "should be initialized after init");
+
+        // Verify: second initialization attempt reverts (state stays true).
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        proxy.initialize(OWNER, empty, empty);
+
+        // Verify: isInitialized remains true after failed re-initialization.
+        assertTrue(proxy.isInitialized(), "should remain initialized after failed re-init");
+    }
+
+    // -----------------------------------------------------------------------
+    //  whitelistImplementations
+    // -----------------------------------------------------------------------
+
     /// @dev Verifies owner can add and remove implementations in one `whitelistImplementations` call.
-    function test_IWI_WI_1_ownerCanAddAndRemoveInSingleCall() public {
+    function test_IWI_WI_1_IWI_WI_4_IWI_WI_6_ownerCanAddAndRemoveInSingleCall() public {
         // Setup: pre-whitelist one entry to remove, then prepare add/remove lists.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -153,12 +279,18 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
 
         // Verify: add/remove mutations are applied atomically for the selected type.
-        assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
-        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationB));
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be unwhitelisted after removal"
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationB),
+            "orgB should be whitelisted after addition"
+        );
     }
 
     /// @dev Verifies non-owner callers cannot mutate whitelist entries.
-    function test_IWI_WI_2_nonOwnerCaller_reverts() public {
+    function test_IWI_WI_2_IWI_WI_1_nonOwnerCaller_reverts() public {
         // Setup: prepare add/remove arrays for unauthorized caller.
         address[] memory toAdd = _single(organizationImplementationA);
         address[] memory empty;
@@ -171,8 +303,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies Organization and Account whitelists are independent namespaces.
-    function test_IWI_WI_3_contractTypeMappings_areIndependent() public {
-        // Setup: whitelist one Organization and one Account implementation independently.
+    function test_IWI_WI_3_IWI_WI_13_contractTypeMappings_areIndependent() public {
+        // Setup: whitelist same address under Organization type only.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
             ContractType.Organization, _single(organizationImplementationA), new address[](0)
@@ -187,8 +319,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, accountImplementationA));
     }
 
+    // forgefmt: disable-next-item
     /// @dev Verifies whitelist mutation emits events for each added/removed implementation.
-    function test_IWI_WI_4_whitelistMutation_emitsEventsPerProcessedAddress() public {
+    function test_IWI_WI_4_IWI_WI_11_IWI_WI_12_whitelistMutation_emitsEventsPerProcessedAddress() public {
         // Setup: configure add/remove lists and seed one pre-whitelisted entry for removal event.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
@@ -206,6 +339,25 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
+    /// @dev Verifies `whitelistImplementations` adds account implementation and sets whitelist to true.
+    function test_IWI_WI_5_ownerCanAddAccountImplementation() public {
+        // Setup: confirm account implementation is not whitelisted.
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should not be whitelisted initially"
+        );
+
+        // Call: owner adds account implementation.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
+
+        // Verify: account implementation is now whitelisted.
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should be whitelisted after addition"
+        );
+    }
+
     /// @dev Verifies same address in both add/remove arrays ends unwhitelisted (add then remove).
     function test_IWI_WI_7_sameAddressInAddAndRemove_endsUnwhitelisted() public {
         // Setup: use same address in both mutation arrays.
@@ -216,11 +368,14 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.whitelistImplementations(ContractType.Organization, both, both);
 
         // Verify: final state is unwhitelisted due remove-after-add ordering.
-        assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be unwhitelisted when in both add and remove"
+        );
     }
 
     /// @dev Verifies empty add/remove arrays are a no-op and do not revert.
-    function test_IWI_WI_8_emptyArrays_noopAndNoRevert() public {
+    function test_IWI_WI_8_IWI_WI_10_emptyArrays_noopAndNoRevert() public {
         // Setup: capture baseline whitelist state.
         bool beforeState =
             whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA);
@@ -236,8 +391,45 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertEq(afterState, beforeState, "empty mutation should be a no-op");
     }
 
+    /// @dev Verifies duplicate addresses in `toWhitelist` are idempotent at state level.
+    function test_IWI_WI_8_duplicateAddressesInToWhitelist_idempotent() public {
+        // Setup: create array with duplicate addresses.
+        address[] memory duplicates = _pair(organizationImplementationA, organizationImplementationA);
+
+        // Call: owner calls whitelistImplementations with duplicate addresses.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(ContractType.Organization, duplicates, new address[](0));
+
+        // Verify: implementation is whitelisted (idempotent result).
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be whitelisted despite duplicate in input"
+        );
+    }
+
+    /// @dev Verifies duplicate addresses in `toUnwhitelist` are idempotent at state level.
+    function test_IWI_WI_9_duplicateAddressesInToUnwhitelist_idempotent() public {
+        // Setup: whitelist an entry, then create duplicate removal array.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, _single(organizationImplementationA), new address[](0)
+        );
+
+        address[] memory duplicates = _pair(organizationImplementationA, organizationImplementationA);
+
+        // Call: owner removes with duplicate addresses.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(ContractType.Organization, new address[](0), duplicates);
+
+        // Verify: implementation is unwhitelisted (idempotent result).
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be unwhitelisted despite duplicate in removal input"
+        );
+    }
+
     /// @dev Verifies pending owner (before `acceptOwnership`) cannot call whitelist mutation.
-    function test_IWI_WI_9_pendingOwnerBeforeAccept_cannotMutateWhitelist() public {
+    function test_IWI_WI_9_IWI_WI_2_pendingOwnerBeforeAccept_cannotMutateWhitelist() public {
         // Setup: initiate ownership transfer to pending owner.
         vm.prank(OWNER);
         whitelistProxy.transferOwnership(NEW_OWNER);
@@ -252,7 +444,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies accepted ownership transfer switches mutation rights from old owner to new owner.
-    function test_IWI_WI_10_afterAccept_newOwnerCanMutate_oldOwnerCannot() public {
+    function test_IWI_WI_10_IWI_WI_3_afterAccept_newOwnerCanMutate_oldOwnerCannot() public {
         // Setup: complete ownership transfer to NEW_OWNER.
         vm.prank(OWNER);
         whitelistProxy.transferOwnership(NEW_OWNER);
@@ -266,7 +458,10 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
 
         // Verify: new owner mutation succeeded and old owner no longer has mutation rights.
-        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be whitelisted by new owner"
+        );
 
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, OWNER));
         vm.prank(OWNER);
@@ -276,8 +471,15 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
+    // -----------------------------------------------------------------------
+    //  isImplementationWhitelisted
+    // -----------------------------------------------------------------------
+
+    // forgefmt: disable-next-item
     /// @dev Verifies `isImplementationWhitelisted` is true only for matching contract type entries.
-    function test_IWI_VIW_1_isImplementationWhitelisted_typeScopedTruthTable() public {
+    function test_IWI_VIW_1_IWI_IIW_1_IWI_IIW_2_IWI_IIW_3_isImplementationWhitelisted_typeScopedTruthTable()
+        public
+    {
         // Setup: whitelist one Organization and one Account target independently.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -287,14 +489,76 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
 
         // Call + Verify: each address is true only under its matching contract type.
-        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
-        assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Account, organizationImplementationA));
-        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA));
-        assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, accountImplementationA));
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be whitelisted under Organization"
+        );
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, organizationImplementationA),
+            "orgA should not be whitelisted under Account"
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should be whitelisted under Account"
+        );
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, accountImplementationA),
+            "accountA should not be whitelisted under Organization"
+        );
     }
 
+    /// @dev Verifies `isImplementationWhitelisted` returns false for all addresses before initialization.
+    function test_IWI_IIW_4_isImplementationWhitelisted_falseBeforeInit() public {
+        // Setup: deploy uninitialized proxy.
+        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
+
+        // Verify: all addresses report false before initialization.
+        assertFalse(
+            proxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be false before init"
+        );
+        assertFalse(
+            proxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should be false before init"
+        );
+        assertFalse(
+            proxy.isImplementationWhitelisted(ContractType.Organization, address(0)),
+            "zero address should be false before init"
+        );
+    }
+
+    /// @dev Verifies `isImplementationWhitelisted` returns false for addresses added then removed from whitelist.
+    function test_IWI_IIW_5_isImplementationWhitelisted_falseAfterAddThenRemove() public {
+        // Setup: add implementation to whitelist.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, _single(organizationImplementationA), new address[](0)
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be whitelisted after addition"
+        );
+
+        // Call: remove implementation from whitelist.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, new address[](0), _single(organizationImplementationA)
+        );
+
+        // Verify: returns false for removed implementation.
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should be false after add-then-remove"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    //  validateIsImplementationWhitelistedOrRevert
+    // -----------------------------------------------------------------------
+
+    // forgefmt: disable-next-item
     /// @dev Verifies `validateIsImplementationWhitelistedOrRevert` reverts for non-whitelisted targets.
-    function test_IWI_VIW_2_validateWhitelisted_revertsWhenNotWhitelisted() public {
+    function test_IWI_VIW_2_IWI_VIIWOR_2_IWI_VIIWOR_5_validateWhitelisted_revertsWhenNotWhitelisted() public {
         // Setup: choose target with no whitelist entry.
         address target = organizationImplementationA;
 
@@ -305,7 +569,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies `validateIsImplementationWhitelistedOrRevert` succeeds for whitelisted targets.
-    function test_IWI_VIW_3_validateWhitelisted_succeedsForWhitelistedTarget() public {
+    function test_IWI_VIW_3_IWI_VIIWOR_1_validateWhitelisted_succeedsForWhitelistedTarget() public {
         // Setup: whitelist target under Organization type.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -318,11 +582,11 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
 
         // Verify: validation call did not revert.
-        assertTrue(true);
+        assertTrue(true, "validation should succeed for whitelisted target");
     }
 
     /// @dev Verifies validation reverts when implementation is whitelisted only under the other contract type.
-    function test_IWI_VIW_4_validateWhitelisted_otherTypeOnly_reverts() public {
+    function test_IWI_VIW_4_IWI_VIIWOR_4_validateWhitelisted_otherTypeOnly_reverts() public {
         // Setup: whitelist target under Account type only.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
@@ -337,8 +601,38 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Organization, accountImplementationA);
     }
 
+    // forgefmt: disable-next-item
+    /// @dev Verifies `validateIsImplementationWhitelistedOrRevert` reverts for address added then removed from
+    // whitelist.
+    function test_IWI_VIIWOR_3_validateWhitelisted_revertsForAddedThenRemovedAddress() public {
+        // Setup: add then remove implementation from whitelist.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, _single(organizationImplementationA), new address[](0)
+        );
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(
+            ContractType.Organization, new address[](0), _single(organizationImplementationA)
+        );
+
+        // Verify: validation reverts for removed implementation.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, organizationImplementationA
+            )
+        );
+        // Call: validate removed implementation.
+        whitelistProxy.validateIsImplementationWhitelistedOrRevert(
+            ContractType.Organization, organizationImplementationA
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    //  UUPS Upgrade
+    // -----------------------------------------------------------------------
+
     /// @dev Verifies owner can perform UUPS upgrade through proxy `upgradeToAndCall`.
-    function test_IWI_UUPS_1_ownerCanUpgradeProxyViaUUPS() public {
+    function test_IWI_UUPS_1_IWI_AU_1_ownerCanUpgradeProxyViaUUPS() public {
         // Setup: initialized proxy with owner from suite setup.
 
         // Call: owner upgrades proxy to V2 implementation.
@@ -352,7 +646,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies non-owner cannot perform UUPS upgrade.
-    function test_IWI_UUPS_2_nonOwnerCannotUpgradeProxy() public {
+    function test_IWI_UUPS_2_IWI_AU_2_nonOwnerCannotUpgradeProxy() public {
         // Setup: initialized proxy owned by OWNER.
 
         // Verify: non-owner upgrade attempt reverts.
@@ -397,7 +691,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies UUPS upgrade with migration calldata executes migration logic.
-    function test_IWI_UUPS_5_upgradeWithMigrationCalldata_executesMigration() public {
+    function test_IWI_UUPS_5_IWI_AU_5_upgradeWithMigrationCalldata_executesMigration() public {
         // Setup: encode migration call on V2 implementation.
         bytes memory migrationData = abi.encodeCall(ImplementationWhitelistV2Harness.setMigrationMarker, (505));
 
@@ -410,8 +704,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertEq(_readProxyImplementation(address(whitelistProxy)), address(implementationV2));
     }
 
-    /// @dev Verifies whitelist storage persists across UUPS upgrades.
-    function test_IWI_UUPS_6_whitelistStoragePersistsAcrossUpgrade() public {
+    // forgefmt: disable-next-item
+    /// @dev Verifies whitelist storage persists across multiple sequential UUPS upgrades for both contract types.
+    function test_IWI_UUPS_6_IWI_AU_3_whitelistStoragePersistsAcrossMultipleSequentialUpgrades() public {
         // Setup: seed whitelist state before upgrade.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -420,16 +715,66 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
 
-        // Call: owner upgrades proxy to V2.
+        // Call: upgrade 1 — implementation -> V2.
         vm.prank(OWNER);
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
 
         // Verify: proxy now delegates to the V2 implementation.
         assertEq(_readProxyImplementation(address(whitelistProxy)), address(implementationV2));
 
-        // Verify: whitelist state survives implementation change.
-        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
-        assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA));
+        // Verify: whitelist state survives first upgrade.
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should persist after upgrade 1"
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should persist after upgrade 1"
+        );
+        assertEq(
+            _readProxyImplementation(address(whitelistProxy)),
+            address(implementationV2),
+            "impl slot should be V2 after upgrade 1"
+        );
+
+        // Call: upgrade 2 — V2 -> back to original implementation.
+        vm.prank(OWNER);
+        IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementation), bytes(""));
+
+        // Verify: whitelist state survives second upgrade.
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should persist after upgrade 2"
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should persist after upgrade 2"
+        );
+        assertEq(
+            _readProxyImplementation(address(whitelistProxy)),
+            address(implementation),
+            "impl slot should be original after upgrade 2"
+        );
+
+        // Call: upgrade 3 — implementation -> V2 again.
+        ImplementationWhitelistV2Harness implementationV2b = new ImplementationWhitelistV2Harness();
+        vm.prank(OWNER);
+        IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2b), bytes(""));
+
+        // Verify: whitelist state survives third upgrade.
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA),
+            "orgA should persist after upgrade 3"
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "accountA should persist after upgrade 3"
+        );
+        assertEq(
+            _readProxyImplementation(address(whitelistProxy)),
+            address(implementationV2b),
+            "impl slot should be V2b after upgrade 3"
+        );
     }
 
     /// @dev Verifies upgrade to non-UUPS or incompatible implementation reverts.
@@ -476,7 +821,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     }
 
     /// @dev Verifies owner-triggered `upgradeToAndCall` rejects zero and no-code implementation targets.
-    function test_IWI_UUPS_10_ownerCannotUpgradeToZeroOrNoCode_reverts() public {
+    function test_IWI_UUPS_10_IWI_AU_6_ownerCannotUpgradeToZeroOrNoCode_reverts() public {
         // Setup: initialized proxy owned by OWNER.
 
         // Verify: zero-address target is rejected.
@@ -493,5 +838,21 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         vm.prank(OWNER);
         // Call: attempt UUPS upgrade to no-code address.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(noCodeAddress, bytes(""));
+    }
+
+    /// @dev Verifies UUPS upgrade preserves ownership state.
+    function test_IWI_AU_4_upgradePreservesOwnershipState() public {
+        // Setup: transfer ownership to NEW_OWNER before upgrade.
+        vm.prank(OWNER);
+        whitelistProxy.transferOwnership(NEW_OWNER);
+        vm.prank(NEW_OWNER);
+        whitelistProxy.acceptOwnership();
+
+        // Call: new owner upgrades proxy to V2.
+        vm.prank(NEW_OWNER);
+        IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
+
+        // Verify: ownership state preserved after upgrade.
+        assertEq(whitelistProxy.owner(), NEW_OWNER, "owner should be preserved after upgrade");
     }
 }

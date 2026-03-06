@@ -15,7 +15,7 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies fuzzed non-whitelisted Organization upgrade targets are always rejected.
-    function test_UPG_FZ_1_fuzz_nonWhitelistedOrganizationTargetsAreRejected(address candidate) public {
+    function test_UPG_FZ_1__IWC_FUZZ_1_fuzz_nonWhitelistedOrganizationTargetsAreRejected(address candidate) public {
         // Setup: configure valid guardian/admin auth for arbitrary candidate without whitelisting it.
         _setSingleAdminThresholdOne();
         vm.assume(!whitelist.isImplementationWhitelisted(ContractType.Organization, candidate));
@@ -38,7 +38,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed non-whitelisted Account implementation targets are always rejected.
-    function test_UPG_FZ_2_fuzz_nonWhitelistedAccountTargetsAreRejected(address candidate) public {
+    function test_UPG_FZ_2__IWC_FUZZ_1_fuzz_nonWhitelistedAccountTargetsAreRejected(address candidate) public {
         // Setup: configure valid admin auth for arbitrary account implementation candidate without whitelisting.
         _setSingleAdminThresholdOne();
         vm.assume(!whitelist.isImplementationWhitelisted(ContractType.Account, candidate));
@@ -63,7 +63,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed successful upgrade sequences preserve core state across repeated upgrades.
-    function test_UPG_FZ_3_fuzz_successfulUpgradeSequences_preserveState(uint8 rounds) public {
+    function test_UPG_FZ_3__IWC_FUZZ_4_fuzz_successfulUpgradeSequences_preserveState(uint8 rounds) public {
         // Setup: bound rounds and seed stable core state to verify persistence.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -127,7 +127,7 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed nested migration payloads cannot trigger an unauthorized second upgrade.
-    function test_UPG_FZ_5_fuzz_nestedUpgradeFromRandomPayload_reverts(bytes memory randomData) public {
+    function test_UPG_FZ_5__IWC_FUZZ_5_fuzz_nestedUpgradeFromRandomPayload_reverts(bytes memory randomData) public {
         // Setup: whitelist both V2 and V3 and craft migration payload that attempts nested second upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

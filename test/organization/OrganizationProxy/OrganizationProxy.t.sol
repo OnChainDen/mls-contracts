@@ -20,8 +20,8 @@ import {InitializationParams} from "types/CommonTypes.sol";
  */
 contract OrganizationProxyTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationProxy.constructor` stores deployer, whitelist, and implementation values in their
-    /// expected storage slots.
-    function test_OPX_CTOR_1__OPX_CTOR_2__OPX_CTOR_3_constructor_setsDeployerWhitelistAndImplementationSlots() public {
+    /// expected storage slots. [ORP-CON-1]
+    function test_OPX_CTOR_1__OPX_CTOR_2__OPX_CTOR_3__ORP_CON_1_constructor_setsDeployerWhitelistAndImplementationSlots() public {
         // Setup: Select a direct deployer account for deploying the proxy outside the factory flow.
         address directDeployer = address(0xFA01);
 
@@ -58,8 +58,8 @@ contract OrganizationProxyTest is InitializationSuiteBase {
         // Verify: Constructor safety checks reject non-contract implementations.
     }
 
-    /// @dev Verifies `OrganizationProxy.constructor` reverts with `ZeroAddress` when whitelist is zero.
-    function test_OPX_CTOR_5_constructor_zeroWhitelist_revertsZeroAddress() public {
+    /// @dev Verifies `OrganizationProxy.constructor` reverts with `ZeroAddress` when whitelist is zero. [ORP-CON-3]
+    function test_OPX_CTOR_5__ORP_CON_3_constructor_zeroWhitelist_revertsZeroAddress() public {
         // Setup: Prepare a zero whitelist address for constructor input.
         address zeroWhitelist = address(0);
 
