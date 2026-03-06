@@ -920,5 +920,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         // Call: invoke `proxiableUUID` through the Organization proxy.
         IUUPSUpgradeableEntrypoints(address(organizationProxy)).proxiableUUID();
+
+        // Verify: `proxiableUUID` on the implementation directly returns the correct ERC-1967 slot.
+        bytes32 uuid = IUUPSUpgradeableEntrypoints(address(implementationV1)).proxiableUUID();
+        assertEq(uuid, ERC1967Utils.IMPLEMENTATION_SLOT);
     }
 }

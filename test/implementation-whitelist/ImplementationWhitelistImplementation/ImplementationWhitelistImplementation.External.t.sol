@@ -461,6 +461,10 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         // Call: invoke `proxiableUUID` through proxy.
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).proxiableUUID();
+
+        // Verify: `proxiableUUID` on the implementation directly returns the correct ERC-1967 slot.
+        bytes32 uuid = IUUPSWhitelistEntrypoints(address(implementation)).proxiableUUID();
+        assertEq(uuid, ERC1967Utils.IMPLEMENTATION_SLOT);
     }
 
     /// @dev Verifies owner-triggered `upgradeToAndCall` rejects zero and no-code implementation targets.

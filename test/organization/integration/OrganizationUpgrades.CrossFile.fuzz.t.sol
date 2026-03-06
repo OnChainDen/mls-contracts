@@ -114,11 +114,12 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
 
         // Call: execute upgrade with malformed migration payload.
         vm.prank(GUARDIAN);
-        (bool success,) = address(organizationProxy).call(
-            abi.encodeCall(
-                IOrganization.upgradeToAndCallWithAuthorization, (address(implementationV2), malformedData, auth)
-            )
-        );
+        (bool success,) = address(organizationProxy)
+            .call(
+                abi.encodeCall(
+                    IOrganization.upgradeToAndCallWithAuthorization, (address(implementationV2), malformedData, auth)
+                )
+            );
 
         // Verify: malformed data path reverts and implementation pointer remains unchanged.
         assertFalse(success, "malformed migration payload should revert");
