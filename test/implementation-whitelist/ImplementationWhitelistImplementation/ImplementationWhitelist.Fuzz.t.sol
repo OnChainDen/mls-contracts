@@ -4,6 +4,8 @@ pragma solidity 0.8.33;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
+import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {ImplementationWhitelistHarness}
     from "test/implementation-whitelist/ImplementationWhitelistImplementation/ImplementationWhitelistHarnesses.sol";
 import {ImplementationWhitelistSuiteBase}
@@ -76,6 +78,68 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         );
     }
 
+    // forgefmt: disable-next-item
+    /// @dev Verifies fuzz random unwhitelisted addresses are always rejected by
+    // `validateIsImplementationWhitelistedOrRevert` for both Organization and Account contract types.
+    function test_IWC_FUZZ_1_fuzz_randomUnwhitelistedAddresses_alwaysRejected(address randomAddr) public {
+        // Setup: ensure the fuzzed address has not been whitelisted.
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, randomAddr),
+            "fuzzed address should start unwhitelisted under Organization"
+        );
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, randomAddr),
+            "fuzzed address should start unwhitelisted under Account"
+        );
+
+        // Verify: Organization-type validation rejects fuzzed address.
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, randomAddr)
+        );
+        whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Organization, randomAddr);
+
+        // Verify: Account-type validation rejects fuzzed address.
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, randomAddr)
+        );
+        whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Account, randomAddr);
+    }
+
+    // forgefmt: disable-next-item
+    /// @dev Verifies fuzz `(salt, implementation, whitelist)` tuples produce deterministic and
+    // sensitivity-preserving outputs from `computeOrganizationAddress` via a locally deployed factory.
+    function test_IWC_FUZZ_4_fuzz_computeOrganizationAddress_deterministicAndSensitivityPreserving(
+        bytes32 saltA,
+        bytes32 saltB,
+        address implA,
+        address implB,
+        address whitelistA,
+        address whitelistB
+    ) public {
+        // Setup: deploy a minimal factory for address computation (view-only, no deployment needed).
+        OrganizationFactoryForFuzz localFactory = new OrganizationFactoryForFuzz();
+
+        // Verify: deterministic — same inputs produce same output.
+        address computedA1 = localFactory.computeAddress(saltA, implA, whitelistA);
+        address computedA2 = localFactory.computeAddress(saltA, implA, whitelistA);
+        assertEq(computedA1, computedA2, "same inputs must produce same output");
+
+        // Verify: sensitivity — different salt changes output.
+        vm.assume(saltA != saltB);
+        address differentSalt = localFactory.computeAddress(saltB, implA, whitelistA);
+        assertTrue(computedA1 != differentSalt, "different salt should change computed address");
+
+        // Verify: sensitivity — different implementation changes output.
+        vm.assume(implA != implB);
+        address differentImpl = localFactory.computeAddress(saltA, implB, whitelistA);
+        assertTrue(computedA1 != differentImpl, "different implementation should change computed address");
+
+        // Verify: sensitivity — different whitelist changes output.
+        vm.assume(whitelistA != whitelistB);
+        address differentWhitelist = localFactory.computeAddress(saltA, implA, whitelistB);
+        assertTrue(computedA1 != differentWhitelist, "different whitelist should change computed address");
+    }
+
     /// @dev IWC-FUZZ-6: Fuzz proxy initialization inputs — malformed init data never leaves partially initialized proxy.
     function test_IWC_FUZZ_6_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(
         bytes calldata randomInitData
@@ -90,5 +154,33 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         // ERC1967Proxy delegatecalls initData to implementation; malformed data should revert.
         vm.expectRevert();
         new ERC1967Proxy(address(implementation), randomInitData);
+    }
+}
+
+/**
+ * @dev Lightweight factory harness for fuzz-testing `computeOrganizationAddress` determinism and sensitivity
+ *      without requiring full org deployment infrastructure.
+ */
+contract OrganizationFactoryForFuzz {
+    /**
+     * @dev Computes a deterministic CREATE2 address for a hypothetical OrganizationProxy deployment.
+     * @param salt CREATE2 salt.
+     * @param implementationAddress Organization implementation address encoded into proxy bytecode.
+     * @param whitelistAddress Whitelist address encoded into proxy bytecode.
+     * @return computed Deterministic CREATE2 address.
+     */
+    function computeAddress(bytes32 salt, address implementationAddress, address whitelistAddress)
+        external
+        view
+        returns (address computed)
+    {
+        // Mirrors OrganizationFactory._getOrganizationProxyBytecode + computeOrganizationAddress logic.
+        bytes memory bytecode = abi.encodePacked(
+            type(OrganizationProxy).creationCode, abi.encode(implementationAddress, whitelistAddress)
+        );
+        bytes32 initCodeHash = keccak256(bytecode);
+        computed = address(
+            uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, initCodeHash))))
+        );
     }
 }
