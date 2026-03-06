@@ -475,14 +475,20 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
         bytes memory expected = abi.encodePacked(type(OrganizationProxy).creationCode, abi.encode(implA, whitelistA));
 
-        bytes32 computedHash = keccak256(bytecodeA1);
-        bytes32 expectedHash = keccak256(factory.getOrganizationProxyBytecode(implA, whitelistA));
+        bytes32 salt = bytes32(uint256(1));
+        bytes32 initCodeHash = keccak256(bytecodeA1);
+        address manualAddr = Create2.computeAddress(salt, initCodeHash, address(factory));
+        address factoryAddr = factory.computeOrganizationAddress(salt, implA, whitelistA);
 
         // Verify: Bytecode encoding, determinism, input sensitivity, and hash stability all match expected behavior.
         assertEq(bytecodeA1, expected, "proxy bytecode should match expected constructor encoding");
         assertEq(bytecodeA1, bytecodeA2, "bytecode should be deterministic for same inputs");
         assertTrue(keccak256(bytecodeA1) != keccak256(bytecodeB), "bytecode hash should differ by implementation");
         assertTrue(keccak256(bytecodeA1) != keccak256(bytecodeC), "bytecode hash should differ by whitelist");
-        assertEq(computedHash, expectedHash, "init code hash should be stable for computeAddress usage");
+        assertEq(
+            manualAddr,
+            factoryAddr,
+            "keccak256 of public bytecode should match init code hash in computeOrganizationAddress"
+        );
     }
 }
