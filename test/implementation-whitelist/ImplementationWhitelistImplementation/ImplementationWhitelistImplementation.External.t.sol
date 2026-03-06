@@ -419,6 +419,9 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         vm.prank(OWNER);
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(address(implementationV2), bytes(""));
 
+        // Verify: proxy now delegates to the V2 implementation.
+        assertEq(_readProxyImplementation(address(whitelistProxy)), address(implementationV2));
+
         // Verify: whitelist state survives implementation change.
         assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Organization, organizationImplementationA));
         assertTrue(whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA));
