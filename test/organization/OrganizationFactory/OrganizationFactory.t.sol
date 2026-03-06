@@ -384,12 +384,15 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` is deterministic and independent of caller
     /// context.
-    function test_OF_COA_1__OF_COA_6_computeOrganizationAddress_deterministicAndCallerIndependent() public view {
+    function test_OF_COA_1__OF_COA_6_computeOrganizationAddress_deterministicAndCallerIndependent() public {
         // Setup: Select a fixed tuple for repeated address computation.
         bytes32 salt = bytes32(uint256(3001));
 
-        // Call: Compute the organization address twice with identical inputs.
+        // Call: Compute the organization address from two different callers with identical inputs.
+        vm.prank(AUTHORIZED_DEPLOYER);
         address computedA = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+
+        vm.prank(UNAUTHORIZED_CALLER);
         address computedB = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
 
         // Verify: Identical inputs produce the same deterministic CREATE2 address.
