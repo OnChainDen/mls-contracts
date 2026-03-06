@@ -163,7 +163,7 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
         );
         assertEq(organization.implementation(), params.accountImplementation, "account implementation mismatch");
 
-        // Verify transaction recovery configuration persisted correctly.
+        // Verify transaction recovery configuration and downstream defaults (CFI-FLOW-6).
         TxRecoveryState memory txRecovery = organization.getTxRecoveryState();
         assertEq(
             txRecovery.recoveryAddress, params.transactionAndERC1271RecoveryAddress, "tx recovery address mismatch"
@@ -173,14 +173,53 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
             params.txRecoveryTimelockDurationSeconds,
             "tx recovery timelock mismatch"
         );
+        assertFalse(txRecovery.isEnabled, "tx recovery must start disabled after init");
+        assertEq(txRecovery.pendingEnableTimestamp, 0, "tx recovery pending enable timestamp must be zero after init");
+        assertEq(
+            txRecovery.pendingInit.pendingRecoveryAddress,
+            address(0),
+            "tx recovery pending init address must be zero after init"
+        );
+        assertEq(
+            txRecovery.pendingInit.pendingTimelockDurationSeconds,
+            0,
+            "tx recovery pending init timelock must be zero after init"
+        );
+        assertEq(
+            txRecovery.pendingInit.pendingTimestamp, 0, "tx recovery pending init timestamp must be zero after init"
+        );
 
-        // Verify guardian recovery configuration persisted correctly.
+        // Verify guardian recovery configuration and downstream defaults (CFI-FLOW-6).
         GuardianRecoveryState memory guardianRecovery = organization.getGuardianRecoveryState();
         assertEq(guardianRecovery.recoveryAddress, params.guardianRecoveryAddress, "guardian recovery address mismatch");
         assertEq(
             guardianRecovery.timelockDurationSeconds,
             params.guardianRecoveryTimelockDurationSeconds,
             "guardian recovery timelock mismatch"
+        );
+        assertFalse(
+            guardianRecovery.isUpdateReadyForAcceptance, "guardian recovery must not be ready for acceptance after init"
+        );
+        assertEq(
+            guardianRecovery.pendingGuardian, address(0), "guardian recovery pending guardian must be zero after init"
+        );
+        assertEq(
+            guardianRecovery.pendingGuardianTimestamp, 0, "guardian recovery pending timestamp must be zero after init"
+        );
+        assertEq(
+            guardianRecovery.pendingInit.pendingRecoveryAddress,
+            address(0),
+            "guardian recovery pending init address must be zero after init"
+        );
+        assertEq(
+            guardianRecovery.pendingInit.pendingTimelockDurationSeconds,
+            0,
+            "guardian recovery pending init timelock must be zero after init"
+        );
+        assertEq(
+            guardianRecovery.pendingInit.pendingTimestamp,
+            0,
+            "guardian recovery pending init timestamp must be zero after init"
         );
     }
 
