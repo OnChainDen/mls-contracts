@@ -315,6 +315,11 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
         uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6164);
         assertFalse(harness.getUsedNonce(nonce), "failed whitelist validation should not consume nonce");
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            address(0),
+            "failed whitelist validation should not mutate implementation"
+        );
 
         // Setup: add whitelist entry for retry with identical signed request.
         _setAccountImplementationWhitelisted(accountImplementationV2, true);
