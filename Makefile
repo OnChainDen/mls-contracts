@@ -176,7 +176,7 @@ analyze:
 
 # Sizes: Checks the sizes of the contracts
 sizes:
-	forge build --sizes
+	forge build --sizes src
 
 # Check: The "CI Mode" - Runs everything
 # This is what you run before pushing code.
