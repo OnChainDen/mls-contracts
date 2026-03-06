@@ -8,6 +8,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {
     LibOrganizationAccountFactoryStorage
 } from "organization/libraries/storage/LibOrganizationAccountFactoryStorage.sol";
@@ -27,6 +28,10 @@ library LibOrganizationAccountFactory {
      * @param newImplementation The new account implementation address
      */
     function setAccountImplementation(address newImplementation) internal {
+        if (newImplementation == address(0)) {
+            revert IOrganizationFactory.ZeroAddress();
+        }
+
         // Validate implementation against whitelist
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)

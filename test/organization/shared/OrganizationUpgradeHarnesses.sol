@@ -243,6 +243,29 @@ contract RevertingValidationWhitelistMock {
 }
 
 /**
+ * @dev Whitelist stub that proves upgrade authorization is not exposed before whitelist validation runs.
+ */
+contract ValidationOrderWhitelistMock {
+    error AuthorizedTargetSetBeforeValidation(address authorizedTarget);
+    error ValidationRevertedBeforeFlagSet();
+
+    OrganizationImplementationHarness internal immutable organization;
+
+    constructor(OrganizationImplementationHarness organization_) {
+        organization = organization_;
+    }
+
+    function validateIsImplementationWhitelistedOrRevert(ContractType, address) external view {
+        (, address authorizedTarget) = organization.getUpgradeState();
+        if (authorizedTarget != address(0)) {
+            revert AuthorizedTargetSetBeforeValidation(authorizedTarget);
+        }
+
+        revert ValidationRevertedBeforeFlagSet();
+    }
+}
+
+/**
  * @dev Whitelist stub with fallback that returns malformed data without reverting.
  */
 contract MalformedValidationWhitelistMock {

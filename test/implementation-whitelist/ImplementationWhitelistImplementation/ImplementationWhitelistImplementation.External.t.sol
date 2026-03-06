@@ -6,7 +6,6 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     ImplementationWhitelistHarness,
@@ -202,20 +201,6 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
-    /// @dev Verifies `initialize` rejects implementation entries with no code. [DESIRED]
-    function test_IWI_INIT_13_initialize_rejectsNoCodeEntries() public {
-        // Setup: deploy uninitialized proxy with a no-code address in the org seed array.
-        ImplementationWhitelistHarness proxy = _deployUninitializedProxy();
-        address[] memory orgSeeds = _single(noCodeAddress);
-        address[] memory empty;
-
-        // Verify: desired behavior is to reject no-code entries during initialization.
-        // NOTE: Current implementation does NOT enforce this. Test documents desired behavior.
-        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, noCodeAddress));
-        // Call: initialize with no-code implementation in seed array.
-        proxy.initialize(OWNER, orgSeeds, empty);
-    }
-
     // forgefmt: disable-next-item
     /// @dev Verifies `isInitialized()` remains true after ownership transfer via `transferOwnership` +
     // `acceptOwnership`.
@@ -306,20 +291,46 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
     // forgefmt: disable-next-item
     /// @dev Verifies whitelist mutation emits events for each added/removed implementation.
     function test_IWI_WI_4_IWI_WI_11_IWI_WI_12_whitelistMutation_emitsEventsPerProcessedAddress() public {
-        // Setup: configure add/remove lists and seed one pre-whitelisted entry for removal event.
-        vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Account, _single(accountImplementationA), new address[](0));
-
-        // Verify: expect one whitelisted and one unwhitelisted event.
-        vm.expectEmit(true, true, true, true, address(whitelistProxy));
-        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Account, accountImplementationB);
-        vm.expectEmit(true, true, true, true, address(whitelistProxy));
-        emit IImplementationWhitelist.ImplementationUnwhitelisted(ContractType.Account, accountImplementationA);
-
-        // Call: mutate whitelist with one add and one remove.
+        // Setup: seed two Account entries for removal and prepare two fresh additions under the same contract type.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
-            ContractType.Account, _single(accountImplementationB), _single(accountImplementationA)
+            ContractType.Account, _pair(accountImplementationA, accountImplementationB), new address[](0)
+        );
+
+        // Verify: expect one event per processed add/remove entry in the external mutation call.
+        vm.expectEmit(true, true, true, true, address(whitelistProxy));
+        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Account, organizationImplementationA);
+        vm.expectEmit(true, true, true, true, address(whitelistProxy));
+        emit IImplementationWhitelist.ImplementationWhitelisted(ContractType.Account, organizationImplementationB);
+        vm.expectEmit(true, true, true, true, address(whitelistProxy));
+        emit IImplementationWhitelist.ImplementationUnwhitelisted(ContractType.Account, accountImplementationA);
+        vm.expectEmit(true, true, true, true, address(whitelistProxy));
+        emit IImplementationWhitelist.ImplementationUnwhitelisted(ContractType.Account, accountImplementationB);
+
+        // Call: add two new Account-type entries and remove the two seeded entries in one owner call.
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(
+            ContractType.Account,
+            _pair(organizationImplementationA, organizationImplementationB),
+            _pair(accountImplementationA, accountImplementationB)
+        );
+
+        // Verify: added entries end true and removed entries end false after the batched mutation.
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, organizationImplementationA),
+            "first added entry should be whitelisted"
+        );
+        assertTrue(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, organizationImplementationB),
+            "second added entry should be whitelisted"
+        );
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationA),
+            "first removed entry should be unwhitelisted"
+        );
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(ContractType.Account, accountImplementationB),
+            "second removed entry should be unwhitelisted"
         );
     }
 

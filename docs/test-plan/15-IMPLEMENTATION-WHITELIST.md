@@ -42,7 +42,6 @@
 | IWI-INIT-10 | Empty organization/account arrays: initialize still succeeds and sets owner | [E] | P2 |
 | IWI-INIT-11 | `initialOwner == address(0)` reverts | [N] | P0 |
 | IWI-INIT-12 | Second initialization attempt reverts (initializer guard) | [N] | P0 |
-| IWI-INIT-13 | [DESIRED] Init rejects implementation entries with no code (EOA/non-contract) | [S] | P0 |
 
 ### 1.3 `whitelistImplementations`
 

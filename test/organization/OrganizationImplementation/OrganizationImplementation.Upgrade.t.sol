@@ -7,12 +7,14 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeab
 import {AccountImplementation} from "account/AccountImplementation.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     OrganizationImplementationSuiteBase
 } from "test/organization/OrganizationImplementation/OrganizationImplementationSuiteBase.sol";
 import {
     OrganizationImplementationHarness,
+    ValidationOrderWhitelistMock,
     RevertingValidationWhitelistMock
 } from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
@@ -800,6 +802,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         _setSingleAdminThresholdOne();
         RevertingValidationWhitelistMock revertingWhitelist = new RevertingValidationWhitelistMock();
         organizationProxy.setUpgradeState(address(revertingWhitelist), address(0));
+        address implementationBefore = _readProxyImplementation(address(organizationProxy));
         (AdminAuthParams memory authReverting,) = _buildUpgradeAuth({
             newImplementation: address(implementationV2),
             salt: 14_029,
@@ -812,31 +815,93 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         vm.expectRevert("VALIDATION_REVERT");
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), authReverting);
+
+        // Verify: whitelist failure leaves the implementation and authorization target unchanged.
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)),
+            implementationBefore,
+            "whitelist revert should keep the implementation unchanged"
+        );
+        (, address authorizedTargetAfterFailure) = organizationProxy.getUpgradeState();
+        assertEq(authorizedTargetAfterFailure, address(0), "whitelist revert should not leave auth target set");
+    }
+
+    /// @dev Verifies whitelist validation runs before the authorization target is exposed in upgrade storage.
+    /// [OI-UTCWA-6, OI-UTCWA-7]
+    function test_OI_UTACWA_31__OI_UTCWA_6__OI_UTCWA_7_whitelistValidation_runsBeforeAuthorizationFlagIsSet()
+        public
+    {
+        // Setup: route validation through a mock that inspects upgrade storage during the whitelist call.
+        _setSingleAdminThresholdOne();
+        ValidationOrderWhitelistMock validatingWhitelist = new ValidationOrderWhitelistMock(organizationProxy);
+        organizationProxy.setUpgradeState(address(validatingWhitelist), address(0));
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
+            newImplementation: address(implementationV2),
+            salt: 14_030,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: validation should observe an unset authorization target and revert with its sentinel error.
+        vm.expectRevert(ValidationOrderWhitelistMock.ValidationRevertedBeforeFlagSet.selector);
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
+
+        // Verify: the reverted validation path does not consume nonce state or leave authorization behind.
+        assertFalse(
+            stateHarness.getUsedNonce(_computeUpgradeNonce(operationData, 14_030)),
+            "whitelist-order failure should not consume nonce"
+        );
+        (, address authorizedTargetAfterFailure) = organizationProxy.getUpgradeState();
+        assertEq(authorizedTargetAfterFailure, address(0), "authorization target should remain unset");
     }
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` rejects zero and no-code targets even when whitelisted.
     /// [OI-UTCWA-14, OI-UTCWA-15]
     function test_OI_UTACWA_30__OI_UTCWA_14__OI_UTCWA_15_zeroImplementationEvenIfWhitelisted_reverts() public {
-        // Setup: whitelist zero address under Organization type and build matching auth.
+        // Setup: whitelist zero and no-code targets under Organization type and build matching auth payloads.
         _setSingleAdminThresholdOne();
+        address noCodeImplementation = address(0xCA11);
         _setOrganizationImplementationWhitelisted(address(0), true);
-        (AdminAuthParams memory auth, bytes memory operationData) = _buildUpgradeAuth({
+        _setOrganizationImplementationWhitelisted(noCodeImplementation, true);
+        (AdminAuthParams memory zeroAuth, bytes memory zeroOperationData) = _buildUpgradeAuth({
             newImplementation: address(0),
             salt: 14_031,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        (AdminAuthParams memory noCodeAuth, bytes memory noCodeOperationData) = _buildUpgradeAuth({
+            newImplementation: noCodeImplementation,
+            salt: 14_032,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
 
-        // Verify: zero/no-code implementations must fail during UUPS upgrade safety checks.
-        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
+        // Verify: zero address is rejected by the explicit guard before whitelist or UUPS execution proceeds.
+        vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
         vm.prank(GUARDIAN);
         // Call: attempt upgrade to zero address even though whitelisted.
-        organizationProxy.upgradeToAndCallWithAuthorization(address(0), bytes(""), auth);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(0), bytes(""), zeroAuth);
 
         assertFalse(
-            stateHarness.getUsedNonce(_computeUpgradeNonce(operationData, 14_031)),
-            "nonce should not be consumed on invalid implementation target"
+            stateHarness.getUsedNonce(_computeUpgradeNonce(zeroOperationData, 14_031)),
+            "zero-target revert should not consume nonce"
+        );
+
+        // Verify: non-zero no-code targets are rejected even when the whitelist approves them.
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, noCodeImplementation)
+        );
+        vm.prank(GUARDIAN);
+        // Call: attempt upgrade to a no-code target even though whitelisted.
+        organizationProxy.upgradeToAndCallWithAuthorization(noCodeImplementation, bytes(""), noCodeAuth);
+
+        assertFalse(
+            stateHarness.getUsedNonce(_computeUpgradeNonce(noCodeOperationData, 14_032)),
+            "no-code-target revert should not consume nonce"
         );
     }
 

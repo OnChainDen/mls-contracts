@@ -43,6 +43,10 @@ contract OrganizationFactory is IOrganizationFactory {
             revert IOrganizationInitialization.UnauthorizedDeployer();
         }
 
+        if (implementationAddress == address(0)) {
+            revert ZeroAddress();
+        }
+
         // Validate that the implementation is whitelisted
         IImplementationWhitelist(whitelistAddress)
             .validateIsImplementationWhitelistedOrRevert(ContractType.Organization, implementationAddress);

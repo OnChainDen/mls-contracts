@@ -5,9 +5,9 @@ pragma solidity 0.8.33;
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
-import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
@@ -84,18 +84,27 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "whitelist failure should rollback nonce consumption");
     }
 
-<<<<<<< HEAD
-    /// @dev Verifies OAFB-SAI-17: whitelist addresses without runtime code are rejected.
-    function test_OAFB_SAI_17_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts() public {
-=======
     /// @dev Verifies desired behavior that whitelist addresses without runtime code are rejected. [OAFB-SAI-8]
-    function test_OAFB_SAI_4__OAFB_SAI_8_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts() public {
->>>>>>> bd7625a3 ([TEST] Add tests for test plan 15)
+    function test_OAFB_SAI_4__OAFB_SAI_8_OAFB_SAI_17_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts()
+        public
+    {
         // Setup: configure one-admin auth and point upgrade whitelist to an EOA/no-code address.
         _setSingleAdminThresholdOne();
-        harness.setUpgradeState(address(0xABCD), address(0));
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+        _setAccountImplementationWhitelisted(accountImplementationV2, true);
 
-        (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
+        (AdminAuthParams memory seedAuth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV2,
+            salt: 6179,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV2, seedAuth);
+
+        harness.setUpgradeState(address(0), address(0));
+        (AdminAuthParams memory zeroWhitelistAuth, bytes memory zeroWhitelistOperationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV1,
             salt: 6180,
             expiration: block.timestamp + 1 hours,
@@ -103,29 +112,69 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
+        // Call: execute `setAccountImplementation` against a zero-address whitelist.
         vm.prank(GUARDIAN);
-        // Call: execute `setAccountImplementation` with no-code whitelist target.
-        (bool success, bytes memory revertData) =
-            address(harness).call(abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, auth)));
+        (bool zeroSuccess, bytes memory zeroRevertData) = address(harness)
+            .call(abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, zeroWhitelistAuth)));
 
-        // Verify: no-code whitelist addresses should be rejected at the call site.
-        assertFalse(success, "no-code whitelist address should cause revert");
-        // Verify: revert originates from calling the non-contract whitelist, not from whitelist business logic.
-        // Foundry's revert data encoding varies across execution modes (empty in normal mode, diagnostic
-        // string in trace mode), so we only assert on the selector when revert data is present.
-        if (revertData.length >= 4) {
-            bytes4 revertSelector;
+        // Verify: zero-address whitelist fails before mutating storage or reaching whitelist business logic.
+        assertFalse(zeroSuccess, "zero-address whitelist should cause revert");
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV2,
+            "zero-address whitelist revert should preserve the active implementation pointer"
+        );
+        if (zeroRevertData.length >= 4) {
+            bytes4 zeroRevertSelector;
             assembly {
-                revertSelector := mload(add(revertData, 0x20))
+                zeroRevertSelector := mload(add(zeroRevertData, 0x20))
             }
             assertTrue(
-                revertSelector != IImplementationWhitelist.ImplementationNotWhitelisted.selector,
-                "should revert before reaching whitelist validation"
+                zeroRevertSelector != IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                "zero-address whitelist should revert before whitelist business logic"
             );
         }
+        assertFalse(
+            harness.getUsedNonce(_computeSetAccountImplementationNonce(zeroWhitelistOperationData, 6180)),
+            "zero-address whitelist revert should not consume nonce"
+        );
 
-        uint256 nonce = _computeSetAccountImplementationNonce(operationData, 6180);
-        assertFalse(harness.getUsedNonce(nonce), "failed whitelist call should not consume nonce");
+        // Setup: switch to a non-zero whitelist address that still has no runtime code.
+        harness.setUpgradeState(address(0xABCD), address(0));
+        (AdminAuthParams memory noCodeWhitelistAuth, bytes memory noCodeWhitelistOperationData) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6181,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: execute `setAccountImplementation` with a no-code whitelist target.
+        vm.prank(GUARDIAN);
+        (bool noCodeSuccess, bytes memory noCodeRevertData) = address(harness)
+            .call(abi.encodeCall(harness.setAccountImplementation, (accountImplementationV1, noCodeWhitelistAuth)));
+
+        // Verify: no-code whitelist also fails before mutating storage or reaching whitelist business logic.
+        assertFalse(noCodeSuccess, "no-code whitelist address should cause revert");
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV2,
+            "no-code whitelist revert should preserve the active implementation pointer"
+        );
+        if (noCodeRevertData.length >= 4) {
+            bytes4 noCodeRevertSelector;
+            assembly {
+                noCodeRevertSelector := mload(add(noCodeRevertData, 0x20))
+            }
+            assertTrue(
+                noCodeRevertSelector != IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                "no-code whitelist should revert before whitelist business logic"
+            );
+        }
+        assertFalse(
+            harness.getUsedNonce(_computeSetAccountImplementationNonce(noCodeWhitelistOperationData, 6181)),
+            "no-code whitelist revert should not consume nonce"
+        );
     }
 
     /// @dev Verifies OAFB-SAI-1: whitelisted implementations update account-implementation storage.
@@ -230,13 +279,10 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertEq(operationData, expectedOperationData, "operationData should equal abi.encode(newImplementation)");
     }
 
-<<<<<<< HEAD
-    /// @dev Verifies OAFB-SAI-10: whitelist validation uses `ContractType.Account` (not `ContractType.Organization`).
-    function test_OAFB_SAI_10_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount() public {
-=======
     /// @dev Verifies whitelist validation uses `ContractType.Account` (not `ContractType.Organization`). [OAFB-SAI-4]
-    function test_OAFB_SAI_9__OAFB_SAI_4_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount() public {
->>>>>>> bd7625a3 ([TEST] Add tests for test plan 15)
+    function test_OAFB_SAI_9__OAFB_SAI_4_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount()
+        public
+    {
         // Setup: whitelist target under Organization type only and configure one-admin auth.
         _setSingleAdminThresholdOne();
         whitelist.setImplementationWhitelisted(ContractType.Organization, accountImplementationV1, true);
@@ -299,19 +345,23 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV1, auth);
     }
 
-<<<<<<< HEAD
-    /// @dev Verifies OAFB-SAI-19: failed whitelist validation does not consume nonce and same signed request can later
-    /// succeed.
-    function test_OAFB_SAI_19_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
-=======
     /// @dev Verifies failed whitelist validation does not consume nonce and same signed request can later succeed.
-    /// [OAFB-SAI-7]
-    function test_OAFB_SAI_11__OAFB_SAI_7_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
->>>>>>> bd7625a3 ([TEST] Add tests for test plan 15)
+    function test_OAFB_SAI_19__OAFB_SAI_7_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
         public
     {
-        // Setup: configure one-admin auth and leave implementation un-whitelisted for first attempt.
+        // Setup: seed an active implementation, then leave the retry target un-whitelisted for the first attempt.
         _setSingleAdminThresholdOne();
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+
+        (AdminAuthParams memory seedAuth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 6163,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, seedAuth);
 
         (AdminAuthParams memory auth, bytes memory operationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV2,
@@ -334,8 +384,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "failed whitelist validation should not consume nonce");
         assertEq(
             harness.getAccountImplementationStorage(),
-            address(0),
-            "failed whitelist validation should not mutate implementation"
+            accountImplementationV1,
+            "failed whitelist validation should keep the active implementation pointer unchanged"
         );
 
         // Setup: add whitelist entry for retry with identical signed request.
@@ -352,14 +402,10 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertTrue(harness.getUsedNonce(nonce), "successful retry should consume nonce");
     }
 
-<<<<<<< HEAD
-    /// @dev Verifies OAFB-SAI-18: no-code implementation addresses are rejected even if whitelisted.
-    function test_OAFB_SAI_18_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts() public {
-=======
     /// @dev Verifies desired behavior that no-code implementation addresses are rejected even if whitelisted.
-    /// [OAFB-SAI-9]
-    function test_OAFB_SAI_12__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts() public {
->>>>>>> bd7625a3 ([TEST] Add tests for test plan 15)
+    function test_OAFB_SAI_18__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
+        public
+    {
         address noCodeImplementation = address(0xCA11);
 
         // Setup: whitelist an EOA/no-code target and configure one-admin auth.
@@ -410,13 +456,10 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "expired auth should not consume nonce");
     }
 
-<<<<<<< HEAD
-    /// @dev Verifies OAFB-SAI-7: signatures for a different implementation cannot authorize current update call.
-    function test_OAFB_SAI_7_setAccountImplementation_signaturesForDifferentImplementation_reverts() public {
-=======
     /// @dev Verifies signatures for a different implementation cannot authorize current update call. [OAFB-SAI-2]
-    function test_OAFB_SAI_14__OAFB_SAI_2_setAccountImplementation_signaturesForDifferentImplementation_reverts() public {
->>>>>>> bd7625a3 ([TEST] Add tests for test plan 15)
+    function test_OAFB_SAI_7__OAFB_SAI_2_setAccountImplementation_signaturesForDifferentImplementation_reverts()
+        public
+    {
         // Setup: whitelist both implementations and sign auth for V1 only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);

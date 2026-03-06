@@ -92,6 +92,23 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         );
     }
 
+    /// @dev Verifies `OrganizationFactory.deployOrganization` emits `OrganizationDeployed` with the exact indexed
+    ///      address, salt, and deployer values. [OF-DO-5]
+    function test_OF_DO_23__OF_DO_5_deployOrganization_success_emitsExactOrganizationDeployedPayload() public {
+        // Setup: prepare a valid deployment tuple and compute the expected proxy address.
+        bytes32 salt = bytes32(uint256(1002));
+        InitializationParams memory params = _defaultInitializationParams();
+        address expected = _computeOrganizationAddress(salt);
+
+        // Verify: expect the deployment event to carry the exact CREATE2 address, salt, and authorized deployer.
+        vm.expectEmit(true, true, true, false, address(factory));
+        emit IOrganizationFactory.OrganizationDeployed(expected, salt, AUTHORIZED_DEPLOYER);
+
+        // Call: deploy an organization through the authorized factory path.
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+    }
+
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized
     /// callers. [OF-DO-1]
     function test_OF_DO_4__OF_DO_1_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer() public {
@@ -157,8 +174,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(0), true);
 
-        // Call: Attempt deployment with zero implementation and expect `ERC1967InvalidImplementation`.
-        vm.expectRevert(abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, address(0)));
+        // Call: attempt deployment with zero implementation and expect the explicit zero-address guard.
+        vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(0), address(whitelist), params);
 
@@ -212,6 +229,30 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         factory.deployOrganization(salt, address(implementation), eoaWhitelist, params);
 
         // Verify: The revert captures the requirement that whitelist must be a valid contract endpoint.
+    }
+
+    /// @dev Verifies a reverting whitelist blocks deployment before proxy code or deployment events can persist.
+    /// [OF-DO-6, OF-DO-8, IWC-INT-7]
+    function test_OF_DO_24__OF_DO_6__OF_DO_8__IWC_INT_7_deployOrganization_whitelistRevert_leavesNoCodeOrEvent()
+        public
+    {
+        // Setup: configure a reverting whitelist payload and precompute the address that would otherwise be deployed.
+        bytes32 salt = bytes32(uint256(2007_1));
+        InitializationParams memory params = _defaultInitializationParams();
+        address expected = factory.computeOrganizationAddress(salt, address(implementation), address(whitelist));
+        bytes memory revertData = bytes("WHITELIST_REVERT");
+        whitelist.setForceRevert(true, revertData);
+        vm.recordLogs();
+
+        // Call: attempt deployment and expect whitelist validation to fail before any proxy deployment side effects.
+        vm.expectRevert(revertData);
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+
+        // Verify: the reverted deployment leaves no runtime code and no `OrganizationDeployed` event behind.
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(expected.code.length, 0, "whitelist revert should leave no deployed proxy code");
+        assertEq(_countTopic(logs, ORG_DEPLOYED_TOPIC), 0, "whitelist revert should not emit OrganizationDeployed");
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts on a second deployment of the same CREATE2 tuple.

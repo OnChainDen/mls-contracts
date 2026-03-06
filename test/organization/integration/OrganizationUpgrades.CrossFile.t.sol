@@ -139,6 +139,18 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         vm.prank(GUARDIAN);
         organizationProxy.setAccountImplementation(accountImplV1, setAccountAuth);
 
+        (AdminAuthParams memory deployAccountAuth,) = _buildAuthForOrganization({
+            organization: address(organizationProxy),
+            operationType: OperationType.DeployAccount,
+            operationData: abi.encode(bytes32(uint256(3))),
+            isApproval: true,
+            salt: 141_010,
+            expirationTimestamp: block.timestamp + 1 hours,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        address deployedAccount = organizationProxy.deployAccount(bytes32(uint256(3)), deployAccountAuth);
+
         // Setup: unwhitelist both active targets.
         _setOrganizationImplementationWhitelisted(address(implementationV2), false);
         _setAccountImplementationWhitelisted(accountImplV1, false);
@@ -179,6 +191,7 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         // Verify: already-active pointers remain unchanged.
         assertEq(_readProxyImplementation(address(organizationProxy)), address(implementationV2), "org pointer changed");
         assertEq(organizationProxy.getAccountImplementationStorage(), accountImplV1, "account pointer changed");
+        assertEq(IVersionedAccount(deployedAccount).version(), 1, "deployed account should keep running its active code");
     }
 
     /// @dev Verifies unwhitelisting active Organization implementation does not block upgrading to new whitelisted
@@ -391,6 +404,53 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         assertEq(
             _readProxyImplementation(address(organizationProxy)), address(implementationV2), "fresh auth should succeed"
         );
+    }
+
+    /// @dev Verifies re-whitelisting a previously removed Account implementation re-enables account upgrade flows.
+    function test_UPG_CFS_11__IWC_INT_4_reWhitelisting_reEnablesAccountImplementationUpdates() public {
+        // Setup: activate Account V1, remove V2 from the whitelist, and build auth for switching to V2.
+        _setSingleAdminThresholdOne();
+        address accountImplV1 = address(new AccountImplementationVersion1());
+        address accountImplV2 = address(new AccountImplementationVersion2());
+        _setAccountImplementationWhitelisted(accountImplV1, true);
+        _setAccountImplementationWhitelisted(accountImplV2, true);
+
+        (AdminAuthParams memory setV1Auth,) = _buildAuthForOrganization({
+            organization: address(organizationProxy),
+            operationType: OperationType.UpgradeAccount,
+            operationData: abi.encode(accountImplV1),
+            isApproval: true,
+            salt: 141_020,
+            expirationTimestamp: block.timestamp + 1 hours,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        vm.prank(GUARDIAN);
+        organizationProxy.setAccountImplementation(accountImplV1, setV1Auth);
+
+        (AdminAuthParams memory setV2Auth,) = _buildAuthForOrganization({
+            organization: address(organizationProxy),
+            operationType: OperationType.UpgradeAccount,
+            operationData: abi.encode(accountImplV2),
+            isApproval: true,
+            salt: 141_021,
+            expirationTimestamp: block.timestamp + 1 hours,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        _setAccountImplementationWhitelisted(accountImplV2, false);
+
+        // Call: fail once while V2 is unwhitelisted, then re-whitelist and retry with the same auth payload.
+        vm.expectRevert(
+            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, accountImplV2)
+        );
+        vm.prank(GUARDIAN);
+        organizationProxy.setAccountImplementation(accountImplV2, setV2Auth);
+
+        _setAccountImplementationWhitelisted(accountImplV2, true);
+        vm.prank(GUARDIAN);
+        organizationProxy.setAccountImplementation(accountImplV2, setV2Auth);
+
+        // Verify: re-whitelisting restores the ability to move the account implementation pointer to V2.
+        assertEq(organizationProxy.getAccountImplementationStorage(), accountImplV2, "re-whitelisted update should succeed");
     }
 
     /// @dev Verifies signatures for Organization A cannot authorize same call on Organization B.

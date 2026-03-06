@@ -2,11 +2,13 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {OrganizationAccountFactoryBase} from "organization/base/OrganizationAccountFactoryBase.sol";
 import {OrganizationAccountSignatureBase} from "organization/base/OrganizationAccountSignatureBase.sol";
 import {OrganizationAccountTransactionBase} from "organization/base/OrganizationAccountTransactionBase.sol";
@@ -78,6 +80,10 @@ contract OrganizationImplementation is
             operationType: OperationType.Upgrade, operationData: operationData, isApproval: true, authParams: authParams
         });
 
+        if (newImplementation == address(0)) {
+            revert IOrganizationFactory.ZeroAddress();
+        }
+
         // Validate implementation against whitelist
         // forgefmt: disable-next-item
         IImplementationWhitelist(LibOrganizationUpgradeStorage.layout().whitelistAddress)
@@ -85,6 +91,10 @@ contract OrganizationImplementation is
                 ContractType.Organization,
                 newImplementation
             );
+
+        if (newImplementation.code.length == 0) {
+            revert ERC1967Utils.ERC1967InvalidImplementation(newImplementation);
+        }
 
         // Bind authorization to this exact target implementation for the upcoming UUPS hook call.
         LibOrganizationUpgradeStorage.layout().authorizedUpgradeImplementation = newImplementation;
