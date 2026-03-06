@@ -81,8 +81,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(beforeUpgrade, afterUpgrade, "computed account address should not change across upgrades");
     }
 
-    /// @dev Verifies `implementation()` returns the current account implementation from storage.
-    function test_OAFB_I_1_implementation_returnsCurrentImplementationAddressFromStorage() public {
+    /// @dev Verifies OAFB-IMP-1: `implementation()` returns the current account implementation from storage.
+    function test_OAFB_IMP_1_implementation_returnsCurrentImplementationAddressFromStorage() public {
         // Setup: seed account implementation storage directly.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -93,8 +93,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(implementationAddress, accountImplementationV1, "implementation view should mirror storage");
     }
 
-    /// @dev Verifies `implementation()` reverts `AccountImplementationNotSet` when unset.
-    function test_OAFB_I_2_implementation_whenUnset_revertsAccountImplementationNotSet() public {
+    /// @dev Verifies OAFB-IMP-2: `implementation()` reverts `AccountImplementationNotSet` when unset.
+    function test_OAFB_IMP_2_implementation_whenUnset_revertsAccountImplementationNotSet() public {
         // Setup: leave account implementation storage as zero.
 
         // Verify: unset implementation should revert with canonical organization error.
@@ -103,8 +103,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         harness.implementation();
     }
 
-    /// @dev Verifies `implementation()` returns updated address after successful set-account-implementation call.
-    function test_OAFB_I_3_implementation_afterSetAccountImplementation_returnsUpdatedAddress() public {
+    /// @dev Verifies OAFB-IMP-1: `implementation()` returns updated address after set-account-implementation call.
+    function test_OAFB_IMP_1_implementation_afterSetAccountImplementation_returnsUpdatedAddress() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV2, true);
@@ -125,8 +125,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(harness.implementation(), accountImplementationV2, "implementation should update after set call");
     }
 
-    /// @dev Verifies `implementation()` is callable by arbitrary non-guardian callers.
-    function test_OAFB_I_4_implementation_callableByAnyone() public {
+    /// @dev Additional coverage (no direct 14-UPGRADES row ID): `implementation()` is callable by non-guardian callers.
+    function test_implementation_callableByAnyone() public {
         // Setup: seed account implementation so view call succeeds.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
@@ -138,8 +138,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         assertEq(implementationAddress, accountImplementationV1, "implementation should be publicly readable");
     }
 
-    /// @dev Verifies successive implementation updates are reflected by `implementation()` getter.
-    function test_OAFB_I_5_implementation_afterSuccessiveSetCalls_returnsLatest() public {
+    /// @dev Verifies OAFB-IMP-1: successive implementation updates are reflected by `implementation()` getter.
+    function test_OAFB_IMP_1_implementation_afterSuccessiveSetCalls_returnsLatest() public {
         // Setup: configure one-admin baseline and whitelist both implementation versions.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -175,8 +175,8 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
         );
     }
 
-    /// @dev Verifies desired behavior that no-code stored implementation addresses are rejected.
-    function test_OAFB_I_6_implementation_noCodeStoredImplementation_reverts() public {
+    /// @dev Additional coverage (no direct 14-UPGRADES row ID): no-code stored implementation addresses are rejected.
+    function test_implementation_noCodeStoredImplementation_reverts() public {
         address noCodeImplementation = address(0xCA67);
 
         // Setup: seed a non-zero implementation address with no runtime code.

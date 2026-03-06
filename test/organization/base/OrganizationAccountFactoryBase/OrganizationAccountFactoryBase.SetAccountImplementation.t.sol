@@ -17,8 +17,8 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationAccountFactoryBase.setAccountImplementation` behavior.
  */
 contract OrganizationAccountFactoryBaseSetAccountImplementationTest is OrganizationAccountFactoryBaseSuiteBase {
-    /// @dev Verifies non-guardian callers are rejected by the `onlyGuardian` modifier.
-    function test_OAFB_SAI_1_setAccountImplementation_nonGuardianCaller_revertsOnlyGuardian() public {
+    /// @dev Verifies OAFB-SAI-2: non-guardian callers are rejected by the `onlyGuardian` modifier.
+    function test_OAFB_SAI_2_setAccountImplementation_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure a valid one-admin baseline and prepare empty auth payload.
         _setSingleAdminThresholdOne();
         AdminAuthParams memory auth;
@@ -30,8 +30,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV1, auth);
     }
 
-    /// @dev Verifies insufficient admin signatures revert through admin-auth validation.
-    function test_OAFB_SAI_2_setAccountImplementation_insufficientSignatures_revertsViaAdminAuthValidation() public {
+    /// @dev Verifies OAFB-SAI-4: insufficient admin signatures revert through admin-auth validation.
+    function test_OAFB_SAI_4_setAccountImplementation_insufficientSignatures_revertsViaAdminAuthValidation() public {
         // Setup: require two signatures but provide one.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -54,8 +54,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "failed auth should not consume nonce");
     }
 
-    /// @dev Verifies non-whitelisted implementations revert via whitelist validation.
-    function test_OAFB_SAI_3_setAccountImplementation_nonWhitelistedImplementation_reverts() public {
+    /// @dev Verifies OAFB-SAI-9: non-whitelisted implementations revert via whitelist validation.
+    function test_OAFB_SAI_9_setAccountImplementation_nonWhitelistedImplementation_reverts() public {
         address nonWhitelistedImplementation = address(0x6110000000000000000000000000000000000010);
 
         // Setup: configure one-admin auth and leave implementation un-whitelisted.
@@ -83,8 +83,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "whitelist failure should rollback nonce consumption");
     }
 
-    /// @dev Verifies desired behavior that whitelist addresses without runtime code are rejected.
-    function test_OAFB_SAI_4_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts() public {
+    /// @dev Verifies OAFB-SAI-17: whitelist addresses without runtime code are rejected.
+    function test_OAFB_SAI_17_setAccountImplementation_whitelistAddressWithoutRuntimeCode_reverts() public {
         // Setup: configure one-admin auth and point upgrade whitelist to an EOA/no-code address.
         _setSingleAdminThresholdOne();
         harness.setUpgradeState(address(0xABCD), address(0));
@@ -122,8 +122,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "failed whitelist call should not consume nonce");
     }
 
-    /// @dev Verifies whitelisted implementations update account-implementation storage.
-    function test_OAFB_SAI_5_setAccountImplementation_whitelistedImplementation_updatesStorage() public {
+    /// @dev Verifies OAFB-SAI-1: whitelisted implementations update account-implementation storage.
+    function test_OAFB_SAI_1_setAccountImplementation_whitelistedImplementation_updatesStorage() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -144,8 +144,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertEq(harness.getAccountImplementationStorage(), accountImplementationV1, "account implementation mismatch");
     }
 
-    /// @dev Verifies successful updates emit `AccountImplementationUpdated(newImplementation)`.
-    function test_OAFB_SAI_6_setAccountImplementation_success_emitsAccountImplementationUpdated() public {
+    /// @dev Verifies OAFB-SAI-11: successful updates emit `AccountImplementationUpdated(newImplementation)`.
+    function test_OAFB_SAI_11_setAccountImplementation_success_emitsAccountImplementationUpdated() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -167,8 +167,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV1, auth);
     }
 
-    /// @dev Verifies admin auth for implementation updates uses `OperationType.UpgradeAccount`.
-    function test_OAFB_SAI_7_setAccountImplementation_operationTypeIsUpgradeAccount_inAdminAuthValidation() public {
+    /// @dev Verifies OAFB-SAI-8: admin auth for implementation updates uses `OperationType.UpgradeAccount`.
+    function test_OAFB_SAI_8_setAccountImplementation_operationTypeIsUpgradeAccount_inAdminAuthValidation() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -210,8 +210,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         );
     }
 
-    /// @dev Verifies operation data for implementation updates encodes only `newImplementation`.
-    function test_OAFB_SAI_8_setAccountImplementation_operationData_encodesNewImplementation() public pure {
+    /// @dev Additional coverage (no direct 14-UPGRADES row ID): operation data encodes only `newImplementation`.
+    function test_setAccountImplementation_operationData_encodesNewImplementation() public pure {
         address newImplementation = 0x111122223333444455556666777788889999aAaa;
 
         // Setup: fixed golden vector for deterministic operation-data encoding checks.
@@ -224,8 +224,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertEq(operationData, expectedOperationData, "operationData should equal abi.encode(newImplementation)");
     }
 
-    /// @dev Verifies whitelist validation uses `ContractType.Account` (not `ContractType.Organization`).
-    function test_OAFB_SAI_9_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount() public {
+    /// @dev Verifies OAFB-SAI-10: whitelist validation uses `ContractType.Account` (not `ContractType.Organization`).
+    function test_OAFB_SAI_10_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount() public {
         // Setup: whitelist target under Organization type only and configure one-admin auth.
         _setSingleAdminThresholdOne();
         whitelist.setImplementationWhitelisted(ContractType.Organization, accountImplementationV1, true);
@@ -261,8 +261,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         );
     }
 
-    /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_OAFB_SAI_10_setAccountImplementation_replaySameNonce_revertsAfterSuccessfulExecution() public {
+    /// @dev Verifies OAFB-SAI-5: replaying the same nonce after success reverts with `NonceAlreadyUsed`.
+    function test_OAFB_SAI_5_setAccountImplementation_replaySameNonce_revertsAfterSuccessfulExecution() public {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -288,8 +288,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV1, auth);
     }
 
-    /// @dev Verifies failed whitelist validation does not consume nonce and same signed request can later succeed.
-    function test_OAFB_SAI_11_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
+    /// @dev Verifies OAFB-SAI-19: failed whitelist validation does not consume nonce and same signed request can later
+    /// succeed.
+    function test_OAFB_SAI_19_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
         public
     {
         // Setup: configure one-admin auth and leave implementation un-whitelisted for first attempt.
@@ -329,8 +330,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertTrue(harness.getUsedNonce(nonce), "successful retry should consume nonce");
     }
 
-    /// @dev Verifies desired behavior that no-code implementation addresses are rejected even if whitelisted.
-    function test_OAFB_SAI_12_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts() public {
+    /// @dev Verifies OAFB-SAI-18: no-code implementation addresses are rejected even if whitelisted.
+    function test_OAFB_SAI_18_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts() public {
         address noCodeImplementation = address(0xCA11);
 
         // Setup: whitelist an EOA/no-code target and configure one-admin auth.
@@ -357,8 +358,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "failed no-code implementation update should not consume nonce");
     }
 
-    /// @dev Verifies expired admin auth reverts and does not consume nonce.
-    function test_OAFB_SAI_13_setAccountImplementation_expiredAdminAuth_revertsAndDoesNotConsumeNonce() public {
+    /// @dev Verifies OAFB-SAI-3: expired admin auth reverts and does not consume nonce.
+    function test_OAFB_SAI_3_setAccountImplementation_expiredAdminAuth_revertsAndDoesNotConsumeNonce() public {
         // Setup: configure one-admin baseline and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -381,8 +382,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonce), "expired auth should not consume nonce");
     }
 
-    /// @dev Verifies signatures for a different implementation cannot authorize current update call.
-    function test_OAFB_SAI_14_setAccountImplementation_signaturesForDifferentImplementation_reverts() public {
+    /// @dev Verifies OAFB-SAI-7: signatures for a different implementation cannot authorize current update call.
+    function test_OAFB_SAI_7_setAccountImplementation_signaturesForDifferentImplementation_reverts() public {
         // Setup: whitelist both implementations and sign auth for V1 only.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -409,8 +410,8 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         assertFalse(harness.getUsedNonce(nonceForV1), "failed mismatched auth should not consume V1 nonce");
     }
 
-    /// @dev Verifies no-code-target revert path preserves current implementation pointer and nonce state.
-    function test_OAFB_SAI_15_setAccountImplementation_noCodeTargetPath_doesNotConsumeNonceOrMutatePointer() public {
+    /// @dev Verifies OAFB-SAI-19: no-code-target revert path preserves current implementation pointer and nonce state.
+    function test_OAFB_SAI_19_setAccountImplementation_noCodeTargetPath_doesNotConsumeNonceOrMutatePointer() public {
         address noCodeImplementation = address(0xCA11);
 
         // Setup: seed an active implementation and whitelist the no-code target.
