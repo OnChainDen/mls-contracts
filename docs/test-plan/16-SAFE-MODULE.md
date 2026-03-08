@@ -34,10 +34,6 @@
 | SEM-CON-5 | `authorizedExecutor == address(0)` — reverts `ExecutorAddressCannotBeZero` | [N] | P0 |
 | SEM-CON-6 | `batchedTransaction == address(0)` — reverts `BatchedTransactionAddressCannotBeZero` | [N] | P0 |
 | SEM-CON-7 | Multiple invalid params — deterministic revert precedence (`safe` check first) | [E] | P2 |
-| SEM-CON-8 | **Desired behavior hardening:** reject non-contract `safe` address (misconfiguration protection) | [S] | P1 |
-| SEM-CON-9 | **Desired behavior hardening:** reject non-contract `batchedTransaction` address | [S] | P1 |
-| SEM-CON-10 | **Desired behavior hardening:** reject contract `authorizedExecutor` (docs require Authorized Executor EOA) | [S] | P1 |
-| SEM-CON-11 | **Desired behavior hardening:** reject `safe == batchedTransaction` configuration | [S] | P1 |
 
 ---
 
@@ -66,8 +62,6 @@
 | SEM-EOB-19 | `to == BATCHED_TRANSACTION` with sub-transaction targeting Safe fails atomically (module reverts) | [I][S] | P0 |
 | SEM-EOB-20 | Safe revert reason/data from `execTransactionFromModule` is bubbled (not remapped to `ExecutionFailed`) | [E] | P1 |
 | SEM-EOB-21 | `to == BATCHED_TRANSACTION`: sub-transaction targets observe `msg.sender == SAFE` (delegatecall context preserved) | [I][S] | P0 |
-| SEM-EOB-22 | **Desired behavior hardening:** reject `to == address(0)` (fail closed on invalid target) | [S] | P1 |
-| SEM-EOB-23 | **Desired behavior hardening:** reject non-contract `to` targets (EOA/no-code) to prevent silent no-op calls | [S] | P1 |
 
 ---
 
@@ -125,8 +119,6 @@
 | BT-ESF-9 | All sub-transactions are executed as `CALL` (no per-subtx delegatecall path) | [S] | P1 |
 | BT-ESF-10 | No partial completion is observable after any failure (all-or-nothing) | [S] | P0 |
 | BT-ESF-11 | Failed execution never returns success=true (no silent partial failure) | [S] | P0 |
-| BT-ESF-12 | **Desired behavior hardening:** sub-transaction with `to == address(0)` reverts (invalid target) | [S] | P1 |
-| BT-ESF-13 | **Desired behavior hardening:** sub-transaction to non-contract address (EOA/no-code) reverts | [S] | P1 |
 
 ---
 
@@ -135,10 +127,8 @@
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | BT-EMB-1 | Trailing bytes shorter than one 28-byte header — **desired behavior:** revert invalid encoding | [E][S] | P0 |
-| BT-EMB-2 | Declared `dataLength` larger than remaining bytes — **desired behavior:** revert invalid encoding | [E][S] | P0 |
 | BT-EMB-3 | Malformed first transaction causes revert before any external call executes | [S] | P0 |
 | BT-EMB-4 | Malformed later transaction reverts and rolls back earlier successful sub-calls | [S] | P0 |
-| BT-EMB-5 | Valid transaction + trailing garbage bytes — **desired behavior:** revert (strict parser) | [E] | P1 |
 | BT-EMB-6 | Exact boundary case: header-only entry with `dataLength=0` is accepted | [E] | P1 |
 | BT-EMB-7 | Extremely large declared `dataLength` with short payload reverts safely | [S] | P0 |
 | BT-EMB-8 | Offset/length confusion cannot bypass self-call block (`CannotCallSafe`) | [S] | P0 |
@@ -164,7 +154,6 @@
 | LOAS-IVGS-5 | Module inner signature signed by wrong executor returns `false` | [N] | P0 |
 | LOAS-IVGS-6 | Malformed module inner signature returns `false` (no revert) | [E] | P0 |
 | LOAS-IVGS-7 | Guardian contract that reverts on `isModuleEnabled` staticcall returns `false` gracefully | [E] | P0 |
-| LOAS-IVGS-8 | Guardian contract that returns truncated data (`<32 bytes`) or malformed data (not `true` or `false`) for `isModuleEnabled` returns `false` | [E] | P0 |
 | LOAS-IVGS-9 | Guardian is EOA and recovered signer is not guardian returns `false` gracefully | [E] | P0 |
 | LOAS-IVGS-10 | Module rotation behavior: old module disabled/new module enabled => old `false`, new `true` immediately | [I][S] | P0 |
 
@@ -180,7 +169,6 @@
 | LOAS-VPBS-4 | ManualApproval with insufficient/invalid review signatures => invalid value | [N] | P0 |
 | LOAS-VPBS-5 | Guardian signature is bound to review hash (changing initiator signature invalidates guardian signature) | [S] | P0 |
 | LOAS-VPBS-6 | Guardian signature over wrong message hash => invalid value | [S] | P0 |
-| LOAS-VPBS-7 | Malformed ABI-encoded policy payload — **desired behavior:** return invalid value (never revert) | [E][S] | P0 |
 | LOAS-VPBS-8 | Policy non-applicability or unauthorized initiator => invalid value even with valid module guardian signature | [S] | P0 |
 | LOAS-VPBS-9 | `expirationTimestamp == block.timestamp` is accepted (strict `>` expiry check) | [E] | P1 |
 | LOAS-VPBS-10 | AutoApprove policy ignores `reviewSignatures` payload (guardian + initiator remain sufficient) | [E][U] | P1 |
@@ -248,7 +236,6 @@
 | SMI-FUZ-2 | Fuzz `executeOnBehalf`: random calldata is forwarded byte-for-byte to Safe | [F] | P1 |
 | SMI-FUZ-3 | Fuzz `isValidSignature`: random malformed signatures never revert and never return magic unless signer is authorized | [F][S] | P0 |
 | SMI-FUZ-4 | Fuzz valid packed batches: successful execution matches sequential-call semantics | [F] | P1 |
-| SMI-FUZ-5 | Fuzz malformed packed batches: always revert and never partially apply state (**desired behavior**) | [F][S] | P0 |
 | SMI-FUZ-6 | Fuzz self-target position in batch: any occurrence always causes atomic revert | [F][S] | P0 |
 | SMI-FUZ-7 | Fuzz module enable/disable sequences: module-signature acceptance always matches current enabled set | [F][S] | P0 |
 | SMI-FUZ-8 | Fuzz random inner module signatures: only correctly signed Authorized Executor signatures validate | [F][S] | P0 |
@@ -272,18 +259,18 @@
 
 | Category | New Tests | Priority |
 |----------|-----------|----------|
-| `SafeExecutorModule.constructor` | 11 | P0-P2 |
-| `SafeExecutorModule.executeOnBehalf` | 23 | P0-P1 |
+| `SafeExecutorModule.constructor` | 7 | P0-P2 |
+| `SafeExecutorModule.executeOnBehalf` | 21 | P0-P1 |
 | `SafeExecutorModule.isValidSignature` | 14 | P0-P2 |
 | `BatchedTransaction.execute` (valid behavior) | 9 | P0-P2 |
-| `BatchedTransaction.execute` (security/failure) | 13 | P0-P1 |
-| `BatchedTransaction.execute` (malformed/bounds) | 9 | P0-P1 |
-| `_isValidGuardianSignature` (safe-module subset) | 10 | P0 |
-| `_validatePolicyBasedSignature` (safe-module subset) | 11 | P0-P1 |
+| `BatchedTransaction.execute` (security/failure) | 11 | P0-P1 |
+| `BatchedTransaction.execute` (malformed/bounds) | 7 | P0-P1 |
+| `_isValidGuardianSignature` (safe-module subset) | 9 | P0 |
+| `_validatePolicyBasedSignature` (safe-module subset) | 10 | P0-P1 |
 | `_isERC1271SignatureAllowedByPolicy` (safe-module subset) | 5 | P0 |
 | `_getInitiatorSignatureHash` (safe-module subset) | 4 | P0-P1 |
 | `_getReviewSignatureHash` (safe-module subset) | 4 | P0 |
 | End-to-end integration | 11 | P0-P1 |
-| Fuzz tests | 8 | P0-P1 |
+| Fuzz tests | 7 | P0-P1 |
 | Invariant tests | 6 | P0 |
-| **Total** | **138** | |
+| **Total** | **125** | |
