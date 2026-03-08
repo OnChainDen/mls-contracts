@@ -68,6 +68,12 @@ interface IOrganizationAdmin {
     error AdminOperationExpired(uint256 expirationTimestamp, uint256 currentTimestamp);
 
     /**
+     * @notice Thrown when `rejectAdminOperation` is used for a non-admin operation domain
+     * @param operationType The unsupported operation type
+     */
+    error InvalidAdminOperationType(OperationType operationType);
+
+    /**
      * @notice Thrown when trying to add an admin that already exists
      * @param admin The address that is already an admin
      */

@@ -44,6 +44,13 @@ abstract contract OrganizationAdminBase is OrganizationModifiers, IOrganizationA
         bytes calldata operationData,
         AdminAuthParams calldata authParams
     ) external override onlyGuardian {
+        if (
+            operationType == OperationType.AccountTransaction
+                || operationType == OperationType.AccountTransactionRejection
+        ) {
+            revert IOrganizationAdmin.InvalidAdminOperationType(operationType);
+        }
+
         // Compute nonce for this operation
         uint256 nonce = LibOrganizationSignatures.computeNonce(operationType, operationData, authParams.salt);
 
