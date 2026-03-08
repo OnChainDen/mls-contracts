@@ -9,6 +9,9 @@ import {
     OrganizationAccountTransactionBaseHarness
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseHarness.sol";
 import {
+    LibOrganizationAccountTransactionHarness
+} from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionHarness.sol";
+import {
     MockAccountForOrganizationTransaction
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
 import {
@@ -251,24 +254,32 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies changing any single core field changes initiator hash.
-    function testFuzz_AT_FZ_8__LOAT_CIHFP_2__LOAT_CIHFP_3__LOAT_CIHFP_4_computeInitiatorHash_singleFieldMutationsChangeHash(
+    function testFuzz_AT_FZ_8__LOAT_CIHFP_2__LOAT_CIHFP_3__LOAT_CIHFP_4__NMATL_RHB_1_computeInitiatorHash_singleFieldMutationsChangeHash(
         address account,
         address to,
         uint96 value,
         bytes calldata data,
         uint256 salt,
         uint8 expirationBuffer
-    ) public view {
-        // Setup: constrain addresses and compute baseline hash.
+    ) public {
+        // Setup: constrain addresses, compute baseline hash, and deploy a second harness for organization binding.
         vm.assume(account != address(0));
         vm.assume(to != address(0));
         vm.assume(expirationBuffer > 0);
         uint256 expiration = block.timestamp + uint256(expirationBuffer) * 1 days;
+        LibOrganizationAccountTransactionHarness secondHarness = new LibOrganizationAccountTransactionHarness();
         bytes32 base = harness.computeInitiatorHashFromParamsViaLibrary(
             account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true
         );
 
         // Verify: mutate each field and assert hash changes.
+        assertTrue(
+            base
+                != secondHarness.computeInitiatorHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "organization mutation should change hash"
+        );
         assertTrue(
             base
                 != harness.computeInitiatorHashFromParamsViaLibrary(
@@ -307,26 +318,49 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         assertTrue(
             base
                 != harness.computeInitiatorHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID + 1, data, true
+                ),
+            "policy id mutation should change hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
                     account, to, value, salt, expiration, DEFAULT_POLICY_ID, _mutateBytes(data), true
                 ),
             "data mutation should change hash"
         );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, false
+                ),
+            "approval flag mutation should change hash"
+        );
+
+        uint256 originalChainId = block.chainid;
+        vm.chainId(originalChainId + 1);
+        bytes32 changedChainHash = harness.computeInitiatorHashFromParamsViaLibrary(
+            account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true
+        );
+        vm.chainId(originalChainId);
+        assertTrue(base != changedChainHash, "chain id mutation should change hash");
     }
 
     /// @dev Verifies changing transaction fields changes review hash for fixed initiator signature.
-    function testFuzz_AT_FZ_9_computeReviewHash_fieldMutationsChangeHash(
+    function testFuzz_AT_FZ_9__NMATL_RHB_3_computeReviewHash_fieldMutationsChangeHash(
         address account,
         address to,
         uint96 value,
         bytes calldata data,
         uint256 salt,
         uint8 expirationBuffer
-    ) public view {
-        // Setup: constrain addresses and derive fixed initiator signature.
+    ) public {
+        // Setup: constrain addresses, derive fixed initiator signature, and deploy a second harness.
         vm.assume(account != address(0));
         vm.assume(to != address(0));
         vm.assume(expirationBuffer > 0);
         uint256 expiration = block.timestamp + uint256(expirationBuffer) * 1 days;
+        LibOrganizationAccountTransactionHarness secondHarness = new LibOrganizationAccountTransactionHarness();
         bytes memory initiatorSig = _signInitiatorTx(
             address(harness), INITIATOR_PK_1, account, to, value, data, salt, expiration, DEFAULT_POLICY_ID, true
         );
@@ -335,6 +369,13 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         );
 
         // Verify: mutating any core field changes review hash.
+        assertTrue(
+            base
+                != secondHarness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                ),
+            "organization mutation should change review hash"
+        );
         assertTrue(
             base
                 != harness.computeReviewHashFromParamsViaLibrary(
@@ -373,10 +414,39 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         assertTrue(
             base
                 != harness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID + 1, data, true, initiatorSig
+                ),
+            "policy id mutation should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
                     account, to, value, salt, expiration, DEFAULT_POLICY_ID, _mutateBytes(data), true, initiatorSig
                 ),
             "data mutation should change review hash"
         );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, false, initiatorSig
+                ),
+            "approval flag mutation should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true, _mutateBytes(initiatorSig)
+                ),
+            "initiator signature mutation should change review hash"
+        );
+
+        uint256 originalChainId = block.chainid;
+        vm.chainId(originalChainId + 1);
+        bytes32 changedChainHash = harness.computeReviewHashFromParamsViaLibrary(
+            account, to, value, salt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+        );
+        vm.chainId(originalChainId);
+        assertTrue(base != changedChainHash, "chain id mutation should change review hash");
     }
 
     /// @dev Verifies random undeployed accounts are always rejected by base execution path.

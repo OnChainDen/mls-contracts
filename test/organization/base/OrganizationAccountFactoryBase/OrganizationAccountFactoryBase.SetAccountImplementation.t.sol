@@ -330,7 +330,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies OAFB-SAI-5: replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_OAFB_SAI_5_setAccountImplementation_replaySameNonce_revertsAfterSuccessfulExecution() public {
+    function test_OAFB_SAI_5_NMAFB_AEP_4_setAccountImplementation_replaySameNonce_revertsAfterSuccessfulExecution()
+        public
+    {
         // Setup: configure one-admin auth and whitelist target implementation.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(accountImplementationV1, true);
@@ -357,7 +359,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies failed whitelist validation does not consume nonce and same signed request can later succeed.
-    function test_OAFB_SAI_19__OAFB_SAI_7_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
+    function test_OAFB_SAI_19__OAFB_SAI_7__NMAFB_AEP_6_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
         public
     {
         // Setup: seed an active implementation, then leave the retry target un-whitelisted for the first attempt.

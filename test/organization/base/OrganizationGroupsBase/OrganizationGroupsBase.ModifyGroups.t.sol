@@ -116,7 +116,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies replaying the same salt/operation after success reverts with `NonceAlreadyUsed`.
-    function test_modifyGroups_replaySameNonce_revertsAfterSuccessfulExecution() public {
+    function test_NMGB_MG_1_modifyGroups_replaySameNonce_revertsAfterSuccessfulExecution() public {
         uint256 groupId = 7904;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -237,7 +237,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies library custom errors bubble through base unchanged.
-    function test_modifyGroups_libraryCustomErrors_bubbleThroughBaseUnchanged() public {
+    function test_NMGB_MG_4_modifyGroups_libraryCustomErrors_bubbleThroughBaseUnchanged() public {
         uint256 nonExistentGroupId = 7908;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -264,7 +264,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies member-level custom errors bubble through base unchanged and nonce is rolled back.
-    function test_modifyGroups_memberDoesNotExist_bubblesThroughBaseAndDoesNotConsumeNonce() public {
+    function test_NMGB_MG_4_modifyGroups_memberDoesNotExist_bubblesThroughBaseAndDoesNotConsumeNonce() public {
         uint256 groupId = 7911;
         address nonMember = address(0xD00D);
 
@@ -328,7 +328,7 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
     }
 
     /// @dev Verifies valid auth + library revert does not consume nonce and same salt/operation can be retried.
-    function test_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation() public {
+    function test_NMGB_MG_4_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation() public {
         uint256 groupId = 7910;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

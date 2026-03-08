@@ -82,7 +82,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` successful nonce replay
     /// reverts with `NonceAlreadyUsed`.
-    function test_OGRB_FIGR_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_OGRB_FIGR_3__NMGRB_IGR_3_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -172,7 +172,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` signatures are bound to the
     /// current pending init tuple values.
-    function test_OGRB_FIGR_8__OGRB_FIGR_10__OGRB_FIGR_11_stalePendingTupleSignatures_revertAfterPendingValuesChange()
+    function test_OGRB_FIGR_8__OGRB_FIGR_10__OGRB_FIGR_11__NMGRB_IGR_8_stalePendingTupleSignatures_revertAfterPendingValuesChange()
         public
     {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
@@ -235,7 +235,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` downstream revert rolls back
     /// nonce and same signed request can succeed later.
-    function test_OGRB_FIGR_9_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+    function test_OGRB_FIGR_9__NMGRB_IGR_10_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         uint256 canFinalizeAt = block.timestamp + 1 days;
@@ -357,7 +357,7 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` signatures for a different
     /// operation type cannot authorize finalization.
-    function test_OGRB_FIGR_14_signaturesForDifferentOperationType_cannotAuthorizeFinalization() public {
+    function test_OGRB_FIGR_14__NMGRB_IGR_7_signaturesForDifferentOperationType_cannotAuthorizeFinalization() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(

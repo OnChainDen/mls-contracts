@@ -169,7 +169,7 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
     }
 
     /// @dev Verifies that replay with same nonce/salt reverts after first successful execution.
-    function test_setPolicies_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_NMPB_SP_1_setPolicies_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: configure a valid fixture for replay with same nonce/salt reverts after first successful execution.
         bytes32 newRoot = keccak256("opb-set-5-root");
         string memory ipfsCid = "ipfs://opb-set-5";

@@ -62,7 +62,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies OGB-CGU-3: replaying the same nonce reverts after successful execution.
-    function test_OGB_CGU_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_OGB_CGU_3__NMGUB_GUF_5_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3901);
@@ -186,7 +186,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies OGB-CGU-8: signatures for a different operation type cannot authorize cancellation.
-    function test_OGB_CGU_8_differentOperationTypeSignatures_cannotAuthorizeCancellation() public {
+    function test_OGB_CGU_8__NMGUB_GUF_7_differentOperationTypeSignatures_cannotAuthorizeCancellation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3906);
@@ -212,7 +212,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies OGB-CGU-9: cancel signatures for pending guardian A fail after pending guardian changes to B.
-    function test_OGB_CGU_9_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
+    function test_OGB_CGU_9__NMGUB_GUF_8_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3907);
@@ -241,7 +241,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
     }
 
     /// @dev Verifies OGB-CGU-10: `NoPendingGuardianUpdate` downstream revert rolls back nonce usage.
-    function test_OGB_CGU_10_noPendingRevert_rollsBackNonce() public {
+    function test_OGB_CGU_10__NMGUB_GUF_10_noPendingRevert_rollsBackNonce() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildCancelGuardianUpdateAuth({

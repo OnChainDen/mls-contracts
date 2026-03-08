@@ -75,7 +75,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies replaying the same nonce after success reverts with `NonceAlreadyUsed`.
-    function test_OAFB_DA_3_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution() public {
+    function test_OAFB_DA_3_NMAFB_AEP_1_deployAccount_replaySameNonce_revertsAfterSuccessfulExecution() public {
         bytes32 create2Salt = bytes32(uint256(4103));
 
         // Setup: configure one-admin auth and a valid implementation for beacon deployment.

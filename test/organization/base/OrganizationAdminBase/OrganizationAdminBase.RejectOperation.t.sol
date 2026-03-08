@@ -27,7 +27,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that a valid rejection succeeds and burns the nonce.
-    function test_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
+    function test_NMADB_RAO_1_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -56,7 +56,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that `AdminOperationRejected` is emitted with the exact operation tuple.
-    function test_rejectAdminOperation_emitsAdminOperationRejectedWithExactArgs() public {
+    function test_NMADB_RAO_1_rejectAdminOperation_emitsAdminOperationRejectedWithExactArgs() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -186,7 +186,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that replaying a rejection with the same nonce reverts with `NonceAlreadyUsed`.
-    function test_rejectAdminOperation_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_NMADB_RAO_2_rejectAdminOperation_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -216,7 +216,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that rejecting first and then executing the same payload fails due to the consumed nonce.
-    function test_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
+    function test_NMADB_RAO_4_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
         address newAdmin = address(0x210);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -265,7 +265,7 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
     }
 
     /// @dev Verifies that executing first and then rejecting the same payload fails due to the consumed nonce.
-    function test_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
+    function test_NMADB_RAO_5_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
         address newAdmin = address(0x211);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});

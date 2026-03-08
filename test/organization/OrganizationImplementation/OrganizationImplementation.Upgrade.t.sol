@@ -155,7 +155,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies replaying the same admin-auth nonce reverts after first successful execution.
-    function test_OI_UTACWA_6_replayWithSameNonce_reverts() public {
+    function test_OI_UTACWA_6__NMOI_UTACWA_1_replayWithSameNonce_reverts() public {
         // Setup: execute one successful authorized upgrade with deterministic nonce.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -711,7 +711,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
     /// `data`. [OI-UTCWA-12]
-    function test_OI_UTACWA_25__OI_UTCWA_12_adminAuthMustBindMigrationData() public {
+    function test_OI_UTACWA_25__OI_UTCWA_12__NMOI_UTACWA_3_adminAuthMustBindMigrationData() public {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

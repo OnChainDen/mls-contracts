@@ -593,7 +593,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies OTRB-IITR-3, OTRB-IITR-4, OTRB-IITR-5, OTRB-IITR-6, OTRB-IITR-7, OTRB-IITR-8, and OTRB-IITR-9
     /// across auth binding/replay and successful initiation.
-    function test_OTRB_IITR_3__OTRB_IITR_4__OTRB_IITR_5__OTRB_IITR_6__OTRB_IITR_7__OTRB_IITR_8__OTRB_IITR_9_initiateInitialize_authBindingReplayAndSuccess()
+    function test_OTRB_IITR_3__OTRB_IITR_4__OTRB_IITR_5__OTRB_IITR_6__OTRB_IITR_7__OTRB_IITR_8__OTRB_IITR_9__NMTRB_ITR_1__NMTRB_ITR_7_initiateInitialize_authBindingReplayAndSuccess()
         public
     {
         // Setup
@@ -766,7 +766,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` rejects stale admin
     /// signatures when current pending values differ from signed operation data.
-    function test_OTRB_FITR_6_finalizeInitialize_stalePendingValues_revert() public {
+    function test_OTRB_FITR_6__NMTRB_ITR_8_finalizeInitialize_stalePendingValues_revert() public {
         // Setup: build finalize auth for an initial pending tuple, then mutate the stored pending recovery address.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -820,7 +820,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     ///   - FITR-11: `isEnabled` remains false after finalize (enable flow still required).
     ///   - FITR-12: Second finalize reverts `NoTxRecoveryInitializationPending` (pending already cleared).
     ///   - FITR-2:  Insufficient admin threshold variant tested in dedicated `test_OTRB_FITR_2_*`.
-    function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12_finalizeInitialize_authAndStateSemantics()
+    function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12__NMTRB_ITR_7_finalizeInitialize_authAndStateSemantics()
         public
     {
         // Setup: start from a fully zeroed recovery state (no config, no pending init).
@@ -935,7 +935,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` reverts for
     /// insufficient admin authorization, `isApproval=false` signatures, and wrong operation type signatures.
-    function test_OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4_cancelInitialize_authValidation_reverts() public {
+    function test_OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4__NMTRB_ITR_7_cancelInitialize_authValidation_reverts()
+        public
+    {
         // Setup: seed pending deferred-init state, then require two admin signatures for the insufficient-auth branch.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK
@@ -990,7 +992,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` rejects stale admin
     /// signatures when pending values change after signature creation.
-    function test_OTRB_CITR_6_cancelInitialize_stalePendingValues_revert() public {
+    function test_OTRB_CITR_6__NMTRB_ITR_8_cancelInitialize_stalePendingValues_revert() public {
         // Setup: sign cancel auth for initial pending values, then mutate pending recovery address in storage.
         _setTxRecoveryState(
             address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp + ADMIN_OPERATION_TIMELOCK

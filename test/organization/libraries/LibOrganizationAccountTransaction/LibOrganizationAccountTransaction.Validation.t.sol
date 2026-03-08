@@ -180,6 +180,70 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
     }
 
+    /// @dev Verifies auto-approve rejection validation rejects approval-domain signatures.
+    function test_NMATL_RHB_7_validateAutoApproveRejection_rejectsApprovalDomainSignatureReplay() public {
+        // Setup: configure an auto-approve policy and sign the transaction with `isApproval=true`.
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x16161717), uint256(61));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory approvalDomainSignature = _signInitiatorTx(
+            address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, 61, expiration, DEFAULT_POLICY_ID, true
+        );
+
+        // Verify: replaying the approval signature through the rejection helper fails domain separation checks.
+        vm.expectRevert(IOrganizationAccountTransaction.TransactionRejectionNotAllowed.selector);
+        // Call: validate an auto-approve rejection using the wrong-domain signature.
+        harness.validateAutoApproveRejectionOrRevertViaLibrary(
+            ACCOUNT, DESTINATION, 0, 61, expiration, DEFAULT_POLICY_ID, data, approvalDomainSignature, proofs
+        );
+    }
+
+    /// @dev Verifies manual confirmation binds reviewer signatures to the exact initiator signature bytes.
+    function test_NMATL_RHB_8_validateManualConfirmation_reviewerSignaturesBindInitiatorSignature() public {
+        // Setup: configure a manual-approval policy and build two distinct initiator signatures for one tuple.
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x16161818), uint256(62));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory signedInitiatorSignature = _signInitiatorTx(
+            address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, 62, expiration, DEFAULT_POLICY_ID, true
+        );
+        bytes memory mutatedInitiatorSignature = _signInitiatorTx(
+            address(harness), INITIATOR_PK_2, ACCOUNT, DESTINATION, 0, data, 62, expiration, DEFAULT_POLICY_ID, true
+        );
+        bytes memory reviewSignature = _signReviewTx(
+            address(harness),
+            REVIEWER_PK_1,
+            ACCOUNT,
+            DESTINATION,
+            0,
+            data,
+            62,
+            expiration,
+            DEFAULT_POLICY_ID,
+            true,
+            signedInitiatorSignature
+        );
+
+        // Verify: reusing review signatures against different initiator-signature bytes fails.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
+        // Call: validate manual confirmation with a mismatched initiator signature binding.
+        harness.validateManualConfirmationOrRevertViaLibrary(
+            ACCOUNT,
+            DESTINATION,
+            0,
+            62,
+            expiration,
+            DEFAULT_POLICY_ID,
+            data,
+            reviewSignature,
+            mutatedInitiatorSignature,
+            proofs,
+            true
+        );
+    }
+
     /// @dev Verifies successful manual/auto approval paths both update rate-limit usage.
     function test_LOAT_VTAOR_13_validateApproval_rateLimitUpdatesAcrossPolicyTypes() public {
         // Setup: configure auto + manual policies with enabled rate-limit.

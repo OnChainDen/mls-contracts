@@ -468,7 +468,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies that replaying the same nonce reverts with `NonceAlreadyUsed`.
-    function test_modifyAdmins_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_NMADB_MA_1_modifyAdmins_replaySameNonce_revertsNonceAlreadyUsed() public {
         address newAdmin = address(0x20A);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -508,7 +508,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies that a downstream revert rolls back both state and nonce consumption.
-    function test_modifyAdmins_downstreamRevert_rollsBackNonceConsumption() public {
+    function test_NMADB_MA_2_modifyAdmins_downstreamRevert_rollsBackNonceConsumption() public {
         address nonMember = address(0x20B);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -545,7 +545,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
     }
 
     /// @dev Verifies that an invalid-threshold downstream revert also rolls back nonce consumption.
-    function test_modifyAdmins_invalidThresholdDownstreamRevert_rollsBackNonceConsumption() public {
+    function test_NMADB_MA_2_modifyAdmins_invalidThresholdDownstreamRevert_rollsBackNonceConsumption() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 

@@ -93,7 +93,9 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
      * @dev Verifies reject nonce matches execute nonce for the same operation tuple by going
      *      through the actual execute and reject paths.
      */
-    function test_OATB_RAT_3_rejectAccountTransaction_nonceMatchesExecuteForSameTuple() public {
+    function test_OATB_RAT_3__NMATB_RAT_1__NMATB_RAT_7_rejectAccountTransaction_nonceMatchesExecuteForSameTuple()
+        public
+    {
         // Setup: deploy account and build shared payload with both approval and rejection signatures.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -185,7 +187,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies successful rejection consumes nonce.
      */
-    function test_rejectAccountTransaction_success_consumesNonce() public {
+    function test_NMATB_RAT_2_rejectAccountTransaction_success_consumesNonce() public {
         // Setup: build valid auto-reject payload.
         address account = address(0xAC004);
         harness.setDeployedAccount(account, true);
@@ -219,9 +221,71 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     }
 
     /**
+     * @dev Verifies expired rejection reverts and rolls back nonce consumption.
+     */
+    function test_NMATB_RAT_8_rejectAccountTransaction_expiredTransaction_rollsBackNonceUsage() public {
+        // Setup: deploy account and build approval/rejection signatures with a past expiration timestamp.
+        address account = address(0xAC00E);
+        harness.setDeployedAccount(account, true);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x0E0F1011), uint256(14));
+        uint256 expiration = block.timestamp - 1;
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory initiatorSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: account,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 14,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+        bytes memory rejectionSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: account,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 14,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: false
+        });
+        uint256 nonce = _computeNonce(account, DESTINATION, 0, data, DEFAULT_POLICY_ID, 14);
+
+        // Verify: expiration failure bubbles from validation and the nonce remains unused.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAccountTransaction.TransactionExpired.selector, expiration, block.timestamp
+            )
+        );
+        vm.prank(GUARDIAN);
+        // Call: reject the expired transaction payload.
+        harness.rejectAccountTransaction({
+            account: account,
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 14,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: rejectionSignature,
+            proofs: proofs
+        });
+
+        // Verify: the reverted expired path must not leave the nonce consumed.
+        assertFalse(harness.getUsedNonce(nonce), "expired rejection should roll back nonce consumption");
+    }
+
+    /**
      * @dev Verifies replay with a previously used nonce reverts with `NonceAlreadyUsed`.
      */
-    function test_OATB_RAT_5_rejectAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
+    function test_OATB_RAT_5_NMATB_RAT_3_rejectAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
         // Setup: execute one successful rejection.
         address account = address(0xAC005);
         harness.setDeployedAccount(account, true);
@@ -299,7 +363,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies success emits `AccountTransactionRejected` with expected payload.
      */
-    function test_OATB_RAT_7_rejectAccountTransaction_success_emitsAccountTransactionRejected() public {
+    function test_OATB_RAT_7_NMATB_RAT_2_rejectAccountTransaction_success_emitsAccountTransactionRejected() public {
         // Setup: build valid auto-reject payload.
         address account = address(0xAC007);
         harness.setDeployedAccount(account, true);
@@ -337,7 +401,9 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies execute then reject with identical tuple reverts due to shared nonce space.
      */
-    function test_OATB_RAT_8_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed() public {
+    function test_OATB_RAT_8__NMATB_RAT_5__NMATB_RAT_7_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed()
+        public
+    {
         // Setup: deploy account and build one shared payload tuple.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -386,7 +452,9 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies reject then execute with identical tuple reverts due to shared nonce space.
      */
-    function test_OATB_RAT_9_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed() public {
+    function test_OATB_RAT_9__NMATB_RAT_4__NMATB_RAT_7_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed()
+        public
+    {
         // Setup: deploy account and build one shared payload tuple.
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -435,7 +503,9 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies failed rejection validation does not burn nonce; fixed retry can succeed.
      */
-    function test_OATB_RAT_10_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed() public {
+    function test_OATB_RAT_10__NMATB_RAT_6_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+        public
+    {
         // Setup: configure auto-approve rejection where first review signature is unauthorized.
         address account = address(0xAC008);
         harness.setDeployedAccount(account, true);

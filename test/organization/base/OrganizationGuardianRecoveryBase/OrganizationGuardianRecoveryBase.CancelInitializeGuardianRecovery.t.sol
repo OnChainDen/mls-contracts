@@ -85,7 +85,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` successful nonce replay
     /// reverts with `NonceAlreadyUsed`.
-    function test_OGRB_CIGR_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_OGRB_CIGR_3__NMGRB_IGR_5_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -170,7 +170,9 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` cancel requires dedicated
     /// op-type and signatures are bound to current pending tuple.
-    function test_OGRB_CIGR_8__OGRB_CIGR_10__OGRB_CIGR_11_cancelAuthBoundToCurrentPendingTupleAndOpType() public {
+    function test_OGRB_CIGR_8__OGRB_CIGR_10__OGRB_CIGR_11__NMGRB_IGR_7__NMGRB_IGR_8_cancelAuthBoundToCurrentPendingTupleAndOpType()
+        public
+    {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         recoveryStateHarness.setGuardianRecoveryPendingInit(
@@ -231,7 +233,7 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` downstream no-pending revert
     /// rolls back nonce usage.
-    function test_OGRB_CIGR_9_downstreamNoPendingRevert_rollsBackNonce() public {
+    function test_OGRB_CIGR_9__NMGRB_IGR_10_downstreamNoPendingRevert_rollsBackNonce() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

@@ -78,7 +78,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` successful nonce replay
     /// reverts with `NonceAlreadyUsed`.
-    function test_OGRB_IIGR_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_OGRB_IIGR_3__NMGRB_IGR_1_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -299,7 +299,7 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
 
     /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` signatures for different
     /// operation type cannot authorize initiation.
-    function test_OGRB_IIGR_13_signaturesForDifferentOperationType_cannotAuthorizeInitiation() public {
+    function test_OGRB_IIGR_13__NMGRB_IGR_7_signaturesForDifferentOperationType_cannotAuthorizeInitiation() public {
         // Setup: start from clean recovery state and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

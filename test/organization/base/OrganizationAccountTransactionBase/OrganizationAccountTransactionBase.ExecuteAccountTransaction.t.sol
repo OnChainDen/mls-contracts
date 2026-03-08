@@ -115,6 +115,79 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
+     * @dev Verifies execute-path nonce derivation depends only on the tuple fields and ignores expiration/signatures/proofs.
+     */
+    function test_NMATB_EAT_1__NMATB_EAT_2__NMATB_EAT_3_executeAccountTransaction_nonceDependsOnlyOnTupleFields()
+        public
+    {
+        // Setup: build one baseline tuple plus field mutations, and prepare two distinct auth/proof payloads.
+        address account = address(0xAAAA11);
+        address alternateAccount = address(0xAAAA12);
+        address alternateDestination = address(0xBBBB13);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x01015555), uint256(44));
+        bytes memory alternateData = abi.encodeWithSelector(bytes4(0x01016666), uint256(44));
+        uint256 policyId = DEFAULT_POLICY_ID;
+        uint256 salt = 44;
+
+        Policy memory autoPolicy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        ValidationProofs memory proofsA = _setSinglePolicyRootAndBuildProofs(policyId, autoPolicy);
+
+        Policy memory manualPolicy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
+        ValidationProofs memory proofsB = _setSinglePolicyRootAndBuildProofs(policyId, manualPolicy);
+
+        bytes memory initiatorSignatureA = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: account,
+            to: DESTINATION,
+            value: 3,
+            data: data,
+            salt: salt,
+            expirationTimestamp: block.timestamp + 1 days,
+            policyId: policyId,
+            isApproval: true
+        });
+        bytes memory initiatorSignatureB = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_2,
+            account: account,
+            to: DESTINATION,
+            value: 3,
+            data: data,
+            salt: salt,
+            expirationTimestamp: block.timestamp + 2 days,
+            policyId: policyId,
+            isApproval: true
+        });
+
+        // Call: compute the baseline nonce, tuple-field mutations, and same-tuple variants with only auth/proof changes.
+        uint256 baseline = _computeNonce(account, DESTINATION, 3, data, policyId, salt);
+        uint256 differentAccount = _computeNonce(alternateAccount, DESTINATION, 3, data, policyId, salt);
+        uint256 differentDestination = _computeNonce(account, alternateDestination, 3, data, policyId, salt);
+        uint256 differentValue = _computeNonce(account, DESTINATION, 4, data, policyId, salt);
+        uint256 differentData = _computeNonce(account, DESTINATION, 3, alternateData, policyId, salt);
+        uint256 differentPolicyId = _computeNonce(account, DESTINATION, 3, data, policyId + 1, salt);
+        uint256 differentSalt = _computeNonce(account, DESTINATION, 3, data, policyId, salt + 1);
+        uint256 sameTupleDifferentExpiration = _computeNonce(account, DESTINATION, 3, data, policyId, salt);
+        uint256 sameTupleDifferentAuth = _computeNonce(account, DESTINATION, 3, data, policyId, salt);
+
+        // Verify: tuple-field changes alter the nonce, while expiration/signature/proof changes alone do not.
+        assertTrue(baseline != differentAccount, "account should be bound");
+        assertTrue(baseline != differentDestination, "destination should be bound");
+        assertTrue(baseline != differentValue, "value should be bound");
+        assertTrue(baseline != differentData, "data hash should be bound");
+        assertTrue(baseline != differentPolicyId, "policy id should be bound");
+        assertTrue(baseline != differentSalt, "salt should be bound");
+        assertEq(sameTupleDifferentExpiration, baseline, "expiration should not affect nonce");
+        assertEq(sameTupleDifferentAuth, baseline, "signatures and proofs should not affect nonce");
+        assertTrue(initiatorSignatureA.length != 0 && initiatorSignatureB.length != 0, "auth fixtures should exist");
+        assertTrue(
+            keccak256(abi.encode(proofsA.policy)) != keccak256(abi.encode(proofsB.policy)),
+            "proof variants should differ for the auth-agnostic nonce assertion"
+        );
+    }
+
+    /**
      * @dev Verifies nonce is consumed before entering the account external call (CEI ordering).
      */
     function test_OATB_EAT_4_executeAccountTransaction_nonceConsumedBeforeAccountCall() public {
@@ -188,7 +261,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies replay with a previously used nonce reverts with `NonceAlreadyUsed`.
      */
-    function test_OATB_EAT_5_executeAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
+    function test_OATB_EAT_5_NMATB_EAT_5_executeAccountTransaction_usedNonce_revertsNonceAlreadyUsed() public {
         // Setup: deploy account and execute once with deterministic tuple.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xAABBCCDD), uint256(4));
@@ -273,7 +346,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies success emits `AccountTransactionExecuted` with expected payload.
      */
-    function test_OATB_EAT_7_executeAccountTransaction_success_emitsAccountTransactionExecuted() public {
+    function test_OATB_EAT_7_NMATB_EAT_4_executeAccountTransaction_success_emitsAccountTransactionExecuted() public {
         // Setup: deploy account and build valid payload.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0xB0B0B0B0), uint256(6));
@@ -389,7 +462,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
      */
-    function test_OATB_EAT_10_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage() public {
+    function test_OATB_EAT_10_NMATB_EAT_8_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
+        public
+    {
         // Setup: deploy account configured to revert on execute.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setShouldRevertExecution(true);
@@ -608,13 +683,16 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies expired transactions revert in the base execution path.
      */
-    function test_OATB_EAT_15_executeAccountTransaction_expiredTransaction_revertsTransactionExpired() public {
+    function test_OATB_EAT_15__NMATB_EAT_9_executeAccountTransaction_expiredTransaction_revertsTransactionExpired()
+        public
+    {
         // Setup: deploy account and sign payload with past expiration.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         bytes memory data = abi.encodeWithSelector(bytes4(0x14141414), uint256(14));
         uint256 expiration = block.timestamp - 1;
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 nonce = _computeNonce(address(account), DESTINATION, 0, data, DEFAULT_POLICY_ID, 14);
         bytes memory initiatorSignature = _signInitiatorTx({
             txHarness: address(harness),
             privateKey: INITIATOR_PK_1,
@@ -648,6 +726,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             reviewSignatures: bytes(""),
             proofs: proofs
         });
+
+        // Verify: the reverted expired path must not leave the nonce consumed.
+        assertFalse(harness.getUsedNonce(nonce), "expired execution should roll back nonce consumption");
     }
 
     /**
@@ -696,7 +777,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies failed pre-validation does not permanently burn nonce; fixed retry can succeed.
      */
-    function test_OATB_EAT_17__LOAT_VTAOR_14_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+    function test_OATB_EAT_17__LOAT_VTAOR_14__NMATB_EAT_7_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
         public
     {
         // Setup: deploy account and build payload with first attempt signed by unauthorized initiator.

@@ -63,7 +63,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-FGU-3: replaying the same nonce reverts after successful execution.
-    function test_OGB_FGU_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_OGB_FGU_3__NMGUB_GUF_3_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2901);
@@ -188,7 +188,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-FGU-8: signatures for a different operation type cannot authorize finalization.
-    function test_OGB_FGU_8_differentOperationTypeSignatures_cannotAuthorizeFinalization() public {
+    function test_OGB_FGU_8__NMGUB_GUF_7_differentOperationTypeSignatures_cannotAuthorizeFinalization() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2906);
@@ -217,7 +217,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-FGU-9: finalize signatures for pending guardian A fail after pending guardian changes to B.
-    function test_OGB_FGU_9_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
+    function test_OGB_FGU_9__NMGUB_GUF_8_signedOperationDataBinding_rejectsChangedPendingGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2907);
@@ -247,7 +247,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-FGU-10: timelock revert rolls back nonce and same signed finalize request can be retried.
-    function test_OGB_FGU_10_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
+    function test_OGB_FGU_10__NMGUB_GUF_10_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2908);
@@ -279,7 +279,7 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-FGU-10: `NoPendingGuardianUpdate` revert rolls back nonce usage.
-    function test_OGB_FGU_10_noPendingRevert_rollsBackNonce_B() public {
+    function test_OGB_FGU_10__NMGUB_GUF_10_noPendingRevert_rollsBackNonce_B() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildFinalizeGuardianUpdateAuth({

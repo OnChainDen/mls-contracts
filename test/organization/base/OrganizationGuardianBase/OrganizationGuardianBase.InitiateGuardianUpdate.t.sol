@@ -58,7 +58,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-IGU-3: replaying the same nonce reverts after successful execution.
-    function test_OGB_IGU_3_replaySameNonce_revertsNonceAlreadyUsed() public {
+    function test_OGB_IGU_3__NMGUB_GUF_1_replaySameNonce_revertsNonceAlreadyUsed() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({
@@ -178,7 +178,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-IGU-8: signatures for a different operation type cannot authorize initiation.
-    function test_OGB_IGU_8_differentOperationTypeSignatures_cannotAuthorizeInitiation() public {
+    function test_OGB_IGU_8__NMGUB_GUF_7_differentOperationTypeSignatures_cannotAuthorizeInitiation() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
@@ -230,7 +230,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-IGU-10: downstream `GuardianUpdateAlreadyPending` revert rolls back nonce and allows retry.
-    function test_OGB_IGU_10_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
+    function test_OGB_IGU_10__NMGUB_GUF_9_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_B);
@@ -265,7 +265,7 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
     }
 
     /// @dev Verifies OGB-IGU-10: downstream `InvalidGuardianAddress` revert rolls back nonce usage.
-    function test_OGB_IGU_10_downstreamInvalidGuardianRevert_rollsBackNonce_B() public {
+    function test_OGB_IGU_10__NMGUB_GUF_9_downstreamInvalidGuardianRevert_rollsBackNonce_B() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateGuardianUpdateAuth({

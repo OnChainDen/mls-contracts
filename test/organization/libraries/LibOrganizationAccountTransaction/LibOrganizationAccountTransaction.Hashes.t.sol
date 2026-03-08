@@ -178,19 +178,151 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         assertEq(actual, expected, "review hash must use review typehash encoding");
     }
 
+    /// @dev Verifies repeated initiator/review hash computations stay deterministic for identical inputs.
+    function test_NMATL_RHB_5_computeInitiatorAndReviewHashes_repeatedCallsRemainDeterministic() public view {
+        // Setup: pin one transaction tuple and one initiator signature payload.
+        bytes memory data = abi.encodeWithSelector(bytes4(0x64640001), uint256(41));
+        bytes memory initiatorSignature = hex"ABCD1234";
+        uint256 expiration = block.timestamp + 1 days;
+
+        // Call: compute both hashes twice with the same inputs.
+        bytes32 initiatorHashA = harness.computeInitiatorHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 9, 141, expiration, DEFAULT_POLICY_ID, data, true
+        );
+        bytes32 initiatorHashB = harness.computeInitiatorHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 9, 141, expiration, DEFAULT_POLICY_ID, data, true
+        );
+        bytes32 reviewHashA = harness.computeReviewHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 9, 141, expiration, DEFAULT_POLICY_ID, data, true, initiatorSignature
+        );
+        bytes32 reviewHashB = harness.computeReviewHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 9, 141, expiration, DEFAULT_POLICY_ID, data, true, initiatorSignature
+        );
+
+        // Verify: identical inputs must produce identical hashes on repeated calls.
+        assertEq(initiatorHashA, initiatorHashB, "initiator hash should be deterministic");
+        assertEq(reviewHashA, reviewHashB, "review hash should be deterministic");
+    }
+
+    /// @dev Verifies initiator hash stays distinct whenever any bound field is mutated.
+    function test_NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct() public {
+        // Setup: compute a baseline initiator hash and deploy a second harness for organization binding checks.
+        bytes memory data = abi.encodeWithSelector(bytes4(0x64640002), uint256(42));
+        uint256 expiration = block.timestamp + 1 days;
+        LibOrganizationAccountTransactionHarness secondHarness = new LibOrganizationAccountTransactionHarness();
+        bytes32 base = harness.computeInitiatorHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 10, 142, expiration, DEFAULT_POLICY_ID, data, true
+        );
+
+        // Verify: mutating any bound field changes the resulting initiator hash.
+        assertTrue(
+            base
+                != secondHarness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 10, 142, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "organization address should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(uint160(ACCOUNT) + 1), DESTINATION, 10, 142, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "account should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT, address(uint160(DESTINATION) + 1), 10, 142, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "destination should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 11, 142, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "value should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 10, 143, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "salt should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 10, 142, expiration + 1, DEFAULT_POLICY_ID, data, true
+                ),
+            "expiration should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT,
+                    DESTINATION,
+                    10,
+                    142,
+                    expiration,
+                    DEFAULT_POLICY_ID + 1,
+                    data,
+                    true
+                ),
+            "policy id should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT,
+                    DESTINATION,
+                    10,
+                    142,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    abi.encodeWithSelector(bytes4(0x64640003), uint256(42)),
+                    true
+                ),
+            "data should be bound"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 10, 142, expiration, DEFAULT_POLICY_ID, data, false
+                ),
+            "approval flag should be bound"
+        );
+
+        uint256 originalChainId = block.chainid;
+        vm.chainId(originalChainId + 1);
+        bytes32 changedChainHash = harness.computeInitiatorHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 10, 142, expiration, DEFAULT_POLICY_ID, data, true
+        );
+        vm.chainId(originalChainId);
+        assertTrue(base != changedChainHash, "chain id should be bound");
+    }
+
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
+    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13__NMATL_RHB_4_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
         public
     {
-        // Setup: compute baseline review hash.
+        // Setup: compute baseline review hash and deploy a second harness for organization binding checks.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64646464), uint256(4));
         bytes memory initiatorSignature = hex"1122";
         uint256 expiration = block.timestamp + 1 days;
+        LibOrganizationAccountTransactionHarness secondHarness = new LibOrganizationAccountTransactionHarness();
         bytes32 base = harness.computeReviewHashFromParamsViaLibrary(
             ACCOUNT, DESTINATION, 1, 95, expiration, DEFAULT_POLICY_ID, data, true, initiatorSignature
         );
 
         // Verify: each single-field mutation changes the review hash.
+        assertTrue(
+            base
+                != secondHarness.computeReviewHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 1, 95, expiration, DEFAULT_POLICY_ID, data, true, initiatorSignature
+                ),
+            "organization address should be bound"
+        );
         assertTrue(
             base
                 != harness.computeReviewHashFromParamsViaLibrary(
@@ -271,6 +403,13 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
                 ),
             "isApproval flag should be bound"
         );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    ACCOUNT, DESTINATION, 1, 95, expiration, DEFAULT_POLICY_ID, data, true, hex"3344"
+                ),
+            "initiator signature should be bound"
+        );
 
         uint256 chainId = block.chainid;
         vm.chainId(chainId + 1);
@@ -302,7 +441,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash matches a precomputed golden vector for known deterministic inputs.
-    function test_LOAT_CIHFP_14_computeInitiatorHash_knownInputs_matchesPrecomputedGoldenHash() public {
+    function test_LOAT_CIHFP_14__NMATL_RHB_6_computeInitiatorHash_knownInputs_matchesPrecomputedGoldenHash() public {
         // Setup: pin chain ID and organization address to deterministic values used by off-chain vector generation.
         uint256 originalChainId = block.chainid;
         vm.chainId(GOLDEN_CHAIN_ID);
@@ -325,7 +464,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash matches a precomputed golden vector for known deterministic inputs.
-    function test_LOAT_CRHFP_14_computeReviewHash_knownInputs_matchesPrecomputedGoldenHash() public {
+    function test_LOAT_CRHFP_14__NMATL_RHB_6_computeReviewHash_knownInputs_matchesPrecomputedGoldenHash() public {
         // Setup: pin chain ID and organization address to deterministic values used by off-chain vector generation.
         uint256 originalChainId = block.chainid;
         vm.chainId(GOLDEN_CHAIN_ID);
