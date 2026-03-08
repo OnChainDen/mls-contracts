@@ -135,7 +135,7 @@
 | NMADM-SIG-1 | Empty signatures returns `false` | [N] | P0 |
 | NMADM-SIG-2 | Duplicate signer reverts `DuplicateOrOutOfOrderAdminSigner` | [N] | P0 |
 | NMADM-SIG-3 | Out-of-order signer list reverts `DuplicateOrOutOfOrderAdminSigner` | [N] | P0 |
-| NMADM-SIG-4 | Insufficent admin signatures reverts `InsufficientAdminAuthorization` | [N] | P0 |
+| NMADM-SIG-4 | Insufficient admin signatures return `false` from `_areAdminSignaturesValid` | [N] | P0 |
 | NMADM-SIG-5 | Non-admin signer reverts `SignerIsNotAdmin` | [N] | P0 |
 | NMADM-SIG-6 | Returns `true` once threshold is reached | [U] | P1 |
 | NMADM-SIG-7 | Mixed EOA->ERC1271->EOA packed signatures parsed correctly (offset accounting) | [S] | P0 |
