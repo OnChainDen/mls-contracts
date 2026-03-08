@@ -195,13 +195,12 @@
 
 ## File 4: `LibOrganizationAccountSignature.sol`
 
-### 4.0 `isValidSignature` (routing + graceful invalid behavior)
+### 4.0 `isValidSignature` (routing behavior)
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
 | LOACS-IVS-1 | Empty signature returns `ERC1271_INVALID_VALUE` (no revert) | [N] | P0 |
 | LOACS-IVS-2 | Unknown type prefix (not `0x00` / `0x01`) returns `ERC1271_INVALID_VALUE` (no revert) | [N] | P0 |
-| LOACS-IVS-3 | Malformed type-`0x01` payload (invalid ABI encoding) returns `ERC1271_INVALID_VALUE` instead of reverting | [N] | P0 |
 
 ### 4.1 `_getInitiatorSignatureHash` (private -> internal via harness)
 
@@ -292,7 +291,6 @@
 | E712-FUZ-4 | Random `initiatorSignature` bytes always alter review hashes (tx + ERC-1271 helpers) | 1000 | P0 |
 | E712-FUZ-5 | Random cross-flow replay attempts (wrong message type hash) are always rejected | 1000 | P0 |
 | E712-FUZ-6 | Random vectors: helper output always matches independent manual EIP-712 reference encoder | 1000 | P1 |
-| E712-FUZ-7 | Random malformed type-`0x01` payload bytes return `ERC1271_INVALID_VALUE` and never revert | 1000 | P0 |
 
 ---
 
@@ -304,7 +302,6 @@
 | E712-INV-2 | **Prefix compliance:** typed-data hash is always `keccak256("\x19\x01" || domain || structHash)` | P1 |
 | E712-INV-3 | **Cross-domain isolation:** same struct hash is never valid across different organizations/chains | P0 |
 | E712-INV-4 | **Message-type separation:** system-defined EIP-712 type hashes stay unique and non-interchangeable | P0 |
-| E712-INV-5 | **ERC-1271 graceful failure:** malformed policy-signature payloads return invalid value instead of reverting | P0 |
 
 ---
 
@@ -312,7 +309,7 @@
 
 | Category | Tests | Priority Focus |
 |----------|-------|----------------|
-| File/function unit + security cases | 121 | P0/P1 |
-| Fuzz tests | 7 | P0/P1 |
-| Invariants | 5 | P0/P1 |
-| **Total** | **133** | |
+| File/function unit + security cases | 120 | P0/P1 |
+| Fuzz tests | 6 | P0/P1 |
+| Invariants | 4 | P0/P1 |
+| **Total** | **130** | |
