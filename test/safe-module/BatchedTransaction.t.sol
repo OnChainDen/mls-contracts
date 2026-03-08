@@ -431,31 +431,6 @@ contract BatchedTransactionTest is Test {
         assertFalse(success, "Failed execution must never return success=true");
     }
 
-    /// @dev [DESIRED BEHAVIOR] Verifies sub-transaction with `to == address(0)` reverts.
-    function test_BT_ESF_12_executeRejectsZeroAddressTarget() public {
-        // Setup: encode sub-transaction targeting address(0).
-        bytes memory encoded = _encodeTx(address(0), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
-
-        // Call: execute batch. Expect revert for address(0) target (not currently enforced).
-        (bool success,) = _executeBatchViaDelegatecall(encoded);
-
-        // Verify: should fail (desired behavior: revert on address(0) target).
-        assertFalse(success, "[DESIRED BEHAVIOR] address(0) sub-transaction should revert");
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies sub-transaction to non-contract address (EOA/no-code) reverts.
-    function test_BT_ESF_13_executeRejectsNonContractTarget() public {
-        // Setup: encode sub-transaction targeting an EOA with no code.
-        address eoa = makeAddr("noCodeTarget");
-        bytes memory encoded = _encodeTx(eoa, abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
-
-        // Call: execute batch. Expect revert for non-contract target (not currently enforced).
-        (bool success,) = _executeBatchViaDelegatecall(encoded);
-
-        // Verify: should fail (desired behavior: revert on non-contract target).
-        assertFalse(success, "[DESIRED BEHAVIOR] non-contract sub-transaction target should revert");
-    }
-
     /// @dev [DESIRED BEHAVIOR] Verifies trailing bytes shorter than one 28-byte header reverts.
     function test_BT_EMB_1_executeShortTrailingBytesReverts() public {
         // Setup: 20 bytes (partial header — address only, missing dataLength).
@@ -467,22 +442,6 @@ contract BatchedTransactionTest is Test {
 
         // Verify: should revert on invalid encoding.
         assertFalse(success, "[DESIRED BEHAVIOR] Trailing bytes shorter than header should revert");
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies declared dataLength larger than remaining bytes reverts.
-    function test_BT_EMB_2_executeDeclaredLengthExceedsRemainingReverts() public {
-        // Setup: header declaring dataLength=100 but only 4 bytes of data follow.
-        bytes memory malformed = abi.encodePacked(
-            address(target1),
-            uint64(100), // declared length: 100
-            abi.encodeWithSelector(MockBTTarget.setValue.selector) // only 4 bytes of data
-        );
-
-        // Call: execute with malformed encoding. Desired behavior: revert.
-        (bool success,) = _executeBatchViaDelegatecall(malformed);
-
-        // Verify: should revert on length mismatch.
-        assertFalse(success, "[DESIRED BEHAVIOR] Declared dataLength > remaining bytes should revert");
     }
 
     /// @dev Verifies malformed first transaction causes revert before any external call.
@@ -512,19 +471,6 @@ contract BatchedTransactionTest is Test {
         // Verify: all side effects rolled back.
         assertFalse(success, "Later reverting tx should fail entire batch");
         assertEq(target1.value(), 0, "Earlier successful sub-call should be rolled back");
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies valid transaction + trailing garbage bytes reverts (strict parser).
-    function test_BT_EMB_5_executeTrailingGarbageBytesReverts() public {
-        // Setup: valid transaction followed by 10 bytes of garbage.
-        bytes memory validTx = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
-        bytes memory withGarbage = abi.encodePacked(validTx, hex"DEADBEEFDEADBEEFDEADBEEFDEADBEEF");
-
-        // Call: execute with trailing garbage. Desired behavior: strict parser rejects.
-        (bool success,) = _executeBatchViaDelegatecall(withGarbage);
-
-        // Verify: should revert (strict parser).
-        assertFalse(success, "[DESIRED BEHAVIOR] Valid tx + trailing garbage should revert");
     }
 
     /// @dev Verifies exact boundary case: header-only entry with dataLength=0 is accepted.

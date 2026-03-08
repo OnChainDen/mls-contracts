@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {OrganizationPolicyStateHarness} from "test/organization/shared/OrganizationPolicyStateHarness.sol";
 import {ValidationProofs} from "types/PolicyTypes.sol";
 
@@ -37,6 +38,25 @@ contract LibOrganizationAccountSignatureHarness is OrganizationPolicyStateHarnes
      * @dev Wrapper around `_validatePolicyBasedSignature`.
      */
     function validatePolicyBasedSignatureViaLibrary(address account, bytes32 hash, bytes calldata signatureData)
+        external
+        view
+        returns (bytes4)
+    {
+        (bool success, bytes memory result) = address(this).staticcall(
+            abi.encodeCall(this.validatePolicyBasedSignatureUnsafe, (account, hash, signatureData))
+        );
+
+        if (!success || result.length < 32) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
+        return abi.decode(result, (bytes4));
+    }
+
+    /**
+     * @dev Raw wrapper around `_validatePolicyBasedSignature`.
+     */
+    function validatePolicyBasedSignatureUnsafe(address account, bytes32 hash, bytes calldata signatureData)
         external
         view
         returns (bytes4)

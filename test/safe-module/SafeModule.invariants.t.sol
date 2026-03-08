@@ -67,6 +67,16 @@ contract InvariantTarget {
 }
 
 /**
+ * @dev InvariantReverter — helper target that always reverts when called from a batch.
+ */
+contract InvariantReverter {
+    /// @dev Reverts unconditionally to exercise atomic batch failure paths.
+    function alwaysRevert() external pure {
+        revert("invariant-batch-revert");
+    }
+}
+
+/**
  * @dev SafeModuleInvariantHandler — defines the action space for invariant fuzzing.
  *      Performs random executeOnBehalf calls with varying callers, targets, and data.
  */
@@ -75,6 +85,7 @@ contract SafeModuleInvariantHandler is Test {
     InvariantMockSafe public mockSafe;
     BatchedTransaction public batchedTx;
     InvariantTarget public target;
+    InvariantReverter public reverter;
 
     address public authorizedExecutor;
     address public unauthorizedCaller;
@@ -82,6 +93,8 @@ contract SafeModuleInvariantHandler is Test {
     uint256 public successfulExecutions;
     uint256 public failedExecutions;
     uint256 public unauthorizedAttempts;
+    uint256 public selfTargetBatchAttempts;
+    uint256 public atomicRevertBatchAttempts;
 
     /**
      * @dev Sets up the handler with module and mock contracts.
@@ -89,6 +102,7 @@ contract SafeModuleInvariantHandler is Test {
      * @param _mockSafe The mock Safe contract
      * @param _batchedTx The BatchedTransaction contract
      * @param _target The target contract
+     * @param _reverter The helper target that always reverts
      * @param _authorizedExecutor The authorized executor address
      */
     constructor(
@@ -96,12 +110,14 @@ contract SafeModuleInvariantHandler is Test {
         InvariantMockSafe _mockSafe,
         BatchedTransaction _batchedTx,
         InvariantTarget _target,
+        InvariantReverter _reverter,
         address _authorizedExecutor
     ) {
         module = _module;
         mockSafe = _mockSafe;
         batchedTx = _batchedTx;
         target = _target;
+        reverter = _reverter;
         authorizedExecutor = _authorizedExecutor;
         unauthorizedCaller = makeAddr("unauthorizedInvariant");
     }
@@ -165,6 +181,67 @@ contract SafeModuleInvariantHandler is Test {
         }
         mockSafe.setExecuteDelegatecalls(false);
     }
+
+    /**
+     * @dev Attempts a batch with one self-targeting sub-call and asserts atomic failure.
+     * @param positionRaw Fuzzed position where the self-targeting sub-call is inserted
+     * @param newValue Fuzzed value used by non-self-targeting sub-calls
+     */
+    function executeBatchTargetingSafe(uint8 positionRaw, uint256 newValue) external {
+        uint8 batchSize = 3;
+        uint8 position = uint8(bound(positionRaw, 0, batchSize - 1));
+        uint256 beforeValue = target.value();
+
+        bytes memory batch;
+        for (uint256 i = 0; i < batchSize; i++) {
+            address to = i == position ? address(mockSafe) : address(target);
+            bytes memory callData = i == position
+                ? abi.encodeWithSelector(InvariantTarget.setValue.selector, newValue)
+                : abi.encodeWithSelector(InvariantTarget.setValue.selector, newValue + i + 1);
+            batch = abi.encodePacked(batch, abi.encodePacked(to, uint64(callData.length), callData));
+        }
+
+        bytes memory data = abi.encodeWithSelector(BatchedTransaction.execute.selector, batch);
+        mockSafe.setExecuteDelegatecalls(true);
+
+        vm.prank(authorizedExecutor);
+        try module.executeOnBehalf(address(batchedTx), data) {
+            revert("INVARIANT VIOLATION: self-targeting batch succeeded");
+        } catch {
+            selfTargetBatchAttempts++;
+            assertEq(target.value(), beforeValue, "self-targeting batch must leave no persisted state");
+        }
+
+        mockSafe.setExecuteDelegatecalls(false);
+    }
+
+    /**
+     * @dev Attempts a batch with a reverting later sub-call and asserts atomic rollback.
+     */
+    function executeBatchWithFailingSubcall() external {
+        uint256 beforeValue = target.value();
+        uint256 stagedValue = beforeValue == type(uint256).max ? beforeValue - 1 : beforeValue + 1;
+
+        bytes memory firstCall = abi.encodeWithSelector(InvariantTarget.setValue.selector, stagedValue);
+        bytes memory secondCall = abi.encodeWithSelector(InvariantReverter.alwaysRevert.selector);
+        bytes memory batch = abi.encodePacked(
+            abi.encodePacked(address(target), uint64(firstCall.length), firstCall),
+            abi.encodePacked(address(reverter), uint64(secondCall.length), secondCall)
+        );
+
+        bytes memory data = abi.encodeWithSelector(BatchedTransaction.execute.selector, batch);
+        mockSafe.setExecuteDelegatecalls(true);
+
+        vm.prank(authorizedExecutor);
+        try module.executeOnBehalf(address(batchedTx), data) {
+            revert("INVARIANT VIOLATION: reverting sub-call batch succeeded");
+        } catch {
+            atomicRevertBatchAttempts++;
+            assertEq(target.value(), beforeValue, "failing batch must roll back earlier writes");
+        }
+
+        mockSafe.setExecuteDelegatecalls(false);
+    }
 }
 
 /**
@@ -179,6 +256,7 @@ contract SafeModuleInvariantsTest is Test {
     SafeExecutorModule internal module;
     BatchedTransaction internal batchedTx;
     InvariantTarget internal target;
+    InvariantReverter internal reverter;
 
     address internal constant AUTHORIZED_EXECUTOR = address(0xA11CE);
 
@@ -187,15 +265,18 @@ contract SafeModuleInvariantsTest is Test {
         mockSafe = new InvariantMockSafe();
         batchedTx = new BatchedTransaction();
         target = new InvariantTarget();
+        reverter = new InvariantReverter();
         module = new SafeExecutorModule(address(mockSafe), AUTHORIZED_EXECUTOR, address(batchedTx));
 
-        handler = new SafeModuleInvariantHandler(module, mockSafe, batchedTx, target, AUTHORIZED_EXECUTOR);
+        handler = new SafeModuleInvariantHandler(module, mockSafe, batchedTx, target, reverter, AUTHORIZED_EXECUTOR);
 
         // Seed baseline coverage for each action.
         handler.executeAsAuthorized(1);
         handler.executeAsUnauthorized(2);
         handler.executeTargetingSafe();
         handler.executeAsBatch(3);
+        handler.executeBatchTargetingSafe(1, 4);
+        handler.executeBatchWithFailingSubcall();
 
         targetContract(address(handler));
     }
@@ -225,27 +306,15 @@ contract SafeModuleInvariantsTest is Test {
         }
     }
 
-    /**
-     * @dev SMI-INV-4: BatchedTransaction never allows a sub-call to delegatecaller address(this).
-     *      This invariant is enforced by the CannotCallSafe check in assembly. The handler's
-     *      executeAsBatch never targets the Safe, and any fuzz sequence that does will be reverted.
-     */
+    /// @dev SMI-INV-4: BatchedTransaction never allows a sub-call to the delegatecaller Safe.
     function invariant_SMI_INV_4_batchNeverAllowsSelfCall() public view {
-        // The handler actions only succeed when no self-call is attempted.
-        // The CannotCallSafe check ensures this invariant at the code level.
-        // Verify the handler tracked some successful batch executions without violation.
-        assertTrue(handler.successfulExecutions() > 0, "At least one successful execution should have occurred");
+        // Handler actions would revert immediately if a self-targeting batch ever succeeded or leaked state.
+        assertTrue(handler.selfTargetBatchAttempts() > 0, "self-targeting batches should be exercised");
     }
 
-    /**
-     * @dev SMI-INV-5: Batched execution is atomic — any failing sub-call leaves no persistent side effects.
-     *      This invariant is tested indirectly: the handler never observes partial state from batches
-     *      because either the entire batch succeeds or the EVM reverts the entire transaction.
-     */
+    /// @dev SMI-INV-5: Batched execution is atomic after any reverting later sub-call.
     function invariant_SMI_INV_5_batchedExecutionIsAtomic() public view {
-        // The EVM guarantees atomicity for reverted delegatecalls. If a batch fails,
-        // all state changes within the delegatecall frame are rolled back. This invariant
-        // is structurally enforced by the EVM and verified by the unit tests (BT-ESF-4, BT-ESF-5, BT-ESF-10).
-        assertTrue(true, "Atomicity is EVM-guaranteed for reverted delegatecalls");
+        // Handler actions would revert immediately if a failing batch ever persisted earlier writes.
+        assertTrue(handler.atomicRevertBatchAttempts() > 0, "reverting later sub-calls should be exercised");
     }
 }

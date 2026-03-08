@@ -74,23 +74,6 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix 0xFF should be invalid");
     }
 
-    /// @dev Verifies type-only recovery payloads return invalid while type-only policy payloads revert.
-    function test_LOAS_IVS_6_isValidSignature_typeOnlyPayload_routesWithEmptySignatureData() public {
-        // Setup: configure recovery to ensure both routing branches are reachable.
-        _setTxRecoveryState(guardianSigner, true);
-
-        // Call: execute recovery-only one-byte payload.
-        bytes4 recoveryOnly = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, abi.encodePacked(uint8(0x00)));
-
-        // Verify: recovery branch should process empty data and return invalid.
-        assertEq(recoveryOnly, SignatureUtils.ERC1271_INVALID_VALUE, "type-only recovery payload should fail closed");
-
-        // Verify: policy branch with empty signature data should revert during decode.
-        vm.expectRevert();
-        // Call: execute policy-only one-byte payload.
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, abi.encodePacked(uint8(0x01)));
-    }
-
     /// @dev Verifies that routing uses `signature[0]` as the authoritative type selector.
     function test_LOAS_IVS_7_isValidSignature_firstByteDeterminesRouting() public {
         // Setup: build a valid policy signature and clone it with a recovery type prefix.

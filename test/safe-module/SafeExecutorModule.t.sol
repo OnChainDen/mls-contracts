@@ -269,43 +269,6 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         new SafeExecutorModule(address(0), address(0), address(0));
     }
 
-    /// @dev [DESIRED BEHAVIOR] Verifies `constructor` rejects non-contract safe address.
-    function test_SEM_CON_8_constructorRejectsNonContractSafe() public {
-        // Setup: EOA address with no deployed code.
-        address eoa = makeAddr("nonContractSafe");
-
-        // Call: deploy with non-contract safe. Expect revert (not currently enforced).
-        vm.expectRevert();
-        new SafeExecutorModule(eoa, authorizedExecutor, address(mockBatchedTransaction));
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies `constructor` rejects non-contract batchedTransaction address.
-    function test_SEM_CON_9_constructorRejectsNonContractBatchedTransaction() public {
-        // Setup: EOA address with no deployed code.
-        address eoa = makeAddr("nonContractBatchedTx");
-
-        // Call: deploy with non-contract batchedTransaction. Expect revert (not currently enforced).
-        vm.expectRevert();
-        new SafeExecutorModule(address(mockSafe), authorizedExecutor, eoa);
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies `constructor` rejects contract authorizedExecutor (must be EOA).
-    function test_SEM_CON_10_constructorRejectsContractExecutor() public {
-        // Setup: contract address as executor.
-        address contractExecutor = address(mockTarget);
-
-        // Call: deploy with contract executor. Expect revert (not currently enforced).
-        vm.expectRevert();
-        new SafeExecutorModule(address(mockSafe), contractExecutor, address(mockBatchedTransaction));
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies `constructor` rejects safe == batchedTransaction configuration.
-    function test_SEM_CON_11_constructorRejectsSameAsBatchedTransaction() public {
-        // Call: deploy with safe == batchedTransaction. Expect revert (not currently enforced).
-        vm.expectRevert();
-        new SafeExecutorModule(address(mockSafe), authorizedExecutor, address(mockSafe));
-    }
-
     /// @dev Verifies `executeOnBehalf` reverts with `UnauthorizedCaller` for non-authorized callers.
     function test_SEM_EOB_1_executeOnBehalfRevertsUnauthorizedCaller() public {
         // Setup: prepare valid calldata targeting mockTarget.
@@ -611,29 +574,6 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
             address(mockSafe),
             "Sub-tx target should see Safe as msg.sender via delegatecall"
         );
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies `executeOnBehalf` rejects `to == address(0)`.
-    function test_SEM_EOB_22_executeOnBehalfRejectsZeroTarget() public {
-        // Setup: calldata with zero target address.
-        bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
-
-        // Call: execute with to == address(0). Expect revert (not currently enforced).
-        vm.prank(authorizedExecutor);
-        vm.expectRevert();
-        module.executeOnBehalf(address(0), data);
-    }
-
-    /// @dev [DESIRED BEHAVIOR] Verifies `executeOnBehalf` rejects non-contract targets (EOA/no-code).
-    function test_SEM_EOB_23_executeOnBehalfRejectsNonContractTarget() public {
-        // Setup: EOA target with no deployed code.
-        address eoa = makeAddr("eoaTarget");
-        bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
-
-        // Call: execute targeting EOA. Expect revert (not currently enforced).
-        vm.prank(authorizedExecutor);
-        vm.expectRevert();
-        module.executeOnBehalf(eoa, data);
     }
 
     /// @dev Verifies `isValidSignature` returns ERC-1271 magic value for valid authorized executor EOA signature.

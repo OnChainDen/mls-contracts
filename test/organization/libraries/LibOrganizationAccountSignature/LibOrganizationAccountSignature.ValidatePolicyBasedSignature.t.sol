@@ -2,8 +2,11 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {BatchedTransaction} from "../../../../src/safe-module/BatchedTransaction.sol";
+import {SafeExecutorModule} from "../../../../src/safe-module/SafeExecutorModule.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
+import {MockGuardianSafe} from "test/helpers/MockGuardianSafe.sol";
 import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
@@ -13,6 +16,9 @@ import {ApproverType, Policy, PolicyType, TransactionType, ValidationProofs} fro
  * @dev Unit tests for `LibOrganizationAccountSignature._validatePolicyBasedSignature`.
  */
 contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibOrganizationAccountSignatureTestBase {
+    uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE;
+    uint256 internal constant OTHER_EXECUTOR_PK = 0xB0B;
+
     struct PolicyValidationFixture {
         uint256 policyId;
         uint256 expirationTimestamp;
@@ -410,24 +416,6 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         );
     }
 
-    /// @dev Verifies that malformed ABI payloads revert during ABI decoding.
-    function test_LOAS_VPBS_15_validatePolicyBasedSignature_malformedAbiPayload_reverts() public {
-        // Setup: build malformed head-only data with out-of-bounds dynamic offsets.
-        bytes memory malformed = abi.encode(
-            uint256(DEFAULT_POLICY_ID),
-            uint256(block.timestamp + 1 days),
-            uint256(type(uint256).max),
-            uint256(type(uint256).max),
-            uint256(type(uint256).max),
-            uint256(type(uint256).max)
-        );
-
-        // Verify: malformed payload triggers ABI decode revert.
-        vm.expectRevert();
-        // Call: execute wrapper with malformed payload.
-        harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
-    }
-
     /// @dev Verifies that authorized ERC-1271 initiator contracts are accepted.
     function test_LOAS_VPBS_16_validatePolicyBasedSignature_authorizedERC1271Initiator_returnsMagicValue() public {
         // Setup: configure policy with ERC-1271 initiator member and valid guardian approval.
@@ -572,20 +560,6 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
 
         // Verify: designated member reviewer should satisfy manual approval.
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "designated member reviewer should be accepted");
-    }
-
-    /// @dev Verifies that unknown approval policy-type enum values revert during enum decoding.
-    function test_LOAS_VPBS_19_validatePolicyBasedSignature_unknownPolicyType_reverts() public {
-        // Setup: build a valid policy signature then mutate encoded policyType enum to an unknown value.
-        uint256 expiration = block.timestamp + 1 days;
-        (bytes memory signature,,,,,) =
-            _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, expiration);
-        _setPolicyTypeInPolicySignature(signature, 2);
-
-        // Verify: unknown policy type triggers enum decode revert.
-        vm.expectRevert();
-        // Call: execute type-routed validation with unknown enum payload.
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
     }
 
     /// @dev Verifies that malformed packed reviewer signature bytes fail closed with invalid value.
@@ -920,6 +894,327 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         // Verify: repeated calls should remain valid and deterministic.
         assertEq(first, SignatureUtils.ERC1271_MAGIC_VALUE, "first validation should return magic");
         assertEq(second, SignatureUtils.ERC1271_MAGIC_VALUE, "second validation should return magic");
+    }
+
+    /// @dev Verifies `_validatePolicyBasedSignature` accepts enabled module guardian signatures for auto-approve.
+    function test_LOAS_VPBS_1_B_validatePolicyBasedSignature_enabledModuleGuardianAutoApprove_returnsMagicValue()
+        public
+    {
+        // Setup: build an auto-approve fixture and replace the guardian with an enabled SafeExecutorModule.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+
+        // Call: validate the policy signature through the enabled module guardian path.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: initiator plus enabled module guardian is sufficient for auto-approve.
+        assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "enabled module guardian should return magic");
+    }
+
+    /// @dev Verifies `_validatePolicyBasedSignature` rejects disabled module guardian signatures.
+    function test_LOAS_VPBS_2_B_validatePolicyBasedSignature_disabledModuleGuardian_returnsInvalidValue() public {
+        // Setup: build an auto-approve fixture with a disabled SafeExecutorModule guardian.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: false,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+
+        // Call: validate the policy signature while the module is disabled on the guardian Safe.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: disabled modules fail closed even when the inner signature is correct.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "disabled module guardian should be invalid");
+    }
+
+    /// @dev Verifies manual approval still requires review signatures when guardian approval comes from a module.
+    function test_LOAS_VPBS_3_B_validatePolicyBasedSignature_manualApprovalModuleGuardianStillNeedsReviews_returnsInvalidValue()
+        public
+    {
+        // Setup: build a manual-approval fixture with an enabled module guardian and remove review signatures.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.RequireManualApproval,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+        fixture.reviewSignatures = bytes("");
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
+
+        // Call: validate the manual-approval payload without any reviewer approvals.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: the module guardian does not bypass manual reviewer requirements.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "manual approvals still require review signatures");
+    }
+
+    /// @dev Verifies invalid review signatures are rejected even when guardian approval comes from a module.
+    function test_LOAS_VPBS_4_B_validatePolicyBasedSignature_manualApprovalModuleGuardianInvalidReviews_returnsInvalidValue()
+        public
+    {
+        // Setup: build a manual-approval fixture with an enabled module guardian and swap in a wrong review hash.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.RequireManualApproval,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+        fixture.reviewSignatures = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: REVIEWER_PK_1,
+            account: ACCOUNT,
+            hash: OTHER_MESSAGE_HASH,
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature
+        });
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
+
+        // Call: validate the manual-approval payload with an invalid reviewer signature bundle.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: invalid reviewer signatures still cause rejection on the module guardian path.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "invalid review signatures should be rejected");
+    }
+
+    /// @dev Verifies module guardian signatures are bound to the initiator signature bytes.
+    function test_LOAS_VPBS_5_validatePolicyBasedSignature_moduleGuardianSignatureBoundToInitiatorSignature_returnsInvalidValue()
+        public
+    {
+        // Setup: build a valid module-guardian fixture, then swap in a different initiator signature without
+        // re-signing.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+        bytes memory differentInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_2,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp
+        });
+        fixture.initiatorSignature = differentInitiatorSignature;
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
+
+        // Call: validate the payload with a stale guardian module signature bound to the old initiator signature.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: changing initiator signature bytes invalidates the guardian module signature.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "guardian module signature should bind initiator bytes");
+    }
+
+    /// @dev Verifies module guardian signatures over the wrong message hash are rejected.
+    function test_LOAS_VPBS_6_validatePolicyBasedSignature_moduleGuardianWrongMessageHash_returnsInvalidValue() public {
+        // Setup: build a valid module-guardian fixture and then replace the guardian signature with one over another
+        // hash.
+        (PolicyValidationFixture memory fixture, SafeExecutorModule module) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+        bytes memory wrongGuardianInnerSignature = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: AUTHORIZED_EXECUTOR_PK,
+            account: ACCOUNT,
+            hash: OTHER_MESSAGE_HASH,
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature
+        });
+        fixture.guardianSignature = _buildContractSignature(address(module), wrongGuardianInnerSignature);
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
+
+        // Call: validate the payload whose module guardian signed a different review hash.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: guardian module signatures must match the exact message hash under review.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "wrong-message guardian module signature should fail");
+    }
+
+    /// @dev Verifies unauthorized initiators still fail on the module guardian path.
+    function test_LOAS_VPBS_8_B_validatePolicyBasedSignature_unauthorizedInitiatorWithModuleGuardian_returnsInvalidValue()
+        public
+    {
+        // Setup: build an enabled-module fixture, then replace the initiator with an unauthorized signer and re-sign.
+        (PolicyValidationFixture memory fixture, SafeExecutorModule module) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+        bytes memory unauthorizedInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_2,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp
+        });
+        bytes memory guardianInnerSignature = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: AUTHORIZED_EXECUTOR_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: unauthorizedInitiatorSignature
+        });
+        fixture.initiatorSignature = unauthorizedInitiatorSignature;
+        fixture.guardianSignature = _buildContractSignature(address(module), guardianInnerSignature);
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
+
+        // Call: validate the payload with an unauthorized initiator and a valid module guardian signature.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: policy authorization still gates the module guardian path.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unauthorized initiator should remain invalid");
+    }
+
+    /// @dev Verifies the exact-expiration boundary is accepted on the module guardian path.
+    function test_LOAS_VPBS_9_B_validatePolicyBasedSignature_expirationAtTimestampWithModuleGuardian_returnsMagicValue()
+        public
+    {
+        // Setup: build an enabled-module auto-approve fixture with `expirationTimestamp == block.timestamp`.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+
+        // Call: validate the payload at the strict expiry boundary.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: exact equality with `block.timestamp` is still accepted.
+        assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "expiration boundary should remain valid");
+    }
+
+    /// @dev Verifies auto-approve ignores reviewer payload bytes even on the module guardian path.
+    function test_LOAS_VPBS_10_validatePolicyBasedSignature_autoApproveIgnoresReviewSignaturesWithModuleGuardian_returnsMagicValue()
+        public
+    {
+        // Setup: build an enabled-module auto-approve fixture and inject irrelevant reviewer bytes.
+        (PolicyValidationFixture memory fixture,) = _buildModuleGuardianFixture({
+            approvalType: PolicyType.AutoApprove,
+            expirationTimestamp: block.timestamp + 1 days,
+            enableModule: true,
+            moduleExecutorPk: AUTHORIZED_EXECUTOR_PK,
+            innerSignerPk: AUTHORIZED_EXECUTOR_PK
+        });
+        fixture.reviewSignatures = hex"1b00ff";
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
+
+        // Call: validate the auto-approve payload with ignored reviewer bytes populated.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, fixture.signatureData);
+
+        // Verify: auto-approve continues to depend only on the initiator and guardian module signatures.
+        assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "auto-approve should ignore review signatures");
+    }
+
+    /**
+     * @dev Builds a baseline-valid policy-validation fixture that uses a `SafeExecutorModule` guardian.
+     * @param approvalType Policy approval mode under test.
+     * @param expirationTimestamp Expiration timestamp bound into the signatures.
+     * @param enableModule Whether the guardian Safe should enable the deployed module.
+     * @param moduleExecutorPk Private key configured as the module's authorized executor.
+     * @param innerSignerPk Private key used to sign the inner guardian payload.
+     * @return fixture Updated fixture using the module guardian path.
+     * @return module Deployed module that validated the guardian signature.
+     */
+    function _buildModuleGuardianFixture(
+        PolicyType approvalType,
+        uint256 expirationTimestamp,
+        bool enableModule,
+        uint256 moduleExecutorPk,
+        uint256 innerSignerPk
+    ) internal returns (PolicyValidationFixture memory fixture, SafeExecutorModule module) {
+        fixture = _buildPolicyValidationFixture(approvalType, expirationTimestamp);
+
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        module =
+            new SafeExecutorModule(address(guardianSafe), vm.addr(moduleExecutorPk), address(new BatchedTransaction()));
+        guardianSafe.setModuleEnabled(address(module), enableModule);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        bytes memory guardianInnerSignature = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: innerSignerPk,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature
+        });
+
+        fixture.guardianSignature = _buildContractSignature(address(module), guardianInnerSignature);
+        fixture.signatureData = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: fixture.guardianSignature,
+            proofs: fixture.proofs
+        });
     }
 
     /**

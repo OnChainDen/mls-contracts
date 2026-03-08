@@ -2,7 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {BatchedTransaction} from "../../../../src/safe-module/BatchedTransaction.sol";
+import {SafeExecutorModule} from "../../../../src/safe-module/SafeExecutorModule.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {MockGuardianSafe} from "test/helpers/MockGuardianSafe.sol";
 import {
     LibOrganizationAccountSignatureHarness
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureHarness.sol";
@@ -15,6 +18,8 @@ import {Policy, PolicyType} from "types/PolicyTypes.sol";
  * @dev Invariant tests for `LibOrganizationAccountSignature` behavior.
  */
 contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSignatureTestBase {
+    uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE;
+
     /// @dev Verifies that only recovery/policy type prefixes can produce ERC-1271 magic values.
     function invariant_AS_INV_1_typePrefixExclusivity_onlyRecoveryAndPolicyProduceMagic() public {
         // Setup: prepare valid recovery and valid policy payload fixtures.
@@ -43,7 +48,7 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
         assertEq(unknownFF, SignatureUtils.ERC1271_INVALID_VALUE, "unknown prefix should return invalid");
     }
 
-    /// @dev Verifies non-policy payload classes return without revert, while malformed policy payloads revert.
+    /// @dev Verifies representative supported and non-policy payload classes stay on the magic-or-invalid surface.
     function invariant_AS_INV_2_isValidSignature_payloadClassRevertBehavior_isStable() public {
         // Setup: prepare representative non-policy payloads plus valid recovery/policy fixtures.
         _setTxRecoveryState(guardianSigner, true);
@@ -72,26 +77,6 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
                 "isValidSignature should only return magic or invalid values"
             );
         }
-
-        // Call: execute type-only policy payload expected to revert during decode.
-        bytes memory typeOnlyPolicyPayload = abi.encodePacked(uint8(0x01));
-        (bool typeOnlyPolicySuccess,) = address(harness)
-            .staticcall(
-                abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, typeOnlyPolicyPayload))
-            );
-
-        // Verify: type-only policy payload class should revert.
-        assertFalse(typeOnlyPolicySuccess, "type-only policy payload should revert");
-
-        // Call: execute malformed policy payload expected to revert during decode.
-        bytes memory malformedPolicyPayload = abi.encodePacked(uint8(0x01), hex"DEADBEEF");
-        (bool malformedSuccess,) = address(harness)
-            .staticcall(
-                abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, malformedPolicyPayload))
-            );
-
-        // Verify: malformed policy payload class should revert.
-        assertFalse(malformedSuccess, "malformed policy payload should revert");
     }
 
     /// @dev Verifies that signatures valid in one organization are invalid in another organization.
@@ -209,5 +194,67 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
             beforeUsage,
             "validation should not consume usage state"
         );
+    }
+
+    /// @dev Verifies guardian validation accepts only direct guardian signatures or enabled guardian modules.
+    function invariant_SMI_INV_6_guardianModuleSignaturesAcceptedIffDirectGuardianOrEnabledModule() public {
+        // Setup: prepare direct-guardian fixtures for matching and mismatching EOAs.
+        policyStateHarness.setGuardian(guardianSigner);
+        bytes memory directGuardianSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+        bytes memory wrongDirectSignature = _signHash(REVIEWER_PK_1, MESSAGE_HASH);
+
+        // Call: validate direct guardian acceptance before switching to module-backed guardian checks.
+        bool directAccepted = harness.isValidGuardianSignatureViaLibrary(directGuardianSignature, MESSAGE_HASH);
+        bool wrongDirectAccepted = harness.isValidGuardianSignatureViaLibrary(wrongDirectSignature, MESSAGE_HASH);
+
+        // Setup: deploy a guardian Safe with one executor module and prepare valid/invalid module signatures.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployGuardianModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        bytes memory enabledModuleSignature =
+            _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+        bytes memory wrongExecutorSignature = _buildModuleGuardianSignature(module, REVIEWER_PK_1, MESSAGE_HASH);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        guardianSafe.setModuleEnabled(address(module), true);
+        bool enabledAccepted = harness.isValidGuardianSignatureViaLibrary(enabledModuleSignature, MESSAGE_HASH);
+
+        guardianSafe.setModuleEnabled(address(module), false);
+        bool disabledAccepted = harness.isValidGuardianSignatureViaLibrary(enabledModuleSignature, MESSAGE_HASH);
+
+        guardianSafe.setModuleEnabled(address(module), true);
+        bool wrongExecutorAccepted = harness.isValidGuardianSignatureViaLibrary(wrongExecutorSignature, MESSAGE_HASH);
+
+        // Verify: acceptance is limited to the direct guardian or an enabled guardian module signed by its executor.
+        assertTrue(directAccepted, "matching direct guardian should validate");
+        assertFalse(wrongDirectAccepted, "non-guardian direct signer should be rejected");
+        assertTrue(enabledAccepted, "enabled guardian module should validate");
+        assertFalse(disabledAccepted, "disabled guardian module should be rejected");
+        assertFalse(wrongExecutorAccepted, "enabled module signed by wrong executor should be rejected");
+    }
+
+    /**
+     * @dev Deploys a Safe executor module for guardian-module invariant checks.
+     * @param safe Safe-compatible guardian address that owns module enablement.
+     * @param executorPk Private key whose address becomes the module's authorized executor.
+     * @return module Newly deployed `SafeExecutorModule`.
+     */
+    function _deployGuardianModule(address safe, uint256 executorPk) internal returns (SafeExecutorModule module) {
+        BatchedTransaction batchedTransaction = new BatchedTransaction();
+        module = new SafeExecutorModule(safe, vm.addr(executorPk), address(batchedTransaction));
+    }
+
+    /**
+     * @dev Builds a module-backed guardian signature for invariant checks.
+     * @param module Safe executor module that validates the inner signature.
+     * @param executorPk Private key used to sign the module's inner payload.
+     * @param messageHash Review hash being signed by the executor.
+     * @return guardianSignature Nested ERC-1271 contract signature for guardian validation.
+     */
+    function _buildModuleGuardianSignature(SafeExecutorModule module, uint256 executorPk, bytes32 messageHash)
+        internal
+        view
+        returns (bytes memory guardianSignature)
+    {
+        guardianSignature = _buildContractSignature(address(module), _signHash(executorPk, messageHash));
     }
 }

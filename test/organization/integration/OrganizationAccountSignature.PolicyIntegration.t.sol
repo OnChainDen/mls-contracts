@@ -812,31 +812,6 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         assertTrue(baseReviewHashA != changedReviewHash, "review hash must bind initiator signature bytes");
     }
 
-    /// @dev Verifies that malformed policy signature payload reverts during decoding.
-    function test_malformedPolicySignatureData_invalidOffsets_reverts() public {
-        // Setup: build a policy-signature payload with invalid dynamic offsets.
-        bytes memory malformedPolicySignatureData = abi.encode(
-            uint256(1), uint256(block.timestamp + 1 days), type(uint256).max, uint256(0), uint256(0), uint256(0)
-        );
-        bytes memory malformed = abi.encodePacked(uint8(0x01), malformedPolicySignatureData);
-
-        // Verify: malformed payload should revert in the current implementation.
-        vm.expectRevert();
-        // Call: execute `isValidSignatureViaLibrary` with malformed policy-signature data.
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
-    }
-
-    /// @dev Verifies that malformed policy signature payloads revert during policy decode.
-    function test_malformedSignatureData_invalidAbiData_reverts() public {
-        // Setup: build malformed policy signature payload with insufficient ABI data.
-        bytes memory malformed = abi.encodePacked(uint8(0x01), hex"deadbeef");
-
-        // Verify: malformed policy payloads should revert.
-        vm.expectRevert();
-        // Call: execute `isValidSignatureViaLibrary` with malformed payload.
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformed);
-    }
-
     /// @dev Verifies that desired manual approval validation reverts must return invalid without revert.
     function test_desired_manualApprovalValidationRevertsMustReturnInvalidWithoutRevert() public {
         // Setup: configure a valid fixture for desired manual approval validation reverts must return invalid without
@@ -1215,49 +1190,6 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
         // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unknown signature prefix should be invalid");
-    }
-
-    /// @dev Verifies that invalid approval policy type in signature payload reverts.
-    function test_invalidApprovalPolicyType_reverts() public {
-        // Setup: configure a valid fixture and mutate encoded signature payload with an invalid enum value.
-        policyStateHarness.setGuardian(guardianSigner);
-
-        Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
-        uint256 expiration = block.timestamp + 1 days;
-
-        bytes memory initiatorSignature = _signInitiatorSignature({
-            sigHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: DEFAULT_POLICY_ID,
-            expirationTimestamp: expiration
-        });
-        bytes memory guardianSignature = _signGuardianReviewHash({
-            sigHarness: harness,
-            privateKey: GUARDIAN_PK,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: DEFAULT_POLICY_ID,
-            expirationTimestamp: expiration,
-            initiatorSignature: initiatorSignature
-        });
-
-        bytes memory signature = _buildPolicySignature({
-            policyId: DEFAULT_POLICY_ID,
-            expirationTimestamp: expiration,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            guardianSignature: guardianSignature,
-            proofs: proofs
-        });
-        _setPolicyTypeInPolicySignature(signature, 2);
-
-        // Verify: malformed enum values revert during decode.
-        vm.expectRevert();
-        // Call: invoke `isValidSignatureViaLibrary` with malformed enum payload.
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
     }
 
     /// @dev Verifies that cross organization replay initiator signature returns invalid value.

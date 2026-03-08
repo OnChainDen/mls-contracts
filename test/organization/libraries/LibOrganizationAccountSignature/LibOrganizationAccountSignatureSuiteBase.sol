@@ -18,7 +18,7 @@ abstract contract LibOrganizationAccountSignatureSuiteBase is OrganizationPolicy
     /**
      * @dev Deploys the account-signature library harness.
      */
-    function _deployHarness() internal override returns (OrganizationAdminStateHarness) {
+    function _deployHarness() internal virtual override returns (OrganizationAdminStateHarness) {
         harness = new LibOrganizationAccountSignatureHarness();
         return OrganizationAdminStateHarness(address(harness));
     }

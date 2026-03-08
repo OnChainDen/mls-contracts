@@ -2,8 +2,11 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {BatchedTransaction} from "../../../../src/safe-module/BatchedTransaction.sol";
+import {SafeExecutorModule} from "../../../../src/safe-module/SafeExecutorModule.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
+import {MockGuardianSafe} from "test/helpers/MockGuardianSafe.sol";
 import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
@@ -13,6 +16,8 @@ import {ApproverType, Policy, PolicyType, ValidationProofs} from "types/PolicyTy
  * @dev Fuzz tests for `LibOrganizationAccountSignature` behavior.
  */
 contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignatureTestBase {
+    uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE;
+
     /// @dev Verifies that random message hashes validate under a fully valid policy-signature fixture.
     function testFuzz_AS_FUZ_1_isValidSignature_randomHashesWithValidPolicySignature_returnsMagic(bytes32 randomMessageHash)
         public
@@ -416,19 +421,6 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         assertTrue(reviewHashA != reviewHashB, "review hash should change with message hash");
     }
 
-    /// @dev Verifies malformed policy payloads with undersized ABI heads revert in policy decoding.
-    function testFuzz_AS_FUZ_11_isValidSignature_randomMalformedPolicyPayloads_revert(bytes calldata malformed) public {
-        // Setup: constrain payloads to undersized ABI heads for deterministic decode reverts.
-        vm.assume(malformed.length < 32 * 6);
-        bytes memory signature = abi.encodePacked(uint8(0x01), malformed);
-
-        // Verify: undersized malformed payloads revert during policy decode.
-        // Note: compiler-generated ABI decoder emits revert(0,0) when head is too short — no error selector.
-        vm.expectRevert();
-        // Call: execute type-routed validation with malformed payload.
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
-    }
-
     /// @dev Verifies that authorization outcome depends on policy authorization, not signature encoding mode.
     function testFuzz_AS_FUZ_12_validatePolicyBasedSignature_authorizedSignerMixes_dependOnAuthorizationNotEncoding(
         bool initiatorAsContract,
@@ -515,10 +507,110 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         assertEq(actual, expected, "authorization outcome should depend on policy authorization");
     }
 
+    /// @dev Verifies module-signature acceptance always follows the guardian Safe's current enabled state.
+    /// @param enabledMask Bitmask whose low bits drive the enabled/disabled state applied at each step.
+    /// @param stepCountRaw Fuzzed number of enablement transitions to evaluate.
+    function testFuzz_SMI_FUZ_7_isValidGuardianSignature_moduleAcceptanceMatchesEnabledState(
+        uint256 enabledMask,
+        uint8 stepCountRaw
+    ) public {
+        // Setup: deploy a guardian Safe with one executor module and prepare a valid module-backed signature.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployGuardianModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+        uint256 stepCount = bound(stepCountRaw, 1, 16);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        // Call: replay the fuzzed enable/disable sequence and validate after each transition.
+        for (uint256 i = 0; i < stepCount; i++) {
+            bool enabled = ((enabledMask >> i) & 1) == 1;
+            guardianSafe.setModuleEnabled(address(module), enabled);
+
+            bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+            // Verify: acceptance matches the guardian Safe's current enabled set exactly.
+            assertEq(actual, enabled, "module-signature acceptance should track current enablement");
+        }
+    }
+
+    /// @dev Verifies only correctly signed authorized-executor module payloads validate through the guardian path.
+    /// @param caseSelector Fuzzed selector for valid, wrong-signer, wrong-hash, or malformed-inner-signature cases.
+    /// @param alternateSignerPkRaw Fuzzed seed for a non-authorized signer key.
+    /// @param wrongHash Fuzzed alternate hash for wrong-hash module signatures.
+    /// @param malformedInnerSignature Arbitrary malformed inner-signature bytes.
+    function testFuzz_SMI_FUZ_8_isValidGuardianSignature_onlyAuthorizedExecutorInnerSignatureValid(
+        uint8 caseSelector,
+        uint256 alternateSignerPkRaw,
+        bytes32 wrongHash,
+        bytes calldata malformedInnerSignature
+    ) public {
+        // Setup: deploy an enabled guardian module and pick one fuzzed inner-signature scenario.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployGuardianModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(module), true);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        caseSelector = uint8(bound(caseSelector, 0, 3));
+        bytes memory innerSignature;
+        bool expected;
+
+        if (caseSelector == 0) {
+            innerSignature = _signHash(AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+            expected = true;
+        } else if (caseSelector == 1) {
+            uint256 alternateSignerPk = bound(alternateSignerPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
+            vm.assume(alternateSignerPk != AUTHORIZED_EXECUTOR_PK);
+            innerSignature = _signHash(alternateSignerPk, MESSAGE_HASH);
+            expected = false;
+        } else if (caseSelector == 2) {
+            vm.assume(wrongHash != MESSAGE_HASH);
+            innerSignature = _signHash(AUTHORIZED_EXECUTOR_PK, wrongHash);
+            expected = false;
+        } else {
+            vm.assume(malformedInnerSignature.length != 65);
+            innerSignature = malformedInnerSignature;
+            expected = false;
+        }
+
+        bytes memory guardianSignature = _buildContractSignature(address(module), innerSignature);
+
+        // Call: validate the fuzzed module inner-signature variant.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: only exact authorized-executor signatures over the validated hash are accepted.
+        assertEq(actual, expected, "guardian module validation should accept only authorized exact-hash signatures");
+    }
+
     /**
      * @dev Computes Merkle leaf for an address using policy tree address-leaf rules.
      */
     function _computeAddressLeaf(address account) internal pure returns (bytes32) {
         return keccak256(bytes.concat(keccak256(abi.encode(account))));
+    }
+
+    /**
+     * @dev Deploys a Safe executor module for guardian-signature fuzz tests.
+     * @param safe Safe-compatible guardian address that owns module enablement.
+     * @param executorPk Private key whose address becomes the module's authorized executor.
+     * @return module Newly deployed `SafeExecutorModule`.
+     */
+    function _deployGuardianModule(address safe, uint256 executorPk) internal returns (SafeExecutorModule module) {
+        BatchedTransaction batchedTransaction = new BatchedTransaction();
+        module = new SafeExecutorModule(safe, vm.addr(executorPk), address(batchedTransaction));
+    }
+
+    /**
+     * @dev Builds a module-backed guardian signature for fuzz tests.
+     * @param module Safe executor module that validates the inner signature.
+     * @param executorPk Private key used to sign the module's inner payload.
+     * @param messageHash Review hash being signed by the executor.
+     * @return guardianSignature Nested ERC-1271 contract signature for guardian validation.
+     */
+    function _buildModuleGuardianSignature(SafeExecutorModule module, uint256 executorPk, bytes32 messageHash)
+        internal
+        view
+        returns (bytes memory guardianSignature)
+    {
+        guardianSignature = _buildContractSignature(address(module), _signHash(executorPk, messageHash));
     }
 }

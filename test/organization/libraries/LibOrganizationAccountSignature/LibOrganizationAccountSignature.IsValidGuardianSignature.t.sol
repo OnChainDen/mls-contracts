@@ -2,12 +2,10 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {MockGuardianSafe, MockGuardianSafeShortReturn} from "test/helpers/MockGuardianSafe.sol";
-import {
-    MockGuardianModuleReverter,
-    MockGuardianModuleUnexpectedReturn,
-    MockGuardianSafeERC1271
-} from "test/helpers/MockGuardianSignatureValidation.sol";
+import {BatchedTransaction} from "../../../../src/safe-module/BatchedTransaction.sol";
+import {SafeExecutorModule} from "../../../../src/safe-module/SafeExecutorModule.sol";
+import {MockGuardianSafe} from "test/helpers/MockGuardianSafe.sol";
+import {MockGuardianModuleReverter} from "test/helpers/MockGuardianSignatureValidation.sol";
 import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
@@ -16,159 +14,185 @@ import {
  * @dev Unit tests for `LibOrganizationAccountSignature._isValidGuardianSignature`.
  */
 contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrganizationAccountSignatureTestBase {
-    /// @dev Verifies that EOA guardian signatures with matching signer return true.
-    function test_LOAS_IVGS_1_isValidGuardianSignature_eoaGuardianMatchingSigner_returnsTrue() public {
-        // Setup: configure guardian as deterministic EOA signer.
+    uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE5;
+    uint256 internal constant OLD_EXECUTOR_PK = 0x0D100;
+    uint256 internal constant NEW_EXECUTOR_PK = 0x0E100;
+
+    BatchedTransaction internal batchedTransaction;
+
+    /// @dev Seeds the batched helper required by `SafeExecutorModule`.
+    function setUp() public override {
+        super.setUp();
+        batchedTransaction = new BatchedTransaction();
+    }
+
+    /// @dev Verifies `_isValidGuardianSignature` returns true for a direct guardian EOA signature.
+    function test_LOAS_IVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue() public {
+        // Setup: configure the guardian as a deterministic EOA and sign the tracked message hash.
         policyStateHarness.setGuardian(guardianSigner);
         bytes memory guardianSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
 
-        // Call: execute `isValidGuardianSignatureViaLibrary` with matching EOA signature.
+        // Call: validate the direct guardian signature.
         bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
 
-        // Verify: matching guardian signer should be accepted.
-        assertTrue(actual, "matching guardian EOA signature should be valid");
+        // Verify: the direct guardian signer is accepted.
+        assertTrue(actual, "direct guardian signature should be valid");
     }
 
-    /// @dev Verifies that EOA guardian signatures with non-matching signer return false.
-    function test_LOAS_IVGS_2_isValidGuardianSignature_eoaGuardianNonMatchingSigner_returnsFalse() public {
-        // Setup: configure guardian as deterministic EOA signer and sign with a different key.
-        policyStateHarness.setGuardian(guardianSigner);
-        bytes memory wrongSignature = _signHash(REVIEWER_PK_1, MESSAGE_HASH);
-
-        // Call: execute `isValidGuardianSignatureViaLibrary` with non-matching EOA signature.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(wrongSignature, MESSAGE_HASH);
-
-        // Verify: non-matching guardian signer should be rejected.
-        assertFalse(actual, "non-matching guardian EOA signature should be invalid");
-    }
-
-    /// @dev Verifies that guardian Safe module signatures from enabled modules return true.
-    function test_LOAS_IVGS_3_isValidGuardianSignature_guardianSafeEnabledModuleSigner_returnsTrue() public {
-        // Setup: configure guardian as Safe mock with guardian signer enabled as module.
+    /// @dev Verifies `_isValidGuardianSignature` accepts an enabled `SafeExecutorModule` contract signature.
+    function test_LOAS_IVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue() public {
+        // Setup: configure a guardian Safe with an enabled executor module and sign through the authorized executor.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
-        guardianSafe.setModuleEnabled(guardianSigner, true);
+        SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(module), true);
         policyStateHarness.setGuardian(address(guardianSafe));
 
-        bytes memory moduleSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
 
-        // Call: execute `isValidGuardianSignatureViaLibrary` with enabled-module signer.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(moduleSignature, MESSAGE_HASH);
+        // Call: validate the module-backed guardian signature.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
 
-        // Verify: enabled Safe module signer should be accepted.
-        assertTrue(actual, "enabled Safe module signer should be valid");
+        // Verify: enabled module signatures are accepted.
+        assertTrue(actual, "enabled module contract signature should be valid");
     }
 
-    /// @dev Verifies that guardian Safe module signatures from disabled modules return false.
-    function test_LOAS_IVGS_4_isValidGuardianSignature_guardianSafeDisabledModuleSigner_returnsFalse() public {
-        // Setup: configure guardian as Safe mock without enabling recovered signer module.
+    /// @dev Verifies `_isValidGuardianSignature` rejects valid module signatures from non-enabled modules.
+    function test_LOAS_IVGS_3_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse() public {
+        // Setup: configure a guardian Safe without enabling the module that produced the contract signature.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
         policyStateHarness.setGuardian(address(guardianSafe));
 
-        bytes memory moduleSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
 
-        // Call: execute `isValidGuardianSignatureViaLibrary` with disabled-module signer.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(moduleSignature, MESSAGE_HASH);
+        // Call: validate the disabled-module signature.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
 
-        // Verify: disabled Safe module signer should be rejected.
-        assertFalse(actual, "disabled Safe module signer should be invalid");
+        // Verify: non-enabled module signatures fail closed.
+        assertFalse(actual, "disabled module contract signature should be invalid");
     }
 
-    /// @dev Verifies that direct guardian ERC-1271 signatures from Safe guardian address return true.
-    function test_LOAS_IVGS_5_isValidGuardianSignature_guardianSafeDirectERC1271Signature_returnsTrue() public {
-        // Setup: configure guardian as Safe-like ERC-1271 contract signer.
-        MockGuardianSafeERC1271 guardianSafe = new MockGuardianSafeERC1271();
-        policyStateHarness.setGuardian(address(guardianSafe));
-
-        bytes memory contractGuardianSignature = _buildContractSignature(address(guardianSafe), hex"AA55");
-
-        // Call: execute `isValidGuardianSignatureViaLibrary` with direct guardian contract signature.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(contractGuardianSignature, MESSAGE_HASH);
-
-        // Verify: direct guardian contract signer should be accepted without module lookup.
-        assertTrue(actual, "direct guardian contract signature should be valid");
-    }
-
-    /// @dev Verifies that malformed guardian signatures fail closed and return false.
-    function test_LOAS_IVGS_6_isValidGuardianSignature_malformedSignature_returnsFalse() public {
-        // Setup: configure guardian as deterministic EOA signer.
-        policyStateHarness.setGuardian(guardianSigner);
-
-        // Call: execute `isValidGuardianSignatureViaLibrary` with malformed signature bytes.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(hex"00", MESSAGE_HASH);
-
-        // Verify: malformed guardian signatures should fail closed.
-        assertFalse(actual, "malformed guardian signature should be invalid");
-    }
-
-    /// @dev Verifies that non-Safe guardian contracts that revert on module checks fail closed.
-    function test_LOAS_IVGS_7_isValidGuardianSignature_nonSafeGuardianModuleCheckReverts_returnsFalse() public {
-        // Setup: configure guardian as contract that reverts on unknown function selectors.
-        MockGuardianModuleReverter revertingGuardian = new MockGuardianModuleReverter();
-        policyStateHarness.setGuardian(address(revertingGuardian));
-
-        bytes memory signature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
-
-        // Call: execute `isValidGuardianSignatureViaLibrary` with non-direct signer to trigger module path.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(signature, MESSAGE_HASH);
-
-        // Verify: reverting module checks should fail closed.
-        assertFalse(actual, "reverting guardian module checks should fail closed");
-    }
-
-    /// @dev Verifies that truncated `isModuleEnabled` return data fails closed.
-    function test_LOAS_IVGS_8_isValidGuardianSignature_guardianModuleShortReturnData_returnsFalse() public {
-        // Setup: configure guardian as mock returning one-byte payload for module checks.
-        MockGuardianSafeShortReturn shortReturnGuardian = new MockGuardianSafeShortReturn();
-        policyStateHarness.setGuardian(address(shortReturnGuardian));
-
-        bytes memory signature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
-
-        // Call: execute `isValidGuardianSignatureViaLibrary` to hit short-return module path.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(signature, MESSAGE_HASH);
-
-        // Verify: short return data should fail closed.
-        assertFalse(actual, "short module-check return data should be invalid");
-    }
-
-    /// @dev Verifies that explicit `false` module checks from guardian Safe return false.
-    function test_LOAS_IVGS_9_isValidGuardianSignature_guardianModuleReturnsFalse_returnsFalse() public {
-        // Setup: configure guardian as Safe mock with no enabled modules.
+    /// @dev Verifies `_isValidGuardianSignature` rejects modules enabled on a different Safe.
+    function test_LOAS_IVGS_4_isValidGuardianSignature_moduleEnabledOnDifferentSafe_returnsFalse() public {
+        // Setup: enable a module on one Safe while configuring a different Safe as the guardian.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        MockGuardianSafe otherSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployModule(address(otherSafe), AUTHORIZED_EXECUTOR_PK);
+        otherSafe.setModuleEnabled(address(module), true);
         policyStateHarness.setGuardian(address(guardianSafe));
 
-        bytes memory signature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
 
-        // Call: execute `isValidGuardianSignatureViaLibrary` with non-enabled module signer.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(signature, MESSAGE_HASH);
+        // Call: validate the signature against the actual guardian Safe.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
 
-        // Verify: explicit false module checks should be rejected.
-        assertFalse(actual, "module false response should be invalid");
+        // Verify: module enablement on another Safe does not authorize the guardian path.
+        assertFalse(actual, "module enabled on a different Safe should be invalid");
     }
 
-    /// @dev Verifies that EOA guardians fail module-path checks gracefully when signer mismatches.
-    function test_LOAS_IVGS_10_isValidGuardianSignature_eoaGuardianModulePathFailsGracefully_returnsFalse() public {
-        // Setup: configure guardian as EOA address different from recovered signer.
-        policyStateHarness.setGuardian(address(0xBEEFCAFE));
-        bytes memory signature = _signHash(REVIEWER_PK_1, MESSAGE_HASH);
+    /// @dev Verifies `_isValidGuardianSignature` rejects module signatures whose inner signer is not authorized.
+    function test_LOAS_IVGS_5_isValidGuardianSignature_wrongExecutorModuleSignature_returnsFalse() public {
+        // Setup: enable a module on the guardian Safe but sign the inner payload with the wrong executor key.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(module), true);
+        policyStateHarness.setGuardian(address(guardianSafe));
 
-        // Call: execute `isValidGuardianSignatureViaLibrary` to trigger EOA module-check path.
-        bool actual = harness.isValidGuardianSignatureViaLibrary(signature, MESSAGE_HASH);
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, REVIEWER_PK_1, MESSAGE_HASH);
 
-        // Verify: module checks on EOAs should fail closed without revert.
-        assertFalse(actual, "EOA module-check path should fail closed");
+        // Call: validate the malformed inner-authorizer combination.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: module signatures signed by the wrong executor fail closed.
+        assertFalse(actual, "wrong executor module signature should be invalid");
     }
 
-    /// @dev Verifies that unexpected module-check return values revert during bool decoding.
-    function test_LOAS_IVGS_11_isValidGuardianSignature_unexpectedModuleReturnData_reverts() public {
-        // Setup: configure guardian as contract returning non-boolean 32-byte payload.
-        MockGuardianModuleUnexpectedReturn weirdGuardian = new MockGuardianModuleUnexpectedReturn();
-        policyStateHarness.setGuardian(address(weirdGuardian));
+    /// @dev Verifies `_isValidGuardianSignature` returns false for malformed module inner signatures.
+    function test_LOAS_IVGS_6_isValidGuardianSignature_malformedModuleInnerSignature_returnsFalse() public {
+        // Setup: enable a module on the guardian Safe and provide malformed inner signature bytes.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(module), true);
+        policyStateHarness.setGuardian(address(guardianSafe));
 
-        bytes memory signature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
+        bytes memory guardianSignature = _buildContractSignature(address(module), hex"1b");
 
-        // Verify: unexpected module return data triggers a decode revert.
-        vm.expectRevert();
-        // Call: execute wrapper call with unexpected return-data guardian.
-        harness.isValidGuardianSignatureViaLibrary(signature, MESSAGE_HASH);
+        // Call: validate the malformed module signature payload.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: malformed inner signatures fail closed without revert.
+        assertFalse(actual, "malformed module inner signature should be invalid");
+    }
+
+    /// @dev Verifies `_isValidGuardianSignature` fails closed when guardian module checks revert.
+    function test_LOAS_IVGS_7_isValidGuardianSignature_revertingGuardianModuleCheck_returnsFalse() public {
+        // Setup: configure a reverting guardian contract and sign through a module that points at it.
+        MockGuardianModuleReverter guardian = new MockGuardianModuleReverter();
+        SafeExecutorModule module = _deployModule(address(guardian), AUTHORIZED_EXECUTOR_PK);
+        policyStateHarness.setGuardian(address(guardian));
+
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+
+        // Call: validate the signature that requires a reverting module lookup.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: reverting module lookups fail closed.
+        assertFalse(actual, "reverting guardian module checks should be invalid");
+    }
+
+    /// @dev Verifies `_isValidGuardianSignature` fails gracefully when the guardian is an EOA and signer mismatches.
+    function test_LOAS_IVGS_9_isValidGuardianSignature_eoaGuardianMismatchedSigner_returnsFalse() public {
+        // Setup: configure an EOA guardian that does not match the recovered signer.
+        policyStateHarness.setGuardian(makeAddr("guardianEoa"));
+        bytes memory guardianSignature = _signHash(REVIEWER_PK_1, MESSAGE_HASH);
+
+        // Call: validate the mismatched EOA signature.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: EOA guardians without a matching signer fail closed.
+        assertFalse(actual, "mismatched EOA guardian signature should be invalid");
+    }
+
+    /// @dev Verifies `_isValidGuardianSignature` reflects module rotation immediately.
+    function test_LOAS_IVGS_10_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately() public {
+        // Setup: configure old and new modules on the same guardian Safe and rotate enablement between them.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule oldModule = _deployModule(address(guardianSafe), OLD_EXECUTOR_PK);
+        SafeExecutorModule newModule = _deployModule(address(guardianSafe), NEW_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(oldModule), false);
+        guardianSafe.setModuleEnabled(address(newModule), true);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        bytes memory oldSignature = _buildModuleGuardianSignature(oldModule, OLD_EXECUTOR_PK, MESSAGE_HASH);
+        bytes memory newSignature = _buildModuleGuardianSignature(newModule, NEW_EXECUTOR_PK, MESSAGE_HASH);
+
+        // Call: validate signatures for the disabled old module and enabled new module.
+        bool oldAccepted = harness.isValidGuardianSignatureViaLibrary(oldSignature, MESSAGE_HASH);
+        bool newAccepted = harness.isValidGuardianSignatureViaLibrary(newSignature, MESSAGE_HASH);
+
+        // Verify: rotation takes effect immediately for signature acceptance.
+        assertFalse(oldAccepted, "old module should be invalid after rotation");
+        assertTrue(newAccepted, "new module should be valid immediately after rotation");
+    }
+
+    /// @dev Deploys a `SafeExecutorModule` against the provided Safe-compatible guardian contract.
+    /// @param safe The Safe-compatible guardian address that owns module enablement.
+    /// @param executorPk The private key whose address becomes the module's authorized executor.
+    /// @return module The deployed Safe executor module.
+    function _deployModule(address safe, uint256 executorPk) internal returns (SafeExecutorModule module) {
+        module = new SafeExecutorModule(safe, vm.addr(executorPk), address(batchedTransaction));
+    }
+
+    /// @dev Builds a module-backed guardian signature using the module contract wrapper format.
+    /// @param module The `SafeExecutorModule` contract that should recover as the signer.
+    /// @param executorPk The executor private key that signs the module's inner payload.
+    /// @param messageHash The review hash being signed by the authorized executor.
+    /// @return guardianSignature The nested ERC-1271 contract signature accepted by the module path.
+    function _buildModuleGuardianSignature(SafeExecutorModule module, uint256 executorPk, bytes32 messageHash)
+        internal
+        view
+        returns (bytes memory guardianSignature)
+    {
+        guardianSignature = _buildContractSignature(address(module), _signHash(executorPk, messageHash));
     }
 }

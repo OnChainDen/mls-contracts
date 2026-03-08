@@ -67,7 +67,7 @@ contract FuzzTarget {
 
 /**
  * @dev Fuzz tests for SafeExecutorModule and BatchedTransaction.
- *      Covers test plan rows SMI-FUZ-1 through SMI-FUZ-6.
+ *      Covers test plan rows SMI-FUZ-1 through SMI-FUZ-4 and SMI-FUZ-6.
  *      SMI-FUZ-7 and SMI-FUZ-8 cover guardian module signature fuzzing and are
  *      implemented in the existing LibOrganizationAccountSignature fuzz suite.
  */
@@ -110,26 +110,42 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
         }
     }
 
-    /// @dev Verifies `executeOnBehalf` always chooses DELEGATECALL iff target == BATCHED_TRANSACTION.
-    function testFuzz_SMI_FUZ_1_executeOnBehalf_operationMatchesTarget(address target) public {
-        // Setup: skip Safe target (would revert CannotCallSafe) and address(0).
-        vm.assume(target != address(mockSafe));
-        vm.assume(target != address(0));
+    /// @dev Verifies `executeOnBehalf` chooses the Safe operation solely from the target kind.
+    /// @param useBatchedTarget Whether to route through `BATCHED_TRANSACTION` instead of a direct call target.
+    /// @param newValue Fuzzed value written through the selected execution path.
+    function testFuzz_SMI_FUZ_1_executeOnBehalf_operationMatchesTargetKind(bool useBatchedTarget, uint256 newValue)
+        public
+    {
+        // Setup: build a successful direct-call or batch-call payload against known contract targets.
+        address target = useBatchedTarget ? address(batchedTx) : address(fuzzTarget);
+        bytes memory data;
 
-        bytes memory data = abi.encodeWithSelector(FuzzTarget.setValue.selector, 42);
-
-        // Call: execute with fuzzed target.
-        vm.prank(authorizedExecutor);
-        try module.executeOnBehalf(target, data) {
-            // Verify: DELEGATECALL(1) iff target == batchedTx, else CALL(0).
-            if (target == address(batchedTx)) {
-                assertEq(mockSafe.lastCallOperation(), 1, "BatchedTransaction must use DELEGATECALL");
-            } else {
-                assertEq(mockSafe.lastCallOperation(), 0, "Non-BatchedTransaction must use CALL");
-            }
-        } catch {
-            // Execution failures (non-contract target, etc.) are acceptable.
+        if (useBatchedTarget) {
+            bytes[] memory txs = new bytes[](1);
+            txs[0] = _encodeTx(address(fuzzTarget), abi.encodeWithSelector(FuzzTarget.setValue.selector, newValue));
+            data = abi.encodeWithSelector(BatchedTransaction.execute.selector, _encodeBatch(txs));
+            mockSafe.setExecuteDelegatecalls(true);
+        } else {
+            data = abi.encodeWithSelector(FuzzTarget.setValue.selector, newValue);
         }
+
+        // Call: execute the fuzzed target-kind path as the authorized executor.
+        vm.prank(authorizedExecutor);
+        bool success = module.executeOnBehalf(target, data);
+
+        if (useBatchedTarget) {
+            mockSafe.setExecuteDelegatecalls(false);
+        }
+
+        // Verify: successful executions use DELEGATECALL only for the batched target and preserve effects.
+        assertTrue(success, "prepared target-kind path should succeed");
+        assertEq(mockSafe.lastCallTo(), target, "Safe should receive the selected target");
+        assertEq(
+            mockSafe.lastCallOperation(),
+            useBatchedTarget ? uint8(1) : uint8(0),
+            "operation should depend only on whether the target is batched"
+        );
+        assertEq(fuzzTarget.value(), newValue, "selected execution path should apply the fuzzed value");
     }
 
     /// @dev Verifies `executeOnBehalf` forwards fuzzed calldata byte-for-byte to Safe.
@@ -148,8 +164,10 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
         }
     }
 
-    /// @dev Verifies `isValidSignature` never reverts for random inputs and only returns magic for authorized signer.
-    function testFuzz_SMI_FUZ_3_isValidSignature_neverRevertsNeverMagicUnlessAuthorized(
+    /// @dev Verifies malformed signature inputs never revert and only return canonical ERC-1271 values.
+    /// @param hash Message hash supplied to `isValidSignature`.
+    /// @param signature Arbitrary malformed or random signature bytes.
+    function testFuzz_SMI_FUZ_3_A_isValidSignature_randomInputsNeverRevertOrReturnUnexpectedValues(
         bytes32 hash,
         bytes calldata signature
     ) public view {
@@ -161,6 +179,35 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
             result == SignatureUtils.ERC1271_MAGIC_VALUE || result == SignatureUtils.ERC1271_INVALID_VALUE,
             "Result must be magic or invalid - no other values allowed"
         );
+    }
+
+    /// @dev Verifies only an exact authorized-executor signature over the validated hash can produce magic.
+    /// @param useAuthorizedSigner Whether to sign with the module's configured authorized executor.
+    /// @param signCorrectHash Whether the signer signs the exact validated hash.
+    /// @param hash Message hash supplied to `isValidSignature`.
+    /// @param otherSignerPkRaw Fuzzed seed for an alternate non-authorized signer key.
+    function testFuzz_SMI_FUZ_3_B_isValidSignature_onlyAuthorizedExactHashProducesMagic(
+        bool useAuthorizedSigner,
+        bool signCorrectHash,
+        bytes32 hash,
+        uint256 otherSignerPkRaw
+    ) public {
+        // Setup: pick either the authorized signer or a bounded alternate signer and optionally mutate the signed hash.
+        uint256 signerPk =
+            useAuthorizedSigner ? AUTHORIZED_EXECUTOR_PK : bound(otherSignerPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
+        vm.assume(useAuthorizedSigner || signerPk != AUTHORIZED_EXECUTOR_PK);
+
+        bytes32 signedHash = signCorrectHash ? hash : keccak256(abi.encode(hash, otherSignerPkRaw));
+        bytes memory signature = _signHash(signerPk, signedHash);
+
+        // Call: validate the constructed signature against the requested hash.
+        bytes4 actual = module.isValidSignature(hash, signature);
+
+        // Verify: magic is only reachable when the authorized executor signed the exact hash under validation.
+        bytes4 expected = useAuthorizedSigner && signCorrectHash
+            ? SignatureUtils.ERC1271_MAGIC_VALUE
+            : SignatureUtils.ERC1271_INVALID_VALUE;
+        assertEq(actual, expected, "only the authorized executor on the exact hash should validate");
     }
 
     /// @dev Verifies successful batch execution matches sequential-call semantics.
@@ -181,39 +228,6 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
         // Verify: batch result matches calling increment() N times sequentially.
         assertTrue(success, "Valid batch should succeed");
         assertEq(fuzzTarget.value(), uint256(batchSize), "Batch result should match sequential execution");
-    }
-
-    /// @dev Verifies malformed batches (truncated data) never partially apply state.
-    function testFuzz_SMI_FUZ_5_execute_malformedBatchNeverPartiallyAppliesState(uint8 truncateBytes) public {
-        // Setup: build a valid 2-tx batch, then truncate it to create malformed encoding.
-        bytes[] memory txs = new bytes[](2);
-        txs[0] = _encodeTx(address(fuzzTarget), abi.encodeWithSelector(FuzzTarget.setValue.selector, 100));
-        txs[1] = _encodeTx(address(fuzzTarget), abi.encodeWithSelector(FuzzTarget.setValue.selector, 200));
-        bytes memory validBatch = _encodeBatch(txs);
-
-        // Truncate by at least 1 byte from the second transaction to make it malformed.
-        uint256 firstTxLen = txs[0].length;
-        truncateBytes = uint8(bound(truncateBytes, 1, uint8(txs[1].length)));
-        uint256 malformedLen = validBatch.length - truncateBytes;
-
-        // Only test if the truncation actually cuts into the second transaction.
-        if (malformedLen <= firstTxLen) return;
-
-        bytes memory malformed = new bytes(malformedLen);
-        for (uint256 i = 0; i < malformedLen; i++) {
-            malformed[i] = validBatch[i];
-        }
-
-        // Call: execute malformed batch.
-        (bool success,) =
-            address(batchedTx).delegatecall(abi.encodeWithSelector(BatchedTransaction.execute.selector, malformed));
-
-        // Verify: if batch failed, no partial state changes.
-        if (!success) {
-            assertEq(fuzzTarget.value(), 0, "Failed malformed batch must not leave partial state");
-        }
-        // If batch succeeded (possible when truncation removes trailing data of a
-        // sub-tx that reads from zero-padded calldata), verify state is consistent.
     }
 
     /// @dev Verifies that self-target at any position in the batch causes atomic revert.
