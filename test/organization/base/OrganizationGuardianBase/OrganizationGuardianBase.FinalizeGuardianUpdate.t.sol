@@ -299,4 +299,45 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         // Verify
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on no-pending downstream revert");
     }
+
+    /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` can finalize the same pending guardian twice
+    /// with different salts before accept/cancel.
+    function test_NMGUB_GUF_4_finalizeGuardianUpdate_samePendingGuardianDifferentSalts_canFinalizeTwice() public {
+        // Setup: create one pending guardian update, wait through timelock, and build two finalize auth payloads with
+        // distinct salts for the same pending guardian.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2910);
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildFinalizeGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 2012,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth,) = _buildFinalizeGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 2013,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce = _computeGuardianNonce(OperationType.FinalizeUpdateGuardian, operationData, 2012);
+        uint256 secondNonce = _computeGuardianNonce(OperationType.FinalizeUpdateGuardian, operationData, 2013);
+
+        // Call: finalize the identical pending guardian tuple twice using two different admin-auth salts.
+        vm.prank(GUARDIAN);
+        harness.finalizeGuardianUpdate(firstAuth);
+
+        vm.prank(GUARDIAN);
+        harness.finalizeGuardianUpdate(secondAuth);
+
+        // Verify: each finalize consumes its own nonce while keeping the same guardian update ready for acceptance.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate finalize nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first finalize nonce should be consumed");
+        assertTrue(harness.getUsedNonce(secondNonce), "second finalize nonce should be consumed");
+        assertTrue(harness.isGuardianUpdateReadyForAcceptance(), "pending guardian should remain ready for acceptance");
+        assertEq(harness.pendingGuardian(), NEW_GUARDIAN_A, "pending guardian should remain unchanged");
+        assertEq(harness.guardian(), GUARDIAN, "finalize should not directly rotate guardian");
+    }
 }

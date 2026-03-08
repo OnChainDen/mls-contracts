@@ -30,6 +30,8 @@ contract MockAccountForOrganizationTransaction is IAccount {
     uint256 public lastNonce;
     uint256 public lastPolicyId;
     uint256 public executionCount;
+    bytes public reentrantCallData;
+    bytes public reentrantRevertData;
 
     constructor(address organization_) {
         organization = organization_;
@@ -47,6 +49,14 @@ contract MockAccountForOrganizationTransaction is IAccount {
      */
     function setAssertNonceConsumedOnEntry(bool assertNonceConsumedOnEntry_) external {
         assertNonceConsumedOnEntry = assertNonceConsumedOnEntry_;
+    }
+
+    /**
+     * @dev Configures optional organization reentry calldata executed during `executeTransaction`.
+     * @param reentrantCallData_ Encoded organization call executed from the account context.
+     */
+    function setReentrantCallData(bytes calldata reentrantCallData_) external {
+        reentrantCallData = reentrantCallData_;
     }
 
     /// @inheritdoc IAccount
@@ -73,6 +83,15 @@ contract MockAccountForOrganizationTransaction is IAccount {
         lastData = data;
         lastNonce = nonce;
         lastPolicyId = policyId;
+
+        if (reentrantCallData.length != 0) {
+            delete reentrantRevertData;
+            (bool reentrySucceeded, bytes memory revertData) = organization.call(reentrantCallData);
+            if (reentrySucceeded) {
+                revert TransactionExecutionFailed();
+            }
+            reentrantRevertData = revertData;
+        }
 
         if (shouldRevertExecution) {
             revert TransactionExecutionFailed();

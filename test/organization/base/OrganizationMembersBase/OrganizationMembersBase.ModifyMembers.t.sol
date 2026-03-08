@@ -558,4 +558,175 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         });
         assertFalse(harness.getUsedNonce(nonce), "failed auth should not consume nonce");
     }
+
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` reverts on replay after one successful execution.
+    function test_NMMB_MM_1_modifyMembers_replaySameSignedParams_revertsNonceAlreadyUsed() public {
+        address memberToAdd = address(0x420);
+
+        // Setup: configure a valid one-admin member mutation and precompute the nonce for its exact signed payload.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyMembersAuth({
+            membersToAdd: buildArray(memberToAdd),
+            membersToRemove: buildEmptyAddressArray(),
+            salt: 4120,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4120});
+
+        // Call: execute the member update once, then replay the identical signed request.
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildArray(memberToAdd), membersToRemove: buildEmptyAddressArray(), authParams: auth
+        });
+
+        _expectNonceAlreadyUsed(nonce);
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildArray(memberToAdd), membersToRemove: buildEmptyAddressArray(), authParams: auth
+        });
+
+        // Verify: the first call consumed the nonce, so the second identical execution is rejected as a replay.
+        assertTrue(harness.getUsedNonce(nonce), "successful first execution should consume the member-update nonce");
+    }
+
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` binds member-array ordering into the nonce domain.
+    function test_NMMB_MM_2_modifyMembers_sameMemberSetDifferentOrder_producesDifferentNonce() public view {
+        address memberA = address(0x421);
+        address memberB = address(0x422);
+
+        // Setup: define two `membersToAdd` arrays containing the same set but in different element order.
+        bytes memory operationDataA = _encodeOperationDataForModifyMembers(buildArray(memberA, memberB), buildEmptyAddressArray());
+        bytes memory operationDataB = _encodeOperationDataForModifyMembers(buildArray(memberB, memberA), buildEmptyAddressArray());
+
+        // Call: compute nonces for both orderings under the same operation type and admin-auth salt.
+        uint256 nonceA =
+            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationDataA, salt: 4121});
+        uint256 nonceB =
+            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationDataB, salt: 4121});
+
+        // Verify: the base-contract hashing path treats array ordering as nonce-relevant input.
+        assertTrue(nonceA != nonceB, "different member-array ordering should produce different nonces");
+    }
+
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` can reapply the same add/remove tuple after a state reset
+    /// when the admin-auth salt changes.
+    function test_NMMB_MM_3_modifyMembers_sameTupleDifferentAdminAuthSalts_canBothSucceed() public {
+        address memberToAdd = address(0x423);
+        address memberToRemove = address(0x424);
+
+        // Setup: start from a state where the signed tuple adds one member and removes another, then prepare the same
+        // signed tuple under two distinct admin-auth salts plus an inverse reset operation between them.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, memberToRemove), admins: buildArray(admin1), threshold: 1
+        });
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildModifyMembersAuth({
+            membersToAdd: buildArray(memberToAdd),
+            membersToRemove: buildArray(memberToRemove),
+            salt: 4122,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth,) = _buildModifyMembersAuth({
+            membersToAdd: buildArray(memberToAdd),
+            membersToRemove: buildArray(memberToRemove),
+            salt: 4123,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory resetAuth,) = _buildModifyMembersAuth({
+            membersToAdd: buildArray(memberToRemove),
+            membersToRemove: buildArray(memberToAdd),
+            salt: 4124,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        uint256 firstNonce =
+            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4122});
+        uint256 secondNonce =
+            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4123});
+
+        // Call: apply the signed tuple once, restore the original pre-state with the inverse operation, then apply
+        // the exact same tuple again under a different admin-auth salt.
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildArray(memberToAdd), membersToRemove: buildArray(memberToRemove), authParams: firstAuth
+        });
+
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildArray(memberToRemove), membersToRemove: buildArray(memberToAdd), authParams: resetAuth
+        });
+
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildArray(memberToAdd), membersToRemove: buildArray(memberToRemove), authParams: secondAuth
+        });
+
+        // Verify: both original executions succeed because the admin-auth salts isolate nonce space, and the final
+        // member state matches the signed add/remove tuple after the second execution.
+        assertTrue(harness.getUsedNonce(firstNonce), "first signed tuple should consume its nonce");
+        assertTrue(harness.getUsedNonce(secondNonce), "second signed tuple should consume its nonce");
+        assertTrue(harness.isMember(memberToAdd), "added member should exist after the second execution");
+        assertFalse(harness.isMember(memberToRemove), "removed member should stay absent after the second execution");
+    }
+
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` rolls back nonce consumption when the downstream member
+    /// mutation reverts.
+    function test_NMMB_MM_4_modifyMembers_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+        address adminMember = address(0x425);
+
+        // Setup: prepare a signed removal for an address that is still an admin member so the first call reverts, and
+        // precompute the nonce tied to that exact signed `modifyMembers` payload.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, adminMember), admins: buildArray(admin1, adminMember), threshold: 1
+        });
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyMembersAuth({
+            membersToAdd: buildEmptyAddressArray(),
+            membersToRemove: buildArray(adminMember),
+            salt: 4125,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4125});
+
+        // Call: hit the downstream `MemberIsAdmin` revert, demote the same address through `modifyAdmins`, then retry
+        // the unchanged signed member-removal request.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberIsAdmin.selector, adminMember));
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), authParams: auth
+        });
+
+        assertFalse(harness.getUsedNonce(nonce), "downstream member revert should roll back nonce consumption");
+
+        _executeModifyAdmins({
+            adminsToAdd: buildEmptyAddressArray(),
+            adminsToRemove: buildArray(adminMember),
+            newVotingThreshold: 1,
+            salt: 5125,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.modifyMembers({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(adminMember), authParams: auth
+        });
+
+        // Verify: the revert left the nonce unused, so the same signed member-removal request succeeds once the
+        // address is no longer an admin.
+        assertTrue(harness.getUsedNonce(nonce), "successful retry should consume the rolled-back nonce");
+        assertFalse(harness.isMember(adminMember), "demoted admin member should be removable on retry");
+    }
 }

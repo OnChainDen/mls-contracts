@@ -2,14 +2,20 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     LibOrganizationAdminHarness
 } from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
 import {
     LibOrganizationAdminInvariantHandler
 } from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminInvariantHandler.sol";
+import {
+    OrganizationAdminBaseHarness
+} from "test/organization/base/OrganizationAdminBase/OrganizationAdminBaseHarness.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationAdminTestBase} from "test/organization/shared/OrganizationAdminTestBase.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Stateful invariant tests for `LibOrganizationAdmin` behavior.
@@ -20,6 +26,24 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
 
     /// @dev Stateful mutation handler.
     LibOrganizationAdminInvariantHandler internal handler;
+
+    /// @dev Separate base-contract harness used for reject-domain invariants.
+    OrganizationAdminBaseHarness internal rejectHarness;
+
+    /// @dev Shared account-transaction-domain payload for reject-domain isolation invariants.
+    bytes internal rejectOperationData;
+
+    /// @dev Rejection auth bound to `OperationType.AccountTransaction`.
+    AdminAuthParams internal accountTransactionRejectAuth;
+
+    /// @dev Rejection auth bound to `OperationType.AccountTransactionRejection`.
+    AdminAuthParams internal accountTransactionRejectionRejectAuth;
+
+    /// @dev Precomputed nonce for the `AccountTransaction` reject-domain isolation check.
+    uint256 internal accountTransactionRejectNonce;
+
+    /// @dev Precomputed nonce for the `AccountTransactionRejection` reject-domain isolation check.
+    uint256 internal accountTransactionRejectionRejectNonce;
 
     /**
      * @dev Deploys the library-focused harness for this suite.
@@ -41,6 +65,48 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
 
         // Register only the handler as the stateful fuzz target.
         targetContract(address(handler));
+
+        // Setup: deploy a separate reject-operation harness with one valid admin so reject-domain invariants can
+        // assert the desired account-transaction isolation behavior against the real base entry point.
+        rejectHarness = new OrganizationAdminBaseHarness();
+        rejectHarness.setGuardian(GUARDIAN);
+        rejectHarness.setMemberStatus(admin1, true);
+        rejectHarness.setAdminStatus(admin1, true);
+        rejectHarness.setAdminCount(1);
+        rejectHarness.setVotingThreshold(1);
+
+        rejectOperationData = abi.encode(address(0xA501), address(0xB501), uint256(0), keccak256(bytes("nminv5")), 77);
+        uint256 expiration = block.timestamp + 1 hours;
+
+        bytes32 accountTransactionRejectHash = rejectHarness.getAdminOperationHash({
+            operationType: OperationType.AccountTransaction,
+            operationData: rejectOperationData,
+            salt: 5101,
+            expirationTimestamp: expiration,
+            isApproval: false
+        });
+        accountTransactionRejectAuth = AdminAuthParams({
+            salt: 5101,
+            expirationTimestamp: expiration,
+            signatures: _buildSortedEOASignatures(accountTransactionRejectHash, buildUint256Array(ADMIN_PK_1))
+        });
+        accountTransactionRejectNonce =
+            rejectHarness.computeNonce(OperationType.AccountTransaction, rejectOperationData, 5101);
+
+        bytes32 accountTransactionRejectionRejectHash = rejectHarness.getAdminOperationHash({
+            operationType: OperationType.AccountTransactionRejection,
+            operationData: rejectOperationData,
+            salt: 5102,
+            expirationTimestamp: expiration,
+            isApproval: false
+        });
+        accountTransactionRejectionRejectAuth = AdminAuthParams({
+            salt: 5102,
+            expirationTimestamp: expiration,
+            signatures: _buildSortedEOASignatures(accountTransactionRejectionRejectHash, buildUint256Array(ADMIN_PK_1))
+        });
+        accountTransactionRejectionRejectNonce =
+            rejectHarness.computeNonce(OperationType.AccountTransactionRejection, rejectOperationData, 5102);
     }
 
     /**
@@ -131,5 +197,43 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
         );
         // Verify: assert the postconditions for this scenario.
         assertEq(actualTrackedCardinality, expectModelAdminCount, "tracked cardinality must equal model admin count");
+    }
+
+    /**
+     * @dev Verifies invariant: `rejectAdminOperation` cannot consume nonces in account-transaction operation domains.
+     */
+    function invariant_NMINV_5_rejectAdminOperationCannotConsumeAccountTransactionDomainNonces() public {
+        // Call: attempt rejection in both account-transaction domains and expect the new explicit domain-isolation
+        // revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction)
+        );
+        vm.prank(GUARDIAN);
+        rejectHarness.rejectAdminOperation(
+            OperationType.AccountTransaction, rejectOperationData, accountTransactionRejectAuth
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdmin.InvalidAdminOperationType.selector,
+                OperationType.AccountTransactionRejection
+            )
+        );
+        vm.prank(GUARDIAN);
+        rejectHarness.rejectAdminOperation(
+            OperationType.AccountTransactionRejection,
+            rejectOperationData,
+            accountTransactionRejectionRejectAuth
+        );
+
+        // Verify: both rejected domains leave their nonce spaces untouched.
+        assertFalse(
+            rejectHarness.getUsedNonce(accountTransactionRejectNonce),
+            "reject should not consume account-transaction nonce"
+        );
+        assertFalse(
+            rejectHarness.getUsedNonce(accountTransactionRejectionRejectNonce),
+            "reject should not consume account-transaction-rejection nonce"
+        );
     }
 }

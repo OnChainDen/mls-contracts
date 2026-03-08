@@ -380,4 +380,134 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
             "out-of-range timelock should not create pending init state"
         );
     }
+
+    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` can re-initiate identical
+    /// params with a new salt after cancellation.
+    function test_NMGRB_IGR_2_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation()
+        public
+    {
+        // Setup: reset storage, configure one-admin auth, and prepare two initiate salts around an intermediate
+        // cancel.
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        (AdminAuthParams memory firstInitiateAuth, bytes memory operationData) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_020,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory cancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_021,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondInitiateAuth,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_022,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce =
+            _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, operationData, 11_020);
+        uint256 secondNonce =
+            _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, operationData, 11_022);
+
+        // Call: initiate once, cancel the pending deferred-init tuple, then re-initiate the identical params with a
+        // new admin-auth salt.
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, firstInitiateAuth);
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(cancelAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, secondInitiateAuth);
+
+        // Verify: both initiate nonces are isolated by salt, and the second call restores the same pending tuple.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate initiate nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first initiate nonce should remain consumed");
+        assertTrue(harness.getUsedNonce(secondNonce), "second initiate nonce should be consumed");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS_B,
+            "re-initiated pending address should match the original tuple"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            "re-initiated pending timelock should match the original tuple"
+        );
+    }
+
+    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` invalid params and
+    /// already-pending branches both roll back nonce usage.
+    function test_NMGRB_IGR_9_initiateInitializeGuardianRecovery_invalidParamsAndPendingState_rollBackNonce() public {
+        // Setup: reset storage, configure one-admin auth, and prepare one invalid-address payload plus one
+        // already-pending payload.
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        (AdminAuthParams memory invalidAddressAuth, bytes memory invalidAddressData) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: address(0),
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_023,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 invalidAddressNonce =
+            _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, invalidAddressData, 11_023);
+
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        (AdminAuthParams memory pendingAuth, bytes memory pendingData) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 11_024,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 pendingNonce =
+            _computeRecoveryNonce(OperationType.InitiateInitializeGuardianRecovery, pendingData, 11_024);
+
+        // Call: first use an invalid recovery address, then hit the already-pending branch with a valid signed tuple.
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        vm.expectRevert(IOrganizationGuardianRecovery.InvalidGuardianRecoveryAddress.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(address(0), GUARDIAN_RECOVERY_TIMELOCK, invalidAddressAuth);
+
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryInitializationAlreadyPending.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS_B, GUARDIAN_RECOVERY_TIMELOCK, pendingAuth);
+
+        // Verify: both downstream revert branches leave their computed nonces unused and preserve the pending tuple.
+        assertFalse(harness.getUsedNonce(invalidAddressNonce), "invalid-address revert should not burn nonce");
+        assertFalse(harness.getUsedNonce(pendingNonce), "already-pending revert should not burn nonce");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS,
+            "already-pending revert should preserve the existing pending address"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            "already-pending revert should preserve the existing pending timelock"
+        );
+    }
 }

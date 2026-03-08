@@ -27,6 +27,7 @@ import {
     TransactionType,
     ValidationProofs
 } from "types/PolicyTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Invariant checks for account-transaction nonce, hash, and rate-limit properties.
@@ -34,6 +35,7 @@ import {
 contract OrganizationAccountTransactionInvariants is OrganizationAccountTransactionBaseSuiteBase {
     OrganizationAccountTransactionInvariantHandler internal handler;
     MockAccountForOrganizationTransaction internal account;
+    OrganizationAccountTransactionBaseHarness internal secondOrganization;
     Policy internal policy;
     ValidationProofs internal proofs;
     bytes internal data;
@@ -41,6 +43,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     bytes internal initiatorSig;
     uint256 internal usedSalt;
     uint256 internal executedNonce;
+    uint256 internal failedExecutionNonce;
     bytes32 internal usageKey;
     uint256 internal usageWindow;
     uint256 internal usageAfterSuccess;
@@ -132,10 +135,19 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             proofs: proofs
         });
         account.setShouldRevertExecution(false);
+
+        // Setup: snapshot the reverted-path nonce and deploy a fresh organization harness for cross-org isolation
+        // invariants.
+        failedExecutionNonce = harness.computeNonce({
+            operationType: OperationType.AccountTransaction,
+            operationData: abi.encode(address(account), DESTINATION, 0, keccak256(failingData), DEFAULT_POLICY_ID),
+            salt: 2
+        });
+        secondOrganization = new OrganizationAccountTransactionBaseHarness();
     }
 
     /// @dev Verifies invariant: consumed nonce cannot be reused for execution or rejection.
-    function invariant_AT_INV_1_nonceConsumption_preventsExecuteAndRejectReplay() public {
+    function invariant_AT_INV_1__NMINV_2_nonceConsumption_preventsExecuteAndRejectReplay() public {
         // Verify: execute replay fails on consumed nonce.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
         vm.prank(GUARDIAN);
@@ -246,6 +258,33 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
             address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
         );
         assertTrue(hashA != hashB, "hash should bind organization address");
+    }
+
+    /// @dev Verifies invariant: identical account-transaction tuples do not share nonce usage across organizations.
+    function invariant_NMINV_3_sameNonceValueDoesNotShareUsageAcrossOrganizations() public view {
+        // Call: derive the matching account-transaction tuple on a fresh organization harness.
+        uint256 sameTupleNonceOnSecondOrg = secondOrganization.computeNonce({
+            operationType: OperationType.AccountTransaction,
+            operationData: abi.encode(address(account), DESTINATION, 0, keccak256(data), DEFAULT_POLICY_ID),
+            salt: usedSalt
+        });
+
+        // Verify: hash/nonce validity remains isolated per organization even when tuple derivation matches.
+        assertTrue(harness.getUsedNonce(executedNonce), "primary organization should keep the executed nonce consumed");
+        assertFalse(
+            secondOrganization.getUsedNonce(executedNonce),
+            "fresh organization should not inherit another org's consumed nonce"
+        );
+        assertFalse(
+            secondOrganization.getUsedNonce(sameTupleNonceOnSecondOrg),
+            "fresh organization should not inherit nonce usage"
+        );
+    }
+
+    /// @dev Verifies invariant: reverted account-transaction execution paths do not burn their computed nonce.
+    function invariant_NMINV_4_revertedExecutionPathsDoNotConsumeNonce() public view {
+        // Verify: the nonce for the reverted downstream execution in `setUp` remains unused.
+        assertFalse(harness.getUsedNonce(failedExecutionNonce), "reverted execution should not consume nonce");
     }
 
     /// @dev Extracts nonce from the first `AccountTransactionExecuted` event in recorded logs.

@@ -180,6 +180,53 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
     }
 
+    /// @dev Verifies `upgradeToAndCallWithAuthorization` can reuse the same implementation and idempotent
+    /// migration calldata under different admin-auth salts.
+    function test_NMOI_UTACWA_2_sameUpgradeTupleDifferentSalts_canBothSucceed() public {
+        // Setup: whitelist the same upgrade target and build two auth payloads for identical
+        // `(newImplementation, migrationData)` using different salts and idempotent marker-setting calldata.
+        _setSingleAdminThresholdOne();
+        _setOrganizationImplementationWhitelisted(address(implementationV2), true);
+        bytes memory migrationData = abi.encodeCall(OrganizationImplementationHarness.migrationSetMarker, (2_222));
+        (AdminAuthParams memory firstAuth, bytes memory firstOperationData) = _buildUpgradeAuth({
+            newImplementation: address(implementationV2),
+            migrationData: migrationData,
+            salt: 14_0061,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth, bytes memory secondOperationData) = _buildUpgradeAuth({
+            newImplementation: address(implementationV2),
+            migrationData: migrationData,
+            salt: 14_0062,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce = _computeUpgradeNonce(firstOperationData, 14_0061);
+        uint256 secondNonce = _computeUpgradeNonce(secondOperationData, 14_0062);
+
+        assertEq(keccak256(firstOperationData), keccak256(secondOperationData), "operation data should match");
+        assertNotEq(firstNonce, secondNonce, "different salts should derive independent nonces");
+
+        // Call: execute the exact same upgrade tuple twice under the two distinct admin-auth salts.
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), migrationData, firstAuth);
+
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), migrationData, secondAuth);
+
+        // Verify: both salts consume independent nonces, the proxy remains on the same target implementation, and
+        // the idempotent migration side effect remains the configured marker value.
+        assertTrue(stateHarness.getUsedNonce(firstNonce), "first nonce should be consumed");
+        assertTrue(stateHarness.getUsedNonce(secondNonce), "second nonce should be consumed");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)), address(implementationV2), "implementation mismatch"
+        );
+        assertEq(organizationProxy.migrationGetMarker(), 2_222, "marker should remain set by both migrations");
+    }
+
     /// @dev Verifies nonces already consumed via rejection flow cannot be reused for upgrade execution.
     function test_OI_UTACWA_7_rejectedNonce_revertsWhenUsedForUpgrade() public {
         // Setup: reject the exact Upgrade operation nonce using valid rejection signatures.
@@ -627,6 +674,96 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), auth);
         assertTrue(stateHarness.getUsedNonce(nonce), "nonce should be consumed on successful retry");
+    }
+
+    /// @dev Verifies `upgradeToAndCallWithAuthorization` rolls back nonce usage when whitelist validation, UUPS
+    /// checks, or migration execution reverts.
+    function test_NMOI_UTACWA_4_whitelistUUPSAndMigrationFailures_rollBackNonce() public {
+        // Setup: prepare one auth payload per failure class so each branch reaches a different downstream revert after
+        // admin auth validation succeeds.
+        _setSingleAdminThresholdOne();
+        (AdminAuthParams memory whitelistAuth, bytes memory whitelistOperationData) = _buildUpgradeAuth({
+            newImplementation: address(implementationV3),
+            salt: 14_0201,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 whitelistNonce = _computeUpgradeNonce(whitelistOperationData, 14_0201);
+
+        _setOrganizationImplementationWhitelisted(address(nonUupsImplementation), true);
+        (AdminAuthParams memory nonUupsAuth, bytes memory nonUupsOperationData) = _buildUpgradeAuth({
+            newImplementation: address(nonUupsImplementation),
+            salt: 14_0202,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 nonUupsNonce = _computeUpgradeNonce(nonUupsOperationData, 14_0202);
+
+        _setOrganizationImplementationWhitelisted(address(wrongUuidImplementation), true);
+        (AdminAuthParams memory wrongUuidAuth, bytes memory wrongUuidOperationData) = _buildUpgradeAuth({
+            newImplementation: address(wrongUuidImplementation),
+            salt: 14_0203,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 wrongUuidNonce = _computeUpgradeNonce(wrongUuidOperationData, 14_0203);
+
+        bytes memory revertingMigrationData = abi.encodeCall(OrganizationImplementationHarness.migrationRevert, ());
+        (AdminAuthParams memory migrationAuth, bytes memory migrationOperationData) = _buildUpgradeAuth({
+            newImplementation: address(implementationV2),
+            migrationData: revertingMigrationData,
+            salt: 14_0204,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 migrationNonce = _computeUpgradeNonce(migrationOperationData, 14_0204);
+        address implementationBeforeMigration = _readProxyImplementation(address(organizationProxy));
+
+        // Call: hit the whitelist, UUPS invalid-implementation, UUPS wrong-UUID, and migration-revert branches.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementationV3)
+            )
+        );
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV3), bytes(""), whitelistAuth);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ERC1967Utils.ERC1967InvalidImplementation.selector, address(nonUupsImplementation))
+        );
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(nonUupsImplementation), bytes(""), nonUupsAuth);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(UUPSUpgradeable.UUPSUnsupportedProxiableUUID.selector, bytes32(uint256(123)))
+        );
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(address(wrongUuidImplementation), bytes(""), wrongUuidAuth);
+
+        _setOrganizationImplementationWhitelisted(address(implementationV2), true);
+        vm.expectRevert(OrganizationImplementationHarness.MigrationCallReverted.selector);
+        vm.prank(GUARDIAN);
+        organizationProxy.upgradeToAndCallWithAuthorization(
+            address(implementationV2),
+            revertingMigrationData,
+            migrationAuth
+        );
+
+        // Verify: every reverted downstream branch leaves its nonce unused, and migration failure also preserves the
+        // pre-call implementation pointer.
+        assertFalse(stateHarness.getUsedNonce(whitelistNonce), "whitelist revert should not consume nonce");
+        assertFalse(stateHarness.getUsedNonce(nonUupsNonce), "non-UUPS revert should not consume nonce");
+        assertFalse(stateHarness.getUsedNonce(wrongUuidNonce), "wrong-UUID revert should not consume nonce");
+        assertFalse(stateHarness.getUsedNonce(migrationNonce), "migration revert should not consume nonce");
+        assertEq(
+            _readProxyImplementation(address(organizationProxy)),
+            implementationBeforeMigration,
+            "migration revert should keep the implementation unchanged"
+        );
     }
 
     /// @dev Verifies authorized-upgrade target is non-zero only during upgrade execution and zero before/after.

@@ -143,6 +143,88 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         harness.modifyGroups(modifications, auth);
     }
 
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` treats modification ordering as part of the nonce domain.
+    function test_NMGB_MG_2_modifyGroups_sameSemanticsDifferentOrdering_producesDifferentNonce() public view {
+        // Setup: define two semantically equivalent multi-create batches whose independent group creations appear in
+        // opposite array order.
+        GroupModification[] memory orderedModifications = _buildModificationsArray(
+            _createModification(7912, buildArray(admin1)),
+            _createModification(7913, buildArray(admin2))
+        );
+        GroupModification[] memory reorderedModifications = _buildModificationsArray(
+            _createModification(7913, buildArray(admin2)),
+            _createModification(7912, buildArray(admin1))
+        );
+        bytes memory orderedOperationData = _encodeOperationDataForModifyGroups(orderedModifications);
+        bytes memory reorderedOperationData = _encodeOperationDataForModifyGroups(reorderedModifications);
+
+        // Call: compute nonces for both orderings under the same admin-auth salt.
+        uint256 orderedNonce = _computeModifyGroupsNonce(orderedOperationData, 3112);
+        uint256 reorderedNonce = _computeModifyGroupsNonce(reorderedOperationData, 3112);
+
+        // Verify: reordering semantically similar modifications still changes the signed operation payload and nonce.
+        assertTrue(orderedNonce != reorderedNonce, "modification ordering should be bound into the nonce domain");
+    }
+
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` can reapply the same modification array after a state reset
+    /// when the admin-auth salt changes.
+    function test_NMGB_MG_3_modifyGroups_sameModificationArrayDifferentSalts_canBothSucceed() public {
+        uint256 groupId = 7914;
+
+        // Setup: seed an existing group, prepare an update that adds one member, and build an inverse reset update so
+        // the original signed modification array can be executed again under a different admin-auth salt.
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1), threshold: 1});
+        groupsStateHarness.setGroupStatus(groupId, true);
+        groupsStateHarness.setGroupMemberStatus(groupId, admin1, true);
+
+        GroupModification[] memory modifications =
+            _buildModificationsArray(_updateModification(groupId, buildArray(admin2), buildEmptyAddressArray()));
+        GroupModification[] memory resetModifications =
+            _buildModificationsArray(_updateModification(groupId, buildEmptyAddressArray(), buildArray(admin2)));
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildModifyGroupsAuth({
+            modifications: modifications,
+            salt: 3113,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth,) = _buildModifyGroupsAuth({
+            modifications: modifications,
+            salt: 3114,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory resetAuth,) = _buildModifyGroupsAuth({
+            modifications: resetModifications,
+            salt: 3115,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        uint256 firstNonce = _computeModifyGroupsNonce(operationData, 3113);
+        uint256 secondNonce = _computeModifyGroupsNonce(operationData, 3114);
+
+        // Call: apply the signed modification array once, undo it with the inverse reset update, then reapply the
+        // exact same original modification array under a different admin-auth salt.
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(modifications, firstAuth);
+
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(resetModifications, resetAuth);
+
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(modifications, secondAuth);
+
+        // Verify: both executions of the original modification array succeed because the admin-auth salts isolate
+        // nonce space, and the target group ends with the newly added member restored.
+        assertTrue(groupsStateHarness.getUsedNonce(firstNonce), "first modification batch should consume its nonce");
+        assertTrue(groupsStateHarness.getUsedNonce(secondNonce), "second modification batch should consume its nonce");
+        assertTrue(harness.isGroupMember(groupId, admin2), "reapplied update should restore the added group member");
+    }
+
     /// @dev Verifies desired behavior that failed auth does not consume nonce and corrected signatures can succeed.
     function test_modifyGroups_failedAuth_doesNotConsumeNonceAndCanRetryWithCorrectedSignatures() public {
         uint256 groupId = 7905;

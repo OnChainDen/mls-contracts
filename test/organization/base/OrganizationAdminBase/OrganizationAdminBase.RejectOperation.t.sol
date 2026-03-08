@@ -343,8 +343,133 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         assertFalse(harness.getUsedNonce(nonce), "failed rejection authorization must not burn nonce");
     }
 
-    /// @dev Verifies that rejection works for arbitrary operation types when properly signed.
-    function test_rejectAdminOperation_arbitraryOperationTypes_workWhenProperlySigned() public {
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` burns only the nonce for the rejected payload.
+    function test_NMADB_RAO_3_rejectAdminOperation_wrongOperationDataConsumesDifferentNonceWithoutBlockingIntendedOperation()
+        public
+    {
+        address intendedAdmin = address(0x212);
+        address wrongAdmin = address(0x213);
+
+        // Setup: configure one-admin auth, then build two distinct `ModifyAdmins` payloads that share the same salt.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, intendedAdmin, wrongAdmin), admins: buildArray(admin1), threshold: 1
+        });
+
+        address[] memory intendedAdminsToAdd = buildArray(intendedAdmin);
+        address[] memory wrongAdminsToAdd = buildArray(wrongAdmin);
+        address[] memory noAdminsToRemove = buildEmptyAddressArray();
+        uint256 salt = 2029;
+        uint256 expiration = block.timestamp + 1 hours;
+
+        bytes memory intendedOperationData =
+            _encodeOperationDataForModifyAdmins(intendedAdminsToAdd, noAdminsToRemove, 1);
+        bytes memory wrongOperationData = _encodeOperationDataForModifyAdmins(wrongAdminsToAdd, noAdminsToRemove, 1);
+
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyAdmins,
+            operationData: wrongOperationData,
+            isApproval: false,
+            salt: salt,
+            expirationTimestamp: expiration,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyAdmins,
+            operationData: intendedOperationData,
+            isApproval: true,
+            salt: salt,
+            expirationTimestamp: expiration,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: reject the wrong payload first, then execute the intended payload with the same salt.
+        vm.prank(GUARDIAN);
+        harness.rejectAdminOperation(OperationType.ModifyAdmins, wrongOperationData, rejectionAuth);
+
+        vm.prank(GUARDIAN);
+        harness.modifyAdmins({
+            adminsToAdd: intendedAdminsToAdd,
+            adminsToRemove: noAdminsToRemove,
+            newVotingThreshold: 1,
+            authParams: approvalAuth
+        });
+
+        uint256 wrongNonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: wrongOperationData, salt: salt});
+        uint256 intendedNonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: intendedOperationData, salt: salt
+        });
+
+        // Verify: the rejected payload burns only its own nonce, and the intended admin mutation still succeeds.
+        assertTrue(harness.getUsedNonce(wrongNonce), "wrong payload nonce should be consumed by rejection");
+        assertTrue(harness.getUsedNonce(intendedNonce), "intended payload nonce should be consumed by execution");
+        assertTrue(harness.isAdmin(intendedAdmin), "intended admin should be added");
+        assertFalse(harness.isAdmin(wrongAdmin), "wrong payload should not mutate admin state");
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects `OperationType.AccountTransaction`.
+    function test_NMADB_RAO_6_rejectAdminOperation_accountTransactionType_revertsAndDoesNotBurnNonce() public {
+        bytes memory operationData = abi.encode(address(0xAB1), address(0xAB2), uint256(1), keccak256("tx"), uint256(9));
+        uint256 salt = 2030;
+
+        // Setup: configure one-admin auth signed over the account-transaction domain that reject-admin must reject.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.AccountTransaction,
+            operationData: operationData,
+            isApproval: false,
+            salt: salt,
+            expirationTimestamp: block.timestamp + 1 hours,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: attempt to reject an account-transaction nonce through the admin-reject entry point.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction));
+        vm.prank(GUARDIAN);
+        harness.rejectAdminOperation(OperationType.AccountTransaction, operationData, auth);
+
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.AccountTransaction, operationData: operationData, salt: salt});
+        // Verify: the unsupported account-transaction domain leaves its nonce unused.
+        assertFalse(harness.getUsedNonce(nonce), "account-transaction nonce should remain unused");
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects `OperationType.AccountTransactionRejection`.
+    function test_NMADB_RAO_7_rejectAdminOperation_accountTransactionRejectionType_revertsAndDoesNotBurnNonce()
+        public
+    {
+        bytes memory operationData = abi.encode(address(0xAB3), address(0xAB4), uint256(2), keccak256("reject"), uint256(10));
+        uint256 salt = 2031;
+
+        // Setup: configure one-admin auth signed over the account-transaction rejection domain that admin reject must reject.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.AccountTransactionRejection,
+            operationData: operationData,
+            isApproval: false,
+            salt: salt,
+            expirationTimestamp: block.timestamp + 1 hours,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: attempt to reject an account-transaction rejection nonce through the admin-reject entry point.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransactionRejection
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.rejectAdminOperation(OperationType.AccountTransactionRejection, operationData, auth);
+
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.AccountTransactionRejection, operationData: operationData, salt: salt
+        });
+        // Verify: the unsupported account-transaction rejection domain leaves its nonce unused.
+        assertFalse(harness.getUsedNonce(nonce), "account-transaction rejection nonce should remain unused");
+    }
+
+    /// @dev Verifies that rejection works for supported admin operation types when properly signed.
+    function test_rejectAdminOperation_supportedAdminOperationTypes_workWhenProperlySigned() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 

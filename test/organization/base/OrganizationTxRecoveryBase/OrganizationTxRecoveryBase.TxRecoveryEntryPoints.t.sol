@@ -20,9 +20,12 @@ import {
 import {
     OrganizationTxRecoveryBaseSuiteBase
 } from "test/organization/base/OrganizationTxRecoveryBase/OrganizationTxRecoveryBaseSuiteBase.sol";
+import {
+    OrganizationTxRecoveryBaseHarness
+} from "test/organization/base/OrganizationTxRecoveryBase/OrganizationTxRecoveryBaseHarness.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
-import {TxRecoveryState} from "types/RecoveryTypes.sol";
+import {PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @dev Unit/integration tests for `OrganizationTxRecoveryBase` entry points.
@@ -667,9 +670,11 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies OTRB-IITR-10, OTRB-IITR-11, and OTRB-IITR-12: initiate-initialize bubbles downstream
     /// already-configured/pending/invalid-param errors.
-    function test_OTRB_IITR_10__OTRB_IITR_11__OTRB_IITR_12_initiateInitialize_downstreamErrorsBubble() public {
+    function test_OTRB_IITR_10__OTRB_IITR_11__OTRB_IITR_12__NMTRB_ITR_9_initiateInitialize_downstreamErrorsBubble()
+        public
+    {
         // Setup
-        (AdminAuthParams memory configuredAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory configuredAuth, bytes memory configuredOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
@@ -677,14 +682,17 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 configuredNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, configuredOperationData, 105);
 
         // Call
         vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, configuredAuth);
+        assertFalse(harness.getUsedNonce(configuredNonce), "already-configured revert should not burn nonce");
 
         _setTxRecoveryState(address(0), false, 0, 0, address(0xABC), TX_RECOVERY_TIMELOCK, block.timestamp + 1);
-        (AdminAuthParams memory pendingAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory pendingAuth, bytes memory pendingOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
@@ -692,13 +700,16 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 pendingNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, pendingOperationData, 106);
 
         vm.expectRevert(IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingAuth);
+        assertFalse(harness.getUsedNonce(pendingNonce), "already-pending revert should not burn nonce");
 
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
-        (AdminAuthParams memory invalidAddressAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory invalidAddressAuth, bytes memory invalidAddressOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             recoveryAddress: address(0),
             timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
@@ -706,11 +717,14 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 invalidAddressNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, invalidAddressOperationData, 107);
         vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
         vm.prank(GUARDIAN);
         harness.initiateInitializeTransactionAndERC1271Recovery(address(0), TX_RECOVERY_TIMELOCK, invalidAddressAuth);
+        assertFalse(harness.getUsedNonce(invalidAddressNonce), "invalid-address revert should not burn nonce");
 
-        (AdminAuthParams memory invalidTimelockAuth,) = _buildTxRecoveryAuth({
+        (AdminAuthParams memory invalidTimelockAuth, bytes memory invalidTimelockOperationData) = _buildTxRecoveryAuth({
             operationType: OperationType.InitiateInitializeTransactionRecovery,
             recoveryAddress: ALT_TX_RECOVERY,
             timelockDurationSeconds: TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
@@ -718,6 +732,168 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 invalidTimelockNonce = harness.computeNonce(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidTimelockOperationData,
+            108
+        );
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(
+            ALT_TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, invalidTimelockAuth
+        );
+        assertFalse(harness.getUsedNonce(invalidTimelockNonce), "invalid-timelock revert should not burn nonce");
+
+        // Verify
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.initiateInitializeTransactionAndERC1271Recovery` can re-initiate the
+    /// same params with a different salt after cancellation.
+    function test_NMTRB_ITR_2_initiateInitialize_sameParamsDifferentSalts_canSucceedAcrossCancel() public {
+        // Setup: start from zeroed tx-recovery config and build two initiate auth payloads around an intermediate
+        // cancel for the same deferred-init tuple.
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        (AdminAuthParams memory firstInitiateAuth, bytes memory operationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 109,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory cancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 110,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondInitiateAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 111,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, operationData, 109);
+        uint256 secondNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, operationData, 111);
+
+        // Call: initiate once, cancel the staged tuple, then re-initiate the identical params with a new auth salt.
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            firstInitiateAuth
+        );
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            secondInitiateAuth
+        );
+
+        // Verify: both initiate nonces are isolated by salt, and the second call recreates the same pending tuple.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate initiate nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first initiate nonce should remain consumed");
+        assertTrue(harness.getUsedNonce(secondNonce), "second initiate nonce should be consumed");
+        assertEq(
+            harness.getTxRecoveryState().pendingInit.pendingRecoveryAddress,
+            ALT_TX_RECOVERY,
+            "re-initiated pending recovery should match the original tuple"
+        );
+        assertEq(
+            harness.getTxRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            TX_RECOVERY_TIMELOCK,
+            "re-initiated pending timelock should match the original tuple"
+        );
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.initiateInitializeTransactionAndERC1271Recovery` rolls back nonce
+    /// usage when downstream init validation fails.
+    function test_NMTRB_ITR_9_initiateInitialize_downstreamFailures_rollBackNonce() public {
+        // Setup: prepare four initiate auth payloads that will each reach a distinct downstream failure branch:
+        // already-configured, already-pending, invalid zero recovery address, and invalid timelock duration.
+        (AdminAuthParams memory configuredAuth, bytes memory configuredOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 112,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 configuredNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, configuredOperationData, 112);
+
+        (AdminAuthParams memory pendingAuth, bytes memory pendingOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 113,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 pendingNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, pendingOperationData, 113);
+
+        (AdminAuthParams memory invalidAddressAuth, bytes memory invalidAddressOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: address(0),
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 114,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 invalidAddressNonce = harness.computeNonce(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidAddressOperationData,
+            114
+        );
+
+        (AdminAuthParams memory invalidTimelockAuth, bytes memory invalidTimelockOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+            salt: 115,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 invalidTimelockNonce = harness.computeNonce(
+            OperationType.InitiateInitializeTransactionRecovery,
+            invalidTimelockOperationData,
+            115
+        );
+
+        // Call: exercise each failure branch as guardian using valid signatures that should only fail after auth and
+        // nonce validation.
+        vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, configuredAuth);
+
+        _setTxRecoveryState(address(0), false, 0, 0, address(0xABC), TX_RECOVERY_TIMELOCK, block.timestamp + 1);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryInitializationAlreadyPending.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, pendingAuth);
+
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(address(0), TX_RECOVERY_TIMELOCK, invalidAddressAuth);
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 TimelockUtils.InvalidTimelockDuration.selector,
@@ -731,7 +907,11 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
             ALT_TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1, invalidTimelockAuth
         );
 
-        // Verify
+        // Verify: every downstream revert path leaves its derived nonce unused so a corrected retry remains possible.
+        assertFalse(harness.getUsedNonce(configuredNonce), "already-configured revert should not burn nonce");
+        assertFalse(harness.getUsedNonce(pendingNonce), "already-pending revert should not burn nonce");
+        assertFalse(harness.getUsedNonce(invalidAddressNonce), "invalid-address revert should not burn nonce");
+        assertFalse(harness.getUsedNonce(invalidTimelockNonce), "invalid-timelock revert should not burn nonce");
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` reverts when admin
@@ -933,6 +1113,221 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         harness.finalizeInitializeTransactionAndERC1271Recovery(afterFinalizeNoPendingAuth);
     }
 
+    /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` reusing the same
+    /// signed params and salt reverts once the nonce has been consumed.
+    function test_NMTRB_ITR_3_finalizeInitialize_replaySameNonce_revertsNonceAlreadyUsed() public {
+        // Setup: stage one pending deferred-init tuple and build a single finalize auth payload for it.
+        _setTxRecoveryState(address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp);
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 209,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 nonce = harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, operationData, 209);
+
+        // Call: finalize once successfully, then recreate the identical pending tuple and replay the same auth.
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(auth);
+
+        _setTxRecoveryState(address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp);
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(auth);
+
+        // Verify: the original finalize consumed the nonce, which blocks replay even after the pending tuple is
+        // recreated.
+        assertTrue(harness.getUsedNonce(nonce), "finalize nonce should remain consumed after replay attempt");
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.finalizeInitializeTransactionAndERC1271Recovery` can finalize the
+    /// same pending tuple on fresh organization instances with different salts.
+    function test_NMTRB_ITR_4_finalizeInitialize_samePendingTupleDifferentSalts_succeedsPerFreshOrg() public {
+        // Setup: deploy two fresh harnesses with the same pending deferred-init tuple and distinct finalize salts.
+        OrganizationTxRecoveryBaseHarness secondHarness = new OrganizationTxRecoveryBaseHarness();
+        secondHarness.setGuardian(GUARDIAN);
+        secondHarness.setAdminOperationTimelockDurationSeconds(ADMIN_OPERATION_TIMELOCK);
+        secondHarness.setMemberStatus(admin1, true);
+        secondHarness.setAdminStatus(admin1, true);
+        secondHarness.setAdminCount(1);
+        secondHarness.setVotingThreshold(1);
+        secondHarness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: address(0),
+                isEnabled: false,
+                timelockDurationSeconds: 0,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: ALT_TX_RECOVERY,
+                    pendingTimelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+                    pendingTimestamp: block.timestamp
+                })
+            })
+        );
+
+        _setTxRecoveryState(address(0), false, 0, 0, ALT_TX_RECOVERY, TX_RECOVERY_TIMELOCK, block.timestamp);
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 210,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        bytes32 secondOperationHash = secondHarness.getAdminOperationHash({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            operationData: operationData,
+            salt: 211,
+            expirationTimestamp: block.timestamp + 30 days,
+            isApproval: true
+        });
+        AdminAuthParams memory secondAuth = AdminAuthParams({
+            salt: 211,
+            expirationTimestamp: block.timestamp + 30 days,
+            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+        });
+        uint256 firstNonce = harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, operationData, 210);
+        uint256 secondNonce =
+            secondHarness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, operationData, 211);
+
+        // Call: finalize the identical pending tuple once per fresh organization instance using different auth salts.
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(firstAuth);
+
+        vm.prank(GUARDIAN);
+        secondHarness.finalizeInitializeTransactionAndERC1271Recovery(secondAuth);
+
+        // Verify: each organization consumes only its own finalize nonce while writing the same configured tuple.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate finalize nonces across organizations");
+        assertTrue(harness.getUsedNonce(firstNonce), "first finalize nonce should be consumed");
+        assertTrue(secondHarness.getUsedNonce(secondNonce), "second finalize nonce should be consumed");
+        assertEq(harness.getTxRecoveryState().recoveryAddress, ALT_TX_RECOVERY, "first org should finalize recovery");
+        assertEq(
+            secondHarness.getTxRecoveryState().recoveryAddress,
+            ALT_TX_RECOVERY,
+            "second org should finalize recovery"
+        );
+        assertEq(
+            harness.getTxRecoveryState().timelockDurationSeconds,
+            TX_RECOVERY_TIMELOCK,
+            "first org should finalize timelock"
+        );
+        assertEq(
+            secondHarness.getTxRecoveryState().timelockDurationSeconds,
+            TX_RECOVERY_TIMELOCK,
+            "second org should finalize timelock"
+        );
+    }
+
+    /// @dev Verifies finalize and cancel downstream check failures roll back nonce usage.
+    function test_NMTRB_ITR_10_finalizeAndCancelFailures_rollBackNonce() public {
+        // Setup: stage one pending tuple that is still timelocked for finalize, then prepare a zero-pending cancel
+        // auth for the no-pending branch.
+        _setTxRecoveryState(
+            address(0),
+            false,
+            0,
+            0,
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        (AdminAuthParams memory finalizeAuth, bytes memory finalizeOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.FinalizeInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 212,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 finalizeNonce =
+            harness.computeNonce(OperationType.FinalizeInitializeTransactionRecovery, finalizeOperationData, 212);
+
+        (AdminAuthParams memory cancelAuth, bytes memory cancelOperationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: address(0),
+            timelockDurationSeconds: 0,
+            salt: 213,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 cancelNonce =
+            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, cancelOperationData, 213);
+
+        // Call: fail finalize before the pending timestamp, then clear pending state and fail cancel with no tuple.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
+                block.timestamp + ADMIN_OPERATION_TIMELOCK,
+                block.timestamp
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeTransactionAndERC1271Recovery(finalizeAuth);
+
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(cancelAuth);
+
+        // Verify: neither downstream failure path leaves its nonce consumed.
+        assertFalse(harness.getUsedNonce(finalizeNonce), "timelock failure should not burn finalize nonce");
+        assertFalse(harness.getUsedNonce(cancelNonce), "no-pending failure should not burn cancel nonce");
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` replaying the same
+    /// signed pending tuple and salt reverts once the cancel nonce has been consumed.
+    function test_NMTRB_ITR_5_cancelInitialize_replaySameNonce_revertsNonceAlreadyUsed() public {
+        // Setup: stage one pending deferred-init tuple and build a single cancel auth payload for it.
+        _setTxRecoveryState(
+            address(0),
+            false,
+            0,
+            0,
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 337,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 nonce = harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, operationData, 337);
+
+        // Call: cancel once successfully, recreate the identical pending tuple, then replay the same auth payload.
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(auth);
+
+        _setTxRecoveryState(
+            address(0),
+            false,
+            0,
+            0,
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK
+        );
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(auth);
+
+        // Verify: the consumed cancel nonce blocks replay even after the same pending tuple is recreated.
+        assertTrue(harness.getUsedNonce(nonce), "cancel nonce should remain consumed after replay attempt");
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, ALT_TX_RECOVERY, "replayed tuple should remain pending");
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds,
+            TX_RECOVERY_TIMELOCK,
+            "replayed tuple timelock should remain pending"
+        );
+    }
+
     /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` reverts for
     /// insufficient admin authorization, `isApproval=false` signatures, and wrong operation type signatures.
     function test_OTRB_CITR_2__OTRB_CITR_3__OTRB_CITR_4__NMTRB_ITR_7_cancelInitialize_authValidation_reverts()
@@ -1079,6 +1474,81 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "pending recovery should clear");
         assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "pending timelock should clear");
         assertEq(state.pendingInit.pendingTimestamp, 0, "pending timestamp should clear");
+    }
+
+    /// @dev Verifies `OrganizationTxRecoveryBase.cancelInitializeTransactionAndERC1271Recovery` can cancel the same
+    /// pending deferred-init tuple twice when fresh auth salts are used and the tuple is re-initiated in between.
+    function test_NMTRB_ITR_6_cancelInitialize_samePendingTupleDifferentSalts_canCancelTwiceAcrossReinitiation()
+        public
+    {
+        // Setup: build two initiate auth payloads and two cancel auth payloads around the same deferred-init tuple.
+        _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
+        (AdminAuthParams memory firstInitiateAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 338,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 339,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondInitiateAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.InitiateInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 340,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondCancelAuth,) = _buildTxRecoveryAuth({
+            operationType: OperationType.CancelInitializeTransactionRecovery,
+            recoveryAddress: ALT_TX_RECOVERY,
+            timelockDurationSeconds: TX_RECOVERY_TIMELOCK,
+            salt: 341,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce = harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, operationData, 339);
+        uint256 secondNonce =
+            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, operationData, 341);
+
+        // Call: initiate and cancel the tuple once, re-initiate the identical tuple, then cancel it again with a new
+        // auth salt.
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            firstInitiateAuth
+        );
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(firstCancelAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeTransactionAndERC1271Recovery(
+            ALT_TX_RECOVERY,
+            TX_RECOVERY_TIMELOCK,
+            secondInitiateAuth
+        );
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeTransactionAndERC1271Recovery(secondCancelAuth);
+
+        // Verify: both cancel salts consume independent nonces while the second cancel clears the recreated tuple.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate cancel nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first cancel nonce should be consumed");
+        assertTrue(harness.getUsedNonce(secondNonce), "second cancel nonce should be consumed");
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "second cancel should clear pending address");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "second cancel should clear pending timelock");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "second cancel should clear pending timestamp");
     }
 
     /// @dev Verifies OTRB-CITR-1, OTRB-CITR-2, OTRB-CITR-3, OTRB-CITR-4, OTRB-CITR-5, OTRB-CITR-6, OTRB-CITR-7,

@@ -193,6 +193,72 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         harness.setPolicies(newRoot, ipfsCid, auth);
     }
 
+    /// @dev Verifies `OrganizationPolicyBase.setPolicies` binds the hashed IPFS CID into nonce derivation while
+    /// preserving deterministic nonces for identical `(newPoliciesRoot, ipfsCid)` payload bytes.
+    function test_NMPB_SP_2__NMPB_SP_3_setPolicies_nonceBinding_tracksIpfsCidBytes() public view {
+        bytes32 newRoot = keccak256("nmpb-sp-2-root");
+        string memory ipfsCidA = "ipfs://nmpb-sp-2-a";
+        string memory ipfsCidASameBytes = "ipfs://nmpb-sp-2-a";
+        string memory ipfsCidB = "ipfs://nmpb-sp-2-b";
+
+        // Setup: derive operation data for one root paired with equal-CID and different-CID byte strings.
+        bytes memory operationDataA = abi.encode(newRoot, keccak256(bytes(ipfsCidA)));
+        bytes memory operationDataASameBytes = abi.encode(newRoot, keccak256(bytes(ipfsCidASameBytes)));
+        bytes memory operationDataB = abi.encode(newRoot, keccak256(bytes(ipfsCidB)));
+
+        // Call: compute nonces for all three policy payload variants under the same admin-auth salt.
+        uint256 nonceA = _computeSetPoliciesNonce(operationDataA, 81051);
+        uint256 nonceASameBytes = _computeSetPoliciesNonce(operationDataASameBytes, 81051);
+        uint256 nonceB = _computeSetPoliciesNonce(operationDataB, 81051);
+
+        // Verify: matching CID bytes preserve the nonce exactly, while a different CID changes the nonce even when the
+        // policies root stays fixed.
+        assertEq(nonceA, nonceASameBytes, "identical root and CID bytes should produce the same nonce");
+        assertTrue(nonceA != nonceB, "changing only the CID should move the nonce into a different replay domain");
+    }
+
+    /// @dev Verifies `OrganizationPolicyBase.setPolicies` can apply the same `(newPoliciesRoot, ipfsCid)` tuple
+    /// twice when the admin-auth salt changes.
+    function test_NMPB_SP_4_setPolicies_sameTupleDifferentAdminAuthSalts_canBothSucceed() public {
+        bytes32 newRoot = keccak256("nmpb-sp-4-root");
+        string memory ipfsCid = "ipfs://nmpb-sp-4";
+
+        // Setup: build two successful policy updates whose signed payload bytes are identical except for the
+        // admin-auth salt used in nonce derivation.
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildSetPoliciesAuth({
+            newPoliciesRoot: newRoot,
+            ipfsCid: ipfsCid,
+            salt: 81052,
+            expirationTimestamp: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth,) = _buildSetPoliciesAuth({
+            newPoliciesRoot: newRoot,
+            ipfsCid: ipfsCid,
+            salt: 81053,
+            expirationTimestamp: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        uint256 firstNonce = _computeSetPoliciesNonce(operationData, 81052);
+        uint256 secondNonce = _computeSetPoliciesNonce(operationData, 81053);
+
+        // Call: execute the same policy update twice using different admin-auth salts.
+        vm.prank(GUARDIAN);
+        harness.setPolicies(newRoot, ipfsCid, firstAuth);
+
+        vm.prank(GUARDIAN);
+        harness.setPolicies(newRoot, ipfsCid, secondAuth);
+
+        // Verify: both admin-auth salts consume independent nonces while the idempotent policy root remains set to
+        // the requested value after the second write.
+        assertTrue(harness.getUsedNonce(firstNonce), "first salt should consume its policy-update nonce");
+        assertTrue(harness.getUsedNonce(secondNonce), "second salt should consume its policy-update nonce");
+        assertEq(harness.getPoliciesRoot(), newRoot, "repeated idempotent policy updates should preserve the root");
+    }
+
     /// @dev Verifies that tampering `newPoliciesRoot` after signing invalidates auth and reverts.
     function test_setPolicies_rootTamperingAfterSigning_invalidatesAuthAndReverts() public {
         // Setup: assemble inputs expected to hit the guarded failure path for tampering `newPoliciesRoot` after signing

@@ -305,4 +305,83 @@ contract OrganizationGuardianRecoveryBaseCancelInitializeGuardianRecoveryTest is
         harness.cancelInitializeGuardianRecovery(freshAuth);
         assertTrue(harness.getUsedNonce(nonce), "fresh signatures with same tuple+salt should succeed");
     }
+
+    /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelInitializeGuardianRecovery` can cancel the same pending
+    /// tuple twice with different salts when the tuple is recreated in between.
+    function test_NMGRB_IGR_6_cancelInitializeGuardianRecovery_samePendingTupleDifferentSalts_canCancelTwice()
+        public
+    {
+        // Setup: reset storage, stage one pending tuple, and prepare two cancel salts around an intermediate
+        // re-initiation of the identical params.
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS_B,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            block.timestamp + 1
+        );
+        (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 13_013,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondCancelAuth,) = _buildCancelInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 13_014,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory reinitiateAuth,) = _buildInitiateInitializeGuardianRecoveryAuth({
+            recoveryAddress: GUARDIAN_RECOVERY_ADDRESS_B,
+            timelockDurationSeconds: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 13_015,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce =
+            _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, operationData, 13_013);
+        uint256 secondNonce =
+            _computeRecoveryNonce(OperationType.CancelInitializeGuardianRecovery, operationData, 13_014);
+
+        // Call: cancel once, recreate the identical pending deferred-init tuple, then cancel it again with a new
+        // admin-auth salt.
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(firstCancelAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateInitializeGuardianRecovery(
+            GUARDIAN_RECOVERY_ADDRESS_B,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            reinitiateAuth
+        );
+
+        vm.prank(GUARDIAN);
+        harness.cancelInitializeGuardianRecovery(secondCancelAuth);
+
+        // Verify: both cancel nonces are isolated by salt, and the second cancel clears the recreated pending tuple.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate cancel nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first cancel nonce should remain consumed");
+        assertTrue(harness.getUsedNonce(secondNonce), "second cancel nonce should be consumed");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingRecoveryAddress,
+            address(0),
+            "second cancel should clear the pending recovery address"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimelockDurationSeconds,
+            0,
+            "second cancel should clear the pending timelock"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingInit.pendingTimestamp,
+            0,
+            "second cancel should clear the pending timestamp"
+        );
+    }
 }

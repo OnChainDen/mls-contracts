@@ -358,6 +358,50 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
         harness.setAccountImplementation(accountImplementationV1, auth);
     }
 
+    /// @dev Verifies `OrganizationAccountFactoryBase.setAccountImplementation` can apply the same implementation
+    /// update twice when the admin-auth salts differ.
+    function test_NMAFB_AEP_5_setAccountImplementation_sameImplementationDifferentSalts_canBothSucceed() public {
+        // Setup: whitelist one runtime-code implementation and prepare two signed updates that differ only by
+        // admin-auth salt.
+        _setSingleAdminThresholdOne();
+        _setAccountImplementationWhitelisted(accountImplementationV1, true);
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 61161,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth,) = _buildSetAccountImplementationAuth({
+            newImplementation: accountImplementationV1,
+            salt: 61162,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        uint256 firstNonce = _computeSetAccountImplementationNonce(operationData, 61161);
+        uint256 secondNonce = _computeSetAccountImplementationNonce(operationData, 61162);
+
+        // Call: execute the same implementation update twice under distinct admin-auth salts.
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, firstAuth);
+
+        vm.prank(GUARDIAN);
+        harness.setAccountImplementation(accountImplementationV1, secondAuth);
+
+        // Verify: each admin-auth salt burns an independent nonce while the idempotent downstream implementation
+        // pointer remains set to the requested target.
+        assertTrue(harness.getUsedNonce(firstNonce), "first salt should consume its nonce");
+        assertTrue(harness.getUsedNonce(secondNonce), "second salt should consume its nonce");
+        assertEq(
+            harness.getAccountImplementationStorage(),
+            accountImplementationV1,
+            "idempotent update should leave the requested implementation active"
+        );
+    }
+
     /// @dev Verifies failed whitelist validation does not consume nonce and same signed request can later succeed.
     function test_OAFB_SAI_19__OAFB_SAI_7__NMAFB_AEP_6_setAccountImplementation_failedWhitelistValidation_doesNotConsumeNonceAndCanRetry()
         public

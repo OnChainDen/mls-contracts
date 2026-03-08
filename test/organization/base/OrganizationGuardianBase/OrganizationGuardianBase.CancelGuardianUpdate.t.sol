@@ -261,4 +261,56 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         // Verify
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on no-pending downstream revert");
     }
+
+    /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel the same pending guardian twice with
+    /// different salts when the pending value is recreated in between.
+    function test_NMGUB_GUF_6_cancelGuardianUpdate_samePendingGuardianDifferentSalts_canCancelTwiceAcrossReinitiation()
+        public
+    {
+        // Setup: create one pending guardian update, prepare two cancel salts for the same guardian, and prepare a
+        // re-initiation step between the cancels.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3910);
+        (AdminAuthParams memory firstCancelAuth, bytes memory operationData) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 3011,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondCancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 3012,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory reinitiateAuth,) = _buildInitiateGuardianUpdateAuth({
+            newGuardian: NEW_GUARDIAN_A,
+            salt: 3013,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 firstNonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, operationData, 3011);
+        uint256 secondNonce = _computeGuardianNonce(OperationType.CancelUpdateGuardian, operationData, 3012);
+
+        // Call: cancel once, recreate the identical pending guardian tuple, then cancel again with a different salt.
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(firstCancelAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateGuardianUpdate(NEW_GUARDIAN_A, reinitiateAuth);
+
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(secondCancelAuth);
+
+        // Verify: both cancel nonces are isolated by salt, and the second cancel clears the recreated pending tuple.
+        assertTrue(firstNonce != secondNonce, "different salts should isolate cancel nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first cancel nonce should remain consumed");
+        assertTrue(harness.getUsedNonce(secondNonce), "second cancel nonce should be consumed");
+        assertEq(harness.pendingGuardian(), address(0), "pending guardian should clear after the second cancel");
+        assertEq(harness.pendingGuardianUpdateTimestamp(), 0, "pending timestamp should clear after the second cancel");
+        assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "ready flag should remain cleared after re-cancel");
+    }
 }

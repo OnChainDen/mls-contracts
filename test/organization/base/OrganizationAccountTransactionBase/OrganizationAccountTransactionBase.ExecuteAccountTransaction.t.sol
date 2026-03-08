@@ -301,6 +301,63 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
+     * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` blocks same-tuple reentry after nonce consumption.
+     */
+    function test_NMATB_EAT_6_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
+        public
+    {
+        // Setup: make the account itself the guardian, then configure a nested replay call with the exact same tuple.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        harness.setGuardian(address(account));
+
+        bytes memory data = abi.encodeWithSelector(bytes4(0xDEADBEEF), uint256(41));
+        (, ValidationProofs memory proofs, bytes memory initiatorSignature, uint256 expiration) =
+            _buildAutoApprovePayload(address(account), DESTINATION, 0, data, 41, DEFAULT_POLICY_ID);
+        uint256 nonce = _computeNonce(address(account), DESTINATION, 0, data, DEFAULT_POLICY_ID, 41);
+
+        bytes memory reentrantCallData = abi.encodeCall(
+            IOrganizationAccountTransaction.executeAccountTransaction,
+            (
+                address(account),
+                DESTINATION,
+                0,
+                data,
+                41,
+                expiration,
+                DEFAULT_POLICY_ID,
+                initiatorSignature,
+                bytes(""),
+                proofs
+            )
+        );
+        account.setReentrantCallData(reentrantCallData);
+
+        // Call: execute the outer transaction from the guardian/account address so the account replays the same nonce in-flight.
+        vm.prank(address(account));
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 41,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: the outer execution succeeds once, while the nested replay fails with `NonceAlreadyUsed`.
+        assertTrue(harness.getUsedNonce(nonce), "outer execution should consume the nonce");
+        assertEq(account.executionCount(), 1, "outer account call should execute exactly once");
+        assertEq(
+            account.reentrantRevertData(),
+            abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce),
+            "nested replay should fail with the consumed nonce"
+        );
+    }
+
+    /**
      * @dev Verifies execution delegates policy validation to `validateTransactionApprovalOrRevert`.
      */
     function test_OATB_EAT_6_executeAccountTransaction_invalidPolicyRevertsPolicyDoesNotApply() public {

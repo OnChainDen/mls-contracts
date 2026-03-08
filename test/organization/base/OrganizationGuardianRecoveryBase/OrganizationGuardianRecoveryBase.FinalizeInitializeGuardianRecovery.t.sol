@@ -9,6 +9,9 @@ import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSign
 import {
     OrganizationGuardianRecoveryBaseSuiteBase
 } from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseSuiteBase.sol";
+import {
+    OrganizationGuardianRecoveryBaseHarness
+} from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseHarness.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {OperationType} from "types/CommonTypes.sol";
 
@@ -384,5 +387,92 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         uint256 finalizeNonce =
             _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_014);
         assertFalse(harness.getUsedNonce(finalizeNonce), "finalize nonce should remain unused");
+    }
+
+    /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` can finalize the same
+    /// pending tuple on fresh organization instances with different salts.
+    function test_NMGRB_IGR_4_finalizeInitializeGuardianRecovery_samePendingTupleDifferentSalts_succeedsPerFreshOrg()
+        public
+    {
+        // Setup: deploy two fresh harnesses with the same pending deferred-init tuple and build finalize auth with
+        // different salts for each organization address.
+        OrganizationGuardianRecoveryBaseHarness secondHarness = new OrganizationGuardianRecoveryBaseHarness();
+        secondHarness.setGuardian(GUARDIAN);
+        secondHarness.setAdminOperationTimelockDurationSeconds(ADMIN_OPERATION_TIMELOCK);
+        secondHarness.setMemberStatus(admin1, true);
+        secondHarness.setAdminStatus(admin1, true);
+        secondHarness.setAdminCount(1);
+        secondHarness.setVotingThreshold(1);
+        secondHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            block.timestamp
+        );
+
+        recoveryStateHarness.resetGuardianRecoveryStorage();
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            GUARDIAN_RECOVERY_ADDRESS,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            block.timestamp
+        );
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildFinalizeInitializeGuardianRecoveryAuth({
+            pendingAddress: GUARDIAN_RECOVERY_ADDRESS,
+            pendingTimelock: GUARDIAN_RECOVERY_TIMELOCK,
+            salt: 12_015,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        bytes32 secondOperationHash = secondHarness.getAdminOperationHash({
+            operationType: OperationType.FinalizeInitializeGuardianRecovery,
+            operationData: operationData,
+            salt: 12_016,
+            expirationTimestamp: block.timestamp + 1 days,
+            isApproval: true
+        });
+        AdminAuthParams memory secondAuth = AdminAuthParams({
+            salt: 12_016,
+            expirationTimestamp: block.timestamp + 1 days,
+            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+        });
+        uint256 firstNonce =
+            _computeRecoveryNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_015);
+        uint256 secondNonce =
+            secondHarness.computeNonce(OperationType.FinalizeInitializeGuardianRecovery, operationData, 12_016);
+
+        // Call: finalize the identical pending tuple once per fresh organization instance, each with its own salt.
+        vm.prank(GUARDIAN);
+        harness.finalizeInitializeGuardianRecovery(firstAuth);
+
+        vm.prank(GUARDIAN);
+        secondHarness.finalizeInitializeGuardianRecovery(secondAuth);
+
+        // Verify: each fresh organization consumes only its own finalize nonce while writing the same configured
+        // recovery tuple.
+        assertTrue(firstNonce != secondNonce, "organization address and salt should isolate finalize nonces");
+        assertTrue(harness.getUsedNonce(firstNonce), "first finalize nonce should be consumed");
+        assertTrue(secondHarness.getUsedNonce(secondNonce), "second finalize nonce should be consumed");
+        assertEq(
+            harness.getGuardianRecoveryState().recoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS,
+            "first organization should finalize the configured recovery address"
+        );
+        assertEq(
+            secondHarness.getGuardianRecoveryState().recoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS,
+            "second organization should finalize the configured recovery address"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().timelockDurationSeconds,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            "first organization should finalize the configured timelock"
+        );
+        assertEq(
+            secondHarness.getGuardianRecoveryState().timelockDurationSeconds,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            "second organization should finalize the configured timelock"
+        );
     }
 }

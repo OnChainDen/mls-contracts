@@ -5,6 +5,9 @@ pragma solidity 0.8.33;
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
+    OrganizationAccountFactoryBaseHarness
+} from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseHarness.sol";
+import {
     OrganizationAccountFactoryBaseSuiteBase
 } from "test/organization/base/OrganizationAccountFactoryBase/OrganizationAccountFactoryBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
@@ -101,6 +104,73 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         vm.prank(GUARDIAN);
         // Call: replay `deployAccount` with the same signed payload.
         harness.deployAccount(create2Salt, auth);
+    }
+
+    /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` isolates admin-auth salts and allows one
+    /// successful deployment per fresh organization for identical `create2Salt` values.
+    function test_NMAFB_AEP_2__NMAFB_AEP_3_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations()
+        public
+    {
+        bytes32 create2Salt = bytes32(uint256(41031));
+        uint256 firstAdminSalt = 51031;
+        uint256 secondAdminSalt = 51032;
+        uint256 expiration = block.timestamp + 1 hours;
+
+        // Setup: configure a valid implementation for the current organization and prepare a second fresh
+        // organization with the same runtime-code implementation and one-admin threshold-one auth state.
+        _setSingleAdminThresholdOne();
+        harness.setAccountImplementationStorage(accountImplementationV1);
+
+        OrganizationAccountFactoryBaseHarness secondHarness = new OrganizationAccountFactoryBaseHarness();
+        secondHarness.setGuardian(GUARDIAN);
+        secondHarness.setMemberStatus(admin1, true);
+        secondHarness.setAdminStatus(admin1, true);
+        secondHarness.setAdminCount(1);
+        secondHarness.setVotingThreshold(1);
+        secondHarness.setAccountImplementationStorage(accountImplementationV1);
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: firstAdminSalt,
+            expiration: expiration,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        bytes32 secondOperationHash = secondHarness.getAdminOperationHash({
+            operationType: OperationType.DeployAccount,
+            operationData: operationData,
+            salt: secondAdminSalt,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+        AdminAuthParams memory secondAuth = AdminAuthParams({
+            salt: secondAdminSalt,
+            expirationTimestamp: expiration,
+            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+        });
+
+        uint256 firstOrgNonce = _computeDeployAccountNonce(operationData, firstAdminSalt);
+        uint256 secondSaltNonce = _computeDeployAccountNonce(operationData, secondAdminSalt);
+        uint256 secondOrgNonce = secondHarness.computeNonce(OperationType.DeployAccount, operationData, secondAdminSalt);
+
+        // Call: compare same-org nonces across different admin-auth salts, then deploy once per fresh organization
+        // using the same `create2Salt` and matching signed payload bytes.
+        assertTrue(firstOrgNonce != secondSaltNonce, "different admin-auth salts should produce different nonces");
+
+        vm.prank(GUARDIAN);
+        address firstAccount = harness.deployAccount(create2Salt, firstAuth);
+
+        vm.prank(GUARDIAN);
+        address secondAccount = secondHarness.deployAccount(create2Salt, secondAuth);
+
+        // Verify: each organization consumes only its own nonce, and both deployments succeed despite identical
+        // `create2Salt` inputs because the organizations are distinct deployers.
+        assertTrue(harness.getUsedNonce(firstOrgNonce), "first organization should consume its deploy nonce");
+        assertTrue(secondHarness.getUsedNonce(secondOrgNonce), "second organization should consume its deploy nonce");
+        assertGt(firstAccount.code.length, 0, "first organization deployment should produce runtime code");
+        assertGt(secondAccount.code.length, 0, "second organization deployment should produce runtime code");
+        assertTrue(firstAccount != secondAccount, "fresh organizations should not collide on deployed account address");
     }
 
     /// @dev Verifies guardian + valid auth delegates to library deployment path and marks the account deployed.
@@ -311,6 +381,48 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         // Verify: corrected retry succeeds and consumes nonce.
         assertEq(deployedAccount, harness.computeAccountAddress(create2Salt), "corrected retry should deploy account");
         assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed after successful retry");
+    }
+
+    /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` rolls back the second admin-auth nonce when a
+    /// duplicate `create2Salt` hits the downstream CREATE2 collision path.
+    function test_NMAFB_AEP_7_deployAccount_duplicateCreate2Salt_rollsBackSecondNonce() public {
+        bytes32 create2Salt = bytes32(uint256(4185));
+
+        // Setup: configure a valid implementation, deploy once to occupy the CREATE2 slot, and prepare a second
+        // signed deployment with the same `create2Salt` but a different admin-auth salt.
+        _setSingleAdminThresholdOne();
+        harness.setAccountImplementationStorage(accountImplementationV1);
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 5185,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory secondAuth,) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 5186,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.deployAccount(create2Salt, firstAuth);
+
+        uint256 firstNonce = _computeDeployAccountNonce(operationData, 5185);
+        uint256 secondNonce = _computeDeployAccountNonce(operationData, 5186);
+
+        // Call: attempt a second deployment that reaches the downstream CREATE2 collision branch.
+        vm.expectRevert();
+        vm.prank(GUARDIAN);
+        harness.deployAccount(create2Salt, secondAuth);
+
+        // Verify: the original deployment nonce stays consumed, while the reverted duplicate deployment rolls back
+        // the later nonce because the downstream CREATE2 call failed.
+        assertTrue(harness.getUsedNonce(firstNonce), "initial successful deployment should keep its nonce consumed");
+        assertFalse(harness.getUsedNonce(secondNonce), "CREATE2 collision should roll back the second nonce");
     }
 
     /// @dev Verifies previously deployed accounts execute new implementation code immediately after upgrade.
