@@ -27,7 +27,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` returns true for a direct guardian EOA signature.
-    function test_LOAS_IVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue() public {
+    function test_LOAS_IVGS_1_LOACS_IVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue() public {
         // Setup: configure the guardian as a deterministic EOA and sign the tracked message hash.
         policyStateHarness.setGuardian(guardianSigner);
         bytes memory guardianSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -40,7 +40,9 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` accepts an enabled `SafeExecutorModule` contract signature.
-    function test_LOAS_IVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue() public {
+    function test_LOAS_IVGS_2_LOACS_IVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue()
+        public
+    {
         // Setup: configure a guardian Safe with an enabled executor module and sign through the authorized executor.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -70,6 +72,26 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
 
         // Verify: non-enabled module signatures fail closed.
         assertFalse(actual, "disabled module contract signature should be invalid");
+    }
+
+    /// @dev Verifies a previously valid enabled-module guardian signature becomes invalid immediately after disable.
+    function test_LOACS_IVGS_3_isValidGuardianSignature_enabledThenDisabledModuleSignature_returnsFalse() public {
+        // Setup: configure a guardian Safe, validate one enabled-module signature, then disable that same module.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(module), true);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+
+        // Call: validate once while enabled, then again after disabling the module.
+        bool enabledAccepted = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+        guardianSafe.setModuleEnabled(address(module), false);
+        bool disabledAccepted = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: the exact same module signature stops authorizing immediately after disable.
+        assertTrue(enabledAccepted, "enabled module signature should be valid before disable");
+        assertFalse(disabledAccepted, "disabled module signature should be invalid after disable");
     }
 
     /// @dev Verifies `_isValidGuardianSignature` rejects modules enabled on a different Safe.
@@ -124,6 +146,20 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
         assertFalse(actual, "malformed module inner signature should be invalid");
     }
 
+    /// @dev Verifies guardian signatures over a different message hash are rejected even when the signer is otherwise
+    /// authorized.
+    function test_LOACS_IVGS_4_A_isValidGuardianSignature_directGuardianWrongMessageHash_returnsFalse() public {
+        // Setup: configure the guardian as a deterministic EOA and sign a different tracked message hash.
+        policyStateHarness.setGuardian(guardianSigner);
+        bytes memory guardianSignature = _signHash(GUARDIAN_PK, OTHER_MESSAGE_HASH);
+
+        // Call: validate the guardian signature against the original tracked message hash.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: guardian signatures must bind the exact message hash under review.
+        assertFalse(actual, "guardian signature over a different message hash should be invalid");
+    }
+
     /// @dev Verifies `_isValidGuardianSignature` fails closed when guardian module checks revert.
     function test_LOAS_IVGS_7_isValidGuardianSignature_revertingGuardianModuleCheck_returnsFalse() public {
         // Setup: configure a reverting guardian contract and sign through a module that points at it.
@@ -154,8 +190,10 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` reflects module rotation immediately.
-    function test_LOAS_IVGS_10_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately() public {
-        // Setup: deploy both modules on the same guardian Safe and enable only the old module initially.
+    function test_LOAS_IVGS_10_LOACS_IVGS_3_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately()
+        public
+    {
+        // Setup: configure old and new modules on the same guardian Safe and rotate enablement between them.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule = _deployModule(address(guardianSafe), OLD_EXECUTOR_PK);
         SafeExecutorModule newModule = _deployModule(address(guardianSafe), NEW_EXECUTOR_PK);
@@ -184,6 +222,24 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
         // Verify: rotation takes effect immediately for signature acceptance.
         assertFalse(oldAfterRotation, "old module should be invalid after rotation");
         assertTrue(newAfterRotation, "new module should be valid immediately after rotation");
+    }
+
+    /// @dev Verifies otherwise-valid guardian module signatures are rejected when validated against a different message
+    /// hash.
+    function test_LOACS_IVGS_4_B_isValidGuardianSignature_moduleWrongMessageHash_returnsFalse() public {
+        // Setup: configure a guardian Safe with one enabled executor module and sign one message hash.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
+        guardianSafe.setModuleEnabled(address(module), true);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+
+        // Call: validate the otherwise-valid module signature against a different message hash.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, OTHER_MESSAGE_HASH);
+
+        // Verify: guardian signatures stay bound to the exact message hash they signed.
+        assertFalse(actual, "guardian signature should fail for a different message hash");
     }
 
     /// @dev Deploys a `SafeExecutorModule` against the provided Safe-compatible guardian contract.

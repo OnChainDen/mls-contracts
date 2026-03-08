@@ -22,7 +22,9 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     bytes32 internal constant GOLDEN_MESSAGE_HASH = keccak256("golden-review-hash");
 
     /// @dev Verifies that different organization addresses produce different review hashes.
-    function test_LOAS_GRSH_1_getReviewSignatureHash_differentOrganizations_returnsDifferentHashes() public {
+    function test_LOAS_GRSH_1_LOACS_GRSH_3_getReviewSignatureHash_differentOrganizations_returnsDifferentHashes()
+        public
+    {
         // Setup: deploy a second harness with a different organization address.
         LibOrganizationAccountSignatureHarness otherHarness = new LibOrganizationAccountSignatureHarness();
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -153,7 +155,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that changing chain id changes the review signature hash.
-    function test_LOAS_GRSH_6_getReviewSignatureHash_differentChainId_returnsDifferentHash() public {
+    function test_LOAS_GRSH_6_LOACS_GRSH_3_getReviewSignatureHash_differentChainId_returnsDifferentHash() public {
         // Setup: select deterministic review-hash inputs.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -183,7 +185,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash derivation includes `keccak256(initiatorSignature)`.
-    function test_LOAS_GRSH_7_getReviewSignatureHash_includesInitiatorSignatureHashField() public view {
+    function test_LOAS_GRSH_7_LOACS_GRSH_1_getReviewSignatureHash_includesInitiatorSignatureHashField() public view {
         // Setup: choose deterministic review-hash inputs.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;
@@ -233,7 +235,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that different initiator signatures produce different review hashes.
-    function test_LOAS_GRSH_8_getReviewSignatureHash_differentInitiatorSignatures_returnsDifferentHash() public view {
+    function test_LOAS_GRSH_8_LOACS_GRSH_2_getReviewSignatureHash_differentInitiatorSignatures_returnsDifferentHash()
+        public
+        view
+    {
         // Setup: select deterministic baseline inputs and two different initiator signatures.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignatureA = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -257,6 +262,61 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
 
         // Verify: different initiator signature bytes should change review hash.
         assertTrue(hashA != hashB, "initiator signature bytes should affect review hash");
+    }
+
+    /// @dev Verifies empty initiator signatures are hashed as `keccak256(\"\")`.
+    function test_LOACS_GRSH_4_getReviewSignatureHash_emptyInitiatorSignature_usesKeccakOfEmptyBytes() public view {
+        // Setup: choose deterministic review-hash inputs with an empty initiator signature.
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = bytes("");
+
+        bytes32 structHash = keccak256(
+            abi.encode(
+                LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH,
+                address(harness),
+                ACCOUNT,
+                MESSAGE_HASH,
+                DEFAULT_POLICY_ID,
+                expiration,
+                block.chainid,
+                keccak256(bytes(""))
+            )
+        );
+        bytes32 expected =
+            MessageHashUtils.toTypedDataHash(_computeDomainSeparator(address(harness), block.chainid), structHash);
+
+        // Call: execute `getReviewSignatureHashViaLibrary` with the empty initiator signature.
+        bytes32 actual = harness.getReviewSignatureHashViaLibrary({
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+
+        // Verify: empty initiator signatures do not revert and hash through the empty-bytes digest.
+        assertEq(actual, expected, "empty initiator signatures should hash as keccak256(empty)");
+    }
+
+    /// @dev Verifies review hash remains distinct from the initiator hash for the same request metadata.
+    function test_LOACS_GRSH_6_getReviewSignatureHash_isDistinctFromInitiatorHash() public view {
+        // Setup: choose deterministic request inputs and one concrete initiator signature payload.
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
+
+        // Call: compute both initiator and review hashes for the same logical request.
+        bytes32 initiatorHash =
+            harness.getInitiatorSignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, DEFAULT_POLICY_ID, expiration);
+        bytes32 reviewHash = harness.getReviewSignatureHashViaLibrary({
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+
+        // Verify: initiator and review flows stay domain-separated by their type hashes and field layouts.
+        assertTrue(reviewHash != initiatorHash, "review hash should remain distinct from initiator hash");
     }
 
     /// @dev Verifies that review hash uses `REVIEW_SIGNATURE_VALIDATION_TYPEHASH` and not initiator typehash.
@@ -308,7 +368,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash uses EIP-712 typed-data hashing with domain separator.
-    function test_LOAS_GRSH_10_getReviewSignatureHash_usesTypedDataHashWithDomainSeparator() public view {
+    function test_LOAS_GRSH_10_LOACS_GRSH_7_getReviewSignatureHash_usesTypedDataHashWithDomainSeparator() public view {
         // Setup: choose deterministic review-hash inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
@@ -369,7 +429,7 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that known golden inputs produce the expected precomputed review hash.
-    function test_LOAS_GRSH_12_getReviewSignatureHash_goldenInputs_matchesExpectedHash() public view {
+    function test_LOAS_GRSH_12_LOACS_GRSH_5_getReviewSignatureHash_goldenInputs_matchesExpectedHash() public view {
         // Setup: use the deterministic golden input fixture.
         bytes memory initiatorSignature =
             hex"1b36495ecf0f3b4f4e8b6b65b0d8b73f53da5ea8327f24df1920525f9f93072ee88f40f2bc74fbad801f28cd26ecee6a10d1f294f4f3696f9de7b51176efdc7d54";

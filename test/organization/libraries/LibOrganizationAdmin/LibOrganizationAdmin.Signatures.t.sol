@@ -2,10 +2,37 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
     LibOrganizationAdminSuiteBase
 } from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminSuiteBase.sol";
+
+/**
+ * @dev ERC-1271 mock that only accepts one exact `(hash, innerSignature)` tuple.
+ */
+contract HashBoundERC1271Signer is IERC1271 {
+    bytes32 internal immutable EXPECTED_HASH;
+    bytes32 internal immutable EXPECTED_SIGNATURE_HASH;
+
+    /// @dev Stores the single accepted hash/signature tuple.
+    /// @param expectedHash The only message hash that should validate.
+    /// @param expectedSignature The only inner signature payload that should validate.
+    constructor(bytes32 expectedHash, bytes memory expectedSignature) {
+        EXPECTED_HASH = expectedHash;
+        EXPECTED_SIGNATURE_HASH = keccak256(expectedSignature);
+    }
+
+    /// @dev Returns magic only when both the message hash and signature bytes match the configured tuple.
+    /// @param hash The message hash passed by the caller.
+    /// @param signature The inner ERC-1271 signature bytes passed by the caller.
+    /// @return magicValue The ERC-1271 magic value when the tuple matches, otherwise `0xffffffff`.
+    function isValidSignature(bytes32 hash, bytes memory signature) external view override returns (bytes4 magicValue) {
+        return hash == EXPECTED_HASH && keccak256(signature) == EXPECTED_SIGNATURE_HASH
+            ? IERC1271.isValidSignature.selector
+            : bytes4(0xffffffff);
+    }
+}
 
 /**
  * @dev Unit tests for signature-checking helpers in `LibOrganizationAdmin`.
@@ -24,7 +51,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `true` once the admin threshold is met.
-    function test_L_59__NMADM_SIG_6_areAdminSignaturesValid_exactThreshold_returnsTrue() public {
+    function test_L_59__NMADM_SIG_6_LOADM_AASV_1_areAdminSignaturesValid_exactThreshold_returnsTrue() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -53,7 +80,8 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         assertTrue(actualIsValid, "more-than-threshold signatures should validate");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `false` when a non-empty signer stream ends below threshold.
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `false` when a non-empty signer stream
+    /// ends below threshold.
     function test_NMADM_SIG_4_areAdminSignaturesValid_fewerThanThreshold_returnsFalse() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
@@ -157,7 +185,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that mixed EOA and ERC-1271 signers succeed when globally sorted.
-    function test_areAdminSignaturesValid_mixedEOAAndERC1271_sorted_succeeds() public {
+    function test_LOADM_AASV_3_test_areAdminSignaturesValid_mixedEOAAndERC1271_sorted_succeeds() public {
         address contractAdmin = address(validSigner1271);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
@@ -178,6 +206,34 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         // Verify: assert that signature validation succeeds for this input set.
         assertTrue(actualIsValid, "mixed sorted signatures should validate");
     }
+
+    /// @dev Verifies `_areAdminSignaturesValid` never treats signatures over a different operation hash as valid.
+    function test_LOADM_AASV_2_areAdminSignaturesValid_differentOperationHash_rejectsEOAAndERC1271Signatures() public {
+        // Setup: configure one EOA admin and one strict hash-bound ERC-1271 admin.
+        bytes32 signedHash = keccak256("signed-admin-operation-hash");
+        bytes32 replayedHash = keccak256("replayed-admin-operation-hash");
+        bytes memory contractInnerSignature = hex"CAFE";
+        HashBoundERC1271Signer hashBoundContractAdmin = new HashBoundERC1271Signer(signedHash, contractInnerSignature);
+
+        _setMembersAndAdmins({
+            members: buildArray(admin1, address(hashBoundContractAdmin)),
+            admins: buildArray(admin1, address(hashBoundContractAdmin)),
+            threshold: 2
+        });
+
+        address[] memory signers = buildArray(admin1, address(hashBoundContractAdmin));
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _signHash(ADMIN_PK_1, signedHash);
+        signatures[1] =
+            _buildContractSignature({signer: address(hashBoundContractAdmin), innerSig: contractInnerSignature});
+        bytes memory packed = _sortAndConcatSignatures(signers, signatures);
+
+        // Verify: the EOA leg no longer recovers under the replayed hash, so validation fails during recovery.
+        _expectSignatureRecoveryFailure();
+        // Call: validate the packed signer set against a different operation hash than the one they signed.
+        harness.areAdminSignaturesValid(packed, replayedHash);
+    }
+
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for malformed packed signatures.
     function test_L_66__NMADM_SIG_8_areAdminSignaturesValid_malformedEncoding_revertsSignatureRecoveryFailed()

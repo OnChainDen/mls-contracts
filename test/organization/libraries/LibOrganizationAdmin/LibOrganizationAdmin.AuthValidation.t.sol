@@ -51,7 +51,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that an expiration timestamp equal to the current block timestamp passes authorization.
-    function test_validateAdminAuth_expirationEqualsBlockTimestamp_succeeds() public {
+    function test_NMADM_AUTH_4_LOADM_VAACNOR_6_validateAdminAuth_expirationEqualsBlockTimestamp_succeeds() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -81,6 +81,42 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         });
         // Verify: assert that the nonce is marked used after successful authorization/execution.
         assertTrue(harness.getUsedNonce(nonce), "nonce should be consumed on boundary expiration success");
+    }
+
+    /// @dev Verifies signatures are bound to the exact expiration timestamp encoded into the operation hash.
+    function test_LOADM_VAACNOR_5_validateAdminAuth_signedExpirationMismatch_revertsAndDoesNotConsumeNonce() public {
+        // Setup: configure one admin and sign the payload with a different expiration than the call uses.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        uint256 salt = 12_001;
+        uint256 signedExpiration = block.timestamp + 1 hours;
+        uint256 providedExpiration = signedExpiration + 1;
+        bytes32 signedHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            salt: salt,
+            expirationTimestamp: signedExpiration,
+            isApproval: true
+        });
+        AdminAuthParams memory auth = AdminAuthParams({
+            salt: salt, expirationTimestamp: providedExpiration, signatures: _signHash(ADMIN_PK_1, signedHash)
+        });
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: baseOperationData, salt: salt
+        });
+
+        // Verify: changing the signed expiration invalidates auth and rolls back nonce consumption.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        // Call: validate the payload using the mismatched expiration timestamp.
+        harness.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            isApproval: true,
+            authParams: auth
+        });
+
+        // Verify: failed auth does not consume the nonce.
+        assertFalse(harness.getUsedNonce(nonce), "expiration mismatch should not consume nonce");
     }
 
     /// @dev Verifies that a past expiration timestamp reverts with `AdminOperationExpired`.
@@ -143,9 +179,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
 
     /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds with valid admin auth
     /// and consumes the derived nonce.
-    function test_L_5__NMADM_AUTH_1_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce()
+    function test_L_5__NMADM_AUTH_1_LOADM_VAACNOR_1_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce()
         public
-    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -612,7 +647,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that rejection signatures cannot authorize an approval operation.
-    function test_validateAdminAuth_rejectionSignatureCannotAuthorizeApproval() public {
+    function test_LOADM_VAACNOR_2_validateAdminAuth_rejectionSignatureCannotAuthorizeApproval() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -768,7 +803,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that a chain ID change invalidates previously signed signatures.
-    function test_validateAdminAuth_chainIdChange_invalidatesOldSignatures() public {
+    function test_LOADM_VAACNOR_9_validateAdminAuth_chainIdChange_invalidatesOldSignatures() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -791,6 +826,39 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         vm.expectRevert();
         // Call: run `validateAdminAuthAndConsumeNonceOrRevert` for the prepared operation payload and auth params.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            isApproval: true,
+            authParams: auth
+        });
+    }
+
+    /// @dev Verifies admin signatures valid on one organization fail on another organization.
+    function test_LOADM_VAACNOR_8_validateAdminAuth_crossOrganizationReplay_revertsSignerIsNotAdmin() public {
+        // Setup: deploy a second organization harness and mirror the same admin/member configuration on both.
+        LibOrganizationAdminHarness otherHarness = new LibOrganizationAdminHarness();
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        otherHarness.setGuardian(GUARDIAN);
+        otherHarness.setMemberStatus(admin1, true);
+        otherHarness.setAdminStatus(admin1, true);
+        otherHarness.setAdminCount(1);
+        otherHarness.setVotingThreshold(1);
+
+        uint256 salt = 32_001;
+        uint256 expiration = block.timestamp + 1 hours;
+        AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            isApproval: true,
+            salt: salt,
+            expirationTimestamp: expiration,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Verify: replaying the signed payload on another organization changes the EIP-712 domain and fails auth.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        // Call: validate the original signature bundle through the second organization harness.
+        otherHarness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
             operationData: baseOperationData,
             isApproval: true,
@@ -832,10 +900,9 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(nonce), "expired auth should not consume nonce");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps below-threshold nonces unused.
-    function test_NMADM_AUTH_5__NMADM_AUTH_14_validateAdminAuth_belowThreshold_revertsAndDoesNotConsumeNonce()
-        public
-    {
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps below-threshold nonces
+    /// unused.
+    function test_NMADM_AUTH_5__NMADM_AUTH_14_validateAdminAuth_belowThreshold_revertsAndDoesNotConsumeNonce() public {
         uint256 salt = 34;
 
         // Setup: require two admin signatures while signing the payload with only one admin key.
@@ -865,7 +932,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(nonce), "below-threshold auth should not consume nonce");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps malformed-signature nonces unused.
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps malformed-signature nonces
+    /// unused.
     function test_NMADM_AUTH_6_validateAdminAuth_malformedSignatures_revertAndDoNotConsumeNonce() public {
         uint256 salt = 35;
 
@@ -890,8 +958,11 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(nonce), "malformed signatures should not consume nonce");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` rejects changed operation data without burning nonce.
-    function test_NMADM_AUTH_7_validateAdminAuth_signedOperationDataMismatch_revertsAndDoesNotConsumeNonce() public {
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` rejects changed operation data
+    /// without burning nonce.
+    function test_NMADM_AUTH_7_LOADM_VAACNOR_4_validateAdminAuth_signedOperationDataMismatch_revertsAndDoesNotConsumeNonce()
+        public
+    {
         bytes memory signedOperationData = baseOperationData;
         bytes memory mutatedOperationData = abi.encode(bytes32("mutated-operation"), uint256(456));
         uint256 salt = 36;
@@ -907,7 +978,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: validate with mutated operation data, expecting signer recovery against the wrong hash to fail admin checks.
+        // Call: validate with mutated operation data, expecting signer recovery against the wrong hash to fail admin
+        // checks.
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
@@ -928,11 +1000,15 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should remain unused");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` rejects changed operation types without burning nonce.
-    function test_NMADM_AUTH_8_validateAdminAuth_signedOperationTypeMismatch_revertsAndDoesNotConsumeNonce() public {
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` rejects changed operation types
+    /// without burning nonce.
+    function test_NMADM_AUTH_8_LOADM_VAACNOR_3_validateAdminAuth_signedOperationTypeMismatch_revertsAndDoesNotConsumeNonce()
+        public
+    {
         uint256 salt = 37;
 
-        // Setup: sign the payload for `ModifyAdmins`, then call validation under `ModifyMembers` with the same bytes and salt.
+        // Setup: sign the payload for `ModifyAdmins`, then call validation under `ModifyMembers` with the same bytes
+        // and salt.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
             operationType: OperationType.ModifyAdmins,
@@ -943,7 +1019,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Call: validate with the wrong operation type, expecting signer recovery against the wrong hash to fail admin checks.
+        // Call: validate with the wrong operation type, expecting signer recovery against the wrong hash to fail admin
+        // checks.
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyMembers,
@@ -964,7 +1041,48 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(membersNonce), "mutated operation-type nonce should remain unused");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps non-admin signer nonces unused.
+    /// @dev Verifies signatures are bound to the exact salt encoded into the operation hash.
+    function test_LOADM_VAACNOR_7_validateAdminAuth_signedSaltMismatch_revertsAndDoesNotConsumeEitherNonce() public {
+        // Setup: configure one admin and sign the payload with a different salt than the call uses.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        uint256 signedSalt = 12_101;
+        uint256 providedSalt = signedSalt + 1;
+        uint256 expiration = block.timestamp + 1 hours;
+        bytes32 signedHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            salt: signedSalt,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+        AdminAuthParams memory auth = AdminAuthParams({
+            salt: providedSalt, expirationTimestamp: expiration, signatures: _signHash(ADMIN_PK_1, signedHash)
+        });
+        uint256 signedNonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: baseOperationData, salt: signedSalt
+        });
+        uint256 providedNonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: baseOperationData, salt: providedSalt
+        });
+
+        // Verify: changing the signed salt invalidates auth and leaves both nonce domains unused.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
+        // Call: validate the payload using the mismatched salt.
+        harness.validateAdminAuthAndConsumeNonceOrRevert({
+            operationType: OperationType.ModifyAdmins,
+            operationData: baseOperationData,
+            isApproval: true,
+            authParams: auth
+        });
+
+        // Verify: neither the originally signed nonce nor the provided nonce is consumed.
+        assertFalse(harness.getUsedNonce(signedNonce), "signed salt nonce should remain unused");
+        assertFalse(harness.getUsedNonce(providedNonce), "provided salt nonce should remain unused");
+    }
+
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps non-admin signer nonces
+    /// unused.
     function test_NMADM_AUTH_9_validateAdminAuth_nonAdminSigner_revertsAndDoesNotConsumeNonce() public {
         uint256 nonAdminPk = 0xDEAE;
         uint256 salt = 38;
@@ -980,9 +1098,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             isApproval: true
         });
         AdminAuthParams memory auth = AdminAuthParams({
-            salt: salt,
-            expirationTimestamp: block.timestamp + 1 hours,
-            signatures: _signHash(nonAdminPk, operationHash)
+            salt: salt, expirationTimestamp: block.timestamp + 1 hours, signatures: _signHash(nonAdminPk, operationHash)
         });
         uint256 nonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: baseOperationData, salt: salt
@@ -1001,7 +1117,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(nonce), "non-admin signer should not consume nonce");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps out-of-order signer nonces unused.
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` keeps out-of-order signer nonces
+    /// unused.
     function test_NMADM_AUTH_10_validateAdminAuth_outOfOrderSigners_revertAndDoNotConsumeNonce() public {
         uint256 salt = 39;
 
@@ -1036,14 +1153,16 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(nonce), "out-of-order signers should not consume nonce");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` shares nonce space across approval and rejection.
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` shares nonce space across approval
+    /// and rejection.
     function test_NMADM_AUTH_11_validateAdminAuth_approvalThenRejection_reusesSharedNonceAndRevertsNonceAlreadyUsed()
         public
     {
         uint256 salt = 40;
         uint256 expiration = block.timestamp + 1 hours;
 
-        // Setup: configure one-admin auth and build distinct approval/rejection signatures for the same operation tuple.
+        // Setup: configure one-admin auth and build distinct approval/rejection signatures for the same operation
+        // tuple.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         AdminAuthParams memory approvalAuth = _buildAdminAuthParamsForEOA({
             operationType: OperationType.ModifyAdmins,
@@ -1085,7 +1204,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertTrue(harness.getUsedNonce(nonce), "shared nonce should remain consumed after approval");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` isolates nonce space by operation type.
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` isolates nonce space by operation
+    /// type.
     function test_NMADM_AUTH_12_validateAdminAuth_differentOperationTypes_canBothSucceed() public {
         uint256 salt = 41;
         uint256 expiration = block.timestamp + 1 hours;
@@ -1182,7 +1302,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertTrue(harness.getUsedNonce(nonceB), "second salt nonce should be consumed");
     }
 
-    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` enforces shared replay protection for mixed EOA/ERC-1271 auth.
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` enforces shared replay protection
+    /// for mixed EOA/ERC-1271 auth.
     function test_NMADM_AUTH_15_validateAdminAuth_mixedEOAAndERC1271_successThenReplay_revertsSharedNonce() public {
         address contractAdmin = address(validSigner1271);
         uint256 salt = 44;

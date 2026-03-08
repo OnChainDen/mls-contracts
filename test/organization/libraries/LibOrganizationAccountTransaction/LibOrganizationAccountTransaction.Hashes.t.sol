@@ -30,7 +30,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     bytes32 internal constant GOLDEN_REVIEW_HASH = 0x44e12a114477fe2befd3baccc5589b3e89909541e1fb3fe3d2c96e57d46bf64a;
 
     /// @dev Verifies initiator hash uses `INITIATE_ACCOUNT_TRANSACTION_TYPEHASH` in struct encoding.
-    function test_LOAT_CIHFP_11_computeInitiatorHash_usesInitiatorTypehash() public view {
+    function test_LOAT_CIHFP_11_LOACT_CIHFP_13_computeInitiatorHash_usesInitiatorTypehash() public view {
         // Setup: deterministic transaction tuple.
         bytes memory data = abi.encodeWithSelector(bytes4(0x61616161), uint256(1));
         uint256 salt = 91;
@@ -74,7 +74,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash for empty calldata uses `keccak256(\"\")`.
-    function test_LOAT_CIHFP_13_computeInitiatorHash_emptyData_usesKeccakOfEmptyBytes() public view {
+    function test_LOAT_CIHFP_13_LOACT_CIHFP_12_computeInitiatorHash_emptyData_usesKeccakOfEmptyBytes() public view {
         // Setup: empty calldata input.
         bytes memory data = bytes("");
         uint256 salt = 92;
@@ -116,7 +116,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash changes when organization binding (`address(this)`) changes.
-    function test_LOAT_CIHFP_1_computeInitiatorHash_organizationBinding_changesAcrossHarnesses() public {
+    function test_LOAT_CIHFP_1_LOACT_CIHFP_11_computeInitiatorHash_organizationBinding_changesAcrossHarnesses() public {
         // Setup: deploy second harness and keep shared transaction tuple.
         bytes memory data = abi.encodeWithSelector(bytes4(0x62626262), uint256(2));
         uint256 expiration = block.timestamp + 1 days;
@@ -135,7 +135,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash uses `REVIEW_ACCOUNT_TRANSACTION_TYPEHASH`.
-    function test_LOAT_CRHFP_12_computeReviewHash_usesReviewTypehash() public view {
+    function test_LOAT_CRHFP_12_LOACT_CRHFP_6_computeReviewHash_usesReviewTypehash() public view {
         // Setup: deterministic tuple and initiator signature bytes.
         bytes memory data = abi.encodeWithSelector(bytes4(0x63636363), uint256(3));
         uint256 salt = 94;
@@ -179,7 +179,10 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies repeated initiator/review hash computations stay deterministic for identical inputs.
-    function test_NMATL_RHB_5_computeInitiatorAndReviewHashes_repeatedCallsRemainDeterministic() public view {
+    function test_LOACT_CIHFP_1_NMATL_RHB_5_computeInitiatorAndReviewHashes_repeatedCallsRemainDeterministic()
+        public
+        view
+    {
         // Setup: pin one transaction tuple and one initiator signature payload.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64640001), uint256(41));
         bytes memory initiatorSignature = hex"ABCD1234";
@@ -205,7 +208,9 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash stays distinct whenever any bound field is mutated.
-    function test_NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct() public {
+    function test_LOACT_CIHFP_2__LOACT_CIHFP_3__LOACT_CIHFP_4__LOACT_CIHFP_5__LOACT_CIHFP_6__LOACT_CIHFP_7__LOACT_CIHFP_8__LOACT_CIHFP_9__LOACT_CIHFP_10__NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct()
+        public
+    {
         // Setup: compute a baseline initiator hash and deploy a second harness for organization binding checks.
         bytes memory data = abi.encodeWithSelector(bytes4(0x64640002), uint256(42));
         uint256 expiration = block.timestamp + 1 days;
@@ -260,14 +265,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
         assertTrue(
             base
                 != harness.computeInitiatorHashFromParamsViaLibrary(
-                    ACCOUNT,
-                    DESTINATION,
-                    10,
-                    142,
-                    expiration,
-                    DEFAULT_POLICY_ID + 1,
-                    data,
-                    true
+                    ACCOUNT, DESTINATION, 10, 142, expiration, DEFAULT_POLICY_ID + 1, data, true
                 ),
             "policy id should be bound"
         );
@@ -303,7 +301,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13__NMATL_RHB_4_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
+    function test_LOACT_CRHFP_1__LOACT_CRHFP_3__LOACT_CRHFP_4__LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13__NMATL_RHB_4_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
         public
     {
         // Setup: compute baseline review hash and deploy a second harness for organization binding checks.
@@ -421,7 +419,10 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash includes `keccak256(initiatorSignature)` binding.
-    function test_LOAT_CRHFP_10__LOAT_CRHFP_11_computeReviewHash_initiatorSignatureBinding_changesHash() public view {
+    function test_LOACT_CRHFP_2__LOAT_CRHFP_10__LOAT_CRHFP_11_computeReviewHash_initiatorSignatureBinding_changesHash()
+        public
+        view
+    {
         // Setup: two different initiator-signature byte payloads.
         bytes memory data = abi.encodeWithSelector(bytes4(0x65656565), uint256(5));
         uint256 expiration = block.timestamp + 1 days;
@@ -438,6 +439,68 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
 
         // Verify: different initiator signatures produce different review hashes.
         assertTrue(hashA != hashB, "review hash should include initiator signature hash");
+    }
+
+    /// @dev Verifies review hash handles an empty initiator signature via `keccak256(\"\")`.
+    function test_LOACT_CRHFP_5_computeReviewHash_emptyInitiatorSignature_usesKeccakOfEmptyBytes() public view {
+        // Setup: use a deterministic review-hash tuple with an empty initiator signature payload.
+        bytes memory data = abi.encodeWithSelector(bytes4(0x67676767), uint256(7));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = bytes("");
+
+        // Call: compute the review hash through the library wrapper.
+        bytes32 actual = harness.computeReviewHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 3, 97, expiration, DEFAULT_POLICY_ID, data, true, initiatorSignature
+        );
+
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH,
+                keccak256("MLSWalletOrganization"),
+                keccak256("1"),
+                block.chainid,
+                address(harness)
+            )
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(
+                LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH,
+                address(harness),
+                ACCOUNT,
+                DESTINATION,
+                3,
+                keccak256(data),
+                97,
+                expiration,
+                DEFAULT_POLICY_ID,
+                true,
+                block.chainid,
+                keccak256(bytes(""))
+            )
+        );
+        bytes32 expected = MessageHashUtils.toTypedDataHash(domainSeparator, structHash);
+
+        // Verify: empty initiator signatures do not revert and hash through the empty-bytes digest.
+        assertEq(actual, expected, "empty initiator signature should hash as keccak256(empty)");
+    }
+
+    /// @dev Verifies review hash stays distinct from the initiator hash for one logical transaction request.
+    function test_LOACT_CRHFP_7_computeReviewHash_isDistinctFromInitiatorHash() public view {
+        // Setup: pin one transaction tuple and one concrete initiator signature payload.
+        bytes memory data = abi.encodeWithSelector(bytes4(0x68686868), uint256(8));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = hex"010203";
+
+        // Call: compute both the initiator hash and the review hash for the same logical request.
+        bytes32 initiatorHash = harness.computeInitiatorHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 4, 98, expiration, DEFAULT_POLICY_ID, data, true
+        );
+        bytes32 reviewHash = harness.computeReviewHashFromParamsViaLibrary(
+            ACCOUNT, DESTINATION, 4, 98, expiration, DEFAULT_POLICY_ID, data, true, initiatorSignature
+        );
+
+        // Verify: initiator and review flows remain domain-separated by their distinct type hashes and layouts.
+        assertTrue(reviewHash != initiatorHash, "review hash should remain distinct from initiator hash");
     }
 
     /// @dev Verifies initiator hash matches a precomputed golden vector for known deterministic inputs.

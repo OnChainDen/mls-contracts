@@ -122,7 +122,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that all policy checks passing returns true.
-    function test_LOAS_IESABP_8_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue() public {
+    function test_LOAS_IESABP_8_LOACS_IESABP_1_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue() public {
         // Setup: build fully valid baseline fixture.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
 
@@ -135,7 +135,9 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that policy-proof failure short-circuits composite failing inputs.
-    function test_LOAS_IESABP_9_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed() public {
+    function test_LOAS_IESABP_9_LOACS_IESABP_2_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed()
+        public
+    {
         // Setup: build fixture with multiple failing conditions, including invalid policy proof.
         (Policy memory policy, ValidationProofs memory proofs) = _buildAllowedFixture();
         policy.config.transactionType = TransactionType.TokenTransfers;

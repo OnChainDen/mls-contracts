@@ -196,7 +196,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection requires non-empty review signature.
-    function test_LOAT_VAAROR_2_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
+    function test_LOAT_VAAROR_2_LOACT_VAAROR_2_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
         public
     {
         // Setup: valid auto-approve rejection context with empty review signatures.
@@ -220,7 +220,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection succeeds for authorized initiator signatures.
-    function test_LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
+    function test_LOACT_VAAROR_1__LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
         public
     {
         // Setup: auto-approve policy and rejection signature from authorized initiator.
@@ -261,7 +261,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies manual-confirmation helper uses policy threshold and rejects below-threshold approvals.
-    function test_LOAT_VMCOR_1__LOAT_VMCOR_5__LOAT_VMCOR_6_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals()
+    function test_LOACT_VMCOR_1__LOAT_VMCOR_1__LOAT_VMCOR_5__LOAT_VMCOR_6_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals()
         public
     {
         // Setup: group approver threshold=2 with one valid review signature.
@@ -364,7 +364,9 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies review-hash binding changes when initiator signature bytes change.
-    function test_LOAT_VMCOR_2__LOAT_VMCOR_8_validateManualConfirmation_reviewHashBindsInitiatorSignature() public {
+    function test_LOACT_VMCOR_2__LOAT_VMCOR_2__LOAT_VMCOR_8_validateManualConfirmation_reviewHashBindsInitiatorSignature()
+        public
+    {
         // Setup: derive two initiator signatures for the same transaction hash from different keys.
         bytes memory data = abi.encodeWithSelector(bytes4(0x49494949), uint256(9));
         uint256 expiration = block.timestamp + 1 days;
