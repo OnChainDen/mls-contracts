@@ -662,9 +662,8 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: confirm this branch reverts for the intended failure condition.
-
-        vm.expectRevert();
+        // Verify: the approval-path hash mismatch recovers a non-admin signer and fails the admin check.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         // Call: run `validateAdminAuthAndConsumeNonceOrRevert` for the prepared operation payload and auth params.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
@@ -817,13 +816,15 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             expirationTimestamp: expiration,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: baseOperationData, salt: salt
+        });
 
         // Chain ID is embedded into the typed-data payload.
         vm.chainId(block.chainid + 1);
 
-        // Verify: confirm this branch reverts for the intended failure condition.
-
-        vm.expectRevert();
+        // Verify: the changed EIP-712 domain recovers a non-admin signer and leaves the nonce unused.
+        vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         // Call: run `validateAdminAuthAndConsumeNonceOrRevert` for the prepared operation payload and auth params.
         harness.validateAdminAuthAndConsumeNonceOrRevert({
             operationType: OperationType.ModifyAdmins,
@@ -831,6 +832,9 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
             isApproval: true,
             authParams: auth
         });
+
+        // Verify: failed cross-chain replay does not consume the nonce.
+        assertFalse(harness.getUsedNonce(nonce), "cross-chain replay should not consume nonce");
     }
 
     /// @dev Verifies admin signatures valid on one organization fail on another organization.
