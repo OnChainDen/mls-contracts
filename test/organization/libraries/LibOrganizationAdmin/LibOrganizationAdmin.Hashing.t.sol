@@ -21,6 +21,11 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
     );
 
+    address internal constant GOLDEN_ORGANIZATION = address(0x1111111111111111111111111111111111111111);
+    uint256 internal constant GOLDEN_CHAIN_ID = 31_337;
+    bytes32 internal constant GOLDEN_ADMIN_OPERATION_HASH =
+        0x5ef4f435c251fc893b3e274d308fb1e415011e419c90b611c5c13c8a2a5d9d0c;
+
     /// @dev Verifies that the same input tuple produces a deterministic hash.
     function test_getAdminOperationHash_sameInput_isDeterministic() public view {
         // Setup: define one operation payload and a fixed parameter tuple.
@@ -305,5 +310,30 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
         // Verify: assert that the derived hash matches the expected reference hash.
 
         assertEq(actualHash, expectHash, "hashing must depend on byte content, not memory pointer");
+    }
+
+    /// @dev Verifies `LibOrganizationAdmin._getAdminOperationHash` matches a precomputed typed-data hash vector.
+    function test_NMADM_HASH_9_getAdminOperationHash_knownInputs_matchesGoldenVector() public {
+        // Setup: pin chain id and clone the harness bytecode at the deterministic organization address used when the
+        // off-chain golden vector was generated.
+        uint256 originalChainId = block.chainid;
+        vm.chainId(GOLDEN_CHAIN_ID);
+        vm.etch(GOLDEN_ORGANIZATION, address(harness).code);
+        LibOrganizationAdminHarness goldenHarness = LibOrganizationAdminHarness(GOLDEN_ORGANIZATION);
+        bytes memory operationData = abi.encode(address(uint160(0xA11CE)), uint256(0xBEEF));
+
+        // Call: compute the admin operation hash for the fixed `(operationType, operationData, salt, expiration,
+        // isApproval)` tuple through the deterministic harness address.
+        bytes32 actualHash = goldenHarness.getAdminOperationHash({
+            operationType: OperationType.ModifyPolicies,
+            operationData: operationData,
+            salt: 17,
+            expirationTimestamp: 1_800_000_000,
+            isApproval: true
+        });
+        vm.chainId(originalChainId);
+
+        // Verify: the on-chain helper matches the expected off-chain precomputed typed-data hash exactly.
+        assertEq(actualHash, GOLDEN_ADMIN_OPERATION_HASH, "golden admin operation hash mismatch");
     }
 }

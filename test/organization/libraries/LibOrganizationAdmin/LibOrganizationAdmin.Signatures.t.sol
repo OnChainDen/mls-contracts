@@ -53,8 +53,8 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         assertTrue(actualIsValid, "more-than-threshold signatures should validate");
     }
 
-    /// @dev Verifies that fewer-than-threshold valid signatures return false.
-    function test_areAdminSignaturesValid_fewerThanThreshold_returnsFalse() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `false` when a non-empty signer stream ends below threshold.
+    function test_NMADM_SIG_4_areAdminSignaturesValid_fewerThanThreshold_returnsFalse() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -64,7 +64,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         // Call: invoke signature validation with fewer-than-threshold signatures.
         bool actualIsValid = harness.areAdminSignaturesValid(signatures, hash);
 
-        // Verify: assert that signature validation fails for this input set.
+        // Verify: the helper reports insufficient signatures with `false` so the caller can decide whether to revert.
         assertFalse(actualIsValid, "fewer-than-threshold signatures should fail");
     }
 
@@ -200,5 +200,39 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
 
         // Verify: assert that signature validation succeeds for this input set.
         assertTrue(actualIsValid, "function should short-circuit after threshold");
+    }
+
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` parses mixed EOA and ERC-1271 signatures across
+    /// multiple packed offsets.
+    function test_NMADM_SIG_7_areAdminSignaturesValid_mixedEOA_ERC1271_EOA_offsetsParseCorrectly() public {
+        address contractAdmin = address(0x5000000000000000000000000000000000000000);
+
+        // Setup: install valid ERC-1271 bytecode at an address sorted between two EOA admins and require all three
+        // signatures so the helper must parse every packed segment.
+        vm.etch(contractAdmin, address(validSigner1271).code);
+        assertTrue(
+            uint160(admin2) < uint160(contractAdmin) && uint160(contractAdmin) < uint160(admin3),
+            "test requires EOA -> ERC1271 -> EOA ordering"
+        );
+        _setMembersAndAdmins({
+            members: buildArray(admin2, contractAdmin, admin3),
+            admins: buildArray(admin2, contractAdmin, admin3),
+            threshold: 3
+        });
+
+        bytes32 hash = keccak256("op65-mixed-offsets");
+        bytes memory packed = abi.encodePacked(
+            _signHash(ADMIN_PK_2, hash),
+            _buildContractSignature({signer: contractAdmin, innerSig: hex"CAFEF00D123456"}),
+            _signHash(ADMIN_PK_3, hash)
+        );
+
+        // Call: validate the sorted `EOA -> ERC1271 -> EOA` packed signature stream against the shared operation
+        // hash.
+        bool actualIsValid = harness.areAdminSignaturesValid(packed, hash);
+
+        // Verify: the helper returns `true` after recovering each signer from the correct packed offset and reaching
+        // the threshold on the third signature.
+        assertTrue(actualIsValid, "mixed packed signatures should validate across all offsets");
     }
 }

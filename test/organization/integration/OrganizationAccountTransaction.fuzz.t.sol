@@ -112,6 +112,121 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
         assertTrue(nonceA != nonceB, "distinct salts should produce distinct nonces");
     }
 
+    /// @dev Verifies replaying a nonce across execute and reject entry points always reverts once either path succeeds.
+    function testFuzz_NMFZ_3_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(uint256 saltRaw, bool rejectFirst)
+        public
+    {
+        // Setup: deploy a fresh organization/account pair, configure one auto-approve policy, and bind both execute
+        // and reject signatures to the same account-transaction tuple under one salt.
+        uint256 salt = bound(saltRaw, 1, type(uint256).max);
+        OrganizationAccountTransactionBaseHarness organization = new OrganizationAccountTransactionBaseHarness();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(organization));
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _emptyProofsForPolicy(policy);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x76767676), uint256(6));
+        uint256 expiration = block.timestamp + 1 days;
+
+        organization.setGuardian(GUARDIAN);
+        organization.setMemberStatus(initiator1, true);
+        organization.setDeployedAccount(address(account), true);
+        organization.setPoliciesRoot(_computePolicyLeaf(DEFAULT_POLICY_ID, policy));
+
+        bytes memory approvalSignature = _signInitiatorTx(
+            address(organization),
+            INITIATOR_PK_1,
+            address(account),
+            DESTINATION,
+            0,
+            data,
+            salt,
+            expiration,
+            DEFAULT_POLICY_ID,
+            true
+        );
+        bytes memory rejectionSignature = _signInitiatorTx(
+            address(organization),
+            INITIATOR_PK_1,
+            address(account),
+            DESTINATION,
+            0,
+            data,
+            salt,
+            expiration,
+            DEFAULT_POLICY_ID,
+            false
+        );
+        uint256 nonce = organization.computeNonce({
+            operationType: OperationType.AccountTransaction,
+            operationData: abi.encode(address(account), DESTINATION, 0, keccak256(data), DEFAULT_POLICY_ID),
+            salt: salt
+        });
+
+        // Call: consume the shared nonce through either reject or execute first, then replay it through the opposite
+        // entry point.
+        if (rejectFirst) {
+            vm.prank(GUARDIAN);
+            organization.rejectAccountTransaction({
+                account: address(account),
+                to: DESTINATION,
+                value: 0,
+                data: data,
+                salt: salt,
+                expirationTimestamp: expiration,
+                policyId: DEFAULT_POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: rejectionSignature,
+                proofs: proofs
+            });
+
+            vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+            vm.prank(GUARDIAN);
+            organization.executeAccountTransaction({
+                account: address(account),
+                to: DESTINATION,
+                value: 0,
+                data: data,
+                salt: salt,
+                expirationTimestamp: expiration,
+                policyId: DEFAULT_POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: bytes(""),
+                proofs: proofs
+            });
+        } else {
+            vm.prank(GUARDIAN);
+            organization.executeAccountTransaction({
+                account: address(account),
+                to: DESTINATION,
+                value: 0,
+                data: data,
+                salt: salt,
+                expirationTimestamp: expiration,
+                policyId: DEFAULT_POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: bytes(""),
+                proofs: proofs
+            });
+
+            vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+            vm.prank(GUARDIAN);
+            organization.rejectAccountTransaction({
+                account: address(account),
+                to: DESTINATION,
+                value: 0,
+                data: data,
+                salt: salt,
+                expirationTimestamp: expiration,
+                policyId: DEFAULT_POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: rejectionSignature,
+                proofs: proofs
+            });
+        }
+
+        // Verify: the first successful path consumes the shared nonce and the opposite path cannot replay it.
+        assertTrue(organization.getUsedNonce(nonce), "successful mixed-path use should consume the shared nonce");
+    }
+
     /// @dev Verifies random calldata produces deterministic initiator hash values.
     function testFuzz_AT_FZ_4__LOAT_CIHFP_12_computeInitiatorHash_randomDataDeterministic(
         bytes calldata data,

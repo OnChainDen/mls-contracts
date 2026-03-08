@@ -260,6 +260,12 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
         assertTrue(hashA != hashB, "hash should bind organization address");
     }
 
+    /// @dev Verifies invariant: once an account-transaction nonce is consumed, `isNonceUsed` never flips back to false.
+    function invariant_NMINV_1_consumedAccountTransactionNonceRemainsUsed() public view {
+        // Verify: the nonce consumed by the successful execution in `setUp` remains marked as used.
+        assertTrue(harness.getUsedNonce(executedNonce), "consumed account-transaction nonce should remain used");
+    }
+
     /// @dev Verifies invariant: identical account-transaction tuples do not share nonce usage across organizations.
     function invariant_NMINV_3_sameNonceValueDoesNotShareUsageAcrossOrganizations() public view {
         // Call: derive the matching account-transaction tuple on a fresh organization harness.
@@ -285,6 +291,267 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     function invariant_NMINV_4_revertedExecutionPathsDoNotConsumeNonce() public view {
         // Verify: the nonce for the reverted downstream execution in `setUp` remains unused.
         assertFalse(harness.getUsedNonce(failedExecutionNonce), "reverted execution should not consume nonce");
+    }
+
+    /// @dev Verifies `_computeInitiatorHashFromParams` remains distinct when any bound field changes.
+    function invariant_NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct() public {
+        // Setup: use the seeded account-transaction tuple from `setUp` as the baseline initiator-hash input.
+        bytes32 base = harness.computeInitiatorHashFromParamsViaLibrary(
+            address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
+        );
+
+        // Call: recompute the initiator hash while mutating exactly one bound field at a time.
+        assertTrue(
+            base
+                != secondOrganization.computeInitiatorHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "organization binding should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(uint160(address(account)) + 1),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true
+                ),
+            "account should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account),
+                    address(uint160(DESTINATION) + 1),
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true
+                ),
+            "destination should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 1, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "value should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt + 1, expiration, DEFAULT_POLICY_ID, data, true
+                ),
+            "salt should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt, expiration + 1, DEFAULT_POLICY_ID, data, true
+                ),
+            "expiration should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID + 1, data, true
+                ),
+            "policy id should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    abi.encodeWithSelector(bytes4(0x83838383), uint256(3)),
+                    true
+                ),
+            "data should change initiator hash"
+        );
+        assertTrue(
+            base
+                != harness.computeInitiatorHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, false
+                ),
+            "approval flag should change initiator hash"
+        );
+        uint256 originalChainId = block.chainid;
+        vm.chainId(originalChainId + 1);
+        bytes32 changedChainHash = harness.computeInitiatorHashFromParamsViaLibrary(
+            address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
+        );
+        vm.chainId(originalChainId);
+
+        // Verify: every bound-field mutation, including `chainId`, produces a distinct initiator hash.
+        assertTrue(base != changedChainHash, "chain id should change initiator hash");
+    }
+
+    /// @dev Verifies `_computeReviewHashFromParams` remains distinct when any bound field changes.
+    function invariant_NMATL_RHB_4_computeReviewHash_boundFieldMutationsRemainDistinct() public {
+        // Setup: use the seeded tuple and review-flow initiator signature as the baseline review-hash input.
+        bytes32 base = harness.computeReviewHashFromParamsViaLibrary(
+            address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+        );
+        bytes memory alternateInitiatorSignature = _signInitiatorTx(
+            address(harness),
+            INITIATOR_PK_2,
+            address(account),
+            DESTINATION,
+            0,
+            data,
+            usedSalt,
+            expiration,
+            DEFAULT_POLICY_ID,
+            true
+        );
+
+        // Call: recompute the review hash while mutating exactly one bound field at a time.
+        assertTrue(
+            base
+                != secondOrganization.computeReviewHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                ),
+            "organization binding should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(uint160(address(account)) + 1),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true,
+                    initiatorSig
+                ),
+            "account should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account),
+                    address(uint160(DESTINATION) + 1),
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true,
+                    initiatorSig
+                ),
+            "destination should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 1, usedSalt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+                ),
+            "value should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account),
+                    DESTINATION,
+                    0,
+                    usedSalt + 1,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true,
+                    initiatorSig
+                ),
+            "salt should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration + 1,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true,
+                    initiatorSig
+                ),
+            "expiration should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID + 1,
+                    data,
+                    true,
+                    initiatorSig
+                ),
+            "policy id should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    abi.encodeWithSelector(bytes4(0x84848484), uint256(4)),
+                    true,
+                    initiatorSig
+                ),
+            "data should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, false, initiatorSig
+                ),
+            "approval flag should change review hash"
+        );
+        assertTrue(
+            base
+                != harness.computeReviewHashFromParamsViaLibrary(
+                    address(account),
+                    DESTINATION,
+                    0,
+                    usedSalt,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    data,
+                    true,
+                    alternateInitiatorSignature
+                ),
+            "initiator signature should change review hash"
+        );
+        uint256 originalChainId = block.chainid;
+        vm.chainId(originalChainId + 1);
+        bytes32 changedChainHash = harness.computeReviewHashFromParamsViaLibrary(
+            address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true, initiatorSig
+        );
+        vm.chainId(originalChainId);
+
+        // Verify: every bound-field mutation, including `initiatorSignature` and `chainId`, produces a distinct
+        // review hash.
+        assertTrue(base != changedChainHash, "chain id should change review hash");
     }
 
     /// @dev Extracts nonce from the first `AccountTransactionExecuted` event in recorded logs.
