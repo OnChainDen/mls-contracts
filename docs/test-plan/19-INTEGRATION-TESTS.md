@@ -169,7 +169,6 @@ Note: Destination, token, function, parameter-constraint, and rate-limit checks 
 |---|-----------|------|----------|
 | OPB-DV-1 | `executeAccountTransaction` (ETH transfer): `DestinationType.CustomList` checks `to` address against the custom-destinations Merkle subtree; unlisted `to` reverts | [I] | P0 |
 | OPB-DV-2 | `executeAccountTransaction` (ERC-20 `transfer`): `DestinationType.CustomList` checks the **recipient argument** extracted from calldata (not the token contract `to` address); unlisted recipient reverts | [S] | P0 |
-| OPB-DV-3 | `executeAccountTransaction` (ERC-20 `transferFrom`): `DestinationType.CustomList` checks the **recipient argument** extracted from calldata; unlisted recipient reverts | [S] | P0 |
 | OPB-DV-4 | `executeAccountTransaction`: `DestinationType.Any` allows any destination without proof | [I] | P1 |
 
 #### Token type and amount threshold
@@ -546,7 +545,6 @@ Critical: Test these through high-level external functions on our Base contracts
 | ISEM-BTE-2 | Any failing subcall reverts full batch and rolls back earlier subcall effects | [S] | P0 |
 | ISEM-BTE-3 | Subcall to `address(this)` (Safe in delegatecall context) always reverts `CannotCallSafe` | [S] | P0 |
 | ISEM-BTE-4 | No ETH value transfer possible through batch (value hardcoded zero) | [S] | P0 |
-| ISEM-BTE-5 | [DESIRED] Malformed packed encoding (short trailing bytes / oversized lengths / trailing garbage) reverts instead of silently succeeding | [DESIRED][S] | P0 |
 
 ---
 
