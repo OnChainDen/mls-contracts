@@ -585,7 +585,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` matches manual CREATE2 derivation and remains
     /// stable before and after deployment.
-    function test_OF_COA_7__OF_COA_8__OF_COA_9_computeOrganizationAddress_matchesManualFormulaAndDeployment() public {
+    function test_OF_COA_7__OF_COA_8__OF_COA_9_OF_COA_5_computeOrganizationAddress_matchesManualFormulaAndDeployment()
+        public
+    {
         // Setup: Build proxy init code hash and manual CREATE2 expectation for a fixed deployment tuple.
         bytes32 salt = bytes32(uint256(3004));
         InitializationParams memory params = _defaultInitializationParams();
