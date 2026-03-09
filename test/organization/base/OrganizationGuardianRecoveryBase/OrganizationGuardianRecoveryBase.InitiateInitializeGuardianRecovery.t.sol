@@ -103,9 +103,11 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         harness.initiateInitializeGuardianRecovery(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK, auth);
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` initiate op-type/data
-    /// binding with approval=true delegates and writes pending state.
-    function test_OGRB_IIGR_4__OGRB_IIGR_5__OGRB_IIGR_6__OGRB_IIGR_7_approvalFlowBindsOpDataAndDelegates() public {
+    /// @dev Verifies deferred guardian-recovery initialization consumes the correct initiate nonce and stages the
+    /// pending tuple that later finalization will commit. [OREC-DRI-1]
+    function test_OGRB_IIGR_4__OGRB_IIGR_5__OGRB_IIGR_6__OGRB_IIGR_7__OREC_DRI_1_approvalFlowBindsOpDataAndDelegates()
+        public
+    {
         // Setup: start from clean recovery state, set admin/member threshold, and prepare signed admin auth.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -153,9 +155,9 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         );
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` downstream revert rolls back
-    /// nonce and same signed request succeeds after state fix.
-    function test_OGRB_IIGR_8_downstreamRevert_rollsBackNonceAndRetrySucceeds() public {
+    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` fails closed once guardian
+    /// recovery is already configured and does not burn the signed nonce. [OREC-DRI-5]
+    function test_OGRB_IIGR_8__OREC_DRI_5_downstreamRevert_rollsBackNonceAndRetrySucceeds() public {
         // Setup: set admin/member threshold and prepare signed admin auth.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth, bytes memory operationData) = _buildInitiateInitializeGuardianRecoveryAuth({
@@ -381,9 +383,9 @@ contract OrganizationGuardianRecoveryBaseInitiateInitializeGuardianRecoveryTest 
         );
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateInitializeGuardianRecovery` can re-initiate identical
-    /// params with a new salt after cancellation.
-    function test_NMGRB_IGR_2_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation()
+    /// @dev Verifies cancelled deferred guardian-recovery initialization leaves the mechanism re-initiable with a new
+    /// auth salt for the same tuple. [OREC-DRI-2]
+    function test_NMGRB_IGR_2__OREC_DRI_2_initiateInitializeGuardianRecovery_sameParamsDifferentSalts_canSucceedAcrossReinitiation()
         public
     {
         // Setup: reset storage, configure one-admin auth, and prepare two initiate salts around an intermediate

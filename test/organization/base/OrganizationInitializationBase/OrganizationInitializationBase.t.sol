@@ -18,8 +18,8 @@ import {InitializationParams} from "types/CommonTypes.sol";
  */
 contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationInitializationBase.initialize` rejects non-deployer callers on an uninitialized
-    /// proxy.
-    function test_OIB_INIT_1_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer() public {
+    /// proxy. [OI-INIT-2]
+    function test_OIB_INIT_1__OI_INIT_2_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer() public {
         // Setup: Deploy an uninitialized proxy and prepare valid initialization params.
         vm.prank(AUTHORIZED_DEPLOYER);
         address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));
@@ -36,9 +36,9 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
         );
     }
 
-    /// @dev Verifies `OrganizationInitializationBase.initialize` succeeds for the deployer, preserves deployer storage,
-    /// and emits one initialization event.
-    function test_OIB_INIT_2__OIB_INIT_6__OIB_VIEW_1__OIB_VIEW_2__OIB_VIEW_3__OIB_VIEW_4__OIB_VIEW_5__CFI_FLOW_6_validInitialize_setsStateAndEmitsOneInitializedEvent()
+    /// @dev Verifies `OrganizationInitializationBase.initialize` succeeds for the deployer, preserves deployer
+    /// storage, transitions initialized state, and emits one initialization event. [OI-INIT-1, OI-GDI-1]
+    function test_OIB_INIT_2__OIB_INIT_6__OIB_VIEW_1__OIB_VIEW_2__OIB_VIEW_3__OIB_VIEW_4__OIB_VIEW_5__CFI_FLOW_6__OI_INIT_1__OI_GDI_1_validInitialize_setsStateAndEmitsOneInitializedEvent()
         public
     {
         // Setup: Deploy a proxy, prepare valid params, assert pre-init views, and begin log recording.
@@ -67,8 +67,8 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies initialize guards for direct implementation calls, failed-init retry behavior, and post-success
-    /// reinitialization attempts.
-    function test_OIB_INIT_3__OIB_INIT_4__OIB_INIT_5__OIB_VIEW_6__CFI_FLOW_4__CFI_FLOW_5_reinitAndDirectImplementationPathsRevertAsExpected()
+    /// reinitialization attempts. [OI-INIT-3, OI-INIT-4, OI-INIT-5]
+    function test_OIB_INIT_3__OIB_INIT_4__OIB_INIT_5__OIB_VIEW_6__CFI_FLOW_4__CFI_FLOW_5__OI_INIT_3__OI_INIT_4__OI_INIT_5_reinitAndDirectImplementationPathsRevertAsExpected()
         public
     {
         // Setup: Build one valid and one invalid initialization payload.

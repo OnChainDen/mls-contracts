@@ -5,6 +5,7 @@ pragma solidity 0.8.33;
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import {IAccount} from "interfaces/IAccount.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {AccountCallRecorderTarget, AccountNativeReceiver} from "test/account/AccountImplementationMocks.sol";
 import {AccountImplementationSuiteBase} from "test/account/AccountImplementationSuiteBase.sol";
 
@@ -15,7 +16,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive accepts ETH from arbitrary senders.
      */
-    function test_AI_RCV_1_receive_acceptsEthFromAnyone() public {
+    function test_AI_RCV_1__OAT_AI_4_receive_acceptsEthFromAnyone() public {
         // Setup: fund a random sender and define transfer value.
         address sender = address(0xA101);
         uint256 value = 0.7 ether;
@@ -33,7 +34,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive emits `MLSWalletAccountNativeTokenReceived` with sender/value.
      */
-    function test_AI_RCV_2_receive_emitsNativeTokenReceivedEvent() public {
+    function test_AI_RCV_2__OAT_AI_4_receive_emitsNativeTokenReceivedEvent() public {
         // Setup: fund sender and configure event expectation.
         address sender = address(0xA102);
         uint256 value = 0.3 ether;
@@ -69,7 +70,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    function test_AI_ET_1_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_ET_1__OAT_AI_1_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization() public {
         // Setup: deploy target call receiver.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
 
@@ -102,7 +103,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies failed downstream call reverts with `TransactionExecutionFailed`.
      */
-    function test_AI_ET_4_executeTransaction_failedCall_revertsTransactionExecutionFailed() public {
+    function test_AI_ET_4__OAT_AI_2_executeTransaction_failedCall_revertsTransactionExecutionFailed() public {
         // Setup: deploy target and build reverting calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);
@@ -200,7 +201,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature delegates `(account,hash,signature)` to organization contract.
      */
-    function test_AI_IVS_1_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
+    function test_AI_IVS_1__OAT_AI_5_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
         // Setup: configure beacon mock to enforce exact delegated call arguments.
         bytes32 hash = keccak256("account-signature-delegate");
         bytes memory signature = hex"0102030405";
@@ -217,7 +218,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns ERC-1271 magic value when organization approves.
      */
-    function test_AI_IVS_2_isValidSignature_organizationApproves_returnsMagicValue() public {
+    function test_AI_IVS_2__OAT_AI_5_isValidSignature_organizationApproves_returnsMagicValue() public {
         // Setup: configure organization to approve.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);
@@ -232,7 +233,7 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns non-magic value when organization rejects.
      */
-    function test_AI_IVS_3_isValidSignature_organizationRejects_returnsNonMagicValue() public {
+    function test_AI_IVS_3__OAT_AI_5_isValidSignature_organizationRejects_returnsNonMagicValue() public {
         // Setup: configure organization to reject.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(0xffffffff);
@@ -242,6 +243,35 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
 
         // Verify: account returns rejection code from organization.
         assertEq(result, bytes4(0xffffffff), "rejected signature should return non-magic value");
+    }
+
+    /**
+     * @dev Verifies direct calls on the implementation contract fail `onlyOrganization` because its own storage is
+     * unset.
+     */
+    function test_OAT_AI_6_executeTransaction_calledOnImplementationContract_revertsOnlyOrganization() public {
+        // Setup: deploy a deterministic target for the direct implementation call.
+        AccountCallRecorderTarget target = new AccountCallRecorderTarget();
+        bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("direct-impl"), 88);
+
+        vm.expectRevert(IAccount.OnlyOrganization.selector);
+        vm.prank(address(beacon));
+        // Call: invoke `executeTransaction` on the implementation contract instead of the proxy account.
+        implementation.executeTransaction(address(target), 0, payload, 17, 29);
+
+        // Verify: direct implementation calls fail closed because the implementation has no bound organization.
+    }
+
+    /**
+     * @dev Verifies direct `isValidSignature` calls on the implementation contract fail closed and return invalid.
+     */
+    function test_OAT_AI_7_isValidSignature_calledOnImplementationContract_returnsInvalidValue() public view {
+        // Call: validate an arbitrary signature directly against the implementation contract.
+        bytes4 result = implementation.isValidSignature(keccak256("direct-implementation-signature"), hex"CAFE");
+
+        // Verify: unset organization storage causes the direct implementation path to return the ERC-1271 invalid
+        // value.
+        assertEq(result, SignatureUtils.ERC1271_INVALID_VALUE, "direct implementation path should fail closed");
     }
 
     /**

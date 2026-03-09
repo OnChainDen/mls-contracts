@@ -24,8 +24,8 @@ import {GroupModification, GroupModificationType, InitializationParams} from "ty
 contract LibOrganizationInitializationTest is InitializationSuiteBase {
     /// @dev Verifies `LibOrganizationInitialization.initialize` happy path configures
     /// members/admins/groups/guardian/recovery state, emits `OrganizationInitialized`, and accepts the min-boundary
-    /// guardian recovery timelock.
-    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4__LOI_REC_5_initializeLibrary_happyPathConfiguresState()
+    /// guardian recovery timelock. [OI-INIT-8]
+    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4__LOI_REC_5__OI_INIT_8_initializeLibrary_happyPathConfiguresState()
         public
     {
         // Setup: Deploy a library harness, build valid params, and set the expected initialization event payload.
@@ -98,8 +98,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` handles max-boundary timelocks, duplicate members,
-    /// empty groups, and deferred recovery configuration.
-    function test_LOI_HPS_8__LOI_HPS_10__LOI_HPS_11__LOI_REC_6__LOI_REC_8__LOI_REC_9__LOI_REC_10__LOI_REC_11_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
+    /// empty groups, and deferred recovery configuration. [OI-INIT-7]
+    function test_LOI_HPS_8__LOI_HPS_10__LOI_HPS_11__LOI_REC_6__LOI_REC_8__LOI_REC_9__LOI_REC_10__LOI_REC_11__OI_INIT_7_initializeLibrary_boundaryAndDeferredRecoveryBehaviors()
         public
     {
         // Setup: Build one params set with duplicate members/max timelocks/empty groups and one deferred-recovery
@@ -164,8 +164,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` reverts for invalid
-    /// member/admin/guardian/implementation/timelock inputs.
-    function test_LOI_VAL_1__LOI_VAL_2__LOI_VAL_3__LOI_VAL_4__LOI_VAL_5__LOI_VAL_6__LOI_VAL_7__LOI_VAL_8__LOI_VAL_9__LOI_VAL_10__LOI_VAL_11__LOI_VAL_12__LOI_VAL_13__LOI_VAL_14_initializeLibrary_validationReverts()
+    /// member/admin/guardian/implementation/timelock inputs. [OI-INIT-6]
+    function test_LOI_VAL_1__LOI_VAL_2__LOI_VAL_3__LOI_VAL_4__LOI_VAL_5__LOI_VAL_6__LOI_VAL_7__LOI_VAL_8__LOI_VAL_9__LOI_VAL_10__LOI_VAL_11__LOI_VAL_12__LOI_VAL_13__LOI_VAL_14__OI_INIT_6_initializeLibrary_validationReverts()
         public
     {
         // Setup: Prepare reusable params and instantiate a fresh harness per validation failure branch.
@@ -470,8 +470,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies library deployer/view helpers plus guardian-revert atomicity, event suppression on revert, and
-    /// one-way initialization transition.
-    function test_LOI_AOG_1__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5_initializeLibrary_atomicityAndViewGuards()
+    /// one-way initialization transition. [OI-INIT-6, OI-INIT-9]
+    function test_LOI_AOG_1__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5__OI_INIT_6__OI_INIT_9_initializeLibrary_atomicityAndViewGuards()
         public
     {
         // Setup: Deploy a harness and seed deployer storage for enforce-only-deployer checks.

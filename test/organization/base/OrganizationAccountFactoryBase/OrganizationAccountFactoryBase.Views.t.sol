@@ -15,7 +15,7 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
  */
 contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBaseSuiteBase {
     /// @dev Verifies `computeAccountAddress` returns the same value as direct library-wrapper computation.
-    function test_OAFB_CAA_1_computeAccountAddress_delegatesToLibraryAndReturnsSameResult() public view {
+    function test_OAFB_CAA_1__OAF_CAA_1_computeAccountAddress_delegatesToLibraryAndReturnsSameResult() public view {
         bytes32 create2Salt = bytes32(uint256(7017));
 
         // Setup: choose deterministic CREATE2 salt for both view paths.
@@ -94,7 +94,7 @@ contract OrganizationAccountFactoryBaseViewsTest is OrganizationAccountFactoryBa
     }
 
     /// @dev Verifies OAFB-IMP-2: `implementation()` reverts `AccountImplementationNotSet` when unset.
-    function test_OAFB_IMP_2_implementation_whenUnset_revertsAccountImplementationNotSet() public {
+    function test_OAFB_IMP_2__OAF_SAI_4_implementation_whenUnset_revertsAccountImplementationNotSet() public {
         // Setup: leave account implementation storage as zero.
 
         // Verify: unset implementation should revert with canonical organization error.

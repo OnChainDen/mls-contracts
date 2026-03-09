@@ -138,8 +138,9 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.getUsedNonce(nonceB), "different pending payload nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-CGU-6: successful base call delegates to library and clears pending state.
-    function test_OGB_CGU_6_delegatesToLibrary_andClearsPendingState() public {
+    /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` clears a pending normal guardian update before
+    /// finalization. [OGU-GU-4]
+    function test_OGB_CGU_6__OGU_GU_4_delegatesToLibrary_andClearsPendingState() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3904);
@@ -185,8 +186,11 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Verifies OGB-CGU-8: signatures for a different operation type cannot authorize cancellation.
-    function test_OGB_CGU_8__NMGUB_GUF_7_differentOperationTypeSignatures_cannotAuthorizeCancellation() public {
+    /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` rejects initiate-stage signatures reused during
+    /// cancel-stage authorization. [OGU-GU-2]
+    function test_OGB_CGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeCancellation()
+        public
+    {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3906);
@@ -312,5 +316,69 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
         assertEq(harness.pendingGuardian(), address(0), "pending guardian should clear after the second cancel");
         assertEq(harness.pendingGuardianUpdateTimestamp(), 0, "pending timestamp should clear after the second cancel");
         assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "ready flag should remain cleared after re-cancel");
+    }
+
+    /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel a guardian update after finalize but
+    /// before accept, restoring the lifecycle to a fresh re-initiable state. [OGU-GU-4]
+    function test_OGU_GU_4_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate() public {
+        // Setup: stage a normal guardian update through finalize so the pending guardian is ready for acceptance.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+        (AdminAuthParams memory initiateAuth,) = _buildInitiateGuardianUpdateAuth({
+            newGuardian: NEW_GUARDIAN_A,
+            salt: 3_201,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.initiateGuardianUpdate(NEW_GUARDIAN_A, initiateAuth);
+
+        vm.warp(block.timestamp + ADMIN_OPERATION_TIMELOCK);
+        (AdminAuthParams memory finalizeAuth,) = _buildFinalizeGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 3_202,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        harness.finalizeGuardianUpdate(finalizeAuth);
+
+        (AdminAuthParams memory cancelAuth,) = _buildCancelGuardianUpdateAuth({
+            pendingGuardian: NEW_GUARDIAN_A,
+            salt: 3_203,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory reinitiateAuth,) = _buildInitiateGuardianUpdateAuth({
+            newGuardian: NEW_GUARDIAN_B,
+            salt: 3_204,
+            expiration: type(uint256).max,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: cancel after finalize but before accept, then immediately start a fresh guardian-update lifecycle.
+        vm.prank(GUARDIAN);
+        harness.cancelGuardianUpdate(cancelAuth);
+
+        vm.prank(GUARDIAN);
+        harness.initiateGuardianUpdate(NEW_GUARDIAN_B, reinitiateAuth);
+
+        // Verify: the finalized-but-unaccepted state is cleared by cancel, and a fresh pending guardian can be staged
+        // right away with a new auth salt.
+        uint256 pendingTimestamp = harness.pendingGuardianUpdateTimestamp();
+        assertEq(harness.pendingGuardian(), NEW_GUARDIAN_B, "fresh initiate should stage the new guardian");
+        assertGt(pendingTimestamp, block.timestamp, "fresh initiate should stage a future pending timestamp");
+        assertEq(
+            pendingTimestamp - block.timestamp,
+            guardianStateHarness.getAdminOperationTimelockDurationSeconds(),
+            "fresh initiate should offset the pending timestamp by the admin timelock"
+        );
+        assertFalse(harness.isGuardianUpdateReadyForAcceptance(), "fresh initiate should reset ready-for-acceptance");
+        assertEq(harness.guardian(), GUARDIAN, "guardian should remain unchanged until a later accept step");
     }
 }

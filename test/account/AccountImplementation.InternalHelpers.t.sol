@@ -147,7 +147,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies execution uses CALL semantics (callee sees account as `msg.sender`, not external caller).
      */
-    function test_AI_EXE_9_executeInternal_usesCallSemantics_notDelegatecallSemantics() public {
+    function test_AI_EXE_9__OAT_AI_3_executeInternal_usesCallSemantics_notDelegatecallSemantics() public {
         // Setup: deploy target and encode payload.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("caller"), uint256(123));

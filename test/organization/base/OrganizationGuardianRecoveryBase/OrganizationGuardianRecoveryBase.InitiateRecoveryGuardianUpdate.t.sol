@@ -14,9 +14,9 @@ import {
 contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
     OrganizationGuardianRecoveryBaseSuiteBase
 {
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.initiateRecoveryGuardianUpdate` reverts when called by a
-    /// non-recovery address.
-    function test_OGRB_IRGU_1_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
+    /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before any pending recovery state
+    /// is written. [OREC-GRF-2]
+    function test_OGRB_IRGU_1__OREC_GRF_2_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         address caller = address(0xCA11);
 

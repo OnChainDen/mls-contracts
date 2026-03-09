@@ -187,8 +187,11 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Verifies OGB-FGU-8: signatures for a different operation type cannot authorize finalization.
-    function test_OGB_FGU_8__NMGUB_GUF_7_differentOperationTypeSignatures_cannotAuthorizeFinalization() public {
+    /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` rejects initiate-stage signatures reused
+    /// during finalize-stage authorization. [OGU-GU-2]
+    function test_OGB_FGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeFinalization()
+        public
+    {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2906);
@@ -246,8 +249,9 @@ contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(nonceB), "mutated pending payload nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-FGU-10: timelock revert rolls back nonce and same signed finalize request can be retried.
-    function test_OGB_FGU_10__NMGUB_GUF_10_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
+    /// @dev Verifies `OrganizationGuardianBase.finalizeGuardianUpdate` reverts before the admin timelock expires and
+    /// succeeds at the exact boundary without requiring new signatures. [OGU-GU-3]
+    function test_OGB_FGU_10__NMGUB_GUF_10__OGU_GU_3_timelockRevert_rollsBackNonceAndAllowsRetry_A() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 2908);

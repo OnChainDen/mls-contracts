@@ -13,6 +13,28 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationAdminBase.rejectAdminOperation`.
  */
 contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteBase {
+    /**
+     * @dev Recovers the EOA signer from a single packed `v|r|s` signature for the provided hash.
+     * @param signature Packed 65-byte signature in `v|r|s` format
+     * @param hash Operation hash used during verification
+     * @return signer Recovered signer address, or `address(0)` if recovery fails
+     */
+    function _recoverEOASigner(bytes memory signature, bytes32 hash) internal pure returns (address signer) {
+        require(signature.length == 65, "invalid signature length");
+
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+
+        assembly {
+            v := byte(0, mload(add(signature, 0x20)))
+            r := mload(add(signature, 0x21))
+            s := mload(add(signature, 0x41))
+        }
+
+        signer = ecrecover(hash, v, r, s);
+    }
+
     /// @dev Verifies that a non-guardian caller reverts via the `onlyGuardian` modifier.
     function test_rejectAdminOperation_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
@@ -26,8 +48,8 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         harness.rejectAdminOperation(OperationType.Upgrade, bytes("payload"), auth);
     }
 
-    /// @dev Verifies that a valid rejection succeeds and burns the nonce.
-    function test_NMADB_RAO_1_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` burns the operation nonce after a valid rejection.
+    function test_NMADB_RAO_1__OAB_RAO_1_rejectAdminOperation_validRejection_succeedsAndBurnsNonce() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -88,8 +110,8 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         harness.rejectAdminOperation(operationType, operationData, auth);
     }
 
-    /// @dev Verifies that approval signatures cannot be reused to authorize a rejection.
-    function test_rejectAdminOperation_approvalSignaturesCannotAuthorizeRejection() public {
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects signatures collected for the approval domain.
+    function test_OAB_RAO_3_rejectAdminOperation_approvalSignaturesCannotAuthorizeRejection() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -107,9 +129,18 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: confirm this branch reverts for the intended failure condition.
+        bytes32 rejectionOperationHash = harness.getAdminOperationHash({
+            operationType: operationType,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expiration,
+            isApproval: false
+        });
+        address recoveredSigner = _recoverEOASigner(approvalAuth.signatures, rejectionOperationHash);
 
-        vm.expectRevert();
+        // Verify: using approval-domain signatures for the rejection path should fail live signer validation and leave
+        // the nonce unused.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, recoveredSigner));
         vm.prank(GUARDIAN);
         // Call: invoke `rejectAdminOperation` for the prepared operation tuple and rejection auth params.
         harness.rejectAdminOperation(operationType, operationData, approvalAuth);
@@ -215,8 +246,9 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         harness.rejectAdminOperation(operationType, operationData, auth);
     }
 
-    /// @dev Verifies that rejecting first and then executing the same payload fails due to the consumed nonce.
-    function test_NMADB_RAO_4_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` blocks later execution of the same payload by
+    /// consuming its nonce.
+    function test_NMADB_RAO_4__OAB_RAO_1_rejectThenExecuteSamePayload_executionFailsByUsedNonce() public {
         address newAdmin = address(0x210);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -264,8 +296,9 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
     }
 
-    /// @dev Verifies that executing first and then rejecting the same payload fails due to the consumed nonce.
-    function test_NMADB_RAO_5_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
+    /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` cannot reject a payload after approval execution has
+    /// already consumed its nonce.
+    function test_NMADB_RAO_5__OAB_RAO_2_executeThenRejectSamePayload_rejectionFailsByUsedNonce() public {
         address newAdmin = address(0x211);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -394,8 +427,9 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
             authParams: approvalAuth
         });
 
-        uint256 wrongNonce =
-            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: wrongOperationData, salt: salt});
+        uint256 wrongNonce = harness.computeNonce({
+            operationType: OperationType.ModifyAdmins, operationData: wrongOperationData, salt: salt
+        });
         uint256 intendedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: intendedOperationData, salt: salt
         });
@@ -424,24 +458,29 @@ contract OrganizationAdminBaseRejectOperationTest is OrganizationAdminBaseSuiteB
         });
 
         // Call: attempt to reject an account-transaction nonce through the admin-reject entry point.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdmin.InvalidAdminOperationType.selector, OperationType.AccountTransaction
+            )
+        );
         vm.prank(GUARDIAN);
         harness.rejectAdminOperation(OperationType.AccountTransaction, operationData, auth);
 
-        uint256 nonce =
-            harness.computeNonce({operationType: OperationType.AccountTransaction, operationData: operationData, salt: salt});
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.AccountTransaction, operationData: operationData, salt: salt
+        });
         // Verify: the unsupported account-transaction domain leaves its nonce unused.
         assertFalse(harness.getUsedNonce(nonce), "account-transaction nonce should remain unused");
     }
 
     /// @dev Verifies `OrganizationAdminBase.rejectAdminOperation` rejects `OperationType.AccountTransactionRejection`.
-    function test_NMADB_RAO_7_rejectAdminOperation_accountTransactionRejectionType_revertsAndDoesNotBurnNonce()
-        public
-    {
-        bytes memory operationData = abi.encode(address(0xAB3), address(0xAB4), uint256(2), keccak256("reject"), uint256(10));
+    function test_NMADB_RAO_7_rejectAdminOperation_accountTransactionRejectionType_revertsAndDoesNotBurnNonce() public {
+        bytes memory operationData =
+            abi.encode(address(0xAB3), address(0xAB4), uint256(2), keccak256("reject"), uint256(10));
         uint256 salt = 2031;
 
-        // Setup: configure one-admin auth signed over the account-transaction rejection domain that admin reject must reject.
+        // Setup: configure one-admin auth signed over the account-transaction rejection domain that admin reject must
+        // reject.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         AdminAuthParams memory auth = _buildAdminAuthParamsForEOA({
             operationType: OperationType.AccountTransactionRejection,

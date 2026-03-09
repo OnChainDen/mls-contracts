@@ -10,9 +10,9 @@ import {
  * @dev Unit tests for `OrganizationGuardianRecoveryBase.acceptGuardianRecovery`.
  */
 contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is OrganizationGuardianRecoveryBaseSuiteBase {
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.acceptGuardianRecovery` reverts when called by a non-pending
-    /// guardian.
-    function test_OGRB_AGR_1_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian() public {
+    /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before a staged recovery guardian
+    /// can be accepted. [OREC-GRF-2]
+    function test_OGRB_AGR_1__OREC_GRF_2_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 
@@ -45,6 +45,84 @@ contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is Organizat
         );
         assertFalse(
             harness.getGuardianRecoveryState().isUpdateReadyForAcceptance, "ready-for-acceptance flag should clear"
+        );
+    }
+
+    /// @dev Verifies a configured recovery address can rotate the guardian after the recovery timelock without any
+    /// participation from the current guardian. [OREC-GRF-1]
+    function test_OREC_GRF_1_recoveryAddressRotatesGuardianAfterTimelockWithoutCurrentGuardianParticipation() public {
+        // Setup: start from the suite baseline where guardian recovery is configured and no recovery update is
+        // pending.
+        address originalGuardian = recoveryStateHarness.getGuardianStorage();
+
+        // Call: initiate and finalize as the recovery address, then accept as the pending guardian after the recovery
+        // timelock elapses.
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
+
+        vm.warp(harness.getGuardianRecoveryState().pendingGuardianTimestamp);
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.finalizeRecoveryGuardianUpdate();
+
+        vm.prank(NEW_GUARDIAN_A);
+        harness.acceptGuardianRecovery();
+
+        // Verify: the guardian rotates away from the original guardian and the recovery-specific pending state fully
+        // clears.
+        assertEq(originalGuardian, GUARDIAN, "baseline guardian should start as the configured guardian fixture");
+        assertEq(recoveryStateHarness.getGuardianStorage(), NEW_GUARDIAN_A, "guardian should rotate via recovery flow");
+        assertEq(harness.getGuardianRecoveryState().pendingGuardian, address(0), "pending guardian should clear");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardianTimestamp,
+            0,
+            "pending recovery timelock timestamp should clear"
+        );
+        assertFalse(
+            harness.getGuardianRecoveryState().isUpdateReadyForAcceptance,
+            "ready-for-acceptance flag should clear after accept"
+        );
+    }
+
+    /// @dev Verifies normal guardian updates and guardian-recovery updates can coexist without corrupting each
+    /// other's pending state. [OREC-GRF-4]
+    function test_OREC_GRF_4_recoveryAndNormalGuardianUpdateFlowsRemainIsolated() public {
+        // Setup: stage a normal guardian update directly in base guardian storage, then start a separate recovery
+        // guardian update through the recovery-only entrypoint.
+        recoveryStateHarness.setPendingGuardian(NEW_GUARDIAN_B);
+        recoveryStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp + 5 days);
+        recoveryStateHarness.setIsGuardianUpdateReadyForAcceptance(false);
+
+        uint256 normalPendingTimestamp = recoveryStateHarness.getPendingGuardianUpdateTimestampStorage();
+
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
+
+        // Call: complete the recovery-specific guardian rotation while leaving the normal update untouched.
+        vm.warp(harness.getGuardianRecoveryState().pendingGuardianTimestamp);
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.finalizeRecoveryGuardianUpdate();
+
+        vm.prank(NEW_GUARDIAN_A);
+        harness.acceptGuardianRecovery();
+
+        // Verify: recovery flow rotates the active guardian and clears only recovery-specific pending state; the
+        // normal pending update tuple remains intact.
+        assertEq(recoveryStateHarness.getGuardianStorage(), NEW_GUARDIAN_A, "recovery accept should rotate guardian");
+        assertEq(recoveryStateHarness.getPendingGuardianStorage(), NEW_GUARDIAN_B, "normal pending guardian persists");
+        assertEq(
+            recoveryStateHarness.getPendingGuardianUpdateTimestampStorage(),
+            normalPendingTimestamp,
+            "normal pending timestamp should be preserved"
+        );
+        assertFalse(
+            recoveryStateHarness.getIsGuardianUpdateReadyForAcceptanceStorage(),
+            "normal ready-for-acceptance flag should be preserved"
+        );
+        assertEq(harness.getGuardianRecoveryState().pendingGuardian, address(0), "recovery pending guardian clears");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardianTimestamp,
+            0,
+            "recovery pending timestamp clears"
         );
     }
 }

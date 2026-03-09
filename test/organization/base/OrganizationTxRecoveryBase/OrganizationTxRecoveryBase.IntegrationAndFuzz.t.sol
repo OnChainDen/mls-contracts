@@ -50,8 +50,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         (success,) = address(harness).call(payload);
     }
 
-    /// @dev Verifies TXR-INT-1: deferred init lifecycle reaches successful recovery execution.
-    function test_TXR_INT_1_deferredSetupLifecycle_fullFlow_succeeds() public {
+    /// @dev Verifies deferred tx/ERC1271 recovery initialization can be finalized after the admin timelock and then
+    /// execute a recovery transaction once the recovery mechanism is enabled. [OREC-DRI-1, OREC-TRF-3]
+    function test_TXR_INT_1__OREC_DRI_1__OREC_TRF_3_deferredSetupLifecycle_fullFlow_succeeds() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
 
@@ -126,8 +127,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         assertTrue(harness.getTxRecoveryState().isEnabled, "recovery should end enabled");
     }
 
-    /// @dev Verifies TXR-INT-3: disabling while enable is pending blocks later finalize.
-    function test_TXR_INT_3_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails() public {
+    /// @dev Verifies tx/ERC1271 recovery disable is immediate, clears any pending enable state, and prevents the
+    /// stale enable-finalize from succeeding later. [OREC-TRF-1]
+    function test_TXR_INT_3__OREC_TRF_1_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails() public {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();
@@ -229,8 +231,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         // Verify
     }
 
-    /// @dev Verifies TXR-INT-7: stale admin signatures for deferred finalize/cancel fail after pending values change.
-    function test_TXR_INT_7_staleAdminSignatures_pendingValuesChanged_revert() public {
+    /// @dev Verifies stale deferred-init admin signatures fail once the pending tx/ERC1271 recovery tuple changes.
+    /// [OREC-DRI-4]
+    function test_TXR_INT_7__OREC_DRI_4_staleAdminSignatures_pendingValuesChanged_revert() public {
         // Setup
         address initialPendingRecovery = address(0xF100);
         address mutatedPendingRecovery = address(0xF200);
@@ -279,8 +282,11 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
         harness.cancelInitializeTransactionAndERC1271Recovery(staleCancelAuth);
     }
 
-    /// @dev Verifies TXR-INT-8: recovery execution bypasses guardian/policy paths but still enforces account ownership.
-    function test_TXR_INT_8_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment() public {
+    /// @dev Verifies recovery execution bypasses guardian and policy checks but still requires the target account to
+    /// be deployed by this organization. [OREC-TRF-3, OREC-TRF-4]
+    function test_TXR_INT_8__OREC_TRF_3__OREC_TRF_4_recoveryExecution_bypassesGuardianPolicyButEnforcesAccountDeployment()
+        public
+    {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction deployedAccount =

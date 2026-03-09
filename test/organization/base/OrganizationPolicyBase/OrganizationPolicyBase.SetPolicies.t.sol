@@ -207,9 +207,9 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         bytes memory operationDataB = abi.encode(newRoot, keccak256(bytes(ipfsCidB)));
 
         // Call: compute nonces for all three policy payload variants under the same admin-auth salt.
-        uint256 nonceA = _computeSetPoliciesNonce(operationDataA, 81051);
-        uint256 nonceASameBytes = _computeSetPoliciesNonce(operationDataASameBytes, 81051);
-        uint256 nonceB = _computeSetPoliciesNonce(operationDataB, 81051);
+        uint256 nonceA = _computeSetPoliciesNonce(operationDataA, 81_051);
+        uint256 nonceASameBytes = _computeSetPoliciesNonce(operationDataASameBytes, 81_051);
+        uint256 nonceB = _computeSetPoliciesNonce(operationDataB, 81_051);
 
         // Verify: matching CID bytes preserve the nonce exactly, while a different CID changes the nonce even when the
         // policies root stays fixed.
@@ -228,7 +228,7 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildSetPoliciesAuth({
             newPoliciesRoot: newRoot,
             ipfsCid: ipfsCid,
-            salt: 81052,
+            salt: 81_052,
             expirationTimestamp: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
@@ -236,14 +236,14 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         (AdminAuthParams memory secondAuth,) = _buildSetPoliciesAuth({
             newPoliciesRoot: newRoot,
             ipfsCid: ipfsCid,
-            salt: 81053,
+            salt: 81_053,
             expirationTimestamp: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        uint256 firstNonce = _computeSetPoliciesNonce(operationData, 81052);
-        uint256 secondNonce = _computeSetPoliciesNonce(operationData, 81053);
+        uint256 firstNonce = _computeSetPoliciesNonce(operationData, 81_052);
+        uint256 secondNonce = _computeSetPoliciesNonce(operationData, 81_053);
 
         // Call: execute the same policy update twice using different admin-auth salts.
         vm.prank(GUARDIAN);
@@ -297,8 +297,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         assertEq(harness.getPoliciesRoot(), bytes32(0), "state should remain unchanged on tampering");
     }
 
-    /// @dev Verifies that tampering `ipfsCid` after signing invalidates auth and reverts.
-    function test_setPolicies_ipfsCidTamperingAfterSigning_invalidatesAuthAndReverts() public {
+    /// @dev Verifies `setPolicies` binds the signed IPFS CID hash and rejects CID tampering. [OPB-SP-3]
+    function test_OPB_SP_3_setPolicies_ipfsCidTamperingAfterSigning_invalidatesAuthAndReverts() public {
         // Setup: assemble inputs expected to hit the guarded failure path for tampering `ipfsCid` after signing
         // invalidates auth and reverts.
         bytes32 newRoot = keccak256("opb-set-7-root");
@@ -412,8 +412,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         assertTrue(harness.getUsedNonce(nonce), "successful retry should consume the nonce");
     }
 
-    /// @dev Verifies that after clearing root to zero, old proof reads must revert (no stale-root reads).
-    function test_setPolicies_transitionClearRoot_oldProofReadReverts() public {
+    /// @dev Verifies clearing the policy root invalidates signatures collected under the old policy set. [OPB-PGM-1]
+    function test_OPB_PGM_1_setPolicies_transitionClearRoot_oldProofReadReverts() public {
         // Setup: assemble inputs expected to hit the guarded failure path for after clearing root to zero, old proof
         // reads must revert (no stale-root reads).
         Policy memory policy = _buildRateLimitedPolicy();
@@ -490,8 +490,9 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         assertEq(harness.policiesRoot(), root2, "second update should be reflected");
     }
 
-    /// @dev Verifies that valid policy proof returns current usage from rate-limit storage.
-    function test_getPolicyUsage_validProof_returnsCurrentTrackedUsage() public {
+    /// @dev Verifies a successful `setPolicies` update is immediately usable by `getPolicyUsage`. [OPB-SP-1,
+    /// OPB-GPU-1]
+    function test_OPB_SP_1__OPB_GPU_1_getPolicyUsage_validProof_returnsCurrentTrackedUsage() public {
         // Setup: configure a valid fixture for valid policy proof returns current usage from rate-limit storage.
         Policy memory policy = _buildRateLimitedPolicy();
         uint256 policyId = 9201;
@@ -513,8 +514,8 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         assertEq(usage, 42, "view should return current tracked usage");
     }
 
-    /// @dev Verifies that invalid policy proof reverts with `PolicyVerificationFailed(policyId)`.
-    function test_getPolicyUsage_invalidPolicyProof_revertsPolicyVerificationFailed() public {
+    /// @dev Verifies invalid policy proofs revert `PolicyVerificationFailed`. [OPB-GPU-2]
+    function test_OPB_GPU_2_getPolicyUsage_invalidPolicyProof_revertsPolicyVerificationFailed() public {
         // Setup: assemble inputs expected to hit the guarded failure path for invalid policy proof reverts with
         // `PolicyVerificationFailed(policyId)`.
         Policy memory policy = _buildRateLimitedPolicy();

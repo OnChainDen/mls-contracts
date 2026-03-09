@@ -108,8 +108,11 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
     }
 
+    // ISEM-EOB-7
     /// @dev Verifies the authorized executor can call a guardian-only organization function through the module.
-    function test_SMI_ETE_5_authorizedExecutorCanExecuteGuardianOnlyOrganizationFunctionViaModule() public {
+    function test_SMI_ETE_5__ISEM_EOB_7_authorizedExecutorCanExecuteGuardianOnlyOrganizationFunctionViaModule()
+        public
+    {
         // Setup: build a signed `modifyMembers` call that adds one new member.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA), 101);
 
@@ -122,8 +125,11 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         assertTrue(organization.getMemberStatus(memberToAddA), "member should be added by the organization call");
     }
 
+    // ISEM-EOB-7
     /// @dev Verifies non-authorized callers cannot execute guardian-only organization functions through the module.
-    function test_SMI_ETE_6_unauthorizedCallerCannotExecuteGuardianOnlyOrganizationFunctionViaModule() public {
+    function test_SMI_ETE_6__ISEM_EOB_7_unauthorizedCallerCannotExecuteGuardianOnlyOrganizationFunctionViaModule()
+        public
+    {
         // Setup: build a signed `modifyMembers` call that would add one new member.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA), 102);
 

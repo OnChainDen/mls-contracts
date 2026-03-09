@@ -9,7 +9,7 @@ import {
     OrganizationGroupsBaseSuiteBase
 } from "test/organization/base/OrganizationGroupsBase/OrganizationGroupsBaseSuiteBase.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
-import {GroupModification, OperationType} from "types/CommonTypes.sol";
+import {GroupModification, GroupModificationType, OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Unit tests for `OrganizationGroupsBase.modifyGroups` behavior.
@@ -26,30 +26,112 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         address[] membersToRemove;
     }
 
-    /// @dev Verifies guardian + valid admin auth forwards to library and applies expected state transition.
-    function test_modifyGroups_guardianWithValidAuth_forwardsAndAppliesStateTransition() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` executes the create/update/delete lifecycle with guardian
+    /// authorization and valid admin signatures.
+    function test_OGB_MG_1_modifyGroups_guardianWithValidAuth_createUpdateDeleteLifecycle_succeeds() public {
         uint256 groupId = 7901;
 
-        // Setup: one-admin threshold-one auth configuration.
+        // Setup: configure one guardian-authorized admin plus two valid organization members so the group can be
+        // created, updated, and deleted through the base entrypoint.
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1), threshold: 1});
+
+        GroupModification[] memory createModifications =
+            _buildModificationsArray(_createModification(groupId, buildArray(admin1)));
+        GroupModification[] memory updateModifications =
+            _buildModificationsArray(_updateModification(groupId, buildArray(admin2), buildEmptyAddressArray()));
+        GroupModification[] memory deleteModifications = _buildModificationsArray(_deleteModification(groupId));
+
+        (AdminAuthParams memory createAuth,) = _buildModifyGroupsAuth({
+            modifications: createModifications,
+            salt: 3101,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory updateAuth,) = _buildModifyGroupsAuth({
+            modifications: updateModifications,
+            salt: 3102,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory deleteAuth,) = _buildModifyGroupsAuth({
+            modifications: deleteModifications,
+            salt: 3103,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: create the group, update it to add a second member, then delete it through three separately
+        // authorized base-path executions.
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(createModifications, createAuth);
+
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(updateModifications, updateAuth);
+
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(deleteModifications, deleteAuth);
+
+        // Verify: the lifecycle should leave the group inactive, while the create/update phases proved the base path
+        // accepted valid admin auth for each transition.
+        assertFalse(harness.isGroup(groupId), "group should be inactive after deletion");
+        assertFalse(harness.isGroupMember(groupId, admin1), "deleted group should not report the original member");
+        assertFalse(harness.isGroupMember(groupId, admin2), "deleted group should not report the updated member");
+    }
+
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` prevents group-id reuse after a successful deletion.
+    function test_OGB_MG_2_modifyGroups_deletedGroupCannotBeRecreated() public {
+        uint256 groupId = 7902;
+
+        // Setup: create and delete one group through valid guardian-authorized executions, then prepare a fresh
+        // signed create request for the same group id.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
-        GroupModification[] memory modifications =
+        GroupModification[] memory createModifications =
             _buildModificationsArray(_createModification(groupId, buildArray(admin1)));
+        GroupModification[] memory deleteModifications = _buildModificationsArray(_deleteModification(groupId));
 
-        (AdminAuthParams memory auth,) = _buildModifyGroupsAuth({
-            modifications: modifications,
-            salt: 3101,
+        (AdminAuthParams memory createAuth,) = _buildModifyGroupsAuth({
+            modifications: createModifications,
+            salt: 3191,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory deleteAuth,) = _buildModifyGroupsAuth({
+            modifications: deleteModifications,
+            salt: 3192,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        (AdminAuthParams memory recreateAuth, bytes memory recreateOperationData) = _buildModifyGroupsAuth({
+            modifications: createModifications,
+            salt: 3193,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
         vm.prank(GUARDIAN);
-        harness.modifyGroups(modifications, auth);
+        harness.modifyGroups(createModifications, createAuth);
 
-        // Verify: base call reached library and mutated groups state.
-        assertTrue(harness.isGroup(groupId), "group should be active");
-        assertTrue(harness.isGroupMember(groupId, admin1), "member should be in group");
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(deleteModifications, deleteAuth);
+
+        uint256 recreateNonce = _computeModifyGroupsNonce(recreateOperationData, 3193);
+
+        // Call: attempt to recreate the deleted group id with a fresh signed payload and expect the base path to
+        // bubble the non-reuse guard.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.GroupAlreadyDeleted.selector, groupId));
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(createModifications, recreateAuth);
+
+        // Verify: deleted groups remain non-recreatable and the failed recreate attempt does not consume its nonce.
+        assertFalse(groupsStateHarness.getUsedNonce(recreateNonce), "recreate revert should not consume nonce");
+        assertFalse(harness.isGroup(groupId), "deleted group should remain inactive");
     }
 
     /// @dev Verifies non-guardian caller reverts via `onlyGuardian`.
@@ -148,12 +230,10 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         // Setup: define two semantically equivalent multi-create batches whose independent group creations appear in
         // opposite array order.
         GroupModification[] memory orderedModifications = _buildModificationsArray(
-            _createModification(7912, buildArray(admin1)),
-            _createModification(7913, buildArray(admin2))
+            _createModification(7912, buildArray(admin1)), _createModification(7913, buildArray(admin2))
         );
         GroupModification[] memory reorderedModifications = _buildModificationsArray(
-            _createModification(7913, buildArray(admin2)),
-            _createModification(7912, buildArray(admin1))
+            _createModification(7913, buildArray(admin2)), _createModification(7912, buildArray(admin1))
         );
         bytes memory orderedOperationData = _encodeOperationDataForModifyGroups(orderedModifications);
         bytes memory reorderedOperationData = _encodeOperationDataForModifyGroups(reorderedModifications);
@@ -409,8 +489,11 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         assertFalse(harness.isGroup(groupId), "state should remain unchanged on malformed enum revert");
     }
 
-    /// @dev Verifies valid auth + library revert does not consume nonce and same salt/operation can be retried.
-    function test_NMGB_MG_4_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation() public {
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rolls back an entire failing batch and allows the same
+    /// signed batch to be retried once the downstream condition is fixed.
+    function test_NMGB_MG_4__OGB_MG_4_modifyGroups_libraryRevert_doesNotConsumeNonceAndCanRetrySameSaltAndOperation()
+        public
+    {
         uint256 groupId = 7910;
 
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -442,5 +525,68 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
 
         assertTrue(groupsStateHarness.getUsedNonce(nonce), "nonce should consume on successful retry");
         assertTrue(harness.isGroupMember(groupId, admin1), "retry should apply signed update successfully");
+    }
+
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects create operations that include
+    /// `membersToRemove`.
+    function test_OGB_MG_6_modifyGroups_createWithMembersToRemove_revertsInvalidGroupCreationOperation() public {
+        uint256 groupId = 7915;
+
+        // Setup: configure one-admin auth and build a malformed create modification that includes
+        // `membersToRemove`, which the library forbids.
+        _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1), threshold: 1});
+
+        GroupModification[] memory modifications = _buildModificationsArray(
+            _buildGroupModification(groupId, GroupModificationType.Create, buildArray(admin1), buildArray(admin2))
+        );
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyGroupsAuth({
+            modifications: modifications,
+            salt: 3194,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3194);
+
+        // Call: execute the malformed create operation and expect the base path to bubble the shape-validation error.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.InvalidGroupCreationOperation.selector, groupId));
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(modifications, auth);
+
+        // Verify: invalid create-shape validation should leave both state and nonce untouched.
+        assertFalse(groupsStateHarness.getUsedNonce(nonce), "invalid create shape should not consume nonce");
+        assertFalse(harness.isGroup(groupId), "invalid create shape should not create the group");
+    }
+
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects delete operations with non-empty member arrays.
+    function test_OGB_MG_6_modifyGroups_deleteWithNonEmptyMemberArrays_revertsInvalidGroupDeletionOperation() public {
+        uint256 groupId = 7916;
+
+        // Setup: configure one-admin auth and build a malformed delete modification that includes member arrays the
+        // delete path must reject.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        GroupModification[] memory modifications = _buildModificationsArray(
+            _buildGroupModification(groupId, GroupModificationType.Delete, buildArray(admin1), buildArray(admin1))
+        );
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyGroupsAuth({
+            modifications: modifications,
+            salt: 3195,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3195);
+
+        // Call: execute the malformed delete operation and expect the base path to bubble the shape-validation error.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationGroups.InvalidGroupDeletionOperation.selector, groupId));
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(modifications, auth);
+
+        // Verify: invalid delete-shape validation should leave both state and nonce untouched.
+        assertFalse(groupsStateHarness.getUsedNonce(nonce), "invalid delete shape should not consume nonce");
+        assertFalse(harness.isGroup(groupId), "invalid delete shape should not create or activate the group");
     }
 }

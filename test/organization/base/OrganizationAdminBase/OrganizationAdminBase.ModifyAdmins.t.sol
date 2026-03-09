@@ -15,8 +15,30 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Unit tests for `OrganizationAdminBase.modifyAdmins` behavior.
  */
 contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase {
-    /// @dev Verifies that a non-guardian caller reverts via the `onlyGuardian` modifier.
-    function test_modifyAdmins_nonGuardianCaller_revertsOnlyGuardian() public {
+    /**
+     * @dev Recovers the EOA signer from a single packed `v|r|s` signature for the provided hash.
+     * @param signature Packed 65-byte signature in `v|r|s` format
+     * @param hash Operation hash used during verification
+     * @return signer Recovered signer address, or `address(0)` if recovery fails
+     */
+    function _recoverEOASigner(bytes memory signature, bytes32 hash) internal pure returns (address signer) {
+        require(signature.length == 65, "invalid signature length");
+
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+
+        assembly {
+            v := byte(0, mload(add(signature, 0x20)))
+            r := mload(add(signature, 0x21))
+            s := mload(add(signature, 0x41))
+        }
+
+        signer = ecrecover(hash, v, r, s);
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` reverts for non-guardian callers.
+    function test_OAB_MA_2_modifyAdmins_nonGuardianCaller_revertsOnlyGuardian() public {
         // Arrange: valid baseline config, but call from a non-guardian account.
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
@@ -98,8 +120,9 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         assertEq(harness.adminCount(), 1, "admin count should decrement");
     }
 
-    /// @dev Verifies that a guardian with valid signatures can add and remove admins in one call.
-    function test_modifyAdmins_guardianWithValidAuth_addAndRemove_succeeds() public {
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` adds/removes admins and updates the threshold in one
+    /// authorized execution.
+    function test_OAB_MA_1_modifyAdmins_guardianWithValidAuth_addsRemovesAndUpdatesThreshold_endToEnd() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({
             members: buildArray(admin1, admin2, admin3), admins: buildArray(admin1, admin2), threshold: 2
@@ -108,7 +131,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
             adminsToAdd: buildArray(admin3),
             adminsToRemove: buildArray(admin2),
-            newVotingThreshold: 2,
+            newVotingThreshold: 1,
             salt: 2003,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
@@ -118,7 +141,7 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         vm.prank(GUARDIAN);
         // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
-            adminsToAdd: buildArray(admin3), adminsToRemove: buildArray(admin2), newVotingThreshold: 2, authParams: auth
+            adminsToAdd: buildArray(admin3), adminsToRemove: buildArray(admin2), newVotingThreshold: 1, authParams: auth
         });
 
         // Verify: assert that the address has admin status expected for this branch.
@@ -128,6 +151,202 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         assertFalse(harness.isAdmin(admin2), "admin2 should be removed");
         // Verify: assert that admin count matches the expected value.
         assertEq(harness.adminCount(), 2, "final admin count should remain 2");
+        assertEq(harness.votingThreshold(), 1, "voting threshold should update in the same execution");
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects duplicate signer entries in the packed approval
+    /// signature list.
+    function test_OAB_MA_3_modifyAdmins_duplicateSigner_revertsDuplicateOrOutOfOrderAdminSigner() public {
+        address newAdmin = address(0x20F);
+        // Setup: require two admin signatures, then build an approval payload that repeats the same signer twice.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 2
+        });
+
+        uint256 salt = 2032;
+        uint256 expiration = block.timestamp + 1 hours;
+        bytes memory operationData =
+            _encodeOperationDataForModifyAdmins(buildArray(newAdmin), buildEmptyAddressArray(), 2);
+        bytes32 operationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _signHash(ADMIN_PK_1, operationHash);
+        signatures[1] = _signHash(ADMIN_PK_1, operationHash);
+        AdminAuthParams memory auth =
+            AdminAuthParams({salt: salt, expirationTimestamp: expiration, signatures: _concatSignatures(signatures)});
+
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+
+        // Call: execute the admin mutation with duplicate signer entries and expect strict ordering validation to
+        // reject the packed signatures.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAdmin.DuplicateOrOutOfOrderAdminSigner.selector, admin1, admin1)
+        );
+        vm.prank(GUARDIAN);
+        harness.modifyAdmins({
+            adminsToAdd: buildArray(newAdmin),
+            adminsToRemove: buildEmptyAddressArray(),
+            newVotingThreshold: 2,
+            authParams: auth
+        });
+
+        // Verify: duplicate-signer validation should fail before consuming the nonce or mutating admin state.
+        assertFalse(harness.getUsedNonce(nonce), "duplicate signer revert should not consume nonce");
+        assertFalse(harness.isAdmin(newAdmin), "duplicate signer revert should not add the admin");
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects out-of-order signer entries in the packed approval
+    /// signature list.
+    function test_OAB_MA_3_modifyAdmins_outOfOrderSigners_revertsDuplicateOrOutOfOrderAdminSigner() public {
+        address newAdmin = address(0x210);
+        // Setup: require two admin signatures, then build an approval payload whose packed signatures are descending by
+        // signer address.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 2
+        });
+
+        uint256 salt = 2033;
+        uint256 expiration = block.timestamp + 1 hours;
+        bytes memory operationData =
+            _encodeOperationDataForModifyAdmins(buildArray(newAdmin), buildEmptyAddressArray(), 2);
+        bytes32 operationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            salt: salt,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+
+        bytes[] memory signatures = new bytes[](2);
+        address firstSigner;
+        address secondSigner;
+        if (uint160(admin1) > uint160(admin2)) {
+            signatures[0] = _signHash(ADMIN_PK_1, operationHash);
+            signatures[1] = _signHash(ADMIN_PK_2, operationHash);
+            firstSigner = admin1;
+            secondSigner = admin2;
+        } else {
+            signatures[0] = _signHash(ADMIN_PK_2, operationHash);
+            signatures[1] = _signHash(ADMIN_PK_1, operationHash);
+            firstSigner = admin2;
+            secondSigner = admin1;
+        }
+        AdminAuthParams memory auth =
+            AdminAuthParams({salt: salt, expirationTimestamp: expiration, signatures: _concatSignatures(signatures)});
+
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+
+        // Call: execute the admin mutation with out-of-order signatures and expect strict signer ordering validation
+        // to reject the packed signatures.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdmin.DuplicateOrOutOfOrderAdminSigner.selector, secondSigner, firstSigner
+            )
+        );
+        vm.prank(GUARDIAN);
+        harness.modifyAdmins({
+            adminsToAdd: buildArray(newAdmin),
+            adminsToRemove: buildEmptyAddressArray(),
+            newVotingThreshold: 2,
+            authParams: auth
+        });
+
+        // Verify: out-of-order signer validation should fail before consuming the nonce or mutating admin state.
+        assertFalse(harness.getUsedNonce(nonce), "out-of-order signatures should not consume nonce");
+        assertFalse(harness.isAdmin(newAdmin), "out-of-order signatures should not add the admin");
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` fails when a signer loses admin status after signatures are
+    /// collected but before execution.
+    function test_OAB_MA_4_modifyAdmins_adminRemovedAfterSigning_revertsSignerIsNotAdminAtExecutionTime() public {
+        address newAdmin = address(0x211);
+        // Setup: collect a valid two-admin approval, then demote one signer before the guardian executes the change.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 2
+        });
+
+        uint256 salt = 2034;
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyAdminsAuth({
+            adminsToAdd: buildArray(newAdmin),
+            adminsToRemove: buildEmptyAddressArray(),
+            newVotingThreshold: 2,
+            salt: salt,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1, ADMIN_PK_2)
+        });
+
+        stateHarness.setAdminStatus(admin2, false);
+        stateHarness.setAdminCount(1);
+
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+
+        // Call: execute the pre-signed payload after the second signer has been demoted and expect live admin-status
+        // validation to fail.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, admin2));
+        vm.prank(GUARDIAN);
+        harness.modifyAdmins({
+            adminsToAdd: buildArray(newAdmin),
+            adminsToRemove: buildEmptyAddressArray(),
+            newVotingThreshold: 2,
+            authParams: auth
+        });
+
+        // Verify: execution-time admin validation should fail closed without consuming the nonce or mutating state.
+        assertFalse(harness.getUsedNonce(nonce), "demoted-signer revert should not consume nonce");
+        assertFalse(harness.isAdmin(newAdmin), "demoted-signer revert should not add the admin");
+    }
+
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects signatures that only satisfy the old threshold after
+    /// the organization threshold increases.
+    function test_OAB_MA_5_modifyAdmins_thresholdRaisedAfterSigning_revertsInsufficientAuthorization() public {
+        address newAdmin = address(0x212);
+        // Setup: collect a one-signature approval while the threshold is one, then raise the live threshold to two
+        // before execution.
+        _setMembersAndAdmins({
+            members: buildArray(admin1, admin2, newAdmin), admins: buildArray(admin1, admin2), threshold: 1
+        });
+
+        uint256 salt = 2035;
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyAdminsAuth({
+            adminsToAdd: buildArray(newAdmin),
+            adminsToRemove: buildEmptyAddressArray(),
+            newVotingThreshold: 1,
+            salt: salt,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        stateHarness.setVotingThreshold(2);
+
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: salt});
+
+        // Call: execute the stale one-signature approval after the threshold rises and expect the live threshold check
+        // to reject it.
+        vm.expectRevert(IOrganizationAdmin.InsufficientAdminAuthorization.selector);
+        vm.prank(GUARDIAN);
+        harness.modifyAdmins({
+            adminsToAdd: buildArray(newAdmin),
+            adminsToRemove: buildEmptyAddressArray(),
+            newVotingThreshold: 1,
+            authParams: auth
+        });
+
+        // Verify: the threshold change should invalidate the stale approval without consuming the nonce or changing
+        // admin state.
+        assertFalse(harness.getUsedNonce(nonce), "stale-threshold approval should not consume nonce");
+        assertFalse(harness.isAdmin(newAdmin), "stale-threshold approval should not add the admin");
     }
 
     /// @dev Verifies that signatures for a different operation type cannot authorize `modifyAdmins`.
@@ -176,8 +395,8 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         assertFalse(harness.getUsedNonce(wrongAuthNonce), "wrong auth nonce should remain unused");
     }
 
-    /// @dev Verifies that rejection signatures cannot execute the `modifyAdmins` approval path.
-    function test_modifyAdmins_rejectionSignatures_cannotExecuteApprovalPath() public {
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects signatures collected for the rejection domain.
+    function test_OAB_RAO_3_modifyAdmins_rejectionSignatures_cannotExecuteApprovalPath() public {
         address newAdmin = address(0x203);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
@@ -192,9 +411,18 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: confirm this branch reverts for the intended failure condition.
+        bytes32 approvalOperationHash = harness.getAdminOperationHash({
+            operationType: OperationType.ModifyAdmins,
+            operationData: operationData,
+            salt: 2005,
+            expirationTimestamp: block.timestamp + 1 hours,
+            isApproval: true
+        });
+        address recoveredSigner = _recoverEOASigner(rejectionAuth.signatures, approvalOperationHash);
 
-        vm.expectRevert();
+        // Verify: using rejection-domain signatures for an approval execution should fail live signer validation and
+        // leave the nonce unused.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, recoveredSigner));
         vm.prank(GUARDIAN);
         // Call: invoke `modifyAdmins` with the prepared add/remove sets, threshold, and admin auth params.
         harness.modifyAdmins({
@@ -435,14 +663,14 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
         assertFalse(harness.getUsedNonce(signedNonce), "signed payload nonce should remain unused on failed auth");
     }
 
-    /// @dev Verifies that expired auth params revert with `AdminOperationExpired`.
-    function test_modifyAdmins_expiredAuth_revertsAdminOperationExpired() public {
+    /// @dev Verifies `OrganizationAdminBase.modifyAdmins` rejects expired auth and leaves the nonce unused.
+    function test_OAB_MA_6_modifyAdmins_expiredAuth_revertsAndDoesNotConsumeNonce() public {
         address newAdmin = address(0x209);
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, newAdmin), admins: buildArray(admin1), threshold: 1});
 
         uint256 expiration = block.timestamp - 1;
-        (AdminAuthParams memory auth,) = _buildModifyAdminsAuth({
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyAdminsAuth({
             adminsToAdd: buildArray(newAdmin),
             adminsToRemove: buildEmptyAddressArray(),
             newVotingThreshold: 1,
@@ -452,8 +680,11 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        // Verify: confirm this branch reverts for the intended failure condition.
+        uint256 nonce =
+            harness.computeNonce({operationType: OperationType.ModifyAdmins, operationData: operationData, salt: 2011});
 
+        // Call: execute the expired approval path and expect timestamp validation to revert before any nonce or state
+        // mutation.
         vm.expectRevert(
             abi.encodeWithSelector(IOrganizationAdmin.AdminOperationExpired.selector, expiration, block.timestamp)
         );
@@ -465,6 +696,10 @@ contract OrganizationAdminBaseModifyAdminsTest is OrganizationAdminBaseSuiteBase
             newVotingThreshold: 1,
             authParams: auth
         });
+
+        // Verify: expired auth should leave the nonce unused and preserve admin state.
+        assertFalse(harness.getUsedNonce(nonce), "expired auth should not consume nonce");
+        assertFalse(harness.isAdmin(newAdmin), "expired auth should not add the admin");
     }
 
     /// @dev Verifies that replaying the same nonce reverts with `NonceAlreadyUsed`.

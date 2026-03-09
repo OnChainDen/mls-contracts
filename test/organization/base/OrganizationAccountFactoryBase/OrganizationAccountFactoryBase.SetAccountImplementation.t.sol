@@ -291,7 +291,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
     }
 
     /// @dev Verifies whitelist validation uses `ContractType.Account` (not `ContractType.Organization`). [OAFB-SAI-4]
-    function test_OAFB_SAI_9__OAFB_SAI_4_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount()
+    function test_OAFB_SAI_9__OAFB_SAI_4__OAF_SAI_3_setAccountImplementation_validatesAgainstWhitelistWithContractTypeAccount()
         public
     {
         // Setup: whitelist target under Organization type only and configure one-admin auth.
@@ -368,21 +368,21 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
         (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV1,
-            salt: 61161,
+            salt: 61_161,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
         (AdminAuthParams memory secondAuth,) = _buildSetAccountImplementationAuth({
             newImplementation: accountImplementationV1,
-            salt: 61162,
+            salt: 61_162,
             expiration: block.timestamp + 1 hours,
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        uint256 firstNonce = _computeSetAccountImplementationNonce(operationData, 61161);
-        uint256 secondNonce = _computeSetAccountImplementationNonce(operationData, 61162);
+        uint256 firstNonce = _computeSetAccountImplementationNonce(operationData, 61_161);
+        uint256 secondNonce = _computeSetAccountImplementationNonce(operationData, 61_162);
 
         // Call: execute the same implementation update twice under distinct admin-auth salts.
         vm.prank(GUARDIAN);
@@ -461,7 +461,7 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
     /// @dev Verifies desired behavior that no-code implementation addresses are rejected even if whitelisted.
     /// [OAFB-SAI-9]
-    function test_OAFB_SAI_12__OAFB_SAI_9_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
+    function test_OAFB_SAI_12__OAFB_SAI_9__OAF_SAI_5_setAccountImplementation_noCodeImplementationEvenIfWhitelisted_reverts()
         public
     {
         address noCodeImplementation = address(0xCA11);
@@ -590,7 +590,9 @@ contract OrganizationAccountFactoryBaseSetAccountImplementationTest is Organizat
 
     /// @dev [DESIRED] Verifies `setAccountImplementation` explicitly rejects `newImplementation == address(0)` before
     ///      reaching whitelist or code-length checks.
-    function test_OAFB_SAI_16__OAFB_SAI_10_setAccountImplementation_zeroImplementation_revertsExplicitly() public {
+    function test_OAFB_SAI_16__OAFB_SAI_10__OAF_SAI_5_setAccountImplementation_zeroImplementation_revertsExplicitly()
+        public
+    {
         // Setup: whitelist address(0) under Account type so whitelist check would pass, and configure one-admin auth.
         _setSingleAdminThresholdOne();
         _setAccountImplementationWhitelisted(address(0), true);

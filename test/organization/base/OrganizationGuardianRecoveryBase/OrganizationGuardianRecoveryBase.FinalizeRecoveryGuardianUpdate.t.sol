@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
 import {
     OrganizationGuardianRecoveryBaseSuiteBase
 } from "test/organization/base/OrganizationGuardianRecoveryBase/OrganizationGuardianRecoveryBaseSuiteBase.sol";
@@ -12,9 +13,9 @@ import {
 contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
     OrganizationGuardianRecoveryBaseSuiteBase
 {
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeRecoveryGuardianUpdate` reverts when called by a
-    /// non-recovery address.
-    function test_OGRB_FRGU_1_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
+    /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before readiness flags can change.
+    /// [OREC-GRF-2]
+    function test_OGRB_FRGU_1__OREC_GRF_2_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false
@@ -45,6 +46,44 @@ contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
             harness.getGuardianRecoveryState().pendingGuardian,
             NEW_GUARDIAN_A,
             "pending guardian should remain unchanged"
+        );
+    }
+
+    /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeRecoveryGuardianUpdate` reverts before the configured
+    /// recovery timelock expires and succeeds at the exact boundary. [OREC-GRF-3]
+    function test_OREC_GRF_3_finalizeRecoveryGuardianUpdate_beforeTimelockReverts_andBoundarySucceeds() public {
+        // Setup: stage a recovery-only guardian update whose finalize timestamp is one recovery timelock in the
+        // future.
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.initiateRecoveryGuardianUpdate(NEW_GUARDIAN_A);
+
+        uint256 canFinalizeAt = harness.getGuardianRecoveryState().pendingGuardianTimestamp;
+
+        // Call: finalize once before the recovery timelock expires, then retry at the exact boundary.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+            )
+        );
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.finalizeRecoveryGuardianUpdate();
+
+        vm.warp(canFinalizeAt);
+        vm.prank(GUARDIAN_RECOVERY_ADDRESS);
+        harness.finalizeRecoveryGuardianUpdate();
+
+        // Verify: boundary success marks the recovery update ready for acceptance without mutating the pending
+        // guardian value itself.
+        assertTrue(harness.getGuardianRecoveryState().isUpdateReadyForAcceptance, "ready flag should be true");
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardian,
+            NEW_GUARDIAN_A,
+            "pending guardian should remain staged for accept"
+        );
+        assertEq(
+            harness.getGuardianRecoveryState().pendingGuardianTimestamp,
+            canFinalizeAt,
+            "timelock boundary should preserve the staged finalize timestamp"
         );
     }
 }

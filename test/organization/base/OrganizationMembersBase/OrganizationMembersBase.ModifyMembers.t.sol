@@ -236,8 +236,9 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         assertFalse(harness.isMember(nonMember), "non-member should remain non-member");
     }
 
-    /// @dev Verifies that removing an address that is still an admin reverts with `MemberIsAdmin`.
-    function test_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` rejects removing a member whose admin role is still
+    /// active.
+    function test_OMB_MM_2_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
         address adminMember = address(0x40B);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({
@@ -345,8 +346,9 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         });
     }
 
-    /// @dev Verifies that once admin status is removed, the same address can be removed from members.
-    function test_modifyMembers_afterDemotion_memberCanBeRemoved() public {
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` succeeds once the target address is demoted from admin
+    /// status first.
+    function test_OMB_MM_2_modifyMembers_afterDemotion_memberCanBeRemoved() public {
         address adminMember = address(0x410);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({
@@ -402,9 +404,9 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         });
     }
 
-    /// @dev Verifies that adding and removing different members in the same call updates both states and emits both
-    /// events.
-    function test_modifyMembers_addAndRemoveDifferentMembers_sameCall_succeeds() public {
+    /// @dev Verifies `OrganizationMembersBase.modifyMembers` adds and removes members in one guardian-authorized
+    /// execution.
+    function test_OMB_MM_1_modifyMembers_guardianWithValidAuth_addsAndRemovesMembers_endToEnd() public {
         address memberToAdd = address(0x412);
         address memberToRemove = address(0x413);
         // Setup: configure members/admins for a valid baseline state.
@@ -574,8 +576,9 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        uint256 nonce =
-            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4120});
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4120
+        });
 
         // Call: execute the member update once, then replay the identical signed request.
         vm.prank(GUARDIAN);
@@ -599,14 +602,18 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
         address memberB = address(0x422);
 
         // Setup: define two `membersToAdd` arrays containing the same set but in different element order.
-        bytes memory operationDataA = _encodeOperationDataForModifyMembers(buildArray(memberA, memberB), buildEmptyAddressArray());
-        bytes memory operationDataB = _encodeOperationDataForModifyMembers(buildArray(memberB, memberA), buildEmptyAddressArray());
+        bytes memory operationDataA =
+            _encodeOperationDataForModifyMembers(buildArray(memberA, memberB), buildEmptyAddressArray());
+        bytes memory operationDataB =
+            _encodeOperationDataForModifyMembers(buildArray(memberB, memberA), buildEmptyAddressArray());
 
         // Call: compute nonces for both orderings under the same operation type and admin-auth salt.
-        uint256 nonceA =
-            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationDataA, salt: 4121});
-        uint256 nonceB =
-            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationDataB, salt: 4121});
+        uint256 nonceA = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationDataA, salt: 4121
+        });
+        uint256 nonceB = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationDataB, salt: 4121
+        });
 
         // Verify: the base-contract hashing path treats array ordering as nonce-relevant input.
         assertTrue(nonceA != nonceB, "different member-array ordering should produce different nonces");
@@ -620,9 +627,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
         // Setup: start from a state where the signed tuple adds one member and removes another, then prepare the same
         // signed tuple under two distinct admin-auth salts plus an inverse reset operation between them.
-        _setMembersAndAdmins({
-            members: buildArray(admin1, memberToRemove), admins: buildArray(admin1), threshold: 1
-        });
+        _setMembersAndAdmins({members: buildArray(admin1, memberToRemove), admins: buildArray(admin1), threshold: 1});
 
         (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildModifyMembersAuth({
             membersToAdd: buildArray(memberToAdd),
@@ -649,10 +654,12 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
 
-        uint256 firstNonce =
-            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4122});
-        uint256 secondNonce =
-            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4123});
+        uint256 firstNonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4122
+        });
+        uint256 secondNonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4123
+        });
 
         // Call: apply the signed tuple once, restore the original pre-state with the inverse operation, then apply
         // the exact same tuple again under a different admin-auth salt.
@@ -698,8 +705,9 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
             isApproval: true,
             privateKeys: buildUint256Array(ADMIN_PK_1)
         });
-        uint256 nonce =
-            harness.computeNonce({operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4125});
+        uint256 nonce = harness.computeNonce({
+            operationType: OperationType.ModifyMembers, operationData: operationData, salt: 4125
+        });
 
         // Call: hit the downstream `MemberIsAdmin` revert, demote the same address through `modifyAdmins`, then retry
         // the unchanged signed member-removal request.

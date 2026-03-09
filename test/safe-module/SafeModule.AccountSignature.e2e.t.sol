@@ -5,10 +5,12 @@ pragma solidity 0.8.33;
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 
+import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
+import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
+import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {LibOrganizationAccountFactory} from "organization/libraries/LibOrganizationAccountFactory.sol";
 import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
-import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {AccountImplementationHarness} from "test/account/AccountImplementationHarness.sol";
 import {MockGuardianSafe} from "test/helpers/MockGuardianSafe.sol";
 import {
@@ -18,14 +20,16 @@ import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
-import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
-import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 import {Policy, PolicyType, ValidationProofs} from "types/PolicyTypes.sol";
 
 /**
  * @dev Beacon-backed organization harness used to exercise the real `AccountImplementation` path.
  */
-contract AccountSignatureOrganizationBeacon is LibOrganizationAccountSignatureHarness, IBeacon, IOrganizationAccountSignature {
+contract AccountSignatureOrganizationBeacon is
+    LibOrganizationAccountSignatureHarness,
+    IBeacon,
+    IOrganizationAccountSignature
+{
     address internal immutable beaconImplementation;
 
     /**
@@ -98,8 +102,11 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
         batchedTransaction = new BatchedTransaction();
     }
 
-    /// @dev Verifies `Account.isValidSignature` accepts enabled-module guardian signatures from the authorized executor.
-    function test_SMI_ETE_1_accountIsValidSignature_acceptsEnabledModuleGuardianSignature() public {
+    /// @dev Verifies `Account.isValidSignature` accepts enabled-module guardian signatures from the authorized
+    /// executor.
+    function test_SMI_ETE_1__OAS_VSFA_5__OAS_IVGS_2_accountIsValidSignature_acceptsEnabledModuleGuardianSignature()
+        public
+    {
         // Setup: configure a valid auto-approve policy signature backed by an enabled SafeExecutorModule guardian.
         (, bytes memory signature,,,) =
             _buildAccountPolicySignatureWithModuleGuardian(AUTHORIZED_EXECUTOR_PK, true, AUTHORIZED_EXECUTOR_PK);
@@ -112,7 +119,9 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
     }
 
     /// @dev Verifies disabling the guardian module invalidates equivalent account signatures without org changes.
-    function test_SMI_ETE_2_accountIsValidSignature_rejectsDisabledModuleGuardianSignature() public {
+    function test_SMI_ETE_2__OAS_VSFA_5__OAS_IVGS_3_accountIsValidSignature_rejectsDisabledModuleGuardianSignature()
+        public
+    {
         // Setup: build a valid signature, then disable the module on the guardian Safe before validation.
         (MockGuardianSafe guardianSafe, bytes memory signature, SafeExecutorModule module,,) =
             _buildAccountPolicySignatureWithModuleGuardian(AUTHORIZED_EXECUTOR_PK, true, AUTHORIZED_EXECUTOR_PK);
@@ -209,7 +218,9 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
     }
 
     /// @dev Verifies the direct guardian signature path still works when the module path is unavailable.
-    function test_SMI_ETE_4_accountIsValidSignature_directGuardianPathStillWorksWithoutModule() public {
+    function test_SMI_ETE_4__OAS_VSFA_5__OAS_IVGS_1_accountIsValidSignature_directGuardianPathStillWorksWithoutModule()
+        public
+    {
         // Setup: configure a valid direct-guardian auto-approve signature without any module path.
         policyStateHarness.setGuardian(guardianSigner);
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);

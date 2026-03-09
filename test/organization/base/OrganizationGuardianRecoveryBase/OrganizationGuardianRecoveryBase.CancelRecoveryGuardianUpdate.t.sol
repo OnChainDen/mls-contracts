@@ -10,9 +10,9 @@ import {
  * @dev Unit tests for `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate`.
  */
 contract OrganizationGuardianRecoveryBaseCancelRecoveryGuardianUpdateTest is OrganizationGuardianRecoveryBaseSuiteBase {
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.cancelRecoveryGuardianUpdate` reverts when called by a
-    /// non-recovery address.
-    function test_OGRB_CRGU_1_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
+    /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before clearing staged recovery
+    /// updates. [OREC-GRF-2]
+    function test_OGRB_CRGU_1__OREC_GRF_2_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false

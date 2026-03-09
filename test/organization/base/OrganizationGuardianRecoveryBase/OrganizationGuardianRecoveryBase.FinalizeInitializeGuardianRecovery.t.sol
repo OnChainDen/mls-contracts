@@ -118,9 +118,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         harness.finalizeInitializeGuardianRecovery(auth);
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` finalize approval path binds
-    /// pending tuple and delegates to library finalization.
-    function test_OGRB_FIGR_4__OGRB_FIGR_5__OGRB_FIGR_6__OGRB_FIGR_7_finalizeApprovalPathBindsPendingTupleAndDelegates()
+    /// @dev Verifies deferred guardian-recovery finalization commits the staged tuple after the admin timelock and
+    /// preserves helper-enforced storage integrity. [OREC-DRI-1, OREC-PH-1]
+    function test_OGRB_FIGR_4__OGRB_FIGR_5__OGRB_FIGR_6__OGRB_FIGR_7__OREC_DRI_1__OREC_PH_1_finalizeApprovalPathBindsPendingTupleAndDelegates()
         public
     {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
@@ -173,9 +173,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         );
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` signatures are bound to the
-    /// current pending init tuple values.
-    function test_OGRB_FIGR_8__OGRB_FIGR_10__OGRB_FIGR_11__NMGRB_IGR_8_stalePendingTupleSignatures_revertAfterPendingValuesChange()
+    /// @dev Verifies deferred guardian-recovery finalize and cancel signatures are bound to the current pending tuple
+    /// values, so stale signatures fail after any pending-value mutation. [OREC-DRI-4]
+    function test_OGRB_FIGR_8__OGRB_FIGR_10__OGRB_FIGR_11__NMGRB_IGR_8__OREC_DRI_4_stalePendingTupleSignatures_revertAfterPendingValuesChange()
         public
     {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
@@ -236,9 +236,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeInitializeGuardianRecoveryTest 
         );
     }
 
-    /// @dev Verifies `OrganizationGuardianRecoveryBase.finalizeInitializeGuardianRecovery` downstream revert rolls back
-    /// nonce and same signed request can succeed later.
-    function test_OGRB_FIGR_9__NMGRB_IGR_10_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
+    /// @dev Verifies deferred guardian-recovery finalization reverts before the admin timelock expires and succeeds
+    /// at the exact boundary without requiring new signatures. [OREC-DRI-3]
+    function test_OGRB_FIGR_9__NMGRB_IGR_10__OREC_DRI_3_downstreamRevert_rollsBackNonceAndAllowsRetry() public {
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and set admin/member threshold.
         recoveryStateHarness.resetGuardianRecoveryStorage();
         uint256 canFinalizeAt = block.timestamp + 1 days;

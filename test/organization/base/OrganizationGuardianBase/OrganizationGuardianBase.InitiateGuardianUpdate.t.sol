@@ -177,8 +177,11 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(nonce), "nonce should rollback on failed auth");
     }
 
-    /// @dev Verifies OGB-IGU-8: signatures for a different operation type cannot authorize initiation.
-    function test_OGB_IGU_8__NMGUB_GUF_7_differentOperationTypeSignatures_cannotAuthorizeInitiation() public {
+    /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects finalize-stage signatures reused
+    /// during initiate-stage authorization. [OGU-GU-2]
+    function test_OGB_IGU_8__NMGUB_GUF_7__OGU_GU_2_differentOperationTypeSignatures_cannotAuthorizeInitiation()
+        public
+    {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         bytes memory operationData = abi.encode(NEW_GUARDIAN_A);
@@ -229,8 +232,11 @@ contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuard
         assertFalse(harness.getUsedNonce(mutatedNonce), "mutated payload nonce should remain unused");
     }
 
-    /// @dev Verifies OGB-IGU-10: downstream `GuardianUpdateAlreadyPending` revert rolls back nonce and allows retry.
-    function test_OGB_IGU_10__NMGUB_GUF_9_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A() public {
+    /// @dev Verifies `OrganizationGuardianBase.initiateGuardianUpdate` rejects a second pending guardian update until
+    /// the first lifecycle is cleared, without burning the signed nonce. [OGU-GU-5]
+    function test_OGB_IGU_10__NMGUB_GUF_9__OGU_GU_5_downstreamPendingRevert_rollsBackNonceAndAllowsRetry_A()
+        public
+    {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_B);

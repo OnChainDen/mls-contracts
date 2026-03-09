@@ -519,7 +519,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
      */
-    function test_OATB_EAT_10_NMATB_EAT_8_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
+    function test_OATB_EAT_10_NMATB_EAT_8__OAT_AI_2_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
         public
     {
         // Setup: deploy account configured to revert on execute.

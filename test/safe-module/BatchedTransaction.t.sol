@@ -172,8 +172,9 @@ contract BatchedTransactionTest is Test {
         assertEq(target1.callCount(), 1, "Target should have received exactly one call");
     }
 
+    // ISEM-BTE-1
     /// @dev Verifies `execute` runs multiple packed transactions in encoded order.
-    function test_BT_EVB_3_executeMultipleTransactionsInOrder() public {
+    function test_ISEM_BTE_1__BT_EVB_3_executeMultipleTransactionsInOrder() public {
         // Setup: encode three sub-transactions in specific order.
         bytes[] memory txs = new bytes[](3);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
@@ -281,8 +282,9 @@ contract BatchedTransactionTest is Test {
         );
     }
 
+    // ISEM-BTE-3
     /// @dev Verifies delegatecall context: sub-transaction targeting delegatecaller reverts `CannotCallSafe`.
-    function test_BT_ESF_1_executeDelegatecallSelfTargetRevertsCannotCallSafe() public {
+    function test_ISEM_BTE_3__BT_ESF_1_executeDelegatecallSelfTargetRevertsCannotCallSafe() public {
         // Setup: encode sub-transaction targeting address(this) (the "Safe" when delegatecalled).
         bytes memory data = abi.encodeWithSelector(MockBTTarget.setValue.selector, 42);
         bytes memory encoded = _encodeTx(address(this), data);
@@ -327,8 +329,9 @@ contract BatchedTransactionTest is Test {
         assertFalse(success, "Reverting sub-transaction should cause batch revert");
     }
 
+    // ISEM-BTE-2
     /// @dev Verifies first sub-call success + second sub-call revert => first side effects rolled back.
-    function test_BT_ESF_4_executeSecondTxRevertRollsBackFirstTx() public {
+    function test_ISEM_BTE_2__BT_ESF_4_executeSecondTxRevertRollsBackFirstTx() public {
         // Setup: first tx succeeds (setValue(10)), second tx reverts.
         bytes[] memory txs = new bytes[](2);
         txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
@@ -358,8 +361,9 @@ contract BatchedTransactionTest is Test {
         assertEq(target1.value(), 0, "First tx side effects should be rolled back on CannotCallSafe");
     }
 
+    // ISEM-BTE-4
     /// @dev Verifies payable target receives `msg.value == 0` for every sub-call.
-    function test_BT_ESF_6_executeSubCallsReceiveZeroMsgValue() public {
+    function test_ISEM_BTE_4__BT_ESF_6_executeSubCallsReceiveZeroMsgValue() public {
         // Setup: deploy target that tracks msg.value.
         MsgValueTracker tracker = new MsgValueTracker();
         bytes[] memory txs = new bytes[](2);

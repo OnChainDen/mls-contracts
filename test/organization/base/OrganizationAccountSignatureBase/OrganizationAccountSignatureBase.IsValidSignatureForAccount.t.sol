@@ -41,7 +41,9 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`.
-    function test_OASB_ISFA_1_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount() public {
+    function test_OASB_ISFA_1__OAS_VSFA_1_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount()
+        public
+    {
         // Setup: mark the account as deployed to isolate the sender gate.
         harness.setDeployedAccount(ACCOUNT, true);
 
@@ -53,7 +55,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`.
-    function test_OASB_ISFA_2_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+    function test_OASB_ISFA_2__OAS_VSFA_1_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
         public
     {
         // Setup: leave deployed-account mapping unset for the target account.
@@ -130,7 +132,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that `isValidSignatureForAccount` is view-only and does not mutate organization state.
-    function test_OASB_ISFA_7_isValidSignatureForAccount_isView_noStateMutation() public {
+    function test_OASB_ISFA_7__OAS_VSFA_8_isValidSignatureForAccount_isView_noStateMutation() public {
         // Setup: configure deterministic state snapshots and a valid recovery signature payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);

@@ -89,7 +89,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.initiateEnableTransactionAndERC1271Recovery` bubbles
     /// `TxRecoveryNotConfigured` when storage has a zero recovery address with an in-range timelock.
-    function test_OTRB_IETR_4_A_initiateEnable_zeroRecoveryAddress_bubblesTxRecoveryNotConfigured() public {
+    function test_OTRB_IETR_4_A__OREC_TRF_2_initiateEnable_zeroRecoveryAddress_bubblesTxRecoveryNotConfigured()
+        public
+    {
         // Setup: seed unconfigured recovery state with a valid timelock and use zero-address caller to satisfy
         // `onlyTxRecoveryAddress` so execution reaches library-level configuration checks.
         _setTxRecoveryState(address(0), false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
@@ -127,7 +129,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies OTRB-FETR-1, OTRB-FETR-2, and OTRB-FETR-3: finalize access and timelock guards.
-    function test_OTRB_FETR_1__OTRB_FETR_2__OTRB_FETR_3_finalizeEnable_accessAndTimelockGuards_revert() public {
+    function test_OTRB_FETR_1__OTRB_FETR_2__OTRB_FETR_3__OREC_TRF_1_finalizeEnable_accessAndTimelockGuards_revert()
+        public
+    {
         // Setup
         _expectOnlyTxRecoveryRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
@@ -355,7 +359,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies the real `AccountImplementation` emits `IAccount.TransactionExecuted` with nonce=0 and policyId=0
     /// when invoked through the recovery execution path.
-    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9_executeRecovery_realAccount_emitsAccountTransactionExecuted()
+    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9__OREC_TRF_5_executeRecovery_realAccount_emitsAccountTransactionExecuted()
         public
     {
         // Setup: deploy real AccountImplementation behind a BeaconProxy pointing to the harness as beacon.
@@ -412,7 +416,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies OTRB-ERAT-12 and OTRB-ERAT-20: downstream account revert bubbles and no recovery event persists.
-    function test_OTRB_ERAT_12__OTRB_ERAT_20_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists()
+    function test_OTRB_ERAT_12__OTRB_ERAT_20__OREC_TRF_6_executeRecovery_downstreamRevert_bubblesAndNoRecoveryEventPersists()
         public
     {
         // Setup
@@ -670,7 +674,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies OTRB-IITR-10, OTRB-IITR-11, and OTRB-IITR-12: initiate-initialize bubbles downstream
     /// already-configured/pending/invalid-param errors.
-    function test_OTRB_IITR_10__OTRB_IITR_11__OTRB_IITR_12__NMTRB_ITR_9_initiateInitialize_downstreamErrorsBubble()
+    function test_OTRB_IITR_10__OTRB_IITR_11__OTRB_IITR_12__NMTRB_ITR_9__OREC_DRI_5_initiateInitialize_downstreamErrorsBubble()
         public
     {
         // Setup
@@ -756,7 +760,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies `OrganizationTxRecoveryBase.initiateInitializeTransactionAndERC1271Recovery` can re-initiate the
     /// same params with a different salt after cancellation.
-    function test_NMTRB_ITR_2_initiateInitialize_sameParamsDifferentSalts_canSucceedAcrossCancel() public {
+    function test_NMTRB_ITR_2__OREC_DRI_2_initiateInitialize_sameParamsDifferentSalts_canSucceedAcrossCancel()
+        public
+    {
         // Setup: start from zeroed tx-recovery config and build two initiate auth payloads around an intermediate
         // cancel for the same deferred-init tuple.
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
@@ -1000,7 +1006,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     ///   - FITR-11: `isEnabled` remains false after finalize (enable flow still required).
     ///   - FITR-12: Second finalize reverts `NoTxRecoveryInitializationPending` (pending already cleared).
     ///   - FITR-2:  Insufficient admin threshold variant tested in dedicated `test_OTRB_FITR_2_*`.
-    function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12__NMTRB_ITR_7_finalizeInitialize_authAndStateSemantics()
+    function test_OTRB_FITR_1__OTRB_FITR_2__OTRB_FITR_3__OTRB_FITR_4__OTRB_FITR_5__OTRB_FITR_6__OTRB_FITR_7__OTRB_FITR_8__OTRB_FITR_9__OTRB_FITR_10__OTRB_FITR_11__OTRB_FITR_12__NMTRB_ITR_7__OREC_DRI_3__OREC_PH_1_finalizeInitialize_authAndStateSemantics()
         public
     {
         // Setup: start from a fully zeroed recovery state (no config, no pending init).

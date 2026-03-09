@@ -16,8 +16,8 @@ import {ContractType} from "types/CommonTypes.sol";
  */
 contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSuiteBase {
     /// @dev Verifies `_addToWhitelist` marks each input as whitelisted for the given contract type.
-    ///      Plan 15: IWI-HELP-1, IWI-HELP-2.
-    function test_IWI_ATW_1_IWI_HELP_1_IWI_HELP_2_addToWhitelist_marksEachInputWhitelisted() public {
+    ///      Plan 15: IWI-HELP-1, IWI-HELP-2. [IWI-PH-1]
+    function test_IWI_ATW_1_IWI_HELP_1_IWI_HELP_2__IWI_PH_1_addToWhitelist_marksEachInputWhitelisted() public {
         // Setup: build deterministic input addresses.
         address[] memory inputs = _pair(organizationImplementationA, organizationImplementationB);
 
@@ -30,8 +30,8 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     }
 
     /// @dev Verifies `_addToWhitelist` leaves other contract-type mapping unchanged for the same addresses.
-    ///      Plan 15: IWI-HELP-4.
-    function test_IWI_ATW_2_IWI_HELP_4_addToWhitelist_otherContractTypeUnchanged() public {
+    ///      Plan 15: IWI-HELP-4. [IWI-PH-1]
+    function test_IWI_ATW_2_IWI_HELP_4__IWI_PH_1_addToWhitelist_otherContractTypeUnchanged() public {
         // Setup: pre-set opposite contract type to known false state.
         assertFalse(whitelistProxy.isImplementationWhitelisted(ContractType.Account, organizationImplementationA));
 
@@ -44,8 +44,8 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     }
 
     /// @dev Verifies `_addToWhitelist` emits one `ImplementationWhitelisted` event per input entry.
-    ///      Plan 15: IWI-HELP-5.
-    function test_IWI_ATW_3_IWI_HELP_5_addToWhitelist_emitsOneEventPerEntry() public {
+    ///      Plan 15: IWI-HELP-5. [IWI-PH-1]
+    function test_IWI_ATW_3_IWI_HELP_5__IWI_PH_1_addToWhitelist_emitsOneEventPerEntry() public {
         // Setup: build two-entry input list.
         address[] memory inputs = _pair(organizationImplementationA, organizationImplementationB);
 
@@ -89,8 +89,8 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     }
 
     /// @dev Verifies `_removeFromWhitelist` marks each input as not whitelisted for the given contract type.
-    ///      Plan 15: IWI-HELP-6.
-    function test_IWI_RTW_1_IWI_HELP_6_removeFromWhitelist_marksEachInputUnwhitelisted() public {
+    ///      Plan 15: IWI-HELP-6. [IWI-PH-1]
+    function test_IWI_RTW_1_IWI_HELP_6__IWI_PH_1_removeFromWhitelist_marksEachInputUnwhitelisted() public {
         // Setup: seed two whitelisted entries to remove.
         whitelistProxy.exposeAddToWhitelist(
             ContractType.Organization, _pair(organizationImplementationA, organizationImplementationB)
@@ -107,8 +107,8 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     }
 
     /// @dev Verifies `_removeFromWhitelist` leaves other contract-type mapping unchanged for same addresses.
-    ///      Plan 15: IWI-HELP-8.
-    function test_IWI_RTW_2_IWI_HELP_8_removeFromWhitelist_otherContractTypeUnchanged() public {
+    ///      Plan 15: IWI-HELP-8. [IWI-PH-1]
+    function test_IWI_RTW_2_IWI_HELP_8__IWI_PH_1_removeFromWhitelist_otherContractTypeUnchanged() public {
         // Setup: seed same address under both types, then remove only Organization entry.
         whitelistProxy.exposeAddToWhitelist(ContractType.Organization, _single(organizationImplementationA));
         whitelistProxy.exposeAddToWhitelist(ContractType.Account, _single(organizationImplementationA));
@@ -122,8 +122,8 @@ contract ImplementationWhitelistInternalHelpersTest is ImplementationWhitelistSu
     }
 
     /// @dev Verifies `_removeFromWhitelist` emits one `ImplementationUnwhitelisted` event per input entry.
-    ///      Plan 15: IWI-HELP-10.
-    function test_IWI_RTW_3_IWI_HELP_10_removeFromWhitelist_emitsOneEventPerEntry() public {
+    ///      Plan 15: IWI-HELP-10. [IWI-PH-1]
+    function test_IWI_RTW_3_IWI_HELP_10__IWI_PH_1_removeFromWhitelist_emitsOneEventPerEntry() public {
         // Setup: seed two entries that will be removed.
         whitelistProxy.exposeAddToWhitelist(
             ContractType.Organization, _pair(organizationImplementationA, organizationImplementationB)

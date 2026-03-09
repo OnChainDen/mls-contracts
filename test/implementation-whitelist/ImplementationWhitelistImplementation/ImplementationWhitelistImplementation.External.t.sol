@@ -6,6 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     ImplementationWhitelistHarness,
@@ -26,8 +27,10 @@ interface IUUPSWhitelistEntrypoints {
  */
 contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase {
     // forgefmt: disable-next-item
-    /// @dev Verifies implementation constructor disables initializers (direct initialize reverts).
-    function test_IWI_INIT_4_IWI_CON_1_IWI_CON_2_constructorDisablesInitializers_directCallReverts() public {
+    /// @dev Verifies implementation constructor disables initializers (direct initialize reverts). [IWI-IDCP-1]
+    function test_IWI_INIT_4_IWI_CON_1_IWI_CON_2__IWI_IDCP_1_constructorDisablesInitializers_directCallReverts()
+        public
+    {
         // Setup: implementation contract is deployed once in suite setup and is initializer-disabled.
         address[] memory empty;
 
@@ -39,7 +42,7 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
     // forgefmt: disable-next-item
     /// @dev Verifies proxy initialization sets owner and seeds both type-specific whitelists.
-    function test_IWI_INIT_1_IWI_INIT_2_IWI_INIT_3_IWI_INIT_4_IWI_INIT_5_initialize_setsOwnerAndSeedsWhitelists()
+    function test_IWI_INIT_1_IWI_INIT_2_IWI_INIT_3_IWI_INIT_4_IWI_INIT_5__IWI_CTRL_1_initialize_setsOwnerAndSeedsWhitelists()
         public
     {
         // Setup: deploy uninitialized proxy and deterministic organization/account seed arrays.
@@ -84,8 +87,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         proxy.initialize(OWNER, empty, empty);
     }
 
-    /// @dev Verifies proxy cannot be initialized twice.
-    function test_IWI_INIT_3_IWI_INIT_12_initialize_cannotBeCalledTwice() public {
+    /// @dev Verifies proxy cannot be initialized twice. [IWI-CTRL-2]
+    function test_IWI_INIT_3_IWI_INIT_12__IWI_CTRL_2_initialize_cannotBeCalledTwice() public {
         // Setup: proxy from suite setup is already initialized.
         address[] memory empty;
 
@@ -258,8 +261,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
-    /// @dev Verifies non-owner callers cannot mutate whitelist entries.
-    function test_IWI_WI_2_IWI_WI_1_nonOwnerCaller_reverts() public {
+    /// @dev Verifies non-owner callers cannot mutate whitelist entries. [IWI-CTRL-3]
+    function test_IWI_WI_2_IWI_WI_1__IWI_CTRL_3_nonOwnerCaller_reverts() public {
         // Setup: prepare add/remove arrays for unauthorized caller.
         address[] memory toAdd = _single(organizationImplementationA);
         address[] memory empty;
@@ -271,8 +274,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         whitelistProxy.whitelistImplementations(ContractType.Organization, toAdd, empty);
     }
 
-    /// @dev Verifies Organization and Account whitelists are independent namespaces.
-    function test_IWI_WI_3_IWI_WI_13_contractTypeMappings_areIndependent() public {
+    /// @dev Verifies Organization and Account whitelists are independent namespaces. [IWI-CTRL-4]
+    function test_IWI_WI_3_IWI_WI_13__IWI_CTRL_4_contractTypeMappings_areIndependent() public {
         // Setup: whitelist same address under Organization type only.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -438,8 +441,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         );
     }
 
-    /// @dev Verifies accepted ownership transfer switches mutation rights from old owner to new owner.
-    function test_IWI_WI_10_IWI_WI_3_afterAccept_newOwnerCanMutate_oldOwnerCannot() public {
+    /// @dev Verifies accepted ownership transfer switches mutation rights from old owner to new owner. [IWI-CTRL-3]
+    function test_IWI_WI_10_IWI_WI_3__IWI_CTRL_3_afterAccept_newOwnerCanMutate_oldOwnerCannot() public {
         // Setup: complete ownership transfer to NEW_OWNER.
         vm.prank(OWNER);
         whitelistProxy.transferOwnership(NEW_OWNER);
@@ -689,7 +692,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
     // forgefmt: disable-next-item
     /// @dev Verifies whitelist storage persists across multiple sequential UUPS upgrades for both contract types.
-    function test_IWI_UUPS_6_IWI_AU_3_whitelistStoragePersistsAcrossMultipleSequentialUpgrades() public {
+    /// [IWI-CTRL-6]
+    function test_IWI_UUPS_6_IWI_AU_3__IWI_CTRL_6_whitelistStoragePersistsAcrossMultipleSequentialUpgrades() public {
         // Setup: seed whitelist state before upgrade.
         vm.prank(OWNER);
         whitelistProxy.whitelistImplementations(
@@ -789,6 +793,18 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         IUUPSWhitelistEntrypoints(address(implementation)).upgradeToAndCall(address(implementationV2), bytes(""));
     }
 
+    /// @dev Verifies direct implementation-contract calls to inherited `upgradeToAndCall` revert
+    /// `OwnableUnauthorizedAccount` because implementation storage has no owner. [IWI-IDCP-2]
+    function test_IWI_IDCP_2_upgradeToAndCallOnImplementationContract_revertsOwnableUnauthorizedAccount() public {
+        // Setup: call the implementation contract directly rather than through the initialized proxy.
+
+        // Call: invoke the implementation UUPS entrypoint directly and expect the plan-19 owner check surface.
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
+        IUUPSWhitelistEntrypoints(address(implementation)).upgradeToAndCall(address(implementationV2), bytes(""));
+
+        // Verify: implementation-storage direct calls should fail via owner enforcement rather than proxy context.
+    }
+
     /// @dev Verifies calling `proxiableUUID` through proxy reverts due `notDelegated`.
     function test_IWI_UUPS_9_proxiableUUIDThroughProxy_revertsNotDelegated() public {
         // Setup: proxy call context.
@@ -823,8 +839,8 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         IUUPSWhitelistEntrypoints(address(whitelistProxy)).upgradeToAndCall(noCodeAddress, bytes(""));
     }
 
-    /// @dev Verifies UUPS upgrade preserves ownership state.
-    function test_IWI_AU_4_upgradePreservesOwnershipState() public {
+    /// @dev Verifies UUPS upgrade preserves ownership state. [IWI-CTRL-6]
+    function test_IWI_AU_4__IWI_CTRL_6_upgradePreservesOwnershipState() public {
         // Setup: transfer ownership to NEW_OWNER before upgrade.
         vm.prank(OWNER);
         whitelistProxy.transferOwnership(NEW_OWNER);
@@ -837,5 +853,35 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
 
         // Verify: ownership state preserved after upgrade.
         assertEq(whitelistProxy.owner(), NEW_OWNER, "owner should be preserved after upgrade");
+    }
+
+    /// @dev Verifies `whitelistImplementations` rejects zero addresses as a fail-closed code-existence requirement.
+    /// [IWI-CTRL-7]
+    function test_IWI_CTRL_7_whitelistImplementations_zeroAddress_revertsAddressEmptyCode_desiredBehavior() public {
+        // Setup: prepare a single zero-address whitelist addition under Organization type.
+        address[] memory toWhitelist = _single(address(0));
+        address[] memory empty;
+
+        // Call: attempt to whitelist the zero address and expect fail-closed empty-code validation.
+        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, address(0)));
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(ContractType.Organization, toWhitelist, empty);
+
+        // Verify: whitelist mutation should reject zero-address inputs before mutating storage.
+    }
+
+    /// @dev Verifies `whitelistImplementations` rejects no-code addresses as a fail-closed code-existence
+    /// requirement. [IWI-CTRL-7]
+    function test_IWI_CTRL_7_whitelistImplementations_noCodeAddress_revertsAddressEmptyCode_desiredBehavior() public {
+        // Setup: prepare a single no-code whitelist addition under Account type.
+        address[] memory toWhitelist = _single(noCodeAddress);
+        address[] memory empty;
+
+        // Call: attempt to whitelist an address with no runtime code and expect fail-closed validation.
+        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, noCodeAddress));
+        vm.prank(OWNER);
+        whitelistProxy.whitelistImplementations(ContractType.Account, toWhitelist, empty);
+
+        // Verify: whitelist mutation should reject no-code targets before mutating storage.
     }
 }
