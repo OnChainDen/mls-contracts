@@ -134,6 +134,39 @@ contract OrganizationGroupsBaseModifyGroupsTest is OrganizationGroupsBaseSuiteBa
         assertFalse(harness.isGroup(groupId), "deleted group should remain inactive");
     }
 
+    /// @dev Verifies `OrganizationGroupsBase.modifyGroups` rejects create batches that add non-members and rolls back
+    /// nonce consumption. [OGB-MG-7]
+    function test_OGB_MG_7_modifyGroups_createWithNonMember_revertsAndDoesNotConsumeNonce() public {
+        uint256 groupId = 7915;
+        address nonMember = address(0xD15EA5E);
+
+        // Setup: configure one valid admin/member signer, then build a create-group batch that mixes one valid member
+        // with one address that is not an organization member.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        GroupModification[] memory modifications =
+            _buildModificationsArray(_createModification(groupId, buildArray(admin1, nonMember)));
+
+        (AdminAuthParams memory auth, bytes memory operationData) = _buildModifyGroupsAuth({
+            modifications: modifications,
+            salt: 3115,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: execute the guardian-authorized create request, expecting the member-existence guard to reject the
+        // non-member entry.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember));
+        vm.prank(GUARDIAN);
+        harness.modifyGroups(modifications, auth);
+
+        // Verify: the failed create leaves the nonce unused and does not partially create the group.
+        uint256 nonce = _computeModifyGroupsNonce(operationData, 3115);
+        assertFalse(groupsStateHarness.getUsedNonce(nonce), "non-member create revert should not consume nonce");
+        assertFalse(harness.isGroup(groupId), "group should not be created when one requested member is invalid");
+    }
+
     /// @dev Verifies non-guardian caller reverts via `onlyGuardian`.
     function test_modifyGroups_nonGuardianCaller_revertsOnlyGuardian() public {
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});

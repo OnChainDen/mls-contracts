@@ -671,6 +671,208 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "manual policy requires review signatures");
     }
 
+    /// @dev Verifies policy-signature validation returns invalid for unknown approval policy-type enum values.
+    /// [OAS-VPBS-8]
+    function test_OAS_VPBS_8_unknownPolicyType_returnsInvalidValue() public {
+        // Setup: seed a policy proof whose encoded approval policy type is neither `AutoApprove` nor
+        // `RequireManualApproval`.
+        policyStateHarness.setGuardian(guardianSigner);
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _emptyProofsForPolicy(policy);
+
+        // Patch the encoded policy leaf and the encoded signature payload to the same unknown enum value so the
+        // Merkle proof remains valid and the branch under test is the approval-policy-type check itself.
+        bytes memory policyLeafPayload = abi.encode(DEFAULT_POLICY_ID, proofs.policy);
+        _setWord(policyLeafPayload, 5 * 32, 99);
+        policyStateHarness.setPoliciesRoot(keccak256(bytes.concat(keccak256(policyLeafPayload))));
+
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+
+        bytes memory signature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: guardianSignature,
+            proofs: proofs
+        });
+        _setPolicyTypeInPolicySignature(signature, 99);
+
+        // Call: validate the policy signature through the library-backed account-signature path.
+        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+
+        // Verify: unknown approval policy types must fail closed with the ERC-1271 invalid value.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unknown approval policy types should be invalid");
+    }
+
+    /// @dev Verifies manual approval accepts a Safe-module guardian plus mixed EOA and ERC-1271 reviewers.
+    /// [OAS-VPBS-11]
+    function test_OAS_VPBS_11_manualPolicySafeGuardianAndMixedReviewers_returnsMagicValue() public {
+        uint256 reviewerGroupId = 9151;
+
+        // Setup: configure a Safe guardian that enables the expected module signer, then require a two-reviewer group
+        // threshold with one EOA reviewer and one ERC-1271 reviewer contract.
+        MockGuardianSafe guardianSafe = new MockGuardianSafe();
+        guardianSafe.setModuleEnabled(guardianSigner, true);
+        policyStateHarness.setGuardian(address(guardianSafe));
+
+        MockERC1271ValidSigner contractReviewer = new MockERC1271ValidSigner();
+        policyStateHarness.setMemberStatus(address(contractReviewer), true);
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = reviewerGroupId;
+        policy.config.approval.approvalThreshold = 2;
+
+        policyStateHarness.setGroupStatus(reviewerGroupId, true);
+        policyStateHarness.setGroupMemberStatus(reviewerGroupId, reviewer1, true);
+        policyStateHarness.setGroupMemberStatus(reviewerGroupId, address(contractReviewer), true);
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 expiration = block.timestamp + 1 days;
+
+        bytes memory initiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory eoaReviewSignature = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: REVIEWER_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+        bytes memory erc1271ReviewSignature = _buildContractSignature(address(contractReviewer), hex"BEEF");
+
+        address[] memory signers = new address[](2);
+        signers[0] = reviewer1;
+        signers[1] = address(contractReviewer);
+
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = eoaReviewSignature;
+        signatures[1] = erc1271ReviewSignature;
+
+        bytes memory reviewSignatures = _sortAndConcatSignatures(signers, signatures);
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+
+        bytes memory signature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
+            guardianSignature: guardianSignature,
+            proofs: proofs
+        });
+
+        // Call: validate the packed mixed-reviewer signature bundle under the Safe-module guardian path.
+        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+
+        // Verify: the mixed reviewer set should satisfy manual approval and return the ERC-1271 magic value.
+        assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "mixed reviewers under a Safe-module guardian should pass");
+    }
+
+    /// @dev Verifies manual approval succeeds when every reviewer signature is supplied by an authorized ERC-1271
+    /// contract signer. [OAS-VPBS-12]
+    function test_OAS_VPBS_12_manualPolicyAllERC1271Reviewers_returnsMagicValue() public {
+        uint256 reviewerGroupId = 9152;
+
+        // Setup: configure a two-reviewer group whose members are both ERC-1271 contracts and keep the guardian on
+        // the standard EOA happy path so only reviewer encoding varies.
+        policyStateHarness.setGuardian(guardianSigner);
+
+        MockERC1271ValidSigner firstContractReviewer = new MockERC1271ValidSigner();
+        MockERC1271ValidSigner secondContractReviewer = new MockERC1271ValidSigner();
+        policyStateHarness.setMemberStatus(address(firstContractReviewer), true);
+        policyStateHarness.setMemberStatus(address(secondContractReviewer), true);
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = reviewerGroupId;
+        policy.config.approval.approvalThreshold = 2;
+
+        policyStateHarness.setGroupStatus(reviewerGroupId, true);
+        policyStateHarness.setGroupMemberStatus(reviewerGroupId, address(firstContractReviewer), true);
+        policyStateHarness.setGroupMemberStatus(reviewerGroupId, address(secondContractReviewer), true);
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 expiration = block.timestamp + 1 days;
+
+        bytes memory initiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+
+        address[] memory signers = new address[](2);
+        signers[0] = address(firstContractReviewer);
+        signers[1] = address(secondContractReviewer);
+
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _buildContractSignature(address(firstContractReviewer), hex"A1A2");
+        signatures[1] = _buildContractSignature(address(secondContractReviewer), hex"B1B2");
+
+        bytes memory reviewSignatures = _sortAndConcatSignatures(signers, signatures);
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+
+        bytes memory signature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
+            guardianSignature: guardianSignature,
+            proofs: proofs
+        });
+
+        // Call: validate the all-contract reviewer bundle through the account-signature library path.
+        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+
+        // Verify: all-ERC-1271 reviewer bundles that meet threshold must still return the ERC-1271 magic value.
+        assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "all-contract reviewer bundles should satisfy approval");
+    }
+
     /// @dev Verifies that reviewer approvals bound to initiator signature bytes.
     function test_OAS_SH_3_reviewerApprovalsBoundToInitiatorSignatureBytes() public {
         // Setup: configure a valid fixture for reviewer approvals bound to initiator signature bytes.

@@ -259,6 +259,45 @@ contract OrganizationPolicyBaseSetPoliciesTest is OrganizationPolicyBaseSuiteBas
         assertEq(harness.getPoliciesRoot(), newRoot, "repeated idempotent policy updates should preserve the root");
     }
 
+    /// @dev Verifies rejecting a `ModifyPolicies` operation blocks later execution of the same signed payload.
+    /// [OPB-SP-2]
+    function test_OPB_SP_2_rejectAdminOperation_blocksLaterSetPoliciesForSameSignedOperation() public {
+        bytes32 newRoot = keccak256("opb-sp-2-root");
+        string memory ipfsCid = "ipfs://opb-sp-2";
+
+        // Setup: build one approval payload and one rejection payload over the exact same
+        // `(newPoliciesRoot, ipfsCid, salt, expiration)` tuple.
+        (AdminAuthParams memory approvalAuth, bytes memory operationData) = _buildSetPoliciesAuth({
+            newPoliciesRoot: newRoot,
+            ipfsCid: ipfsCid,
+            salt: 81_054,
+            expirationTimestamp: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        AdminAuthParams memory rejectionAuth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyPolicies,
+            operationData: operationData,
+            isApproval: false,
+            salt: 81_054,
+            expirationTimestamp: block.timestamp + 1 hours,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+        uint256 nonce = _computeSetPoliciesNonce(operationData, 81_054);
+
+        vm.prank(GUARDIAN);
+        harness.rejectAdminOperation(OperationType.ModifyPolicies, operationData, rejectionAuth);
+
+        // Call: try to execute `setPolicies` with the approval signatures for the now-rejected nonce.
+        assertTrue(harness.getUsedNonce(nonce), "rejection should burn the shared modify-policies nonce");
+        _expectNonceAlreadyUsed(nonce);
+        vm.prank(GUARDIAN);
+        harness.setPolicies(newRoot, ipfsCid, approvalAuth);
+
+        // Verify: the rejected operation never updates the policies root.
+        assertEq(harness.getPoliciesRoot(), bytes32(0), "rejected modify-policies tuple must remain unexecutable");
+    }
+
     /// @dev Verifies that tampering `newPoliciesRoot` after signing invalidates auth and reverts.
     function test_setPolicies_rootTamperingAfterSigning_invalidatesAuthAndReverts() public {
         // Setup: assemble inputs expected to hit the guarded failure path for tampering `newPoliciesRoot` after signing

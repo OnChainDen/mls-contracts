@@ -2,8 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {LibOrganizationAccountSignature} from "organization/libraries/LibOrganizationAccountSignature.sol";
 import {OrganizationPolicyStateHarness} from "test/organization/shared/OrganizationPolicyStateHarness.sol";
 import {ValidationProofs} from "types/PolicyTypes.sol";
 
@@ -16,6 +16,24 @@ contract LibOrganizationAccountSignatureHarness is OrganizationPolicyStateHarnes
      * @dev Wrapper around `LibOrganizationAccountSignature.isValidSignature`.
      */
     function isValidSignatureViaLibrary(address account, bytes32 hash, bytes calldata signature)
+        external
+        view
+        returns (bytes4)
+    {
+        (bool success, bytes memory result) =
+            address(this).staticcall(abi.encodeCall(this.isValidSignatureUnsafe, (account, hash, signature)));
+
+        if (!success || result.length < 32) {
+            return SignatureUtils.ERC1271_INVALID_VALUE;
+        }
+
+        return abi.decode(result, (bytes4));
+    }
+
+    /**
+     * @dev Raw wrapper around `LibOrganizationAccountSignature.isValidSignature`.
+     */
+    function isValidSignatureUnsafe(address account, bytes32 hash, bytes calldata signature)
         external
         view
         returns (bytes4)
@@ -42,9 +60,8 @@ contract LibOrganizationAccountSignatureHarness is OrganizationPolicyStateHarnes
         view
         returns (bytes4)
     {
-        (bool success, bytes memory result) = address(this).staticcall(
-            abi.encodeCall(this.validatePolicyBasedSignatureUnsafe, (account, hash, signatureData))
-        );
+        (bool success, bytes memory result) = address(this)
+            .staticcall(abi.encodeCall(this.validatePolicyBasedSignatureUnsafe, (account, hash, signatureData)));
 
         if (!success || result.length < 32) {
             return SignatureUtils.ERC1271_INVALID_VALUE;

@@ -218,6 +218,70 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         assertGt(firstAccount.code.length, 0, "first deployment should remain intact after collision revert");
     }
 
+    /// @dev Verifies deployed-account tracking is isolated per organization even when both orgs deploy with the same
+    /// CREATE2 salt. [OAF-DA-3]
+    function test_OAF_DA_3_deployAccount_otherOrganizationAccountIsNotTrackedAsLocallyDeployed() public {
+        bytes32 create2Salt = bytes32(uint256(41_032));
+        uint256 expiration = block.timestamp + 1 hours;
+
+        // Setup: configure two fresh organizations that share the same admin signer and account implementation so
+        // they can both deploy using the same CREATE2 salt under isolated storage.
+        _setSingleAdminThresholdOne();
+        harness.setAccountImplementationStorage(accountImplementationV1);
+
+        OrganizationAccountFactoryBaseHarness secondHarness = new OrganizationAccountFactoryBaseHarness();
+        secondHarness.setGuardian(GUARDIAN);
+        secondHarness.setMemberStatus(admin1, true);
+        secondHarness.setAdminStatus(admin1, true);
+        secondHarness.setAdminCount(1);
+        secondHarness.setVotingThreshold(1);
+        secondHarness.setAccountImplementationStorage(accountImplementationV1);
+
+        (AdminAuthParams memory firstAuth, bytes memory operationData) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 51_033,
+            expiration: expiration,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        bytes32 secondOperationHash = secondHarness.getAdminOperationHash({
+            operationType: OperationType.DeployAccount,
+            operationData: operationData,
+            salt: 51_034,
+            expirationTimestamp: expiration,
+            isApproval: true
+        });
+        AdminAuthParams memory secondAuth = AdminAuthParams({
+            salt: 51_034,
+            expirationTimestamp: expiration,
+            signatures: _buildSortedEOASignatures(secondOperationHash, buildUint256Array(ADMIN_PK_1))
+        });
+
+        vm.prank(GUARDIAN);
+        address firstAccount = harness.deployAccount(create2Salt, firstAuth);
+
+        // Call: ask the second organization whether the first organization's deployed account belongs to it, then
+        // deploy its own account using the same CREATE2 salt.
+        assertTrue(harness.isDeployedAccount(firstAccount), "first organization should track its deployed account");
+        assertFalse(
+            secondHarness.isDeployedAccount(firstAccount),
+            "second organization must not treat another org's account as locally deployed"
+        );
+
+        vm.prank(GUARDIAN);
+        address secondAccount = secondHarness.deployAccount(create2Salt, secondAuth);
+
+        // Verify: each organization tracks only its own deployment, even when the signed payload and CREATE2 salt are
+        // otherwise identical.
+        assertFalse(
+            secondHarness.isDeployedAccount(firstAccount),
+            "second organization should still reject the first organization's account after its own deployment"
+        );
+        assertTrue(secondHarness.isDeployedAccount(secondAccount), "second organization should track only its account");
+        assertTrue(firstAccount != secondAccount, "distinct organizations should deploy distinct account addresses");
+    }
+
     /// @dev Verifies guardian + valid auth deploys a deterministic account that is immediately callable. [OAF-DA-1]
     function test_OAFB_DA_7__OAF_DA_1_deployAccount_guardianWithValidAuth_delegatesToLibraryAndMarksDeployed() public {
         bytes32 create2Salt = bytes32(uint256(4104));
