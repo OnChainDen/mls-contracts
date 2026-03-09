@@ -154,6 +154,30 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Whitelist enforcement is confirmed by the expected revert.
     }
 
+    /// @dev Verifies `OrganizationFactory.deployOrganization` rejects an implementation that is whitelisted only under
+    /// `ContractType.Account`. [OF-DO-3]
+    function test_OF_DO_3_deployOrganization_accountOnlyWhitelistedImplementation_revertsImplementationNotWhitelisted()
+        public
+    {
+        // Setup: Configure the shared organization implementation to be whitelisted only in the account namespace.
+        bytes32 salt = bytes32(uint256(20021));
+        InitializationParams memory params = _defaultInitializationParams();
+        whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementation), false);
+        whitelist.setImplementationWhitelisted(ContractType.Account, address(implementation), true);
+
+        // Call: Attempt deployment from the authorized deployer and expect the organization whitelist validation
+        // path to reject the implementation.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(implementation)
+            )
+        );
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+
+        // Verify: Account-only whitelist membership does not satisfy the organization deployment whitelist gate.
+    }
+
     /// @dev Verifies `OrganizationFactory.deployOrganization` validates whitelist inputs using
     /// `ContractType.Organization` and the exact implementation address. [OF-DO-3]
     function test_OF_DO_6__OF_DO_7__OF_DO_3_deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation()
