@@ -25,31 +25,31 @@
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| OF-DO-1 | Authorized deployer + whitelisted implementation + valid init params deploys, initializes, and returns expected address | [I] | P0 |
-| OF-DO-2 | Unauthorized caller reverts `UnauthorizedDeployer` | [N] | P0 |
-| OF-DO-3 | Non-whitelisted implementation reverts | [N] | P0 |
-| OF-DO-4 | Failed initialization (invalid init params) reverts atomically; no partial deployment persists | [S] | P0 |
-| OF-DO-5 | Retry after failed deploy with same `(salt, implementation, whitelist)` succeeds (salt not consumed on revert) | [I] | P1 |
-| OF-DO-6 | Deployment emits `OrganizationDeployed` only on successful full flow | [EV] | P1 |
-| OF-DO-7 | Reusing same `(salt, implementation, whitelist)` after successful deployment reverts (CREATE2 collision) and does not produce duplicate deploy side effects | [N][S] | P1 |
-| OF-DO-8 | [DESIRED] `implementationAddress == address(0)` reverts | [DESIRED][N] | P0 |
-| OF-DO-9 | [DESIRED] `implementationAddress` without code reverts | [DESIRED][S] | P0 |
-| OF-DO-10 | [DESIRED] `whitelistAddress == address(0)` reverts | [DESIRED][S] | P0 |
-| OF-DO-11 | [DESIRED] `whitelistAddress` without code reverts | [DESIRED][S] | P0 |
+| IOF-DO-1 | Authorized deployer + whitelisted implementation + valid init params deploys, initializes, and returns expected address | [I] | P0 |
+| IOF-DO-2 | Unauthorized caller reverts `UnauthorizedDeployer` | [N] | P0 |
+| IOF-DO-3 | Non-whitelisted implementation reverts | [N] | P0 |
+| IOF-DO-4 | Failed initialization (invalid init params) reverts atomically; no partial deployment persists | [S] | P0 |
+| IOF-DO-5 | Retry after failed deploy with same `(salt, implementation, whitelist)` succeeds (salt not consumed on revert) | [I] | P1 |
+| IOF-DO-6 | Deployment emits `OrganizationDeployed` only on successful full flow | [EV] | P1 |
+| IOF-DO-7 | Reusing same `(salt, implementation, whitelist)` after successful deployment reverts (CREATE2 collision) and does not produce duplicate deploy side effects | [N][S] | P1 |
+| IOF-DO-8 | [DESIRED] `implementationAddress == address(0)` reverts | [DESIRED][N] | P0 |
+| IOF-DO-9 | [DESIRED] `implementationAddress` without code reverts | [DESIRED][S] | P0 |
+| IOF-DO-10 | [DESIRED] `whitelistAddress == address(0)` reverts | [DESIRED][S] | P0 |
+| IOF-DO-11 | [DESIRED] `whitelistAddress` without code reverts | [DESIRED][S] | P0 |
 
 ### 1.2 `computeOrganizationAddress(...)`
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| OF-COA-1 | Deterministic for same inputs | [I] | P1 |
-| OF-COA-2 | Different salt/implementation/whitelist produce different addresses | [I] | P1 |
-| OF-COA-3 | Matches actual deployed address from `deployOrganization` | [I] | P0 |
+| IOF-COA-1 | Deterministic for same inputs | [I] | P1 |
+| IOF-COA-2 | Different salt/implementation/whitelist produce different addresses | [I] | P1 |
+| IOF-COA-3 | Matches actual deployed address from `deployOrganization` | [I] | P0 |
 
 ### 1.3 `_getOrganizationProxyBytecode(...)` (private -> harness)
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| OF-GOPB-1 | Bytecode hash is stable for same inputs and sensitive to implementation/whitelist changes | [S] | P1 |
+| IOF-GOPB-1 | Bytecode hash is stable for same inputs and sensitive to implementation/whitelist changes | [S] | P1 |
 
 ---
 
@@ -529,24 +529,24 @@ Critical: Test these through high-level external functions on our Base contracts
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| SEM-EOB-1 | Only `AUTHORIZED_EXECUTOR` can execute on behalf of Safe | [S] | P0 |
-| SEM-EOB-2 | Calls targeting Safe itself are blocked | [S] | P0 |
-| SEM-EOB-3 | Non-batch targets use CALL; batch target uses DELEGATECALL; forwarded value is always zero | [S] | P0 |
-| SEM-EOB-4 | Safe execution failure reverts `ExecutionFailed` | [N] | P0 |
-| SEM-EOB-5 | Module ERC-1271 signature path accepts only signatures from authorized executor | [S] | P0 |
-| SEM-EOB-6 | Malformed/invalid module-signature encodings return ERC-1271 invalid value (not revert) | [S] | P1 |
-| SEM-EOB-7 | Authorized executor can execute guardian-only Organization entrypoints via Safe module; unauthorized callers cannot | [I][S] | P0 |
-| SEM-EOB-8 | [DESIRED] Constructor hardening: reject invalid/non-contract Safe and BatchedTransaction wiring | [DESIRED][S] | P1 |
+| ISEM-EOB-1 | Only `AUTHORIZED_EXECUTOR` can execute on behalf of Safe | [S] | P0 |
+| ISEM-EOB-2 | Calls targeting Safe itself are blocked | [S] | P0 |
+| ISEM-EOB-3 | Non-batch targets use CALL; batch target uses DELEGATECALL; forwarded value is always zero | [S] | P0 |
+| ISEM-EOB-4 | Safe execution failure reverts `ExecutionFailed` | [N] | P0 |
+| ISEM-EOB-5 | Module ERC-1271 signature path accepts only signatures from authorized executor | [S] | P0 |
+| ISEM-EOB-6 | Malformed/invalid module-signature encodings return ERC-1271 invalid value (not revert) | [S] | P1 |
+| ISEM-EOB-7 | Authorized executor can execute guardian-only Organization entrypoints via Safe module; unauthorized callers cannot | [I][S] | P0 |
+| ISEM-EOB-8 | [DESIRED] Constructor hardening: reject invalid/non-contract Safe and BatchedTransaction wiring | [DESIRED][S] | P1 |
 
 ### 14.2 `BatchedTransaction.execute(...)`
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| SEM-BTE-1 | Valid packed batch executes subcalls in order atomically | [I] | P0 |
-| SEM-BTE-2 | Any failing subcall reverts full batch and rolls back earlier subcall effects | [S] | P0 |
-| SEM-BTE-3 | Subcall to `address(this)` (Safe in delegatecall context) always reverts `CannotCallSafe` | [S] | P0 |
-| SEM-BTE-4 | No ETH value transfer possible through batch (value hardcoded zero) | [S] | P0 |
-| SEM-BTE-5 | [DESIRED] Malformed packed encoding (short trailing bytes / oversized lengths / trailing garbage) reverts instead of silently succeeding | [DESIRED][S] | P0 |
+| ISEM-BTE-1 | Valid packed batch executes subcalls in order atomically | [I] | P0 |
+| ISEM-BTE-2 | Any failing subcall reverts full batch and rolls back earlier subcall effects | [S] | P0 |
+| ISEM-BTE-3 | Subcall to `address(this)` (Safe in delegatecall context) always reverts `CannotCallSafe` | [S] | P0 |
+| ISEM-BTE-4 | No ETH value transfer possible through batch (value hardcoded zero) | [S] | P0 |
+| ISEM-BTE-5 | [DESIRED] Malformed packed encoding (short trailing bytes / oversized lengths / trailing garbage) reverts instead of silently succeeding | [DESIRED][S] | P0 |
 
 ---
 
