@@ -160,7 +160,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         public
     {
         // Setup: Configure the shared organization implementation to be whitelisted only in the account namespace.
-        bytes32 salt = bytes32(uint256(20021));
+        bytes32 salt = bytes32(uint256(20_021));
         InitializationParams memory params = _defaultInitializationParams();
         whitelist.setImplementationWhitelisted(ContractType.Organization, address(implementation), false);
         whitelist.setImplementationWhitelisted(ContractType.Account, address(implementation), true);
@@ -179,8 +179,8 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` validates whitelist inputs using
-    /// `ContractType.Organization` and the exact implementation address. [OF-DO-3]
-    function test_OF_DO_6__OF_DO_7__OF_DO_3_deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation()
+    /// `ContractType.Organization` and the exact implementation address.
+    function test_OF_DO_6__OF_DO_7__deployOrganization_whitelistValidation_usesOrganizationTypeAndExactImplementation()
         public
     {
         // Setup: Configure the whitelist mock to expect one exact validation tuple and then reject it.
