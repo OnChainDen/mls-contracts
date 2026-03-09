@@ -241,9 +241,9 @@ contract ImplementationWhitelistInvariantsTest is Test {
     }
 
     // forgefmt: disable-next-item
-    /// @dev IWC-INV-2: No unwhitelisted implementation can pass validation — onchain state must match
-    // reference model for all tracked addresses under both contract types.
-    function invariant_IWC_INV_2_globalWhitelistEnforcement_onchainMatchesReferenceModel() public view {
+    /// @dev IWC-INV-2 + IWC-INV-3: Onchain whitelist state must match the reference model for every tracked address
+    // under both contract types, which also proves type independence (adding to one type never affects the other).
+    function invariant_IWC_INV_2_3_whitelistStateMatchesReferenceModel() public view {
         ImplementationWhitelistHarness whitelist = handler.whitelist();
         uint256 count = handler.trackedCount();
 
@@ -257,26 +257,6 @@ contract ImplementationWhitelistInvariantsTest is Test {
             bool accountOnchain = whitelist.isImplementationWhitelisted(ContractType.Account, addr);
             bool accountReference = handler.referenceWhitelisted(ContractType.Account, addr);
             assertEq(accountOnchain, accountReference, "account whitelist state must match reference model");
-        }
-    }
-
-    // forgefmt: disable-next-item
-    /// @dev IWC-INV-3: Account and Organization whitelist mappings never alias or cross-enable — adding to one type
-    // never affects the other.
-    function invariant_IWC_INV_3_typeIndependence_accountAndOrganizationMappingsNeverAlias() public view {
-        ImplementationWhitelistHarness whitelist = handler.whitelist();
-        uint256 count = handler.trackedCount();
-
-        for (uint256 i = 0; i < count; ++i) {
-            address addr = handler.trackedAddresses(i);
-
-            bool orgExpected = handler.referenceWhitelisted(ContractType.Organization, addr);
-            bool accountExpected = handler.referenceWhitelisted(ContractType.Account, addr);
-            bool orgActual = whitelist.isImplementationWhitelisted(ContractType.Organization, addr);
-            bool accountActual = whitelist.isImplementationWhitelisted(ContractType.Account, addr);
-
-            assertEq(orgActual, orgExpected, "org mapping should reflect only org operations");
-            assertEq(accountActual, accountExpected, "account mapping should reflect only account operations");
         }
     }
 
