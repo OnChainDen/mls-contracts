@@ -205,6 +205,75 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
         organization.setAccountImplementation(address(upgradeAccountImplementation), accountUpgradeAuth);
     }
 
+    /// @dev Verifies unwhitelisting active implementations blocks future deployments and upgrades without mutating the
+    ///      already-active organization or account implementation pointers. [IWI-CTRL-5]
+    function test_IWI_CTRL_5_unwhitelistingActiveImplementations_blocksFutureDeploysAndPreservesPointers() public {
+        // Setup: deploy a baseline organization while both active implementations remain whitelisted.
+        InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));
+        OrganizationImplementationHarness organization = _deployOrganizationProxy({
+            salt: bytes32(uint256(15_250)),
+            implementationAddress: address(baseOrganizationImplementation),
+            params: params
+        });
+        address orgPointerBefore = _readProxyImplementation(address(organization));
+        address accountPointerBefore = organization.getAccountImplementationStorage();
+
+        // Setup: unwhitelist the implementations that are already active for the baseline organization.
+        _setWhitelistStatus(ContractType.Organization, address(baseOrganizationImplementation), false);
+        _setWhitelistStatus(ContractType.Account, address(baseAccountImplementation), false);
+
+        // Verify: new deployments using the now-unwhitelisted active Organization implementation are blocked.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(baseOrganizationImplementation)
+            )
+        );
+        // Call: attempt to deploy a fresh organization against the unwhitelisted active implementation target.
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(
+            bytes32(uint256(15_251)), address(baseOrganizationImplementation), address(whitelistProxy), params
+        );
+
+        // Verify: trying to "upgrade" to the same now-unwhitelisted active Organization implementation also fails.
+        AdminAuthParams memory orgUpgradeAuth = _buildUpgradeAuth({
+            organization: organization,
+            newImplementation: address(baseOrganizationImplementation),
+            data: bytes(""),
+            salt: 15_252
+        });
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector,
+                address(baseOrganizationImplementation)
+            )
+        );
+        // Call: attempt an organization upgrade targeting the already-active but now-unwhitelisted implementation.
+        vm.prank(GUARDIAN);
+        organization.upgradeToAndCallWithAuthorization(address(baseOrganizationImplementation), bytes(""), orgUpgradeAuth);
+
+        // Verify: trying to re-set the already-active account implementation also fails once it is unwhitelisted.
+        AdminAuthParams memory accountUpgradeAuth = _buildAccountImplementationAuth({
+            organization: organization, newImplementation: address(baseAccountImplementation), salt: 15_253
+        });
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IImplementationWhitelist.ImplementationNotWhitelisted.selector, address(baseAccountImplementation)
+            )
+        );
+        // Call: attempt to re-apply the active account implementation after unwhitelisting it.
+        vm.prank(GUARDIAN);
+        organization.setAccountImplementation(address(baseAccountImplementation), accountUpgradeAuth);
+
+        // Verify: the blocked deploy/upgrade attempts never mutate the active implementation pointers.
+        assertEq(_readProxyImplementation(address(organization)), orgPointerBefore, "active org pointer should remain unchanged");
+        assertEq(
+            organization.getAccountImplementationStorage(),
+            accountPointerBefore,
+            "active account pointer should remain unchanged"
+        );
+    }
+
     /// @dev Verifies whitelist UUPS upgrades preserve state and enforcement in factory, org-upgrade, and
     /// account-upgrade flows. [IWC-INT-5]
     function test_IWC_INT_5_whitelistUpgrade_preservesFactoryOrgAndAccountEnforcement() public {

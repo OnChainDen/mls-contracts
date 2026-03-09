@@ -134,13 +134,23 @@ contract MockNativeReceiver {
 contract MockERC20ForAccountTransaction {
     mapping(address => uint256) public balanceOf;
 
+    /// @dev Mints test balances directly to the requested holder.
     function mint(address to, uint256 amount) external {
         balanceOf[to] += amount;
     }
 
+    /// @dev Transfers tokens from the caller to the requested recipient.
     function transfer(address to, uint256 amount) external returns (bool) {
         require(balanceOf[msg.sender] >= amount, "insufficient balance");
         balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        return true;
+    }
+
+    /// @dev Transfers tokens from `from` to `to` without allowance checks for policy-path tests.
+    function transferFrom(address from, address to, uint256 amount) external returns (bool) {
+        require(balanceOf[from] >= amount, "insufficient balance");
+        balanceOf[from] -= amount;
         balanceOf[to] += amount;
         return true;
     }
@@ -155,13 +165,26 @@ contract MockInteractionTarget {
     bytes public lastCallData;
     address public lastCaller;
     uint256 public total;
+    bytes32 public payloadHash;
+    bytes public lastPayload;
 
+    /// @dev Records the forwarded value, calldata, and decoded amount for static-parameter interaction tests.
     function ping(uint256 amount) external payable {
         calls++;
         lastValue = msg.value;
         lastCallData = msg.data;
         lastCaller = msg.sender;
         total += amount;
+    }
+
+    /// @dev Records a dynamic bytes payload for parameter-constraint integration tests.
+    function storePayload(bytes calldata payload) external payable {
+        calls++;
+        lastValue = msg.value;
+        lastCallData = msg.data;
+        lastCaller = msg.sender;
+        lastPayload = payload;
+        payloadHash = keccak256(payload);
     }
 }
 

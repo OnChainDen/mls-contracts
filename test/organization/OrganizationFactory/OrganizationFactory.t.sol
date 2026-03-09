@@ -28,7 +28,7 @@ import {
 import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
-import {ContractType, InitializationParams} from "types/CommonTypes.sol";
+import {ContractType, GroupModification, InitializationParams} from "types/CommonTypes.sol";
 
 interface IWhitelistUUPSUpgradeEntrypoints {
     function upgradeToAndCall(address newImplementation, bytes calldata data) external payable;
@@ -120,6 +120,34 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Call: deploy an organization through the authorized factory path.
         vm.prank(AUTHORIZED_DEPLOYER);
         factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+    }
+
+    /// @dev Verifies `OrganizationFactory.deployOrganization` can initialize 10,000 members in a single call within
+    /// the active block gas limit while preserving the expected organization state. [INT-ETE-8]
+    function test_INT_ETE_8_deployOrganization_initializeTenThousandMembersWithinBlockLimit() public {
+        // Setup: replace the default member/admin fixture with a 10,000-member payload and no initial groups to
+        // isolate the large-membership initialization path.
+        InitializationParams memory params = _defaultInitializationParams();
+        params.members = new address[](10_000);
+        for (uint256 i = 0; i < params.members.length; ++i) {
+            params.members[i] = address(uint160(0x1_0000 + i));
+        }
+        params.admins = buildArray(params.members[0]);
+        params.votingThreshold = 1;
+        params.groups = new GroupModification[](0);
+
+        bytes32 salt = bytes32(uint256(91_008));
+        uint256 gasBefore = gasleft();
+
+        // Call: deploy and initialize the organization through the real factory path.
+        vm.prank(AUTHORIZED_DEPLOYER);
+        address deployed = factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+        uint256 gasUsed = gasBefore - gasleft();
+
+        // Verify: the deployment succeeds within the active block gas limit and persists the full member set.
+        assertLt(gasUsed, block.gaslimit, "10,000-member initialization should stay within the block gas limit");
+        assertTrue(IOrganization(deployed).isInitialized(), "organization should be initialized after large deploy");
+        _assertInitializedState(IOrganization(deployed), params);
     }
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized

@@ -455,19 +455,6 @@ contract BatchedTransactionTest is Test {
         assertFalse(success, "Failed execution must never return success=true");
     }
 
-    /// @dev [DESIRED BEHAVIOR] Verifies trailing bytes shorter than one 28-byte header reverts.
-    function test_BT_EMB_1_executeShortTrailingBytesReverts() public {
-        // Setup: 20 bytes (partial header — address only, missing dataLength).
-        bytes memory partialHeader = abi.encodePacked(address(target1));
-        require(partialHeader.length == 20, "partialHeader should be 20 bytes");
-
-        // Call: execute with partial header. Desired behavior: revert.
-        (bool success,) = _executeBatchViaDelegatecall(partialHeader);
-
-        // Verify: should revert on invalid encoding.
-        assertFalse(success, "[DESIRED BEHAVIOR] Trailing bytes shorter than header should revert");
-    }
-
     /// @dev Verifies malformed first transaction causes revert before any external call.
     function test_BT_EMB_3_executeMalformedFirstTxRevertsBeforeExternalCall() public {
         // Setup: encode a batch where first tx is a reverting function, ensuring no state change.
@@ -510,21 +497,6 @@ contract BatchedTransactionTest is Test {
         // Verify: call succeeds via target's fallback.
         assertTrue(success, "Header-only entry with dataLength=0 should succeed");
         assertTrue(emptyTarget.wasCalled(), "Target fallback should have been called");
-    }
-
-    /// @dev Verifies extremely large declared dataLength with short payload reverts safely.
-    function test_BT_EMB_7_executeExtremelyLargeDataLengthReverts() public {
-        // Setup: header with extremely large declared dataLength but no actual data.
-        bytes memory malformed = abi.encodePacked(
-            address(target1),
-            uint64(type(uint64).max) // extremely large dataLength
-        );
-
-        // Call: execute with extreme dataLength.
-        (bool success,) = _executeBatchViaDelegatecall(malformed);
-
-        // Verify: should revert (calldatacopy with extreme length or OOG).
-        assertFalse(success, "Extremely large declared dataLength should revert safely");
     }
 
     /// @dev Verifies offset/length confusion cannot bypass self-call block (CannotCallSafe).

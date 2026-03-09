@@ -20,6 +20,7 @@ import {ApproverType, Policy, PolicyType, TransactionType, ValidationProofs} fro
  */
 contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAccountSignatureSuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 177;
+    uint256 internal constant NON_MEMBER_PK = 0xD15EA5E;
 
     address internal constant ACCOUNT = address(0xAA7701);
     bytes32 internal constant MESSAGE_HASH = keccak256("policy-signature-message");
@@ -545,6 +546,87 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "source-account mismatch should be rejected");
     }
 
+    /// @dev Verifies `isValidSignature` returns magic for a proofed source account and invalid for an unproofed
+    ///      account under the same `anySourceAccount=false` policy. [OPB-SAF-3]
+    function test_OPB_SAF_3_isValidSignature_specificSourceAccountOnly_allowsProofedAccountAndRejectsOtherAccount()
+        public
+    {
+        // Setup: bind the policy to one account in the source-account tree, then build signatures for both the
+        // allowed account and a different account using the same policy proof.
+        policyStateHarness.setGuardian(guardianSigner);
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
+        policy.config.anySourceAccount = false;
+        address[] memory allowedAccounts = buildArray(ACCOUNT);
+        bytes32[] memory sourceAccountProof;
+        (policy.roots.sourceAccountsRoot, sourceAccountProof) = _buildAddressRootAndProof(allowedAccounts, 0);
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        proofs.sourceAccountProof = sourceAccountProof;
+
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory allowedInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory allowedGuardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: allowedInitiatorSignature
+        });
+        bytes memory allowedSignature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: allowedInitiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: allowedGuardianSignature,
+            proofs: proofs
+        });
+
+        address deniedAccount = address(0xAA7702);
+        bytes memory deniedInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: deniedAccount,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory deniedGuardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: deniedAccount,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: deniedInitiatorSignature
+        });
+        bytes memory deniedSignature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: deniedInitiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: deniedGuardianSignature,
+            proofs: proofs
+        });
+
+        // Call: validate the proofed account first, then retry from an account outside the source-account tree.
+        bytes4 allowedResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, allowedSignature);
+        bytes4 deniedResult = harness.isValidSignatureViaLibrary(deniedAccount, MESSAGE_HASH, deniedSignature);
+
+        // Verify: the proofed account returns magic value while the unproofed account fails closed.
+        assertEq(allowedResult, SignatureUtils.ERC1271_MAGIC_VALUE, "proofed source account should be valid");
+        assertEq(deniedResult, SignatureUtils.ERC1271_INVALID_VALUE, "unproofed source account should be invalid");
+    }
+
     /// @dev Verifies that unauthorized initiator returns invalid value.
     function test_OAS_IESABP_5_unauthorizedInitiator_returnsInvalidValue() public {
         // Setup: configure a valid fixture for unauthorized initiator returns invalid value.
@@ -585,6 +667,51 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
         // Verify: assert the expected success result and state updates.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "unauthorized initiators should be rejected");
+    }
+
+    /// @dev Verifies `isValidSignature` still requires organization membership even when `anyInitiator=true`.
+    ///      [OPB-AIA-3]
+    function test_OPB_AIA_3_isValidSignature_anyInitiatorStillRequiresMembership() public {
+        // Setup: enable `anyInitiator`, but sign with an address that is not a member of the organization.
+        policyStateHarness.setGuardian(guardianSigner);
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
+        policy.config.initiator.anyInitiator = true;
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory nonMemberInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: NON_MEMBER_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: nonMemberInitiatorSignature
+        });
+
+        bytes memory signature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: nonMemberInitiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: guardianSignature,
+            proofs: proofs
+        });
+
+        // Call: validate the non-member initiator signature through the real ERC-1271 path.
+        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signature);
+
+        // Verify: `anyInitiator=true` does not bypass the organization-membership requirement.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "non-member initiator should remain invalid");
     }
 
     /// @dev Verifies that auto approve policy without review signatures returns magic value.

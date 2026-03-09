@@ -148,6 +148,8 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes32 policiesRootBefore = policyStateHarness.getPoliciesRoot();
+        bool accountDeploymentBefore = policyStateHarness.isDeployedAccount(address(account));
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorSignature = _signInitiatorSignature({
             sigHarness: harness,
@@ -213,8 +215,14 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
         bytes4 newResult = account.isValidSignature(MESSAGE_HASH, newSignature);
 
         // Verify: rotation takes effect immediately for the account's ERC-1271 path.
-        assertEq(oldResult, SignatureUtils.ERC1271_INVALID_VALUE, "old module should be invalid after rotation");
-        assertEq(newResult, SignatureUtils.ERC1271_MAGIC_VALUE, "new module should be valid after rotation");
+        assertEq(oldResult, SignatureUtils.ERC1271_INVALID_VALUE, "disabled old module should be invalid");
+        assertEq(newResult, SignatureUtils.ERC1271_MAGIC_VALUE, "enabled new module should be valid");
+        assertEq(policyStateHarness.getPoliciesRoot(), policiesRootBefore, "rotation should not mutate policy root");
+        assertEq(
+            policyStateHarness.isDeployedAccount(address(account)),
+            accountDeploymentBefore,
+            "rotation should not mutate deployed-account tracking"
+        );
     }
 
     /// @dev Verifies the direct guardian signature path still works when the module path is unavailable.
