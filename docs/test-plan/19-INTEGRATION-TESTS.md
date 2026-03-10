@@ -486,10 +486,8 @@ Critical: Test these through high-level external functions on our Base contracts
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
-| OIMP-IDCP-1 | `initialize()` called directly on the implementation contract (not via proxy) reverts (deployer address is unset in implementation's own storage, so `onlyDeployer` fails) | [S] | P0 |
-| OIMP-IDCP-2 | Inherited `upgradeToAndCall()` called directly on the implementation contract reverts `UnauthorizedUpgrade` (`authorizedUpgradeImplementation` is unset in implementation's own storage) | [S] | P0 |
 | OIMP-IDCP-3 | `upgradeToAndCallWithAuthorization()` called directly on the implementation contract reverts (guardian is unset in implementation's own storage, so `onlyGuardian` fails) | [S] | P0 |
-| OIMP-IDCP-4 | [DESIRED] Constructor calls `_disableInitializers()` so `initialize()` on the implementation contract reverts `InvalidInitialization` (explicit defense-in-depth, not relying on `onlyDeployer` as an accidental guard) | [DESIRED][S] | P0 |
+| OIMP-IDCP-4 | Constructor calls `_disableInitializers()` so `initialize()` on the implementation contract reverts `InvalidInitialization` | [S] | P0 |
 
 ---
 

@@ -93,7 +93,7 @@
 | OIB-INIT-2 | Deployer caller with valid params — succeeds | [U] | P0 |
 | OIB-INIT-3 | Re-initialization after success — reverts (initializer guard) | [S] | P0 |
 | OIB-INIT-4 | Failed initialize call does not permanently lock initialization (later valid initialize by deployer can succeed) | [S] | P1 |
-| OIB-INIT-5 | Direct call on implementation contract (not proxy) reverts `UnauthorizedDeployer` | [S] | P0 |
+| OIB-INIT-5 | Direct call on implementation contract (not proxy) reverts `InvalidInitialization` because the constructor disables initializers | [S] | P0 |
 | OIB-INIT-6 | Successful call emits exactly one `OrganizationInitialized` event | [EV] | P1 |
 
 ---
