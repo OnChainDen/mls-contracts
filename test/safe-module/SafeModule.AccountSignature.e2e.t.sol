@@ -127,15 +127,14 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
 
     /// @dev Verifies module rotation makes old signatures fail and new signatures pass through the full account path.
     function test_SMI_ETE_3_accountIsValidSignature_moduleRotationOldFailsNewPasses() public {
-        // Setup: deploy old and new modules on the same guardian Safe with different authorized executors.
+        // Setup: deploy old and new modules on the same guardian Safe; enable the old module first.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule =
             new SafeExecutorModule(address(guardianSafe), vm.addr(AUTHORIZED_EXECUTOR_PK), address(batchedTransaction));
         SafeExecutorModule newModule = new SafeExecutorModule(
             address(guardianSafe), vm.addr(NEW_AUTHORIZED_EXECUTOR_PK), address(batchedTransaction)
         );
-        guardianSafe.setModuleEnabled(address(oldModule), false);
-        guardianSafe.setModuleEnabled(address(newModule), true);
+        guardianSafe.setModuleEnabled(address(oldModule), true);
         policyStateHarness.setGuardian(address(guardianSafe));
 
         Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -162,6 +161,23 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
                 initiatorSignature: initiatorSignature
             })
         );
+        bytes memory oldSignature = _buildPolicySignature({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: oldGuardianSignature,
+            proofs: proofs
+        });
+
+        // Verify: old module signature is valid before rotation.
+        bytes4 preRotationResult = account.isValidSignature(MESSAGE_HASH, oldSignature);
+        assertEq(preRotationResult, SignatureUtils.ERC1271_MAGIC_VALUE, "old module should be valid before rotation");
+
+        // Setup: rotate — disable old module, enable new module.
+        guardianSafe.setModuleEnabled(address(oldModule), false);
+        guardianSafe.setModuleEnabled(address(newModule), true);
+
         bytes memory newGuardianSignature = _buildContractSignature(
             address(newModule),
             _signReviewSignature({
@@ -174,15 +190,6 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
                 initiatorSignature: initiatorSignature
             })
         );
-
-        bytes memory oldSignature = _buildPolicySignature({
-            policyId: DEFAULT_POLICY_ID,
-            expirationTimestamp: expiration,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            guardianSignature: oldGuardianSignature,
-            proofs: proofs
-        });
         bytes memory newSignature = _buildPolicySignature({
             policyId: DEFAULT_POLICY_ID,
             expirationTimestamp: expiration,
@@ -197,8 +204,8 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
         bytes4 newResult = account.isValidSignature(MESSAGE_HASH, newSignature);
 
         // Verify: rotation takes effect immediately for the account's ERC-1271 path.
-        assertEq(oldResult, SignatureUtils.ERC1271_INVALID_VALUE, "disabled old module should be invalid");
-        assertEq(newResult, SignatureUtils.ERC1271_MAGIC_VALUE, "enabled new module should be valid");
+        assertEq(oldResult, SignatureUtils.ERC1271_INVALID_VALUE, "old module should be invalid after rotation");
+        assertEq(newResult, SignatureUtils.ERC1271_MAGIC_VALUE, "new module should be valid after rotation");
     }
 
     /// @dev Verifies the direct guardian signature path still works when the module path is unavailable.
