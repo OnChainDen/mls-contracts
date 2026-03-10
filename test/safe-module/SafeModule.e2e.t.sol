@@ -130,8 +130,9 @@ contract SafeModuleE2ETest is Test, SignatureTestHelpers {
         }
     }
 
-    /// @dev Verifies disabling module on Guardian Safe makes equivalent module-style signatures invalid.
-    function test_SMI_ETE_2_disableModuleInvalidatesModuleSignatures() public {
+    /// @dev Verifies disabled module on Guardian Safe still results in valid signature from module, even if not
+    /// accepted by the account.
+    function test_SMI_ETE_2_disabledModuleStillValidatesSignatureAtModuleLevel() public {
         // Setup: deploy a Guardian Safe mock, enable module as a module on it.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule guardianModule =
