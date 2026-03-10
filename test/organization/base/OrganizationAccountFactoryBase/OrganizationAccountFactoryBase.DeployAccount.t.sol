@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
+
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {
@@ -108,7 +110,7 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
 
     /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` isolates admin-auth salts and allows one
     /// successful deployment per fresh organization for identical `create2Salt` values.
-    function test_NMAFB_AEP_2__NMAFB_AEP_3_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations()
+    function test_NMAFB_AEP_2_deployAccount_sameCreate2Salt_usesIndependentNoncesAndSucceedsAcrossFreshOrganizations()
         public
     {
         bytes32 create2Salt = bytes32(uint256(41031));
@@ -171,6 +173,47 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
         assertGt(firstAccount.code.length, 0, "first organization deployment should produce runtime code");
         assertGt(secondAccount.code.length, 0, "second organization deployment should produce runtime code");
         assertTrue(firstAccount != secondAccount, "fresh organizations should not collide on deployed account address");
+    }
+
+    /// @dev Verifies `OrganizationAccountFactoryBase.deployAccount` reverts on the second deployment when using the
+    /// same `create2Salt` with a different admin-auth salt on the same organization due to CREATE2 collision.
+    function test_NMAFB_AEP_3_deployAccount_sameCreate2Salt_differentAdminSalt_sameOrg_revertsCreate2Collision()
+        public
+    {
+        bytes32 create2Salt = bytes32(uint256(41032));
+
+        // Setup: configure a valid implementation and deploy once to occupy the CREATE2 slot.
+        _setSingleAdminThresholdOne();
+        harness.setAccountImplementationStorage(accountImplementationV1);
+
+        (AdminAuthParams memory firstAuth,) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 51033,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        address firstAccount = harness.deployAccount(create2Salt, firstAuth);
+        assertGt(firstAccount.code.length, 0, "first deployment should produce runtime code");
+
+        (AdminAuthParams memory secondAuth,) = _buildDeployAccountAuth({
+            create2Salt: create2Salt,
+            salt: 51034,
+            expiration: block.timestamp + 1 hours,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        // Call: attempt a second deployment on the same organization with the same `create2Salt` but a different
+        // admin-auth salt; the second nonce is independent, but the CREATE2 address collides.
+        vm.expectRevert(Errors.FailedDeployment.selector);
+        vm.prank(GUARDIAN);
+        harness.deployAccount(create2Salt, secondAuth);
+
+        // Verify: the first deployment is unaffected and the second cannot be executed.
+        assertGt(firstAccount.code.length, 0, "first deployment should remain intact after collision revert");
     }
 
     /// @dev Verifies guardian + valid auth delegates to library deployment path and marks the account deployed.
