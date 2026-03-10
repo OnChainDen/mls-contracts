@@ -2,12 +2,12 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
-import {ISafeExecutorModule} from "interfaces/ISafeExecutorModule.sol";
-import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
 import {BatchedTransaction} from "../../src/safe-module/BatchedTransaction.sol";
-import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
+import {SafeExecutorModule} from "../../src/safe-module/SafeExecutorModule.sol";
+import {ISafeExecutorModule} from "interfaces/ISafeExecutorModule.sol";
 import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
 import {OrganizationGroupsTestBase} from "test/organization/shared/OrganizationGroupsTestBase.sol";
+import {OrganizationImplementationHarness} from "test/organization/shared/OrganizationUpgradeHarnesses.sol";
 import {AdminAuthParams} from "types/AdminTypes.sol";
 import {GroupModification, OperationType} from "types/CommonTypes.sol";
 
@@ -145,8 +145,9 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         // Setup: encode member additions first, then a group creation that uses those newly added members.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 201);
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 202);
-        bytes memory batchData =
-            abi.encodeWithSelector(BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyGroupsCall));
+        bytes memory batchData = abi.encodeWithSelector(
+            BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyGroupsCall)
+        );
 
         // Call: execute the ordered admin batch through SafeExecutorModule -> BatchedTransaction.
         vm.prank(authorizedExecutor);
@@ -166,8 +167,9 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         // Setup: encode the same logical work in the unsafe order, creating the group before members exist.
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 301);
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 302);
-        bytes memory batchData =
-            abi.encodeWithSelector(BatchedTransaction.execute.selector, _encodeBatch(modifyGroupsCall, modifyMembersCall));
+        bytes memory batchData = abi.encodeWithSelector(
+            BatchedTransaction.execute.selector, _encodeBatch(modifyGroupsCall, modifyMembersCall)
+        );
 
         // Call: execute the malformed ordering and expect the batch to fail atomically.
         vm.prank(authorizedExecutor);
@@ -187,8 +189,9 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         // Setup: execute a successful member/group batch once to consume both nonces.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 401);
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 402);
-        bytes memory batchData =
-            abi.encodeWithSelector(BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyGroupsCall));
+        bytes memory batchData = abi.encodeWithSelector(
+            BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyGroupsCall)
+        );
 
         vm.prank(authorizedExecutor);
         module.executeOnBehalf(address(batchedTransaction), batchData);
@@ -210,7 +213,8 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
     function test_SMI_ETE_10_B_consumedSecondNonce_rollsBackFreshFirstSubcall() public {
         // Setup: execute an initial successful batch whose group-call nonce will be replayed later.
         bytes memory initialModifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 501);
-        bytes memory staleModifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 502);
+        bytes memory staleModifyGroupsCall =
+            _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 502);
         bytes memory initialBatchData = abi.encodeWithSelector(
             BatchedTransaction.execute.selector, _encodeBatch(initialModifyMembersCall, staleModifyGroupsCall)
         );
@@ -242,8 +246,9 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         // Setup: build a valid member/group batch that would otherwise succeed.
         bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 601);
         bytes memory modifyGroupsCall = _buildCreateGroupCall(GROUP_ID, buildArray(memberToAddA, memberToAddB), 602);
-        bytes memory batchData =
-            abi.encodeWithSelector(BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyGroupsCall));
+        bytes memory batchData = abi.encodeWithSelector(
+            BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyGroupsCall)
+        );
 
         safe.setModuleEnabled(address(module), false);
 
@@ -267,6 +272,25 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
         assertFalse(organization.getMemberStatus(memberToAddA), "first member should remain absent");
         assertFalse(organization.getMemberStatus(memberToAddB), "second member should remain absent");
         assertFalse(organization.getGroupStatus(GROUP_ID), "group should remain absent");
+    }
+
+    /// @dev Verifies that batching two identical admin operations in a single batch reverts atomically because the
+    ///      second sub-call encounters a nonce already consumed by the first sub-call.
+    function test_SMI_ETE_12_duplicateAdminOperationsInSameBatch_revertsNonceAlreadyUsed() public {
+        // Setup: build the same modifyMembers call twice so both sub-calls derive the same nonce.
+        bytes memory modifyMembersCall = _buildModifyMembersCall(buildArray(memberToAddA, memberToAddB), 701);
+        bytes memory batchData = abi.encodeWithSelector(
+            BatchedTransaction.execute.selector, _encodeBatch(modifyMembersCall, modifyMembersCall)
+        );
+
+        // Call: execute a batch where both sub-calls share the same nonce; the second triggers NonceAlreadyUsed.
+        vm.prank(authorizedExecutor);
+        vm.expectRevert(ISafeExecutorModule.ExecutionFailed.selector);
+        module.executeOnBehalf(address(batchedTransaction), batchData);
+
+        // Verify: the batch rolls back atomically—no member state from either sub-call persists.
+        assertFalse(organization.getMemberStatus(memberToAddA), "first member should not be added");
+        assertFalse(organization.getMemberStatus(memberToAddB), "second member should not be added");
     }
 
     /**
@@ -349,6 +373,7 @@ contract SafeModuleOrganizationBatchE2ETest is OrganizationGroupsTestBase {
      * @return batch Concatenated packed batch bytes.
      */
     function _encodeBatch(bytes memory firstCall, bytes memory secondCall) internal view returns (bytes memory batch) {
-        batch = abi.encodePacked(_encodeTx(address(organization), firstCall), _encodeTx(address(organization), secondCall));
+        batch =
+            abi.encodePacked(_encodeTx(address(organization), firstCall), _encodeTx(address(organization), secondCall));
     }
 }
