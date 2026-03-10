@@ -115,7 +115,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
-     * @dev Verifies execute-path nonce derivation depends only on the tuple fields and ignores expiration/signatures/proofs.
+     * @dev Verifies execute-path nonce derivation depends only on the tuple fields and ignores
+     * expiration/signatures/proofs.
      */
     function test_NMATB_EAT_1__NMATB_EAT_2__NMATB_EAT_3_executeAccountTransaction_nonceDependsOnlyOnTupleFields()
         public
@@ -160,7 +161,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             isApproval: true
         });
 
-        // Call: compute the baseline nonce, tuple-field mutations, and same-tuple variants with only auth/proof changes.
+        // Call: compute the baseline nonce, tuple-field mutations, and same-tuple variants with only auth/proof
+        // changes.
         uint256 baseline = _computeNonce(account, DESTINATION, 3, data, policyId, salt);
         uint256 differentAccount = _computeNonce(alternateAccount, DESTINATION, 3, data, policyId, salt);
         uint256 differentDestination = _computeNonce(account, alternateDestination, 3, data, policyId, salt);
@@ -168,8 +170,6 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         uint256 differentData = _computeNonce(account, DESTINATION, 3, alternateData, policyId, salt);
         uint256 differentPolicyId = _computeNonce(account, DESTINATION, 3, data, policyId + 1, salt);
         uint256 differentSalt = _computeNonce(account, DESTINATION, 3, data, policyId, salt + 1);
-        uint256 sameTupleDifferentExpiration = _computeNonce(account, DESTINATION, 3, data, policyId, salt);
-        uint256 sameTupleDifferentAuth = _computeNonce(account, DESTINATION, 3, data, policyId, salt);
 
         // Verify: tuple-field changes alter the nonce, while expiration/signature/proof changes alone do not.
         assertTrue(baseline != differentAccount, "account should be bound");
@@ -178,8 +178,6 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         assertTrue(baseline != differentData, "data hash should be bound");
         assertTrue(baseline != differentPolicyId, "policy id should be bound");
         assertTrue(baseline != differentSalt, "salt should be bound");
-        assertEq(sameTupleDifferentExpiration, baseline, "expiration should not affect nonce");
-        assertEq(sameTupleDifferentAuth, baseline, "signatures and proofs should not affect nonce");
         assertTrue(initiatorSignatureA.length != 0 && initiatorSignatureB.length != 0, "auth fixtures should exist");
         assertTrue(
             keccak256(abi.encode(proofsA.policy)) != keccak256(abi.encode(proofsB.policy)),
@@ -301,7 +299,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
-     * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` blocks same-tuple reentry after nonce consumption.
+     * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` blocks same-tuple reentry after
+     * nonce consumption.
      */
     function test_NMATB_EAT_6_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
         public
@@ -332,7 +331,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         );
         account.setReentrantCallData(reentrantCallData);
 
-        // Call: execute the outer transaction from the guardian/account address so the account replays the same nonce in-flight.
+        // Call: execute the outer transaction from the guardian/account address so the account replays the same nonce
+        // in-flight.
         vm.prank(address(account));
         harness.executeAccountTransaction({
             account: address(account),
