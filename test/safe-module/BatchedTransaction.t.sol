@@ -73,6 +73,22 @@ contract MsgValueTracker {
 }
 
 /**
+ * @dev CallOrderTracker — records the argument of each call to verify execution order.
+ */
+contract CallOrderTracker {
+    uint256[] public callOrder;
+
+    function recordCall(uint256 id) external {
+        callOrder.push(id);
+    }
+
+    function getCallOrder() external view returns (uint256[] memory) {
+        return callOrder;
+    }
+}
+
+
+/**
  * @dev RequiresEthBTTarget — reverts unless msg.value > 0.
  */
 contract RequiresEthBTTarget {
@@ -175,19 +191,23 @@ contract BatchedTransactionTest is Test {
 
     /// @dev Verifies repeated calls to same target preserve order and cumulative state.
     function test_BT_EVB_4_executeRepeatedCallsCumulativeState() public {
-        // Setup: five increment calls to same target.
+        // Setup: five recordCall() invocations with ordered IDs to a CallOrderTracker.
+        CallOrderTracker tracker = new CallOrderTracker();
         bytes[] memory txs = new bytes[](5);
         for (uint256 i = 0; i < 5; i++) {
-            txs[i] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.increment.selector));
+            txs[i] = _encodeTx(address(tracker), abi.encodeWithSelector(CallOrderTracker.recordCall.selector, i));
         }
 
         // Call: execute batch.
         (bool success,) = _executeBatchViaDelegatecall(_encodeBatch(txs));
 
-        // Verify: target value reflects all five increments.
+        // Verify: all five calls executed in the exact encoded order.
         assertTrue(success, "Batch should succeed");
-        assertEq(target1.value(), 5, "Target should have been incremented 5 times");
-        assertEq(target1.callCount(), 5, "Call count should be 5");
+        uint256[] memory order = tracker.getCallOrder();
+        assertEq(order.length, 5, "Should have recorded 5 calls");
+        for (uint256 i = 0; i < 5; i++) {
+            assertEq(order[i], i, "Call at position should match encoded order");
+        }
     }
 
     /// @dev Verifies zero-length calldata sub-transaction is valid (fallback/receive path).
