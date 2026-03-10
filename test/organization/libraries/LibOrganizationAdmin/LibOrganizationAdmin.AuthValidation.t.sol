@@ -141,8 +141,11 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         assertFalse(harness.getUsedNonce(nonce), "nonce should not stay consumed after revert");
     }
 
-    /// @dev Verifies that a single valid admin signature passes authorization when threshold is one.
-    function test_validateAdminAuth_thresholdOne_singleValidSignature_succeeds() public {
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds with valid admin auth
+    /// and consumes the derived nonce.
+    function test_L_5__NMADM_AUTH_1_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce()
+        public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -482,8 +485,9 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
         // Verify: this test passes if mixed-signer validation succeeds without reverting.
     }
 
-    /// @dev Verifies that replaying a consumed nonce reverts with `NonceAlreadyUsed`.
-    function test_validateAdminAuth_nonceReplay_revertsNonceAlreadyUsed() public {
+    /// @dev Verifies `LibOrganizationAdmin.validateAdminAuthAndConsumeNonceOrRevert` succeeds once and then rejects a
+    /// replay of the same nonce.
+    function test_L_15__NMADM_AUTH_2_validateAdminAuth_nonceReplay_revertsNonceAlreadyUsed() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 

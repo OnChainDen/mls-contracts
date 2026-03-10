@@ -11,8 +11,8 @@ import {
  * @dev Unit tests for signature-checking helpers in `LibOrganizationAdmin`.
  */
 contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
-    /// @dev Verifies that empty signatures return false.
-    function test_areAdminSignaturesValid_emptySignatures_returnsFalse() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `false` for an empty signature payload.
+    function test_L_58__NMADM_SIG_1_areAdminSignaturesValid_emptySignatures_returnsFalse() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -23,8 +23,8 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         assertFalse(actualIsValid, "empty signatures should be false");
     }
 
-    /// @dev Verifies that exactly-threshold valid signatures return true.
-    function test_areAdminSignaturesValid_exactThreshold_returnsTrue() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `true` once the admin threshold is met.
+    function test_L_59__NMADM_SIG_6_areAdminSignaturesValid_exactThreshold_returnsTrue() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -68,8 +68,8 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         assertFalse(actualIsValid, "fewer-than-threshold signatures should fail");
     }
 
-    /// @dev Verifies that a duplicate signer reverts with `DuplicateOrOutOfOrderAdminSigner`.
-    function test_areAdminSignaturesValid_duplicateSigner_revertsDuplicateOrOutOfOrder() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for duplicate admin signers.
+    function test_L_62__NMADM_SIG_2_areAdminSignaturesValid_duplicateSigner_revertsDuplicateOrOutOfOrder() public {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -86,8 +86,10 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         harness.areAdminSignaturesValid(signatures, hash);
     }
 
-    /// @dev Verifies that out-of-order signers revert with `DuplicateOrOutOfOrderAdminSigner`.
-    function test_areAdminSignaturesValid_outOfOrderSigner_revertsDuplicateOrOutOfOrder() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for out-of-order admin signers.
+    function test_L_63__NMADM_SIG_3_areAdminSignaturesValid_outOfOrderSigner_revertsDuplicateOrOutOfOrder()
+        public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -118,8 +120,10 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         harness.areAdminSignaturesValid(outOfOrder, hash);
     }
 
-    /// @dev Verifies that a signer who is neither admin nor member reverts with `SignerIsNotAdmin`.
-    function test_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts when a recovered signer is not an admin.
+    function test_L_64__NMADM_SIG_5_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin()
+        public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
@@ -175,8 +179,10 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         assertTrue(actualIsValid, "mixed sorted signatures should validate");
     }
 
-    /// @dev Verifies that malformed signature encoding reverts with `SignatureRecoveryFailed`.
-    function test_areAdminSignaturesValid_malformedEncoding_revertsSignatureRecoveryFailed() public {
+    /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for malformed packed signatures.
+    function test_L_66__NMADM_SIG_8_areAdminSignaturesValid_malformedEncoding_revertsSignatureRecoveryFailed()
+        public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
