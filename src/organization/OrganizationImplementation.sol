@@ -68,6 +68,10 @@ contract OrganizationImplementation is
     OrganizationGuardianRecoveryBase,
     OrganizationTxRecoveryBase
 {
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @inheritdoc IOrganization
     function upgradeToAndCallWithAuthorization(
         address newImplementation,
