@@ -155,24 +155,35 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
 
     /// @dev Verifies `_isValidGuardianSignature` reflects module rotation immediately.
     function test_LOAS_IVGS_10_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately() public {
-        // Setup: configure old and new modules on the same guardian Safe and rotate enablement between them.
+        // Setup: deploy both modules on the same guardian Safe and enable only the old module initially.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule = _deployModule(address(guardianSafe), OLD_EXECUTOR_PK);
         SafeExecutorModule newModule = _deployModule(address(guardianSafe), NEW_EXECUTOR_PK);
-        guardianSafe.setModuleEnabled(address(oldModule), false);
-        guardianSafe.setModuleEnabled(address(newModule), true);
+        guardianSafe.setModuleEnabled(address(oldModule), true);
         policyStateHarness.setGuardian(address(guardianSafe));
 
         bytes memory oldSignature = _buildModuleGuardianSignature(oldModule, OLD_EXECUTOR_PK, MESSAGE_HASH);
         bytes memory newSignature = _buildModuleGuardianSignature(newModule, NEW_EXECUTOR_PK, MESSAGE_HASH);
 
-        // Call: validate signatures for the disabled old module and enabled new module.
-        bool oldAccepted = harness.isValidGuardianSignatureViaLibrary(oldSignature, MESSAGE_HASH);
-        bool newAccepted = harness.isValidGuardianSignatureViaLibrary(newSignature, MESSAGE_HASH);
+        // Call: validate both signatures before rotation.
+        bool oldBeforeRotation = harness.isValidGuardianSignatureViaLibrary(oldSignature, MESSAGE_HASH);
+        bool newBeforeRotation = harness.isValidGuardianSignatureViaLibrary(newSignature, MESSAGE_HASH);
+
+        // Verify: only the old module is accepted before rotation.
+        assertTrue(oldBeforeRotation, "old module should be valid before rotation");
+        assertFalse(newBeforeRotation, "new module should be invalid before rotation");
+
+        // Setup: rotate by disabling the old module and enabling the new one.
+        guardianSafe.setModuleEnabled(address(oldModule), false);
+        guardianSafe.setModuleEnabled(address(newModule), true);
+
+        // Call: validate both signatures after rotation.
+        bool oldAfterRotation = harness.isValidGuardianSignatureViaLibrary(oldSignature, MESSAGE_HASH);
+        bool newAfterRotation = harness.isValidGuardianSignatureViaLibrary(newSignature, MESSAGE_HASH);
 
         // Verify: rotation takes effect immediately for signature acceptance.
-        assertFalse(oldAccepted, "old module should be invalid after rotation");
-        assertTrue(newAccepted, "new module should be valid immediately after rotation");
+        assertFalse(oldAfterRotation, "old module should be invalid after rotation");
+        assertTrue(newAfterRotation, "new module should be valid immediately after rotation");
     }
 
     /// @dev Deploys a `SafeExecutorModule` against the provided Safe-compatible guardian contract.
