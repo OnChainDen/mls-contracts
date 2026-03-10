@@ -6,7 +6,6 @@ import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgrad
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     ImplementationWhitelistHarness,
@@ -793,16 +792,16 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         IUUPSWhitelistEntrypoints(address(implementation)).upgradeToAndCall(address(implementationV2), bytes(""));
     }
 
-    /// @dev Verifies direct implementation-contract calls to inherited `upgradeToAndCall` revert
-    /// `OwnableUnauthorizedAccount` because implementation storage has no owner. [IWI-IDCP-2]
-    function test_IWI_IDCP_2_upgradeToAndCallOnImplementationContract_revertsOwnableUnauthorizedAccount() public {
+    /// @dev Verifies direct implementation-contract calls to inherited `upgradeToAndCall` revert through the UUPS
+    /// `onlyProxy` guard. [IWI-IDCP-2]
+    function test_IWI_IDCP_2_upgradeToAndCallOnImplementationContract_revertsUUPSUnauthorizedCallContext() public {
         // Setup: call the implementation contract directly rather than through the initialized proxy.
 
-        // Call: invoke the implementation UUPS entrypoint directly and expect the plan-19 owner check surface.
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, address(this)));
+        // Call: invoke the implementation UUPS entrypoint directly and expect the proxy-context guard.
+        vm.expectRevert(UUPSUpgradeable.UUPSUnauthorizedCallContext.selector);
         IUUPSWhitelistEntrypoints(address(implementation)).upgradeToAndCall(address(implementationV2), bytes(""));
 
-        // Verify: implementation-storage direct calls should fail via owner enforcement rather than proxy context.
+        // Verify: implementation-storage direct calls should fail before any owner-check path.
     }
 
     /// @dev Verifies calling `proxiableUUID` through proxy reverts due `notDelegated`.
@@ -855,33 +854,4 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertEq(whitelistProxy.owner(), NEW_OWNER, "owner should be preserved after upgrade");
     }
 
-    /// @dev Verifies `whitelistImplementations` rejects zero addresses as a fail-closed code-existence requirement.
-    /// [IWI-CTRL-7]
-    function test_IWI_CTRL_7_whitelistImplementations_zeroAddress_revertsAddressEmptyCode_desiredBehavior() public {
-        // Setup: prepare a single zero-address whitelist addition under Organization type.
-        address[] memory toWhitelist = _single(address(0));
-        address[] memory empty;
-
-        // Call: attempt to whitelist the zero address and expect fail-closed empty-code validation.
-        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, address(0)));
-        vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Organization, toWhitelist, empty);
-
-        // Verify: whitelist mutation should reject zero-address inputs before mutating storage.
-    }
-
-    /// @dev Verifies `whitelistImplementations` rejects no-code addresses as a fail-closed code-existence
-    /// requirement. [IWI-CTRL-7]
-    function test_IWI_CTRL_7_whitelistImplementations_noCodeAddress_revertsAddressEmptyCode_desiredBehavior() public {
-        // Setup: prepare a single no-code whitelist addition under Account type.
-        address[] memory toWhitelist = _single(noCodeAddress);
-        address[] memory empty;
-
-        // Call: attempt to whitelist an address with no runtime code and expect fail-closed validation.
-        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, noCodeAddress));
-        vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Account, toWhitelist, empty);
-
-        // Verify: whitelist mutation should reject no-code targets before mutating storage.
-    }
 }

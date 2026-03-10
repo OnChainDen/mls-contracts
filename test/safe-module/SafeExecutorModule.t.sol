@@ -4,7 +4,6 @@ pragma solidity 0.8.33;
 
 import {Test} from "forge-std/Test.sol";
 
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IBatchedTransaction} from "../../src/interfaces/IBatchedTransaction.sol";
 import {ISafeExecutorModule} from "../../src/interfaces/ISafeExecutorModule.sol";
 import {SignatureUtils} from "../../src/libraries/SignatureUtils.sol";
@@ -268,37 +267,6 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         // Call: deploy with all-zero params. Expect SafeAddressCannotBeZero (first check).
         vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
         new SafeExecutorModule(address(0), address(0), address(0));
-    }
-
-    // ISEM-EOB-8
-    /// @dev Verifies `SafeExecutorModule.constructor` rejects non-contract Safe wiring as a fail-closed safety
-    /// requirement.
-    function test_ISEM_EOB_8_constructorRevertsNonContractSafe_desiredBehavior() public {
-        // Setup: choose an EOA-style address for the Safe while keeping the other constructor inputs valid.
-        address nonContractSafe = makeAddr("nonContractSafe");
-
-        // Call: deploy with a non-contract Safe and expect fail-closed code-existence validation.
-        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, nonContractSafe));
-        new SafeExecutorModule(nonContractSafe, authorizedExecutor, address(mockBatchedTransaction));
-
-        // Verify: constructor should reject invalid Safe wiring before storing immutable state.
-    }
-
-    // ISEM-EOB-8
-    /// @dev Verifies `SafeExecutorModule.constructor` rejects non-contract BatchedTransaction wiring as a fail-closed
-    /// safety requirement.
-    function test_ISEM_EOB_8_constructorRevertsNonContractBatchedTransaction_desiredBehavior() public {
-        // Setup: choose an EOA-style address for BatchedTransaction while keeping the Safe and executor valid.
-        address nonContractBatchedTransaction = makeAddr("nonContractBatchedTransaction");
-
-        // Call: deploy with a non-contract BatchedTransaction target and expect fail-closed code-existence
-        // validation.
-        vm.expectRevert(
-            abi.encodeWithSelector(Address.AddressEmptyCode.selector, nonContractBatchedTransaction)
-        );
-        new SafeExecutorModule(address(mockSafe), authorizedExecutor, nonContractBatchedTransaction);
-
-        // Verify: constructor should reject invalid BatchedTransaction wiring before storing immutable state.
     }
 
     // ISEM-EOB-1

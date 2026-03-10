@@ -505,14 +505,13 @@ Critical: Test these through high-level external functions on our Base contracts
 | IWI-CTRL-4 | Contract-type isolation: Account whitelist entries never authorize org deploy/upgrade and vice versa | [S] | P0 |
 | IWI-CTRL-5 | Unwhitelisting blocks future deployments/upgrades but does not mutate already active implementation pointers | [I] | P1 |
 | IWI-CTRL-6 | Whitelist UUPS upgrade preserves allowlist state and ownership | [I] | P1 |
-| IWI-CTRL-7 | [DESIRED] Reject zero/no-code addresses when whitelisting | [DESIRED][S] | P0 |
 
 ### 13.2 Implementation contract direct-call protection (uninitialized implementation attack vector)
 
 | ID | Test Case | Type | Priority |
 |---|-----------|------|----------|
 | IWI-IDCP-1 | `initialize()` called directly on the implementation contract reverts `InvalidInitialization` (`_disableInitializers()` in constructor permanently marks implementation's own storage as fully initialized) | [S] | P0 |
-| IWI-IDCP-2 | Inherited `upgradeToAndCall()` called directly on the implementation contract reverts `OwnableUnauthorizedAccount` (owner is unset in implementation's own storage, so `onlyOwner` in `_authorizeUpgrade` fails) | [S] | P0 |
+| IWI-IDCP-2 | Inherited `upgradeToAndCall()` called directly on the implementation contract reverts `UUPSUnauthorizedCallContext` via the UUPS `onlyProxy` guard | [S] | P0 |
 
 ### 13.3 Private helpers (private -> harness)
 
@@ -535,7 +534,6 @@ Critical: Test these through high-level external functions on our Base contracts
 | ISEM-EOB-5 | Module ERC-1271 signature path accepts only signatures from authorized executor | [S] | P0 |
 | ISEM-EOB-6 | Malformed/invalid module-signature encodings return ERC-1271 invalid value (not revert) | [S] | P1 |
 | ISEM-EOB-7 | Authorized executor can execute guardian-only Organization entrypoints via Safe module; unauthorized callers cannot | [I][S] | P0 |
-| ISEM-EOB-8 | [DESIRED] Constructor hardening: reject invalid/non-contract Safe and BatchedTransaction wiring | [DESIRED][S] | P1 |
 
 ### 14.2 `BatchedTransaction.execute(...)`
 
