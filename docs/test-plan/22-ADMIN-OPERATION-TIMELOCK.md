@@ -104,13 +104,13 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOI-INIT-1 | Valid `adminOperationTimelockDurationSeconds` is persisted and readable from base getter | `[I]` | P0 |
-| LOI-INIT-2 | `OrganizationInitialized` event includes the exact configured admin-operation timelock value | `[EV]` | P1 |
-| LOI-INIT-3 | Timelock below min reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
-| LOI-INIT-4 | Timelock above max reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
-| LOI-INIT-5 | Invalid timelock causes full initialization revert (no partial persisted org state) | `[S]` | P0 |
-| LOI-INIT-6 | If a later initialization step reverts (for example, invalid guardian), admin-operation timelock state write is rolled back atomically | `[S]` | P0 |
-| LOI-INIT-7 | Second initialize attempt reverts (`AlreadyInitialized`) and does not change timelock value | `[N]` | P0 |
+| LOI-AOTINIT-1 | Valid `adminOperationTimelockDurationSeconds` is persisted and readable from base getter | `[I]` | P0 |
+| LOI-AOTINIT-2 | `OrganizationInitialized` event includes the exact configured admin-operation timelock value | `[EV]` | P1 |
+| LOI-AOTINIT-3 | Timelock below min reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
+| LOI-AOTINIT-4 | Timelock above max reverts initialization with `InvalidTimelockDuration` | `[N]` | P0 |
+| LOI-AOTINIT-5 | Invalid timelock causes full initialization revert (no partial persisted org state) | `[S]` | P0 |
+| LOI-AOTINIT-6 | If a later initialization step reverts (for example, invalid guardian), admin-operation timelock state write is rolled back atomically | `[S]` | P0 |
+| LOI-AOTINIT-7 | Second initialize attempt reverts (`AlreadyInitialized`) and does not change timelock value | `[N]` | P0 |
 
 ---
 
@@ -120,9 +120,9 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOG-IGU-1 | Sets `pendingGuardianUpdateTimestamp = block.timestamp + adminOperationTimelockDurationSeconds` | `[I]` | P0 |
-| LOG-IGU-2 | `GuardianUpdateInitiated(..., canFinalizeAtTimestamp)` emits the same timestamp persisted in storage | `[EV]` | P1 |
-| LOG-IGU-3 | Same-block finalize attempt reverts (`TimelockNotExpired`) | `[S]` | P0 |
+| LOG-AOTIGU-1 | Sets `pendingGuardianUpdateTimestamp = block.timestamp + adminOperationTimelockDurationSeconds` | `[I]` | P0 |
+| LOG-AOTIGU-2 | `GuardianUpdateInitiated(..., canFinalizeAtTimestamp)` emits the same timestamp persisted in storage | `[EV]` | P1 |
+| LOG-AOTIGU-3 | Same-block finalize attempt reverts (`TimelockNotExpired`) | `[S]` | P0 |
 
 ---
 
@@ -130,12 +130,12 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOG-FGU-1 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
-| LOG-FGU-2 | At exact pending timestamp succeeds | `[E]` | P1 |
-| LOG-FGU-3 | After pending timestamp succeeds | `[U]` | P1 |
-| LOG-FGU-4 | Success sets `isGuardianUpdateReadyForAcceptance = true` while preserving pending guardian + pending timestamp until accept/cancel | `[U]` | P1 |
-| LOG-FGU-5 | After cancellation, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
-| LOG-FGU-6 | After accepting new guardian, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
+| LOG-AOTFGU-1 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
+| LOG-AOTFGU-2 | At exact pending timestamp succeeds | `[E]` | P1 |
+| LOG-AOTFGU-3 | After pending timestamp succeeds | `[U]` | P1 |
+| LOG-AOTFGU-4 | Success sets `isGuardianUpdateReadyForAcceptance = true` while preserving pending guardian + pending timestamp until accept/cancel | `[U]` | P1 |
+| LOG-AOTFGU-5 | After cancellation, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
+| LOG-AOTFGU-6 | After accepting new guardian, finalize reverts `NoPendingGuardianUpdate` even if previous timestamp has passed | `[S]` | P1 |
 
 ---
 
@@ -143,10 +143,10 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOG-CGU-1 | Before timelock expiry, cancel clears pending guardian timestamp to `0` and emits `GuardianUpdateCancelled` with the cancelled pending guardian | `[U][EV]` | P1 |
-| LOG-CGU-2 | After timelock expiry (but before acceptance), cancel still succeeds and clears pending timelock state | `[E]` | P1 |
-| LOG-CGU-3 | Cancelling a finalized-but-not-yet-accepted update resets `isGuardianUpdateReadyForAcceptance` to `false` | `[U]` | P1 |
-| LOG-CGU-4 | After cancellation, re-initiation computes a fresh `canFinalizeAtTimestamp = newStart + adminOperationTimelockDurationSeconds` (no stale timestamp reuse) | `[S]` | P1 |
+| LOG-AOTCGU-1 | Before timelock expiry, cancel clears pending guardian timestamp to `0` and emits `GuardianUpdateCancelled` with the cancelled pending guardian | `[U][EV]` | P1 |
+| LOG-AOTCGU-2 | After timelock expiry (but before acceptance), cancel still succeeds and clears pending timelock state | `[E]` | P1 |
+| LOG-AOTCGU-3 | Cancelling a finalized-but-not-yet-accepted update resets `isGuardianUpdateReadyForAcceptance` to `false` | `[U]` | P1 |
+| LOG-AOTCGU-4 | After cancellation, re-initiation computes a fresh `canFinalizeAtTimestamp = newStart + adminOperationTimelockDurationSeconds` (no stale timestamp reuse) | `[S]` | P1 |
 
 ---
 
@@ -156,11 +156,11 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-IIGR-1 | Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
-| LOGR-IIGR-2 | Deferred-init pending timestamp does **not** use guardian-recovery timelock duration input | `[S]` | P0 |
-| LOGR-IIGR-3 | Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
-| LOGR-IIGR-4 | `GuardianRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
-| LOGR-IIGR-5 | Same-block finalize attempt reverts (TimelockNotExpired) | [S] | P0 |
+| LOGR-AOTIIGR-1 | Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
+| LOGR-AOTIIGR-2 | Deferred-init pending timestamp does **not** use guardian-recovery timelock duration input | `[S]` | P0 |
+| LOGR-AOTIIGR-3 | Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
+| LOGR-AOTIIGR-4 | `GuardianRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
+| LOGR-AOTIIGR-5 | Same-block finalize attempt reverts (TimelockNotExpired) | [S] | P0 |
 
 ---
 
@@ -168,13 +168,13 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-FIGR-1 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
-| LOGR-FIGR-2 | At exact pending timestamp succeeds | `[E]` | P1 |
-| LOGR-FIGR-3 | After pending timestamp succeeds | `[U]` | P1 |
-| LOGR-FIGR-4 | Success clears pending-init timelock state and writes final recovery config | `[U]` | P1 |
-| LOGR-FIGR-5 | Emits `GuardianRecoveryInitializationFinalized(recoveryAddress,timelockDurationSeconds)` matching pending-init values used during finalization | `[EV]` | P1 |
-| LOGR-FIGR-6 | After cancellation, finalize reverts `NoGuardianRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
-| LOGR-FIGR-7 | Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
+| LOGR-AOTFIGR-1 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
+| LOGR-AOTFIGR-2 | At exact pending timestamp succeeds | `[E]` | P1 |
+| LOGR-AOTFIGR-3 | After pending timestamp succeeds | `[U]` | P1 |
+| LOGR-AOTFIGR-4 | Success clears pending-init timelock state and writes final recovery config | `[U]` | P1 |
+| LOGR-AOTFIGR-5 | Emits `GuardianRecoveryInitializationFinalized(recoveryAddress,timelockDurationSeconds)` matching pending-init values used during finalization | `[EV]` | P1 |
+| LOGR-AOTFIGR-6 | After cancellation, finalize reverts `NoGuardianRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
+| LOGR-AOTFIGR-7 | Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
 
 ---
 
@@ -182,10 +182,10 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-CIGR-1 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` and emits `GuardianRecoveryInitializationCancelled` | `[U][EV]` | P1 |
-| LOGR-CIGR-2 | Cancel is allowed both before and after timelock expiry, as long as finalization has not occurred | `[E]` | P1 |
-| LOGR-CIGR-3 | No pending init reverts `NoGuardianRecoveryInitializationPending` | `[N]` | P0 |
-| LOGR-CIGR-4 | After cancellation, a fresh initiate is allowed and uses a new admin-operation timelock timestamp | `[S]` | P1 |
+| LOGR-AOTCIGR-1 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` and emits `GuardianRecoveryInitializationCancelled` | `[U][EV]` | P1 |
+| LOGR-AOTCIGR-2 | Cancel is allowed both before and after timelock expiry, as long as finalization has not occurred | `[E]` | P1 |
+| LOGR-AOTCIGR-3 | No pending init reverts `NoGuardianRecoveryInitializationPending` | `[N]` | P0 |
+| LOGR-AOTCIGR-4 | After cancellation, a fresh initiate is allowed and uses a new admin-operation timelock timestamp | `[S]` | P1 |
 
 ---
 
@@ -193,9 +193,9 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-FRGU-1 | Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
-| LOGR-FRGU-2 | Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
-| LOGR-FRGU-3 | Uses shared `validateTimelockExpiredOrRevert` semantics: after timestamp succeeds | `[U]` | P1 |
+| LOGR-AOTFRGU-1 | Uses shared `validateTimelockExpiredOrRevert` semantics: before timestamp reverts | `[I]` | P1 |
+| LOGR-AOTFRGU-2 | Uses shared `validateTimelockExpiredOrRevert` semantics: at exact timestamp succeeds | `[E]` | P1 |
+| LOGR-AOTFRGU-3 | Uses shared `validateTimelockExpiredOrRevert` semantics: after timestamp succeeds | `[U]` | P1 |
 
 ---
 
@@ -203,8 +203,8 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-CPGRIT-1 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` to zero | `[U]` | P1 |
-| LOGR-CPGRIT-2 | Idempotent when fields are already zero | `[E]` | P2 |
+| LOGR-AOTCPGRIT-1 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` to zero | `[U]` | P1 |
+| LOGR-AOTCPGRIT-2 | Idempotent when fields are already zero | `[E]` | P2 |
 
 ---
 
@@ -212,10 +212,10 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-VGRNCOR-1 | Unconfigured state (`recoveryAddress=0` and `timelockDurationSeconds=0`) succeeds | `[U]` | P1 |
-| LOGR-VGRNCOR-2 | `recoveryAddress!=0` and `timelockDurationSeconds=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
-| LOGR-VGRNCOR-3 | `recoveryAddress=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
-| LOGR-VGRNCOR-4 | `recoveryAddress!=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+| LOGR-AOTVGRNCOR-1 | Unconfigured state (`recoveryAddress=0` and `timelockDurationSeconds=0`) succeeds | `[U]` | P1 |
+| LOGR-AOTVGRNCOR-2 | `recoveryAddress!=0` and `timelockDurationSeconds=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+| LOGR-AOTVGRNCOR-3 | `recoveryAddress=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
+| LOGR-AOTVGRNCOR-4 | `recoveryAddress!=0` and `timelockDurationSeconds!=0` reverts `GuardianRecoveryAlreadyConfigured` | `[N]` | P0 |
 
 ---
 
@@ -223,12 +223,12 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOGR-VGRPOR-1 | `recoveryAddress=0` reverts `InvalidGuardianRecoveryAddress` | `[N]` | P0 |
-| LOGR-VGRPOR-2 | Timelock below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
-| LOGR-VGRPOR-3 | Timelock above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
-| LOGR-VGRPOR-4 | Non-zero address + timelock at min boundary (`2 days`) succeeds | `[E]` | P1 |
-| LOGR-VGRPOR-5 | Non-zero address + timelock within boundary (`2 days` < x < `30 days`) succeeds | `[S]` | P1 |
-| LOGR-VGRPOR-6 | Non-zero address + timelock at max boundary (`30 days`) succeeds | `[E]` | P1 |
+| LOGR-AOTVGRPOR-1 | `recoveryAddress=0` reverts `InvalidGuardianRecoveryAddress` | `[N]` | P0 |
+| LOGR-AOTVGRPOR-2 | Timelock below minimum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| LOGR-AOTVGRPOR-3 | Timelock above maximum reverts `InvalidTimelockDuration` | `[N]` | P0 |
+| LOGR-AOTVGRPOR-4 | Non-zero address + timelock at min boundary (`2 days`) succeeds | `[E]` | P1 |
+| LOGR-AOTVGRPOR-5 | Non-zero address + timelock within boundary (`2 days` < x < `30 days`) succeeds | `[S]` | P1 |
+| LOGR-AOTVGRPOR-6 | Non-zero address + timelock at max boundary (`30 days`) succeeds | `[E]` | P1 |
 
 ---
 
@@ -238,11 +238,11 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOTR-IITR-1 | Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
-| LOTR-IITR-2 | Deferred-init pending timestamp does **not** use tx-recovery timelock duration input | `[S]` | P0 |
-| LOTR-IITR-3 | Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
-| LOTR-IITR-4 | `TxRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
-| LOTR-IITR-5 | Same-block finalize attempt reverts (TimelockNotExpired) | [S] | P0 |
+| LOTR-AOTIITR-1 | Deferred-init pending timestamp uses **admin-operation** timelock (`now + adminOperationTimelockDurationSeconds`) | `[I]` | P0 |
+| LOTR-AOTIITR-2 | Deferred-init pending timestamp does **not** use tx-recovery timelock duration input | `[S]` | P0 |
+| LOTR-AOTIITR-3 | Stores `pendingRecoveryAddress` and `pendingTimelockDurationSeconds` exactly as requested for finalize/cancel operation-data binding | `[U]` | P1 |
+| LOTR-AOTIITR-4 | `TxRecoveryInitializationInitiated(..., canFinalizeAtTimestamp)` emits the same pending timestamp stored in state | `[EV]` | P1 |
+| LOTR-AOTIITR-5 | Same-block finalize attempt reverts (TimelockNotExpired) | [S] | P0 |
 
 
 ---
@@ -251,13 +251,13 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOTR-FITR-1 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
-| LOTR-FITR-2 | At exact pending timestamp succeeds | `[E]` | P1 |
-| LOTR-FITR-3 | After pending timestamp succeeds | `[U]` | P1 |
-| LOTR-FITR-4 | Success clears pending-init timelock state and writes final tx-recovery config | `[U]` | P1 |
-| LOTR-FITR-5 | Emits `TxRecoveryInitializationFinalized(recoveryAddress,timelockDurationSeconds)` matching pending-init values used during finalization | `[EV]` | P1 |
-| LOTR-FITR-6 | After cancellation, finalize reverts `NoTxRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
-| LOTR-FITR-7 | Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
+| LOTR-AOTFITR-1 | Before pending timestamp reverts `TimelockNotExpired` | `[N]` | P0 |
+| LOTR-AOTFITR-2 | At exact pending timestamp succeeds | `[E]` | P1 |
+| LOTR-AOTFITR-3 | After pending timestamp succeeds | `[U]` | P1 |
+| LOTR-AOTFITR-4 | Success clears pending-init timelock state and writes final tx-recovery config | `[U]` | P1 |
+| LOTR-AOTFITR-5 | Emits `TxRecoveryInitializationFinalized(recoveryAddress,timelockDurationSeconds)` matching pending-init values used during finalization | `[EV]` | P1 |
+| LOTR-AOTFITR-6 | After cancellation, finalize reverts `NoTxRecoveryInitializationPending` even if cancelled timestamp would have expired | `[S]` | P1 |
+| LOTR-AOTFITR-7 | Harness-only state-mutation scenario: if downstream config write would revert, pending-init state remains unchanged (atomicity) | `[S]` | P1 |
 
 ---
 
@@ -265,10 +265,10 @@ These files call `LibOrganizationAdminOperationTimelock` helpers (`computeCanFin
 
 | ID | Test Case | Type | Priority |
 |---|---|---|---|
-| LOTR-CITR-1 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` and emits `TxRecoveryInitializationCancelled` | `[U][EV]` | P1 |
-| LOTR-CITR-2 | Cancel is allowed both before and after timelock expiry, as long as finalization has not occurred | `[E]` | P1 |
-| LOTR-CITR-3 | No pending init reverts `NoTxRecoveryInitializationPending` | `[N]` | P0 |
-| LOTR-CITR-4 | After cancellation, a fresh initiate is allowed and uses a new admin-operation timelock timestamp | `[S]` | P1 |
+| LOTR-AOTCITR-1 | Clears `pendingRecoveryAddress`, `pendingTimelockDurationSeconds`, and `pendingTimestamp` and emits `TxRecoveryInitializationCancelled` | `[U][EV]` | P1 |
+| LOTR-AOTCITR-2 | Cancel is allowed both before and after timelock expiry, as long as finalization has not occurred | `[E]` | P1 |
+| LOTR-AOTCITR-3 | No pending init reverts `NoTxRecoveryInitializationPending` | `[N]` | P0 |
+| LOTR-AOTCITR-4 | After cancellation, a fresh initiate is allowed and uses a new admin-operation timelock timestamp | `[S]` | P1 |
 
 ---
 
