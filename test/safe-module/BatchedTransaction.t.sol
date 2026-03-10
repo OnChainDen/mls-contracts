@@ -531,13 +531,8 @@ contract BatchedTransactionTest is Test {
         // Call: execute with missing data bytes after header.
         (bool success,) = _executeBatchViaDelegatecall(encoded);
 
-        // Verify: if call succeeds with zero-padded selector, target should NOT have been called
-        // with a valid function. If the 4 zero bytes don't match any selector, the call reverts.
-        // Either way, the batch should not silently produce valid state changes.
-        if (success) {
-            // If it somehow succeeds, verify no meaningful state change.
-            assertEq(target1.callCount(), 0, "Target should not have had a valid function call");
-        }
-        // If it fails, that's also acceptable behavior.
+        // Verify: zero-padded selector (0x00000000) matches no function on target and there is no
+        // fallback, so the call reverts and the batch fails.
+        assertFalse(success, "Malformed payload with zero-padded selector should not silently succeed");
     }
 }
