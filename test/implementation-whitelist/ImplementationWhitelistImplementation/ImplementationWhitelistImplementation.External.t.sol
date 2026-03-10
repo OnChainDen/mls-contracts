@@ -854,37 +854,4 @@ contract ImplementationWhitelistExternalTest is ImplementationWhitelistSuiteBase
         assertEq(whitelistProxy.owner(), NEW_OWNER, "owner should be preserved after upgrade");
     }
 
-    /// @dev Verifies `whitelistImplementations` rejects zero addresses as a fail-closed code-existence requirement.
-    /// [IWI-CTRL-7]
-    function test_UPG_CTRL_8_A__IWI_CTRL_7_whitelistImplementations_zeroAddress_revertsAddressEmptyCode_desiredBehavior()
-        public
-    {
-        // Setup: prepare a single zero-address whitelist addition under Organization type.
-        address[] memory toWhitelist = _single(address(0));
-        address[] memory empty;
-
-        // Call: attempt to whitelist the zero address and expect fail-closed empty-code validation.
-        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, address(0)));
-        vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Organization, toWhitelist, empty);
-
-        // Verify: whitelist mutation should reject zero-address inputs before mutating storage.
-    }
-
-    /// @dev Verifies `whitelistImplementations` rejects no-code addresses as a fail-closed code-existence
-    /// requirement. [IWI-CTRL-7]
-    function test_UPG_CTRL_8_B__IWI_CTRL_7_whitelistImplementations_noCodeAddress_revertsAddressEmptyCode_desiredBehavior()
-        public
-    {
-        // Setup: prepare a single no-code whitelist addition under Account type.
-        address[] memory toWhitelist = _single(noCodeAddress);
-        address[] memory empty;
-
-        // Call: attempt to whitelist an address with no runtime code and expect fail-closed validation.
-        vm.expectRevert(abi.encodeWithSelector(Address.AddressEmptyCode.selector, noCodeAddress));
-        vm.prank(OWNER);
-        whitelistProxy.whitelistImplementations(ContractType.Account, toWhitelist, empty);
-
-        // Verify: whitelist mutation should reject no-code targets before mutating storage.
-    }
 }

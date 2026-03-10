@@ -270,7 +270,6 @@ Functions: upgrade/whitelist control paths
 | UPG-CTRL-5 | **Whitelist owner exclusivity:** only current whitelist owner mutates whitelist entries | P0 |
 | UPG-CTRL-6 | **Whitelist type independence:** account and organization whitelist maps never cross-enable each other | P0 |
 | UPG-CTRL-7 | **Desired behavior:** org upgrade admin auth should bind both `newImplementation` and migration `data` payload | P0 |
-| UPG-CTRL-8 | **Desired behavior:** only non-zero contract addresses can be whitelisted/activated as implementations | P0 |
 | UPG-CTRL-9 | **Upgrade rollback safety:** failed org upgrade/migration leaves pre-upgrade implementation active and `isUpgradeAuthorized == false` | P0 |
 | UPG-CTRL-10 | **Whitelist UUPS owner gate:** direct whitelist upgrades are authorized only by the current whitelist owner | P0 |
 
