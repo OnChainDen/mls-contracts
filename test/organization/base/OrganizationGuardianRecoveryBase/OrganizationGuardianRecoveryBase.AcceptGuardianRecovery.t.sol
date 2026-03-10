@@ -12,7 +12,9 @@ import {
 contract OrganizationGuardianRecoveryBaseAcceptGuardianRecoveryTest is OrganizationGuardianRecoveryBaseSuiteBase {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before a staged recovery guardian
     /// can be accepted. [OREC-GRF-2]
-    function test_OGRB_AGR_1__OREC_GRF_2_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian() public {
+    function test_OGRB_AGR_1__OREC_GRF_2__GREC_INV_7_nonPendingGuardianCaller_revertsOnlyRecoveryPendingGuardian()
+        public
+    {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_A, block.timestamp, true);
 

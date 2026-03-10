@@ -129,7 +129,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that signature policy cannot authorize account transactions.
-    function test_LOAT_VTAOR_9_signaturePolicyCannotAuthorizeAccountTransactions() public {
+    function test_LOAT_VTAOR_9__POL_INV_4_signaturePolicyCannotAuthorizeAccountTransactions() public {
         // Setup: assemble inputs expected to hit the guarded failure path for signature policy cannot authorize account
         // transactions.
         Policy memory policy =
@@ -348,7 +348,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that token transfer rate limit usage tracks transfer amount.
-    function test_tokenTransferRateLimitUsageTracksTransferAmount() public {
+    function test_TXRL_INV_5_tokenTransferRateLimitUsageTracksTransferAmount() public {
         // Setup: configure a valid fixture for token transfer rate limit usage tracks transfer amount.
         uint256 amount = 42;
 
@@ -396,7 +396,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that non token rate limit usage increments by one.
-    function test_nonTokenRateLimitUsageIncrementsByOne() public {
+    function test_TXRL_INV_5_nonTokenRateLimitUsageIncrementsByOne() public {
         // Setup: configure a valid fixture for non token rate limit usage increments by one.
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.ContractInteractions, approvalType: PolicyType.AutoApprove});
@@ -442,7 +442,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that rate limit key uses erc20 recipient as destination.
-    function test_rateLimitKeyUsesERC20RecipientAsDestination() public {
+    function test_TXRL_INV_11_rateLimitKeyUsesERC20RecipientAsDestination() public {
         // Setup: configure a valid fixture for rate limit key uses erc20 recipient as destination.
         uint256 amount = 11;
 

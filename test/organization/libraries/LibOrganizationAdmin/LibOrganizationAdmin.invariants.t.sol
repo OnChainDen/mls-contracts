@@ -112,7 +112,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     /**
      * @dev Verifies that `adminCount` is always at least one.
      */
-    function invariant_adminCountIsAlwaysAtLeastOne() public view {
+    function invariant_ADMIN_INV_2_adminCountIsAlwaysAtLeastOne() public view {
         // Setup: no special preconditions; assert against whatever state fuzzing reached.
         // Call: read current admin count from the harness under invariant testing.
         // Library code should never allow mutations that leave zero admins.
@@ -123,7 +123,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     /**
      * @dev Verifies that `votingThreshold` always stays within [1, adminCount].
      */
-    function invariant_votingThresholdWithinBounds() public view {
+    function invariant_ADMIN_INV_3_votingThresholdWithinBounds() public view {
         // Setup: prepare local snapshots of the current on-chain admin state.
         // Call: read on-chain admin count and voting threshold snapshots.
         uint256 adminCount = harness.adminCount();
@@ -139,7 +139,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     /**
      * @dev Verifies that admin status implies member status for all tracked addresses.
      */
-    function invariant_adminImpliesMemberForTrackedAddresses() public view {
+    function invariant_ADMIN_INV_1_adminImpliesMemberForTrackedAddresses() public view {
         // Setup: iterate over the tracked-address universe from the handler model.
         uint256 count = handler.trackedAddressCount();
         for (uint256 i = 0; i < count; i++) {
@@ -156,7 +156,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     /**
      * @dev Verifies that once a tracked nonce is consumed, it never reverts to unused.
      */
-    function invariant_usedNonceMonotonicity() public view {
+    function invariant_NMSIG_INV_1_usedNonceMonotonicity() public view {
         // Setup: iterate through all nonces the handler model has marked as touched.
         uint256 nonceCount = handler.trackedUsedNonceCount();
         for (uint256 i = 0; i < nonceCount; i++) {
@@ -173,7 +173,7 @@ contract LibOrganizationAdminInvariants is OrganizationAdminTestBase {
     /**
      * @dev Verifies that the modeled admin-set cardinality matches on-chain `adminCount`.
      */
-    function invariant_modelCardinalityMatchesOnchainAdminCount() public view {
+    function invariant_ADMIN_INV_4_modelCardinalityMatchesOnchainAdminCount() public view {
         // Setup: reconstruct cardinality over the model's tracked address universe.
         uint256 count = handler.trackedAddressCount();
         uint256 actualTrackedCardinality = 0;

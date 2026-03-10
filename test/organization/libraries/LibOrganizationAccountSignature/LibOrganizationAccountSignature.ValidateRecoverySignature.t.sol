@@ -12,8 +12,8 @@ import {
  * @dev Unit tests for `LibOrganizationAccountSignature._validateRecoverySignature`.
  */
 contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrganizationAccountSignatureTestBase {
-    /// @dev Verifies LOAS-VRS-1: unconfigured recovery returns invalid value (not revert).
-    function test_LOAS_VRS_1__OAS_VRS_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue()
+    /// @dev Verifies unconfigured recovery returns invalid value instead of magic. [ASIG-INV-2]
+    function test_OAS_VRS_1__ASIG_INV_2_A_LOAS_VRS_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue()
         public
     {
         // Setup: configure recovery as enabled but with zero recovery address.
@@ -27,8 +27,8 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "zero recovery address should be invalid");
     }
 
-    /// @dev Verifies LOAS-VRS-2: enabled recovery with a valid signer returns magic value.
-    function test_LOAS_VRS_2_LOACS_VRS_1_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue()
+    /// @dev Verifies enabled recovery with the configured signer returns magic value. [ASIG-INV-2]
+    function test_ASIG_INV_2_B_LOAS_VRS_2_LOACS_VRS_1_validateRecoverySignature_recoveryEnabledAndValidSignature_returnsMagicValue()
         public
     {
         // Setup: configure enabled recovery state for the deterministic guardian signer.
@@ -42,8 +42,8 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "valid recovery signature should return magic");
     }
 
-    /// @dev Verifies LOAS-VRS-3: configured but disabled recovery returns invalid value.
-    function test_LOAS_VRS_3_LOACS_VRS_2__OAS_VRS_2_validateRecoverySignature_recoveryDisabled_returnsInvalidValue()
+    /// @dev Verifies configured but disabled recovery returns invalid value. [ASIG-INV-2]
+    function test_ASIG_INV_2_C_LOAS_VRS_3_LOACS_VRS_2__OAS_VRS_2_validateRecoverySignature_recoveryDisabled_returnsInvalidValue()
         public
     {
         // Setup: configure recovery address with `isEnabled=false`.
@@ -74,7 +74,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
-    function test_LOAS_VRS_5_LOACS_VRS_2__OAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
+    function test_ASIG_INV_2_D_LOAS_VRS_5_LOACS_VRS_2__OAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
         public
     {
         // Setup: configure enabled recovery for `initiator2` and sign as guardian.

@@ -101,7 +101,10 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed range payload lengths fail closed.
-    function test_isUintParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
+    function test_POL_INV_14_isUintParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse()
+        public
+        view
+    {
         // Setup: provide short and oversized payloads for Range decoding.
         bytes memory shortRangeData = abi.encode(uint256(10));
         bytes memory oversizedRangeData = bytes.concat(abi.encode(uint256(10), uint256(20)), bytes32(uint256(30)));
@@ -157,7 +160,9 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isUintParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
+    function test_POL_INV_14_isUintParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+        public
+    {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isUintParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

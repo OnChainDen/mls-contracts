@@ -152,7 +152,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized
     /// callers. [OF-DO-1, IOF-DO-2]
-    function test_OF_DO_4__OF_DO_1__IOF_DO_2_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer()
+    function test_ACCF_INV_9__OF_DO_4__OF_DO_1__IOF_DO_2_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer()
         public
     {
         // Setup: Prepare valid initialization params for an unauthorized caller attempt.
@@ -168,7 +168,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts when the organization implementation is not
     /// whitelisted. [OF-DO-2, IOF-DO-3]
-    function test_OF_DO_5__OF_DO_2__IOF_DO_3_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted()
+    function test_ACCF_INV_10__OF_DO_5__OF_DO_2__IOF_DO_3_deployOrganization_nonWhitelistedImplementation_revertsImplementationNotWhitelisted()
         public
     {
         // Setup: Mark the organization implementation as not whitelisted and keep valid init params.
@@ -237,7 +237,9 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `implementationAddress == address(0)`. [OF-DO-11,
     /// IOF-DO-8]
-    function test_OF_DO_8__OF_DO_11__IOF_DO_8_deployOrganization_zeroImplementation_reverts() public {
+    function test_UPG_CTRL_8_C__OF_DO_8__OF_DO_11__IOF_DO_8_deployOrganization_zeroImplementation_reverts()
+        public
+    {
         // Setup: Prepare deployment inputs with a zero implementation while keeping whitelist checks enabled.
         bytes32 salt = bytes32(uint256(2004));
         InitializationParams memory params = _defaultInitializationParams();
@@ -399,7 +401,7 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationFactory.deployOrganization` rolls back atomically when initialization parameters are
     /// invalid. [OF-DO-12, IOF-DO-4]
-    function test_OF_DO_15__CFI_FLOW_2__OF_DO_12__IOF_DO_4_deployOrganization_invalidInitParams_revertAndLeaveNoCode()
+    function test_ACCF_INV_7__INIT_STATE_6_A__OF_DO_15__CFI_FLOW_2__OF_DO_12__IOF_DO_4_deployOrganization_invalidInitParams_revertAndLeaveNoCode()
         public
     {
         // Setup: Build three invalid initialization variants and precompute each target deployment address.

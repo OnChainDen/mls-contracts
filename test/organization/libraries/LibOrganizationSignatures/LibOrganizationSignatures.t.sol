@@ -25,7 +25,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` is deterministic for identical inputs.
-    function test_NMSIG_CN_1_computeNonce_sameInputsRemainDeterministic() public view {
+    function test_NMSIG_CN_1__NMSIG_INV_3_computeNonce_sameInputsRemainDeterministic() public view {
         // Setup: define one nonce tuple with fixed operation type, payload, and salt.
         bytes memory operationData = abi.encode(address(0xA11CE), uint256(7));
 
@@ -38,7 +38,7 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.computeNonce` changes when any bound field changes.
-    function test_NMSIG_CN_2__NMSIG_CN_3__NMSIG_CN_4__NMSIG_CN_5_computeNonce_changesWhenBoundFieldChanges()
+    function test_NMSIG_CN_2__NMSIG_CN_3__NMSIG_CN_4__NMSIG_CN_5__NMSIG_INV_4__NMSIG_INV_5_computeNonce_changesWhenBoundFieldChanges()
         public
     {
         // Setup: define a baseline tuple and deploy a second harness to vary the organization address binding.
@@ -51,7 +51,8 @@ contract LibOrganizationSignaturesTest is Test {
         uint256 differentData =
             harness.computeNonceViaLibrary(OperationType.ModifyAdmins, abi.encode(address(0xCAFE), uint256(11)), 19);
         uint256 differentSalt = harness.computeNonceViaLibrary(OperationType.ModifyAdmins, operationData, 20);
-        uint256 differentOrganization = secondHarness.computeNonceViaLibrary(OperationType.ModifyAdmins, operationData, 19);
+        uint256 differentOrganization =
+            secondHarness.computeNonceViaLibrary(OperationType.ModifyAdmins, operationData, 19);
 
         // Verify: each bound field mutation must move the nonce into a different replay domain.
         assertTrue(baseline != differentType, "operation type should be bound");
@@ -103,7 +104,9 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies `LibOrganizationSignatures.validateAndConsumeNonceOrRevert` reverts with the exact reused nonce.
-    function test_NMSIG_VCN_2__NMSIG_VCN_3_validateAndConsumeNonce_reusedNonceRevertsWithExactValue() public {
+    function test_NMSIG_VCN_2__NMSIG_VCN_3__NMSIG_INV_2_validateAndConsumeNonce_reusedNonceRevertsWithExactValue()
+        public
+    {
         // Setup: consume one nonce once so the next attempt hits the replay path.
         uint256 nonce = harness.computeNonceViaLibrary(OperationType.ModifyMembers, abi.encode(uint256(24)), 24);
         harness.validateAndConsumeNonceOrRevertViaLibrary(nonce);
@@ -130,7 +133,9 @@ contract LibOrganizationSignaturesTest is Test {
     }
 
     /// @dev Verifies once a nonce is consumed it stays used across later successful nonce consumptions.
-    function test_NMSIG_VCN_6_validateAndConsumeNonce_consumedNonceRemainsMonotonicAcrossLaterOperations() public {
+    function test_NMSIG_VCN_6__NMSIG_INV_1_validateAndConsumeNonce_consumedNonceRemainsMonotonicAcrossLaterOperations()
+        public
+    {
         // Setup: derive two distinct nonces in the same harness storage.
         uint256 nonceA = harness.computeNonceViaLibrary(OperationType.ModifyPolicies, abi.encode(uint256(26)), 27);
         uint256 nonceB = harness.computeNonceViaLibrary(OperationType.ModifyPolicies, abi.encode(uint256(27)), 28);

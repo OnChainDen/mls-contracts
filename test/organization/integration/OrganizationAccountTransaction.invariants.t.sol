@@ -19,6 +19,7 @@ import {
 import {
     OrganizationAccountTransactionInvariantHandler
 } from "test/organization/integration/OrganizationAccountTransactionInvariantHandler.sol";
+import {OperationType} from "types/CommonTypes.sol";
 import {
     Policy,
     PolicyType,
@@ -27,7 +28,6 @@ import {
     TransactionType,
     ValidationProofs
 } from "types/PolicyTypes.sol";
-import {OperationType} from "types/CommonTypes.sol";
 
 /**
  * @dev Invariant checks for account-transaction nonce, hash, and rate-limit properties.
@@ -147,7 +147,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: consumed nonce cannot be reused for execution or rejection.
-    function invariant_AT_INV_1__NMINV_2_nonceConsumption_preventsExecuteAndRejectReplay() public {
+    function invariant_AT_INV_1__NMINV_2__NMSIG_INV_2_nonceConsumption_preventsExecuteAndRejectReplay() public {
         // Verify: execute replay fails on consumed nonce.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
         vm.prank(GUARDIAN);
@@ -193,7 +193,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: rate-limit usage changes atomically (exact increment or full rollback).
-    function invariant_AT_INV_2_rateLimitAtomicity_noPartialUsageMutations() public view {
+    function invariant_AT_INV_2__TXRL_INV_6_rateLimitAtomicity_noPartialUsageMutations() public view {
         assertEq(
             harness.getPolicyUsage(usageKey, usageWindow), usageAfterSuccess, "usage must remain exact after revert"
         );
@@ -238,7 +238,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: approval and rejection initiator hashes are always distinct.
-    function invariant_AT_INV_5_approvalRejectionHashSeparation() public view {
+    function invariant_E712_HASH_3_B_AT_INV_5_approvalRejectionHashSeparation() public view {
         bytes32 approvalHash = harness.computeInitiatorHashFromParamsViaLibrary(
             address(account), DESTINATION, 0, usedSalt, expiration, DEFAULT_POLICY_ID, data, true
         );
@@ -260,8 +260,8 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
         assertTrue(hashA != hashB, "hash should bind organization address");
     }
 
-    /// @dev Verifies invariant: once an account-transaction nonce is consumed, `isNonceUsed` never flips back to false.
-    function invariant_NMINV_1_consumedAccountTransactionNonceRemainsUsed() public view {
+    /// @dev Verifies a consumed account-transaction nonce never flips back to unused. [NMSIG-INV-1]
+    function invariant_NMINV_1__NMSIG_INV_1_consumedAccountTransactionNonceRemainsUsed() public view {
         // Verify: the nonce consumed by the successful execution in `setUp` remains marked as used.
         assertTrue(harness.getUsedNonce(executedNonce), "consumed account-transaction nonce should remain used");
     }
@@ -288,7 +288,7 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: reverted account-transaction execution paths do not burn their computed nonce.
-    function invariant_NMINV_4_revertedExecutionPathsDoNotConsumeNonce() public view {
+    function invariant_NMINV_4__NMSIG_INV_6_revertedExecutionPathsDoNotConsumeNonce() public view {
         // Verify: the nonce for the reverted downstream execution in `setUp` remains unused.
         assertFalse(harness.getUsedNonce(failedExecutionNonce), "reverted execution should not consume nonce");
     }

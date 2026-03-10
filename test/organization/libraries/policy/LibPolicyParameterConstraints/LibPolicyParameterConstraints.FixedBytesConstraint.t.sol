@@ -78,7 +78,10 @@ contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParam
     }
 
     /// @dev Verifies that oversized comparison payloads fail closed for fixed bytes checks.
-    function test_isFixedBytesParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
+    function test_POL_INV_14_isFixedBytesParameterAllowedByConstraint_oversizedComparisonData_returnsFalse()
+        public
+        view
+    {
         // Setup: create a two-word comparison payload instead of the required single word.
         bytes32 expected = keccak256("fixed-oversized");
         bytes memory oversizedData = bytes.concat(abi.encode(expected), bytes32(uint256(1)));
@@ -113,7 +116,9 @@ contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParam
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isFixedBytesParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
+    function test_POL_INV_14_isFixedBytesParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+        public
+    {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isFixedBytesParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

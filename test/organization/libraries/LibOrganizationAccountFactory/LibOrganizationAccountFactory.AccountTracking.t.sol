@@ -52,7 +52,7 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
     }
 
     /// @dev Verifies accounts deployed by another organization return false.
-    function test_LOAF_IADBO_4_isAccountDeployedByOrganization_accountDeployedByDifferentOrganization_returnsFalse()
+    function test_ACCF_INV_4_A_LOAF_IADBO_4_isAccountDeployedByOrganization_accountDeployedByDifferentOrganization_returnsFalse()
         public
     {
         bytes32 salt = bytes32(uint256(9138));
@@ -67,6 +67,26 @@ contract LibOrganizationAccountFactoryAccountTrackingTest is LibOrganizationAcco
 
         // Verify: cross-organization account should not be treated as deployed by this org.
         assertFalse(trackedByThisOrg, "account from another organization should return false");
+    }
+
+    /// @dev Verifies `validateIsAccountDeployedByOrgOrRevert` rejects accounts deployed by a different organization.
+    function test_ACCF_INV_4_B_validateIsAccountDeployedByOrgOrRevert_foreignOrganizationAccount_reverts() public {
+        bytes32 salt = bytes32(uint256(9139));
+
+        // Setup: deploy an account through a distinct organization harness so this harness never marks it as local.
+        LibOrganizationAccountFactoryHarness otherHarness = new LibOrganizationAccountFactoryHarness();
+        otherHarness.setAccountImplementationStorage(accountImplementationV1);
+        address deployedByOther = otherHarness.deployAccountViaLibrary(salt);
+
+        // Verify: cross-organization validation must fail with the canonical deployed-account error.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAccountFactory.AccountNotDeployedByOrganization.selector, deployedByOther
+            )
+        );
+
+        // Call: validate the foreign organization's deployed account from this harness.
+        harness.validateIsAccountDeployedByOrgOrRevertViaLibrary(deployedByOther);
     }
 
     /// @dev Verifies computed address transitions from false to true only after successful deployment.

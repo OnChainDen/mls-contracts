@@ -62,7 +62,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` only allows the configured tx recovery address to invoke protected
     /// state-changing entrypoints.
-    function invariant_TXR_INV_1_onlyTxRecoveryAddressCanCallTxRecoveryProtectedEntrypoints() public {
+    function invariant_TXR_INV_1_TXRC_INV_4_onlyTxRecoveryAddressCanCallTxRecoveryProtectedEntrypoints() public {
         // Setup: use the seeded tx-recovery baseline and handler-owned mock account.
 
         // Call: attempt each protected entrypoint from non-recovery callers.
@@ -78,7 +78,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` keeps tx-recovery config write-once after initial configuration.
-    function invariant_TXR_INV_2_txRecoveryConfigWriteOnce_afterInitialization() public {
+    function invariant_TXR_INV_2_TXRC_INV_1_txRecoveryConfigWriteOnce_afterInitialization() public {
         // Setup: exercise enable/disable transitions around the configured baseline.
         handler.initiateEnable();
         handler.finalizeEnable(true);
@@ -188,7 +188,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` zero deferred-init timestamp implies zero deferred-init tuple.
-    function invariant_TXR_INV_9_zeroPendingInitTimestampImpliesZeroDeferredInitTuple() public view {
+    function invariant_TXR_INV_9_TXRC_INV_10_zeroPendingInitTimestampImpliesZeroDeferredInitTuple() public view {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -374,7 +374,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` tx-recovery transitions never mutate guardian-recovery state.
-    function invariant_TXR_INV_20_txRecoveryTransitionsNeverMutateGuardianRecoveryState() public {
+    function invariant_TXR_INV_20_TXRC_INV_7_txRecoveryTransitionsNeverMutateGuardianRecoveryState() public {
         // Setup: execute representative tx-recovery transitions.
         handler.initiateEnable();
         handler.finalizeEnable(true);
@@ -422,7 +422,7 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
 
     /// @dev Verifies `OrganizationTxRecoveryBase` successful recovery execution always uses `nonce=0` and
     /// `policyId=0`.
-    function invariant_TXR_INV_21_successfulRecoveryExecutionAlwaysUsesNonceZeroAndPolicyIdZero() public {
+    function invariant_TXR_INV_21_TXRC_INV_6_successfulRecoveryExecutionAlwaysUsesNonceZeroAndPolicyIdZero() public {
         // Setup: execute recovery against a non-reverting target.
         handler.executeRecoveryToReceiver(6, 456);
 

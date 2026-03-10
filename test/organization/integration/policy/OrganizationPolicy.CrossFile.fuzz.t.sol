@@ -73,7 +73,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that source account proofs only pass for exact tuple.
-    function testFuzz_sourceAccountProofsOnlyPassForExactTuple(
+    function testFuzz_POL_INV_3_sourceAccountProofsOnlyPassForExactTuple(
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for source account proofs only pass
         // for exact tuple.
         address accountA,

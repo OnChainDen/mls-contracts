@@ -144,7 +144,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
     /// @dev Verifies Account and Organization whitelist namespaces stay isolated across all system entrypoints.
     ///      [IWC-INT-2]
-    function test_IWC_INT_2_accountAndOrganizationNamespaces_remainSeparatedAcrossDeployUpgradeAndAccountFlows()
+    function test_UPG_CTRL_6__IWC_INT_2_accountAndOrganizationNamespaces_remainSeparatedAcrossDeployUpgradeAndAccountFlows()
         public
     {
         // Setup: whitelist the organization candidate under Account only, and the account candidate under
@@ -388,7 +388,7 @@ contract ImplementationWhitelistControlsCrossFileTest is InitializationSuiteBase
 
     /// @dev Verifies whitelist ownership transfer immediately changes who can unlock factory, org-upgrade, and
     ///      account-upgrade flows. [IWC-INT-6]
-    function test_IWC_INT_6_whitelistOwnershipTransfer_changesSystemWideMutationAuthority() public {
+    function test_UPG_CTRL_5__IWC_INT_6_whitelistOwnershipTransfer_changesSystemWideMutationAuthority() public {
         // Setup: deploy a baseline organization, then transfer whitelist ownership to a new owner while leaving the
         // candidate org/account targets unwhitelisted.
         InitializationParams memory params = _buildInitializationParams(address(baseAccountImplementation));

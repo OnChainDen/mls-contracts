@@ -113,7 +113,7 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
     }
 
     /// @dev Verifies that malformed range payload lengths fail closed for int constraints.
-    function test_isIntParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
+    function test_POL_INV_14_isIntParameterAllowedByConstraint_malformedRangeComparisonData_returnsFalse() public view {
         // Setup: build short and oversized range payloads for signed range decoding.
         bytes memory shortRangeData = abi.encode(int256(-5));
         bytes memory oversizedRangeData = bytes.concat(abi.encode(int256(-5), int256(5)), bytes32(uint256(1)));
@@ -160,7 +160,9 @@ contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterCon
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
+    function test_POL_INV_14_isIntParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+        public
+    {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isIntParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

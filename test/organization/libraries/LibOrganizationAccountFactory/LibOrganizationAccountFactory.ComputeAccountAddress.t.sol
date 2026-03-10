@@ -13,7 +13,7 @@ import {
  */
 contract LibOrganizationAccountFactoryComputeAccountAddressTest is LibOrganizationAccountFactorySuiteBase {
     /// @dev Verifies same salt always computes the same address.
-    function test_LOAF_CAA_1_computeAccountAddress_sameSalt_isDeterministic() public view {
+    function test_ACCF_INV_1_LOAF_CAA_1_computeAccountAddress_sameSalt_isDeterministic() public view {
         bytes32 salt = bytes32(uint256(9030));
 
         // Setup: choose one deterministic salt for repeated computation checks.

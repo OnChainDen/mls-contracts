@@ -32,7 +32,7 @@ contract OrganizationFactoryInvariantsTest is Test {
     }
 
     /// @dev Verifies INIT-INV-1: `isInitialized()` only transitions false -> true and never back.
-    function invariant_INIT_INV_1_isInitialized_canOnlyTransitionFalseToTrue() public view {
+    function invariant_INIT_STATE_1_INIT_INV_1_isInitialized_canOnlyTransitionFalseToTrue() public view {
         assertFalse(handler.reinitializeSucceeded(), "reinitialize unexpectedly succeeded");
 
         uint256 successfulLength = handler.deploymentRecordsLength();
@@ -54,7 +54,7 @@ contract OrganizationFactoryInvariantsTest is Test {
     }
 
     /// @dev Verifies INIT-INV-2: initialized organizations keep admin/member consistency invariants.
-    function invariant_INIT_INV_2_initializedAdminMemberConsistency_holds() public view {
+    function invariant_INIT_STATE_2_INIT_INV_2_initializedAdminMemberConsistency_holds() public view {
         uint256 length = handler.deploymentRecordsLength();
         for (uint256 i = 0; i < length; ++i) {
             OrganizationFactoryInvariantHandler.DeploymentRecord memory record = handler.deploymentRecordAt(i);

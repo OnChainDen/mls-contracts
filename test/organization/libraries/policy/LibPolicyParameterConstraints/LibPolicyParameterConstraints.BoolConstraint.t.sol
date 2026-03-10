@@ -86,7 +86,7 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that oversized comparison payloads fail closed.
-    function test_isBoolParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
+    function test_POL_INV_14_isBoolParameterAllowedByConstraint_oversizedComparisonData_returnsFalse() public view {
         // Setup: append an extra 32-byte word so comparison data is not exactly one slot.
         bytes memory oversized = bytes.concat(abi.encode(true), bytes32(uint256(99)));
 
@@ -114,7 +114,9 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior() public {
+    function test_POL_INV_14_isBoolParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+        public
+    {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false. Call: run `isBoolParameterAllowedByConstraintViaPolicyLibrary` across the prepared
         // variants.

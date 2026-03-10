@@ -99,4 +99,21 @@ contract OrganizationTxRecoveryBaseHarness is OrganizationGuardianStateHarness, 
     function validateRecoveryAccountTransactionAllowedOrRevertViaHarness() external view {
         LibOrganizationTxRecovery.validateRecoveryAccountTransactionAllowedOrRevert();
     }
+
+    /**
+     * @dev Exposes recovery-signature validation for direct test assertions.
+     */
+    function isValidRecoverySignatureViaHarness(bytes32 hash, bytes calldata signature) external view returns (bool) {
+        return LibOrganizationTxRecovery.isValidRecoverySignature(hash, signature);
+    }
+
+    /**
+     * @dev Exposes tx-recovery parameter validation for direct test assertions.
+     */
+    function validateTxRecoveryParamsOrRevertViaHarness(address recoveryAddress, uint256 timelockDurationSeconds)
+        external
+        pure
+    {
+        LibOrganizationTxRecovery._validateTxRecoveryParamsOrRevert(recoveryAddress, timelockDurationSeconds);
+    }
 }

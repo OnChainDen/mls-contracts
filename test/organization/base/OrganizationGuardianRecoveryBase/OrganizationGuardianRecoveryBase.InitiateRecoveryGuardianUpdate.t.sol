@@ -16,7 +16,9 @@ contract OrganizationGuardianRecoveryBaseInitiateRecoveryGuardianUpdateTest is
 {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before any pending recovery state
     /// is written. [OREC-GRF-2]
-    function test_OGRB_IRGU_1__OREC_GRF_2_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
+    function test_OGRB_IRGU_1__OREC_GRF_2__GREC_INV_6_A_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
+        public
+    {
         // Setup: reuse suite baseline where guardian-recovery is configured.
         address caller = address(0xCA11);
 

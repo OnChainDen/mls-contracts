@@ -17,7 +17,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationGuardianBaseFinalizeGuardianUpdateTest is OrganizationGuardianBaseSuiteBase {
     /// @dev Verifies OGB-FGU-1: non-guardian caller reverts via `onlyGuardian`.
-    function test_OGB_FGU_1_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_OGB_FGU_1_GUARD_INV_6_B_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);

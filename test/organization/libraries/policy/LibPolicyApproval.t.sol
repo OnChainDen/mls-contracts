@@ -296,7 +296,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that group approver type returns configured approval threshold.
-    function test_getRequiredApprovals_groupApprover_returnsConfiguredThreshold() public {
+    function test_POL_INV_6_getRequiredApprovals_groupApprover_returnsConfiguredThreshold() public {
         // Setup: configure a valid fixture for group approver type returns configured approval threshold.
         Policy memory policy = _groupApproverPolicy(2211, 3);
 
@@ -307,7 +307,7 @@ contract LibPolicyApprovalTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that member approver ignores `approvalThreshold` field.
-    function test_getRequiredApprovals_memberApproverIgnoresThresholdField() public {
+    function test_POL_INV_6_getRequiredApprovals_memberApproverIgnoresThresholdField() public {
         // Setup: configure a valid fixture for member approver ignores `approvalThreshold` field.
         Policy memory policy = _memberApproverPolicy(reviewer1);
         policy.config.approval.approvalThreshold = 9;

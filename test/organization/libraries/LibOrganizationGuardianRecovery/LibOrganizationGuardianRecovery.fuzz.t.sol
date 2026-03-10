@@ -73,7 +73,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
 
     /// @dev Verifies that finalize behavior follows timestamp relation and pending timestamp equals
     /// block.timestamp+duration.
-    function testFuzz_OGR_FZ_4__OGR_FZ_5__OGR_FZ_9_finalizeBeforeAfterTimelock_behavesByTimestamp(
+    function testFuzz_OGR_FZ_4__OGR_FZ_5__OGR_FZ_9__GREC_INV_10_finalizeBeforeAfterTimelock_behavesByTimestamp(
         uint256 timelock,
         uint256 delta
     ) public {

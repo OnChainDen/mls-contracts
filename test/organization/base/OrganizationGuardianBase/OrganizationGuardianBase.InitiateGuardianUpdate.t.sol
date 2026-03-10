@@ -16,7 +16,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationGuardianBaseInitiateGuardianUpdateTest is OrganizationGuardianBaseSuiteBase {
     /// @dev Verifies OGB-IGU-1: non-guardian caller reverts via `onlyGuardian`.
-    function test_OGB_IGU_1_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_OGB_IGU_1_GUARD_INV_6_A_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory auth,) = _buildInitiateGuardianUpdateAuth({

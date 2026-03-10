@@ -84,7 +84,7 @@ contract OrganizationPolicyCrossFileTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies deleted groups stop authorizing policies even when stale group-member bits still remain set.
-    function test_OGB_MG_3_OGB_MG_5_deletedGroupWithGhostMembershipStopsAuthorizingPolicies() public {
+    function test_OGB_MG_3_OGB_MG_5_GROUP_INV_4_deletedGroupWithGhostMembershipStopsAuthorizingPolicies() public {
         // Setup: configure a shared group-based policy and seed live organization membership plus group membership.
         Policy memory policy = _buildSharedGroupPolicy(AUTHORIZATION_GROUP_ID);
         policyStateHarness.setGroupStatus(AUTHORIZATION_GROUP_ID, true);

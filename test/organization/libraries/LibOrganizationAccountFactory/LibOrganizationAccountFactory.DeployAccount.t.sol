@@ -36,7 +36,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies deployed address matches `computeAccountAddress(create2Salt)`.
-    function test_LOAF_DA_2_deployAccount_deployedAddress_matchesComputeAccountAddress() public {
+    function test_ACCF_INV_2_LOAF_DA_2_deployAccount_deployedAddress_matchesComputeAccountAddress() public {
         bytes32 create2Salt = bytes32(uint256(8024));
 
         // Setup: set a valid beacon implementation with runtime code.
@@ -102,7 +102,7 @@ contract LibOrganizationAccountFactoryDeployAccountTest is LibOrganizationAccoun
     }
 
     /// @dev Verifies deploying the same salt twice reverts due CREATE2 collision.
-    function test_LOAF_DA_7_deployAccount_sameSaltTwice_revertsCreate2Collision() public {
+    function test_ACCF_INV_11_LOAF_DA_7_deployAccount_sameSaltTwice_revertsCreate2Collision() public {
         bytes32 create2Salt = bytes32(uint256(8027));
 
         // Setup: set valid beacon implementation and perform first successful deployment.

@@ -19,7 +19,9 @@ import {InitializationParams} from "types/CommonTypes.sol";
 contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     /// @dev Verifies `OrganizationInitializationBase.initialize` rejects non-deployer callers on an uninitialized
     /// proxy. [OI-INIT-2]
-    function test_OIB_INIT_1__OI_INIT_2_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer() public {
+    function test_INIT_STATE_3__OIB_INIT_1__OI_INIT_2_uninitializedProxy_nonDeployerRevertsUnauthorizedDeployer()
+        public
+    {
         // Setup: Deploy an uninitialized proxy and prepare valid initialization params.
         vm.prank(AUTHORIZED_DEPLOYER);
         address proxy = address(new OrganizationProxy(address(implementation), address(whitelist)));

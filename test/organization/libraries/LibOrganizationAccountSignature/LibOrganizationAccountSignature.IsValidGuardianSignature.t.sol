@@ -26,8 +26,10 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
         batchedTransaction = new BatchedTransaction();
     }
 
-    /// @dev Verifies `_isValidGuardianSignature` returns true for a direct guardian EOA signature.
-    function test_LOAS_IVGS_1_LOACS_IVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue() public {
+    /// @dev Verifies `_isValidGuardianSignature` returns true for a direct guardian EOA signature. [ASIG-INV-5]
+    function test_ASIG_INV_5_A_LOAS_IVGS_1_LOACS_IVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue()
+        public
+    {
         // Setup: configure the guardian as a deterministic EOA and sign the tracked message hash.
         policyStateHarness.setGuardian(guardianSigner);
         bytes memory guardianSignature = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -40,7 +42,8 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` accepts an enabled `SafeExecutorModule` contract signature.
-    function test_LOAS_IVGS_2_LOACS_IVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue()
+    ///      [ASIG-INV-5]
+    function test_ASIG_INV_5_B_LOAS_IVGS_2_LOACS_IVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue()
         public
     {
         // Setup: configure a guardian Safe with an enabled executor module and sign through the authorized executor.
@@ -59,7 +62,10 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` rejects valid module signatures from non-enabled modules.
-    function test_LOAS_IVGS_3_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse() public {
+    ///      [ASIG-INV-5]
+    function test_ASIG_INV_5_C_LOAS_IVGS_3_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse()
+        public
+    {
         // Setup: configure a guardian Safe without enabling the module that produced the contract signature.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -75,7 +81,10 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies a previously valid enabled-module guardian signature becomes invalid immediately after disable.
-    function test_LOACS_IVGS_3_isValidGuardianSignature_enabledThenDisabledModuleSignature_returnsFalse() public {
+    ///      [ASIG-INV-6]
+    function test_ASIG_INV_6_A_LOACS_IVGS_3_isValidGuardianSignature_enabledThenDisabledModuleSignature_returnsFalse()
+        public
+    {
         // Setup: configure a guardian Safe, validate one enabled-module signature, then disable that same module.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -113,7 +122,10 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` rejects module signatures whose inner signer is not authorized.
-    function test_LOAS_IVGS_5_isValidGuardianSignature_wrongExecutorModuleSignature_returnsFalse() public {
+    ///      [ASIG-INV-5]
+    function test_ASIG_INV_5_D_LOAS_IVGS_5_isValidGuardianSignature_wrongExecutorModuleSignature_returnsFalse()
+        public
+    {
         // Setup: enable a module on the guardian Safe but sign the inner payload with the wrong executor key.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule module = _deployModule(address(guardianSafe), AUTHORIZED_EXECUTOR_PK);
@@ -189,8 +201,8 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
         assertFalse(actual, "mismatched EOA guardian signature should be invalid");
     }
 
-    /// @dev Verifies `_isValidGuardianSignature` reflects module rotation immediately.
-    function test_LOAS_IVGS_10_LOACS_IVGS_3_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately()
+    /// @dev Verifies `_isValidGuardianSignature` reflects module rotation immediately. [ASIG-INV-6]
+    function test_ASIG_INV_6_B_LOAS_IVGS_10_LOACS_IVGS_3_isValidGuardianSignature_moduleRotation_oldFalseNewTrueImmediately()
         public
     {
         // Setup: configure old and new modules on the same guardian Safe and rotate enablement between them.

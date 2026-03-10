@@ -208,7 +208,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash stays distinct whenever any bound field is mutated.
-    function test_LOACT_CIHFP_2__LOACT_CIHFP_3__LOACT_CIHFP_4__LOACT_CIHFP_5__LOACT_CIHFP_6__LOACT_CIHFP_7__LOACT_CIHFP_8__LOACT_CIHFP_9__LOACT_CIHFP_10__NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct()
+    function test_E712_HASH_7_A_LOACT_CIHFP_2__LOACT_CIHFP_3__LOACT_CIHFP_4__LOACT_CIHFP_5__LOACT_CIHFP_6__LOACT_CIHFP_7__LOACT_CIHFP_8__LOACT_CIHFP_9__LOACT_CIHFP_10__NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct()
         public
     {
         // Setup: compute a baseline initiator hash and deploy a second harness for organization binding checks.
@@ -301,7 +301,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash binds every transaction field and chain id.
-    function test_LOACT_CRHFP_1__LOACT_CRHFP_3__LOACT_CRHFP_4__LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13__NMATL_RHB_4_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
+    function test_E712_HASH_7_B_LOACT_CRHFP_1__LOACT_CRHFP_3__LOACT_CRHFP_4__LOAT_CRHFP_2__LOAT_CRHFP_3__LOAT_CRHFP_4__LOAT_CRHFP_5__LOAT_CRHFP_6__LOAT_CRHFP_7__LOAT_CRHFP_8__LOAT_CRHFP_9__LOAT_CRHFP_13__NMATL_RHB_4_computeReviewHash_fieldBinding_changesHashWhenAnyFieldChanges()
         public
     {
         // Setup: compute baseline review hash and deploy a second harness for organization binding checks.

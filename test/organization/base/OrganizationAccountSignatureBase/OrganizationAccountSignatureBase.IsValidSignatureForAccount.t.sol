@@ -43,8 +43,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         libHarness.setMemberStatus(reviewer1, true);
     }
 
-    /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`.
-    function test_OASB_ISFA_1__OAS_VSFA_1_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount()
+    /// @dev Verifies that calls where `msg.sender != account` revert with `SenderIsNotAccount`. [ASIG-INV-11]
+    function test_ASIG_INV_11_A_OASB_ISFA_1__OAS_VSFA_1_isValidSignatureForAccount_senderNotAccount_revertsSenderIsNotAccount()
         public
     {
         // Setup: mark the account as deployed to isolate the sender gate.
@@ -57,8 +57,8 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, bytes(""));
     }
 
-    /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`.
-    function test_OASB_ISFA_2__OAS_VSFA_1_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+    /// @dev Verifies that undeployed accounts revert even when `msg.sender == account`. [ASIG-INV-11]
+    function test_ASIG_INV_11_B_OASB_ISFA_2__OAS_VSFA_1_isValidSignatureForAccount_accountNotDeployed_revertsAccountNotDeployedByOrganization()
         public
     {
         // Setup: leave deployed-account mapping unset for the target account.
@@ -88,8 +88,10 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
         harness.isValidSignatureForAccount(ACCOUNT, MESSAGE_HASH, policySignature);
     }
 
-    /// @dev Verifies that valid account callers receive the same result as direct library validation.
-    function test_OASB_ISFA_4_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult() public {
+    /// @dev Verifies that valid account callers receive the same result as direct library validation. [ASIG-INV-11]
+    function test_ASIG_INV_11_C_OASB_ISFA_4_isValidSignatureForAccount_deployedAccountDelegatesToLibraryResult()
+        public
+    {
         // Setup: align storage fixtures for both harnesses and build a valid recovery payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);

@@ -30,7 +30,7 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` zero recovery address reverts with
     /// `InvalidGuardianRecoveryAddress`.
-    function test_LOGR_IGR_3_zeroAddress_revertsInvalidGuardianRecoveryAddress() public {
+    function test_LOGR_IGR_3__GREC_INV_11_A_zeroAddress_revertsInvalidGuardianRecoveryAddress() public {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -48,7 +48,9 @@ contract LibOrganizationGuardianRecoveryInitializeTest is LibOrganizationGuardia
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` below-min and above-max timelock
     /// values revert `InvalidTimelockDuration`.
-    function test_LOGR_IGR_4__LOGR_IGR_5_outOfRangeTimelock_revertsInvalidTimelockDuration() public {
+    function test_LOGR_IGR_4__LOGR_IGR_5__GREC_INV_11_B_outOfRangeTimelock_revertsInvalidTimelockDuration()
+        public
+    {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 

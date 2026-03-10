@@ -225,8 +225,8 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
         assertFalse(allowed, "malformed Address OneOf root should fail");
     }
 
-    /// @dev Verifies that bytes/string dispatch uses dynamic offset and content hash correctly.
-    function test_isParameterAllowedByConstraint__OPB_PH_5_bytesAndString_dispatchPath_usesOffsetAndHash()
+    /// @dev Verifies bytes/string parameter dispatch follows the dynamic offset and hashes the pointed-to payload.
+    function test_POL_INV_13__OPB_PH_5_isParameterAllowedByConstraint_bytesAndString_dispatchPath_usesOffsetAndHash()
         public
         view
     {

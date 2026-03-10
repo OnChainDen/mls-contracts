@@ -14,7 +14,7 @@ import {AdminAuthParams} from "types/AdminTypes.sol";
 contract OrganizationGuardianBaseAcceptGuardianTest is OrganizationGuardianBaseSuiteBase {
     /// @dev Verifies `OrganizationGuardianBase.acceptGuardian` only allows the pending guardian to accept a finalized
     /// guardian update. [OGU-GU-6]
-    function test_OGB_AG_1__OGU_GU_6_nonPendingGuardianCaller_revertsOnlyPendingGuardian() public {
+    function test_OGB_AG_1__OGU_GU_6__GUARD_INV_7_nonPendingGuardianCaller_revertsOnlyPendingGuardian() public {
         // Setup
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
         guardianStateHarness.setPendingGuardianUpdateTimestamp(block.timestamp);

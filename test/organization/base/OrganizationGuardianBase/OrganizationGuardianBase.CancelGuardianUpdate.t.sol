@@ -16,7 +16,7 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardianBaseSuiteBase {
     /// @dev Verifies OGB-CGU-1: non-guardian caller reverts via `onlyGuardian`.
-    function test_OGB_CGU_1_nonGuardianCaller_revertsOnlyGuardian() public {
+    function test_OGB_CGU_1_GUARD_INV_6_C_nonGuardianCaller_revertsOnlyGuardian() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         guardianStateHarness.setPendingGuardian(NEW_GUARDIAN_A);
@@ -140,7 +140,7 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` clears a pending normal guardian update before
     /// finalization. [OGU-GU-4]
-    function test_OGB_CGU_6__OGU_GU_4_delegatesToLibrary_andClearsPendingState() public {
+    function test_OGB_CGU_6__OGU_GU_4__GUARD_INV_8_A_delegatesToLibrary_andClearsPendingState() public {
         // Setup
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         _initiatePendingGuardianUpdate(NEW_GUARDIAN_A, 3904);
@@ -320,7 +320,9 @@ contract OrganizationGuardianBaseCancelGuardianUpdateTest is OrganizationGuardia
 
     /// @dev Verifies `OrganizationGuardianBase.cancelGuardianUpdate` can cancel a guardian update after finalize but
     /// before accept, restoring the lifecycle to a fresh re-initiable state. [OGU-GU-4]
-    function test_OGU_GU_4_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate() public {
+    function test_OGU_GU_4__GUARD_INV_8_B_cancelAfterFinalizeBeforeAccept_clearsReadyStateAndAllowsFreshUpdate()
+        public
+    {
         // Setup: stage a normal guardian update through finalize so the pending guardian is ready for acceptance.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
         (AdminAuthParams memory initiateAuth,) = _buildInitiateGuardianUpdateAuth({

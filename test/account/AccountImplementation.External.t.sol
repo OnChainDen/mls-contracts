@@ -70,7 +70,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    function test_AI_ET_1__OAT_AI_1_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_INV_1__AI_ET_1__OAT_AI_1_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization()
+        public
+    {
         // Setup: deploy target call receiver.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
 
@@ -103,7 +105,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies failed downstream call reverts with `TransactionExecutionFailed`.
      */
-    function test_AI_ET_4__OAT_AI_2_executeTransaction_failedCall_revertsTransactionExecutionFailed() public {
+    function test_AI_INV_4__AI_ET_4__OAT_AI_2_executeTransaction_failedCall_revertsTransactionExecutionFailed()
+        public
+    {
         // Setup: deploy target and build reverting calldata.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);
@@ -201,7 +205,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature delegates `(account,hash,signature)` to organization contract.
      */
-    function test_AI_IVS_1__OAT_AI_5_isValidSignature_delegatesToOrganizationWithExpectedArguments() public {
+    function test_AI_INV_3__AI_IVS_1__OAT_AI_5_isValidSignature_delegatesToOrganizationWithExpectedArguments()
+        public
+    {
         // Setup: configure beacon mock to enforce exact delegated call arguments.
         bytes32 hash = keccak256("account-signature-delegate");
         bytes memory signature = hex"0102030405";

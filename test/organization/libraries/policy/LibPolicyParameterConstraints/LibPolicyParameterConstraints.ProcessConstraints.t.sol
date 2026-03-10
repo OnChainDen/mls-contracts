@@ -24,8 +24,9 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
         assertTrue(allowed, "empty constraints array should pass");
     }
 
-    /// @dev Verifies that mixed head slot counts advance offsets correctly.
-    function test_processConstraints_mixedHeadSlots_advancesOffsetsCorrectly() public view {
+    /// @dev Verifies `_processConstraints` walks parameter heads using the correct cumulative calldata offsets.
+    /// [POL-INV-11]
+    function test_POL_INV_11_processConstraints_mixedHeadSlots_advancesOffsetsCorrectly() public view {
         // Setup: configure a valid fixture for mixed head slot counts advance offsets correctly.
         bytes32[2] memory staticArray = [bytes32(uint256(11)), bytes32(uint256(22))];
 
@@ -82,8 +83,9 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
         assertFalse(allowed, "headSlotCount=0 should fail");
     }
 
-    /// @dev Verifies that insufficient head bytes in calldata returns false.
-    function test_processConstraints_dataShorterThanRequiredHead_returnsFalse() public view {
+    /// @dev Verifies `_processConstraints` returns false when calldata is too short for a declared head slot.
+    /// [POL-INV-12]
+    function test_POL_INV_12_processConstraints_dataShorterThanRequiredHead_returnsFalse() public view {
         // Setup: build fixture inputs where insufficient head bytes in calldata returns false should be denied.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
@@ -171,8 +173,12 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
         assertTrue(allowed, "multi-slot struct Any constraint should process without decode errors");
     }
 
-    /// @dev Verifies that later constraints fail when offset advancement exhausts available head bytes.
-    function test_processConstraints_secondConstraintHeadOutOfBoundsAfterOffsetAdvance_returnsFalse() public view {
+    /// @dev Verifies later constraints fail closed once offset walking exhausts available calldata head bytes.
+    /// [POL-INV-11, POL-INV-12]
+    function test_POL_INV_11__POL_INV_12_processConstraints_secondConstraintHeadOutOfBoundsAfterOffsetAdvance_returnsFalse()
+        public
+        view
+    {
         // Setup: first constraint consumes two head slots; second needs one more slot that is absent.
         ParameterConstraint memory firstArrayAny = ParameterConstraint({
             paramType: ParamType.Array,

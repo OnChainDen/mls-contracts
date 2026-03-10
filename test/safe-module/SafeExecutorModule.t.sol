@@ -271,7 +271,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
 
     // ISEM-EOB-1
     /// @dev Verifies `executeOnBehalf` reverts with `UnauthorizedCaller` for non-authorized callers.
-    function test_ISEM_EOB_1__SEM_EOB_1_executeOnBehalfRevertsUnauthorizedCaller() public {
+    ///      [ASIG-INV-12]
+    function test_ASIG_INV_12_A_ISEM_EOB_1__SEM_EOB_1_executeOnBehalfRevertsUnauthorizedCaller() public {
         // Setup: prepare valid calldata targeting mockTarget.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -301,8 +302,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     // ISEM-EOB-2
-    /// @dev Verifies `executeOnBehalf` reverts with `CannotCallSafe` when targeting the Safe.
-    function test_ISEM_EOB_2__SEM_EOB_3_executeOnBehalfRevertsCannotCallSafe() public {
+    /// @dev Verifies `executeOnBehalf` reverts with `CannotCallSafe` when targeting the Safe. [ASIG-INV-7]
+    function test_ASIG_INV_7_ISEM_EOB_2__SEM_EOB_3_executeOnBehalfRevertsCannotCallSafe() public {
         // Setup: calldata targeting the Safe.
         bytes memory data = abi.encodeWithSelector(MockSafe.addOwnerWithThreshold.selector, makeAddr("owner"), 2);
 
@@ -313,7 +314,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies `executeOnBehalf` invokes `Safe.execTransactionFromModule` exactly once and returns true.
-    function test_SEM_EOB_4_SEM_EOB_10_executeOnBehalfCallsSafeOnceAndReturnsTrue() public {
+    ///      [ASIG-INV-12]
+    function test_ASIG_INV_12_B_SEM_EOB_4_SEM_EOB_10_executeOnBehalfCallsSafeOnceAndReturnsTrue() public {
         // Setup: valid calldata.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 123);
 
@@ -354,8 +356,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
     }
 
     // ISEM-EOB-3
-    /// @dev Verifies `executeOnBehalf` always forwards value=0 to the Safe.
-    function test_ISEM_EOB_3__SEM_EOB_7_executeOnBehalfAlwaysForwardsZeroValue() public {
+    /// @dev Verifies `executeOnBehalf` always forwards value=0 to the Safe. [ASIG-INV-8]
+    function test_ASIG_INV_8_A_ISEM_EOB_3__SEM_EOB_7_executeOnBehalfAlwaysForwardsZeroValue() public {
         // Setup: valid calldata.
         bytes memory data = abi.encodeWithSelector(MockTarget.setValue.selector, 42);
 
@@ -435,8 +437,8 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
         revertModule.executeOnBehalf(address(mockTarget), data);
     }
 
-    /// @dev Verifies `executeOnBehalf` enforces no-ETH-transfer policy (value always 0).
-    function test_SEM_EOB_14_executeOnBehalfCannotSendEth() public {
+    /// @dev Verifies `executeOnBehalf` enforces no-ETH-transfer policy (value always 0). [ASIG-INV-8]
+    function test_ASIG_INV_8_B_SEM_EOB_14_executeOnBehalfCannotSendEth() public {
         // Setup: deploy target that requires non-zero msg.value.
         RequiresEthTarget ethTarget = new RequiresEthTarget();
         bytes memory data = abi.encodeWithSelector(RequiresEthTarget.payableAction.selector);

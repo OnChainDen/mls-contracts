@@ -548,7 +548,9 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back all prior writes (members, admins, groups,
     /// guardian, timelock) when recovery setup reverts.
-    function test_LOI_AOG_3_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites() public {
+    function test_INIT_STATE_6_B__LOI_AOG_3_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites()
+        public
+    {
         // Setup: Build params with valid members/admins/groups/guardian but an invalid guardian recovery timelock to
         // trigger `InvalidTimelockDuration` during recovery initialization (step 7 of initialize).
         LibOrganizationInitializationHarness harness = _newLibraryHarness();

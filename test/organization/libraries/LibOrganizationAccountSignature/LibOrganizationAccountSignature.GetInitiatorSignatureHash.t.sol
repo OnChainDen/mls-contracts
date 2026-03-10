@@ -22,7 +22,7 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
     bytes32 internal constant GOLDEN_MESSAGE_HASH = keccak256("golden-initiator-hash");
 
     /// @dev Verifies that different organization addresses produce different initiator hashes.
-    function test_LOAS_GISH_1_LOACS_GISH_7_getInitiatorSignatureHash_differentOrganizations_returnsDifferentHashes()
+    function test_E712_HASH_6_LOAS_GISH_1_LOACS_GISH_7_getInitiatorSignatureHash_differentOrganizations_returnsDifferentHashes()
         public
     {
         // Setup: deploy an additional harness with a different verifying-contract address.
@@ -103,7 +103,9 @@ contract LibOrganizationAccountSignatureGetInitiatorSignatureHashTest is LibOrga
     }
 
     /// @dev Verifies that changing chain id changes the initiator signature hash.
-    function test_LOAS_GISH_6_LOACS_GISH_6_getInitiatorSignatureHash_differentChainId_returnsDifferentHash() public {
+    function test_E712_HASH_5_LOAS_GISH_6_LOACS_GISH_6_getInitiatorSignatureHash_differentChainId_returnsDifferentHash()
+        public
+    {
         // Setup: snapshot baseline hash inputs.
         uint256 expiration = block.timestamp + 1 days;
         bytes32 baseline =

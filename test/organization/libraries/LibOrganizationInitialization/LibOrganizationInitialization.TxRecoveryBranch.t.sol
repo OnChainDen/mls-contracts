@@ -107,7 +107,9 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
     }
 
     /// @dev Verifies LOI-REC-7: tx recovery timelock min boundary is accepted at initialization and remains disabled.
-    function test_LOI_REC_7_initialize_nonZeroRecoveryAndMinBoundaryTimelock_configuresTxRecovery() public {
+    function test_INIT_STATE_7_A_LOI_REC_7_initialize_nonZeroRecoveryAndMinBoundaryTimelock_configuresTxRecovery()
+        public
+    {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -126,7 +128,9 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
     }
 
     /// @dev Verifies LOI-REC-8: tx recovery timelock max boundary is accepted at initialization and remains disabled.
-    function test_LOI_REC_8_initialize_nonZeroRecoveryAndMaxBoundaryTimelock_configuresTxRecovery() public {
+    function test_INIT_STATE_7_B_LOI_REC_8_initialize_nonZeroRecoveryAndMaxBoundaryTimelock_configuresTxRecovery()
+        public
+    {
         // Setup
         InitializationParams memory params =
             _buildParams(TX_RECOVERY, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS, 3 days);
@@ -182,7 +186,7 @@ contract LibOrganizationInitializationTxRecoveryBranchTest is Test {
 
     /// @dev Verifies LOI-VAL-11 and LOI-VAL-12: invalid admin-op timelock always reverts init, preventing a
     /// same-window deferred tx-recovery finalize path.
-    function test_LOI_VAL_11__LOI_VAL_12_initialize_invalidAdminOperationTimelock_revertsAndPreventsDeferredFinalizeWindow()
+    function test_INIT_STATE_7_C_LOI_VAL_11__LOI_VAL_12_initialize_invalidAdminOperationTimelock_revertsAndPreventsDeferredFinalizeWindow()
         public
     {
         // Setup

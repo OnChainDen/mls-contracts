@@ -156,6 +156,26 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         }
     }
 
+    /// @dev Verifies non-empty `parameterConstraints` payloads shorter than the ABI empty-array header fail closed.
+    /// [POL-INV-15]
+    function test_POL_INV_15_areParametersAllowedByConstraints_nonEmptyPayloadShorterThanAbiEmptyArray_returnsFalse()
+        public
+        view
+    {
+        // Setup: use representative short non-empty payloads that cannot decode as a canonical constraints array.
+        bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(5));
+        bytes memory shortPayloadA = hex"01";
+        bytes memory shortPayloadB = new bytes(63);
+
+        // Call: evaluate both undersized payloads through the public library wrapper.
+        bool allowedA = harness.areParametersAllowedByConstraintsViaPolicyLibrary(shortPayloadA, data);
+        bool allowedB = harness.areParametersAllowedByConstraintsViaPolicyLibrary(shortPayloadB, data);
+
+        // Verify: non-empty payloads below 64 bytes must fail closed without authorizing.
+        assertFalse(allowedA, "single-byte constraint payload should fail closed");
+        assertFalse(allowedB, "63-byte constraint payload should fail closed");
+    }
+
     /// @dev Verifies that malformed comparisonData in a constraint fails closed with false.
     function test_areParametersAllowedByConstraints_malformedComparisonData_failClosedDesiredBehavior() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData in a

@@ -9,8 +9,8 @@ import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
  * @dev Unit tests for `LibPolicyRateLimits` wrappers.
  */
 contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
-    /// @dev Verifies that `limitType == None` returns true and does not write usage.
-    function test_checkAndUpdateRateLimit_limitTypeNone_returnsTrueAndDoesNotWriteUsage() public {
+    /// @dev Verifies disabled `limitType == None` succeeds without writing usage. [TXRL-INV-10]
+    function test_TXRL_INV_10_checkAndUpdateRateLimit_limitTypeNone_returnsTrueAndDoesNotWriteUsage() public {
         // Setup: configure a valid fixture for `limitType == None` returns true and does not write usage.
         uint256 policyId = 9001;
         Policy memory policy = _buildBasePolicy();
@@ -33,8 +33,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 0, "limitType None should not write usage");
     }
 
-    /// @dev Verifies that `timeIntervalHours == 0` returns true and does not write usage.
-    function test_checkAndUpdateRateLimit_zeroIntervalHours_returnsTrueAndDoesNotWriteUsage() public {
+    /// @dev Verifies `timeIntervalHours == 0` succeeds without writing usage. [TXRL-INV-10]
+    function test_TXRL_INV_10_checkAndUpdateRateLimit_zeroIntervalHours_returnsTrueAndDoesNotWriteUsage() public {
         // Setup: configure a valid fixture for `timeIntervalHours == 0` returns true and does not write usage.
         uint256 policyId = 9002;
         Policy memory policy = _timeIntervalPolicy(0, 100);
@@ -53,8 +53,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 0, "zero interval-hours should not write usage");
     }
 
-    /// @dev Verifies that usage below limit returns true and writes updated usage.
-    function test_checkAndUpdateRateLimit_usageBelowLimit_returnsTrueAndWritesUsage() public {
+    /// @dev Verifies successful updates write the exact usage amount once. [TXRL-INV-5, TXRL-INV-7]
+    function test_TXRL_INV_5__TXRL_INV_7_checkAndUpdateRateLimit_usageBelowLimit_returnsTrueAndWritesUsage() public {
         // Setup: configure a valid fixture for usage below limit returns true and writes updated usage.
         uint256 policyId = 9003;
         Policy memory policy = _timeIntervalPolicy(1, 10);
@@ -96,7 +96,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that usage above limit returns false and does not update usage.
-    function test_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage() public {
+    function test_TXRL_INV_7_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for usage above limit returns false
         // and does not update usage.
         uint256 policyId = 9005;
@@ -144,8 +144,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 4, "failed second update must not mutate usage");
     }
 
-    /// @dev Verifies that new time window resets effective usage budget.
-    function test_checkAndUpdateRateLimit_newWindowResetsUsageBudget() public {
+    /// @dev Verifies a new time window starts with an independent usage budget. [TXRL-INV-2]
+    function test_TXRL_INV_2_checkAndUpdateRateLimit_newWindowResetsUsageBudget() public {
         // Setup: configure a valid fixture for new time window resets effective usage budget.
         uint256 policyId = 9007;
         Policy memory policy = _timeIntervalPolicy(1, 5);
@@ -176,8 +176,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usageSecondWindow, 5, "second window usage should be independent");
     }
 
-    /// @dev Verifies that per-entity scope isolates usage across entities.
-    function test_checkAndUpdateRateLimit_perEntityScope_isolatesUsageAcrossEntities() public {
+    /// @dev Verifies per-entity scope isolates usage across scoped entities. [TXRL-INV-3]
+    function test_TXRL_INV_3_checkAndUpdateRateLimit_perEntityScope_isolatesUsageAcrossEntities() public {
         // Setup: configure a valid fixture for per-entity scope isolates usage across entities.
         uint256 policyId = 9008;
         Policy memory policy = _timeIntervalPolicy(1, 5);
@@ -227,9 +227,8 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 3, "zero usage increment should not change tracked usage");
     }
 
-    /// @dev Verifies that desired behavior: usage overflow fails closed (`false`) rather than reverting and does not
-    /// mutate usage.
-    function test_checkAndUpdateRateLimit_additionOverflow_failsClosed_desired() public {
+    /// @dev Verifies usage overflow fails closed without mutating tracked usage. [TXRL-INV-8]
+    function test_TXRL_INV_8_checkAndUpdateRateLimit_additionOverflow_failsClosed_desired() public {
         // Setup: build fixture inputs where desired behavior: usage overflow fails closed (`false`) rather than
         // reverting should be denied.
         uint256 policyId = 9010;
@@ -455,7 +454,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that acrossAll scopes ignore account/destination/initiator differences.
-    function test_computeUsageKey_allAcrossAllScopes_ignoresEntityDifferences() public {
+    function test_TXRL_INV_3_computeUsageKey_allAcrossAllScopes_ignoresEntityDifferences() public {
         // Setup: configure a valid fixture for acrossAll scopes ignore account/destination/initiator differences.
         Policy memory policy = _timeIntervalPolicy(1, 100);
 
@@ -470,7 +469,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that `sourceScope == PerEntity` separates usage by account.
-    function test_computeUsageKey_sourceScopePerEntity_separatesByAccount() public {
+    function test_TXRL_INV_3_computeUsageKey_sourceScopePerEntity_separatesByAccount() public {
         // Setup: configure a valid fixture for `sourceScope == PerEntity` separates usage by account.
         Policy memory policy = _timeIntervalPolicy(1, 100);
         policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
@@ -518,7 +517,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that different policy IDs always produce different keys.
-    function test_computeUsageKey_differentPolicyIds_produceDifferentKeys() public {
+    function test_TXRL_INV_9_computeUsageKey_differentPolicyIds_produceDifferentKeys() public {
         // Setup: configure a valid fixture for different policy IDs always produce different keys.
         Policy memory policy = _timeIntervalPolicy(1, 100);
 

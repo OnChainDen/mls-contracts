@@ -15,7 +15,9 @@ contract OrganizationGuardianRecoveryBaseFinalizeRecoveryGuardianUpdateTest is
 {
     /// @dev Verifies recovery-only guardian entrypoints reject unauthorized callers before readiness flags can change.
     /// [OREC-GRF-2]
-    function test_OGRB_FRGU_1__OREC_GRF_2_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress() public {
+    function test_OGRB_FRGU_1__OREC_GRF_2__GREC_INV_6_B_nonRecoveryAddressCaller_revertsOnlyGuardianRecoveryAddress()
+        public
+    {
         // Setup: seed pending recovery-guardian update.
         recoveryStateHarness.setGuardianRecoveryPendingUpdate(
             NEW_GUARDIAN_A, block.timestamp + GUARDIAN_RECOVERY_TIMELOCK, false

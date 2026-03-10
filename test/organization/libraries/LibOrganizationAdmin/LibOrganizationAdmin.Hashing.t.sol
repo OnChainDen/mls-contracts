@@ -165,7 +165,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that toggling `isApproval` produces a different hash.
-    function test_NMADM_HASH_2_LOADM_GAOH_6_getAdminOperationHash_differentIsApproval_producesDifferentHash()
+    function test_E712_HASH_3_A_NMADM_HASH_2_LOADM_GAOH_6_getAdminOperationHash_differentIsApproval_producesDifferentHash()
         public
         view
     {

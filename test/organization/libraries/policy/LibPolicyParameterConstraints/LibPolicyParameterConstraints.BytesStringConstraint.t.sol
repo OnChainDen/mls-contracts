@@ -247,8 +247,8 @@ contract LibPolicyParameterConstraintsBytesStringConstraintTest is LibPolicyPara
         }
     }
 
-    /// @dev Verifies that malformed comparisonData fails closed with false.
-    function test_isBytesOrStringParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
+    /// @dev Verifies malformed bytes/string comparison data fails closed with false. [POL-INV-14]
+    function test_POL_INV_14_isBytesOrStringParameterAllowedByConstraint_malformedComparisonData_failClosedDesiredBehavior()
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for malformed comparisonData fails
         // closed with false.
         public

@@ -708,7 +708,9 @@ contract OrganizationAccountFactoryBaseDeployAccountTest is OrganizationAccountF
     }
 
     /// @dev Verifies all accounts under one organization share a single implementation pointer.
-    function test_OAFB_SAI_15_setAccountImplementation_allAccountsShareSingleImplementationPointer() public {
+    function test_ACCF_INV_5_OAFB_SAI_15_setAccountImplementation_allAccountsShareSingleImplementationPointer()
+        public
+    {
         // Setup: deploy two accounts under V1 and then move pointer to V2.
         _setSingleAdminThresholdOne();
         address implV1 = address(new OAFBAccountImplementationVersion1());

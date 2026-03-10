@@ -129,7 +129,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies OTRB-FETR-1, OTRB-FETR-2, and OTRB-FETR-3: finalize access and timelock guards.
-    function test_OTRB_FETR_1__OTRB_FETR_2__OTRB_FETR_3__OREC_TRF_1_finalizeEnable_accessAndTimelockGuards_revert()
+    function test_OTRB_FETR_1__OTRB_FETR_2__OTRB_FETR_3__OREC_TRF_1__TXRC_INV_2_A_finalizeEnable_accessAndTimelockGuards_revert()
         public
     {
         // Setup
@@ -160,7 +160,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies OTRB-FETR-4, OTRB-FETR-5, and OTRB-FETR-6: finalize succeeds at boundary, clears pending, and
     /// cannot be replayed.
-    function test_OTRB_FETR_4__OTRB_FETR_5__OTRB_FETR_6_finalizeEnable_boundarySuccessAndReplayGuard() public {
+    function test_OTRB_FETR_4__OTRB_FETR_5__OTRB_FETR_6__TXRC_INV_2_B_finalizeEnable_boundarySuccessAndReplayGuard()
+        public
+    {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();
@@ -234,7 +236,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies OTRB-DTER-2, OTRB-DTER-3, OTRB-DTER-4, and OTRB-DTER-5: disable clears enabled/pending state, is
     /// idempotent, and blocks recovery execution.
-    function test_OTRB_DTER_2__OTRB_DTER_3__OTRB_DTER_4__OTRB_DTER_5_disable_clearsStateAndBlocksExecution() public {
+    function test_OTRB_DTER_2__OTRB_DTER_3__OTRB_DTER_4__OTRB_DTER_5__TXRC_INV_3_disable_clearsStateAndBlocksExecution()
+        public
+    {
         // Setup
         _enableTxRecovery();
         _setTxRecoveryState(TX_RECOVERY, false, TX_RECOVERY_TIMELOCK, block.timestamp + 1, address(0), 0, 0);
@@ -261,7 +265,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies OTRB-ERAT-1, OTRB-ERAT-2, and OTRB-ERAT-3: execute-recovery access/config/enabled guards.
-    function test_OTRB_ERAT_1__OTRB_ERAT_2__OTRB_ERAT_3_executeRecovery_accessAndEnableGuards_revert() public {
+    function test_OTRB_ERAT_1__OTRB_ERAT_2__OTRB_ERAT_3__TXRC_INV_5_A_executeRecovery_accessAndEnableGuards_revert()
+        public
+    {
         // Setup
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
@@ -286,7 +292,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     }
 
     /// @dev Verifies OTRB-ERAT-4 and OTRB-ERAT-5: pending enable (pre/post-expiry) is not sufficient before finalize.
-    function test_OTRB_ERAT_4__OTRB_ERAT_5_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled()
+    function test_OTRB_ERAT_4__OTRB_ERAT_5__TXRC_INV_5_B_executeRecovery_pendingEnableNotFinalized_revertsTxRecoveryNotEnabled()
         public
     {
         // Setup
@@ -334,7 +340,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
 
     /// @dev Verifies OTRB-ERAT-7, OTRB-ERAT-8, and OTRB-ERAT-9: successful execution emits event and forwards exact
     /// tuple with nonce/policy fixed to zero.
-    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9_executeRecovery_success_emitsAndForwardsExpectedTuple() public {
+    function test_OTRB_ERAT_7__OTRB_ERAT_8__OTRB_ERAT_9__TXRC_INV_6_executeRecovery_success_emitsAndForwardsExpectedTuple()
+        public
+    {
         // Setup
         _enableTxRecovery();
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
@@ -472,6 +480,93 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
+    /// @dev Verifies recovery execution succeeds without consuming any Organization nonce slot.
+    function test_TXRC_INV_8_executeRecoveryDoesNotConsumeOrganizationNonceMapping() public {
+        // Setup: enable recovery, deploy a recovery target account, and precompute one unused Organization nonce plus
+        // one unrelated pre-used nonce as a control snapshot.
+        _enableTxRecovery();
+        MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
+        harness.setDeployedAccount(address(account), true);
+
+        bytes memory trackedOperationData = abi.encode(address(0xAA01), uint256(77));
+        uint256 untouchedNonce =
+            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, trackedOperationData, 8081);
+        uint256 controlUsedNonce =
+            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, trackedOperationData, 8082);
+        harness.setUsedNonce(controlUsedNonce, true);
+
+        // Call: execute a successful recovery transaction through the tx-recovery path.
+        vm.prank(TX_RECOVERY);
+        harness.executeRecoveryAccountTransaction(address(account), DESTINATION, 0, bytes("txrc-inv-8"));
+
+        // Verify: recovery execution leaves the Organization nonce mapping untouched.
+        assertFalse(harness.getUsedNonce(untouchedNonce), "recovery execution must not consume fresh org nonces");
+        assertTrue(harness.getUsedNonce(controlUsedNonce), "recovery execution must not clear existing used nonces");
+    }
+
+    /// @dev Verifies recovery-signature validation depends on signer/config only, not on the enabled flag.
+    function test_TXRC_INV_9_isValidRecoverySignature_independentOfEnabledFlag() public {
+        // Setup: bind tx recovery to a signer with a known private key and build one valid signature for a fixed hash.
+        uint256 recoveryPk = 0x71009;
+        address recoverySigner = vm.addr(recoveryPk);
+        bytes32 messageHash = keccak256("txrc-inv-9");
+        bytes memory validSignature = _signHash(recoveryPk, messageHash);
+
+        _setTxRecoveryState(recoverySigner, true, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+        bool enabledResult = harness.isValidRecoverySignatureViaHarness(messageHash, validSignature);
+
+        // Call: flip only the enabled flag and re-run the same signature helper against the same configured signer.
+        _setTxRecoveryState(recoverySigner, false, TX_RECOVERY_TIMELOCK, 0, address(0), 0, 0);
+        bool disabledResult = harness.isValidRecoverySignatureViaHarness(messageHash, validSignature);
+
+        // Verify: enabled-state toggles do not affect raw recovery-signature validity.
+        assertTrue(enabledResult, "sanity: configured recovery signer should validate");
+        assertEq(disabledResult, enabledResult, "helper result should be independent of the enabled flag");
+    }
+
+    /// @dev Verifies tx-recovery setup rejects zero recovery addresses and out-of-range timelock values.
+    function test_TXRC_INV_11_validateTxRecoveryParams_rejectsZeroAddressAndOutOfRangeTimelocks() public {
+        // Setup: choose a valid recovery address and exercise the helper directly so each rejection is tied to the
+        // exact parameter pair under test.
+        address validRecoveryAddress = address(0x71011);
+
+        // Call: validate the zero-address branch and both below-min and above-max timelock branches.
+        vm.expectRevert(IOrganizationTxRecovery.InvalidTxRecoveryAddress.selector);
+        harness.validateTxRecoveryParamsOrRevertViaHarness(address(0), TX_RECOVERY_TIMELOCK);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        harness.validateTxRecoveryParamsOrRevertViaHarness(
+            validRecoveryAddress, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS + 1,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        harness.validateTxRecoveryParamsOrRevertViaHarness(
+            validRecoveryAddress, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS + 1
+        );
+
+        // Verify: a valid boundary tuple still passes, proving the helper itself remains usable after the rejections.
+        harness.validateTxRecoveryParamsOrRevertViaHarness(
+            validRecoveryAddress, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS
+        );
+        harness.validateTxRecoveryParamsOrRevertViaHarness(
+            validRecoveryAddress, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+    }
+
     /// @dev Verifies OTRB-ERAT-15: recovery execution targeting organization state-changing selectors fails closed.
     ///      Sweeps every non-view Organization function selector to ensure none can be invoked via recovery execution.
     function test_OTRB_ERAT_15_executeRecovery_targetingOrganization_revertsTransactionExecutionFailed() public {
@@ -501,7 +596,7 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
     /// arguments (to external, to organization, to self) and also attempts every Organization state-changing selector
     /// on the
     ///      account address to confirm the account rejects unknown selectors.
-    function test_OTRB_ERAT_16_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
+    function test_AI_INV_5__OTRB_ERAT_16_executeRecovery_targetingAccount_revertsTransactionExecutionFailedForSelectorSweep()
         public
     {
         // Setup

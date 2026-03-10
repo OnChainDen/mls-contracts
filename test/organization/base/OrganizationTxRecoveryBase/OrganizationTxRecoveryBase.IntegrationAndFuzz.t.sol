@@ -129,7 +129,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
 
     /// @dev Verifies tx/ERC1271 recovery disable is immediate, clears any pending enable state, and prevents the
     /// stale enable-finalize from succeeding later. [OREC-TRF-1]
-    function test_TXR_INT_3__OREC_TRF_1_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails() public {
+    function test_TXR_INT_3__OREC_TRF_1__TXRC_INV_3_emergencyDisableLifecycle_pendingEnableThenDisable_finalizeFails()
+        public
+    {
         // Setup
         vm.prank(TX_RECOVERY);
         harness.initiateEnableTransactionAndERC1271Recovery();

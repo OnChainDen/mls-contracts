@@ -238,7 +238,7 @@ contract OrganizationMembersBaseModifyMembersTest is OrganizationMembersBaseSuit
 
     /// @dev Verifies `OrganizationMembersBase.modifyMembers` rejects removing a member whose admin role is still
     /// active.
-    function test_OMB_MM_2_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
+    function test_ADMIN_INV_5_OMB_MM_2_modifyMembers_removeAdminMember_revertsMemberIsAdmin() public {
         address adminMember = address(0x40B);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({

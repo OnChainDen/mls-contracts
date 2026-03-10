@@ -9,6 +9,7 @@ import {AccountImplementation} from "account/AccountImplementation.sol";
 import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
+import {IOrganizationGuardian} from "interfaces/organization/IOrganizationGuardian.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {
@@ -359,6 +360,80 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce),
             "nested replay should fail with the consumed nonce"
         );
+    }
+
+    /**
+     * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` cannot re-enter privileged
+     * organization entrypoints from the account context. [TXRL-INV-12]
+     */
+    function test_TXRL_INV_12_executeAccountTransaction_accountReentryCannotCallPrivilegedOrganizationFunctions()
+        public
+    {
+        // Setup: deploy an account plus downstream target, configure one valid auto-approve transaction, and stage a
+        // guardian-only `rejectAccountTransaction` reentry from the account context.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(73));
+        (, ValidationProofs memory proofs, bytes memory initiatorSignature, uint256 expiration) =
+            _buildAutoApprovePayload(address(account), address(target), 0, data, 73, DEFAULT_POLICY_ID);
+        bytes memory rejectionSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: data,
+            salt: 73,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: false
+        });
+        bytes32 policiesRootBefore = harness.getPoliciesRoot();
+
+        account.setReentrantCallData(
+            abi.encodeCall(
+                IOrganizationAccountTransaction.rejectAccountTransaction,
+                (
+                    address(account),
+                    address(target),
+                    0,
+                    data,
+                    73,
+                    expiration,
+                    DEFAULT_POLICY_ID,
+                    initiatorSignature,
+                    rejectionSignature,
+                    proofs
+                )
+            )
+        );
+
+        // Call: execute the outer account transaction as guardian so the account re-enters the organization while the
+        // execution path is in flight.
+        vm.prank(GUARDIAN);
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: data,
+            salt: 73,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: the outer execution succeeds once, the reentrant privileged call fails with `UnauthorizedGuardian`,
+        // and organization state remains unchanged.
+        assertEq(account.executionCount(), 1, "outer account execution should still succeed");
+        assertEq(target.calls(), 1, "downstream target should still be called exactly once");
+        assertEq(
+            account.reentrantRevertData(),
+            abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardian.selector, address(account), GUARDIAN),
+            "reentrant guardian-only organization call should fail from the account context"
+        );
+        assertEq(harness.getPoliciesRoot(), policiesRootBefore, "reentrant privileged call must not mutate policy root");
     }
 
     /**

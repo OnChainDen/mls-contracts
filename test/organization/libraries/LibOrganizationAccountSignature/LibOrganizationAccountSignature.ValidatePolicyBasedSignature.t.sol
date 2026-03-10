@@ -112,8 +112,10 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "empty initiator signature should be invalid");
     }
 
-    /// @dev Verifies that malformed initiator signatures fail closed.
-    function test_LOAS_VPBS_6_validatePolicyBasedSignature_malformedInitiatorSignature_returnsInvalidValue() public {
+    /// @dev Verifies that malformed initiator signatures fail closed. [ASIG-INV-13]
+    function test_ASIG_INV_13_A_LOAS_VPBS_6_validatePolicyBasedSignature_malformedInitiatorSignature_returnsInvalidValue()
+        public
+    {
         // Setup: build a valid fixture and replace initiator signature with malformed bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -901,7 +903,8 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that malformed packed reviewer signature bytes fail closed with invalid value.
-    function test_LOAS_VPBS_20_LOACS_VPBS_10_validatePolicyBasedSignature_malformedReviewSignatureBytes_returnsInvalidValue()
+    ///      [ASIG-INV-10] [ASIG-INV-13]
+    function test_ASIG_INV_10__ASIG_INV_13_B_LOAS_VPBS_20_LOACS_VPBS_10_validatePolicyBasedSignature_malformedReviewSignatureBytes_returnsInvalidValue()
         public
     {
         // Setup: build manual fixture and replace packed reviewer signatures with malformed bytes.

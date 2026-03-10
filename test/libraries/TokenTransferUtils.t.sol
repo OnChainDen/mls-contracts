@@ -237,7 +237,8 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Data shorter than 4 bytes should not be detected as an ERC-20 token transfer.
-    function test_isTransactionERC20TokenTransfer_dataTooShort_returnsFalse() public view {
+    ///      [TXUT-PARSE-3]
+    function test_TXUT_PARSE_3_A_isTransactionERC20TokenTransfer_dataTooShort_returnsFalse() public view {
         bytes memory shortData = hex"a905"; // Only 2 bytes
 
         bool result = harness.isTransactionERC20TokenTransfer(shortData, 0);
@@ -261,7 +262,8 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Valid ERC-20 transfer calldata should extract the correct recipient address.
-    function test_extractERC20TransferRecipient_validCalldata_extractsCorrectRecipient() public view {
+    ///      [TXUT-PARSE-1]
+    function test_TXUT_PARSE_1_A_extractERC20TransferRecipient_validCalldata_extractsCorrectRecipient() public view {
         bytes memory data = _encodeTransferCalldata(RECIPIENT, AMOUNT);
 
         address recipient = harness.extractERC20TransferRecipient(data);
@@ -270,7 +272,8 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Data too short to contain a recipient should revert with MalformedTokenTransfer.
-    function test_extractERC20TransferRecipient_dataTooShort_reverts() public {
+    ///      [TXUT-PARSE-3]
+    function test_TXUT_PARSE_3_B_extractERC20TransferRecipient_dataTooShort_reverts() public {
         bytes memory shortData = hex"a9059cbb0000000000000000000000000000000000000000"; // 24 bytes (< 36)
 
         vm.expectRevert(TokenTransferUtils.MalformedTokenTransfer.selector);
@@ -287,8 +290,8 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Data with length 35 (one byte short of the minimum 36) should revert with
-    /// MalformedTokenTransfer.
-    function test_extractERC20TransferRecipient_length35_reverts() public {
+    ///      MalformedTokenTransfer. [TXUT-PARSE-3]
+    function test_TXUT_PARSE_3_C_extractERC20TransferRecipient_length35_reverts() public {
         // Build 35 bytes: transfer selector (4) + 31 bytes of address padding
         bytes memory data = new bytes(35);
         data[0] = TRANSFER_SELECTOR[0];
@@ -459,8 +462,8 @@ contract TokenTransferUtilsTest is Test {
         assertEq(amount, 1 ether, "Native transfer should return the msg.value");
     }
 
-    /// @dev Test case: An ERC-20 transfer should extract the amount from calldata bytes.
-    function test_extractTransferAmount_erc20Transfer_extractsFromCalldata() public view {
+    /// @dev Test case: An ERC-20 transfer should extract the amount from calldata bytes. [TXUT-PARSE-2]
+    function test_TXUT_PARSE_2_A_extractTransferAmount_erc20Transfer_extractsFromCalldata() public view {
         bytes memory data = _encodeTransferCalldata(RECIPIENT, 42 ether);
 
         uint256 amount = harness.extractTransferAmount(data, 0);
@@ -487,7 +490,8 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Data too short to contain an amount should revert with MalformedTokenTransfer.
-    function test_extractTransferAmount_dataTooShort_reverts() public {
+    ///      [TXUT-PARSE-3]
+    function test_TXUT_PARSE_3_D_extractTransferAmount_dataTooShort_reverts() public {
         // 60 bytes (less than required 68)
         bytes memory shortData = new bytes(60);
         shortData[0] = bytes1(uint8(0xa9)); // Partial transfer selector
@@ -497,8 +501,8 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Data with length 67 (one byte short of the minimum 68) should revert with
-    ///      MalformedTokenTransfer.
-    function test_extractTransferAmount_length67_reverts() public {
+    ///      MalformedTokenTransfer. [TXUT-PARSE-3]
+    function test_TXUT_PARSE_3_E_extractTransferAmount_length67_reverts() public {
         bytes memory data = new bytes(67);
 
         vm.expectRevert(TokenTransferUtils.MalformedTokenTransfer.selector);
@@ -584,7 +588,11 @@ contract TokenTransferUtilsTest is Test {
     }
 
     /// @dev Test case: Any valid ERC-20 transfer calldata should extract the correct recipient for any address.
-    function testFuzz_extractERC20TransferRecipient_validCalldata_correctRecipient(address to) public view {
+    ///      [TXUT-PARSE-1]
+    function testFuzz_TXUT_PARSE_1_B_extractERC20TransferRecipient_validCalldata_correctRecipient(address to)
+        public
+        view
+    {
         bytes memory data = _encodeTransferCalldata(to, AMOUNT);
 
         address recipient = harness.extractERC20TransferRecipient(data);
@@ -592,8 +600,8 @@ contract TokenTransferUtilsTest is Test {
         assertEq(recipient, to, "Should extract the correct recipient for any address");
     }
 
-    /// @dev Test case: Any valid ERC-20 transfer calldata should extract the correct amount.
-    function testFuzz_extractTransferAmount_validCalldata_correctAmount(address to, uint256 expectedAmount)
+    /// @dev Test case: Any valid ERC-20 transfer calldata should extract the correct amount. [TXUT-PARSE-2]
+    function testFuzz_TXUT_PARSE_2_B_extractTransferAmount_validCalldata_correctAmount(address to, uint256 expectedAmount)
         public
         view
     {

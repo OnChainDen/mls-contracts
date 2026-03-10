@@ -55,7 +55,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: deployed account beacon binding (organization address) never changes.
-    function invariant_AF_IT_2_deployedAccount_beaconBindingRemainsOrganization() public view {
+    function invariant_AI_INV_2_AF_IT_2_deployedAccount_beaconBindingRemainsOrganization() public view {
         // Setup: read tracked successful deployment count from invariant handler.
         uint256 length = handler.trackedDeployedAccountsLength();
         // Call: iterate tracked deployed accounts and read organization binding through proxy.
@@ -93,7 +93,7 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: `deployedAccounts` mapping is monotonic and never flips true back to false.
-    function invariant_AF_IT_5_deployedAccountsMapping_monotonicTrueState() public view {
+    function invariant_ACCF_INV_3_AF_IT_5_deployedAccountsMapping_monotonicTrueState() public view {
         // Setup: read count of addresses previously observed with `deployedAccounts == true`.
         uint256 length = handler.trackedObservedTrueAccountsLength();
         // Call: iterate each observed-true account and re-read deployment status.

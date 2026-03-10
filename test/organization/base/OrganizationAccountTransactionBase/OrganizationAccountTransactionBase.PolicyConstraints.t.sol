@@ -36,7 +36,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies `executeAccountTransaction` rejects disallowed source accounts and allows any-source policies
      *      across different deployed accounts. [OPB-SAF-1, OPB-SAF-2]
      */
-    function test_OPB_SAF_1__OPB_SAF_2_executeAccountTransaction_sourceAccountPolicies_requireProofOrAllowAnySource()
+    function test_OPB_SAF_1__OPB_SAF_2__POL_INV_3_executeAccountTransaction_sourceAccountPolicies_requireProofOrAllowAnySource()
         public
     {
         // Setup: deploy two organization accounts plus one interaction target, then bind a specific-source policy to
@@ -50,17 +50,27 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         specificSourcePolicy.config.anySourceAccount = false;
         bytes32[] memory sourceProof;
-        (specificSourcePolicy.roots.sourceAccountsRoot, sourceProof) = _buildSingleAddressRootAndProof(address(accountA));
+        (specificSourcePolicy.roots.sourceAccountsRoot, sourceProof) =
+            _buildSingleAddressRootAndProof(address(accountA));
 
-        ValidationProofs memory specificSourceProofs = _setSinglePolicyRootAndBuildProofs(9_001, specificSourcePolicy);
+        ValidationProofs memory specificSourceProofs = _setSinglePolicyRootAndBuildProofs(9001, specificSourcePolicy);
         specificSourceProofs.sourceAccountProof = sourceProof;
 
         (bytes memory allowedSig, uint256 allowedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(target), 0, data, 1, 9_001);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(target), 0, data, 1, 9001);
 
         // Call: execute the specific-source policy from the proofed account.
         _executeAsGuardian(
-            address(accountA), address(target), 0, data, 1, allowedExpiration, 9_001, allowedSig, bytes(""), specificSourceProofs
+            address(accountA),
+            address(target),
+            0,
+            data,
+            1,
+            allowedExpiration,
+            9001,
+            allowedSig,
+            bytes(""),
+            specificSourceProofs
         );
 
         // Verify: the allowed source account reaches the downstream target exactly once.
@@ -68,23 +78,32 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         assertEq(target.lastCaller(), address(accountA), "successful call should originate from the proofed account");
 
         (bytes memory deniedSig, uint256 deniedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountB), address(target), 0, data, 2, 9_001);
+            _signExecution(INITIATOR_PK_1, address(accountB), address(target), 0, data, 2, 9001);
 
         // Call: execute the same policy from a different deployed account, expecting the source-account gate to fail.
-        _expectPolicyDoesNotApply(9_001);
+        _expectPolicyDoesNotApply(9001);
         _executeAsGuardian(
-            address(accountB), address(target), 0, data, 2, deniedExpiration, 9_001, deniedSig, bytes(""), specificSourceProofs
+            address(accountB),
+            address(target),
+            0,
+            data,
+            2,
+            deniedExpiration,
+            9001,
+            deniedSig,
+            bytes(""),
+            specificSourceProofs
         );
 
         Policy memory anySourcePolicy =
             _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         anySourcePolicy.config.anySourceAccount = true;
-        ValidationProofs memory anySourceProofs = _setSinglePolicyRootAndBuildProofs(9_002, anySourcePolicy);
+        ValidationProofs memory anySourceProofs = _setSinglePolicyRootAndBuildProofs(9002, anySourcePolicy);
 
         (bytes memory anySourceSigA, uint256 anySourceExpirationA) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(target), 0, data, 3, 9_002);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(target), 0, data, 3, 9002);
         (bytes memory anySourceSigB, uint256 anySourceExpirationB) =
-            _signExecution(INITIATOR_PK_1, address(accountB), address(target), 0, data, 4, 9_002);
+            _signExecution(INITIATOR_PK_1, address(accountB), address(target), 0, data, 4, 9002);
 
         // Call: re-run through an any-source policy from both accounts.
         _executeAsGuardian(
@@ -94,7 +113,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             3,
             anySourceExpirationA,
-            9_002,
+            9002,
             anySourceSigA,
             bytes(""),
             anySourceProofs
@@ -106,7 +125,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             4,
             anySourceExpirationB,
-            9_002,
+            9002,
             anySourceSigB,
             bytes(""),
             anySourceProofs
@@ -142,10 +161,11 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         (allowedPolicy.roots.customDestinationsRoot, allowedDestinationProof) =
             _buildSingleAddressRootAndProof(address(allowedReceiver));
 
-        ValidationProofs memory allowedProofs = _setSinglePolicyRootAndBuildProofs(9_010, allowedPolicy);
+        ValidationProofs memory allowedProofs = _setSinglePolicyRootAndBuildProofs(9010, allowedPolicy);
         allowedProofs.destinationProof = allowedDestinationProof;
-        (bytes memory allowedSig, uint256 allowedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(allowedReceiver), transferValue, bytes(""), 10, 9_010);
+        (bytes memory allowedSig, uint256 allowedExpiration) = _signExecution(
+            INITIATOR_PK_1, address(account), address(allowedReceiver), transferValue, bytes(""), 10, 9010
+        );
 
         // Call: execute the native ETH transfer to the proofed receiver.
         _executeAsGuardian(
@@ -155,7 +175,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             10,
             allowedExpiration,
-            9_010,
+            9010,
             allowedSig,
             bytes(""),
             allowedProofs
@@ -165,10 +185,10 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         assertEq(allowedReceiver.totalReceived(), transferValue, "allowed receiver should get native transfer");
 
         (bytes memory thresholdSig, uint256 thresholdExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(allowedReceiver), 0.5 ether, bytes(""), 13, 9_010);
+            _signExecution(INITIATOR_PK_1, address(account), address(allowedReceiver), 0.5 ether, bytes(""), 13, 9010);
 
         // Call: retry at the exact configured threshold, expecting the strict `< threshold` rule to fail closed.
-        _expectPolicyDoesNotApply(9_010);
+        _expectPolicyDoesNotApply(9010);
         _executeAsGuardian(
             address(account),
             address(allowedReceiver),
@@ -176,13 +196,14 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             13,
             thresholdExpiration,
-            9_010,
+            9010,
             thresholdSig,
             bytes(""),
             allowedProofs
         );
 
-        Policy memory deniedDestinationPolicy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
+        Policy memory deniedDestinationPolicy =
+            _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         deniedDestinationPolicy.config.destinationType = DestinationType.CustomList;
         deniedDestinationPolicy.config.token.anyToken = false;
         deniedDestinationPolicy.config.token.tokenAddress = address(0);
@@ -191,13 +212,14 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             _buildSingleAddressRootAndProof(address(deniedReceiver));
 
         ValidationProofs memory deniedDestinationProofs =
-            _setSinglePolicyRootAndBuildProofs(9_011, deniedDestinationPolicy);
+            _setSinglePolicyRootAndBuildProofs(9011, deniedDestinationPolicy);
         deniedDestinationProofs.destinationProof = deniedDestinationProof;
-        (bytes memory deniedDestinationSig, uint256 deniedDestinationExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(allowedReceiver), transferValue, bytes(""), 11, 9_011);
+        (bytes memory deniedDestinationSig, uint256 deniedDestinationExpiration) = _signExecution(
+            INITIATOR_PK_1, address(account), address(allowedReceiver), transferValue, bytes(""), 11, 9011
+        );
 
         // Call: retry against an unlisted native receiver, expecting the destination gate to fail before execution.
-        _expectPolicyDoesNotApply(9_011);
+        _expectPolicyDoesNotApply(9011);
         _executeAsGuardian(
             address(account),
             address(allowedReceiver),
@@ -205,7 +227,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             11,
             deniedDestinationExpiration,
-            9_011,
+            9011,
             deniedDestinationSig,
             bytes(""),
             deniedDestinationProofs
@@ -213,13 +235,14 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
         Policy memory deniedTokenPolicy = allowedPolicy;
         deniedTokenPolicy.config.token.tokenAddress = address(0xC0FFEE);
-        ValidationProofs memory deniedTokenProofs = _setSinglePolicyRootAndBuildProofs(9_012, deniedTokenPolicy);
+        ValidationProofs memory deniedTokenProofs = _setSinglePolicyRootAndBuildProofs(9012, deniedTokenPolicy);
         deniedTokenProofs.destinationProof = allowedDestinationProof;
-        (bytes memory deniedTokenSig, uint256 deniedTokenExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(allowedReceiver), transferValue, bytes(""), 12, 9_012);
+        (bytes memory deniedTokenSig, uint256 deniedTokenExpiration) = _signExecution(
+            INITIATOR_PK_1, address(account), address(allowedReceiver), transferValue, bytes(""), 12, 9012
+        );
 
         // Call: retry with a policy that disallows the native token, expecting the token filter to fail closed.
-        _expectPolicyDoesNotApply(9_012);
+        _expectPolicyDoesNotApply(9012);
         _executeAsGuardian(
             address(account),
             address(allowedReceiver),
@@ -227,7 +250,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             12,
             deniedTokenExpiration,
-            9_012,
+            9012,
             deniedTokenSig,
             bytes(""),
             deniedTokenProofs
@@ -242,7 +265,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies ERC-20 transfers use the recipient argument for destination checks and bind the allowed token
      *      contract. [OPB-DV-2, OPB-TAT-2]
      */
-    function test_OPB_DV_2__OPB_TAT_2_executeAccountTransaction_erc20TransferPolicies_checkRecipientAndToken()
+    function test_OPB_DV_2__OPB_TAT_2__TXRL_INV_11_executeAccountTransaction_erc20TransferPolicies_checkRecipientAndToken()
         public
     {
         // Setup: deploy one account plus two token contracts, then fund the account with both token balances.
@@ -259,11 +282,11 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         bytes32[] memory recipientProof;
         (allowedPolicy.roots.customDestinationsRoot, recipientProof) = _buildSingleAddressRootAndProof(RECIPIENT);
 
-        ValidationProofs memory allowedProofs = _setSinglePolicyRootAndBuildProofs(9_020, allowedPolicy);
+        ValidationProofs memory allowedProofs = _setSinglePolicyRootAndBuildProofs(9020, allowedPolicy);
         allowedProofs.destinationProof = recipientProof;
         bytes memory hundredTokenTransfer = _encodeERC20Transfer(RECIPIENT, 100);
         (bytes memory allowedSig, uint256 allowedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(allowedToken), 0, hundredTokenTransfer, 20, 9_020);
+            _signExecution(INITIATOR_PK_1, address(account), address(allowedToken), 0, hundredTokenTransfer, 20, 9020);
 
         // Call: execute an allowed ERC-20 transfer that stays below the configured threshold.
         _executeAsGuardian(
@@ -273,7 +296,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             hundredTokenTransfer,
             20,
             allowedExpiration,
-            9_020,
+            9020,
             allowedSig,
             bytes(""),
             allowedProofs
@@ -290,15 +313,15 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         (recipientOnlyPolicy.roots.customDestinationsRoot, tokenAddressProof) =
             _buildSingleAddressRootAndProof(address(allowedToken));
 
-        ValidationProofs memory recipientOnlyProofs = _setSinglePolicyRootAndBuildProofs(9_021, recipientOnlyPolicy);
+        ValidationProofs memory recipientOnlyProofs = _setSinglePolicyRootAndBuildProofs(9021, recipientOnlyPolicy);
         recipientOnlyProofs.destinationProof = tokenAddressProof;
         bytes memory recipientCheckData = _encodeERC20Transfer(RECIPIENT, 10);
         (bytes memory recipientOnlySig, uint256 recipientOnlyExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(allowedToken), 0, recipientCheckData, 21, 9_021);
+            _signExecution(INITIATOR_PK_1, address(account), address(allowedToken), 0, recipientCheckData, 21, 9021);
 
         // Call: present a proof for the token contract instead of the transfer recipient, expecting destination
         // validation to reject it.
-        _expectPolicyDoesNotApply(9_021);
+        _expectPolicyDoesNotApply(9021);
         _executeAsGuardian(
             address(account),
             address(allowedToken),
@@ -306,19 +329,19 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             recipientCheckData,
             21,
             recipientOnlyExpiration,
-            9_021,
+            9021,
             recipientOnlySig,
             bytes(""),
             recipientOnlyProofs
         );
 
-        ValidationProofs memory wrongTokenProofs = _setSinglePolicyRootAndBuildProofs(9_022, allowedPolicy);
+        ValidationProofs memory wrongTokenProofs = _setSinglePolicyRootAndBuildProofs(9022, allowedPolicy);
         wrongTokenProofs.destinationProof = recipientProof;
         (bytes memory wrongTokenSig, uint256 wrongTokenExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(otherToken), 0, recipientCheckData, 22, 9_022);
+            _signExecution(INITIATOR_PK_1, address(account), address(otherToken), 0, recipientCheckData, 22, 9022);
 
         // Call: retry against a different token contract, expecting the token filter to reject it.
-        _expectPolicyDoesNotApply(9_022);
+        _expectPolicyDoesNotApply(9022);
         _executeAsGuardian(
             address(account),
             address(otherToken),
@@ -326,7 +349,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             recipientCheckData,
             22,
             wrongTokenExpiration,
-            9_022,
+            9022,
             wrongTokenSig,
             bytes(""),
             wrongTokenProofs
@@ -423,7 +446,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies function allowlists bind selector plus constraint hash, reject calldata shorter than 4 bytes,
      *      and enforce exact static-parameter matches. [OPB-FAPC-1, OPB-FAPC-3, OPB-FAPC-4]
      */
-    function test_OPB_FAPC_1__OPB_FAPC_3__OPB_FAPC_4_executeAccountTransaction_staticFunctionPolicies_failClosed()
+    function test_OPB_FAPC_1__OPB_FAPC_3__OPB_FAPC_4__POL_INV_10_executeAccountTransaction_staticFunctionPolicies_failClosed()
         public
     {
         // Setup: deploy one account plus one interaction target, then allow only `ping(uint256)` with an exact
@@ -446,17 +469,26 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         (policy.roots.allowedFunctionsRoot, functionProof) =
             _buildSingleFunctionRootAndProof(target.ping.selector, sevenConstraints);
 
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_040, policy);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9040, policy);
         proofs.functionProof = functionProof;
         proofs.constraints = sevenConstraints;
 
         bytes memory allowedData = abi.encodeWithSelector(target.ping.selector, uint256(7));
         (bytes memory allowedSig, uint256 allowedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, allowedData, 40, 9_040);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, allowedData, 40, 9040);
 
         // Call: execute the allowed selector with the exact allowed static argument.
         _executeAsGuardian(
-            address(account), address(target), 0, allowedData, 40, allowedExpiration, 9_040, allowedSig, bytes(""), proofs
+            address(account),
+            address(target),
+            0,
+            allowedData,
+            40,
+            allowedExpiration,
+            9040,
+            allowedSig,
+            bytes(""),
+            proofs
         );
 
         // Verify: the allowed selector and exact parameter succeed through the real execute path.
@@ -468,11 +500,11 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         ValidationProofs memory mismatchedConstraintHashProofs = proofs;
         mismatchedConstraintHashProofs.constraints = _encodeSingleConstraint(exactEight);
         (bytes memory mismatchedConstraintHashSig, uint256 mismatchedConstraintHashExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, allowedData, 41, 9_040);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, allowedData, 41, 9040);
 
         // Call: reuse the selector proof but change the constraint bytes, expecting the selector+constraints leaf
         // binding to reject it.
-        _expectPolicyDoesNotApply(9_040);
+        _expectPolicyDoesNotApply(9040);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -480,7 +512,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             allowedData,
             41,
             mismatchedConstraintHashExpiration,
-            9_040,
+            9040,
             mismatchedConstraintHashSig,
             bytes(""),
             mismatchedConstraintHashProofs
@@ -488,20 +520,20 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
         bytes memory shortData = hex"010203";
         (bytes memory shortSig, uint256 shortExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, shortData, 42, 9_040);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, shortData, 42, 9040);
 
         // Call: execute calldata shorter than one selector, expecting the allowlist path to fail closed.
-        _expectPolicyDoesNotApply(9_040);
+        _expectPolicyDoesNotApply(9040);
         _executeAsGuardian(
-            address(account), address(target), 0, shortData, 42, shortExpiration, 9_040, shortSig, bytes(""), proofs
+            address(account), address(target), 0, shortData, 42, shortExpiration, 9040, shortSig, bytes(""), proofs
         );
 
         bytes memory wrongStaticValueData = abi.encodeWithSelector(target.ping.selector, uint256(8));
         (bytes memory wrongStaticValueSig, uint256 wrongStaticValueExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, wrongStaticValueData, 43, 9_040);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, wrongStaticValueData, 43, 9040);
 
         // Call: execute the allowed selector with the wrong static argument, expecting the exact constraint to fail.
-        _expectPolicyDoesNotApply(9_040);
+        _expectPolicyDoesNotApply(9040);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -509,7 +541,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             wrongStaticValueData,
             43,
             wrongStaticValueExpiration,
-            9_040,
+            9040,
             wrongStaticValueSig,
             bytes(""),
             proofs
@@ -545,13 +577,13 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         (policy.roots.allowedFunctionsRoot, functionProof) =
             _buildSingleFunctionRootAndProof(target.storePayload.selector, payloadConstraints);
 
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_050, policy);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9050, policy);
         proofs.functionProof = functionProof;
         proofs.constraints = payloadConstraints;
 
         bytes memory matchingData = abi.encodeWithSelector(target.storePayload.selector, expectedPayload);
         (bytes memory matchingSig, uint256 matchingExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, matchingData, 50, 9_050);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, matchingData, 50, 9050);
 
         // Call: execute the allowed dynamic-bytes payload.
         _executeAsGuardian(
@@ -561,7 +593,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             matchingData,
             50,
             matchingExpiration,
-            9_050,
+            9050,
             matchingSig,
             bytes(""),
             proofs
@@ -572,10 +604,10 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
         bytes memory mismatchedData = abi.encodeWithSelector(target.storePayload.selector, differentPayload);
         (bytes memory mismatchedSig, uint256 mismatchedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, mismatchedData, 51, 9_050);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, mismatchedData, 51, 9050);
 
         // Call: execute the same selector with different bytes, expecting the exact constraint to reject it.
-        _expectPolicyDoesNotApply(9_050);
+        _expectPolicyDoesNotApply(9050);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -583,7 +615,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             mismatchedData,
             51,
             mismatchedExpiration,
-            9_050,
+            9050,
             mismatchedSig,
             bytes(""),
             proofs
@@ -592,11 +624,11 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         bytes memory badOffsetData =
             bytes.concat(target.storePayload.selector, abi.encode(uint256(31), uint256(3), bytes3(hex"AABBCC")));
         (bytes memory badOffsetSig, uint256 badOffsetExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, badOffsetData, 52, 9_050);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, badOffsetData, 52, 9050);
 
         // Call: execute a dynamic-bytes payload whose offset points into the ABI head region, expecting fail-closed
         // validation.
-        _expectPolicyDoesNotApply(9_050);
+        _expectPolicyDoesNotApply(9050);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -604,7 +636,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             badOffsetData,
             52,
             badOffsetExpiration,
-            9_050,
+            9050,
             badOffsetSig,
             bytes(""),
             proofs
@@ -613,11 +645,11 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         bytes memory truncatedData =
             bytes.concat(target.storePayload.selector, abi.encode(uint256(32), uint256(10)), hex"AABBCCDD");
         (bytes memory truncatedSig, uint256 truncatedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, truncatedData, 53, 9_050);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, truncatedData, 53, 9050);
 
         // Call: execute a dynamic-bytes payload whose declared length runs past `data.length`, expecting fail-closed
         // validation.
-        _expectPolicyDoesNotApply(9_050);
+        _expectPolicyDoesNotApply(9050);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -625,7 +657,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             truncatedData,
             53,
             truncatedExpiration,
-            9_050,
+            9050,
             truncatedSig,
             bytes(""),
             proofs
@@ -674,7 +706,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies per-entity rate-limit scopes separate initiator/account/destination budgets, while an all-shared
      *      scope collapses them into one budget. [OPB-RL-1, OPB-RL-2, OPB-RL-3, OPB-RL-4]
      */
-    function test_OPB_RL_1__OPB_RL_2__OPB_RL_3__OPB_RL_4_executeAccountTransaction_rateLimitScopes_chargeExpectedKeys()
+    function test_OPB_RL_1__OPB_RL_2__OPB_RL_3__OPB_RL_4__TXRL_INV_3_executeAccountTransaction_rateLimitScopes_chargeExpectedKeys()
         public
     {
         // Setup: deploy two accounts and two interaction targets for four scoped-rate-limit subcases.
@@ -684,78 +716,137 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         MockInteractionTarget targetB = new MockInteractionTarget();
         bytes memory data = abi.encodeWithSelector(targetA.ping.selector, uint256(1));
 
-        Policy memory initiatorScopedPolicy =
-            _buildRateLimitedContractPolicy(RateLimitScope.PerEntity, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, true);
-        ValidationProofs memory initiatorScopedProofs =
-            _setSinglePolicyRootAndBuildProofs(9_060, initiatorScopedPolicy);
+        Policy memory initiatorScopedPolicy = _buildRateLimitedContractPolicy(
+            RateLimitScope.PerEntity, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, true
+        );
+        ValidationProofs memory initiatorScopedProofs = _setSinglePolicyRootAndBuildProofs(9060, initiatorScopedPolicy);
         (bytes memory initiatorOneSig, uint256 initiatorOneExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 60, 9_060);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 60, 9060);
         (bytes memory initiatorTwoSig, uint256 initiatorTwoExpiration) =
-            _signExecution(INITIATOR_PK_2, address(accountA), address(targetA), 0, data, 61, 9_060);
+            _signExecution(INITIATOR_PK_2, address(accountA), address(targetA), 0, data, 61, 9060);
 
         // Call: execute twice under a per-initiator policy with two different initiators.
         _executeAsGuardian(
-            address(accountA), address(targetA), 0, data, 60, initiatorOneExpiration, 9_060, initiatorOneSig, bytes(""), initiatorScopedProofs
+            address(accountA),
+            address(targetA),
+            0,
+            data,
+            60,
+            initiatorOneExpiration,
+            9060,
+            initiatorOneSig,
+            bytes(""),
+            initiatorScopedProofs
         );
         _executeAsGuardian(
-            address(accountA), address(targetA), 0, data, 61, initiatorTwoExpiration, 9_060, initiatorTwoSig, bytes(""), initiatorScopedProofs
+            address(accountA),
+            address(targetA),
+            0,
+            data,
+            61,
+            initiatorTwoExpiration,
+            9060,
+            initiatorTwoSig,
+            bytes(""),
+            initiatorScopedProofs
         );
 
         // Verify: each initiator accrues usage against a separate key.
         uint256 initiatorWindow = _computeTimeWindow(initiatorScopedPolicy);
         assertEq(
-            harness.getPolicyUsage(_computeUsageKey(9_060, initiatorScopedPolicy, address(accountA), address(targetA), initiator1), initiatorWindow),
+            harness.getPolicyUsage(
+                _computeUsageKey(9060, initiatorScopedPolicy, address(accountA), address(targetA), initiator1),
+                initiatorWindow
+            ),
             1,
             "initiator one should have an isolated budget"
         );
         assertEq(
-            harness.getPolicyUsage(_computeUsageKey(9_060, initiatorScopedPolicy, address(accountA), address(targetA), initiator2), initiatorWindow),
+            harness.getPolicyUsage(
+                _computeUsageKey(9060, initiatorScopedPolicy, address(accountA), address(targetA), initiator2),
+                initiatorWindow
+            ),
             1,
             "initiator two should have an isolated budget"
         );
 
-        Policy memory sourceScopedPolicy =
-            _buildRateLimitedContractPolicy(RateLimitScope.AcrossAll, RateLimitScope.PerEntity, RateLimitScope.AcrossAll, false);
-        ValidationProofs memory sourceScopedProofs = _setSinglePolicyRootAndBuildProofs(9_061, sourceScopedPolicy);
+        Policy memory sourceScopedPolicy = _buildRateLimitedContractPolicy(
+            RateLimitScope.AcrossAll, RateLimitScope.PerEntity, RateLimitScope.AcrossAll, false
+        );
+        ValidationProofs memory sourceScopedProofs = _setSinglePolicyRootAndBuildProofs(9061, sourceScopedPolicy);
         (bytes memory sourceAccountASig, uint256 sourceAccountAExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 62, 9_061);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 62, 9061);
         (bytes memory sourceAccountBSig, uint256 sourceAccountBExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountB), address(targetA), 0, data, 63, 9_061);
+            _signExecution(INITIATOR_PK_1, address(accountB), address(targetA), 0, data, 63, 9061);
 
         // Call: execute twice under a per-source-account policy with two different accounts.
         _executeAsGuardian(
-            address(accountA), address(targetA), 0, data, 62, sourceAccountAExpiration, 9_061, sourceAccountASig, bytes(""), sourceScopedProofs
+            address(accountA),
+            address(targetA),
+            0,
+            data,
+            62,
+            sourceAccountAExpiration,
+            9061,
+            sourceAccountASig,
+            bytes(""),
+            sourceScopedProofs
         );
         _executeAsGuardian(
-            address(accountB), address(targetA), 0, data, 63, sourceAccountBExpiration, 9_061, sourceAccountBSig, bytes(""), sourceScopedProofs
+            address(accountB),
+            address(targetA),
+            0,
+            data,
+            63,
+            sourceAccountBExpiration,
+            9061,
+            sourceAccountBSig,
+            bytes(""),
+            sourceScopedProofs
         );
 
         // Verify: each source account accrues usage against a separate key.
         uint256 sourceWindow = _computeTimeWindow(sourceScopedPolicy);
         assertEq(
-            harness.getPolicyUsage(_computeUsageKey(9_061, sourceScopedPolicy, address(accountA), address(targetA), initiator1), sourceWindow),
+            harness.getPolicyUsage(
+                _computeUsageKey(9061, sourceScopedPolicy, address(accountA), address(targetA), initiator1),
+                sourceWindow
+            ),
             1,
             "account A should have an isolated source budget"
         );
         assertEq(
-            harness.getPolicyUsage(_computeUsageKey(9_061, sourceScopedPolicy, address(accountB), address(targetA), initiator1), sourceWindow),
+            harness.getPolicyUsage(
+                _computeUsageKey(9061, sourceScopedPolicy, address(accountB), address(targetA), initiator1),
+                sourceWindow
+            ),
             1,
             "account B should have an isolated source budget"
         );
 
-        Policy memory destinationScopedPolicy =
-            _buildRateLimitedContractPolicy(RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.PerEntity, false);
+        Policy memory destinationScopedPolicy = _buildRateLimitedContractPolicy(
+            RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.PerEntity, false
+        );
         ValidationProofs memory destinationScopedProofs =
-            _setSinglePolicyRootAndBuildProofs(9_062, destinationScopedPolicy);
+            _setSinglePolicyRootAndBuildProofs(9062, destinationScopedPolicy);
         (bytes memory destinationASig, uint256 destinationAExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 64, 9_062);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 64, 9062);
         bytes memory dataToTargetB = abi.encodeWithSelector(targetB.ping.selector, uint256(1));
         (bytes memory destinationBSig, uint256 destinationBExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(targetB), 0, dataToTargetB, 65, 9_062);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(targetB), 0, dataToTargetB, 65, 9062);
 
         // Call: execute twice under a per-destination policy with two different destinations.
         _executeAsGuardian(
-            address(accountA), address(targetA), 0, data, 64, destinationAExpiration, 9_062, destinationASig, bytes(""), destinationScopedProofs
+            address(accountA),
+            address(targetA),
+            0,
+            data,
+            64,
+            destinationAExpiration,
+            9062,
+            destinationASig,
+            bytes(""),
+            destinationScopedProofs
         );
         _executeAsGuardian(
             address(accountA),
@@ -764,7 +855,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             dataToTargetB,
             65,
             destinationBExpiration,
-            9_062,
+            9062,
             destinationBSig,
             bytes(""),
             destinationScopedProofs
@@ -774,7 +865,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         uint256 destinationWindow = _computeTimeWindow(destinationScopedPolicy);
         assertEq(
             harness.getPolicyUsage(
-                _computeUsageKey(9_062, destinationScopedPolicy, address(accountA), address(targetA), initiator1),
+                _computeUsageKey(9062, destinationScopedPolicy, address(accountA), address(targetA), initiator1),
                 destinationWindow
             ),
             1,
@@ -782,26 +873,36 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         );
         assertEq(
             harness.getPolicyUsage(
-                _computeUsageKey(9_062, destinationScopedPolicy, address(accountA), address(targetB), initiator1),
+                _computeUsageKey(9062, destinationScopedPolicy, address(accountA), address(targetB), initiator1),
                 destinationWindow
             ),
             1,
             "target B should have an isolated destination budget"
         );
 
-        Policy memory acrossAllPolicy =
-            _buildRateLimitedContractPolicy(RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, true);
-        ValidationProofs memory acrossAllProofs = _setSinglePolicyRootAndBuildProofs(9_063, acrossAllPolicy);
+        Policy memory acrossAllPolicy = _buildRateLimitedContractPolicy(
+            RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, true
+        );
+        ValidationProofs memory acrossAllProofs = _setSinglePolicyRootAndBuildProofs(9063, acrossAllPolicy);
         (bytes memory sharedBudgetSig, uint256 sharedBudgetExpiration) =
-            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 66, 9_063);
+            _signExecution(INITIATOR_PK_1, address(accountA), address(targetA), 0, data, 66, 9063);
         (bytes memory exhaustedBudgetSig, uint256 exhaustedBudgetExpiration) =
-            _signExecution(INITIATOR_PK_2, address(accountB), address(targetB), 0, dataToTargetB, 67, 9_063);
+            _signExecution(INITIATOR_PK_2, address(accountB), address(targetB), 0, dataToTargetB, 67, 9063);
 
         // Call: consume the shared budget once, then retry from a different account, destination, and initiator.
         _executeAsGuardian(
-            address(accountA), address(targetA), 0, data, 66, sharedBudgetExpiration, 9_063, sharedBudgetSig, bytes(""), acrossAllProofs
+            address(accountA),
+            address(targetA),
+            0,
+            data,
+            66,
+            sharedBudgetExpiration,
+            9063,
+            sharedBudgetSig,
+            bytes(""),
+            acrossAllProofs
         );
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, 9_063));
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, 9063));
         _executeAsGuardian(
             address(accountB),
             address(targetB),
@@ -809,7 +910,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             dataToTargetB,
             67,
             exhaustedBudgetExpiration,
-            9_063,
+            9063,
             exhaustedBudgetSig,
             bytes(""),
             acrossAllProofs
@@ -819,7 +920,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         uint256 acrossAllWindow = _computeTimeWindow(acrossAllPolicy);
         assertEq(
             harness.getPolicyUsage(
-                _computeUsageKey(9_063, acrossAllPolicy, address(accountA), address(targetA), initiator1),
+                _computeUsageKey(9063, acrossAllPolicy, address(accountA), address(targetA), initiator1),
                 acrossAllWindow
             ),
             1,
@@ -831,60 +932,100 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies rate-limit usage resets after a time window passes and that the exact boundary already belongs to
      *      the new window. [OPB-RL-5, OPB-RL-6]
      */
-    function test_OPB_RL_5__OPB_RL_6_executeAccountTransaction_rateLimitWindows_resetAfterBoundary() public {
+    function test_OPB_RL_5__OPB_RL_6__TXRL_INV_2_executeAccountTransaction_rateLimitWindows_resetAfterBoundary()
+        public
+    {
         // Setup: deploy one account plus one interaction target, then use a one-call-per-hour policy for two
         // time-window subcases.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();
         bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(1));
 
-        Policy memory rolloverPolicy =
-            _buildRateLimitedContractPolicy(RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, false);
-        ValidationProofs memory rolloverProofs = _setSinglePolicyRootAndBuildProofs(9_070, rolloverPolicy);
+        Policy memory rolloverPolicy = _buildRateLimitedContractPolicy(
+            RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, false
+        );
+        ValidationProofs memory rolloverProofs = _setSinglePolicyRootAndBuildProofs(9070, rolloverPolicy);
 
         vm.warp(1);
         (bytes memory firstWindowSig, uint256 firstWindowExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 70, 9_070);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 70, 9070);
         _executeAsGuardian(
-            address(account), address(target), 0, data, 70, firstWindowExpiration, 9_070, firstWindowSig, bytes(""), rolloverProofs
+            address(account),
+            address(target),
+            0,
+            data,
+            70,
+            firstWindowExpiration,
+            9070,
+            firstWindowSig,
+            bytes(""),
+            rolloverProofs
         );
         uint256 firstWindow = _computeTimeWindow(rolloverPolicy);
 
-        vm.warp(3_601);
+        vm.warp(3601);
         (bytes memory secondWindowSig, uint256 secondWindowExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 71, 9_070);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 71, 9070);
         _executeAsGuardian(
-            address(account), address(target), 0, data, 71, secondWindowExpiration, 9_070, secondWindowSig, bytes(""), rolloverProofs
+            address(account),
+            address(target),
+            0,
+            data,
+            71,
+            secondWindowExpiration,
+            9070,
+            secondWindowSig,
+            bytes(""),
+            rolloverProofs
         );
         uint256 secondWindow = _computeTimeWindow(rolloverPolicy);
 
         // Verify: usage from the old window does not carry into the next window after the boundary passes.
-        bytes32 rolloverKey = _computeUsageKey(9_070, rolloverPolicy, address(account), address(target), initiator1);
+        bytes32 rolloverKey = _computeUsageKey(9070, rolloverPolicy, address(account), address(target), initiator1);
         assertEq(harness.getPolicyUsage(rolloverKey, firstWindow), 1, "old window should retain its own usage");
         assertEq(harness.getPolicyUsage(rolloverKey, secondWindow), 1, "new window should start fresh");
 
-        Policy memory exactBoundaryPolicy =
-            _buildRateLimitedContractPolicy(RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, false);
-        ValidationProofs memory exactBoundaryProofs = _setSinglePolicyRootAndBuildProofs(9_071, exactBoundaryPolicy);
+        Policy memory exactBoundaryPolicy = _buildRateLimitedContractPolicy(
+            RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, false
+        );
+        ValidationProofs memory exactBoundaryProofs = _setSinglePolicyRootAndBuildProofs(9071, exactBoundaryPolicy);
 
-        vm.warp(7_199);
+        vm.warp(7199);
         (bytes memory beforeBoundarySig, uint256 beforeBoundaryExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 72, 9_071);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 72, 9071);
         _executeAsGuardian(
-            address(account), address(target), 0, data, 72, beforeBoundaryExpiration, 9_071, beforeBoundarySig, bytes(""), exactBoundaryProofs
+            address(account),
+            address(target),
+            0,
+            data,
+            72,
+            beforeBoundaryExpiration,
+            9071,
+            beforeBoundarySig,
+            bytes(""),
+            exactBoundaryProofs
         );
         uint256 beforeBoundaryWindow = _computeTimeWindow(exactBoundaryPolicy);
 
-        vm.warp(7_200);
+        vm.warp(7200);
         (bytes memory onBoundarySig, uint256 onBoundaryExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 73, 9_071);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 73, 9071);
         _executeAsGuardian(
-            address(account), address(target), 0, data, 73, onBoundaryExpiration, 9_071, onBoundarySig, bytes(""), exactBoundaryProofs
+            address(account),
+            address(target),
+            0,
+            data,
+            73,
+            onBoundaryExpiration,
+            9071,
+            onBoundarySig,
+            bytes(""),
+            exactBoundaryProofs
         );
         uint256 onBoundaryWindow = _computeTimeWindow(exactBoundaryPolicy);
 
         // Verify: the transaction executed at the exact boundary uses the new window instead of the exhausted old one.
-        bytes32 boundaryKey = _computeUsageKey(9_071, exactBoundaryPolicy, address(account), address(target), initiator1);
+        bytes32 boundaryKey = _computeUsageKey(9071, exactBoundaryPolicy, address(account), address(target), initiator1);
         assertEq(harness.getPolicyUsage(boundaryKey, beforeBoundaryWindow), 1, "pre-boundary window should stay full");
         assertEq(harness.getPolicyUsage(boundaryKey, onBoundaryWindow), 1, "boundary execution should use fresh window");
     }
@@ -893,7 +1034,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies rejection does not mutate rate-limit usage and rate-limit overflows fail closed with
      *      `RateLimitExceeded`. [OPB-RL-7, OPB-RL-8]
      */
-    function test_OPB_RL_7__OPB_RL_8__OAT_RAT_4_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe()
+    function test_OPB_RL_7__OPB_RL_8__OAT_RAT_4__TXRL_INV_4__TXRL_INV_8_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe()
         public
     {
         // Setup: deploy one account plus one interaction target, then prepare one rate-limited auto-approve policy.
@@ -901,15 +1042,16 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         MockInteractionTarget target = new MockInteractionTarget();
         bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(1));
 
-        Policy memory policy =
-            _buildRateLimitedContractPolicy(RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, false);
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_080, policy);
+        Policy memory policy = _buildRateLimitedContractPolicy(
+            RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, RateLimitScope.AcrossAll, false
+        );
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9080, policy);
 
         (bytes memory approvalSig, uint256 approvalExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 80, 9_080);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 80, 9080);
         bytes memory rejectionSig =
-            _signRejection(INITIATOR_PK_1, address(account), address(target), 0, data, 80, approvalExpiration, 9_080);
-        bytes32 usageKey = _computeUsageKey(9_080, policy, address(account), address(target), initiator1);
+            _signRejection(INITIATOR_PK_1, address(account), address(target), 0, data, 80, approvalExpiration, 9080);
+        bytes32 usageKey = _computeUsageKey(9080, policy, address(account), address(target), initiator1);
         uint256 window = _computeTimeWindow(policy);
 
         // Call: reject one tuple first, then execute a different tuple under the same policy.
@@ -921,7 +1063,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data: data,
             salt: 80,
             expirationTimestamp: approvalExpiration,
-            policyId: 9_080,
+            policyId: 9080,
             initiatorSignature: approvalSig,
             reviewSignatures: rejectionSig,
             proofs: proofs
@@ -929,9 +1071,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         assertEq(harness.getPolicyUsage(usageKey, window), 0, "rejection should not consume any rate-limit usage");
 
         (bytes memory executedSig, uint256 executedExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 81, 9_080);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 81, 9080);
         _executeAsGuardian(
-            address(account), address(target), 0, data, 81, executedExpiration, 9_080, executedSig, bytes(""), proofs
+            address(account), address(target), 0, data, 81, executedExpiration, 9080, executedSig, bytes(""), proofs
         );
 
         // Verify: the later execution still sees the pre-rejection usage and consumes exactly one unit.
@@ -939,15 +1081,15 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
         Policy memory overflowPolicy = policy;
         overflowPolicy.config.rateLimit.timeIntervalLimit = type(uint256).max;
-        ValidationProofs memory overflowProofs = _setSinglePolicyRootAndBuildProofs(9_081, overflowPolicy);
-        bytes32 overflowKey = _computeUsageKey(9_081, overflowPolicy, address(account), address(target), initiator1);
+        ValidationProofs memory overflowProofs = _setSinglePolicyRootAndBuildProofs(9081, overflowPolicy);
+        bytes32 overflowKey = _computeUsageKey(9081, overflowPolicy, address(account), address(target), initiator1);
         harness.setPolicyUsage(overflowKey, window, type(uint256).max);
 
         (bytes memory overflowSig, uint256 overflowExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 82, 9_081);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 82, 9081);
 
         // Call: execute when usage addition would overflow `uint256`, expecting the fail-closed rate-limit error.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, 9_081));
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, 9081));
         _executeAsGuardian(
             address(account),
             address(target),
@@ -955,7 +1097,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             82,
             overflowExpiration,
-            9_081,
+            9081,
             overflowSig,
             bytes(""),
             overflowProofs
@@ -969,7 +1111,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies zero-threshold manual group approvals are rejected and `anyInitiator=true` still requires
      *      organization membership. [OPB-AIA-1, OPB-AIA-2]
      */
-    function test_OPB_AIA_1__OPB_AIA_2_executeAccountTransaction_manualZeroThresholdAndNonMemberInitiator_failClosed()
+    function test_OPB_AIA_1__OPB_AIA_2__POL_INV_7_executeAccountTransaction_manualZeroThresholdAndNonMemberInitiator_failClosed()
         public
     {
         // Setup: deploy one account plus one interaction target, then prepare one zero-threshold manual policy and one
@@ -986,10 +1128,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         harness.setGroupStatus(880, true);
         harness.setGroupMemberStatus(880, reviewer1, true);
 
-        ValidationProofs memory zeroThresholdProofs =
-            _setSinglePolicyRootAndBuildProofs(9_090, zeroThresholdPolicy);
+        ValidationProofs memory zeroThresholdProofs = _setSinglePolicyRootAndBuildProofs(9090, zeroThresholdPolicy);
         (bytes memory zeroThresholdSig, uint256 zeroThresholdExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 90, 9_090);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 90, 9090);
 
         // Call: execute with a manual group policy whose threshold resolves to zero, expecting fail-closed approval
         // validation.
@@ -1001,7 +1142,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             90,
             zeroThresholdExpiration,
-            9_090,
+            9090,
             zeroThresholdSig,
             bytes(""),
             zeroThresholdProofs
@@ -1010,14 +1151,13 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         Policy memory anyInitiatorPolicy =
             _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         anyInitiatorPolicy.config.initiator.anyInitiator = true;
-        ValidationProofs memory anyInitiatorProofs =
-            _setSinglePolicyRootAndBuildProofs(9_091, anyInitiatorPolicy);
+        ValidationProofs memory anyInitiatorProofs = _setSinglePolicyRootAndBuildProofs(9091, anyInitiatorPolicy);
         (bytes memory nonMemberSig, uint256 nonMemberExpiration) =
-            _signExecution(NON_MEMBER_PK, address(account), address(target), 0, data, 91, 9_091);
+            _signExecution(NON_MEMBER_PK, address(account), address(target), 0, data, 91, 9091);
 
         // Call: execute with a non-member initiator under `anyInitiator=true`, expecting the membership requirement to
         // remain enforced.
-        _expectPolicyDoesNotApply(9_091);
+        _expectPolicyDoesNotApply(9091);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -1025,7 +1165,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             91,
             nonMemberExpiration,
-            9_091,
+            9091,
             nonMemberSig,
             bytes(""),
             anyInitiatorProofs
@@ -1045,15 +1185,14 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         MockInteractionTarget target = new MockInteractionTarget();
         bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(1));
 
-        Policy memory removedPolicy =
-            _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
-        ValidationProofs memory removedPolicyProofs = _setSinglePolicyRootAndBuildProofs(9_100, removedPolicy);
+        Policy memory removedPolicy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        ValidationProofs memory removedPolicyProofs = _setSinglePolicyRootAndBuildProofs(9100, removedPolicy);
         (bytes memory removedPolicySig, uint256 removedPolicyExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 100, 9_100);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 100, 9100);
         harness.setPoliciesRoot(bytes32(0));
 
-        // Call: execute after the policy root was cleared; signatures were collected before the drop.
-        _expectPolicyDoesNotApply(9_100);
+        // Call: execute with signatures collected before the policy root dropped the policy.
+        _expectPolicyDoesNotApply(9100);
         _executeAsGuardian(
             address(account),
             address(target),
@@ -1061,7 +1200,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             100,
             removedPolicyExpiration,
-            9_100,
+            9100,
             removedPolicySig,
             bytes(""),
             removedPolicyProofs
@@ -1076,13 +1215,15 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         harness.setGroupMemberStatus(881, reviewer1, true);
         harness.setGroupMemberStatus(881, reviewer2, true);
 
-        ValidationProofs memory groupProofs = _setSinglePolicyRootAndBuildProofs(9_101, groupPolicy);
+        ValidationProofs memory groupProofs = _setSinglePolicyRootAndBuildProofs(9101, groupPolicy);
         (bytes memory initiatorSig, uint256 groupExpiration) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 101, 9_101);
-        bytes memory reviewSigOne =
-            _signReview(INITIATOR_PK_1, REVIEWER_PK_1, address(account), address(target), 0, data, 101, groupExpiration, 9_101);
-        bytes memory reviewSigTwo =
-            _signReview(INITIATOR_PK_1, REVIEWER_PK_2, address(account), address(target), 0, data, 101, groupExpiration, 9_101);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 101, 9101);
+        bytes memory reviewSigOne = _signReview(
+            INITIATOR_PK_1, REVIEWER_PK_1, address(account), address(target), 0, data, 101, groupExpiration, 9101
+        );
+        bytes memory reviewSigTwo = _signReview(
+            INITIATOR_PK_1, REVIEWER_PK_2, address(account), address(target), 0, data, 101, groupExpiration, 9101
+        );
         bytes memory combinedReviewSigs =
             reviewer1 < reviewer2 ? bytes.concat(reviewSigOne, reviewSigTwo) : bytes.concat(reviewSigTwo, reviewSigOne);
         harness.setGroupMemberStatus(881, reviewer2, false);
@@ -1097,7 +1238,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             data,
             101,
             groupExpiration,
-            9_101,
+            9101,
             initiatorSig,
             combinedReviewSigs,
             groupProofs

@@ -185,7 +185,10 @@ contract LibOrganizationAccountSignatureGetReviewSignatureHashTest is LibOrganiz
     }
 
     /// @dev Verifies that review hash derivation includes `keccak256(initiatorSignature)`.
-    function test_LOAS_GRSH_7_LOACS_GRSH_1_getReviewSignatureHash_includesInitiatorSignatureHashField() public view {
+    function test_E712_HASH_4_LOAS_GRSH_7_LOACS_GRSH_1_getReviewSignatureHash_includesInitiatorSignatureHashField()
+        public
+        view
+    {
         // Setup: choose deterministic review-hash inputs.
         bytes memory initiatorSignature = _signHash(INITIATOR_PK_1, MESSAGE_HASH);
         uint256 expiration = block.timestamp + 1 days;

@@ -623,7 +623,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
     }
 
     /// @dev Verifies reverting migration calldata reverts the full transaction and keeps implementation unchanged.
-    function test_OI_UTACWA_19__OIMP_UCA_3_revertingMigrationCall_revertsAtomicallyAndKeepsImplementation() public {
+    function test_UPG_CTRL_9_A__OI_UTACWA_19__OIMP_UCA_3_revertingMigrationCall_revertsAtomicallyAndKeepsImplementation()
+        public
+    {
         // Setup: whitelist target and build migration payload that intentionally reverts.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -804,7 +806,7 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies failed upgrade paths never leave authorized-upgrade target stuck set.
     /// [OI-UTCWA-7, OI-UTCWA-9, OIMP-UCA-5]
-    function test_OI_UTACWA_22__OI_UTCWA_7__OI_UTCWA_9__OIMP_UCA_5_failedUpgrade_neverLeavesAuthorizationFlagTrue()
+    function test_UPG_CTRL_9_B__OI_UTACWA_22__OI_UTCWA_7__OI_UTCWA_9__OIMP_UCA_5_failedUpgrade_neverLeavesAuthorizationFlagTrue()
         public
     {
         // Setup: use reverting migration payload to force rollback path.
@@ -858,7 +860,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
     /// `data`. [OI-UTCWA-12, OIMP-UCA-7]
-    function test_OI_UTACWA_25__OI_UTCWA_12__NMOI_UTACWA_3__OIMP_UCA_7_adminAuthMustBindMigrationData() public {
+    function test_UPG_CTRL_7__OI_UTACWA_25__OI_UTCWA_12__NMOI_UTACWA_3__OIMP_UCA_7_adminAuthMustBindMigrationData()
+        public
+    {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
