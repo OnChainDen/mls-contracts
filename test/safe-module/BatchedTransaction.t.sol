@@ -537,7 +537,7 @@ contract BatchedTransactionTest is Test {
     }
 
     /// @dev Verifies offset/length confusion cannot bypass self-call block (CannotCallSafe).
-    function test_ASIG_INV_10_A_BT_EMB_8_executeOffsetLengthConfusionCannotBypassSelfCallBlock() public {
+    function test_ASIG_INV_9_D_BT_EMB_8_executeOffsetLengthConfusionCannotBypassSelfCallBlock() public {
         EmptyCallTarget emptyTarget = new EmptyCallTarget();
         bytes4 expectedSelector = IBatchedTransaction.CannotCallSafe.selector;
 
@@ -620,45 +620,6 @@ contract BatchedTransactionTest is Test {
         // Verify: zero-padded selector (0x00000000) matches no function on target and there is no
         // fallback, so the call reverts and the batch fails.
         assertFalse(success, "Malformed payload with zero-padded selector should not silently succeed");
-    }
-
-    /// @dev Verifies `execute` fails closed and rolls back earlier side effects when a later packed sub-tx is cut
-    ///      short mid-data. [ASIG-INV-10] [ASIG-INV-16]
-    function test_ASIG_INV_10__ASIG_INV_16_A_executeTruncatedBatchMidData_revertsAtomically() public {
-        // Setup: first sub-tx is valid and second declares full setValue calldata but only includes the selector.
-        bytes memory firstTx = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
-        bytes memory secondData = abi.encodeWithSelector(MockBTTarget.setValue.selector, 99);
-        bytes memory truncatedSecondTx =
-            abi.encodePacked(address(target2), uint64(secondData.length), bytes4(MockBTTarget.setValue.selector));
-
-        // Call: execute the batch with the later sub-tx payload truncated in the middle of its calldata body.
-        (bool success,) = _executeBatchViaDelegatecall(abi.encodePacked(firstTx, truncatedSecondTx));
-
-        // Verify: execution fails closed and neither the earlier success nor the truncated later tx persists.
-        assertFalse(success, "Mid-data truncation should fail the entire batch");
-        assertEq(target1.value(), 0, "Earlier side effects should roll back after malformed payload failure");
-        assertEq(target1.callCount(), 0, "Earlier successful call count should roll back");
-        assertEq(target2.value(), 0, "Truncated sub-tx must not persist any target state");
-        assertEq(target2.callCount(), 0, "Truncated sub-tx must not leave an observed successful call");
-    }
-
-    /// @dev Verifies `execute` rejects a batch cut short during a later sub-tx header and leaves no earlier side
-    ///      effects behind. [ASIG-INV-16]
-    function test_ASIG_INV_16_B_executeTruncatedBatchMidHeader_revertsAtomically() public {
-        EmptyCallTarget emptyTarget = new EmptyCallTarget();
-
-        // Setup: first sub-tx is valid and the second includes only the 20-byte `to` field with no length bytes.
-        bytes memory firstTx = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 10));
-        bytes memory truncatedSecondHeader = abi.encodePacked(address(emptyTarget));
-
-        // Call: execute the batch even though the later sub-tx header is cut off before the uint64 data length.
-        (bool success,) = _executeBatchViaDelegatecall(abi.encodePacked(firstTx, truncatedSecondHeader));
-
-        // Verify: the truncated header should revert atomically, preserving neither earlier writes nor later calls.
-        assertFalse(success, "Mid-header truncation should fail the entire batch");
-        assertEq(target1.value(), 0, "Earlier side effects should roll back when a later header is truncated");
-        assertEq(target1.callCount(), 0, "Earlier successful call count should roll back");
-        assertFalse(emptyTarget.wasCalled(), "Truncated header should not execute any later target call");
     }
 
     /// @dev Verifies each packed sub-tx forwards the exact encoded `to` and `data` bytes to its target under

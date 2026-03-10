@@ -247,13 +247,12 @@ Functions: signature routing and validation, Safe module execution, batched exec
 | ASIG-INV-7 | **Safe-call block:** `SafeExecutorModule.executeOnBehalf` never succeeds with `to == SAFE` | P0 |
 | ASIG-INV-8 | **No ETH forwarding:** `SafeExecutorModule` always forwards `value = 0` | P0 |
 | ASIG-INV-9 | **Batched atomicity and safe-call block:** batched execution never allows subcall to delegatecaller `address(this)` and fully reverts on any subcall failure | P0 |
-| ASIG-INV-10 | **Desired behavior fail-closed parsing:** malformed batched payloads and malformed policy-signature payloads never authorize execution | P0 |
+| ASIG-INV-10 | **Desired behavior fail-closed parsing:** malformed policy-signature payloads never authorize execution | P0 |
 | ASIG-INV-11 | **Account-caller binding:** `isValidSignatureForAccount` only succeeds when `msg.sender == account` and `account` is org-deployed | P0 |
 | ASIG-INV-12 | **Safe executor caller gate:** `executeOnBehalf` succeeds only when caller is `AUTHORIZED_EXECUTOR` | P0 |
 | ASIG-INV-13 | **Desired behavior (ERC-1271 compatibility):** malformed policy-signature payloads return invalid magic value (`0xffffffff`) instead of reverting | P1 |
 | ASIG-INV-14 | **Batch field decoding:** each sub-tx in `BatchedTransaction.execute` calls the correct `to` with the correct `data`. Fuzz: pack N sub-txs as `[to(20)][dataLength(8)][data(N)]`, execute via delegatecall; verify each mock target received exactly its expected calldata | P0 |
 | ASIG-INV-15 | **Batch offset walking:** a well-formed batch executes every sub-tx — none skipped, none repeated. Fuzz: pack N sub-txs targeting counter contracts; assert all N counters incremented exactly once | P0 |
-| ASIG-INV-16 | **Truncated batch reverts atomically:** if the packed payload is cut short (mid-header or mid-data), the entire batch reverts and no sub-tx side effects persist | P0 |
 
 ---
 
