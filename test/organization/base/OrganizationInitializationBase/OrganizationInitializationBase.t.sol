@@ -67,7 +67,7 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
     }
 
     /// @dev Verifies initialize guards for direct implementation calls, failed-init retry behavior, and post-success
-    /// reinitialization attempts. [OI-INIT-3, OI-INIT-4, OI-INIT-5]
+    /// reinitialization attempts. [OIB-INIT-5, OI-INIT-3, OI-INIT-4, OI-INIT-5]
     function test_OIB_INIT_3__OIB_INIT_4__OIB_INIT_5__OIB_VIEW_6__CFI_FLOW_4__CFI_FLOW_5__OI_INIT_3__OI_INIT_4__OI_INIT_5_reinitAndDirectImplementationPathsRevertAsExpected()
         public
     {
@@ -78,11 +78,11 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
 
         // Call: Exercise direct implementation initialize, failed proxy initialize, successful initialize, and both
         // reinitialize paths.
-        vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         implementation.initialize(params);
 
         // Verify: Direct implementation deployer stays zero and failed initialization does not lock subsequent valid
-        // initialization.
+        // proxy initialization.
         assertEq(implementation.getDeployerAddress(), address(0), "implementation deployer slot should be zero");
 
         vm.prank(AUTHORIZED_DEPLOYER);

@@ -1253,19 +1253,6 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         IUUPSUpgradeableEntrypoints(address(implementationV1)).upgradeToAndCall(address(implementationV2), bytes(""));
     }
 
-    /// @dev Verifies direct implementation-contract calls to inherited `upgradeToAndCall` fail closed with
-    /// `UnauthorizedUpgrade`. [OIMP-IDCP-2]
-    function test_OIMP_IDCP_2_upgradeToAndCallOnImplementationContract_revertsUnauthorizedUpgrade() public {
-        // Setup: use the implementation contract directly instead of the proxy wrapper path.
-
-        // Call: invoke the inherited UUPS entrypoint directly on the implementation and expect the plan-19
-        // implementation-storage guard.
-        vm.expectRevert(IOrganization.UnauthorizedUpgrade.selector);
-        IUUPSUpgradeableEntrypoints(address(implementationV1)).upgradeToAndCall(address(implementationV2), bytes(""));
-
-        // Verify: the direct-call protection should fail via Organization authorization rather than proxy context.
-    }
-
     /// @dev Verifies direct implementation-contract calls to `upgradeToAndCallWithAuthorization` revert because the
     /// guardian is unset in implementation storage. [OIMP-IDCP-3]
     function test_OIMP_IDCP_3_upgradeToAndCallWithAuthorizationOnImplementation_revertsUnauthorizedGuardian() public {
@@ -1284,9 +1271,9 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
         // Verify: direct implementation calls cannot reach upgrade auth validation without satisfying guardian access.
     }
 
-    /// @dev Verifies direct implementation-contract calls to `initialize` revert `InvalidInitialization` as
-    /// defense-in-depth. [OIMP-IDCP-4]
-    function test_OIMP_IDCP_4_initializeOnImplementation_revertsInvalidInitialization_desiredBehavior() public {
+    /// @dev Verifies direct implementation-contract calls to `initialize` revert `InvalidInitialization` via the
+    /// constructor-time initializer lockout. [OIMP-IDCP-4]
+    function test_OIMP_IDCP_4_initializeOnImplementation_revertsInvalidInitialization() public {
         // Setup: call the implementation contract directly with defaulted initialization params.
         InitializationParams memory params;
 
