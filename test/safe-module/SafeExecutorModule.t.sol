@@ -704,16 +704,14 @@ contract SafeExecutorModuleTest is Test, SignatureTestHelpers {
 
     /// @dev Verifies `isValidSignature` is view and does not mutate state.
     function test_SEM_IVS_11_isValidSignatureIsViewAndNoStateMutation() public {
-        // Setup: record state before call.
+        // Setup: build a valid signature.
         bytes memory signature = _signHash(AUTHORIZED_EXECUTOR_PK, TEST_HASH);
-        uint256 snapshotId = vm.snapshotState();
 
-        // Call: validate signature.
-        module.isValidSignature(TEST_HASH, signature);
-
-        // Verify: state is unchanged (snapshot matches current state).
-        bool unchanged = vm.revertToStateAndDelete(snapshotId);
-        assertTrue(unchanged, "isValidSignature should be view with no state mutation");
+        // Call + Verify: staticcall reverts at the EVM level if any state mutation occurs.
+        (bool success,) = address(module).staticcall(
+            abi.encodeCall(module.isValidSignature, (TEST_HASH, signature))
+        );
+        assertTrue(success, "isValidSignature should succeed under staticcall (view)");
     }
 
     /// @dev Verifies `isValidSignature` accepts valid authorized signature for both v=27 and v=28 encodings.
