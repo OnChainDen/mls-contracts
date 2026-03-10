@@ -505,17 +505,70 @@ contract BatchedTransactionTest is Test {
 
     /// @dev Verifies offset/length confusion cannot bypass self-call block (CannotCallSafe).
     function test_BT_EMB_8_executeOffsetLengthConfusionCannotBypassSelfCallBlock() public {
-        // Setup: encode a batch that eventually targets address(this) despite complex encoding.
-        // First entry: valid tx to target1. Second entry: targets address(this).
-        bytes[] memory txs = new bytes[](2);
-        txs[0] = _encodeTx(address(target1), abi.encodeWithSelector(MockBTTarget.setValue.selector, 42));
-        txs[1] = _encodeTx(address(this), abi.encodeWithSelector(MockBTTarget.setValue.selector, 99));
+        EmptyCallTarget emptyTarget = new EmptyCallTarget();
+        bytes4 expectedSelector = IBatchedTransaction.CannotCallSafe.selector;
 
-        // Call: execute batch.
-        (bool success,) = _executeBatchViaDelegatecall(_encodeBatch(txs));
+        // Attempt 1: 4 bytes of truncated data before address(this).
+        // dataLength=4 causes the parser to consume only 4 bytes, then read
+        // address(this) directly as the next entry's `to`.
+        //   [emptyTarget:20][len=4:8][0xdeadbeef:4][address(this):20][0:8]
+        {
+            bytes memory crafted = abi.encodePacked(
+                address(emptyTarget), uint64(4), bytes4(0xdeadbeef), address(this), uint64(0)
+            );
+            (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(crafted);
+            assertFalse(success, "Attempt 1: should revert");
+            bytes4 selector;
+            assembly {
+                selector := mload(add(returnData, 32))
+            }
+            assertEq(selector, expectedSelector, "Attempt 1: should be CannotCallSafe");
+        }
 
-        // Verify: CannotCallSafe is enforced regardless of encoding position.
-        assertFalse(success, "Self-call block should not be bypassable via offset/length manipulation");
+        // Attempt 2: 32 bytes of misaligned data before address(this).
+        // dataLength=32 absorbs a full ABI-argument-sized region, then the parser
+        // reads address(this) at the boundary immediately after.
+        //   [emptyTarget:20][len=32:8][32B data][address(this):20][0:8]
+        {
+            bytes memory crafted = abi.encodePacked(
+                address(emptyTarget),
+                uint64(32),
+                bytes32(uint256(0xdeadbeefcafebabe)),
+                address(this),
+                uint64(0)
+            );
+            (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(crafted);
+            assertFalse(success, "Attempt 2: should revert");
+            bytes4 selector;
+            assembly {
+                selector := mload(add(returnData, 32))
+            }
+            assertEq(selector, expectedSelector, "Attempt 2: should be CannotCallSafe");
+        }
+
+        // Attempt 3: phantom intermediate entry between truncated data and address(this).
+        // After entry 1's truncated 4-byte data, the next 28 bytes form a phantom entry
+        // (codeless address + len=0) whose call succeeds (EVM calls to codeless addresses
+        // return success), then address(this) appears as entry 3's `to`.
+        //   [emptyTarget:20][len=4:8][0xdeadbeef:4][phantom:20][0:8][address(this):20][0:8]
+        {
+            bytes memory crafted = abi.encodePacked(
+                address(emptyTarget),
+                uint64(4),
+                bytes4(0xdeadbeef),
+                address(uint160(0xdead)),
+                uint64(0),
+                address(this),
+                uint64(0)
+            );
+            (bool success, bytes memory returnData) = _executeBatchViaDelegatecall(crafted);
+            assertFalse(success, "Attempt 3: should revert");
+            bytes4 selector;
+            assembly {
+                selector := mload(add(returnData, 32))
+            }
+            assertEq(selector, expectedSelector, "Attempt 3: should be CannotCallSafe");
+        }
     }
 
     /// @dev Verifies malformed payload must not silently succeed using zero-padded calldata.
