@@ -235,30 +235,180 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "manual reviewer signature must bind the review hash");
     }
 
-    /// @dev Verifies mutating the initiator signature or other signed fields invalidates policy-based authorization.
-    function test_LOACS_VPBS_3__LOACS_VPBS_4_validatePolicyBasedSignature_mutatedInitiatorOrSignedFields_returnInvalidValue()
+    // LOACS-VPBS-3
+    /// @dev Verifies mutating the initiator signature invalidates both guardian and reviewer signatures via hash binding.
+    function test_LOACS_VPBS_3_validatePolicyBasedSignature_mutatedInitiatorSignature_invalidatesHashBoundSignatures()
         public
     {
-        // Setup: build a valid manual-approval fixture with guardian and reviewer signatures bound to one request.
+        uint256 policyId = DEFAULT_POLICY_ID;
+        uint256 expirationTimestamp = block.timestamp + 1 days;
+
+        // --- Guardian invalidation (AutoApprove) ---
+        // Setup: build a valid auto-approve fixture with `anyInitiator = true` so both signers are authorized.
+        // Only guardian is checked (no reviewers), isolating the guardian hash-binding path.
+        {
+            policyStateHarness.setGuardian(guardianSigner);
+            Policy memory autoPolicy = _buildSignaturePolicy(PolicyType.AutoApprove);
+            autoPolicy.config.initiator.anyInitiator = true;
+            ValidationProofs memory autoProofs = _setSinglePolicyRootAndBuildProofs(policyId, autoPolicy);
+
+            bytes memory originalInitiatorSig = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp
+            });
+
+            bytes memory guardianSig = _signGuardianReviewHash({
+                sigHarness: harness,
+                privateKey: GUARDIAN_PK,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: originalInitiatorSig
+            });
+
+            bytes memory validPayload = _buildPolicySignatureData({
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: originalInitiatorSig,
+                reviewSignatures: new bytes(0),
+                guardianSignature: guardianSig,
+                proofs: autoProofs
+            });
+            assertEq(
+                harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, validPayload),
+                SignatureUtils.ERC1271_MAGIC_VALUE,
+                "sanity: auto-approve baseline should be valid"
+            );
+
+            // Call: swap in a different (authorized) initiator signature without re-signing guardian.
+            bytes memory mutatedInitiatorSig = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_2,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp
+            });
+
+            bytes memory mutatedPayload = _buildPolicySignatureData({
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: mutatedInitiatorSig,
+                reviewSignatures: new bytes(0),
+                guardianSignature: guardianSig,
+                proofs: autoProofs
+            });
+
+            // Verify: guardian signature is invalidated because the review hash changed with the initiator signature.
+            assertEq(
+                harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, mutatedPayload),
+                SignatureUtils.ERC1271_INVALID_VALUE,
+                "guardian should be invalidated when initiator signature mutates"
+            );
+        }
+
+        // --- Reviewer invalidation (RequireManualApproval) ---
+        // Setup: build a manual-approval fixture, mutate the initiator, re-sign the guardian over the new review hash,
+        // but keep the original reviewer signatures to isolate the reviewer hash-binding path.
+        {
+            policyStateHarness.setGuardian(guardianSigner);
+            Policy memory manualPolicy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
+            manualPolicy.config.initiator.anyInitiator = true;
+            ValidationProofs memory manualProofs = _setSinglePolicyRootAndBuildProofs(policyId, manualPolicy);
+
+            bytes memory originalInitiatorSig = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp
+            });
+
+            bytes memory reviewerSig = _signReviewSignature({
+                sigHarness: harness,
+                privateKey: REVIEWER_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: originalInitiatorSig
+            });
+
+            bytes memory guardianSig = _signGuardianReviewHash({
+                sigHarness: harness,
+                privateKey: GUARDIAN_PK,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: originalInitiatorSig
+            });
+
+            bytes memory validPayload = _buildPolicySignatureData({
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: originalInitiatorSig,
+                reviewSignatures: reviewerSig,
+                guardianSignature: guardianSig,
+                proofs: manualProofs
+            });
+            assertEq(
+                harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, validPayload),
+                SignatureUtils.ERC1271_MAGIC_VALUE,
+                "sanity: manual-approval baseline should be valid"
+            );
+
+            // Call: swap in a different (authorized) initiator signature and re-sign the guardian over the new review
+            // hash, but keep the original (now stale) reviewer signatures.
+            bytes memory mutatedInitiatorSig = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_2,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp
+            });
+
+            bytes memory reBoundGuardianSig = _signGuardianReviewHash({
+                sigHarness: harness,
+                privateKey: GUARDIAN_PK,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: mutatedInitiatorSig
+            });
+
+            bytes memory mutatedPayload = _buildPolicySignatureData({
+                policyId: policyId,
+                expirationTimestamp: expirationTimestamp,
+                initiatorSignature: mutatedInitiatorSig,
+                reviewSignatures: reviewerSig,
+                guardianSignature: reBoundGuardianSig,
+                proofs: manualProofs
+            });
+
+            // Verify: reviewer signatures are invalidated because the review hash changed with the initiator signature.
+            assertEq(
+                harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, mutatedPayload),
+                SignatureUtils.ERC1271_INVALID_VALUE,
+                "reviewer should be invalidated when initiator signature mutates"
+            );
+        }
+    }
+
+    // LOACS-VPBS-4
+    /// @dev Verifies mutating signed fields (account, hash, policyId, expirationTimestamp) invalidates authorization.
+    function test_LOACS_VPBS_4_validatePolicyBasedSignature_mutatedSignedFields_returnInvalidValue() public {
+        // Setup: build a valid manual-approval fixture with all signatures bound to one set of signed fields.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.RequireManualApproval, expirationTimestamp: block.timestamp + 1 days
-        });
-        bytes memory mutatedInitiatorSignature = _signInitiatorSignature({
-            sigHarness: harness,
-            privateKey: INITIATOR_PK_2,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: fixture.policyId,
-            expirationTimestamp: fixture.expirationTimestamp
-        });
-
-        bytes memory mutatedInitiatorPayload = _buildPolicySignatureData({
-            policyId: fixture.policyId,
-            expirationTimestamp: fixture.expirationTimestamp,
-            initiatorSignature: mutatedInitiatorSignature,
-            reviewSignatures: fixture.reviewSignatures,
-            guardianSignature: fixture.guardianSignature,
-            proofs: fixture.proofs
         });
 
         bytes memory mutatedPolicyIdPayload = _buildPolicySignatureData({
@@ -279,9 +429,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
             proofs: fixture.proofs
         });
 
-        // Call: execute the same signature bundle across initiator/signature-field mutations.
-        bytes4 mutatedInitiatorResult =
-            harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, mutatedInitiatorPayload);
+        // Call: validate the original payload against mutated account/hash parameters, and mutated field payloads.
         bytes4 mutatedAccountResult =
             harness.validatePolicyBasedSignatureViaLibrary(OTHER_ACCOUNT, MESSAGE_HASH, fixture.signatureData);
         bytes4 mutatedHashResult =
@@ -291,8 +439,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         bytes4 mutatedExpirationResult =
             harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, mutatedExpirationPayload);
 
-        // Verify: any mutation of the initiator signature or signed fields invalidates authorization.
-        assertEq(mutatedInitiatorResult, SignatureUtils.ERC1271_INVALID_VALUE, "initiator mutation should be invalid");
+        // Verify: any mutation of a signed field invalidates authorization.
         assertEq(mutatedAccountResult, SignatureUtils.ERC1271_INVALID_VALUE, "account mutation should be invalid");
         assertEq(mutatedHashResult, SignatureUtils.ERC1271_INVALID_VALUE, "message-hash mutation should be invalid");
         assertEq(mutatedPolicyIdResult, SignatureUtils.ERC1271_INVALID_VALUE, "policy-id mutation should be invalid");
