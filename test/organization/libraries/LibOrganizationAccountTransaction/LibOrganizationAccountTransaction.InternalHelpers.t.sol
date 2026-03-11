@@ -196,7 +196,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection requires non-empty review signature.
-    function test_LOAT_VAAROR_2_LOACT_VAAROR_2_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
+    function test_LOAT_VAAROR_2_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
         public
     {
         // Setup: valid auto-approve rejection context with empty review signatures.

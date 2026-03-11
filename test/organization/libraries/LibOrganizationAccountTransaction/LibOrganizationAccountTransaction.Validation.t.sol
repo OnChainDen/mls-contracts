@@ -262,7 +262,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies auto-approve rejection validation rejects approval-domain signatures.
-    function test_NMATL_RHB_7_validateAutoApproveRejection_rejectsApprovalDomainSignatureReplay() public {
+    function test_LOACT_VAAROR_2__NMATL_RHB_7_validateAutoApproveRejection_rejectsApprovalDomainSignatureReplay()
+        public
+    {
         // Setup: configure an auto-approve policy and sign the transaction with `isApproval=true`.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
