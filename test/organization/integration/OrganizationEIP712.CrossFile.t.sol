@@ -298,13 +298,14 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
         bytes memory forcedRecoverySignature = bytes.concat(policySignature);
         forcedRecoverySignature[0] = bytes1(uint8(0x00));
 
+        bytes memory forcedPolicySignature = bytes.concat(recoverySignature);
+        forcedPolicySignature[0] = bytes1(uint8(0x01));
+
         // Call: execute the valid recovery path, the valid policy path, and both cross-prefix replay attempts.
         bytes4 validRecoveryResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
         bytes4 validPolicyResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, policySignature);
         bytes4 policyAsRecoveryResult =
             harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, forcedRecoverySignature);
-        bytes4 recoveryAsPolicyResult =
-            harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, _signHash(GUARDIAN_PK, MESSAGE_HASH));
 
         // Verify: only the correctly prefixed payloads authorize their intended validation route.
         assertEq(validRecoveryResult, SignatureUtils.ERC1271_MAGIC_VALUE, "recovery payload should validate");
@@ -314,11 +315,10 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
             SignatureUtils.ERC1271_INVALID_VALUE,
             "policy payload should not authorize recovery flow"
         );
-        assertEq(
-            recoveryAsPolicyResult,
-            SignatureUtils.ERC1271_INVALID_VALUE,
-            "recovery payload should not authorize policy flow"
-        );
+
+        // Verify: recovery data forced through the policy path reverts (too short for abi.decode).
+        vm.expectRevert();
+        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, forcedPolicySignature);
     }
 
     /// @dev Verifies fuzzed initiator-signature byte mutations always alter both transaction and ERC-1271 review hashes.
