@@ -181,6 +181,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     /// and consumes the derived nonce.
     function test_L_5__NMADM_AUTH_1_LOADM_VAACNOR_1_validateAdminAuth_thresholdOneSingleValidSignature_succeedsAndConsumesNonce()
         public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 

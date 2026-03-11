@@ -207,33 +207,60 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
         assertTrue(actualIsValid, "mixed sorted signatures should validate");
     }
 
-    /// @dev Verifies `_areAdminSignaturesValid` never treats signatures over a different operation hash as valid.
-    function test_LOADM_AASV_2_areAdminSignaturesValid_differentOperationHash_rejectsEOAAndERC1271Signatures() public {
-        // Setup: configure one EOA admin and one strict hash-bound ERC-1271 admin.
+    /// @dev Verifies `_areAdminSignaturesValid` reverts with `SignerIsNotAdmin` when an EOA signature is validated
+    /// against a different operation hash, because `ecrecover` silently recovers a different (non-admin) address.
+    function test_LOADM_AASV_2_areAdminSignaturesValid_eoaSignedDifferentHash_revertsSignerIsNotAdmin() public {
+        // Setup: configure a single EOA admin with threshold 1.
+        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
+
+        bytes32 signedHash = keccak256("signed-admin-operation-hash");
+        bytes32 replayedHash = keccak256("replayed-admin-operation-hash");
+        bytes memory signature = _signHash(ADMIN_PK_1, signedHash);
+
+        // Compute the address ecrecover produces when given the wrong hash.
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        assembly {
+            v := byte(0, mload(add(signature, 0x20)))
+            r := mload(add(signature, 0x21))
+            s := mload(add(signature, 0x41))
+        }
+        address misrecoveredSigner = ecrecover(replayedHash, v, r, s);
+        assertTrue(misrecoveredSigner != address(0), "ecrecover should not return zero for this input");
+        assertTrue(misrecoveredSigner != admin1, "ecrecover should recover a different address for a different hash");
+
+        // Verify: the misrecovered address is not an admin.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAdmin.SignerIsNotAdmin.selector, misrecoveredSigner));
+        // Call: validate the EOA signature against a different hash than the one that was signed.
+        harness.areAdminSignaturesValid(signature, replayedHash);
+    }
+
+    /// @dev Verifies `_areAdminSignaturesValid` reverts with `SignatureRecoveryFailed` when an ERC-1271 contract
+    /// signature is validated against a different operation hash, because the contract rejects the wrong hash.
+    function test_LOADM_AASV_2_areAdminSignaturesValid_erc1271SignedDifferentHash_revertsSignatureRecoveryFailed()
+        public
+    {
+        // Setup: configure a single hash-bound ERC-1271 admin with threshold 1.
         bytes32 signedHash = keccak256("signed-admin-operation-hash");
         bytes32 replayedHash = keccak256("replayed-admin-operation-hash");
         bytes memory contractInnerSignature = hex"CAFE";
         HashBoundERC1271Signer hashBoundContractAdmin = new HashBoundERC1271Signer(signedHash, contractInnerSignature);
 
         _setMembersAndAdmins({
-            members: buildArray(admin1, address(hashBoundContractAdmin)),
-            admins: buildArray(admin1, address(hashBoundContractAdmin)),
-            threshold: 2
+            members: buildArray(address(hashBoundContractAdmin)),
+            admins: buildArray(address(hashBoundContractAdmin)),
+            threshold: 1
         });
 
-        address[] memory signers = buildArray(admin1, address(hashBoundContractAdmin));
-        bytes[] memory signatures = new bytes[](2);
-        signatures[0] = _signHash(ADMIN_PK_1, signedHash);
-        signatures[1] =
+        bytes memory packed =
             _buildContractSignature({signer: address(hashBoundContractAdmin), innerSig: contractInnerSignature});
-        bytes memory packed = _sortAndConcatSignatures(signers, signatures);
 
-        // Verify: the EOA leg no longer recovers under the replayed hash, so validation fails during recovery.
+        // Verify: the ERC-1271 contract rejects the wrong hash, so recovery fails.
         _expectSignatureRecoveryFailure();
-        // Call: validate the packed signer set against a different operation hash than the one they signed.
+        // Call: validate the ERC-1271 signature against a different hash than the one it was bound to.
         harness.areAdminSignaturesValid(packed, replayedHash);
     }
-
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for malformed packed signatures.
     function test_L_66__NMADM_SIG_8_areAdminSignaturesValid_malformedEncoding_revertsSignatureRecoveryFailed()
