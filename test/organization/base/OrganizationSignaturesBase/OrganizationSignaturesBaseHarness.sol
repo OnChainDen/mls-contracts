@@ -10,6 +10,9 @@ import {LibOrganizationSignaturesStorage} from "organization/libraries/storage/L
  * @dev Base-contract-focused harness exposing nonce state controls for `OrganizationSignaturesBase`.
  */
 contract OrganizationSignaturesBaseHarness is OrganizationSignaturesBase {
+    /// @dev Error used to force a parent-transaction rollback after nonce consumption.
+    error ForcedRollback();
+
     /**
      * @dev Writes a raw used-nonce flag for test setup.
      * @param nonce The nonce to mutate.
@@ -25,5 +28,14 @@ contract OrganizationSignaturesBaseHarness is OrganizationSignaturesBase {
      */
     function consumeNonceViaLibrary(uint256 nonce) external {
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
+    }
+
+    /**
+     * @dev Consumes a nonce through the underlying library and then reverts the parent transaction.
+     * @param nonce The nonce to consume before reverting.
+     */
+    function consumeNonceThenRevertViaLibrary(uint256 nonce) external {
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
+        revert ForcedRollback();
     }
 }

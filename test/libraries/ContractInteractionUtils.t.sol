@@ -15,6 +15,9 @@ import {ContractInteractionUtils} from "libraries/ContractInteractionUtils.sol";
  *      `calldata` parameters.
  */
 contract ContractInteractionUtilsHarness {
+    /// @dev Exposes selector extraction for calldata-based fuzz and unit tests.
+    /// @param data Calldata blob whose first four bytes are interpreted as a selector.
+    /// @return selector The extracted selector.
     function extractFunctionSelector(bytes calldata data) external pure returns (bytes4) {
         return ContractInteractionUtils.extractFunctionSelector(data);
     }
@@ -30,6 +33,7 @@ contract ContractInteractionUtilsHarness {
 contract ContractInteractionUtilsTest is Test {
     ContractInteractionUtilsHarness public harness;
 
+    /// @dev Deploys the harness exposing selector extraction wrappers.
     function setUp() public {
         harness = new ContractInteractionUtilsHarness();
     }
@@ -100,17 +104,36 @@ contract ContractInteractionUtilsTest is Test {
 
     /// @dev Test case: Random calldata (>= 4 bytes) should always extract the correct first 4 bytes as the selector.
     ///      [TXUT-PARSE-4]
-    function testFuzz_TXUT_PARSE_4_B_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(bytes calldata data)
+    function testFuzz_TXUT_PARSE_4_B__FCIU_SELECT_18_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(
+        bytes calldata data
+    )
         public
         view
     {
+        // Setup: constrain fuzz calldata to the minimum valid selector length.
         vm.assume(data.length >= 4);
 
+        // Call: extract the selector from the fuzz calldata.
         bytes4 selector = harness.extractFunctionSelector(data);
 
         // The expected selector is just the first 4 bytes of the data
         bytes4 expected = bytes4(data[:4]);
 
+        // Verify: extraction should match the first four calldata bytes exactly.
         assertEq(selector, expected, "Should always extract the first 4 bytes as the selector");
+    }
+
+    /// @dev Verifies `ContractInteractionUtils.extractFunctionSelector` always reverts for calldata shorter than four
+    /// bytes.
+    /// @param data Fuzzed calldata constrained below the minimum selector length.
+    function testFuzz_FCIU_SELECT_19_extractFunctionSelector_shortCalldataAlwaysReverts(bytes calldata data) public {
+        // Setup: constrain fuzz calldata below the minimum selector length.
+        vm.assume(data.length < 4);
+
+        // Call: extract the selector, expecting the short-calldata path to revert.
+        vm.expectRevert();
+        harness.extractFunctionSelector(data);
+
+        // Verify: the revert expectation above proves short calldata never returns padded garbage.
     }
 }

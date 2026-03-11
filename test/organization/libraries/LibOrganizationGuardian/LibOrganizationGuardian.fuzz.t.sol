@@ -29,8 +29,9 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
         assertEq(harness.getGuardianViaLibrary(), newGuardian, "guardian should match fuzzed valid new guardian");
     }
 
-    /// @dev Verifies GFZ-2: finalize reverts before timelock and succeeds at/after timelock.
-    function testFuzz_GFZ_2_randomBeforeAfterTimelock_finalizePassFail(
+    /// @dev Verifies `LibOrganizationGuardian.finalizeGuardianUpdate` reverts before the admin-operation timelock
+    /// expires and succeeds once it has expired.
+    function testFuzz_GFZ_2__FLOGU_FINAL_106_randomBeforeAfterTimelock_finalizePassFail(
         address newGuardian,
         bool beforeTimelock,
         uint256 delta
@@ -107,8 +108,9 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
         assertEq(harness.getPendingGuardianViaLibrary(), pendingGuardian, "pending guardian should remain unchanged");
     }
 
-    /// @dev Verifies GFZ-5: random timelock durations produce `canFinalizeAt = block.timestamp + duration`.
-    function testFuzz_GFZ_5_randomTimelockDurations_canFinalizeTimestampMatchesDuration(
+    /// @dev Verifies `LibOrganizationGuardian.initiateGuardianUpdate` stores both the pending guardian and the
+    /// finalize timestamp derived from the admin-operation timelock.
+    function testFuzz_GFZ_5__FLOGU_INIT_105_randomTimelockDurations_canFinalizeTimestampMatchesDuration(
         address newGuardian,
         uint256 timelockDuration
     ) public {
@@ -130,6 +132,7 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
             expectedCanFinalizeAt,
             "pending timestamp should equal block.timestamp + fuzzed timelock duration"
         );
+        assertEq(harness.getPendingGuardianViaLibrary(), newGuardian, "pending guardian should match fuzzed guardian");
     }
 
     /// @dev Verifies GFZ-6: random guardians pass `enforceOnlyGuardian`, while others fail.
@@ -155,5 +158,89 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
 
         // Verify
         assertEq(harness.getGuardianViaLibrary(), guardian, "guardian should remain unchanged");
+    }
+
+    /// @dev Verifies `LibOrganizationGuardian.acceptGuardian` only succeeds after finalization and only when the
+    /// pending guardian is the caller accepted by `enforceOnlyPendingGuardian`.
+    /// @param newGuardian The pending guardian used for the update flow.
+    /// @param caller The caller tested against the pending-guardian gate.
+    /// @param finalizeUpdate Whether to finalize the pending guardian update before acceptance.
+    function testFuzz_FLOGU_ACCEPT_107_acceptGuardian_requiresFinalizedStateAndPendingGuardianCaller(
+        address newGuardian,
+        address caller,
+        bool finalizeUpdate
+    ) public {
+        // Setup: seed one pending guardian update and optionally finalize it before the acceptance attempt.
+        vm.assume(newGuardian != address(0));
+        _clearPendingGuardianState();
+        harness.initiateGuardianUpdateViaLibrary(newGuardian);
+
+        if (finalizeUpdate) {
+            vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
+            harness.finalizeGuardianUpdateViaLibrary();
+        }
+
+        // Call: enforce the pending-guardian caller gate, then attempt acceptance under the selected branch.
+        if (caller != newGuardian) {
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationGuardian.UnauthorizedGuardianAcceptance.selector, caller, newGuardian)
+            );
+            vm.prank(caller);
+            harness.enforceOnlyPendingGuardianViaLibrary();
+
+            // Verify: a wrong caller leaves the pending guardian state untouched.
+            assertEq(harness.getPendingGuardianViaLibrary(), newGuardian, "pending guardian should remain unchanged");
+            return;
+        }
+
+        if (!finalizeUpdate) {
+            vm.expectRevert(IOrganizationGuardian.GuardianUpdateNotReadyForAcceptance.selector);
+            harness.acceptGuardianViaLibrary();
+
+            // Verify: unfinalized updates cannot be accepted and keep the old guardian in place.
+            assertEq(harness.getPendingGuardianViaLibrary(), newGuardian, "pending guardian should stay pending");
+            assertFalse(
+                harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(),
+                "ready flag should stay false before finalize"
+            );
+            return;
+        }
+
+        harness.acceptGuardianViaLibrary();
+
+        // Verify: finalized updates accepted by the pending guardian replace the guardian and clear pending state.
+        assertEq(harness.getGuardianViaLibrary(), newGuardian, "accepted guardian should become current guardian");
+        assertEq(harness.getPendingGuardianViaLibrary(), address(0), "accept should clear pending guardian");
+        assertEq(
+            harness.getPendingGuardianUpdateTimestampViaLibrary(), 0, "accept should clear pending finalize timestamp"
+        );
+        assertFalse(
+            harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(),
+            "accept should clear the ready-for-acceptance flag"
+        );
+    }
+
+    /// @dev Verifies `LibOrganizationGuardian.cancelGuardianUpdate` clears all pending guardian-update state.
+    /// @param newGuardian The pending guardian cleared by the cancel path.
+    function testFuzz_FLOGU_CANCEL_108_cancelGuardianUpdate_clearsAllPendingState(address newGuardian) public {
+        // Setup: seed one pending guardian update and mark it as finalized to ensure cancel clears every pending field.
+        vm.assume(newGuardian != address(0));
+        _clearPendingGuardianState();
+        harness.initiateGuardianUpdateViaLibrary(newGuardian);
+        vm.warp(harness.getPendingGuardianUpdateTimestampViaLibrary());
+        harness.finalizeGuardianUpdateViaLibrary();
+
+        // Call: cancel the pending guardian update.
+        harness.cancelGuardianUpdateViaLibrary();
+
+        // Verify: cancel clears the pending guardian, timestamp, and ready-for-acceptance flag.
+        assertEq(harness.getPendingGuardianViaLibrary(), address(0), "cancel should clear pending guardian");
+        assertEq(
+            harness.getPendingGuardianUpdateTimestampViaLibrary(), 0, "cancel should clear pending finalize timestamp"
+        );
+        assertFalse(
+            harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary(),
+            "cancel should clear the ready-for-acceptance flag"
+        );
     }
 }

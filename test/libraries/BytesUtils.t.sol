@@ -40,6 +40,7 @@ contract BytesUtilsTest is Test {
     /// @dev Signature length constant (65 bytes: r=32, s=32, v=1) - useful for testing signature-related scenarios
     uint256 constant SIGNATURE_LENGTH = 65;
 
+    /// @dev Deploys the harness exposing the `BytesUtils` slicing helpers.
     function setUp() public {
         harness = new BytesUtilsHarness();
     }
@@ -316,7 +317,7 @@ contract BytesUtilsTest is Test {
         _verifySliceFromCorrectness(fourSignatures, result, SIGNATURE_LENGTH);
     }
 
-    function testFuzz_BYTE_SLICE_3_A_sliceFrom_lengthCorrectness(uint8 signatureCount) public view {
+    function testFuzz_BYTE_SLICE_3_A__FBU_SLICE_22_sliceFrom_lengthCorrectness(uint8 signatureCount) public view {
         // Bound to reasonable range (1-10 signatures)
         signatureCount = uint8(bound(signatureCount, 1, 10));
 
@@ -331,7 +332,7 @@ contract BytesUtilsTest is Test {
         }
     }
 
-    function testFuzz_BYTE_SLICE_1_A_sliceFrom_dataIntegrity(uint8 signatureCount) public view {
+    function testFuzz_BYTE_SLICE_1_A__FBU_SLICE_22_sliceFrom_dataIntegrity(uint8 signatureCount) public view {
         // Bound to 2-10 signatures (need at least 2 for meaningful test)
         signatureCount = uint8(bound(signatureCount, 2, 10));
 
@@ -342,7 +343,7 @@ contract BytesUtilsTest is Test {
         _verifySliceFromCorrectness(data, result, SIGNATURE_LENGTH);
     }
 
-    function testFuzz_sliceFrom_arbitraryLength(uint16 totalLength, uint16 startIndex) public view {
+    function testFuzz_FBU_SLICE_22_sliceFrom_arbitraryLength(uint16 totalLength, uint16 startIndex) public view {
         totalLength = uint16(bound(totalLength, 0, 1000));
         startIndex = uint16(bound(startIndex, 0, 1000));
 
@@ -508,7 +509,7 @@ contract BytesUtilsTest is Test {
 
     /// @dev Verifies `sliceRange` zero-pads the trailing bytes in the last output word for non-word-aligned
     ///      lengths so adjacent source memory cannot leak. [BYTE-SLICE-4]
-    function testFuzz_BYTE_SLICE_4_C_sliceRange_nonAlignedLastWordZeroPadsTrailingBytes(
+    function testFuzz_BYTE_SLICE_4_C__FBU_SLICE_22_sliceRange_nonAlignedLastWordZeroPadsTrailingBytes(
         uint16 bufferLength,
         uint16 startIndex,
         uint16 sliceLength
@@ -539,7 +540,7 @@ contract BytesUtilsTest is Test {
         assertEq(uint256(lastWord) & trailingMask, 0, "Trailing bytes in the last word should be zero-padded");
     }
 
-    function testFuzz_BYTE_SLICE_1_B__BYTE_SLICE_3_B_sliceRange_arbitraryInputs(
+    function testFuzz_BYTE_SLICE_1_B__BYTE_SLICE_3_B__FBU_SLICE_22_sliceRange_arbitraryInputs(
         uint16 bufferLength,
         uint16 startIndex,
         uint16 sliceLength
@@ -572,7 +573,7 @@ contract BytesUtilsTest is Test {
         }
     }
 
-    function testFuzz_sliceRange_matchesSliceFrom(uint16 bufferLength, uint16 startIndex) public view {
+    function testFuzz_FBU_SLICE_22_sliceRange_matchesSliceFrom(uint16 bufferLength, uint16 startIndex) public view {
         bufferLength = uint16(bound(bufferLength, 0, 500));
         startIndex = uint16(bound(startIndex, 0, 600));
 

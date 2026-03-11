@@ -3,24 +3,37 @@
 pragma solidity 0.8.33;
 
 import {IOrganization} from "interfaces/IOrganization.sol";
+import {IOrganizationFactory} from "interfaces/IOrganizationFactory.sol";
 import {IOrganizationAdmin} from "interfaces/organization/IOrganizationAdmin.sol";
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
+import {IOrganizationMembers} from "interfaces/organization/IOrganizationMembers.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
+import {OrganizationFactoryHarness} from "test/organization/OrganizationFactory/OrganizationFactoryHarnesses.sol";
 import {
     InitializationSuiteBase
 } from "test/organization/base/OrganizationInitializationBase/OrganizationInitializationBaseSuiteBase.sol";
-import {GroupModification, InitializationParams} from "types/CommonTypes.sol";
+import {GroupModification, GroupModificationType, InitializationParams} from "types/CommonTypes.sol";
 
 /**
  * @dev Fuzz coverage for initialization flows.
  */
 contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
-    /// @dev Verifies fuzzed valid initialization params deploy successfully and preserve admin/member invariants.
-    function test_INIT_FUZZ_1__INIT_FUZZ_3_fuzzValidParams_initializeSucceedsAndInvariantsHold(
+    /// @dev Verifies valid randomized initialization params establish initialized state, keep admins inside the
+    /// member set, and respect optional recovery configuration.
+    /// @param seed Entropy seed used to derive deterministic member/admin/recovery addresses.
+    /// @param memberCountRaw Fuzzed member-count seed bounded into the valid range.
+    /// @param adminCountRaw Fuzzed admin-count seed bounded into the valid range.
+    /// @param thresholdRaw Fuzzed voting-threshold seed bounded into the valid range.
+    /// @param disableGuardianRecovery Whether guardian recovery should be omitted from initialization params.
+    /// @param disableTxRecovery Whether transaction/ERC1271 recovery should be omitted from initialization params.
+    /// @param salt Fuzzed CREATE2 salt used for deployment.
+    function test_INIT_FUZZ_1__INIT_FUZZ_3__FLOI_INIT_26_fuzzValidParams_initializeSucceedsAndInvariantsHold(
         uint256 seed,
         uint8 memberCountRaw,
         uint8 adminCountRaw,
         uint8 thresholdRaw,
+        bool disableGuardianRecovery,
+        bool disableTxRecovery,
         bytes32 salt
     ) public {
         // Setup: Bound fuzzed member/admin/threshold values and build matching valid initialization params.
@@ -29,15 +42,24 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
         uint256 threshold = bound(uint256(thresholdRaw), 1, adminCount);
 
         InitializationParams memory params = _buildFuzzParams(seed, memberCount, adminCount, threshold);
+        if (disableGuardianRecovery) {
+            params.guardianRecoveryAddress = address(0);
+            params.guardianRecoveryTimelockDurationSeconds = 0;
+        }
+        if (disableTxRecovery) {
+            params.transactionAndERC1271RecoveryAddress = address(0);
+            params.txRecoveryTimelockDurationSeconds = 0;
+        }
 
         // Call: Deploy an organization through the factory using the fuzzed valid params.
         address deployed = _deployOrganization(salt, params);
         IOrganization organization = IOrganization(deployed);
 
-        // Verify: Initialization succeeds and admin/threshold/member invariants hold for all fuzzed values.
+        // Verify: Initialization succeeds, core invariants hold, and optional recovery omission stays respected.
         assertTrue(organization.isInitialized(), "fuzz deployment should initialize organization");
         assertEq(organization.adminCount(), adminCount, "admin count invariant mismatch");
         assertEq(organization.votingThreshold(), threshold, "threshold invariant mismatch");
+        _assertInitializedState(organization, params);
 
         for (uint256 i = 0; i < adminCount; ++i) {
             assertTrue(organization.isAdmin(params.admins[i]), "admin should be marked admin");
@@ -162,22 +184,32 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
         assertEq(_computeOrganizationAddress(salt).code.length, 0, "out-of-range timelock should prevent deployment");
     }
 
-    /// @dev Verifies fuzzed salts keep `computeOrganizationAddress` aligned with actual deployment addresses.
-    function test_INIT_FUZZ_7_fuzzComputeAddress_matchesActualDeployment(bytes32 salt) public {
+    /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` stays deterministic and matches the deployed
+    /// proxy address for fuzzed salts.
+    /// @param salt Fuzzed CREATE2 salt used to precompute and deploy the organization address.
+    function testFuzz_INIT_FUZZ_7__FOF_DEPLOY_129_fuzzComputeAddress_matchesActualDeployment(bytes32 salt) public {
         // Setup: Prepare valid initialization params and precompute the expected deployment address for the fuzzed
         // salt.
         InitializationParams memory params = _defaultInitializationParams();
         address expected = _computeOrganizationAddress(salt);
+        address repeated = _computeOrganizationAddress(salt);
 
         // Call: Deploy the organization for the same fuzzed salt.
         address deployed = _deployOrganization(salt, params);
 
-        // Verify: The deployed address always matches the precomputed CREATE2 address.
+        // Verify: address computation should be deterministic and match the deployed address exactly.
+        assertEq(expected, repeated, "computeOrganizationAddress should be deterministic");
         assertEq(deployed, expected, "computeAddress should match deployment for all salts");
     }
 
-    /// @dev Verifies a failed initialization attempt can be retried successfully with the same fuzzed tuple.
-    function test_INIT_FUZZ_8_fuzzFailedThenRetry_sameTupleCanSucceed(bytes32 salt, uint8 thresholdDeltaRaw) public {
+    /// @dev Verifies a failing initialization sub-step leaves no partial organization state and allows deterministic
+    /// retry with the same tuple.
+    /// @param salt Fuzzed CREATE2 salt reused across the failing and successful deployment attempts.
+    /// @param thresholdDeltaRaw Fuzzed delta used to push the invalid voting threshold above the admin count.
+    function testFuzz_INIT_FUZZ_8__FLOI_INIT_27__FOF_DINIT_131_fuzzFailedThenRetry_sameTupleCanSucceed(
+        bytes32 salt,
+        uint8 thresholdDeltaRaw
+    ) public {
         // Setup: Build an invalid-threshold params set and a valid params set for the same deployment tuple.
         InitializationParams memory invalidParams = _defaultInitializationParams();
         invalidParams.votingThreshold = invalidParams.admins.length + 1 + bound(uint256(thresholdDeltaRaw), 0, 8);
@@ -200,6 +232,165 @@ contract OrganizationFactoryFuzzTest is InitializationSuiteBase {
         // Verify: Retry deployment remains deterministic and succeeds after the prior revert.
         assertEq(deployed, _computeOrganizationAddress(salt), "retry should keep deterministic address");
         assertTrue(IOrganization(deployed).isInitialized(), "retry should succeed after failed attempt");
+    }
+
+    /// @dev Verifies failing member/group/recovery validation branches revert atomically and leave the deployment
+    /// tuple reusable.
+    /// @param seed Entropy seed used to derive deterministic addresses.
+    /// @param failureModeRaw Fuzzed selector choosing which initialization sub-step should fail.
+    /// @param salt Fuzzed CREATE2 salt reused across the failing and retry deployment attempts.
+    function testFuzz_FLOI_INIT_27_failingValidationSubsteps_revertAtomicallyAndAllowRetry(
+        uint256 seed,
+        uint8 failureModeRaw,
+        bytes32 salt
+    ) public {
+        // Setup: derive one valid payload and one invalid payload for the same deployment tuple.
+        InitializationParams memory invalidParams = _buildFuzzParams(seed, 4, 2, 2);
+        InitializationParams memory validParams = _buildFuzzParams(seed, 4, 2, 2);
+        uint256 failureMode = bound(uint256(failureModeRaw), 0, 4);
+        bytes memory expectedRevertData;
+
+        if (failureMode == 0) {
+            invalidParams.members = buildEmptyAddressArray();
+            expectedRevertData = abi.encodeWithSelector(IOrganizationInitialization.NoMembersProvided.selector);
+        } else if (failureMode == 1) {
+            address outsider = _deriveAddress(seed, 9001);
+            for (uint256 i = 0; i < invalidParams.members.length; ++i) {
+                if (outsider == invalidParams.members[i]) {
+                    outsider = _deriveAddress(seed + 1, 9001);
+                    break;
+                }
+            }
+            invalidParams.admins[0] = outsider;
+            expectedRevertData =
+                abi.encodeWithSelector(IOrganizationAdmin.AdminNotMember.selector, invalidParams.admins[0]);
+        } else if (failureMode == 2) {
+            invalidParams.groups = new GroupModification[](1);
+            invalidParams.groups[0] = GroupModification({
+                groupId: GROUP_ID + 1,
+                modificationType: GroupModificationType.Create,
+                membersToAdd: buildArray(address(0)),
+                membersToRemove: buildEmptyAddressArray()
+            });
+            expectedRevertData = abi.encodeWithSelector(IOrganizationMembers.InvalidMemberAddress.selector, address(0));
+        } else if (failureMode == 3) {
+            invalidParams.guardianRecoveryAddress = _deriveAddress(seed, 9002);
+            invalidParams.guardianRecoveryTimelockDurationSeconds = 0;
+            expectedRevertData = abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            );
+        } else {
+            invalidParams.transactionAndERC1271RecoveryAddress = _deriveAddress(seed, 9003);
+            invalidParams.txRecoveryTimelockDurationSeconds = 0;
+            expectedRevertData = abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                0,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            );
+        }
+
+        // Call: attempt deployment with the selected failing sub-step, then retry with the valid payload.
+        vm.expectRevert(expectedRevertData);
+        vm.prank(AUTHORIZED_DEPLOYER);
+        factory.deployOrganization(salt, address(implementation), address(whitelist), invalidParams);
+
+        // Verify: the failing path should leave no code behind at the deterministic address.
+        assertEq(_computeOrganizationAddress(salt).code.length, 0, "failing initialize should leave no deployed code");
+
+        address deployed = _deployOrganization(salt, validParams);
+
+        // Verify: the same deployment tuple remains reusable after the revert.
+        assertEq(deployed, _computeOrganizationAddress(salt), "retry should keep the deterministic deployment tuple");
+        assertTrue(IOrganization(deployed).isInitialized(), "retry after failed validation should still initialize");
+    }
+
+    /// @dev Verifies only the configured deployer can successfully deploy organizations.
+    /// @param caller Fuzzed caller constrained away from the authorized deployer.
+    /// @param salt Fuzzed CREATE2 salt used in the failed deployment attempt.
+    function testFuzz_FOF_DEPLOY_130_deployOrganization_onlyAuthorizedDeployerCanDeploy(address caller, bytes32 salt)
+        public
+    {
+        // Setup: constrain the caller away from the configured authorized deployer.
+        vm.assume(caller != AUTHORIZED_DEPLOYER);
+        InitializationParams memory params = _defaultInitializationParams();
+
+        // Call: attempt deployment from a non-deployer address, expecting `UnauthorizedDeployer`.
+        vm.expectRevert(IOrganizationInitialization.UnauthorizedDeployer.selector);
+        vm.prank(caller);
+        factory.deployOrganization(salt, address(implementation), address(whitelist), params);
+
+        // Verify: unauthorized callers should never be able to deploy organizations.
+    }
+
+    /// @dev Verifies the constructor rejects `address(0)` and preserves non-zero deployers exactly.
+    /// @param deployer Fuzzed non-zero deployer address for the success branch.
+    function testFuzz_FOF_CTOR_132_constructor_rejectsZeroAddressAndStoresNonZeroDeployer(address deployer) public {
+        // Setup: constrain the fuzzed success-case deployer away from zero.
+        vm.assume(deployer != address(0));
+
+        // Call: construct one zero-address factory and one non-zero-address factory.
+        vm.expectRevert(IOrganizationFactory.ZeroAddress.selector);
+        new OrganizationFactoryHarness(address(0));
+
+        OrganizationFactoryHarness localFactory = new OrganizationFactoryHarness(deployer);
+
+        // Verify: zero-address deployers revert, while non-zero deployers are stored immutably.
+        assertEq(localFactory.DEPLOYER_ADDRESS(), deployer, "constructor should store the non-zero deployer exactly");
+    }
+
+    /// @dev Verifies proxy bytecode generation stays deterministic and changes when implementation or whitelist
+    /// inputs change.
+    /// @param implementationA Fuzzed implementation for the baseline bytecode.
+    /// @param implementationB Fuzzed alternate implementation.
+    /// @param whitelistA Fuzzed whitelist for the baseline bytecode.
+    /// @param whitelistB Fuzzed alternate whitelist.
+    function testFuzz_FOF_BYTECODE_133_getOrganizationProxyBytecode_isDeterministicAndFieldSensitive(
+        address implementationA,
+        address implementationB,
+        address whitelistA,
+        address whitelistB
+    ) public view {
+        // Setup: read the baseline bytecode twice from identical inputs.
+        bytes memory baseline = factory.getOrganizationProxyBytecode(implementationA, whitelistA);
+        bytes memory repeated = factory.getOrganizationProxyBytecode(implementationA, whitelistA);
+
+        // Verify: identical inputs should be deterministic.
+        assertEq(keccak256(baseline), keccak256(repeated), "bytecode should be deterministic for identical inputs");
+
+        // Verify: changing the implementation or whitelist input changes the bytecode hash.
+        vm.assume(implementationA != implementationB);
+        vm.assume(whitelistA != whitelistB);
+        bytes memory differentImplementation = factory.getOrganizationProxyBytecode(implementationB, whitelistA);
+        bytes memory differentWhitelist = factory.getOrganizationProxyBytecode(implementationA, whitelistB);
+        assertTrue(
+            keccak256(baseline) != keccak256(differentImplementation),
+            "implementation changes should alter proxy bytecode"
+        );
+        assertTrue(
+            keccak256(baseline) != keccak256(differentWhitelist), "whitelist changes should alter proxy bytecode"
+        );
+    }
+
+    /// @dev Verifies successful factory deployment initializes the organization in the same transaction and leaves
+    /// the factory recorded as the deployer address.
+    /// @param salt Fuzzed CREATE2 salt used for the deployment.
+    function testFuzz_FCF_FDINIT_168_deployOrganization_successYieldsInitializedStateAndFactoryDeployer(bytes32 salt)
+        public
+    {
+        // Setup: build the default valid initialization payload.
+        InitializationParams memory params = _defaultInitializationParams();
+
+        // Call: deploy the organization through the factory.
+        address deployed = _deployOrganization(salt, params);
+        IOrganizationInitialization organization = IOrganizationInitialization(deployed);
+
+        // Verify: deployment should initialize the organization atomically and store the factory as deployer.
+        assertTrue(organization.isInitialized(), "successful factory deployment should initialize in the same tx");
+        assertEq(organization.getDeployerAddress(), address(factory), "factory should be stored as deployer address");
     }
 
     /// @dev Builds a valid initialization payload from fuzzed cardinalities and threshold values.

@@ -134,14 +134,24 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "disabled module signature should be invalid");
     }
 
-    /// @dev Verifies module rotation makes old signatures fail and new signatures pass through the full account path.
-    function test_SMI_ETE_3__INT_ETE_7_accountIsValidSignature_moduleRotationOldFailsNewPasses() public {
+    /// @dev Verifies guardian-module rotation invalidates old signatures immediately and activates new ones
+    /// immediately through the full account path.
+    /// @param oldExecutorPkRaw Raw private key used for the original module executor.
+    /// @param newExecutorPkRaw Raw private key used for the replacement module executor.
+    function testFuzz_SMI_ETE_3__FCF_MODULE_164__INT_ETE_7_accountIsValidSignature_moduleRotationOldFailsNewPasses(
+        uint256 oldExecutorPkRaw,
+        uint256 newExecutorPkRaw
+    ) public {
+        uint256 oldExecutorPk = bound(oldExecutorPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
+        uint256 newExecutorPk = bound(newExecutorPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
+        vm.assume(oldExecutorPk != newExecutorPk);
+
         // Setup: deploy old and new modules on the same guardian Safe; enable the old module first.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule =
-            new SafeExecutorModule(address(guardianSafe), vm.addr(AUTHORIZED_EXECUTOR_PK), address(batchedTransaction));
+            new SafeExecutorModule(address(guardianSafe), vm.addr(oldExecutorPk), address(batchedTransaction));
         SafeExecutorModule newModule = new SafeExecutorModule(
-            address(guardianSafe), vm.addr(NEW_AUTHORIZED_EXECUTOR_PK), address(batchedTransaction)
+            address(guardianSafe), vm.addr(newExecutorPk), address(batchedTransaction)
         );
         guardianSafe.setModuleEnabled(address(oldModule), true);
         policyStateHarness.setGuardian(address(guardianSafe));
@@ -164,7 +174,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
             address(oldModule),
             _signReviewSignature({
                 sigHarness: harness,
-                privateKey: AUTHORIZED_EXECUTOR_PK,
+                privateKey: oldExecutorPk,
                 account: address(account),
                 hash: MESSAGE_HASH,
                 policyId: DEFAULT_POLICY_ID,
@@ -193,7 +203,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
             address(newModule),
             _signReviewSignature({
                 sigHarness: harness,
-                privateKey: NEW_AUTHORIZED_EXECUTOR_PK,
+                privateKey: newExecutorPk,
                 account: address(account),
                 hash: MESSAGE_HASH,
                 policyId: DEFAULT_POLICY_ID,

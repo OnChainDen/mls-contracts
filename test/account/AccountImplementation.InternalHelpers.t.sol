@@ -10,6 +10,60 @@ import {AccountImplementationSuiteBase} from "test/account/AccountImplementation
  * @dev Tests for exposed internal helpers `_execute` and `_onlyOrganization`.
  */
 contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteBase {
+    /// @dev Verifies `_execute` preserves success semantics and forwards fuzzed value/data to the target.
+    /// @param forwardedPayload The bytes payload decoded by the recorder target.
+    /// @param marker The marker value decoded by the recorder target.
+    /// @param rawValue The native-token value forwarded through `_execute`.
+    function testFuzz_FAI_EXEC_146_executeInternal_successPathForwardsRandomValueAndData(
+        bytes calldata forwardedPayload,
+        uint256 marker,
+        uint256 rawValue
+    ) public {
+        vm.assume(forwardedPayload.length <= 1024);
+
+        uint256 value = bound(rawValue, 0, 1 ether);
+        uint256 txGas = 1_000_000;
+
+        // Setup: fund the account and encode a recorder call carrying fuzzed payload/value inputs.
+        AccountCallRecorderTarget target = new AccountCallRecorderTarget();
+        bytes memory payload = abi.encodeWithSelector(target.record.selector, forwardedPayload, marker);
+        vm.deal(address(account), value);
+
+        // Call: invoke the internal helper wrapper against the recorder target.
+        bool success = account.executeViaInternal(address(target), value, payload, txGas);
+
+        // Verify: `_execute` returns success and preserves caller, value, calldata, and gas-cap semantics.
+        assertTrue(success, "successful internal call should return true");
+        assertEq(target.calls(), 1, "recorder target should be called exactly once");
+        assertEq(target.lastCaller(), address(account), "callee should observe the account as msg.sender");
+        assertEq(target.lastValue(), value, "callee should receive the forwarded native-token amount");
+        assertEq(target.lastPayload(), forwardedPayload, "callee should decode the forwarded payload bytes");
+        assertEq(target.returnMarker(), marker, "callee should decode the forwarded marker");
+        assertTrue(target.observedGas() <= txGas, "callee gas should not exceed the provided gas cap");
+    }
+
+    /// @dev Verifies `_execute` fails closed and preserves balances when the downstream call reverts.
+    /// @param rawValue The native-token value attempted on the reverting call.
+    function testFuzz_FAI_EXEC_146_executeInternal_failurePathReturnsFalseWithoutTransferringValue(uint256 rawValue)
+        public
+    {
+        uint256 value = bound(rawValue, 0, 1 ether);
+        uint256 txGas = 300_000;
+
+        // Setup: fund the account and prepare a target that always reverts.
+        AccountCallRecorderTarget target = new AccountCallRecorderTarget();
+        bytes memory payload = abi.encodeWithSelector(target.fail.selector);
+        vm.deal(address(account), value);
+
+        // Call: execute the reverting downstream call through the internal helper wrapper.
+        bool success = account.executeViaInternal(address(target), value, payload, txGas);
+
+        // Verify: `_execute` reports failure and the reverting target receives no value.
+        assertFalse(success, "reverting internal call should return false");
+        assertEq(address(target).balance, 0, "reverting target should not retain forwarded value");
+        assertEq(target.calls(), 0, "reverting path should not leave recorder state behind");
+    }
+
     /**
      * @dev Verifies `_execute` returns true for a successful downstream call.
      */

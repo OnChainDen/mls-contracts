@@ -104,6 +104,21 @@ contract CalldataRecorderTarget {
 }
 
 /**
+ * @dev CalldataValueRecorderTarget — fallback target that records both calldata and msg.value.
+ */
+contract CalldataValueRecorderTarget {
+    bytes public lastCalldata;
+    uint256 public lastMsgValue;
+    uint256 public callCount;
+
+    fallback() external payable {
+        lastCalldata = msg.data;
+        lastMsgValue = msg.value;
+        callCount++;
+    }
+}
+
+/**
  * @dev RequiresEthBTTarget — reverts unless msg.value > 0.
  */
 contract RequiresEthBTTarget {
@@ -622,9 +637,9 @@ contract BatchedTransactionTest is Test {
         assertFalse(success, "Malformed payload with zero-padded selector should not silently succeed");
     }
 
-    /// @dev Verifies each packed sub-tx forwards the exact encoded `to` and `data` bytes to its target under
-    ///      delegatecall execution. [ASIG-INV-14]
-    function testFuzz_ASIG_INV_14_C_executeBatchFieldDecodingForwardsExactToAndData(
+    /// @dev Verifies bounded packed batches with fuzzed calldata lengths terminate while preserving exact field
+    ///      decoding under delegatecall execution. [ASIG-INV-14]
+    function testFuzz_ASIG_INV_14_C__FBT_EXEC_159_executeBatchFieldDecodingForwardsExactToAndData(
         uint8 rawCount,
         bytes32 seed
     ) public {
@@ -653,6 +668,36 @@ contract BatchedTransactionTest is Test {
         }
     }
 
+    /// @dev Verifies malformed packed payload tails revert atomically without preserving earlier successful effects.
+    /// @param rawValidPrefixCount The number of valid prefix sub-transactions prepended before the malformed tail.
+    function testFuzz_FBT_EXEC_158_malformedPackedPayloadsRevertAtomically(uint8 rawValidPrefixCount) public {
+        uint8 validPrefixCount = uint8(bound(rawValidPrefixCount, 1, 4));
+        MockBTTarget[] memory targets = new MockBTTarget[](validPrefixCount);
+        bytes[] memory prefixTxs = new bytes[](validPrefixCount);
+
+        // Setup: build a valid prefix of increment calls whose effects would be visible if atomic rollback failed.
+        for (uint256 i = 0; i < validPrefixCount; ++i) {
+            targets[i] = new MockBTTarget();
+            prefixTxs[i] = _encodeTx(address(targets[i]), abi.encodeWithSelector(MockBTTarget.increment.selector));
+        }
+
+        // Append a malformed tail whose declared calldata length exceeds the provided bytes and resolves to an
+        // invalid selector on a contract without fallback.
+        MockBTTarget malformedTarget = new MockBTTarget();
+        bytes memory malformedTail = abi.encodePacked(address(malformedTarget), uint64(4), hex"ff");
+        bytes memory malformedBatch = bytes.concat(_encodeBatch(prefixTxs), malformedTail);
+
+        // Call: execute the prefix plus malformed tail through delegatecall mode.
+        (bool success,) = _executeBatchViaDelegatecall(malformedBatch);
+
+        // Verify: the malformed tail fails the batch and rolls back every earlier prefix side effect.
+        assertFalse(success, "malformed packed payload should fail the batch");
+        for (uint256 i = 0; i < validPrefixCount; ++i) {
+            assertEq(targets[i].value(), 0, "prefix effects must be rolled back atomically");
+            assertEq(targets[i].callCount(), 0, "prefix calls must not persist after malformed-tail revert");
+        }
+    }
+
     /// @dev Verifies a well-formed packed batch executes every encoded sub-tx exactly once with no skips or
     ///      repeats. [ASIG-INV-15]
     function testFuzz_ASIG_INV_15_C_executeWellFormedBatchExecutesEachSubTxExactlyOnce(uint8 rawCount) public {
@@ -674,6 +719,39 @@ contract BatchedTransactionTest is Test {
         for (uint256 i = 0; i < count; i++) {
             assertEq(targets[i].value(), 1, "Each counter should be incremented exactly once");
             assertEq(targets[i].callCount(), 1, "No target should be skipped or called more than once");
+        }
+    }
+
+    /// @dev Verifies every fallback-shaped sub-call executes with `msg.value == 0` regardless of payload bytes.
+    /// @param rawCount The bounded number of fallback targets in the fuzzed batch.
+    /// @param seed Entropy used to derive distinct fallback calldata payloads.
+    function testFuzz_FBT_EXEC_160_executeSubcallsAlwaysUseZeroValueRegardlessOfPayloadShape(
+        uint8 rawCount,
+        bytes32 seed
+    ) public {
+        uint8 count = uint8(bound(rawCount, 1, 6));
+        CalldataValueRecorderTarget[] memory targets = new CalldataValueRecorderTarget[](count);
+        bytes[] memory txs = new bytes[](count);
+        bytes[] memory expectedCalldata = new bytes[](count);
+
+        // Setup: fund the delegatecaller and build fallback calls with fuzz-derived payload lengths and bytes.
+        vm.deal(address(this), 5 ether);
+        for (uint256 i = 0; i < count; ++i) {
+            targets[i] = new CalldataValueRecorderTarget();
+            uint256 dataLength = uint256(uint8(uint256(keccak256(abi.encodePacked(seed, i))))) % 48;
+            expectedCalldata[i] = _buildFuzzedCalldata(seed, i, dataLength);
+            txs[i] = _encodeTx(address(targets[i]), expectedCalldata[i]);
+        }
+
+        // Call: execute the fuzz-shaped fallback batch through delegatecall mode.
+        (bool success,) = _executeBatchViaDelegatecall(_encodeBatch(txs));
+
+        // Verify: all fallback targets are reached with the exact calldata bytes and a hardcoded zero msg.value.
+        assertTrue(success, "well-formed fallback batch should succeed");
+        for (uint256 i = 0; i < count; ++i) {
+            assertEq(targets[i].callCount(), 1, "each fallback target should be called exactly once");
+            assertEq(targets[i].lastCalldata(), expectedCalldata[i], "fallback should receive the encoded calldata");
+            assertEq(targets[i].lastMsgValue(), 0, "sub-calls must always execute with zero value");
         }
     }
 

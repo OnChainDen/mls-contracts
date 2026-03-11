@@ -15,28 +15,51 @@ import {TokenTransferUtils} from "libraries/TokenTransferUtils.sol";
  *      all harness functions must be `external` to receive calldata from the test.
  */
 contract TokenTransferUtilsHarness {
+    /// @dev Exposes token-transfer classification for direct testing.
+    /// @param data Calldata associated with the transaction.
+    /// @param value Native-token value attached to the transaction.
+    /// @return isTokenTransfer True when the transaction is classified as a token transfer.
     function isTransactionTokenTransfer(bytes calldata data, uint256 value) external pure returns (bool) {
         return TokenTransferUtils.isTransactionTokenTransfer(data, value);
     }
 
+    /// @dev Exposes native-transfer classification for direct testing.
+    /// @param data Calldata associated with the transaction.
+    /// @param value Native-token value attached to the transaction.
+    /// @return isNativeTransfer True when the transaction is classified as a native transfer.
     function isTransactionNativeTokenTransfer(bytes calldata data, uint256 value) external pure returns (bool) {
         return TokenTransferUtils.isTransactionNativeTokenTransfer(data, value);
     }
 
     // forge-lint: disable-next-line(mixed-case-function)
+    /// @dev Exposes ERC-20 transfer classification for direct testing.
+    /// @param data Calldata associated with the transaction.
+    /// @param value Native-token value attached to the transaction.
+    /// @return isErc20Transfer True when the transaction is classified as an ERC-20 transfer.
     function isTransactionERC20TokenTransfer(bytes calldata data, uint256 value) external pure returns (bool) {
         return TokenTransferUtils.isTransactionERC20TokenTransfer(data, value);
     }
 
     // forge-lint: disable-next-line(mixed-case-function)
+    /// @dev Exposes ERC-20 transfer recipient extraction for direct testing.
+    /// @param data ERC-20 calldata expected to encode `transfer(address,uint256)`.
+    /// @return recipient Extracted transfer recipient.
     function extractERC20TransferRecipient(bytes calldata data) external pure returns (address) {
         return TokenTransferUtils.extractERC20TransferRecipient(data);
     }
 
+    /// @dev Exposes token-address extraction for direct testing.
+    /// @param to Transaction target address.
+    /// @param data Transaction calldata.
+    /// @return tokenAddress Extracted token address or `address(0)` for native transfers.
     function extractTokenAddress(address to, bytes calldata data) external pure returns (address) {
         return TokenTransferUtils.extractTokenAddress(to, data);
     }
 
+    /// @dev Exposes transfer-amount extraction for direct testing.
+    /// @param data Transaction calldata.
+    /// @param value Native-token value attached to the transaction.
+    /// @return amount Extracted transfer amount.
     function extractTransferAmount(bytes calldata data, uint256 value) external pure returns (uint256) {
         return TokenTransferUtils.extractTransferAmount(data, value);
     }
@@ -75,6 +98,8 @@ contract TokenTransferUtilsTest is Test {
     /// @dev A sample transfer amount
     uint256 constant AMOUNT = 1 ether;
 
+    /// @dev Deploys the harness exposing the token-transfer helper functions.
+    /// @dev Deploys the harness exposing the token-transfer classification and parsing helpers.
     function setUp() public {
         harness = new TokenTransferUtilsHarness();
     }
@@ -587,53 +612,80 @@ contract TokenTransferUtilsTest is Test {
         harness.extractTransferAmount(data, 0);
     }
 
-    /// @dev Test case: Any valid ERC-20 transfer calldata should extract the correct recipient for any address.
-    ///      [TXUT-PARSE-1]
-    function testFuzz_TXUT_PARSE_1_B_extractERC20TransferRecipient_validCalldata_correctRecipient(address to)
+    /// @dev Verifies `TokenTransferUtils.extractERC20TransferRecipient` always returns the encoded recipient for valid
+    /// transfer calldata.
+    /// @param to Fuzzed recipient encoded into the transfer calldata.
+    function testFuzz_TXUT_PARSE_1_B__FTTU_RECIP_14_extractERC20TransferRecipient_validCalldata_correctRecipient(
+        address to
+    )
         public
         view
     {
+        // Setup: encode a valid ERC-20 transfer for the fuzzed recipient.
         bytes memory data = _encodeTransferCalldata(to, AMOUNT);
 
+        // Call: extract the recipient from the encoded transfer calldata.
         address recipient = harness.extractERC20TransferRecipient(data);
 
+        // Verify: the decoded recipient should match the fuzzed transfer target exactly.
         assertEq(recipient, to, "Should extract the correct recipient for any address");
     }
 
-    /// @dev Test case: Any valid ERC-20 transfer calldata should extract the correct amount. [TXUT-PARSE-2]
-    function testFuzz_TXUT_PARSE_2_B_extractTransferAmount_validCalldata_correctAmount(address to, uint256 expectedAmount)
+    /// @dev Verifies `TokenTransferUtils.extractTransferAmount` returns the encoded ERC-20 amount for valid transfer
+    /// calldata.
+    /// @param to Fuzzed recipient encoded into the transfer calldata.
+    /// @param expectedAmount Fuzzed amount encoded into the transfer calldata.
+    function testFuzz_TXUT_PARSE_2_B__FTTU_AMOUNT_15_extractTransferAmount_validCalldata_correctAmount(
+        address to,
+        uint256 expectedAmount
+    )
         public
         view
     {
+        // Setup: encode a valid ERC-20 transfer for the fuzzed amount.
         bytes memory data = _encodeTransferCalldata(to, expectedAmount);
 
+        // Call: extract the amount from the encoded transfer calldata.
         uint256 amount = harness.extractTransferAmount(data, 0);
 
+        // Verify: the ERC-20 path should return the encoded amount exactly.
         assertEq(amount, expectedAmount, "Should extract the correct amount");
     }
 
-    /// @dev Test case: Random data should never be classified as both a native and an ERC-20 token transfer.
-    function testFuzz_isTransactionTokenTransfer_neverBothNativeAndERC20(bytes calldata data, uint256 value)
+    /// @dev Verifies `TokenTransferUtils.isTransactionTokenTransfer` never classifies one transaction as both native
+    /// and ERC-20.
+    /// @param data Fuzzed calldata paired with the transaction.
+    /// @param value Fuzzed native-token value paired with the transaction.
+    function testFuzz_FTTU_TXTOK_12_isTransactionTokenTransfer_neverBothNativeAndERC20(
+        bytes calldata data,
+        uint256 value
+    )
         public
         view
     {
+        // Setup: evaluate both classification paths for the same fuzzed transaction shape.
         bool isNative = harness.isTransactionNativeTokenTransfer(data, value);
         bool isERC20 = harness.isTransactionERC20TokenTransfer(data, value);
 
-        // It's impossible for a transaction to be both native and ERC-20:
-        // Native requires data.length == 0 && value > 0
-        // ERC-20 requires data.length >= 4 && value == 0
+        // Verify: native and ERC-20 transfer classifications must stay mutually exclusive.
         assertFalse(isNative && isERC20, "A transaction cannot be both native and ERC-20 transfer");
     }
 
-    /// @dev Test case: extractTokenAddress with any random `to` and random data length should correctly return
-    ///      address(0) for empty data and `to` for non-empty data.
-    function testFuzz_extractTokenAddress_randomToAndDataLength_correctBehavior(address to, bytes calldata data)
+    /// @dev Verifies `TokenTransferUtils.extractTokenAddress` returns `to` for non-empty calldata and `address(0)`
+    /// for empty calldata.
+    /// @param to Fuzzed transaction target.
+    /// @param data Fuzzed transaction calldata.
+    function testFuzz_FTTU_TOKEN_17_extractTokenAddress_randomToAndDataLength_correctBehavior(
+        address to,
+        bytes calldata data
+    )
         public
         view
     {
+        // Call: extract the token address from the fuzzed `(to, data)` tuple.
         address result = harness.extractTokenAddress(to, data);
 
+        // Verify: empty calldata maps to native transfers, while non-empty calldata maps to `to`.
         if (data.length == 0) {
             assertEq(result, address(0), "Empty data should return address(0)");
         } else {
@@ -641,13 +693,77 @@ contract TokenTransferUtilsTest is Test {
         }
     }
 
-    /// @dev Test case: extractTransferAmount with any random value and empty data should always return the value
-    ///      parameter.
-    function testFuzz_extractTransferAmount_emptyDataRandomValue_returnsValue(uint256 value) public view {
+    /// @dev Verifies `TokenTransferUtils.extractTransferAmount` returns the native value unchanged for empty
+    /// calldata.
+    /// @param value Fuzzed native-token value.
+    function testFuzz_FTTU_AMOUNT_15_extractTransferAmount_emptyDataRandomValue_returnsValue(uint256 value)
+        public
+        view
+    {
+        // Setup: use the native-transfer path with empty calldata.
         bytes memory emptyData = new bytes(0);
 
+        // Call: extract the transfer amount from the native-transfer tuple.
         uint256 amount = harness.extractTransferAmount(emptyData, value);
 
+        // Verify: the native path should return the attached value exactly.
         assertEq(amount, value, "Empty data should always return the value parameter");
+    }
+
+    /// @dev Verifies `TokenTransferUtils.isTransactionERC20TokenTransfer` accepts only the exact transfer selector
+    /// with zero native value.
+    /// @param selector Fuzzed selector encoded into otherwise valid ERC-20-shaped calldata.
+    /// @param value Fuzzed native-token value paired with the calldata.
+    /// @param to Fuzzed recipient encoded into the calldata payload.
+    /// @param amount Fuzzed transfer amount encoded into the calldata payload.
+    function testFuzz_FTTU_ERC20_13_isTransactionERC20TokenTransfer_onlyExactTransferSelectorWithZeroValue(
+        bytes4 selector,
+        uint256 value,
+        address to,
+        uint256 amount
+    ) public view {
+        // Setup: build a fixed-length ERC-20-shaped calldata blob using the fuzzed selector and arguments.
+        bytes memory data = abi.encodeWithSelector(selector, to, amount);
+
+        // Call: classify the fuzzed transaction shape as an ERC-20 transfer or not.
+        bool isTransfer = harness.isTransactionERC20TokenTransfer(data, value);
+
+        // Verify: only the exact `transfer(address,uint256)` selector paired with zero native value is accepted.
+        assertEq(
+            isTransfer,
+            selector == TRANSFER_SELECTOR && value == 0,
+            "classification should accept only the exact transfer selector with zero value"
+        );
+    }
+
+    /// @dev Verifies `TokenTransferUtils.extractERC20TransferRecipient` always reverts for malformed short calldata
+    /// lengths.
+    /// @param rawLength Fuzzed length constrained below the valid 68-byte ERC-20 transfer encoding.
+    function testFuzz_FTTU_PARSE_16_extractERC20TransferRecipient_shortCalldataAlwaysReverts(uint8 rawLength)
+        public
+    {
+        // Setup: constrain the calldata length below the valid ERC-20 transfer payload size.
+        uint256 dataLength = bound(rawLength, 0, 67);
+        bytes memory data = new bytes(dataLength);
+
+        // Call: extract the recipient, expecting `MalformedTokenTransfer` for every short payload.
+        vm.expectRevert(TokenTransferUtils.MalformedTokenTransfer.selector);
+        harness.extractERC20TransferRecipient(data);
+
+        // Verify: the revert expectation above proves malformed short payloads never decode successfully.
+    }
+
+    /// @dev Verifies `TokenTransferUtils.extractTransferAmount` always reverts for malformed short calldata lengths.
+    /// @param rawLength Fuzzed length constrained below the valid 68-byte ERC-20 transfer encoding.
+    function testFuzz_FTTU_PARSE_16_extractTransferAmount_shortCalldataAlwaysReverts(uint8 rawLength) public {
+        // Setup: constrain the calldata length to malformed non-empty ERC-20-shaped payloads.
+        uint256 dataLength = bound(rawLength, 1, 67);
+        bytes memory data = new bytes(dataLength);
+
+        // Call: extract the amount, expecting `MalformedTokenTransfer` for every short payload.
+        vm.expectRevert(TokenTransferUtils.MalformedTokenTransfer.selector);
+        harness.extractTransferAmount(data, 0);
+
+        // Verify: the revert expectation above proves malformed short payloads never decode successfully.
     }
 }

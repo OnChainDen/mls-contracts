@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
@@ -16,26 +18,29 @@ import {ContractType} from "types/CommonTypes.sol";
 
 /// @dev Fuzz tests for implementation whitelist controls.
 contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
-    /// @dev IWC-FUZZ-2: Fuzz add/remove sequences per ContractType — onchain state matches reference model.
-    function test_IWC_FUZZ_2_fuzz_addRemoveSequencesMatchReferenceModel(
+    /// @dev Verifies internal whitelist helper wrappers preserve model parity for fuzzed add/remove sequences.
+    /// @param addresses The implementation addresses mutated across the sequence.
+    /// @param shouldAdd Whether each sequence step adds or removes its corresponding address.
+    /// @param useAccountType Whether to mutate the Account or Organization whitelist bucket.
+    function testFuzz_IWC_FUZZ_2__FIWI_HELPER_143_internalWhitelistHelpers_matchReferenceModel(
         address[5] calldata addresses,
-        bool[5] calldata shouldAdd
+        bool[5] calldata shouldAdd,
+        bool useAccountType
     ) public {
-        // Setup + Call: execute a fuzzed sequence of add/remove operations for Organization type.
+        // Setup: choose the fuzzed whitelist bucket and its untouched counterpart.
+        ContractType contractType = useAccountType ? ContractType.Account : ContractType.Organization;
+        ContractType otherType = useAccountType ? ContractType.Organization : ContractType.Account;
+
+        // Call: drive the exposed internal add/remove helpers through a fuzzed mutation sequence.
         for (uint256 i = 0; i < 5; i++) {
-            vm.prank(OWNER);
             if (shouldAdd[i]) {
-                whitelistProxy.whitelistImplementations(
-                    ContractType.Organization, _single(addresses[i]), new address[](0)
-                );
+                whitelistProxy.exposeAddToWhitelist(contractType, _single(addresses[i]));
             } else {
-                whitelistProxy.whitelistImplementations(
-                    ContractType.Organization, new address[](0), _single(addresses[i])
-                );
+                whitelistProxy.exposeRemoveFromWhitelist(contractType, _single(addresses[i]));
             }
         }
 
-        // Verify: each address matches the expected final state based on last operation for that address.
+        // Verify: the mutated bucket follows the last-operation model and the untouched bucket stays unchanged.
         for (uint256 i = 0; i < 5; i++) {
             bool expectedWhitelisted = false;
             for (uint256 j = 0; j < 5; j++) {
@@ -44,20 +49,29 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
                 }
             }
             assertEq(
-                whitelistProxy.isImplementationWhitelisted(ContractType.Organization, addresses[i]),
+                whitelistProxy.isImplementationWhitelisted(contractType, addresses[i]),
                 expectedWhitelisted,
                 "onchain state must match last operation for address"
+            );
+            assertFalse(
+                whitelistProxy.isImplementationWhitelisted(otherType, addresses[i]),
+                "other whitelist bucket must remain unchanged"
             );
         }
     }
 
-    /// @dev IWC-FUZZ-3: Fuzz mixed Account/Organization operations — mappings remain independent.
-    function test_IWC_FUZZ_3_fuzz_mixedTypeOperations_mappingsRemainIndependent(
+    /// @dev Verifies Organization and Account whitelist buckets stay independent under fuzzed mixed operations.
+    /// @param addr The shared implementation address mutated under both buckets.
+    /// @param addToOrg Whether the Organization bucket receives the address.
+    /// @param addToAccount Whether the Account bucket receives the address.
+    function testFuzz_IWC_FUZZ_3__FIWI_MAP_141_fuzz_mixedTypeOperations_mappingsRemainIndependent(
         address addr,
         bool addToOrg,
         bool addToAccount
     ) public {
-        // Setup + Call: apply operations for each contract type independently.
+        // Setup: start from a clean initialized proxy with both buckets unset for the fuzzed address.
+
+        // Call: apply owner-authorized mutations to each bucket independently.
         if (addToOrg) {
             vm.prank(OWNER);
             whitelistProxy.whitelistImplementations(ContractType.Organization, _single(addr), new address[](0));
@@ -80,31 +94,181 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         );
     }
 
-    // forgefmt: disable-next-item
-    /// @dev Verifies fuzz random unwhitelisted addresses are always rejected by
-    // `validateIsImplementationWhitelistedOrRevert` for both Organization and Account contract types.
-    function test_IWC_FUZZ_1_fuzz_randomUnwhitelistedAddresses_alwaysRejected(address randomAddr) public {
-        // Setup: ensure the fuzzed address has not been whitelisted.
-        assertFalse(
-            whitelistProxy.isImplementationWhitelisted(ContractType.Organization, randomAddr),
-            "fuzzed address should start unwhitelisted under Organization"
-        );
-        assertFalse(
-            whitelistProxy.isImplementationWhitelisted(ContractType.Account, randomAddr),
-            "fuzzed address should start unwhitelisted under Account"
-        );
+    /// @dev Verifies whitelist validation stays consistent with the stored mapping for fuzzed tuples.
+    /// @param randomAddr The fuzzed implementation address being checked.
+    /// @param useAccountType Whether to use the Account or Organization whitelist bucket.
+    /// @param shouldWhitelist Whether to seed the fuzzed address into the chosen whitelist bucket.
+    function testFuzz_IWC_FUZZ_1__FIWI_VALIDATE_139_validateHelper_matchesWhitelistMapping(
+        address randomAddr,
+        bool useAccountType,
+        bool shouldWhitelist
+    ) public {
+        // Setup: choose the fuzzed contract-type bucket and optionally seed the candidate address into it.
+        ContractType contractType = useAccountType ? ContractType.Account : ContractType.Organization;
+        if (shouldWhitelist) {
+            vm.prank(OWNER);
+            whitelistProxy.whitelistImplementations(contractType, _single(randomAddr), new address[](0));
+        }
 
-        // Verify: Organization-type validation rejects fuzzed address.
+        // Call: read the stored mapping before exercising the validation helper.
+        bool isWhitelisted = whitelistProxy.isImplementationWhitelisted(contractType, randomAddr);
+
+        // Verify: whitelisted entries pass validation and unwhitelisted entries always revert with the exact error.
+        assertEq(isWhitelisted, shouldWhitelist, "mapping state must match the seeded fuzz branch");
+        if (isWhitelisted) {
+            whitelistProxy.validateIsImplementationWhitelistedOrRevert(contractType, randomAddr);
+            return;
+        }
+
         vm.expectRevert(
             abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, randomAddr)
         );
-        whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Organization, randomAddr);
+        whitelistProxy.validateIsImplementationWhitelistedOrRevert(contractType, randomAddr);
+    }
 
-        // Verify: Account-type validation rejects fuzzed address.
-        vm.expectRevert(
-            abi.encodeWithSelector(IImplementationWhitelist.ImplementationNotWhitelisted.selector, randomAddr)
+    /// @dev Verifies whitelist initialization is one-time and preserves the first owner and seed sets after re-entry.
+    /// @param initialOwner The owner configured during the first successful initialization.
+    /// @param orgSeeds The Organization implementation seeds applied during the first initialization.
+    /// @param accountSeeds The Account implementation seeds applied during the first initialization.
+    /// @param secondOwner The owner proposed during the rejected second initialization.
+    /// @param secondOrgOnly A second Organization implementation unique to the rejected re-entry attempt.
+    /// @param secondAccountOnly A second Account implementation unique to the rejected re-entry attempt.
+    function testFuzz_FIWI_INIT_138_initialize_isOneTimeAndPreservesFirstConfiguration(
+        address initialOwner,
+        address[3] calldata orgSeeds,
+        address[3] calldata accountSeeds,
+        address secondOwner,
+        address secondOrgOnly,
+        address secondAccountOnly
+    ) public {
+        vm.assume(initialOwner != address(0));
+        for (uint256 i = 0; i < orgSeeds.length; ++i) {
+            vm.assume(secondOrgOnly != orgSeeds[i]);
+        }
+        for (uint256 i = 0; i < accountSeeds.length; ++i) {
+            vm.assume(secondAccountOnly != accountSeeds[i]);
+        }
+
+        address[] memory orgSeedArray = new address[](orgSeeds.length);
+        address[] memory accountSeedArray = new address[](accountSeeds.length);
+        for (uint256 i = 0; i < orgSeeds.length; ++i) {
+            orgSeedArray[i] = orgSeeds[i];
+        }
+        for (uint256 i = 0; i < accountSeeds.length; ++i) {
+            accountSeedArray[i] = accountSeeds[i];
+        }
+
+        // Setup: deploy an uninitialized proxy instance and prepare first/second initialization payloads.
+        ImplementationWhitelistHarness freshProxy = _deployUninitializedProxy();
+
+        // Call: initialize once successfully, then attempt a second initialization with altered owner and seeds.
+        freshProxy.initialize(initialOwner, orgSeedArray, accountSeedArray);
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        freshProxy.initialize(secondOwner, _single(secondOrgOnly), _single(secondAccountOnly));
+
+        // Verify: initialization sticks to the first owner and seed sets and ignores the rejected second payload.
+        assertTrue(freshProxy.isInitialized(), "proxy should report initialized after the first call");
+        assertEq(freshProxy.owner(), initialOwner, "owner should remain the first initialized owner");
+        for (uint256 i = 0; i < orgSeeds.length; ++i) {
+            assertTrue(
+                freshProxy.isImplementationWhitelisted(ContractType.Organization, orgSeeds[i]),
+                "first organization seed should remain whitelisted"
+            );
+        }
+        for (uint256 i = 0; i < accountSeeds.length; ++i) {
+            assertTrue(
+                freshProxy.isImplementationWhitelisted(ContractType.Account, accountSeeds[i]),
+                "first account seed should remain whitelisted"
+            );
+        }
+        assertFalse(
+            freshProxy.isImplementationWhitelisted(ContractType.Organization, secondOrgOnly),
+            "second initialization must not apply organization seeds"
         );
-        whitelistProxy.validateIsImplementationWhitelistedOrRevert(ContractType.Account, randomAddr);
+        assertFalse(
+            freshProxy.isImplementationWhitelisted(ContractType.Account, secondAccountOnly),
+            "second initialization must not apply account seeds"
+        );
+    }
+
+    /// @dev Verifies only the owner can mutate whitelist mappings for fuzzed callers and mutation directions.
+    /// @param caller The caller attempting the whitelist mutation.
+    /// @param useAccountType Whether to mutate the Account or Organization whitelist bucket.
+    /// @param addOperation Whether the mutation is an add or a remove operation.
+    /// @param implementationAddress The implementation address targeted by the mutation.
+    function testFuzz_FIWI_WHITELIST_140_whitelistImplementations_onlyOwnerCanMutate(
+        address caller,
+        bool useAccountType,
+        bool addOperation,
+        address implementationAddress
+    ) public {
+        // Setup: choose the fuzzed whitelist bucket and seed the address first when testing the remove path.
+        ContractType contractType = useAccountType ? ContractType.Account : ContractType.Organization;
+        if (!addOperation) {
+            vm.prank(OWNER);
+            whitelistProxy.whitelistImplementations(contractType, _single(implementationAddress), new address[](0));
+        }
+
+        address[] memory toWhitelist = addOperation ? _single(implementationAddress) : new address[](0);
+        address[] memory toUnwhitelist = addOperation ? new address[](0) : _single(implementationAddress);
+
+        // Call: execute the fuzzed mutation as either the owner or a non-owner.
+        if (caller == OWNER) {
+            vm.prank(caller);
+            whitelistProxy.whitelistImplementations(contractType, toWhitelist, toUnwhitelist);
+
+            // Verify: owner calls apply the requested mutation exactly.
+            assertEq(
+                whitelistProxy.isImplementationWhitelisted(contractType, implementationAddress),
+                addOperation,
+                "owner mutation should set the whitelist bit to the requested final state"
+            );
+            return;
+        }
+
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, caller));
+        vm.prank(caller);
+        whitelistProxy.whitelistImplementations(contractType, toWhitelist, toUnwhitelist);
+
+        // Verify: non-owner callers cannot change add/remove outcomes.
+        assertEq(
+            whitelistProxy.isImplementationWhitelisted(contractType, implementationAddress),
+            !addOperation,
+            "non-owner mutation must leave whitelist state unchanged"
+        );
+    }
+
+    /// @dev Verifies invalid whitelist targets never become active entries, even if an owner submits them.
+    /// @param useAccountType Whether to target the Account or Organization whitelist bucket.
+    /// @param useZeroAddress Whether to test `address(0)` instead of a no-code EOA-like address.
+    /// @param candidate The no-code address candidate used when `useZeroAddress` is false.
+    function testFuzz_FIWI_MUTATE_144_invalidTargets_neverBecomeWhitelisted(
+        bool useAccountType,
+        bool useZeroAddress,
+        address candidate
+    ) public {
+        vm.assume(useZeroAddress || candidate != address(0));
+        vm.assume(useZeroAddress || candidate.code.length == 0);
+
+        // Setup: choose the invalid target and confirm it starts unwhitelisted.
+        ContractType contractType = useAccountType ? ContractType.Account : ContractType.Organization;
+        address invalidTarget = useZeroAddress ? address(0) : candidate;
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(contractType, invalidTarget),
+            "invalid target should start unwhitelisted"
+        );
+
+        // Call: allow either revert or silent rejection, but never successful activation of the invalid target.
+        vm.prank(OWNER);
+        try whitelistProxy.whitelistImplementations(contractType, _single(invalidTarget), new address[](0)) { } catch {
+        }
+
+        // Verify: invalid targets must remain unwhitelisted after the attempted mutation.
+        assertFalse(
+            whitelistProxy.isImplementationWhitelisted(contractType, invalidTarget),
+            "invalid targets must never become whitelisted"
+        );
     }
 
     // forgefmt: disable-next-item

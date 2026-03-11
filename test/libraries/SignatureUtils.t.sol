@@ -188,6 +188,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     MockERC1271RightPaddedSigner public rightPaddedSigner1271;
     MockERC1271Return31BytesSigner public return31BytesSigner1271;
 
+    /// @dev Deploys the harness and all ERC-1271 signer mocks used by the suite.
     function setUp() public {
         harness = new SignatureUtilsHarness();
 
@@ -667,7 +668,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Verifies `_getVByte` and `_tryRecoverEOASigner` read the embedded `(v,r,s)` fields from the supplied
     ///      offset without bleeding into surrounding bytes. [SIGU-PARSE-1]
-    function testFuzz_SIGU_PARSE_1_E_embeddedEOASignatureFieldExtraction_matchesKnownVRS(
+    function testFuzz_SIGU_PARSE_1_E__FSU_HAR_7_embeddedEOASignatureFieldExtraction_matchesKnownVRS(
         uint256 privateKey,
         uint8 prefixLength,
         uint8 suffixLength,
@@ -986,7 +987,9 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Extracting an inner signature of any random length in [1, 2000] should always produce
     ///      extracted bytes that match the source exactly.
-    function testFuzz_SIGU_PARSE_2_C_extractContractInnerSignature_randomLength_matchesSource(uint16 sigLength)
+    function testFuzz_SIGU_PARSE_2_C__FSU_HAR_7_extractContractInnerSignature_randomLength_matchesSource(
+        uint16 sigLength
+    )
         public
         view
     {
@@ -1007,7 +1010,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Verifies the contract-signature header helpers extract the embedded signer, encoded uint16 length,
     ///      and inner bytes from a fuzzed offset. [SIGU-PARSE-2]
-    function testFuzz_SIGU_PARSE_2_E_embeddedContractSignatureFieldExtraction_matchesHeaderAndInnerBytes(
+    function testFuzz_SIGU_PARSE_2_E__FSU_HAR_7_embeddedContractSignatureFieldExtraction_matchesHeaderAndInnerBytes(
         uint160 signerSeed,
         uint8 prefixLength,
         uint8 suffixLength,
@@ -1571,7 +1574,9 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Only the exact ERC-1271 magic value (0x1626ba7e) should produce a true result; any other
     ///      random bytes4 return value should produce false.
-    function testFuzz_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(bytes4 randomMagic) public {
+    function testFuzz_FSU_ERC1271_6_isValidERC1271SignatureNow_randomMagicValue_onlyCorrectMagicIsValid(
+        bytes4 randomMagic
+    ) public {
         // Deploy a mock that returns the random magic value
         MockERC1271CustomReturn mock = new MockERC1271CustomReturn(randomMagic);
 
@@ -1584,21 +1589,26 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         }
     }
 
-    /// @dev Test case: Any valid private key should produce a recoverable signature via tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_anyValidPrivateKey_recoversCorrectly(uint256 privateKey) public view {
+    /// @dev Verifies valid EOA signatures recover the expected signer through both top-level recovery wrappers.
+    function testFuzz_FSU_TRS_1_tryRecoverSigner_anyValidPrivateKey_recoversCorrectly(uint256 privateKey) public view {
+        // Setup: bound the fuzzed private key to the valid secp256k1 range and sign the shared test hash.
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
 
         bytes memory sig = _signHash(privateKey, TEST_HASH);
         address expectedSigner = vm.addr(privateKey);
 
+        // Call: recover the signer through both the soft-fail and revert-on-failure wrappers.
         (bool success, address signer) = harness.tryRecoverSigner(sig, TEST_HASH);
+        address strictSigner = harness.recoverSignerOrRevert(sig, TEST_HASH);
 
+        // Verify: both wrappers should recover the exact EOA signer for valid signatures.
         assertTrue(success, "Should always recover valid signature");
         assertEq(signer, expectedSigner, "Should always recover correct signer");
+        assertEq(strictSigner, expectedSigner, "Strict wrapper should recover the same signer");
     }
 
     /// @dev Test case: Random bytes should never successfully recover a signer.
-    function testFuzz_tryRecoverSigner_randomBytes_neverRecovers(bytes memory randomSig) public view {
+    function testFuzz_FSU_TRS_2_tryRecoverSigner_randomBytes_neverRecovers(bytes memory randomSig) public view {
         (bool success, address signer) = harness.tryRecoverSigner(randomSig, TEST_HASH);
 
         assertFalse(success, "Random bytes should not recover a signer");
@@ -1607,7 +1617,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Flipping the s value to the upper half of the curve (signature malleability) should always
     ///      be rejected by tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_malleability_alwaysRejected(uint256 privateKey) public view {
+    function testFuzz_FSU_EOA_3_tryRecoverSigner_malleability_alwaysRejected(uint256 privateKey) public view {
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
 
         bytes memory malleableSig = _makeHighSSignature(privateKey, TEST_HASH);
@@ -1619,7 +1629,9 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Random ERC-1271 inner signature lengths should always produce the correct nextOffset
     ///      calculation (23 + innerLength). [SIGU-PARSE-3]
-    function testFuzz_SIGU_PARSE_3_C_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(uint16 innerLength)
+    function testFuzz_SIGU_PARSE_3_C__FSU_ATOFF_5_tryRecoverSignerAtOffset_randomERC1271InnerLength_offsetCorrect(
+        uint16 innerLength
+    )
         public
         view
     {
@@ -1636,7 +1648,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
     /// @dev Test case: Random multi-signature arrays (N EOA + M ERC-1271) should always have correct offset
     ///      chaining, with the final offset equaling the total combined length. [SIGU-PARSE-4]
-    function testFuzz_SIGU_PARSE_4_B_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(
+    function testFuzz_SIGU_PARSE_4_B__FSU_ATOFF_5_tryRecoverSignerAtOffset_mixedMultiSig_offsetChainingWorks(
         uint8 numEOA,
         uint8 numContract
     )
@@ -1681,27 +1693,37 @@ contract SignatureUtilsTest is SignatureTestHelpers {
         assertEq(offset, combined.length, "Final offset should equal total combined length");
     }
 
-    /// @dev Test case: A signature created for hash A should never validate as the same signer when verified
-    ///      against a different hash B.
-    function testFuzz_tryRecoverSigner_differentHash_differentSigner(uint256 privateKey, bytes32 hashB) public view {
+    /// @dev Verifies a signature created for hash `A` never validates as the same signer for a distinct hash `B`
+    /// through either top-level or offset-based recovery.
+    function testFuzz_FSU_TRSO_4_tryRecoverSigner_differentHash_differentSigner(uint256 privateKey, bytes32 hashB)
+        public
+        view
+    {
+        // Setup: sign the shared test hash and constrain the alternate hash to differ.
         privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
-        // Ensure hashB != TEST_HASH
         vm.assume(hashB != TEST_HASH);
 
         bytes memory sig = _signHash(privateKey, TEST_HASH);
         address expectedSigner = vm.addr(privateKey);
 
-        // Verify against a different hash
+        // Call: attempt recovery against the different hash through both entrypoints.
         (bool success, address signer) = harness.tryRecoverSigner(sig, hashB);
+        (bool offsetSuccess, address offsetSigner,) = harness.tryRecoverSignerAtOffset(sig, 0, hashB);
 
+        // Verify: a signature for hash `A` must never validate as the original signer for hash `B`.
         if (success) {
-            // If recovery succeeds with a different hash, the signer must be different
             assertTrue(signer != expectedSigner, "Signature for hash A should not validate as same signer for hash B");
+        }
+        if (offsetSuccess) {
+            assertTrue(
+                offsetSigner != expectedSigner,
+                "Offset-based recovery for hash B should not validate as the original signer"
+            );
         }
     }
 
     /// @dev Test case: Any EOA signature length except 65 should be rejected by tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_invalidEOALength_returnsFalse(uint16 sigLength) public view {
+    function testFuzz_FSU_TRS_2_tryRecoverSigner_invalidEOALength_returnsFalse(uint16 sigLength) public view {
         sigLength = uint16(bound(sigLength, 0, 1000));
         vm.assume(sigLength != 65);
 
@@ -1718,7 +1740,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
     }
 
     /// @dev Test case: Any v byte except {0, 27, 28} should be rejected by tryRecoverSigner.
-    function testFuzz_tryRecoverSigner_invalidVByte_returnsFalse(uint8 invalidV) public view {
+    function testFuzz_FSU_TRS_2_tryRecoverSigner_invalidVByte_returnsFalse(uint8 invalidV) public view {
         vm.assume(invalidV != 0 && invalidV != 27 && invalidV != 28);
 
         bytes memory sig = _signHash(TEST_PK_1, TEST_HASH);
@@ -1728,5 +1750,197 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         assertFalse(success, "Recovery should fail for invalid v bytes");
         assertEq(signer, address(0), "Signer should be address(0)");
+    }
+
+    /// @dev Verifies valid ERC-1271 signatures recover the configured contract signer through both top-level
+    /// recovery wrappers.
+    /// @param innerLength Fuzzed ERC-1271 inner-signature length.
+    function testFuzz_FSU_TRS_1_tryRecoverSigner_validERC1271Signature_recoversExpectedSigner(uint16 innerLength)
+        public
+        view
+    {
+        // Setup: build a valid contract signature with a fuzzed inner-signature length.
+        innerLength = uint16(bound(innerLength, 0, 512));
+        bytes memory innerSig = new bytes(innerLength);
+        bytes memory signature = _buildContractSignature(address(validSigner1271), innerSig);
+
+        // Call: recover the signer through both the soft-fail and strict top-level contract-signature paths.
+        (bool success, address signer) = harness.tryRecoverSigner(signature, TEST_HASH);
+        address strictSigner = harness.recoverSignerOrRevert(signature, TEST_HASH);
+
+        // Verify: valid ERC-1271 signatures should recover the configured contract signer through both wrappers.
+        assertTrue(success, "valid ERC-1271 signatures should recover successfully");
+        assertEq(signer, address(validSigner1271), "recovered signer should match the ERC-1271 contract");
+        assertEq(strictSigner, address(validSigner1271), "strict wrapper should recover the contract signer");
+    }
+
+    /// @dev Verifies failing ERC-1271 response variants always fail contract-signer recovery and direct ERC-1271
+    /// validation.
+    /// @param caseSelector Fuzzed selector choosing one failing ERC-1271 signer variant.
+    /// @param innerLength Fuzzed inner-signature length.
+    function testFuzz_FSU_ERC1271_6_tryRecoverContractSigner_failureVariantsAlwaysReturnFalse(
+        uint8 caseSelector,
+        uint16 innerLength
+    ) public view {
+        // Setup: pick one failing ERC-1271 implementation and build a contract signature for it.
+        innerLength = uint16(bound(innerLength, 0, 255));
+        bytes memory innerSig = new bytes(innerLength);
+        address[7] memory failingSigners = [
+            address(wrongMagicSigner1271),
+            address(revertingSigner1271),
+            address(shortReturnSigner1271),
+            address(emptyReturnSigner1271),
+            address(rightPaddedSigner1271),
+            address(return31BytesSigner1271),
+            address(stateModifierSigner1271)
+        ];
+        address signerContract = failingSigners[caseSelector % failingSigners.length];
+        bytes memory signature = _buildContractSignature(signerContract, innerSig);
+
+        // Call: attempt recovery through the contract-signer path and direct ERC-1271 validation path.
+        (bool success, address signer) = harness.tryRecoverContractSigner(signature, 0, TEST_HASH);
+        bool validationSuccess = harness.isValidERC1271SignatureNow(signerContract, TEST_HASH, innerSig);
+
+        // Verify: non-magic, reverting, short, or state-mutating ERC-1271 responses must fail closed.
+        assertFalse(success, "failing ERC-1271 responses should never recover");
+        assertEq(signer, address(0), "failed recovery should return address(0)");
+        assertFalse(validationSuccess, "direct ERC-1271 validation should fail for all failing variants");
+    }
+
+    /// @dev Verifies invalid signature encodings fail softly through `tryRecoverSigner` and revert through
+    /// `recoverSignerOrRevert`.
+    /// @param caseSelector Fuzzed selector choosing malformed-length, truncated, or invalid-`v` inputs.
+    /// @param rawLength Fuzzed signature length used for malformed/truncated cases.
+    /// @param invalidV Fuzzed invalid `v` byte for the EOA failure case.
+    function testFuzz_FSU_TRS_2_recoverSignerOrRevert_invalidInputsFailSoftAndStrict(
+        uint8 caseSelector,
+        uint16 rawLength,
+        uint8 invalidV
+    ) public {
+        bytes memory signature;
+
+        // Setup: derive one invalid signature shape for this fuzz iteration.
+        if (caseSelector % 3 == 0) {
+            uint256 malformedLength = bound(uint256(rawLength), 0, 256);
+            vm.assume(malformedLength != 65);
+            signature = new bytes(malformedLength);
+            if (malformedLength > 0) {
+                signature[0] = bytes1(uint8(27));
+            }
+        } else if (caseSelector % 3 == 1) {
+            uint256 truncatedLength = bound(uint256(rawLength), 1, 64);
+            signature = new bytes(truncatedLength);
+            signature[0] = bytes1(uint8(27));
+        } else {
+            vm.assume(invalidV != 0 && invalidV != 27 && invalidV != 28);
+            signature = _signHash(TEST_PK_1, TEST_HASH);
+            signature[0] = bytes1(invalidV);
+        }
+
+        // Call: recover through the soft-fail wrapper and the strict wrapper.
+        (bool success, address signer) = harness.tryRecoverSigner(signature, TEST_HASH);
+        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
+        harness.recoverSignerOrRevert(signature, TEST_HASH);
+
+        // Verify: invalid inputs should fail softly and revert strictly.
+        assertFalse(success, "invalid signatures should fail soft recovery");
+        assertEq(signer, address(0), "failed soft recovery should return address(0)");
+    }
+
+    /// @dev Verifies `SignatureUtils.recoverSignerAtOffsetOrRevert` matches the try-variant on successful recovery.
+    /// @param privateKey Fuzzed signing key used to build the EOA signature.
+    /// @param prefixLength Fuzzed noisy prefix length before the signature payload.
+    /// @param suffixLength Fuzzed noisy suffix length after the signature payload.
+    function testFuzz_FSU_WRAP_8_recoverSignerAtOffsetOrRevert_successPathMatchesTryRecoverSignerAtOffset(
+        uint256 privateKey,
+        uint8 prefixLength,
+        uint8 suffixLength
+    ) public view {
+        // Setup: embed one valid EOA signature behind a fuzzed offset inside arbitrary surrounding bytes.
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 64));
+        suffixLength = uint8(bound(suffixLength, 0, 64));
+        bytes memory prefix = new bytes(prefixLength);
+        bytes memory suffix = new bytes(suffixLength);
+        bytes memory signature = _signHash(privateKey, TEST_HASH);
+        bytes memory signatures = abi.encodePacked(prefix, signature, suffix);
+        uint256 offset = prefixLength;
+
+        // Call: recover through both the try-variant and the revert-wrapper variant.
+        (bool trySuccess, address trySigner, uint256 tryNextOffset) =
+            harness.tryRecoverSignerAtOffset(signatures, offset, TEST_HASH);
+        (address wrapperSigner, uint256 wrapperNextOffset) =
+            harness.recoverSignerAtOffsetOrRevert(signatures, offset, TEST_HASH);
+
+        // Verify: the wrapper should preserve the success tuple from the try-variant exactly.
+        assertTrue(trySuccess, "valid signatures should succeed through tryRecoverSignerAtOffset");
+        assertEq(wrapperSigner, trySigner, "wrapper signer should match try-variant signer");
+        assertEq(wrapperNextOffset, tryNextOffset, "wrapper nextOffset should match try-variant nextOffset");
+    }
+
+    /// @dev Verifies `SignatureUtils.recoverSignerAtOffsetOrRevert` reverts with `SignatureRecoveryFailed` on failed
+    /// recovery paths.
+    /// @param invalidV Fuzzed invalid EOA `v` byte outside `{0, 27, 28}`.
+    function testFuzz_FSU_WRAP_8_recoverSignerAtOffsetOrRevert_failurePathAlwaysReverts(uint8 invalidV) public {
+        // Setup: build an otherwise valid signature and corrupt the leading `v` byte.
+        vm.assume(invalidV != 0 && invalidV != 27 && invalidV != 28);
+        bytes memory signature = _signHash(TEST_PK_1, TEST_HASH);
+        signature[0] = bytes1(invalidV);
+
+        // Call: recover through the revert-wrapper, expecting `SignatureRecoveryFailed`.
+        vm.expectRevert(SignatureUtils.SignatureRecoveryFailed.selector);
+        harness.recoverSignerAtOffsetOrRevert(signature, 0, TEST_HASH);
+
+        // Verify: the wrapper should fail closed rather than return a partial tuple.
+    }
+
+    /// @dev Verifies `_tryRecoverEOASigner` rejects fuzzed high-`s` signatures even when the payload is embedded at
+    /// a random non-zero offset.
+    /// @param privateKey Fuzzed private key used to construct the high-`s` signature.
+    /// @param prefixLength Fuzzed noisy prefix length before the embedded signature bytes.
+    function testFuzz_FSU_EOA_3_tryRecoverEOASigner_highSMalleableSignaturesAlwaysRejected(
+        uint256 privateKey,
+        uint8 prefixLength
+    ) public view {
+        // Setup: embed one high-`s` signature behind a fuzzed offset.
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 128));
+        bytes memory signature = _makeHighSSignature(privateKey, TEST_HASH);
+        bytes memory prefixedSignature = abi.encodePacked(new bytes(prefixLength), signature);
+        uint8 v = uint8(signature[0]);
+
+        // Call: recover the embedded signature through the helper-targeted harness wrapper.
+        (bool success, address signer) =
+            harness.tryRecoverEOASigner(prefixedSignature, prefixLength, TEST_HASH, v);
+
+        // Verify: high-`s` signatures are always rejected by the EOA helper.
+        assertFalse(success, "high-s signatures should always be rejected by _tryRecoverEOASigner");
+        assertEq(signer, address(0), "failed helper recovery should return address(0)");
+    }
+
+    /// @dev Verifies offset-based recovery never returns the original signer when a signature built for one hash is
+    /// validated against a different hash.
+    /// @param privateKey Fuzzed signing key used to build the embedded EOA signature.
+    /// @param prefixLength Fuzzed prefix length used as the recovery offset.
+    /// @param otherHash Fuzzed alternate hash constrained away from `TEST_HASH`.
+    function testFuzz_FSU_TRSO_4_tryRecoverSignerAtOffset_differentHashNeverRecoversExpectedSigner(
+        uint256 privateKey,
+        uint8 prefixLength,
+        bytes32 otherHash
+    ) public view {
+        // Setup: embed one valid EOA signature behind a fuzzed prefix and choose a distinct verification hash.
+        privateKey = bound(privateKey, 1, SECP256K1_CURVE_ORDER - 1);
+        prefixLength = uint8(bound(prefixLength, 0, 128));
+        vm.assume(otherHash != TEST_HASH);
+        bytes memory signatures = abi.encodePacked(new bytes(prefixLength), _signHash(privateKey, TEST_HASH));
+        address expectedSigner = vm.addr(privateKey);
+
+        // Call: recover the embedded signature at the offset against the wrong hash.
+        (bool success, address signer,) = harness.tryRecoverSignerAtOffset(signatures, prefixLength, otherHash);
+
+        // Verify: any successful wrong-hash recovery must resolve to a different signer.
+        if (success) {
+            assertTrue(signer != expectedSigner, "wrong-hash offset recovery must not return the original signer");
+        }
     }
 }

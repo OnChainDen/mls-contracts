@@ -1450,4 +1450,302 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify
         result;
     }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.initializeTxRecovery` can configure tx recovery exactly once.
+    /// @param firstRecovery The first configured tx-recovery address.
+    /// @param firstTimelock The first configured tx-recovery timelock.
+    /// @param secondRecovery The second attempted tx-recovery address.
+    /// @param secondTimelock The second attempted tx-recovery timelock.
+    function testFuzz_FLOTR_INIT_110_initializeTxRecovery_canOnlyBeConfiguredOnce(
+        address firstRecovery,
+        uint256 firstTimelock,
+        address secondRecovery,
+        uint256 secondTimelock
+    ) public {
+        vm.assume(firstRecovery != address(0));
+        vm.assume(secondRecovery != address(0));
+
+        uint256 boundedFirstTimelock = bound(
+            firstTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+        uint256 boundedSecondTimelock = bound(
+            secondTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+
+        // Setup: reset tx-recovery state and apply one successful initialization.
+        harness.resetTxRecoveryState();
+        harness.initializeTxRecovery(firstRecovery, boundedFirstTimelock);
+
+        // Call: attempt to initialize again with a new tuple, expecting the one-time configuration revert.
+        vm.expectRevert(IOrganizationTxRecovery.TransactionRecoveryAlreadyConfigured.selector);
+        harness.initializeTxRecovery(secondRecovery, boundedSecondTimelock);
+
+        // Verify: the originally configured tuple remains unchanged after the rejected second initialization.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.recoveryAddress, firstRecovery, "configured recovery address should remain unchanged");
+        assertEq(state.timelockDurationSeconds, boundedFirstTimelock, "configured timelock should remain unchanged");
+        assertFalse(state.isEnabled, "initialize should not auto-enable recovery");
+    }
+
+    /// @dev Verifies deferred tx-recovery initialization uses the admin-operation timelock for initiate, finalize,
+    /// and cancel paths.
+    /// @param pendingRecovery The recovery address proposed through deferred initialization.
+    /// @param pendingTimelock The tx-recovery timelock proposed through deferred initialization.
+    /// @param cancelAfterInitiate Whether to cancel immediately instead of finalizing after the timelock.
+    function testFuzz_FLOTR_DINIT_112_deferredTxRecoveryInit_obeysAdminOperationTimelock(
+        address pendingRecovery,
+        uint256 pendingTimelock,
+        bool cancelAfterInitiate
+    ) public {
+        vm.assume(pendingRecovery != address(0));
+        uint256 boundedPendingTimelock = bound(
+            pendingTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+
+        // Setup: clear active tx-recovery config so deferred initialization is available.
+        harness.resetTxRecoveryState();
+
+        // Call: initiate deferred initialization, then either cancel immediately or finalize after the admin
+        // timelock.
+        harness.initiateInitializeTxRecovery(pendingRecovery, boundedPendingTimelock);
+        TxRecoveryState memory pendingState = harness.getTxRecoveryState();
+
+        assertEq(
+            pendingState.pendingInit.pendingTimestamp,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK,
+            "pending-init timestamp should use the admin-operation timelock"
+        );
+
+        if (cancelAfterInitiate) {
+            harness.cancelInitializeTxRecovery();
+
+            // Verify: cancel clears the pending tuple and leaves active tx recovery unconfigured.
+            TxRecoveryState memory cancelledState = harness.getTxRecoveryState();
+            assertEq(cancelledState.recoveryAddress, address(0), "cancel should not configure tx recovery");
+            assertEq(
+                cancelledState.pendingInit.pendingRecoveryAddress, address(0), "cancel should clear pending address"
+            );
+            assertEq(cancelledState.pendingInit.pendingTimestamp, 0, "cancel should clear pending timestamp");
+            return;
+        }
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
+                pendingState.pendingInit.pendingTimestamp,
+                block.timestamp
+            )
+        );
+        harness.finalizeInitializeTxRecovery();
+
+        vm.warp(pendingState.pendingInit.pendingTimestamp);
+        harness.finalizeInitializeTxRecovery();
+
+        // Verify: finalize succeeds only after the admin timelock and promotes the pending tuple into active config.
+        TxRecoveryState memory finalizedState = harness.getTxRecoveryState();
+        assertEq(finalizedState.recoveryAddress, pendingRecovery, "finalize should configure recovery address");
+        assertEq(
+            finalizedState.timelockDurationSeconds, boundedPendingTimelock, "finalize should configure timelock"
+        );
+        assertEq(
+            finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address"
+        );
+        assertEq(finalizedState.pendingInit.pendingTimestamp, 0, "finalize should clear pending timestamp");
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery` requires the enable timelock to expire and makes disable immediate
+    /// while clearing stale pending-enable state.
+    /// @param rawSecondsBefore The offset used to land strictly before the pending-enable timestamp.
+    function testFuzz_FLOTR_TOGGLE_114_enableRequiresTimelock_disableClearsPending(uint256 rawSecondsBefore) public {
+        // Setup: initiate enable to seed a pending timestamp, then warp strictly before it.
+        harness.initiateEnableTxRecovery();
+        uint256 pendingTimestamp = harness.getTxRecoveryState().pendingEnableTimestamp;
+        uint256 secondsBefore = bound(rawSecondsBefore, 1, TX_TIMELOCK);
+        vm.warp(pendingTimestamp - secondsBefore);
+
+        // Call: verify finalize reverts before expiry, then disable immediately and confirm the pending state is
+        // cleared.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, pendingTimestamp, block.timestamp
+            )
+        );
+        harness.finalizeEnableTxRecovery();
+
+        harness.disableTxRecovery();
+
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryEnablePending.selector);
+        harness.finalizeEnableTxRecovery();
+
+        // Verify: disable leaves recovery disabled and clears the stale pending-enable timestamp immediately.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertFalse(state.isEnabled, "disable should keep recovery disabled");
+        assertEq(state.pendingEnableTimestamp, 0, "disable should clear pending enable");
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.validateRecoveryAccountTransactionAllowedOrRevert` only allows the
+    /// recovery transaction path when tx recovery is both configured and enabled.
+    /// @param configuredRecoveryAddress Fuzzed non-zero recovery address used for the configured states.
+    /// @param timelockDurationRaw Fuzzed entropy bounded into the valid recovery timelock range.
+    function testFuzz_FLOTR_GATE_115_validateRecoveryAccountTransactionAllowed_requiresConfiguredAndEnabled(
+        address configuredRecoveryAddress,
+        uint256 timelockDurationRaw
+    ) public {
+        // Setup: bound a valid timelock and prepare configured+enabled, unconfigured, and configured+disabled
+        // tx-recovery states around the fuzzed configured recovery address.
+        vm.assume(configuredRecoveryAddress != address(0));
+        uint256 boundedTimelock = bound(
+            timelockDurationRaw,
+            TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+            TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+        TxRecoveryState memory configuredEnabled = TxRecoveryState({
+            recoveryAddress: configuredRecoveryAddress,
+            isEnabled: true,
+            timelockDurationSeconds: boundedTimelock,
+            pendingEnableTimestamp: 0,
+            pendingInit: PendingRecoveryInitTimelock({
+                pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+            })
+        });
+        TxRecoveryState memory unconfigured = TxRecoveryState({
+            recoveryAddress: address(0),
+            isEnabled: true,
+            timelockDurationSeconds: boundedTimelock,
+            pendingEnableTimestamp: 0,
+            pendingInit: PendingRecoveryInitTimelock({
+                pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+            })
+        });
+        TxRecoveryState memory configuredDisabled = TxRecoveryState({
+            recoveryAddress: configuredRecoveryAddress,
+            isEnabled: false,
+            timelockDurationSeconds: boundedTimelock,
+            pendingEnableTimestamp: 0,
+            pendingInit: PendingRecoveryInitTimelock({
+                pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+            })
+        });
+
+        // Call: evaluate the allowed path plus the unconfigured and disabled rejection branches.
+        harness.setTxRecoveryState(configuredEnabled);
+        harness.validateRecoveryAccountTransactionAllowedOrRevert();
+
+        harness.setTxRecoveryState(unconfigured);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotConfigured.selector);
+        harness.validateRecoveryAccountTransactionAllowedOrRevert();
+
+        harness.setTxRecoveryState(configuredDisabled);
+        vm.expectRevert(IOrganizationTxRecovery.TxRecoveryNotEnabled.selector);
+        harness.validateRecoveryAccountTransactionAllowedOrRevert();
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.isValidRecoverySignature` accepts both EOA and ERC-1271 recovery
+    /// signers and does not depend on the enabled flag.
+    /// @param startEnabled The initial enabled flag used for the first validation branch.
+    function testFuzz_FLOTR_SIG_116_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(
+        bool startEnabled
+    ) public {
+        // Setup: build valid EOA and ERC-1271 recovery signers plus a wrong EOA signature for the negative branch.
+        bytes memory validEOASignature = _signHash(RECOVERY_PK, MESSAGE_HASH);
+        bytes memory wrongEOASignature = _signHash(OTHER_PK, MESSAGE_HASH);
+        MockERC1271ValidSigner validContract = new MockERC1271ValidSigner();
+        bytes memory validContractSignature = _buildContractSignature(address(validContract), hex"CAFE");
+
+        // Call: validate the EOA path with both enabled states.
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: recoveryAddress,
+                isEnabled: startEnabled,
+                timelockDurationSeconds: TX_TIMELOCK,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+        bool eoaFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validEOASignature);
+        bool eoaWrong = harness.isValidRecoverySignature(MESSAGE_HASH, wrongEOASignature);
+
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: recoveryAddress,
+                isEnabled: !startEnabled,
+                timelockDurationSeconds: TX_TIMELOCK,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+        bool eoaSecond = harness.isValidRecoverySignature(MESSAGE_HASH, validEOASignature);
+
+        // Call: validate the ERC-1271 path with both enabled states.
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: address(validContract),
+                isEnabled: startEnabled,
+                timelockDurationSeconds: TX_TIMELOCK,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+        bool contractFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validContractSignature);
+
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: address(validContract),
+                isEnabled: !startEnabled,
+                timelockDurationSeconds: TX_TIMELOCK,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+        bool contractSecond = harness.isValidRecoverySignature(MESSAGE_HASH, validContractSignature);
+
+        // Verify: valid EOA and ERC-1271 recovery signatures pass regardless of enabled state, while wrong signers
+        // still fail.
+        assertTrue(eoaFirst, "valid EOA recovery signature should pass");
+        assertTrue(eoaSecond, "valid EOA recovery signature should be independent of enabled state");
+        assertFalse(eoaWrong, "wrong EOA signer should fail");
+        assertTrue(contractFirst, "valid ERC1271 recovery signature should pass");
+        assertTrue(contractSecond, "valid ERC1271 recovery signature should be independent of enabled state");
+    }
+
+    /// @dev Verifies recovery signatures cannot replay across a different signed hash even when the signer stays
+    /// configured.
+    /// @param originalHash The hash actually signed by the configured recovery signer.
+    /// @param replayHash The distinct hash used for the replay attempt.
+    function testFuzz_FLOTR_SIG_116__FCF_SIGSYS_161_isValidRecoverySignature_sameSignatureCannotReplayAcrossDifferentHashes(
+        bytes32 originalHash,
+        bytes32 replayHash
+    ) public {
+        vm.assume(originalHash != replayHash);
+
+        // Setup: configure the deterministic recovery signer and build one signature over the original hash only.
+        harness.setTxRecoveryState(
+            TxRecoveryState({
+                recoveryAddress: recoveryAddress,
+                isEnabled: true,
+                timelockDurationSeconds: TX_TIMELOCK,
+                pendingEnableTimestamp: 0,
+                pendingInit: PendingRecoveryInitTimelock({
+                    pendingRecoveryAddress: address(0), pendingTimelockDurationSeconds: 0, pendingTimestamp: 0
+                })
+            })
+        );
+        bytes memory signature = _signHash(RECOVERY_PK, originalHash);
+
+        // Call: validate the same signature against both the original hash and a distinct replay hash.
+        bool originalValid = harness.isValidRecoverySignature(originalHash, signature);
+        bool replayValid = harness.isValidRecoverySignature(replayHash, signature);
+
+        // Verify: the configured signer validates only for the exact signed hash.
+        assertTrue(originalValid, "configured recovery signer should validate the original hash");
+        assertFalse(replayValid, "same signature must fail when replayed against a different hash");
+    }
 }

@@ -9,6 +9,54 @@ import {LibOrganizationEIP712} from "organization/libraries/LibOrganizationEIP71
  */
 contract LibOrganizationEIP712Harness {
     /**
+     * @dev Exposes `LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH`.
+     * @return typehash The domain-separator type hash constant.
+     */
+    function getDomainTypehash() external pure returns (bytes32 typehash) {
+        return LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH;
+    }
+
+    /**
+     * @dev Exposes `LibOrganizationEIP712.ADMIN_OPERATION_TYPEHASH`.
+     * @return typehash The admin-operation type hash constant.
+     */
+    function getAdminOperationTypehash() external pure returns (bytes32 typehash) {
+        return LibOrganizationEIP712.ADMIN_OPERATION_TYPEHASH;
+    }
+
+    /**
+     * @dev Exposes `LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH`.
+     * @return typehash The initiate-account-transaction type hash constant.
+     */
+    function getInitiateAccountTransactionTypehash() external pure returns (bytes32 typehash) {
+        return LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH;
+    }
+
+    /**
+     * @dev Exposes `LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH`.
+     * @return typehash The review-account-transaction type hash constant.
+     */
+    function getReviewAccountTransactionTypehash() external pure returns (bytes32 typehash) {
+        return LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH;
+    }
+
+    /**
+     * @dev Exposes `LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH`.
+     * @return typehash The initiate-signature-validation type hash constant.
+     */
+    function getInitiateSignatureValidationTypehash() external pure returns (bytes32 typehash) {
+        return LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH;
+    }
+
+    /**
+     * @dev Exposes `LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH`.
+     * @return typehash The review-signature-validation type hash constant.
+     */
+    function getReviewSignatureValidationTypehash() external pure returns (bytes32 typehash) {
+        return LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH;
+    }
+
+    /**
      * @dev Exposes `LibOrganizationEIP712.getDomainSeparator`.
      * @return domainSeparator The current EIP-712 domain separator for this harness.
      */

@@ -8,7 +8,7 @@ import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {
     LibOrganizationGuardianRecoverySuiteBase
 } from "test/organization/libraries/LibOrganizationGuardianRecovery/LibOrganizationGuardianRecoverySuiteBase.sol";
-import {GuardianRecoveryState} from "types/RecoveryTypes.sol";
+import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
  * @dev Fuzz tests for guardian-recovery flows.
@@ -41,6 +41,40 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         );
     }
 
+    /// @dev Verifies `LibOrganizationGuardianRecovery.initializeGuardianRecovery` can configure recovery exactly once.
+    /// @param recoveryAddress The first configured recovery address.
+    /// @param timelock The first configured guardian-recovery timelock.
+    /// @param secondRecoveryAddress The second attempted recovery address.
+    /// @param secondTimelock The second attempted guardian-recovery timelock.
+    function testFuzz_FLOGR_INIT_109_initializeGuardianRecovery_canOnlyBeConfiguredOnce(
+        address recoveryAddress,
+        uint256 timelock,
+        address secondRecoveryAddress,
+        uint256 secondTimelock
+    ) public {
+        vm.assume(recoveryAddress != address(0));
+        vm.assume(secondRecoveryAddress != address(0));
+
+        uint256 boundedTimelock =
+            bound(timelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS);
+        uint256 boundedSecondTimelock = bound(
+            secondTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+
+        // Setup: start from zero recovery state and configure the first guardian-recovery tuple.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initializeGuardianRecoveryViaLibrary(recoveryAddress, boundedTimelock);
+
+        // Call: attempt to initialize again with a new tuple, expecting the one-time configuration revert.
+        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
+        harness.initializeGuardianRecoveryViaLibrary(secondRecoveryAddress, boundedSecondTimelock);
+
+        // Verify: the originally configured tuple remains unchanged after the rejected second initialization.
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(state.recoveryAddress, recoveryAddress, "configured recovery address should remain unchanged");
+        assertEq(state.timelockDurationSeconds, boundedTimelock, "configured timelock should remain unchanged");
+    }
+
     /// @dev Verifies that validation helper accepts in-range timelocks and rejects out-of-range values.
     function testFuzz_OGR_FZ_2__OGR_FZ_3_validateParams_acceptsInRangeRejectsOutOfRange(
         address recoveryAddress,
@@ -71,9 +105,9 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         assertTrue(true, "validation branch executed");
     }
 
-    /// @dev Verifies that finalize behavior follows timestamp relation and pending timestamp equals
-    /// block.timestamp+duration.
-    function testFuzz_OGR_FZ_4__OGR_FZ_5__OGR_FZ_9__GREC_INV_10_finalizeBeforeAfterTimelock_behavesByTimestamp(
+    /// @dev Verifies recovery-guardian updates use the configured guardian-recovery timelock and enforce the
+    /// finalize timestamp relation.
+    function testFuzz_OGR_FZ_4__OGR_FZ_5__OGR_FZ_9__GREC_INV_10__FLOGR_RUPDATE_113_finalizeBeforeAfterTimelock_behavesByTimestamp(
         uint256 timelock,
         uint256 delta
     ) public {
@@ -118,6 +152,73 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
 
         // Verify: finalize branch behavior matched timestamp relation.
         assertTrue(true, "finalize branch behavior matched timestamp relation");
+    }
+
+    /// @dev Verifies deferred guardian-recovery initialization uses the admin-operation timelock for initiate,
+    /// finalize, and cancel paths.
+    /// @param pendingRecoveryAddress The recovery address proposed through deferred initialization.
+    /// @param pendingTimelock The recovery timelock proposed through deferred initialization.
+    /// @param cancelAfterInitiate Whether to cancel immediately instead of finalizing after the timelock.
+    function testFuzz_FLOGR_DINIT_111_deferredGuardianRecoveryInit_obeysAdminOperationTimelock(
+        address pendingRecoveryAddress,
+        uint256 pendingTimelock,
+        bool cancelAfterInitiate
+    ) public {
+        vm.assume(pendingRecoveryAddress != address(0));
+        uint256 boundedPendingTimelock = bound(
+            pendingTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+
+        // Setup: clear active guardian-recovery config so deferred initialization is available.
+        harness.resetGuardianRecoveryStorageViaHarness();
+
+        // Call: initiate deferred initialization, then either cancel immediately or finalize after the admin timelock.
+        harness.initiateInitializeGuardianRecoveryViaLibrary(pendingRecoveryAddress, boundedPendingTimelock);
+        GuardianRecoveryState memory pendingState = harness.getGuardianRecoveryStateViaStorage();
+
+        assertEq(
+            pendingState.pendingInit.pendingTimestamp,
+            block.timestamp + ADMIN_OPERATION_TIMELOCK,
+            "pending-init timestamp should use the admin-operation timelock"
+        );
+
+        if (cancelAfterInitiate) {
+            harness.cancelInitializeGuardianRecoveryViaLibrary();
+
+            // Verify: cancel clears the pending tuple and leaves active recovery config unset.
+            GuardianRecoveryState memory cancelledState = harness.getGuardianRecoveryStateViaStorage();
+            assertEq(cancelledState.recoveryAddress, address(0), "cancel should not configure recovery");
+            assertEq(
+                cancelledState.pendingInit.pendingRecoveryAddress, address(0), "cancel should clear pending address"
+            );
+            assertEq(cancelledState.pendingInit.pendingTimestamp, 0, "cancel should clear pending timestamp");
+            return;
+        }
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector,
+                pendingState.pendingInit.pendingTimestamp,
+                block.timestamp
+            )
+        );
+        harness.finalizeInitializeGuardianRecoveryViaLibrary();
+
+        vm.warp(pendingState.pendingInit.pendingTimestamp);
+        harness.finalizeInitializeGuardianRecoveryViaLibrary();
+
+        // Verify: finalize succeeds only after the admin timelock and promotes the pending tuple into active config.
+        GuardianRecoveryState memory finalizedState = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(finalizedState.recoveryAddress, pendingRecoveryAddress, "finalize should configure recovery address");
+        assertEq(
+            finalizedState.timelockDurationSeconds,
+            boundedPendingTimelock,
+            "finalize should configure recovery timelock"
+        );
+        assertEq(
+            finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address"
+        );
+        assertEq(finalizedState.pendingInit.pendingTimestamp, 0, "finalize should clear pending timestamp");
     }
 
     /// @dev Verifies that random non-zero guardians complete flow while zero guardian always reverts on initiate.
@@ -274,5 +375,122 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
                 state.timelockDurationSeconds, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS, "timelock must be <= max"
             );
         }
+    }
+
+    /// @dev Verifies guardian-recovery operations never mutate tx-recovery storage.
+    /// @param txRecoveryAddress The tx-recovery address seeded into storage.
+    /// @param enabled Whether tx recovery starts enabled.
+    /// @param txTimelock The tx-recovery timelock seeded into storage.
+    /// @param pendingEnableTimestamp The pending tx-recovery enable timestamp seeded into storage.
+    /// @param pendingInitAddress The pending tx-recovery init address seeded into storage.
+    /// @param pendingInitTimelock The pending tx-recovery init timelock seeded into storage.
+    /// @param pendingInitTimestamp The pending tx-recovery init timestamp seeded into storage.
+    /// @param newGuardian The recovery guardian used for the guardian-recovery mutation path.
+    function testFuzz_FLOGR_ISO_117_guardianRecoveryOperations_neverMutateTxRecoveryState(
+        address txRecoveryAddress,
+        bool enabled,
+        uint256 txTimelock,
+        uint256 pendingEnableTimestamp,
+        address pendingInitAddress,
+        uint256 pendingInitTimelock,
+        uint256 pendingInitTimestamp,
+        address newGuardian
+    ) public {
+        vm.assume(newGuardian != address(0));
+
+        // Setup: seed arbitrary tx-recovery state, then perform guardian-recovery operations on the other state
+        // subtree.
+        TxRecoveryState memory beforeState = TxRecoveryState({
+            recoveryAddress: txRecoveryAddress,
+            isEnabled: enabled,
+            timelockDurationSeconds: txTimelock,
+            pendingEnableTimestamp: pendingEnableTimestamp,
+            pendingInit: PendingRecoveryInitTimelock({
+                pendingRecoveryAddress: pendingInitAddress,
+                pendingTimelockDurationSeconds: pendingInitTimelock,
+                pendingTimestamp: pendingInitTimestamp
+            })
+        });
+        recoveryStateHarness.setTxRecoveryState(beforeState);
+        _resetAndConfigureRecovery();
+
+        harness.initiateRecoveryGuardianUpdateViaLibrary(newGuardian);
+        harness.cancelRecoveryGuardianUpdateViaLibrary();
+
+        // Verify: tx-recovery storage remains unchanged after guardian-recovery mutations.
+        TxRecoveryState memory afterState = harness.getTxRecoveryStateViaStorage();
+        assertEq(afterState.recoveryAddress, beforeState.recoveryAddress, "tx recovery address should not change");
+        assertEq(afterState.isEnabled, beforeState.isEnabled, "tx recovery enabled flag should not change");
+        assertEq(
+            afterState.timelockDurationSeconds,
+            beforeState.timelockDurationSeconds,
+            "tx recovery timelock should not change"
+        );
+        assertEq(
+            afterState.pendingEnableTimestamp,
+            beforeState.pendingEnableTimestamp,
+            "pending enable timestamp should not change"
+        );
+        assertEq(
+            afterState.pendingInit.pendingRecoveryAddress,
+            beforeState.pendingInit.pendingRecoveryAddress,
+            "pending init address should not change"
+        );
+        assertEq(
+            afterState.pendingInit.pendingTimelockDurationSeconds,
+            beforeState.pendingInit.pendingTimelockDurationSeconds,
+            "pending init timelock should not change"
+        );
+        assertEq(
+            afterState.pendingInit.pendingTimestamp,
+            beforeState.pendingInit.pendingTimestamp,
+            "pending init timestamp should not change"
+        );
+    }
+
+    /// @dev Verifies guardian-recovery helper wrappers stay idempotent and field-consistent.
+    /// @param pendingAddress The pending deferred-init recovery address seeded into storage.
+    /// @param pendingTimelock The pending deferred-init timelock seeded into storage.
+    /// @param pendingTimestamp The pending deferred-init finalize timestamp seeded into storage.
+    /// @param configuredRecovery The active recovery address used for the validate-not-configured branch.
+    /// @param configuredTimelock The active recovery timelock used for the validate-not-configured branch.
+    function testFuzz_FLOGR_HAR_118_helperWrappers_areIdempotentAndFieldConsistent(
+        address pendingAddress,
+        uint256 pendingTimelock,
+        uint256 pendingTimestamp,
+        address configuredRecovery,
+        uint256 configuredTimelock
+    ) public {
+        vm.assume(pendingAddress != address(0));
+        vm.assume(configuredRecovery != address(0));
+
+        uint256 boundedPendingTimelock = bound(
+            pendingTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+
+        // Setup: seed a pending deferred-init tuple, clear it twice through the helper, then seed active config.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        recoveryStateHarness.setGuardianRecoveryPendingInit(
+            pendingAddress, boundedPendingTimelock, pendingTimestamp
+        );
+
+        harness.clearPendingGuardianRecoveryInitTimelockViaLibrary();
+        harness.clearPendingGuardianRecoveryInitTimelockViaLibrary();
+
+        GuardianRecoveryState memory clearedState = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(clearedState.pendingInit.pendingRecoveryAddress, address(0), "clear helper should zero address");
+        assertEq(clearedState.pendingInit.pendingTimelockDurationSeconds, 0, "clear helper should zero timelock");
+        assertEq(clearedState.pendingInit.pendingTimestamp, 0, "clear helper should zero timestamp");
+
+        recoveryStateHarness.setGuardianRecoveryConfig(configuredRecovery, configuredTimelock);
+
+        // Call: run the not-configured validator after seeding active config.
+        vm.expectRevert(IOrganizationGuardianRecovery.GuardianRecoveryAlreadyConfigured.selector);
+        harness.validateGuardianRecoveryNotConfiguredOrRevertViaLibrary();
+
+        // Verify: the helper revert leaves the active config intact.
+        GuardianRecoveryState memory configuredState = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(configuredState.recoveryAddress, configuredRecovery, "configured recovery address should remain");
+        assertEq(configuredState.timelockDurationSeconds, configuredTimelock, "configured timelock should remain");
     }
 }

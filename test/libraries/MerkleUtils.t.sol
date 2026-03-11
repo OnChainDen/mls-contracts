@@ -15,6 +15,9 @@ import {MerkleUtils} from "libraries/MerkleUtils.sol";
  *      via a public wrapper so it can be called from the test contract.
  */
 contract MerkleUtilsHarness {
+    /// @dev Exposes address-leaf computation for direct testing.
+    /// @param addr Address to convert into a Merkle leaf.
+    /// @return leaf Double-hashed Merkle leaf for the address.
     function computeAddressLeaf(address addr) external pure returns (bytes32) {
         return MerkleUtils.computeAddressLeaf(addr);
     }
@@ -36,6 +39,7 @@ contract MerkleUtilsTest is Test {
     MerkleUtilsHarness public harness;
     Merkle public merkle;
 
+    /// @dev Deploys the harness and Merkle helper used across fuzz cases.
     function setUp() public {
         harness = new MerkleUtilsHarness();
         merkle = new Merkle();
@@ -94,13 +98,38 @@ contract MerkleUtilsTest is Test {
     }
 
     /// @dev Test case: No two random addresses should ever produce the same leaf (collision resistance).
-    function testFuzz_computeAddressLeaf_noCollisions(address addr1, address addr2) public view {
+    function testFuzz_FMU_LEAF_10_computeAddressLeaf_distinctRandomAddressesDoNotCollide(
+        address addr1,
+        address addr2
+    ) public view {
+        // Setup: constrain the fuzzed addresses to distinct values.
         vm.assume(addr1 != addr2);
 
+        // Call: compute the Merkle leaf for each distinct address.
         bytes32 leaf1 = harness.computeAddressLeaf(addr1);
         bytes32 leaf2 = harness.computeAddressLeaf(addr2);
 
+        // Verify: distinct addresses should not collide in practical fuzz space.
         assertTrue(leaf1 != leaf2, "Different addresses should never collide");
+    }
+
+    /// @dev Verifies `MerkleUtils.computeAddressLeaf` stays deterministic and matches the documented double-hash
+    /// formula for random addresses.
+    /// @param addr Fuzzed address used to derive the Merkle leaf.
+    function testFuzz_FMU_LEAF_9_computeAddressLeaf_randomAddressesRemainDeterministicAndDoubleHashed(address addr)
+        public
+        view
+    {
+        // Setup: derive the expected documented double-hash leaf from the fuzzed address.
+        bytes32 expectedLeaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
+
+        // Call: compute the Merkle leaf twice for the same address.
+        bytes32 firstLeaf = harness.computeAddressLeaf(addr);
+        bytes32 secondLeaf = harness.computeAddressLeaf(addr);
+
+        // Verify: leaf computation should be deterministic and match the double-hash formula exactly.
+        assertEq(firstLeaf, expectedLeaf, "leaf should match the documented double-hash formula");
+        assertEq(secondLeaf, expectedLeaf, "repeated calls should remain deterministic");
     }
 
     /// @dev Test case: Random tree sizes (2-100 leaves) should produce verifiable merkle proofs for each leaf.
@@ -126,7 +155,7 @@ contract MerkleUtilsTest is Test {
     }
 
     /// @dev Test case: Modifying any single byte of a valid merkle proof should always cause verification to fail.
-    function testFuzz_computeAddressLeaf_modifiedProofByte_verificationFails(
+    function testFuzz_FMU_MERK_11_computeAddressLeaf_modifiedProofByteAlwaysInvalidatesVerification(
         uint8 rawTreeSize,
         uint8 leafIndex,
         uint8 proofByteIndex

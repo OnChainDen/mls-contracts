@@ -10,12 +10,24 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Library-focused harness exposing nonce helpers from `LibOrganizationSignatures`.
  */
 contract LibOrganizationSignaturesHarness {
+    /// @dev Error used to force a state-reverting parent transaction after nonce consumption.
+    error ForcedRollback();
+
     /**
      * @dev Exposes `LibOrganizationSignatures.validateAndConsumeNonceOrRevert`.
      * @param nonce The nonce to validate and consume.
      */
     function validateAndConsumeNonceOrRevertViaLibrary(uint256 nonce) external {
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
+    }
+
+    /**
+     * @dev Consumes a nonce through the library and then reverts the parent transaction.
+     * @param nonce The nonce to validate and consume before reverting.
+     */
+    function validateAndConsumeNonceThenRevertViaLibrary(uint256 nonce) external {
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
+        revert ForcedRollback();
     }
 
     /**

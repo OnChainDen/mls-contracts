@@ -66,6 +66,15 @@ contract FuzzTarget {
 }
 
 /**
+ * @dev RevertingFuzzTarget — target whose only entrypoint always reverts.
+ */
+contract RevertingFuzzTarget {
+    function fail() external pure {
+        revert("reverting-fuzz-target");
+    }
+}
+
+/**
  * @dev Fuzz tests for SafeExecutorModule and BatchedTransaction.
  *      Covers test plan rows SMI-FUZ-1 through SMI-FUZ-4 and SMI-FUZ-6.
  *      SMI-FUZ-7 and SMI-FUZ-8 cover guardian module signature fuzzing and are
@@ -110,12 +119,123 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
         }
     }
 
+    /// @dev Verifies the constructor rejects any zero-address argument and otherwise persists the exact tuple.
+    /// @param safeArg The Safe address supplied to the constructor.
+    /// @param executorArg The authorized executor address supplied to the constructor.
+    /// @param batchedArg The batched-transaction address supplied to the constructor.
+    /// @param zeroMask Bitmask selecting which constructor arguments are overwritten to zero.
+    function testFuzz_FSEM_CTOR_149_constructor_rejectsZeroArgsAndPersistsNonZeroTuple(
+        address safeArg,
+        address executorArg,
+        address batchedArg,
+        uint8 zeroMask
+    ) public {
+        if (zeroMask & 0x01 != 0) {
+            safeArg = address(0);
+        } else {
+            vm.assume(safeArg != address(0));
+        }
+
+        if (zeroMask & 0x02 != 0) {
+            executorArg = address(0);
+        } else {
+            vm.assume(executorArg != address(0));
+        }
+
+        if (zeroMask & 0x04 != 0) {
+            batchedArg = address(0);
+        } else {
+            vm.assume(batchedArg != address(0));
+        }
+
+        // Setup: derive the constructor tuple after applying the fuzzed zero-address mask.
+
+        // Call: deploy the module and branch on the first zero-address validation that should trigger.
+        if (safeArg == address(0)) {
+            vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
+            new SafeExecutorModule(safeArg, executorArg, batchedArg);
+            return;
+        }
+
+        if (executorArg == address(0)) {
+            vm.expectRevert(ISafeExecutorModule.ExecutorAddressCannotBeZero.selector);
+            new SafeExecutorModule(safeArg, executorArg, batchedArg);
+            return;
+        }
+
+        if (batchedArg == address(0)) {
+            vm.expectRevert(ISafeExecutorModule.BatchedTransactionAddressCannotBeZero.selector);
+            new SafeExecutorModule(safeArg, executorArg, batchedArg);
+            return;
+        }
+
+        SafeExecutorModule freshModule = new SafeExecutorModule(safeArg, executorArg, batchedArg);
+
+        // Verify: non-zero constructor tuples persist exactly into the immutable fields.
+        assertEq(freshModule.SAFE(), safeArg, "SAFE immutable should match constructor input");
+        assertEq(
+            freshModule.AUTHORIZED_EXECUTOR(), executorArg, "AUTHORIZED_EXECUTOR immutable should match input"
+        );
+        assertEq(
+            freshModule.BATCHED_TRANSACTION(), batchedArg, "BATCHED_TRANSACTION immutable should match input"
+        );
+    }
+
+    /// @dev Verifies only the configured authorized executor can make `executeOnBehalf` succeed.
+    /// @param caller The fuzzed caller attempting to invoke the module.
+    /// @param newValue The value written on the success branch.
+    function testFuzz_FSEM_EXEC_150_executeOnBehalf_onlyAuthorizedExecutorCanCall(address caller, uint256 newValue)
+        public
+    {
+        bytes memory data = abi.encodeWithSelector(FuzzTarget.setValue.selector, newValue);
+
+        // Setup: build a deterministic successful downstream call against the fuzz target.
+
+        // Call: execute from the fuzzed caller and branch on whether it matches the authorized executor.
+        if (caller == authorizedExecutor) {
+            vm.prank(caller);
+            bool success = module.executeOnBehalf(address(fuzzTarget), data);
+
+            // Verify: the authorized executor succeeds and applies the requested state change.
+            assertTrue(success, "authorized executor should make executeOnBehalf succeed");
+            assertEq(fuzzTarget.value(), newValue, "authorized path should apply the fuzzed target value");
+            return;
+        }
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ISafeExecutorModule.UnauthorizedCaller.selector, caller, authorizedExecutor)
+        );
+        vm.prank(caller);
+        module.executeOnBehalf(address(fuzzTarget), data);
+
+        // Verify: unauthorized callers revert before the Safe is touched.
+        assertEq(mockSafe.callCount(), 0, "unauthorized callers must be rejected before Safe execution");
+        assertEq(fuzzTarget.value(), 0, "unauthorized callers must not mutate the target");
+    }
+
+    /// @dev Verifies `executeOnBehalf` always rejects attempts to target the Safe itself.
+    /// @param data The fuzzed calldata supplied on the forbidden Safe-targeted call.
+    function testFuzz_FSEM_EXEC_151_executeOnBehalf_callsToSafeAlwaysRevert(bytes calldata data) public {
+        vm.assume(data.length <= 1024);
+
+        // Setup: choose arbitrary calldata while forcing the module target to equal the configured Safe.
+
+        // Call: invoke the Safe-targeted path as the authorized executor, expecting the specific guard revert.
+        vm.expectRevert(abi.encodeWithSelector(ISafeExecutorModule.CannotCallSafe.selector, address(mockSafe)));
+        vm.prank(authorizedExecutor);
+        module.executeOnBehalf(address(mockSafe), data);
+
+        // Verify: the rejection happens before any Safe call is attempted.
+        assertEq(mockSafe.callCount(), 0, "Safe-targeted calls must revert before reaching Safe execution");
+    }
+
     /// @dev Verifies `executeOnBehalf` chooses the Safe operation solely from the target kind.
     /// @param useBatchedTarget Whether to route through `BATCHED_TRANSACTION` instead of a direct call target.
     /// @param newValue Fuzzed value written through the selected execution path.
-    function testFuzz_SMI_FUZ_1_executeOnBehalf_operationMatchesTargetKind(bool useBatchedTarget, uint256 newValue)
-        public
-    {
+    function testFuzz_SMI_FUZ_1__FSEM_EXEC_152_executeOnBehalf_operationMatchesTargetKind(
+        bool useBatchedTarget,
+        uint256 newValue
+    ) public {
         // Setup: build a successful direct-call or batch-call payload against known contract targets.
         address target = useBatchedTarget ? address(batchedTx) : address(fuzzTarget);
         bytes memory data;
@@ -148,20 +268,53 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
         assertEq(fuzzTarget.value(), newValue, "selected execution path should apply the fuzzed value");
     }
 
-    /// @dev Verifies `executeOnBehalf` forwards fuzzed calldata byte-for-byte to Safe.
-    function testFuzz_SMI_FUZ_2_executeOnBehalf_calldataForwardedByteForByte(bytes calldata randomData) public {
+    /// @dev Verifies `executeOnBehalf` forwards exact calldata while always instructing the Safe to send zero value.
+    /// @param randomData The fuzzed calldata forwarded into the Safe.
+    function testFuzz_SMI_FUZ_2__FSEM_EXEC_153_executeOnBehalf_forwardsZeroValueAndCalldataByteForByte(
+        bytes calldata randomData
+    ) public {
+        vm.assume(randomData.length <= 1024);
+
         // Call: execute with fuzzed calldata.
         vm.prank(authorizedExecutor);
         try module.executeOnBehalf(address(fuzzTarget), randomData) {
-            // Verify: Safe received exact bytes.
+            // Verify: Safe received exact bytes and the hardcoded zero-value invariant held on success.
             assertEq(mockSafe.lastCallData(), randomData, "Calldata must be forwarded byte-for-byte");
+            assertEq(mockSafe.lastCallValue(), 0, "Safe execution value must stay zero");
         } catch {
-            // Target call may fail for random data, but data should still have been forwarded.
-            // Only check if Safe was actually called.
+            // Verify: failure still routes the exact bytes into Safe with value fixed at zero.
             if (mockSafe.callCount() > 0) {
                 assertEq(mockSafe.lastCallData(), randomData, "Calldata must be forwarded even on failure");
+                assertEq(mockSafe.lastCallValue(), 0, "Safe execution value must stay zero even on failure");
             }
         }
+    }
+
+    /// @dev Verifies every failed Safe execution path reverts `ExecutionFailed` instead of returning `false`.
+    /// @param useBatchedFailure Whether to fail through the batched delegatecall path instead of a direct target revert.
+    function testFuzz_FSEM_EXEC_154_executeOnBehalf_failedExecutionAlwaysRevertsExecutionFailed(
+        bool useBatchedFailure
+    ) public {
+        address target;
+        bytes memory data;
+
+        // Setup: choose either a direct reverting target or a batched self-target that makes Safe execution fail.
+        if (useBatchedFailure) {
+            bytes[] memory txs = new bytes[](1);
+            txs[0] = _encodeTx(address(mockSafe), hex"00");
+            target = address(batchedTx);
+            data = abi.encodeWithSelector(BatchedTransaction.execute.selector, _encodeBatch(txs));
+            mockSafe.setExecuteDelegatecalls(true);
+        } else {
+            RevertingFuzzTarget revertingTarget = new RevertingFuzzTarget();
+            target = address(revertingTarget);
+            data = abi.encodeWithSelector(RevertingFuzzTarget.fail.selector);
+        }
+
+        // Call: execute the guaranteed-failure path as the authorized executor, expecting `ExecutionFailed`.
+        vm.expectRevert(ISafeExecutorModule.ExecutionFailed.selector);
+        vm.prank(authorizedExecutor);
+        module.executeOnBehalf(target, data);
     }
 
     /// @dev Verifies malformed signature inputs never revert and only return canonical ERC-1271 values.
@@ -186,7 +339,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @param signCorrectHash Whether the signer signs the exact validated hash.
     /// @param hash Message hash supplied to `isValidSignature`.
     /// @param otherSignerPkRaw Fuzzed seed for an alternate non-authorized signer key.
-    function testFuzz_SMI_FUZ_3_B_isValidSignature_onlyAuthorizedExactHashProducesMagic(
+    function testFuzz_SMI_FUZ_3_B__FSEM_SIG_155_isValidSignature_onlyAuthorizedExactHashProducesMagic(
         bool useAuthorizedSigner,
         bool signCorrectHash,
         bytes32 hash,
@@ -211,7 +364,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies successful batch execution matches sequential-call semantics.
-    function testFuzz_SMI_FUZ_4_execute_validBatchMatchesSequentialSemantics(uint8 batchSize) public {
+    function testFuzz_SMI_FUZ_4__FBT_EXEC_156_execute_validBatchMatchesSequentialSemantics(uint8 batchSize) public {
         // Setup: bound batch size to reasonable range.
         batchSize = uint8(bound(batchSize, 1, 20));
 
@@ -231,7 +384,9 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     }
 
     /// @dev Verifies that self-target at any position in the batch causes atomic revert.
-    function testFuzz_SMI_FUZ_6_execute_selfTargetAtAnyPositionCausesAtomicRevert(uint8 position) public {
+    function testFuzz_SMI_FUZ_6__FBT_EXEC_157_execute_selfTargetAtAnyPositionCausesAtomicRevert(uint8 position)
+        public
+    {
         // Setup: batch of 5 transactions with one targeting address(this) (the "Safe").
         uint8 batchSize = 5;
         position = uint8(bound(position, 0, batchSize - 1));

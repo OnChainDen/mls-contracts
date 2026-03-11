@@ -12,6 +12,7 @@ import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizati
 import {IOrganizationInitialization} from "interfaces/organization/IOrganizationInitialization.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {SignatureTestHelpers} from "test/helpers/SignatureTestHelpers.sol";
@@ -730,6 +731,352 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         );
         assertEq(
             disabledSignatureResult, bytes4(0xffffffff), "disabled recovery should immediately reject the same payload"
+        );
+    }
+
+    /// @dev Verifies `getPolicyUsage` matches the usage written by the real account-transaction execution path.
+    /// @param organizationSalt CREATE2 salt used for organization deployment.
+    /// @param accountSalt CREATE2 salt used for account deployment.
+    /// @param amountRaw Fuzzed amount seed used for token-transfer usage.
+    /// @param useTokenTransfer Whether to exercise the token-transfer or contract-interaction execution path.
+    function testFuzz_FCF_RATE_163_getPolicyUsage_matchesExecutionPathUsage(
+        bytes32 organizationSalt,
+        bytes32 accountSalt,
+        uint96 amountRaw,
+        bool useTokenTransfer
+    ) public {
+        // Setup: deploy a real organization/account pair and install one rate-limited auto-approve policy.
+        OrganizationImplementationHarness organization = _deployOrganizationHarness(organizationSalt);
+        address account = _deployAccount(
+            organization, accountSalt, uint256(keccak256(abi.encodePacked("fcf-rate-163-deploy", accountSalt)))
+        );
+        vm.deal(account, 1 ether);
+
+        Policy memory policy = _buildAutoApprovePolicy(initiatorSigner);
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = type(uint128).max;
+        policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
+        policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
+
+        address to;
+        uint256 value;
+        bytes memory data;
+        address destinationForUsage;
+        uint256 expectedUsage;
+
+        if (useTokenTransfer) {
+            uint256 amount = bound(uint256(amountRaw), 1, 1_000_000);
+            address token = address(
+                uint160(uint256(keccak256(abi.encodePacked("fcf-rate-163-token", organizationSalt, accountSalt))))
+            );
+            address recipient = address(
+                uint160(uint256(keccak256(abi.encodePacked("fcf-rate-163-recipient", organizationSalt, accountSalt))))
+            );
+
+            policy.config.transactionType = TransactionType.TokenTransfers;
+            to = token;
+            value = 0;
+            data = abi.encodeWithSelector(bytes4(0xa9059cbb), recipient, amount);
+            destinationForUsage = recipient;
+            expectedUsage = amount;
+        } else {
+            policy.config.transactionType = TransactionType.ContractInteractions;
+            to = EXECUTION_RECIPIENT;
+            value = 0;
+            data = abi.encodeWithSelector(bytes4(0x51515151), uint256(amountRaw));
+            destinationForUsage = EXECUTION_RECIPIENT;
+            expectedUsage = 1;
+        }
+
+        ValidationProofs memory proofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, policy, 16_301);
+        ValidationProofs memory executionProofs = _buildEmptyProofs(policy);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signInitiatorTransaction({
+            organization: address(organization),
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: 16_302,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            isApproval: true
+        });
+
+        // Call: execute one real account transaction and then read usage back through `getPolicyUsage`.
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: 16_302,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: executionProofs
+        });
+
+        uint256 observedUsage =
+            organization.getPolicyUsage(POLICY_ID, policy, account, destinationForUsage, initiatorSigner, proofs.policyProof);
+
+        // Verify: the public usage getter matches the amount/count written by the execution path.
+        assertEq(observedUsage, expectedUsage, "policy usage getter should match execution-path accounting");
+    }
+
+    /// @dev Verifies execute/reject nonce consumption is unaffected by interleaved recovery executions.
+    /// @param organizationSalt CREATE2 salt used for organization deployment.
+    /// @param accountSalt CREATE2 salt used for account deployment.
+    /// @param txSaltRaw Raw salt used to derive the shared execute/reject nonce.
+    /// @param rejectFirst Whether the rejection path should consume the nonce before the execute replay attempt.
+    /// @param recoveryBeforeReplay Whether to place the recovery execution before or after the nonce-consuming path.
+    function testFuzz_FCF_REPLAY_165_executeRejectAndRecoveryOrderingNeverReopensConsumedNonce(
+        bytes32 organizationSalt,
+        bytes32 accountSalt,
+        uint256 txSaltRaw,
+        bool rejectFirst,
+        bool recoveryBeforeReplay
+    ) public {
+        // Setup: deploy a real organization/account pair, install one auto-approve policy, and enable tx recovery.
+        OrganizationImplementationHarness organization = _deployOrganizationHarness(organizationSalt);
+        address account = _deployAccount(
+            organization, accountSalt, uint256(keccak256(abi.encodePacked("fcf-replay-165-deploy", accountSalt)))
+        );
+        vm.deal(account, 1 ether);
+
+        Policy memory policy = _buildAutoApprovePolicy(initiatorSigner);
+        ValidationProofs memory proofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, policy, 16_501);
+
+        vm.prank(TX_RECOVERY);
+        organization.initiateEnableTransactionAndERC1271Recovery();
+        vm.warp(organization.getTxRecoveryState().pendingEnableTimestamp);
+        vm.prank(TX_RECOVERY);
+        organization.finalizeEnableTransactionAndERC1271Recovery();
+
+        uint256 txSalt = bound(txSaltRaw, 1, type(uint96).max);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory approvalSignature = _signInitiatorTransaction({
+            organization: address(organization),
+            account: account,
+            to: EXECUTION_RECIPIENT,
+            value: 0.2 ether,
+            data: bytes(""),
+            salt: txSalt,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            isApproval: true
+        });
+        bytes memory rejectionSignature = _signInitiatorTransaction({
+            organization: address(organization),
+            account: account,
+            to: EXECUTION_RECIPIENT,
+            value: 0.2 ether,
+            data: bytes(""),
+            salt: txSalt,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            isApproval: false
+        });
+        uint256 nonce = _computeAccountTransactionNonce({
+            organization: organization,
+            account: account,
+            to: EXECUTION_RECIPIENT,
+            value: 0.2 ether,
+            data: bytes(""),
+            policyId: POLICY_ID,
+            salt: txSalt
+        });
+
+        if (recoveryBeforeReplay) {
+            vm.prank(TX_RECOVERY);
+            organization.executeRecoveryAccountTransaction(account, RECOVERY_RECIPIENT, 0.1 ether, bytes(""));
+        }
+
+        // Call: consume the shared nonce through one path, optionally run recovery, then replay the opposite path.
+        if (rejectFirst) {
+            vm.prank(GUARDIAN);
+            organization.rejectAccountTransaction({
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: bytes(""),
+                salt: txSalt,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: rejectionSignature,
+                proofs: proofs
+            });
+        } else {
+            vm.prank(GUARDIAN);
+            organization.executeAccountTransaction({
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: bytes(""),
+                salt: txSalt,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: bytes(""),
+                proofs: proofs
+            });
+        }
+
+        if (!recoveryBeforeReplay) {
+            vm.prank(TX_RECOVERY);
+            organization.executeRecoveryAccountTransaction(account, SECOND_RECIPIENT, 0.1 ether, bytes(""));
+        }
+
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+        if (rejectFirst) {
+            vm.prank(GUARDIAN);
+            organization.executeAccountTransaction({
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: bytes(""),
+                salt: txSalt,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: bytes(""),
+                proofs: proofs
+            });
+        } else {
+            vm.prank(GUARDIAN);
+            organization.rejectAccountTransaction({
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: bytes(""),
+                salt: txSalt,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                initiatorSignature: approvalSignature,
+                reviewSignatures: rejectionSignature,
+                proofs: proofs
+            });
+        }
+
+        // Verify: recovery ordering never clears the consumed nonce or re-enables replay.
+        assertTrue(organization.getUsedNonce(nonce), "consumed account-transaction nonce must stay used");
+        assertEq(
+            RECOVERY_RECIPIENT.balance + SECOND_RECIPIENT.balance,
+            0.1 ether,
+            "exactly one recovery execution should succeed regardless of ordering"
+        );
+    }
+
+    /// @dev Verifies organization and account CREATE2 precomputes match their runtime deployments for fuzzed salts.
+    /// @param organizationSalt CREATE2 salt used for organization deployment.
+    /// @param accountSalt CREATE2 salt used for account deployment.
+    function testFuzz_FCF_DEPLOY_166_factoryAndAccountPrecomputesMatchRuntime(
+        bytes32 organizationSalt,
+        bytes32 accountSalt
+    ) public {
+        // Setup: precompute both deployment addresses before executing the real factory and account-factory paths.
+        address expectedOrganization = factory.computeOrganizationAddress(
+            organizationSalt, address(lifecycleImplementation), address(whitelist)
+        );
+        OrganizationImplementationHarness organization = _deployOrganizationHarness(organizationSalt);
+        address expectedAccount = organization.computeAccountAddress(accountSalt);
+
+        // Call: deploy the organization first, then deploy one account through the real guardian/admin flow.
+        address deployedAccount = _deployAccount(
+            organization, accountSalt, uint256(keccak256(abi.encodePacked("fcf-deploy-166-account", accountSalt)))
+        );
+
+        // Verify: both precomputed CREATE2 addresses match the runtime deployments exactly.
+        assertEq(address(organization), expectedOrganization, "organization deployment should match factory precompute");
+        assertEq(deployedAccount, expectedAccount, "account deployment should match organization precompute");
+    }
+
+    /// @dev Verifies guardian-update and deferred recovery-init timestamps all derive from the same org-wide admin
+    /// timelock.
+    /// @param organizationSalt CREATE2 salt used for organization deployment.
+    /// @param adminTimelockRaw Raw admin-operation timelock seed bounded into the valid range.
+    /// @param newGuardian Pending guardian used for the normal guardian-update flow.
+    /// @param guardianRecoveryAddress Recovery address proposed through deferred guardian-recovery initialization.
+    /// @param txRecoveryAddress Recovery address proposed through deferred tx-recovery initialization.
+    function testFuzz_FCF_TIMELK_167_allPendingFinalizeTimestampsUseOrgWideAdminTimelock(
+        bytes32 organizationSalt,
+        uint256 adminTimelockRaw,
+        address newGuardian,
+        address guardianRecoveryAddress,
+        address txRecoveryAddress
+    ) public {
+        vm.assume(newGuardian != address(0) && newGuardian != GUARDIAN);
+        vm.assume(guardianRecoveryAddress != address(0));
+        vm.assume(txRecoveryAddress != address(0));
+
+        uint256 adminTimelock = bound(
+            adminTimelockRaw, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+        );
+
+        // Setup: deploy an organization whose deferred recovery-init paths are available and whose admin timelock is
+        // fuzzed within the valid range.
+        InitializationParams memory params = _buildInitializationParams(address(versionedAccountImplementationV1));
+        params.adminOperationTimelockDurationSeconds = adminTimelock;
+        params.guardianRecoveryAddress = address(0);
+        params.guardianRecoveryTimelockDurationSeconds = 0;
+        params.transactionAndERC1271RecoveryAddress = address(0);
+        params.txRecoveryTimelockDurationSeconds = 0;
+
+        OrganizationImplementationHarness organization = _deployOrganizationHarnessWithParams(organizationSalt, params);
+        uint256 expectedPendingTimestamp = block.timestamp + adminTimelock;
+
+        AdminAuthParams memory guardianAuth = _buildOperationAuth(
+            organization, OperationType.InitiateUpdateGuardian, abi.encode(newGuardian), 16_701, true
+        );
+        AdminAuthParams memory guardianRecoveryAuth = _buildOperationAuth(
+            organization,
+            OperationType.InitiateInitializeGuardianRecovery,
+            abi.encode(guardianRecoveryAddress, RECOVERY_TIMELOCK),
+            16_702,
+            true
+        );
+        AdminAuthParams memory txRecoveryAuth = _buildOperationAuth(
+            organization,
+            OperationType.InitiateInitializeTransactionRecovery,
+            abi.encode(txRecoveryAddress, RECOVERY_TIMELOCK),
+            16_703,
+            true
+        );
+
+        // Call: initiate the three admin-timelocked flows that should all derive their finalize timestamp the same way.
+        vm.prank(GUARDIAN);
+        organization.initiateGuardianUpdate(newGuardian, guardianAuth);
+
+        vm.prank(GUARDIAN);
+        organization.initiateInitializeGuardianRecovery(guardianRecoveryAddress, RECOVERY_TIMELOCK, guardianRecoveryAuth);
+
+        vm.prank(GUARDIAN);
+        organization.initiateInitializeTransactionAndERC1271Recovery(txRecoveryAddress, RECOVERY_TIMELOCK, txRecoveryAuth);
+
+        // Verify: every pending finalize timestamp equals `block.timestamp + adminOperationTimelockDurationSeconds`.
+        assertEq(
+            organization.adminOperationTimelockDurationSeconds(),
+            adminTimelock,
+            "organization should expose the fuzzed admin-operation timelock"
+        );
+        assertEq(
+            organization.pendingGuardianUpdateTimestamp(),
+            expectedPendingTimestamp,
+            "guardian update should use the org-wide admin timelock"
+        );
+        assertEq(
+            organization.getGuardianRecoveryState().pendingInit.pendingTimestamp,
+            expectedPendingTimestamp,
+            "guardian-recovery deferred init should use the org-wide admin timelock"
+        );
+        assertEq(
+            organization.getTxRecoveryState().pendingInit.pendingTimestamp,
+            expectedPendingTimestamp,
+            "tx-recovery deferred init should use the org-wide admin timelock"
         );
     }
 

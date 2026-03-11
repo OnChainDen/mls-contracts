@@ -438,7 +438,9 @@ contract OrganizationTxRecoveryBaseIntegrationAndFuzzTest is OrganizationTxRecov
     }
 
     /// @dev Verifies TXR-FZ-6: fuzz non-recovery callers are unauthorized across tx-recovery-protected entrypoints.
-    function testFuzz_TXR_FZ_6_nonRecoveryCallers_entrypointsAlwaysRevertUnauthorized(address caller) public {
+    function testFuzz_TXR_FZ_6__FOTRB_ENTRY_121_nonRecoveryCallers_entrypointsAlwaysRevertUnauthorized(address caller)
+        public
+    {
         // Setup
         vm.assume(caller != TX_RECOVERY);
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));

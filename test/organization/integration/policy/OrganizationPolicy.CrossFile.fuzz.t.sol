@@ -14,7 +14,8 @@ import {
     ParameterConstraint,
     Policy,
     RateLimitScope,
-    TransactionType
+    TransactionType,
+    ValidationProofs
 } from "types/PolicyTypes.sol";
 
 /**
@@ -22,6 +23,146 @@ import {
  */
 contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     uint256 internal constant DEFAULT_POLICY_ID = 5001;
+
+    /**
+     * @dev Seeds the reusable initiator membership fixture required by top-level transaction-policy checks.
+     */
+    function setUp() public override {
+        super.setUp();
+        policyStateHarness.setMemberStatus(initiator1, true);
+        policyStateHarness.setMemberStatus(initiator2, true);
+    }
+
+    /**
+     * @dev Verifies `LibOrganizationPolicy.isPolicyInOrg` accepts the exact policy/proof tuple and fails closed for
+     *      any single-field policy mutation or single-word proof mutation.
+     * @param policyIdSeed Raw policy id used to derive a bounded non-zero policy id
+     * @param mutationSelector Chooses which policy field to mutate after the exact-tuple control check
+     */
+    function testFuzz_FLOP_MERKLE_56_isPolicyInOrg_exactTuplePassesAndPolicyOrProofMutationFails(
+        uint256 policyIdSeed,
+        uint8 mutationSelector
+    ) public {
+        // Setup: build a two-leaf policy tree so the exact tuple has both a non-empty proof and multiple mutable
+        // policy fields.
+        uint256 policyId = bound(policyIdSeed, 1, type(uint96).max - 1);
+        Policy memory policy = _buildBasePolicy();
+        policy.config.anySourceAccount = false;
+        policy.config.destinationType = DestinationType.CustomList;
+        policy.config.transactionType = TransactionType.ContractInteractions;
+        policy.config.approval.approvalThreshold = 2;
+        policy.roots.sourceAccountsRoot = keccak256("floa-merkle-56-source-root");
+        policy.roots.customDestinationsRoot = keccak256("floa-merkle-56-destination-root");
+        policy.roots.allowedFunctionsRoot = keccak256("floa-merkle-56-function-root");
+
+        Policy memory siblingPolicy = _buildBasePolicy();
+        siblingPolicy.config.anyFunction = false;
+
+        uint256[] memory policyIds = new uint256[](2);
+        policyIds[0] = policyId;
+        policyIds[1] = policyId + 1;
+        Policy[] memory policies = new Policy[](2);
+        policies[0] = policy;
+        policies[1] = siblingPolicy;
+
+        (bytes32 root, bytes32[] memory proof) = _buildPolicyRootAndProof(policyIds, policies, 0);
+        policyStateHarness.setPoliciesRoot(root);
+
+        // Call: validate the exact policy/proof tuple against the stored root.
+        assertTrue(harness.isPolicyInOrgViaLibrary(policyId, policy, proof), "exact policy+proof tuple should pass");
+
+        Policy memory mutated = policy;
+        uint8 mode = uint8(mutationSelector % 8);
+        if (mode == 0) {
+            mutated.config.transactionType = TransactionType.TokenTransfers;
+        } else if (mode == 1) {
+            mutated.config.anySourceAccount = true;
+        } else if (mode == 2) {
+            mutated.config.destinationType = DestinationType.Any;
+        } else if (mode == 3) {
+            mutated.config.approval.approvalThreshold = 3;
+        } else if (mode == 4) {
+            mutated.config.initiator.initiatorMember = reviewer1;
+        } else if (mode == 5) {
+            mutated.config.token.amountThreshold = 1;
+        } else if (mode == 6) {
+            mutated.roots.sourceAccountsRoot = policy.roots.sourceAccountsRoot ^ bytes32(uint256(1));
+        } else {
+            mutated.roots.allowedFunctionsRoot = policy.roots.allowedFunctionsRoot ^ bytes32(uint256(1));
+        }
+
+        bytes32[] memory mutatedProof = new bytes32[](proof.length);
+        for (uint256 i = 0; i < proof.length; i++) {
+            mutatedProof[i] = proof[i];
+        }
+        mutatedProof[0] = mutatedProof[0] ^ bytes32(uint256(1));
+
+        // Verify: mutating either the policy fields or one proof word should invalidate membership verification.
+        assertFalse(
+            harness.isPolicyInOrgViaLibrary(policyId, mutated, proof), "single policy-field mutation should fail"
+        );
+        assertFalse(
+            harness.isPolicyInOrgViaLibrary(policyId, policy, mutatedProof), "single proof-word mutation should fail"
+        );
+    }
+
+    /**
+     * @dev Verifies `LibOrganizationPolicy.isSourceAccountAllowedByPolicy` always accepts when
+     *      `anySourceAccount == true`, and otherwise requires the exact source-account proof tuple.
+     * @param allowedAccount Account included in the source-account merkle tree
+     * @param otherAccount Distinct account excluded from the source-account merkle tree
+     */
+    function testFuzz_FLOP_SOURCE_57_isSourceAccountAllowedByPolicy_anySourceAcceptsOtherwiseExactProofRequired(
+        address allowedAccount,
+        address otherAccount
+    ) public {
+        // Setup: build a two-leaf source-account tree whose proof covers `allowedAccount` but excludes
+        // `otherAccount`, then derive policy variants that differ only on the any-source flag.
+        vm.assume(allowedAccount != address(0));
+        vm.assume(otherAccount != address(0));
+        vm.assume(allowedAccount != otherAccount);
+
+        address witnessAccount = address(
+            uint160(uint256(keccak256(abi.encodePacked("floop-source-57", allowedAccount, otherAccount))) | uint256(1))
+        );
+        vm.assume(witnessAccount != allowedAccount);
+        vm.assume(witnessAccount != otherAccount);
+
+        (bytes32 sourceRoot, bytes32[] memory sourceProof) =
+            _buildAddressRootAndProof(buildArray(allowedAccount, witnessAccount), 0);
+        bytes32[] memory emptyProof = new bytes32[](0);
+
+        Policy memory filteredPolicy = _buildBasePolicy();
+        filteredPolicy.config.anySourceAccount = false;
+        filteredPolicy.roots.sourceAccountsRoot = sourceRoot;
+
+        Policy memory anySourcePolicy = _buildBasePolicy();
+        anySourcePolicy.config.anySourceAccount = true;
+        anySourcePolicy.roots.sourceAccountsRoot = sourceRoot;
+
+        // Verify: the any-source branch should always pass, while the filtered branch should require the exact
+        // proof/account tuple.
+        assertTrue(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(anySourcePolicy, allowedAccount, emptyProof),
+            "any-source policy should accept the included account"
+        );
+        assertTrue(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(anySourcePolicy, otherAccount, sourceProof),
+            "any-source policy should accept even without an exact source proof"
+        );
+        assertTrue(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(filteredPolicy, allowedAccount, sourceProof),
+            "filtered policy should accept the exact source-account proof"
+        );
+        assertFalse(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(filteredPolicy, otherAccount, sourceProof),
+            "filtered policy should reject a different account with the same proof"
+        );
+        assertFalse(
+            harness.isSourceAccountAllowedByPolicyViaLibrary(filteredPolicy, allowedAccount, emptyProof),
+            "filtered policy should reject the included account without its proof"
+        );
+    }
 
     /// @dev Verifies that policy field mutation invalidates original proof.
     function testFuzz_policyFieldMutationInvalidatesOriginalProof(uint256 policyIdSeed, uint8 mutationSelector)
@@ -79,9 +220,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         address accountA,
         address accountB,
         bool useFirst
-    )
-        public
-    {
+    ) public {
         vm.assume(accountA != address(0));
         vm.assume(accountB != address(0));
         vm.assume(accountA != accountB);
@@ -335,5 +474,372 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
 
         assertFalse(bytesLengthResult, "bytes length OOB should fail closed");
         assertFalse(stringLengthResult, "string length OOB should fail closed");
+    }
+
+    /**
+     * @dev Verifies token-transfer policies only authorize actual token transfers whose token and destination satisfy
+     *      the policy filters.
+     * @param useERC20 Whether to test the ERC-20 transfer branch instead of the native-transfer branch
+     * @param allowedDestination Allowed transfer recipient encoded into the destination proof
+     * @param deniedDestination Distinct disallowed transfer recipient
+     * @param tokenContract ERC-20 token contract used for the token-transfer branch
+     * @param amountRaw Raw transfer amount used to derive a bounded non-zero amount
+     */
+    function testFuzz_FLOP_TX_58_isTransactionAllowedByPolicy_tokenTransferPoliciesOnlyAcceptActualMatchingTransfers(
+        bool useERC20,
+        address allowedDestination,
+        address deniedDestination,
+        address tokenContract,
+        uint96 amountRaw
+    ) public {
+        // Setup: build one token-transfer policy whose destination proof matches only `allowedDestination`.
+        vm.assume(allowedDestination != address(0));
+        vm.assume(deniedDestination != address(0));
+        vm.assume(allowedDestination != deniedDestination);
+        vm.assume(tokenContract != address(0));
+        vm.assume(tokenContract != address(0xBAD1));
+
+        uint256 amount = bound(uint256(amountRaw), 1, type(uint96).max);
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) =
+            _buildAddressRootAndProof(buildArray(allowedDestination, deniedDestination), 0);
+
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.TokenTransfers;
+        policy.config.destinationType = DestinationType.CustomList;
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = useERC20 ? tokenContract : address(0);
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        bytes32[] memory policyProof = _setPolicyRootForExactPolicyWithSibling(DEFAULT_POLICY_ID, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: new bytes32[](0),
+            destinationProof: destinationProof,
+            functionProof: new bytes32[](0),
+            constraints: bytes("")
+        });
+
+        address validTo = useERC20 ? tokenContract : allowedDestination;
+        uint256 validValue = useERC20 ? 0 : amount;
+        bytes memory validData = useERC20 ? _encodeERC20Transfer(allowedDestination, amount) : bytes("");
+        address wrongTokenTo = useERC20 ? address(0xBAD1) : allowedDestination;
+        bytes memory wrongDestinationData = useERC20 ? _encodeERC20Transfer(deniedDestination, amount) : bytes("");
+
+        // Verify: only actual token transfers that match both the token filter and the destination proof should pass.
+        assertTrue(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA58), validTo, validValue, validData, initiator1, proofs
+            ),
+            "matching token transfer should pass"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA58),
+                wrongTokenTo,
+                0,
+                useERC20 ? validData : abi.encodeWithSelector(bytes4(0x11223344), amount),
+                initiator1,
+                proofs
+            ),
+            "non-transfer or wrong-token inputs should fail the token-transfer policy"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA58),
+                useERC20 ? tokenContract : deniedDestination,
+                useERC20 ? 0 : amount,
+                useERC20 ? wrongDestinationData : bytes(""),
+                initiator1,
+                proofs
+            ),
+            "wrong transfer destination should fail the token-transfer policy"
+        );
+    }
+
+    /**
+     * @dev Verifies contract-interaction policies reject token transfers and enforce function, constraint, and
+     *      destination checks on the top-level transaction path.
+     * @param allowedDestination Allowed interaction target encoded into the destination proof
+     * @param deniedDestination Distinct disallowed interaction target
+     * @param allowedArg Argument value that satisfies the exact parameter constraint
+     * @param deniedArg Distinct argument value that violates the parameter constraint
+     */
+    function testFuzz_FLOP_TX_59_isTransactionAllowedByPolicy_contractInteractionPoliciesRejectTokenTransfersAndEnforceChecks(
+        address allowedDestination,
+        address deniedDestination,
+        uint256 allowedArg,
+        uint256 deniedArg
+    ) public {
+        // Setup: build one contract-interaction policy with exact destination, selector, and parameter constraints.
+        vm.assume(allowedDestination != address(0));
+        vm.assume(deniedDestination != address(0));
+        vm.assume(allowedDestination != deniedDestination);
+        vm.assume(allowedArg != deniedArg);
+
+        bytes4 selector = bytes4(0x11223344);
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) =
+            _buildAddressRootAndProof(buildArray(allowedDestination, deniedDestination), 0);
+        ParameterConstraint memory exactArgConstraint = ParameterConstraint({
+            paramType: ParamType.Uint,
+            constraintType: ConstraintType.Exact,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: abi.encode(allowedArg),
+            paramValueInListProof: new bytes32[](0)
+        });
+        bytes memory constraints = _encodeSingleConstraint(exactArgConstraint);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = selector;
+        bytes[] memory constraintsList = new bytes[](1);
+        constraintsList[0] = constraints;
+        (bytes32 functionRoot, bytes32[] memory functionProof) =
+            _buildFunctionRootAndProof(selectors, constraintsList, 0);
+
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.ContractInteractions;
+        policy.config.destinationType = DestinationType.CustomList;
+        policy.config.anyFunction = false;
+        policy.roots.customDestinationsRoot = destinationRoot;
+        policy.roots.allowedFunctionsRoot = functionRoot;
+
+        bytes32[] memory policyProof = _setPolicyRootForExactPolicyWithSibling(DEFAULT_POLICY_ID, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: new bytes32[](0),
+            destinationProof: destinationProof,
+            functionProof: functionProof,
+            constraints: constraints
+        });
+
+        bytes memory validData = abi.encodeWithSelector(selector, allowedArg);
+        bytes memory wrongSelectorData = abi.encodeWithSelector(selector ^ bytes4(uint32(1)), allowedArg);
+        bytes memory wrongConstraintData = abi.encodeWithSelector(selector, deniedArg);
+
+        // Verify: the contract-interaction path should reject token transfers and fail closed on selector,
+        // constraint, or destination mismatches.
+        assertTrue(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA59), allowedDestination, 0, validData, initiator1, proofs
+            ),
+            "matching contract interaction should pass"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA59),
+                address(0xC59),
+                0,
+                _encodeERC20Transfer(allowedDestination, bound(allowedArg, 1, type(uint96).max)),
+                initiator1,
+                proofs
+            ),
+            "token transfers should fail the contract-interaction policy"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA59), deniedDestination, 0, validData, initiator1, proofs
+            ),
+            "wrong destination should fail the contract-interaction policy"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA59), allowedDestination, 0, wrongSelectorData, initiator1, proofs
+            ),
+            "wrong selector should fail the contract-interaction policy"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA59), allowedDestination, 0, wrongConstraintData, initiator1, proofs
+            ),
+            "wrong parameter value should fail the contract-interaction policy"
+        );
+    }
+
+    /**
+     * @dev Verifies `TransactionType.Any` policies authorize both token transfers and contract interactions only when
+     *      the actual destination satisfies the destination filter.
+     * @param useTokenTransfer Whether to test the token-transfer class instead of the contract-interaction class
+     * @param useERC20 When `useTokenTransfer == true`, whether to test the ERC-20 branch instead of the native branch
+     * @param allowedDestination Allowed actual destination encoded into the destination proof
+     * @param deniedDestination Distinct disallowed actual destination
+     * @param tokenContract ERC-20 token contract used for the ERC-20 transfer branch
+     * @param amountRaw Raw amount used to derive a bounded non-zero transfer amount
+     */
+    function testFuzz_FLOP_TX_60_isTransactionAllowedByPolicy_anyPoliciesAcceptBothTransactionClassesOnlyWhenDestinationAllowed(
+        bool useTokenTransfer,
+        bool useERC20,
+        address allowedDestination,
+        address deniedDestination,
+        address tokenContract,
+        uint96 amountRaw
+    ) public {
+        // Setup: build one `TransactionType.Any` policy whose destination proof matches only `allowedDestination`.
+        vm.assume(allowedDestination != address(0));
+        vm.assume(deniedDestination != address(0));
+        vm.assume(allowedDestination != deniedDestination);
+        vm.assume(tokenContract != address(0));
+
+        uint256 amount = bound(uint256(amountRaw), 1, type(uint96).max);
+        (bytes32 destinationRoot, bytes32[] memory destinationProof) =
+            _buildAddressRootAndProof(buildArray(allowedDestination, deniedDestination), 0);
+
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.Any;
+        policy.config.destinationType = DestinationType.CustomList;
+        policy.roots.customDestinationsRoot = destinationRoot;
+
+        bytes32[] memory policyProof = _setPolicyRootForExactPolicyWithSibling(DEFAULT_POLICY_ID, policy);
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: policyProof,
+            sourceAccountProof: new bytes32[](0),
+            destinationProof: destinationProof,
+            functionProof: new bytes32[](0),
+            constraints: bytes("")
+        });
+
+        bool allowedResult;
+        bool deniedResult;
+        if (useTokenTransfer) {
+            if (useERC20) {
+                // Call: evaluate the ERC-20 transfer class for both an allowed and disallowed actual recipient.
+                allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                    DEFAULT_POLICY_ID,
+                    address(0xAA60),
+                    tokenContract,
+                    0,
+                    _encodeERC20Transfer(allowedDestination, amount),
+                    initiator1,
+                    proofs
+                );
+                deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                    DEFAULT_POLICY_ID,
+                    address(0xAA60),
+                    tokenContract,
+                    0,
+                    _encodeERC20Transfer(deniedDestination, amount),
+                    initiator1,
+                    proofs
+                );
+            } else {
+                // Call: evaluate the native-transfer class for both an allowed and disallowed actual recipient.
+                allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                    DEFAULT_POLICY_ID, address(0xAA60), allowedDestination, amount, bytes(""), initiator1, proofs
+                );
+                deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                    DEFAULT_POLICY_ID, address(0xAA60), deniedDestination, amount, bytes(""), initiator1, proofs
+                );
+            }
+        } else {
+            bytes memory callData = abi.encodeWithSelector(bytes4(0x88776655), amount);
+
+            // Call: evaluate the contract-interaction class for both an allowed and disallowed actual destination.
+            allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA60), allowedDestination, 0, callData, initiator1, proofs
+            );
+            deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID, address(0xAA60), deniedDestination, 0, callData, initiator1, proofs
+            );
+        }
+
+        // Verify: both transaction classes should be accepted only when the destination filter matches the actual
+        // destination derived by the policy helpers.
+        assertTrue(allowedResult, "allowed destination should pass for the selected transaction class");
+        assertFalse(deniedResult, "disallowed destination should fail for the selected transaction class");
+    }
+
+    /**
+     * @dev Verifies `TransactionType.Signatures` policies never authorize account-transaction execution or rejection
+     *      paths regardless of whether the calldata looks like a native transfer, ERC-20 transfer, or contract
+     *      interaction.
+     * @param useTokenTransfer Whether to exercise a token-transfer-shaped transaction instead of a contract
+     * interaction
+     * @param useERC20 When `useTokenTransfer == true`, whether to exercise the ERC-20 branch instead of the native
+     * transfer branch
+     * @param destination Destination used for native-transfer or contract-interaction branches
+     * @param tokenContract ERC-20 token contract used for the ERC-20 transfer branch
+     * @param amountRaw Raw amount used to derive a bounded non-zero transfer amount
+     */
+    function testFuzz_FLOP_TX_61_isTransactionAllowedByPolicy_signaturesPoliciesNeverAuthorizeAccountTransactionPaths(
+        bool useTokenTransfer,
+        bool useERC20,
+        address destination,
+        address tokenContract,
+        uint96 amountRaw
+    ) public {
+        // Setup: store one existing `TransactionType.Signatures` policy with otherwise-permissive filters.
+        vm.assume(destination != address(0));
+        vm.assume(tokenContract != address(0));
+
+        uint256 amount = bound(uint256(amountRaw), 1, type(uint96).max);
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.Signatures;
+
+        policyStateHarness.setPoliciesRoot(_computePolicyLeaf(DEFAULT_POLICY_ID, policy));
+        ValidationProofs memory proofs = ValidationProofs({
+            policy: policy,
+            policyProof: new bytes32[](0),
+            sourceAccountProof: new bytes32[](0),
+            destinationProof: new bytes32[](0),
+            functionProof: new bytes32[](0),
+            constraints: bytes("")
+        });
+
+        address to;
+        uint256 value;
+        bytes memory data;
+        if (useTokenTransfer) {
+            if (useERC20) {
+                to = tokenContract;
+                value = 0;
+                data = _encodeERC20Transfer(destination, amount);
+            } else {
+                to = destination;
+                value = amount;
+                data = bytes("");
+            }
+        } else {
+            to = destination;
+            value = 0;
+            data = abi.encodeWithSelector(bytes4(0x55667788), amount);
+        }
+
+        // Call: evaluate the representative account-transaction path against the signatures-only policy.
+        bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            DEFAULT_POLICY_ID, address(0xAA61), to, value, data, initiator1, proofs
+        );
+
+        // Verify: signature-validation policies should never authorize account-transaction execution/rejection flows.
+        assertFalse(allowed, "signatures-only policy should reject every account-transaction path");
+    }
+
+    /**
+     * @dev Builds a two-leaf policy tree, stores the resulting root, and returns the proof for the exact policy under
+     *      test.
+     * @param policyId Policy id assigned to the exact policy under test
+     * @param policy Exact policy whose proof should be returned
+     * @return proof Merkle proof for `policy` at `policyId`
+     */
+    function _setPolicyRootForExactPolicyWithSibling(uint256 policyId, Policy memory policy)
+        internal
+        returns (bytes32[] memory proof)
+    {
+        Policy memory siblingPolicy = _buildBasePolicy();
+        siblingPolicy.config.transactionType = TransactionType.Signatures;
+        siblingPolicy.config.anyFunction = false;
+
+        uint256[] memory policyIds = new uint256[](2);
+        policyIds[0] = policyId;
+        policyIds[1] = policyId + 1;
+        Policy[] memory policies = new Policy[](2);
+        policies[0] = policy;
+        policies[1] = siblingPolicy;
+
+        bytes32 root;
+        (root, proof) = _buildPolicyRootAndProof(policyIds, policies, 0);
+        policyStateHarness.setPoliciesRoot(root);
     }
 }

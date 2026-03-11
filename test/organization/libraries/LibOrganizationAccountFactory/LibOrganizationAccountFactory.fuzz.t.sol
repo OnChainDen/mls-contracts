@@ -2,6 +2,9 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
+
+import {AccountProxy} from "account/AccountProxy.sol";
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {
     LibOrganizationAccountFactoryHarness
@@ -31,10 +34,12 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         assertTrue(accountA != accountB, "distinct salts should produce unique addresses");
     }
 
-    /// @dev Verifies random salts produce deployable account proxies.
-    function testFuzz_AF_FT_2_deployAccount_randomSalt_alwaysDeploysAccount(bytes32 salt) public {
+    /// @dev Verifies deployed-account tracking flips from `false` to `true` exactly once for a successful deploy.
+    function testFuzz_AF_FT_2__FLOAF_DEPLOY_125_deployAccount_randomSalt_alwaysDeploysAccount(bytes32 salt) public {
         // Setup: seed valid implementation with runtime code.
         harness.setAccountImplementationStorage(accountImplementationV1);
+        address computed = harness.computeAccountAddressViaLibrary(salt);
+        assertFalse(harness.isDeployedAccount(computed), "mapping should start false before deployment");
 
         // Call: deploy account for fuzzed salt.
         address deployed = harness.deployAccountViaLibrary(salt);
@@ -58,17 +63,21 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         harness.setAccountImplementationViaLibrary(candidate);
     }
 
-    /// @dev Verifies computed address matches deployed address for any valid salt.
-    function testFuzz_AF_FT_4_computeAndDeploy_randomSalt_deployedMatchesComputed(bytes32 salt) public {
+    /// @dev Verifies CREATE2 address computation is deterministic and matches the deployed address for valid salts.
+    function testFuzz_AF_FT_4__FLOAF_DEPLOY_124_computeAndDeploy_randomSalt_deployedMatchesComputed(bytes32 salt)
+        public
+    {
         // Setup: seed valid implementation with runtime code.
         harness.setAccountImplementationStorage(accountImplementationV1);
 
         address computed = harness.computeAccountAddressViaLibrary(salt);
+        address computedAgain = harness.computeAccountAddressViaLibrary(salt);
 
         // Call: deploy account for same salt.
         address deployed = harness.deployAccountViaLibrary(salt);
 
-        // Verify: computed and deployed addresses must match.
+        // Verify: computation should be deterministic and match the deployed address exactly.
+        assertEq(computed, computedAgain, "computeAccountAddress should be deterministic");
         assertEq(deployed, computed, "deployed address should match computed address");
     }
 
@@ -94,8 +103,10 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         assertFalse(isTracked, "non-deployed address should return false");
     }
 
-    /// @dev Verifies same salt across different organizations computes different addresses.
-    function testFuzz_AF_FT_6_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(bytes32 salt) public {
+    /// @dev Verifies the same salt across different organizations computes different account addresses.
+    function testFuzz_AF_FT_6__FLOAF_ADDRESS_126_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(
+        bytes32 salt
+    ) public {
         // Setup: instantiate a second organization harness.
         LibOrganizationAccountFactoryHarness otherHarness = new LibOrganizationAccountFactoryHarness();
 
@@ -105,5 +116,51 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
 
         // Verify: different organization deployers should derive different CREATE2 addresses.
         assertTrue(thisOrgAddress != otherOrgAddress, "same salt across organizations should differ");
+    }
+
+    /// @dev Verifies reusing the same salt always reverts and preserves deployed-account tracking after the first
+    /// successful deployment.
+    /// @param salt Fuzzed CREATE2 salt reused across both deployment attempts.
+    function testFuzz_FLOAF_DEPLOY_127_reusingSameSaltAlwaysRevertsAndPreservesTracking(bytes32 salt) public {
+        // Setup: seed a valid implementation and deploy once to occupy the CREATE2 slot.
+        harness.setAccountImplementationStorage(accountImplementationV1);
+        address firstDeployment = harness.deployAccountViaLibrary(salt);
+        assertTrue(harness.isDeployedAccount(firstDeployment), "first deployment should mark the account as tracked");
+
+        // Call: attempt to deploy a second time with the same salt.
+        vm.expectRevert(Errors.FailedDeployment.selector);
+        harness.deployAccountViaLibrary(salt);
+
+        // Verify: the original deployment remains tracked and no rollback occurs on the collision revert path.
+        assertTrue(harness.isDeployedAccount(firstDeployment), "collision revert should preserve deployed tracking");
+    }
+
+    /// @dev Verifies account-proxy bytecode generation is deterministic within one organization and changes across
+    /// organization addresses.
+    /// @param foreignOrganization Fuzzed non-zero organization address used for the field-sensitivity comparison.
+    function testFuzz_FLOAF_BYTECODE_128_getAccountProxyBytecode_isDeterministicAndOrganizationSensitive(
+        address foreignOrganization
+    ) public view {
+        // Setup: constrain the comparison organization away from this harness address and precompute a reference
+        // bytecode blob for it.
+        vm.assume(foreignOrganization != address(0));
+        vm.assume(foreignOrganization != address(harness));
+        bytes memory expectedBytecode =
+            abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(harness), ""));
+        bytes memory foreignBytecode =
+            abi.encodePacked(type(AccountProxy).creationCode, abi.encode(foreignOrganization, ""));
+
+        // Call: read account-proxy bytecode repeatedly for this harness.
+        bytes memory bytecode = harness.getAccountProxyBytecodeViaLibrary();
+        bytes memory repeatedBytecode = harness.getAccountProxyBytecodeViaLibrary();
+
+        // Verify: one organization should produce deterministic bytecode, match the reference model, and change when
+        // the organization address changes.
+        assertEq(keccak256(bytecode), keccak256(repeatedBytecode), "bytecode should be deterministic per org");
+        assertEq(keccak256(bytecode), keccak256(expectedBytecode), "bytecode should encode this organization address");
+        assertTrue(
+            keccak256(bytecode) != keccak256(foreignBytecode),
+            "bytecode should change when the organization address changes"
+        );
     }
 }

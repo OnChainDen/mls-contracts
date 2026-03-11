@@ -70,18 +70,22 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    function test_AI_INV_1__AI_ET_1__OAT_AI_1_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization()
-        public
-    {
-        // Setup: deploy target call receiver.
+    function testFuzz_AI_INV_1__AI_ET_1__OAT_AI_1__FAI_ORG_145_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(
+        address caller
+    ) public {
+        vm.assume(caller != address(beacon));
+
+        // Setup: deploy target call receiver and choose a non-organization caller.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
 
         vm.expectRevert(IAccount.OnlyOrganization.selector);
-        vm.prank(NON_ORGANIZATION);
-        // Call: invoke executeTransaction from non-organization address.
+        vm.prank(caller);
+        // Call: invoke executeTransaction from the fuzzed non-organization address.
         account.executeTransaction(
             address(target), 0, abi.encodeWithSelector(target.record.selector, bytes("x"), 1), 1, 1
         );
+
+        // Verify: every caller other than the bound organization is rejected.
     }
 
     /**
@@ -296,5 +300,31 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
 
         // Verify: caller is unrestricted and response is returned.
         assertEq(result, IERC1271.isValidSignature.selector, "isValidSignature should be publicly callable");
+    }
+
+    /// @dev Verifies receiving native tokens never mutates the stored organization address and always emits.
+    /// @param sender The caller sending native tokens into the account.
+    /// @param rawValue The native-token amount to send.
+    function testFuzz_FAI_RECEIVE_148_receiveSucceedsEmitsAndPreservesOrganization(address sender, uint256 rawValue)
+        public
+    {
+        uint256 value = bound(rawValue, 0, 10 ether);
+
+        // Setup: fund the fuzzed sender and snapshot the stored organization address before the receive call.
+        vm.deal(sender, value);
+        address organizationBefore = account.getOrganizationAddress();
+
+        vm.expectEmit(true, true, true, true, address(account));
+        emit IAccount.MLSWalletAccountNativeTokenReceived(sender, value);
+
+        // Call: send the fuzzed native-token amount into the account through `receive`.
+        vm.prank(sender);
+        (bool success,) = address(account).call{value: value}("");
+
+        // Verify: the transfer succeeds, emits, and leaves the bound organization address unchanged.
+        assertTrue(success, "receive should accept native-token transfers");
+        assertEq(account.getOrganizationAddress(), organizationBefore, "receive must not mutate organization storage");
+        assertEq(organizationBefore, address(beacon), "organization getter should stay bound to the beacon");
+        assertEq(address(account).balance, value, "account balance should increase by the transferred amount");
     }
 }

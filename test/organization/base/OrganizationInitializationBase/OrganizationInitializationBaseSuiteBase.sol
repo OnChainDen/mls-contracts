@@ -138,7 +138,8 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
         return type(uint256).max;
     }
 
-    /// @dev Asserts that organization state matches the provided initialization payload after success.
+    /// @dev Asserts that organization state matches the provided initialization payload after success, including
+    /// optional recovery configuration branches.
     /// @param organization Organization instance under test.
     /// @param params Initialization parameters expected to be persisted.
     function _assertInitializedState(IOrganization organization, InitializationParams memory params) internal view {
@@ -165,14 +166,19 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
 
         // Verify transaction recovery configuration and downstream defaults (CFI-FLOW-6).
         TxRecoveryState memory txRecovery = organization.getTxRecoveryState();
-        assertEq(
-            txRecovery.recoveryAddress, params.transactionAndERC1271RecoveryAddress, "tx recovery address mismatch"
-        );
-        assertEq(
-            txRecovery.timelockDurationSeconds,
-            params.txRecoveryTimelockDurationSeconds,
-            "tx recovery timelock mismatch"
-        );
+        if (params.transactionAndERC1271RecoveryAddress == address(0)) {
+            assertEq(txRecovery.recoveryAddress, address(0), "tx recovery should stay unset when omitted");
+            assertEq(txRecovery.timelockDurationSeconds, 0, "tx recovery timelock should stay unset when omitted");
+        } else {
+            assertEq(
+                txRecovery.recoveryAddress, params.transactionAndERC1271RecoveryAddress, "tx recovery address mismatch"
+            );
+            assertEq(
+                txRecovery.timelockDurationSeconds,
+                params.txRecoveryTimelockDurationSeconds,
+                "tx recovery timelock mismatch"
+            );
+        }
         assertFalse(txRecovery.isEnabled, "tx recovery must start disabled after init");
         assertEq(txRecovery.pendingEnableTimestamp, 0, "tx recovery pending enable timestamp must be zero after init");
         assertEq(
@@ -191,12 +197,21 @@ abstract contract InitializationSuiteBase is Test, ArrayBuilders {
 
         // Verify guardian recovery configuration and downstream defaults (CFI-FLOW-6).
         GuardianRecoveryState memory guardianRecovery = organization.getGuardianRecoveryState();
-        assertEq(guardianRecovery.recoveryAddress, params.guardianRecoveryAddress, "guardian recovery address mismatch");
-        assertEq(
-            guardianRecovery.timelockDurationSeconds,
-            params.guardianRecoveryTimelockDurationSeconds,
-            "guardian recovery timelock mismatch"
-        );
+        if (params.guardianRecoveryAddress == address(0)) {
+            assertEq(guardianRecovery.recoveryAddress, address(0), "guardian recovery should stay unset when omitted");
+            assertEq(
+                guardianRecovery.timelockDurationSeconds, 0, "guardian recovery timelock should stay unset when omitted"
+            );
+        } else {
+            assertEq(
+                guardianRecovery.recoveryAddress, params.guardianRecoveryAddress, "guardian recovery address mismatch"
+            );
+            assertEq(
+                guardianRecovery.timelockDurationSeconds,
+                params.guardianRecoveryTimelockDurationSeconds,
+                "guardian recovery timelock mismatch"
+            );
+        }
         assertFalse(
             guardianRecovery.isUpdateReadyForAcceptance, "guardian recovery must not be ready for acceptance after init"
         );

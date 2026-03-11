@@ -54,7 +54,7 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     /**
      * @dev Verifies that adding the same address twice is idempotent.
      */
-    function testFuzz_modifyMembers_addingSameAddressTwice_isIdempotent(address candidate) public {
+    function testFuzz_FLOM_MEMBER_46_modifyMembers_addingSameAddressTwiceIsIdempotent(address candidate) public {
         // Setup: constrain fuzz inputs for valid preconditions.
         vm.assume(candidate != address(0));
         // Setup: configure members/admins for a valid baseline state.
@@ -79,33 +79,27 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     }
 
     /**
-     * @dev Verifies that removing the same non-member address repeatedly is idempotent and non-reverting.
+     * @dev Verifies the desired behavior that removing a non-member always reverts with `MemberDoesNotExist`.
      */
-    function testFuzz_modifyMembers_removingSameNonMemberAddress_isIdempotent(address nonMember) public {
+    function testFuzz_FLOM_MEMBER_46_modifyMembers_removingNonMemberAlwaysRevertsMemberDoesNotExist(address nonMember)
+        public
+    {
         // Setup: constrain fuzz inputs for valid preconditions.
         vm.assume(nonMember != address(0) && nonMember != admin1);
         // Setup: configure members/admins for a valid baseline state.
         _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
 
-        bytes memory callData =
-            abi.encodeCall(harness.modifyMembersViaLibrary, (buildEmptyAddressArray(), buildArray(nonMember)));
-        // Call: execute first removal attempt through low-level call to capture success/failure.
-        (bool firstSuccess,) = address(harness).call(callData);
-        // Call: execute second removal attempt for the same non-member address.
-        (bool secondSuccess,) = address(harness).call(callData);
-
-        // Verify: both attempts should be successful no-ops.
-        assertTrue(firstSuccess, "first non-member removal should be a non-reverting no-op");
-        // Verify: both attempts should be successful no-ops.
-        assertTrue(secondSuccess, "second non-member removal should be a non-reverting no-op");
-        // Verify: target address remains non-member after idempotent removals.
-        assertFalse(harness.isMember(nonMember), "target should remain non-member");
+        // Call: remove a non-member through the library wrapper and expect the desired revert.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember));
+        harness.modifyMembersViaLibrary({
+            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(nonMember)
+        });
     }
 
     /**
      * @dev Verifies that any add array containing `address(0)` reverts with `InvalidMemberAddress`.
      */
-    function testFuzz_modifyMembers_randomZeroAddressInput_alwaysRevertsInvalidMemberAddress(
+    function testFuzz_FLOM_MEMBER_47_modifyMembers_randomZeroAddressInputAlwaysRevertsInvalidMemberAddress(
         uint256 seed,
         uint8 rawCount,
         uint8 rawZeroIndex
@@ -127,7 +121,9 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     /**
      * @dev Verifies that attempting to remove a member who is an admin always reverts with `MemberIsAdmin`.
      */
-    function testFuzz_modifyMembers_removingAdminMember_alwaysRevertsMemberIsAdmin(address adminMember) public {
+    function testFuzz_FLOM_MEMBER_47_modifyMembers_removingAdminMemberAlwaysRevertsMemberIsAdmin(address adminMember)
+        public
+    {
         // Setup: constrain fuzz inputs for valid preconditions.
         vm.assume(adminMember != address(0) && adminMember != admin1);
         // Setup: configure members/admins for a valid baseline state.
