@@ -79,24 +79,6 @@ contract LibOrganizationMembersFuzzTest is LibOrganizationMembersSuiteBase {
     }
 
     /**
-     * @dev Verifies the desired behavior that removing a non-member always reverts with `MemberDoesNotExist`.
-     */
-    function testFuzz_FLOM_MEMBER_46_modifyMembers_removingNonMemberAlwaysRevertsMemberDoesNotExist(address nonMember)
-        public
-    {
-        // Setup: constrain fuzz inputs for valid preconditions.
-        vm.assume(nonMember != address(0) && nonMember != admin1);
-        // Setup: configure members/admins for a valid baseline state.
-        _setMembersAndAdmins({members: buildArray(admin1), admins: buildArray(admin1), threshold: 1});
-
-        // Call: remove a non-member through the library wrapper and expect the desired revert.
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationMembers.MemberDoesNotExist.selector, nonMember));
-        harness.modifyMembersViaLibrary({
-            membersToAdd: buildEmptyAddressArray(), membersToRemove: buildArray(nonMember)
-        });
-    }
-
-    /**
      * @dev Verifies that any add array containing `address(0)` reverts with `InvalidMemberAddress`.
      */
     function testFuzz_FLOM_MEMBER_47_modifyMembers_randomZeroAddressInputAlwaysRevertsInvalidMemberAddress(

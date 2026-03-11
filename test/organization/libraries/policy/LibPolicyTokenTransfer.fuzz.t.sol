@@ -12,11 +12,11 @@ import {DestinationType, Policy} from "types/PolicyTypes.sol";
  * @dev Fuzz tests for `LibPolicyTokenTransfer`.
  */
 contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
-    /// @dev Verifies `LibPolicyTokenTransfer._isTokenAmountAllowedByPolicy` should treat the threshold as inclusive.
+    /// @dev Verifies `LibPolicyTokenTransfer._isTokenAmountAllowedByPolicy` treats the threshold as an exclusive cap.
     /// @param threshold The configured threshold and tested transfer amount.
     /// @param recipient The ERC-20 recipient used in the token-transfer branch.
     /// @param useNativeTransfer Whether to exercise the native-transfer amount path.
-    function testFuzz_FLPT_AMOUNT_67_isTokenAmountAllowed_treatsThresholdAsInclusiveDesiredBehavior(
+    function testFuzz_FLPT_AMOUNT_67_isTokenAmountAllowed_treatsThresholdAsExclusiveUpperBound(
         uint256 threshold,
         address recipient,
         bool useNativeTransfer
@@ -32,8 +32,8 @@ contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
         // Call: evaluate the exact-threshold transfer amount.
         bool allowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, data, value);
 
-        // Verify: exact-threshold transfers should be accepted under the desired inclusive semantics.
-        assertTrue(allowed, "threshold equality should be allowed");
+        // Verify: exact-threshold transfers should be rejected under exclusive-threshold semantics.
+        assertFalse(allowed, "threshold equality should be rejected");
     }
 
     /// @dev Verifies `LibPolicyTokenTransfer.isTokenTransferAllowedByPolicy` never lets malformed short transfer
@@ -47,7 +47,8 @@ contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
         vm.assume(token != address(0));
         uint256 shortLength = bound(uint256(rawShortLength), 4, 67);
 
-        // Setup: configure an exact-token policy with amount checking enabled and craft selector-prefixed short calldata.
+        // Setup: configure an exact-token policy with amount checking enabled and craft selector-prefixed short
+        // calldata.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = token;

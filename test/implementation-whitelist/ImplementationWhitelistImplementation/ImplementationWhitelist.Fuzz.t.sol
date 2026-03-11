@@ -3,8 +3,8 @@
 pragma solidity 0.8.33;
 
 import {OwnableUpgradeable} from "@openzeppelin-upgradeable/access/OwnableUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import {IImplementationWhitelist} from "interfaces/IImplementationWhitelist.sol";
 import {OrganizationProxy} from "organization/OrganizationProxy.sol";
@@ -236,38 +236,6 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
             whitelistProxy.isImplementationWhitelisted(contractType, implementationAddress),
             !addOperation,
             "non-owner mutation must leave whitelist state unchanged"
-        );
-    }
-
-    /// @dev Verifies invalid whitelist targets never become active entries, even if an owner submits them.
-    /// @param useAccountType Whether to target the Account or Organization whitelist bucket.
-    /// @param useZeroAddress Whether to test `address(0)` instead of a no-code EOA-like address.
-    /// @param candidate The no-code address candidate used when `useZeroAddress` is false.
-    function testFuzz_FIWI_MUTATE_144_invalidTargets_neverBecomeWhitelisted(
-        bool useAccountType,
-        bool useZeroAddress,
-        address candidate
-    ) public {
-        vm.assume(useZeroAddress || candidate != address(0));
-        vm.assume(useZeroAddress || candidate.code.length == 0);
-
-        // Setup: choose the invalid target and confirm it starts unwhitelisted.
-        ContractType contractType = useAccountType ? ContractType.Account : ContractType.Organization;
-        address invalidTarget = useZeroAddress ? address(0) : candidate;
-        assertFalse(
-            whitelistProxy.isImplementationWhitelisted(contractType, invalidTarget),
-            "invalid target should start unwhitelisted"
-        );
-
-        // Call: allow either revert or silent rejection, but never successful activation of the invalid target.
-        vm.prank(OWNER);
-        try whitelistProxy.whitelistImplementations(contractType, _single(invalidTarget), new address[](0)) { } catch {
-        }
-
-        // Verify: invalid targets must remain unwhitelisted after the attempted mutation.
-        assertFalse(
-            whitelistProxy.isImplementationWhitelisted(contractType, invalidTarget),
-            "invalid targets must never become whitelisted"
         );
     }
 

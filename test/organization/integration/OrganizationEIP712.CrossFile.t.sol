@@ -5,9 +5,6 @@ pragma solidity 0.8.33;
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
 import {
-    LibOrganizationAdminHarness
-} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
-import {
     LibOrganizationAccountSignatureHarness
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureHarness.sol";
 import {
@@ -16,6 +13,9 @@ import {
 import {
     LibOrganizationAccountTransactionHarness
 } from "test/organization/libraries/LibOrganizationAccountTransaction/LibOrganizationAccountTransactionHarness.sol";
+import {
+    LibOrganizationAdminHarness
+} from "test/organization/libraries/LibOrganizationAdmin/LibOrganizationAdminHarness.sol";
 import {OrganizationPolicyStateHarness} from "test/organization/shared/OrganizationPolicyStateHarness.sol";
 import {OperationType} from "types/CommonTypes.sol";
 import {ApproverType, Policy, PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
@@ -53,7 +53,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
         _configureAdminHarness(admin1);
 
         Policy memory txPolicy = _buildTxPolicy(PolicyType.AutoApprove, initiator1, reviewer1);
-        ValidationProofs memory txProofs = _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
+        ValidationProofs memory txProofs =
+            _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
 
         bytes memory txData = abi.encodeWithSelector(bytes4(0x11111111), uint256(1));
         bytes memory adminOperationData = abi.encode(bytes32("cross-file-admin-op"), uint256(7));
@@ -73,16 +74,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
         );
         // Call: validate the account-transaction approval flow with the wrong-domain signature bytes.
         txHarness.validateTransactionApprovalOrRevertViaLibrary(
-            TX_ACCOUNT,
-            TX_DESTINATION,
-            0,
-            txData,
-            1,
-            expiration,
-            TX_POLICY_ID,
-            adminSignature,
-            bytes(""),
-            txProofs
+            TX_ACCOUNT, TX_DESTINATION, 0, txData, 1, expiration, TX_POLICY_ID, adminSignature, bytes(""), txProofs
         );
     }
 
@@ -90,7 +82,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     function test_E712_MTI_2_validateTransactionApproval_rejectsInitiatorSignatureReplayAsReviewSignature() public {
         // Setup: configure a manual-approval transaction policy with one authorized reviewer.
         Policy memory txPolicy = _buildTxPolicy(PolicyType.RequireManualApproval, initiator1, reviewer1);
-        ValidationProofs memory txProofs = _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
+        ValidationProofs memory txProofs =
+            _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
 
         bytes memory txData = abi.encodeWithSelector(bytes4(0x22222222), uint256(2));
         uint256 expiration = block.timestamp + 1 days;
@@ -160,7 +153,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     function test_E712_MTI_4_crossFlowReplay_rejectsTransactionAndPolicySignaturesAcrossFlows() public {
         // Setup: configure valid transaction and signature policies on their respective harnesses.
         Policy memory txPolicy = _buildTxPolicy(PolicyType.AutoApprove, initiator1, reviewer1);
-        ValidationProofs memory txProofs = _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
+        ValidationProofs memory txProofs =
+            _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
 
         policyStateHarness.setGuardian(guardianSigner);
         Policy memory sigPolicy = _buildSignaturePolicy(PolicyType.AutoApprove);
@@ -322,7 +316,8 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
         harness.isValidSignatureUnsafe(ACCOUNT, MESSAGE_HASH, forcedPolicySignature);
     }
 
-    /// @dev Verifies fuzzed initiator-signature byte mutations always alter both transaction and ERC-1271 review hashes.
+    /// @dev Verifies fuzzed initiator-signature byte mutations always alter both transaction and ERC-1271 review
+    /// hashes.
     function testFuzz_E712_FUZ_4_reviewHashes_randomInitiatorSignatureBytesAlwaysChangeHashes(
         bytes calldata initiatorSignatureA,
         bytes calldata initiatorSignatureB
@@ -415,7 +410,9 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
                 _signTxInitiator(TX_ACCOUNT, TX_DESTINATION, 0, txData, salt, expiration, TX_POLICY_ID, true);
 
             // Verify: an initiator-hash signature must never satisfy the review-hash approval path.
-            vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0)
+            );
             // Call: replay the initiator signature in the review-signatures slot.
             txHarness.validateTransactionApprovalOrRevertViaLibrary(
                 TX_ACCOUNT,
@@ -436,8 +433,7 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
 
         if (caseSelector == 2) {
             Policy memory manualSigPolicy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
-            ValidationProofs memory manualSigProofs =
-                _setSinglePolicyRootAndBuildProofs(SIG_POLICY_ID, manualSigPolicy);
+            ValidationProofs memory manualSigProofs = _setSinglePolicyRootAndBuildProofs(SIG_POLICY_ID, manualSigPolicy);
             bytes memory initiatorSignature = _signInitiatorSignature({
                 sigHarness: harness,
                 privateKey: INITIATOR_PK_1,
@@ -469,7 +465,9 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
 
             // Verify: a signature-validation initiator signature must not authorize the review hash path.
             assertEq(
-                manualResult, SignatureUtils.ERC1271_INVALID_VALUE, "initiator signature should not authorize review flow"
+                manualResult,
+                SignatureUtils.ERC1271_INVALID_VALUE,
+                "initiator signature should not authorize review flow"
             );
             return;
         }

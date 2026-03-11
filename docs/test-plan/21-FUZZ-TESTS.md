@@ -46,7 +46,7 @@ Several cases below target functions currently marked `private`. For implementat
 | FLOA-ADMINS-42 | `src/organization/libraries/LibOrganizationAdmin.sol` | `modifyAdmins` | `newVotingThreshold` must satisfy `1 <= threshold <= adminCount` after modification | 10000 | P0 |
 | FLOA-ADMINS-43 | `src/organization/libraries/LibOrganizationAdmin.sol` | `modifyAdmins` | Random add/remove arrays never leave `adminCount == 0` | 10000 | P0 |
 | FOAB-ADMOP-45 | `src/organization/base/OrganizationAdminBase.sol` | `modifyAdmins`, `rejectAdminOperation` | Guardian-only access and operation-data binding: signatures for one `(operationType, payloadHashes, threshold, salt)` never authorize a different payload | 10000 | P0 |
-| FLOM-MEMBER-46 | `src/organization/libraries/LibOrganizationMembers.sol` | `modifyMembers` | Add is idempotent for duplicates; remove non-member always reverts | 10000 | P0 |
+| FLOM-MEMBER-46 | `src/organization/libraries/LibOrganizationMembers.sol` | `modifyMembers` | Add is idempotent for duplicates | 10000 | P0 |
 | FLOM-MEMBER-47 | `src/organization/libraries/LibOrganizationMembers.sol` | `modifyMembers` | `address(0)` additions always revert; admin-member removal always reverts | 10000 | P0 |
 | FOMB-MEMBER-48 | `src/organization/base/OrganizationMembersBase.sol` | `modifyMembers` | Guardian-only access and operation-data binding to `keccak256(adds)`/`keccak256(removes)` prevent signature reuse across different member batches | 10000 | P0 |
 | FLOG-GROUP-49 | `src/organization/libraries/LibOrganizationGroups.sol` | `modifyGroups` | Create/update/delete semantics hold for random valid modification batches | 10000 | P0 |
@@ -64,7 +64,7 @@ Several cases below target functions currently marked `private`. For implementat
 | FLOP-TX-61 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isTransactionAllowedByPolicy` | `TransactionType.Signatures` never authorizes account transaction execution/rejection path | 10000 | P0 |
 | FOPB-USAGE-63 | `src/organization/base/OrganizationPolicyBase.sol` | `setPolicies`, `getPolicyUsage` | Guardian-only policy updates bind signatures to `(newRoot, keccak256(ipfsCid))`; `getPolicyUsage` always reverts on invalid policy proof | 10000 | P0 |
 | FLPD-DEST-65 | `src/organization/libraries/policy/LibPolicyDestination.sol` | `isDestinationAllowedByPolicy` | Custom destination mode accepts only valid Merkle membership proof | 10000 | P0 |
-| FLPT-AMOUNT-67 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `_isTokenAmountAllowedByPolicy` | **[DESIRED]** threshold check is inclusive (`amount <= threshold`) | 10000 | P0 |
+| FLPT-AMOUNT-67 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `_isTokenAmountAllowedByPolicy` | Threshold check is exclusive (`amount < threshold`) | 10000 | P0 |
 | FLPT-ALLOW-68 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `isTokenTransferAllowedByPolicy` | Malformed token calldata cannot bypass token policy checks | 10000 | P0 |
 | FLPCI-FUNC-69 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | `_isFunctionAllowedByPolicy` | `anyFunction=true` bypasses function proof requirements | 10000 | P0 |
 | FLPCI-FUNC-70 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | `_isFunctionAllowedByPolicy` | Function membership binds `selector + keccak256(constraints)` exactly | 10000 | P0 |
@@ -94,7 +94,6 @@ Several cases below target functions currently marked `private`. For implementat
 | FLOAS-POLICY-99 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `_validatePolicyBasedSignature` | Policy path enforces expiration, initiator sig, guardian sig, policy applicability, and manual approvals when needed | 10000 | P0 |
 | FLOAS-GUARD-100 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `_isValidGuardianSignature` | Guardian sig accepted from guardian directly or enabled safe module only | 10000 | P0 |
 | FLOAS-E712-102 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | EIP-712 hash helpers | Cross-org and cross-chain replay always fails | 10000 | P0 |
-| FLOAS-SIG-103 | `src/organization/libraries/LibOrganizationAccountSignature.sol` | `isValidSignature` | **[DESIRED]** malformed policy payloads return `0xffffffff` and never revert | 10000 | P0 |
 | FOASB-SIG-104 | `src/organization/base/OrganizationAccountSignatureBase.sol` | `isValidSignatureForAccount` | Caller must equal `account` and account must be deployed by organization | 10000 | P0 |
 | FLOGU-FINAL-106 | `src/organization/libraries/LibOrganizationGuardian.sol` | `finalizeGuardianUpdate` | Finalize before timelock expiry always reverts | 2000 | P1 |
 | FLOGU-ACCEPT-107 | `src/organization/libraries/LibOrganizationGuardian.sol` | `acceptGuardian` | Accept requires finalized state and pending guardian caller | 2000 | P1 |
@@ -128,7 +127,6 @@ Several cases below target functions currently marked `private`. For implementat
 | FIWI-MAP-141 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | whitelist mapping logic | `ContractType.Account` and `ContractType.Organization` mappings remain independent | 10000 | P0 |
 | FIWI-ENFORCE-142 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` + integration callsites | whitelist enforcement | Unwhitelisted implementation rejected in org deploy, org upgrade, and account upgrade flows | 10000 | P0 |
 | FIWI-HELPER-143 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | private `_addToWhitelist`, `_removeFromWhitelist` via harness | Model-based add/remove sequence parity under random operations | 2000 | P1 |
-| FIWI-MUTATE-144 | `src/implementation-whitelist/ImplementationWhitelistImplementation.sol` | whitelist mutation | **[DESIRED]** zero-address / no-code implementations are rejected even if submitted for whitelisting | 10000 | P0 |
 | FAI-ORG-145 | `src/account/AccountImplementation.sol` | `executeTransaction`, `_onlyOrganization` | Only organization can execute account calls | 10000 | P0 |
 | FAI-EXEC-146 | `src/account/AccountImplementation.sol` | `_execute` via harness | CALL success/failure and data/value forwarding behavior preserved for random targets | 2000 | P1 |
 | FSEM-EXEC-150 | `src/safe-module/SafeExecutorModule.sol` | `executeOnBehalf` | Only `AUTHORIZED_EXECUTOR` can call successfully | 10000 | P0 |

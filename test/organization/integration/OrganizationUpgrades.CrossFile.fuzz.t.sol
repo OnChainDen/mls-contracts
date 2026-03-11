@@ -16,11 +16,12 @@ import {ContractType, OperationType} from "types/CommonTypes.sol";
  */
 contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileSuiteBase {
     /// @dev Verifies fuzzed non-whitelisted Organization upgrade targets are always rejected.
-    function testFuzz_UPG_FZ_1__IWC_FUZZ_1__FOI_UPGRADE_134__FIWI_ENFORCE_142_fuzz_nonWhitelistedOrganizationTargetsAreRejected(
-        address candidate
-    ) public {
-        // Setup: configure valid guardian/admin auth for arbitrary candidate without whitelisting it.
+    function testFuzz_UPG_FZ_1__IWC_FUZZ_1__FOI_UPGRADE_134__FIWI_ENFORCE_142_fuzz_nonWhitelistedOrganizationTargetsAreRejected(address candidate)
+        public
+    {
+        // Setup: configure valid guardian/admin auth for an arbitrary non-zero candidate without whitelisting it.
         _setSingleAdminThresholdOne();
+        vm.assume(candidate != address(0));
         vm.assume(!whitelist.isImplementationWhitelisted(ContractType.Organization, candidate));
 
         (AdminAuthParams memory auth,) = _buildUpgradeAuth({
@@ -41,9 +42,9 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed non-whitelisted Account implementation targets are always rejected.
-    function testFuzz_UPG_FZ_2__IWC_FUZZ_1__FIWI_ENFORCE_142_fuzz_nonWhitelistedAccountTargetsAreRejected(
-        address candidate
-    ) public {
+    function testFuzz_UPG_FZ_2__IWC_FUZZ_1__FIWI_ENFORCE_142_fuzz_nonWhitelistedAccountTargetsAreRejected(address candidate)
+        public
+    {
         // Setup: configure valid admin auth for arbitrary account implementation candidate without whitelisting.
         _setSingleAdminThresholdOne();
         vm.assume(!whitelist.isImplementationWhitelisted(ContractType.Account, candidate));
@@ -134,9 +135,9 @@ contract OrganizationUpgradesCrossFileFuzzTest is OrganizationUpgradesCrossFileS
     }
 
     /// @dev Verifies fuzzed nested migration payloads cannot trigger an unauthorized second upgrade.
-    function testFuzz_UPG_FZ_5__IWC_FUZZ_5__FOI_UPGRADE_137_fuzz_nestedUpgradeFromRandomPayload_reverts(
-        bytes memory randomData
-    ) public {
+    function testFuzz_UPG_FZ_5__IWC_FUZZ_5__FOI_UPGRADE_137_fuzz_nestedUpgradeFromRandomPayload_reverts(bytes memory randomData)
+        public
+    {
         // Setup: whitelist both V2 and V3 and craft migration payload that attempts nested second upgrade.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);

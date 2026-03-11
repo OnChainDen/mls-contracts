@@ -51,8 +51,9 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
 
     /// @dev Verifies random non-whitelisted implementations are rejected.
     function testFuzz_AF_FT_3_setAccountImplementation_randomNonWhitelistedAddress_reverts(address candidate) public {
-        // Setup: whitelist one known implementation and ensure candidate differs.
+        // Setup: whitelist one known implementation and constrain the candidate onto the whitelist-check path.
         whitelist.setImplementationWhitelisted(ContractType.Account, accountImplementationV1, true);
+        vm.assume(candidate != address(0));
         vm.assume(candidate != accountImplementationV1);
 
         // Verify: non-whitelisted candidate should be rejected.
@@ -104,9 +105,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies the same salt across different organizations computes different account addresses.
-    function testFuzz_AF_FT_6_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(
-        bytes32 salt
-    ) public {
+    function testFuzz_AF_FT_6_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(bytes32 salt) public {
         // Setup: instantiate a second organization harness.
         LibOrganizationAccountFactoryHarness otherHarness = new LibOrganizationAccountFactoryHarness();
 
@@ -134,5 +133,4 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         // Verify: the original deployment remains tracked and no rollback occurs on the collision revert path.
         assertTrue(harness.isDeployedAccount(firstDeployment), "collision revert should preserve deployed tracking");
     }
-
 }

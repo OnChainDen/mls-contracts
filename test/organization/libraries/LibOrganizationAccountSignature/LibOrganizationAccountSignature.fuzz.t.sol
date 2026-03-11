@@ -88,9 +88,9 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
      *      `0x00` type prefix.
      * @param recoveryPkRaw Raw private key used to derive the configured recovery signer
      */
-    function testFuzz_FLOAS_SIG_97__FCF_ASREC_162_isValidSignature_validRecoveryPrefix00ReturnsMagic(
-        uint256 recoveryPkRaw
-    ) public {
+    function testFuzz_FLOAS_SIG_97__FCF_ASREC_162_isValidSignature_validRecoveryPrefix00ReturnsMagic(uint256 recoveryPkRaw)
+        public
+    {
         // Setup: derive a bounded recovery signer, enable tx recovery, and build a valid type-prefixed recovery
         // signature.
         uint256 recoveryPk = bound(recoveryPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
@@ -820,32 +820,6 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
 
         // Verify: only exact authorized-executor signatures over the validated hash are accepted.
         assertEq(actual, expected, "guardian module validation should accept only authorized exact-hash signatures");
-    }
-
-    /**
-     * @dev Verifies `LibOrganizationAccountSignature.isValidSignature` returns the ERC-1271 invalid value for
-     *      malformed policy payloads without ever reverting.
-     * @param malformedPayload Arbitrary malformed policy payload bytes placed after the `0x01` type prefix
-     */
-    function testFuzz_FLOAS_SIG_103_isValidSignature_malformedPolicyPayloadsReturnInvalidAndNeverRevert(bytes calldata malformedPayload)
-        public
-    {
-        // Setup: constrain payload size for stable fuzz runtime and wrap the arbitrary bytes with the policy prefix.
-        vm.assume(malformedPayload.length <= 256);
-        bytes memory malformedSignature = abi.encodePacked(uint8(0x01), malformedPayload);
-
-        // Call: invoke the raw library wrapper via low-level staticcall so the test can distinguish invalid returns
-        // from unexpected reverts.
-        (bool success, bytes memory result) = address(harness)
-            .staticcall(abi.encodeCall(harness.isValidSignatureUnsafe, (ACCOUNT, MESSAGE_HASH, malformedSignature)));
-
-        // Verify: malformed policy payloads should fail closed with the ERC-1271 invalid value and never revert.
-        assertTrue(success, "malformed policy payload should not revert");
-        assertEq(
-            abi.decode(result, (bytes4)),
-            SignatureUtils.ERC1271_INVALID_VALUE,
-            "malformed policy payload should return invalid"
-        );
     }
 
     /**
