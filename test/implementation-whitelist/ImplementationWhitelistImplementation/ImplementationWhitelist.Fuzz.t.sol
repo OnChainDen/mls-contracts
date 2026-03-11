@@ -98,7 +98,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
     /// @param randomAddr The fuzzed implementation address being checked.
     /// @param useAccountType Whether to use the Account or Organization whitelist bucket.
     /// @param shouldWhitelist Whether to seed the fuzzed address into the chosen whitelist bucket.
-    function testFuzz_IWC_FUZZ_1__FIWI_VALIDATE_139_validateHelper_matchesWhitelistMapping(
+    function testFuzz_IWC_FUZZ_1_validateHelper_matchesWhitelistMapping(
         address randomAddr,
         bool useAccountType,
         bool shouldWhitelist

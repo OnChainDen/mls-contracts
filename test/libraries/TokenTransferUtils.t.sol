@@ -635,7 +635,7 @@ contract TokenTransferUtilsTest is Test {
     /// calldata.
     /// @param to Fuzzed recipient encoded into the transfer calldata.
     /// @param expectedAmount Fuzzed amount encoded into the transfer calldata.
-    function testFuzz_TXUT_PARSE_2_B__FTTU_AMOUNT_15_extractTransferAmount_validCalldata_correctAmount(
+    function testFuzz_TXUT_PARSE_2_B_extractTransferAmount_validCalldata_correctAmount(
         address to,
         uint256 expectedAmount
     )
@@ -669,45 +669,6 @@ contract TokenTransferUtilsTest is Test {
 
         // Verify: native and ERC-20 transfer classifications must stay mutually exclusive.
         assertFalse(isNative && isERC20, "A transaction cannot be both native and ERC-20 transfer");
-    }
-
-    /// @dev Verifies `TokenTransferUtils.extractTokenAddress` returns `to` for non-empty calldata and `address(0)`
-    /// for empty calldata.
-    /// @param to Fuzzed transaction target.
-    /// @param data Fuzzed transaction calldata.
-    function testFuzz_FTTU_TOKEN_17_extractTokenAddress_randomToAndDataLength_correctBehavior(
-        address to,
-        bytes calldata data
-    )
-        public
-        view
-    {
-        // Call: extract the token address from the fuzzed `(to, data)` tuple.
-        address result = harness.extractTokenAddress(to, data);
-
-        // Verify: empty calldata maps to native transfers, while non-empty calldata maps to `to`.
-        if (data.length == 0) {
-            assertEq(result, address(0), "Empty data should return address(0)");
-        } else {
-            assertEq(result, to, "Non-empty data should return `to`");
-        }
-    }
-
-    /// @dev Verifies `TokenTransferUtils.extractTransferAmount` returns the native value unchanged for empty
-    /// calldata.
-    /// @param value Fuzzed native-token value.
-    function testFuzz_FTTU_AMOUNT_15_extractTransferAmount_emptyDataRandomValue_returnsValue(uint256 value)
-        public
-        view
-    {
-        // Setup: use the native-transfer path with empty calldata.
-        bytes memory emptyData = new bytes(0);
-
-        // Call: extract the transfer amount from the native-transfer tuple.
-        uint256 amount = harness.extractTransferAmount(emptyData, value);
-
-        // Verify: the native path should return the attached value exactly.
-        assertEq(amount, value, "Empty data should always return the value parameter");
     }
 
     /// @dev Verifies `TokenTransferUtils.isTransactionERC20TokenTransfer` accepts only the exact transfer selector

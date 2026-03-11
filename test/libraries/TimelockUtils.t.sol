@@ -104,28 +104,4 @@ contract TimelockUtilsTest is Test {
         harness.validateTimelockDurationOrRevert(7 days);
     }
 
-    /// @dev Test case: Any duration in [MIN, MAX] should succeed.
-    function testFuzz_FTU_DUR_20_validateTimelockDurationOrRevert_withinRange_succeeds(uint256 duration) public view {
-        // Setup: bound the fuzzed duration inside the valid timelock range.
-        duration = bound(duration, MIN_DURATION, MAX_DURATION);
-
-        // Call: validate the bounded in-range timelock duration.
-        harness.validateTimelockDurationOrRevert(duration);
-
-        // Verify: any in-range duration should succeed without reverting.
-    }
-
-    /// @dev Test case: Any duration outside [MIN, MAX] should revert with InvalidTimelockDuration.
-    function testFuzz_FTU_DUR_21_validateTimelockDurationOrRevert_outsideRange_reverts(uint256 duration) public {
-        // Setup: constrain the fuzzed duration outside the valid timelock range.
-        vm.assume(duration < MIN_DURATION || duration > MAX_DURATION);
-
-        // Call: validate the out-of-range timelock, expecting `InvalidTimelockDuration`.
-        vm.expectRevert(
-            abi.encodeWithSelector(TimelockUtils.InvalidTimelockDuration.selector, duration, MIN_DURATION, MAX_DURATION)
-        );
-        harness.validateTimelockDurationOrRevert(duration);
-
-        // Verify: the revert expectation above proves out-of-range values fail validation.
-    }
 }

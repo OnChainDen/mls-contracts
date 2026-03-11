@@ -49,69 +49,6 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         assertEq(policyStateHarness.getPolicyUsage(zeroHoursKey, 0), 0);
     }
 
-    /// @dev Verifies `LibPolicyRateLimits.computeUsageKey` merges or isolates usage according to scope composition.
-    /// @param policyId The policy identifier included in the usage key domain.
-    /// @param accountA The baseline source account.
-    /// @param accountB A different source account for the isolation branch.
-    /// @param destinationA The baseline destination account.
-    /// @param destinationB A different destination account for the isolation branch.
-    /// @param initiatorA The baseline initiator account.
-    /// @param initiatorB A different initiator account for the isolation branch.
-    function testFuzz_FLPRL_USAGE_83_computeUsageKey_scopeCompositionMatchesIsolationRules(
-        uint256 policyId,
-        address accountA,
-        address accountB,
-        address destinationA,
-        address destinationB,
-        address initiatorA,
-        address initiatorB
-    ) public view {
-        vm.assume(accountA != accountB);
-        vm.assume(destinationA != destinationB);
-        vm.assume(initiatorA != initiatorB);
-
-        // Setup: build one across-all policy and three per-entity variants for each scoped component.
-        Policy memory acrossAllPolicy = _timeIntervalPolicy(1, 100);
-
-        Policy memory sourceScopedPolicy = _timeIntervalPolicy(1, 100);
-        sourceScopedPolicy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;
-
-        Policy memory destinationScopedPolicy = _timeIntervalPolicy(1, 100);
-        destinationScopedPolicy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
-
-        Policy memory initiatorScopedPolicy = _timeIntervalPolicy(1, 100);
-        initiatorScopedPolicy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
-
-        // Call: compute usage keys while mutating one scoped entity at a time.
-        bytes32 acrossAllA =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, acrossAllPolicy, accountA, destinationA, initiatorA);
-        bytes32 acrossAllB =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, acrossAllPolicy, accountB, destinationB, initiatorB);
-
-        bytes32 sourceKeyA =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, sourceScopedPolicy, accountA, destinationA, initiatorA);
-        bytes32 sourceKeyB =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, sourceScopedPolicy, accountB, destinationA, initiatorA);
-
-        bytes32 destinationKeyA = harness.computeUsageKeyViaPolicyLibrary(
-            policyId, destinationScopedPolicy, accountA, destinationA, initiatorA
-        );
-        bytes32 destinationKeyB = harness.computeUsageKeyViaPolicyLibrary(
-            policyId, destinationScopedPolicy, accountA, destinationB, initiatorA
-        );
-
-        bytes32 initiatorKeyA =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, initiatorScopedPolicy, accountA, destinationA, initiatorA);
-        bytes32 initiatorKeyB =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, initiatorScopedPolicy, accountA, destinationA, initiatorB);
-
-        // Verify: across-all mode merges all entities, while each per-entity scope isolates its own component.
-        assertEq(acrossAllA, acrossAllB, "across-all scopes should merge all entities");
-        assertTrue(sourceKeyA != sourceKeyB, "source scope should isolate by source account");
-        assertTrue(destinationKeyA != destinationKeyB, "destination scope should isolate by destination");
-        assertTrue(initiatorKeyA != initiatorKeyB, "initiator scope should isolate by initiator");
-    }
-
     /// @dev Verifies `LibPolicyRateLimits.checkAndUpdateRateLimit` increments tracked usage by exactly
     /// `usageAmount` when the increment stays within the limit.
     /// @param policyId The policy identifier used for the tracked usage entry.

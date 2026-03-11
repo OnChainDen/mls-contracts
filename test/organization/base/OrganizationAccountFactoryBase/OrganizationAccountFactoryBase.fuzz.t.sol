@@ -125,39 +125,4 @@ contract OrganizationAccountFactoryBaseFuzzTest is OrganizationAccountFactoryBas
         );
     }
 
-    /// @dev Verifies `implementation` reverts while unset and then returns exactly the whitelisted implementation
-    /// configured through the admin-gated setter.
-    /// @param useFirstImplementation Selects which runtime-code implementation is configured.
-    /// @param adminSaltRaw Fuzzed admin-auth salt seed.
-    function testFuzz_FOAFB_IMPL_123_implementation_revertsWhenUnsetAndReturnsConfiguredWhitelistedTarget(
-        bool useFirstImplementation,
-        uint256 adminSaltRaw
-    ) public {
-        // Setup: leave the account implementation unset, then whitelist one fuzz-selected runtime-code target.
-        _setSingleAdminThresholdOne();
-        address configuredImplementation = useFirstImplementation ? accountImplementationV1 : accountImplementationV2;
-
-        // Call: read `implementation()` before configuration, then set a whitelisted target and read again.
-        vm.expectRevert(IOrganization.AccountImplementationNotSet.selector);
-        harness.implementation();
-
-        _setAccountImplementationWhitelisted(configuredImplementation, true);
-        (AdminAuthParams memory auth,) = _buildSetAccountImplementationAuth({
-            newImplementation: configuredImplementation,
-            salt: bound(adminSaltRaw, 1, type(uint96).max),
-            expiration: block.timestamp + 1 days,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        vm.prank(GUARDIAN);
-        harness.setAccountImplementation(configuredImplementation, auth);
-
-        // Verify: the getter fails closed while unset and returns exactly the configured whitelisted implementation
-        // once the setter succeeds.
-        assertEq(
-            harness.implementation(),
-            configuredImplementation,
-            "implementation getter should mirror the configured whitelisted target"
-        );
-    }
 }

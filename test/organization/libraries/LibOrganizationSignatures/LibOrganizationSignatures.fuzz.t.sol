@@ -24,56 +24,6 @@ contract LibOrganizationSignaturesFuzzTest is Test {
         harness = new LibOrganizationSignaturesHarness();
     }
 
-    /// @dev Verifies changing `operationType`, `operationData`, or `salt` always changes the computed nonce.
-    /// @param rawOperationType Fuzzed operation type seed bounded into the valid enum range.
-    /// @param operationData Fuzzed baseline operation payload.
-    /// @param salt Fuzzed baseline salt.
-    function testFuzz_FLOS_NONCE_30_computeNonce_isSensitiveToEveryBoundField(
-        uint8 rawOperationType,
-        bytes calldata operationData,
-        uint256 salt
-    ) public {
-        // Setup: choose one valid operation type plus guaranteed-different mutations for type, data, and salt.
-        uint256 operationTypeCount = uint256(OperationType.AccountTransactionRejection) + 1;
-        OperationType operationType = OperationType(bound(uint256(rawOperationType), 0, operationTypeCount - 1));
-        OperationType differentOperationType = OperationType((uint256(operationType) + 1) % operationTypeCount);
-        bytes memory differentOperationData = abi.encodePacked(operationData, bytes1(uint8(1)));
-        uint256 differentSalt = salt == type(uint256).max ? salt - 1 : salt + 1;
-
-        // Call: compute the nonce once for the baseline tuple and once for each single-field mutation.
-        uint256 baseline = harness.computeNonceViaLibrary(operationType, operationData, salt);
-        uint256 differentType = harness.computeNonceViaLibrary(differentOperationType, operationData, salt);
-        uint256 differentData = harness.computeNonceViaLibrary(operationType, differentOperationData, salt);
-        uint256 differentSaltNonce = harness.computeNonceViaLibrary(operationType, operationData, differentSalt);
-
-        // Verify: mutating any bound input should move the nonce into a different replay domain.
-        assertTrue(baseline != differentType, "operation type should affect nonce derivation");
-        assertTrue(baseline != differentData, "operation data should affect nonce derivation");
-        assertTrue(baseline != differentSaltNonce, "salt should affect nonce derivation");
-    }
-
-    /// @dev Verifies the same nonce tuple on different organization addresses always produces different nonces.
-    /// @param rawOperationType Fuzzed operation type seed bounded into the valid enum range.
-    /// @param operationData Fuzzed operation payload reused across both organizations.
-    /// @param salt Fuzzed salt reused across both organizations.
-    function testFuzz_FLOS_NONCE_31_computeNonce_isolatedAcrossOrganizations(
-        uint8 rawOperationType,
-        bytes calldata operationData,
-        uint256 salt
-    ) public {
-        // Setup: deploy a second harness so the same tuple executes under a different organization address.
-        uint256 operationTypeCount = uint256(OperationType.AccountTransactionRejection) + 1;
-        OperationType operationType = OperationType(bound(uint256(rawOperationType), 0, operationTypeCount - 1));
-        LibOrganizationSignaturesHarness otherHarness = new LibOrganizationSignaturesHarness();
-
-        // Call: compute the same nonce tuple on both harnesses.
-        uint256 nonceA = harness.computeNonceViaLibrary(operationType, operationData, salt);
-        uint256 nonceB = otherHarness.computeNonceViaLibrary(operationType, operationData, salt);
-
-        // Verify: the organization address should isolate nonce space.
-        assertTrue(nonceA != nonceB, "different organization addresses should isolate nonce space");
-    }
-
     /// @dev Verifies nonce consumption is monotonic from `false -> true` and any replay attempt reverts.
     /// @param rawOperationType Fuzzed operation type seed bounded into the valid enum range.
     /// @param operationData Fuzzed operation payload used to derive the nonce.

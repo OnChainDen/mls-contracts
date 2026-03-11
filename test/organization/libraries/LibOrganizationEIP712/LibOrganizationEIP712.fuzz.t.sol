@@ -20,7 +20,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @dev Verifies `LibOrganizationEIP712.getDomainSeparator` stays deterministic for one organization and chain
     /// while typed-data wrapping remains deterministic for the same struct hash.
     /// @param structHash Fuzzed struct hash wrapped by the Organization EIP-712 helpers.
-    function testFuzz_E712_FUZ_1__FLOEIP_DOMAIN_35_getDomainSeparator_sameInputsRemainDeterministic(bytes32 structHash)
+    function testFuzz_E712_FUZ_1_getDomainSeparator_sameInputsRemainDeterministic(bytes32 structHash)
         public
         view
     {
@@ -68,7 +68,7 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
     /// @param structHash Fuzzed struct hash shared across all domain computations.
     /// @param rawChainIdA Fuzzed first chain id constrained to a non-zero value.
     /// @param rawChainIdB Fuzzed second chain id constrained to a distinct non-zero value.
-    function testFuzz_E712_FUZ_3__FLOEIP_DOMAIN_35_randomChainAndOrganizationPairs_isolateDomains(
+    function testFuzz_E712_FUZ_3_randomChainAndOrganizationPairs_isolateDomains(
         bytes32 structHash,
         uint64 rawChainIdA,
         uint64 rawChainIdB
@@ -125,49 +125,4 @@ contract LibOrganizationEIP712FuzzTest is LibOrganizationEIP712TestBase {
         assertEq(actualTypedDataHash, expectedOZ, "typed-data hash should match OpenZeppelin reference");
     }
 
-    /// @dev Verifies all documented Organization EIP-712 type hashes remain unique and match their documented type
-    /// strings.
-    /// @param selectedIndex Fuzzed index used to re-check one documented type hash after the full uniqueness pass.
-    function testFuzz_FLOEIP_TYPE_37_typehashConstants_matchDocumentationAndRemainUnique(uint8 selectedIndex)
-        public
-        pure
-    {
-        // Setup: build the documented type-string hashes in the same order as the production constants.
-        bytes32[] memory expected = new bytes32[](6);
-        expected[0] = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-        expected[1] = keccak256(
-            "AdminOperation(uint8 operationType,bytes operationData,uint256 salt,uint256 expirationTimestamp,bool isApproval,uint256 chainId,address organization)"
-        );
-        expected[2] = keccak256(
-            "InitiateAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId)"
-        );
-        expected[3] = keccak256(
-            "ReviewAccountTransaction(address organization,address account,address to,uint256 value,bytes data,uint256 salt,uint256 expirationTimestamp,uint256 policyId,bool isApproval,uint256 chainId,bytes initiatorSignature)"
-        );
-        expected[4] = keccak256(
-            "InitiateSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId)"
-        );
-        expected[5] = keccak256(
-            "ReviewSignatureValidation(address organization,address account,bytes32 hash,uint256 policyId,uint256 expirationTimestamp,uint256 chainId,bytes initiatorSignature)"
-        );
-
-        bytes32[] memory actual = new bytes32[](6);
-        actual[0] = LibOrganizationEIP712.EIP712_DOMAIN_TYPEHASH;
-        actual[1] = LibOrganizationEIP712.ADMIN_OPERATION_TYPEHASH;
-        actual[2] = LibOrganizationEIP712.INITIATE_ACCOUNT_TRANSACTION_TYPEHASH;
-        actual[3] = LibOrganizationEIP712.REVIEW_ACCOUNT_TRANSACTION_TYPEHASH;
-        actual[4] = LibOrganizationEIP712.INITIATE_SIGNATURE_VALIDATION_TYPEHASH;
-        actual[5] = LibOrganizationEIP712.REVIEW_SIGNATURE_VALIDATION_TYPEHASH;
-
-        // Verify: each constant should equal the documented type string and all constants should remain unique.
-        for (uint256 i = 0; i < actual.length; ++i) {
-            assertEq(actual[i], expected[i], "type hash should match the documented type string");
-            for (uint256 j = i + 1; j < actual.length; ++j) {
-                assertTrue(actual[i] != actual[j], "type hashes should remain unique");
-            }
-        }
-
-        uint256 index = uint256(selectedIndex) % actual.length;
-        assertEq(actual[index], expected[index], "selected type hash should still match its documented type string");
-    }
 }

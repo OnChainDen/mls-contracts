@@ -234,7 +234,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies random calldata produces deterministic initiator hash values.
-    function testFuzz_AT_FZ_4__LOAT_CIHFP_12__FLOAT_HASH_90_computeInitiatorHash_randomDataDeterministic(
+    function testFuzz_AT_FZ_4__LOAT_CIHFP_12_computeInitiatorHash_randomDataDeterministic(
         bytes calldata data,
         uint256 salt
     ) public view {
@@ -251,7 +251,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies review hash changes when initiator signature bytes change.
-    function testFuzz_AT_FZ_5__FLOAT_HASH_91_computeReviewHash_differentInitiatorSignaturesProduceDifferentHashes(
+    function testFuzz_AT_FZ_5_computeReviewHash_differentInitiatorSignaturesProduceDifferentHashes(
         bytes calldata data,
         uint256 salt
     ) public view {
@@ -375,7 +375,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies changing any single core field changes initiator hash.
-    function testFuzz_AT_FZ_8__LOAT_CIHFP_2__LOAT_CIHFP_3__LOAT_CIHFP_4__NMATL_RHB_1__FLOAT_HASH_90_computeInitiatorHash_singleFieldMutationsChangeHash(
+    function testFuzz_AT_FZ_8__LOAT_CIHFP_2__LOAT_CIHFP_3__LOAT_CIHFP_4__NMATL_RHB_1_computeInitiatorHash_singleFieldMutationsChangeHash(
         address account,
         address to,
         uint96 value,
@@ -468,7 +468,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies changing transaction fields changes review hash for fixed initiator signature.
-    function testFuzz_AT_FZ_9__NMATL_RHB_3__FLOAT_HASH_90_computeReviewHash_fieldMutationsChangeHash(
+    function testFuzz_AT_FZ_9__NMATL_RHB_3_computeReviewHash_fieldMutationsChangeHash(
         address account,
         address to,
         uint96 value,

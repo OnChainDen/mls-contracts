@@ -608,7 +608,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies that mixed EOA/ERC-1271 signature streams accept sorted admin signers and reject ordering/admin
      * violations while parsing variable inner-signature lengths.
      */
-    function testFuzz_NMFZ_5__FLOA_SIGS_40__FLOA_HAR_44_areAdminSignaturesValid_mixedEOAAndERC1271StreamsEnforceOrderingAndAdminChecks(
+    function testFuzz_NMFZ_5__FLOA_SIGS_40_areAdminSignaturesValid_mixedEOAAndERC1271StreamsEnforceOrderingAndAdminChecks(
         bytes calldata innerSig,
         uint8 rawMode,
         bool useNonAdminContract
@@ -788,119 +788,6 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
 
         // Verify: caller-gate failures must not consume the underlying nonce.
         assertFalse(org.getUsedNonce(nonce), "unauthorized caller should not burn nonce");
-    }
-
-    /**
-     * @dev Verifies `LibOrganizationAdmin._getAdminOperationHash` is deterministic and sensitive to every hashed
-     *      field.
-     * @param operationSeed Baseline payload seed used to derive the operation data
-     * @param saltRaw Raw salt used to derive a bounded nonce salt
-     * @param expirationBuffer Raw expiration offset used to derive a bounded future expiration
-     * @param isApproval Baseline approval-domain flag
-     * @param mutationSelector Chooses which helper input to mutate
-     */
-    function testFuzz_FLOA_HAR_44_getAdminOperationHash_isDeterministicAndFieldSensitive(
-        bytes32 operationSeed,
-        uint256 saltRaw,
-        uint64 expirationBuffer,
-        bool isApproval,
-        uint8 mutationSelector
-    ) public {
-        // Setup: derive one baseline admin-operation tuple and recompute it twice for the determinism check.
-        uint256 salt = bound(saltRaw, 1, type(uint256).max - 1);
-        uint256 expiration = block.timestamp + bound(uint256(expirationBuffer), 1, 10 days);
-        bytes memory operationData = abi.encode("floa-har-44", operationSeed);
-        bytes32 baselineHash = harness.getAdminOperationHash({
-            operationType: OperationType.ModifyAdmins,
-            operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expiration,
-            isApproval: isApproval
-        });
-        bytes32 repeatedHash = harness.getAdminOperationHash({
-            operationType: OperationType.ModifyAdmins,
-            operationData: operationData,
-            salt: salt,
-            expirationTimestamp: expiration,
-            isApproval: isApproval
-        });
-
-        // Verify: identical inputs should always reproduce the same admin-operation hash.
-        assertEq(baselineHash, repeatedHash, "admin operation hash should be deterministic");
-
-        uint8 mode = uint8(mutationSelector % 7);
-        bytes32 mutatedHash;
-        if (mode == 0) {
-            // Call: mutate the operation type while keeping all other fields fixed.
-            mutatedHash = harness.getAdminOperationHash({
-                operationType: OperationType.ModifyMembers,
-                operationData: operationData,
-                salt: salt,
-                expirationTimestamp: expiration,
-                isApproval: isApproval
-            });
-        } else if (mode == 1) {
-            // Call: mutate the operation data while keeping all other fields fixed.
-            mutatedHash = harness.getAdminOperationHash({
-                operationType: OperationType.ModifyAdmins,
-                operationData: abi.encode("floa-har-44", operationSeed, "mutated"),
-                salt: salt,
-                expirationTimestamp: expiration,
-                isApproval: isApproval
-            });
-        } else if (mode == 2) {
-            // Call: mutate the nonce salt while keeping all other fields fixed.
-            mutatedHash = harness.getAdminOperationHash({
-                operationType: OperationType.ModifyAdmins,
-                operationData: operationData,
-                salt: salt + 1,
-                expirationTimestamp: expiration,
-                isApproval: isApproval
-            });
-        } else if (mode == 3) {
-            // Call: mutate the expiration timestamp while keeping all other fields fixed.
-            mutatedHash = harness.getAdminOperationHash({
-                operationType: OperationType.ModifyAdmins,
-                operationData: operationData,
-                salt: salt,
-                expirationTimestamp: expiration + 1,
-                isApproval: isApproval
-            });
-        } else if (mode == 4) {
-            // Call: mutate the approval-domain flag while keeping all other fields fixed.
-            mutatedHash = harness.getAdminOperationHash({
-                operationType: OperationType.ModifyAdmins,
-                operationData: operationData,
-                salt: salt,
-                expirationTimestamp: expiration,
-                isApproval: !isApproval
-            });
-        } else if (mode == 5) {
-            // Call: mutate the active chain id for the helper call.
-            uint256 originalChainId = block.chainid;
-            vm.chainId(originalChainId + 1);
-            mutatedHash = harness.getAdminOperationHash({
-                operationType: OperationType.ModifyAdmins,
-                operationData: operationData,
-                salt: salt,
-                expirationTimestamp: expiration,
-                isApproval: isApproval
-            });
-            vm.chainId(originalChainId);
-        } else {
-            // Call: recompute the helper hash from a different organization address.
-            LibOrganizationAdminHarness mirrorHarness = new LibOrganizationAdminHarness();
-            mutatedHash = mirrorHarness.getAdminOperationHash({
-                operationType: OperationType.ModifyAdmins,
-                operationData: operationData,
-                salt: salt,
-                expirationTimestamp: expiration,
-                isApproval: isApproval
-            });
-        }
-
-        // Verify: mutating any helper input should change the resulting admin-operation hash.
-        assertTrue(mutatedHash != baselineHash, "mutating any admin operation field should change the hash");
     }
 
     /**

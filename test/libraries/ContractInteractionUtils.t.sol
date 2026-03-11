@@ -104,7 +104,7 @@ contract ContractInteractionUtilsTest is Test {
 
     /// @dev Test case: Random calldata (>= 4 bytes) should always extract the correct first 4 bytes as the selector.
     ///      [TXUT-PARSE-4]
-    function testFuzz_TXUT_PARSE_4_B__FCIU_SELECT_18_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(
+    function testFuzz_TXUT_PARSE_4_B_extractFunctionSelector_randomCalldata_extractsFirst4Bytes(
         bytes calldata data
     )
         public

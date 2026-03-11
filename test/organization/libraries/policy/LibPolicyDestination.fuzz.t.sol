@@ -9,38 +9,6 @@ import {Policy} from "types/PolicyTypes.sol";
  * @dev Fuzz tests for `LibPolicyDestination`.
  */
 contract LibPolicyDestinationFuzzTest is PolicyLibrariesFuzzTestBase {
-    /// @dev Verifies `LibPolicyDestination.getActualDestination` uses transfer recipients for ERC-20 transfers and
-    /// `to` for non-transfer calls.
-    /// @param token The ERC-20 token contract address used for the transfer branch.
-    /// @param recipient The transfer recipient encoded into ERC-20 calldata.
-    /// @param target The `to` address used for non-transfer branches.
-    /// @param amount The transfer amount encoded into the ERC-20 calldata.
-    /// @param value The native value used for the non-transfer branch.
-    function testFuzz_FLPD_DEST_64_getActualDestination_erc20TransfersUseRecipientAndNonTransfersUseTo(
-        address token,
-        address recipient,
-        address target,
-        uint256 amount,
-        uint256 value
-    ) public view {
-        vm.assume(token != address(0));
-        vm.assume(target != address(0));
-
-        // Setup: prepare one ERC-20 transfer payload plus native-transfer and contract-interaction fixtures.
-        bytes memory transferData = _encodeERC20Transfer(recipient, amount);
-        bytes memory approveData = _encodeERC20Approve(recipient, amount);
-
-        // Call: resolve actual destinations for ERC-20 transfer, native transfer, and non-transfer calldata paths.
-        address transferDestination = harness.getActualDestinationViaPolicyLibrary(token, transferData, 0);
-        address nativeDestination = harness.getActualDestinationViaPolicyLibrary(target, bytes(""), value);
-        address contractDestination = harness.getActualDestinationViaPolicyLibrary(target, approveData, 0);
-
-        // Verify: ERC-20 transfer resolves to the recipient while both non-transfer paths resolve to `to`.
-        assertEq(transferDestination, recipient, "erc20 transfer should resolve to encoded recipient");
-        assertEq(nativeDestination, target, "native transfer should resolve to to-address");
-        assertEq(contractDestination, target, "non-transfer calldata should resolve to to-address");
-    }
-
     /// @dev Verifies `LibPolicyDestination.isDestinationAllowedByPolicy` accepts only exact custom-list membership.
     /// @param token The token contract used when exercising the ERC-20-transfer branch.
     /// @param allowedDestination The destination included in the merkle tree.

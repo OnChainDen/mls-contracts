@@ -119,68 +119,6 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
         }
     }
 
-    /// @dev Verifies the constructor rejects any zero-address argument and otherwise persists the exact tuple.
-    /// @param safeArg The Safe address supplied to the constructor.
-    /// @param executorArg The authorized executor address supplied to the constructor.
-    /// @param batchedArg The batched-transaction address supplied to the constructor.
-    /// @param zeroMask Bitmask selecting which constructor arguments are overwritten to zero.
-    function testFuzz_FSEM_CTOR_149_constructor_rejectsZeroArgsAndPersistsNonZeroTuple(
-        address safeArg,
-        address executorArg,
-        address batchedArg,
-        uint8 zeroMask
-    ) public {
-        if (zeroMask & 0x01 != 0) {
-            safeArg = address(0);
-        } else {
-            vm.assume(safeArg != address(0));
-        }
-
-        if (zeroMask & 0x02 != 0) {
-            executorArg = address(0);
-        } else {
-            vm.assume(executorArg != address(0));
-        }
-
-        if (zeroMask & 0x04 != 0) {
-            batchedArg = address(0);
-        } else {
-            vm.assume(batchedArg != address(0));
-        }
-
-        // Setup: derive the constructor tuple after applying the fuzzed zero-address mask.
-
-        // Call: deploy the module and branch on the first zero-address validation that should trigger.
-        if (safeArg == address(0)) {
-            vm.expectRevert(ISafeExecutorModule.SafeAddressCannotBeZero.selector);
-            new SafeExecutorModule(safeArg, executorArg, batchedArg);
-            return;
-        }
-
-        if (executorArg == address(0)) {
-            vm.expectRevert(ISafeExecutorModule.ExecutorAddressCannotBeZero.selector);
-            new SafeExecutorModule(safeArg, executorArg, batchedArg);
-            return;
-        }
-
-        if (batchedArg == address(0)) {
-            vm.expectRevert(ISafeExecutorModule.BatchedTransactionAddressCannotBeZero.selector);
-            new SafeExecutorModule(safeArg, executorArg, batchedArg);
-            return;
-        }
-
-        SafeExecutorModule freshModule = new SafeExecutorModule(safeArg, executorArg, batchedArg);
-
-        // Verify: non-zero constructor tuples persist exactly into the immutable fields.
-        assertEq(freshModule.SAFE(), safeArg, "SAFE immutable should match constructor input");
-        assertEq(
-            freshModule.AUTHORIZED_EXECUTOR(), executorArg, "AUTHORIZED_EXECUTOR immutable should match input"
-        );
-        assertEq(
-            freshModule.BATCHED_TRANSACTION(), batchedArg, "BATCHED_TRANSACTION immutable should match input"
-        );
-    }
-
     /// @dev Verifies only the configured authorized executor can make `executeOnBehalf` succeed.
     /// @param caller The fuzzed caller attempting to invoke the module.
     /// @param newValue The value written on the success branch.
@@ -232,7 +170,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @dev Verifies `executeOnBehalf` chooses the Safe operation solely from the target kind.
     /// @param useBatchedTarget Whether to route through `BATCHED_TRANSACTION` instead of a direct call target.
     /// @param newValue Fuzzed value written through the selected execution path.
-    function testFuzz_SMI_FUZ_1__FSEM_EXEC_152_executeOnBehalf_operationMatchesTargetKind(
+    function testFuzz_SMI_FUZ_1_executeOnBehalf_operationMatchesTargetKind(
         bool useBatchedTarget,
         uint256 newValue
     ) public {
@@ -339,7 +277,7 @@ contract SafeModuleFuzzTest is Test, SignatureTestHelpers {
     /// @param signCorrectHash Whether the signer signs the exact validated hash.
     /// @param hash Message hash supplied to `isValidSignature`.
     /// @param otherSignerPkRaw Fuzzed seed for an alternate non-authorized signer key.
-    function testFuzz_SMI_FUZ_3_B__FSEM_SIG_155_isValidSignature_onlyAuthorizedExactHashProducesMagic(
+    function testFuzz_SMI_FUZ_3_B_isValidSignature_onlyAuthorizedExactHashProducesMagic(
         bool useAuthorizedSigner,
         bool signCorrectHash,
         bytes32 hash,

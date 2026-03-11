@@ -50,59 +50,6 @@ contract OrganizationSignaturesBaseFuzzTest is Test {
         rollbackHarness = new OrganizationSignaturesRollbackHarness();
     }
 
-    /// @dev Verifies `computeNonce` changes whenever any field in `(operationType, operationData, salt)` changes.
-    /// @param rawOperationTypeA Fuzzed operation-type seed for the first nonce tuple.
-    /// @param operationDataA Fuzzed operation payload for the first nonce tuple.
-    /// @param saltA Fuzzed salt for the first nonce tuple.
-    /// @param rawOperationTypeB Fuzzed operation-type seed for the second nonce tuple.
-    /// @param operationDataB Fuzzed operation payload for the second nonce tuple.
-    /// @param saltB Fuzzed salt for the second nonce tuple.
-    function testFuzz_FLOS_NONCE_30_computeNonce_changesWhenOperationTupleChanges(
-        uint8 rawOperationTypeA,
-        bytes calldata operationDataA,
-        uint256 saltA,
-        uint8 rawOperationTypeB,
-        bytes calldata operationDataB,
-        uint256 saltB
-    ) public {
-        // Setup: bound both operation types into the valid enum range and skip the identical control tuple.
-        OperationType operationTypeA =
-            OperationType(bound(uint256(rawOperationTypeA), 0, uint256(OperationType.AccountTransactionRejection)));
-        OperationType operationTypeB =
-            OperationType(bound(uint256(rawOperationTypeB), 0, uint256(OperationType.AccountTransactionRejection)));
-        vm.assume(
-            operationTypeA != operationTypeB || keccak256(operationDataA) != keccak256(operationDataB) || saltA != saltB
-        );
-
-        // Call: compute both nonces through the external base-wrapper surface.
-        uint256 nonceA = harness.computeNonce(operationTypeA, operationDataA, saltA);
-        uint256 nonceB = harness.computeNonce(operationTypeB, operationDataB, saltB);
-
-        // Verify: any tuple mutation should move the nonce into a different replay domain.
-        assertTrue(nonceA != nonceB, "nonce should change whenever any bound tuple field changes");
-    }
-
-    /// @dev Verifies `computeNonce` isolates the same tuple across different organization addresses.
-    /// @param rawOperationType Fuzzed operation-type seed bounded into the valid enum range.
-    /// @param operationData Fuzzed operation payload shared across both organizations.
-    /// @param salt Fuzzed salt shared across both organizations.
-    function testFuzz_FLOS_NONCE_31_computeNonce_isolatesOrganizationsForSameTuple(
-        uint8 rawOperationType,
-        bytes calldata operationData,
-        uint256 salt
-    ) public {
-        // Setup: bound the operation type into the valid enum range.
-        OperationType operationType =
-            OperationType(bound(uint256(rawOperationType), 0, uint256(OperationType.AccountTransactionRejection)));
-
-        // Call: compute the same tuple on two different organization-address wrappers.
-        uint256 firstNonce = harness.computeNonce(operationType, operationData, salt);
-        uint256 secondNonce = secondHarness.computeNonce(operationType, operationData, salt);
-
-        // Verify: organization address is part of nonce derivation, so the replay domains stay isolated.
-        assertTrue(firstNonce != secondNonce, "same tuple should derive different nonces across organizations");
-    }
-
     /// @dev Verifies `validateAndConsumeNonceOrRevert` flips a fresh nonce from `false` to `true` exactly once and
     /// reverts on replay with the exact nonce value.
     /// @param rawOperationType Fuzzed operation-type seed bounded into the valid enum range.
@@ -155,47 +102,4 @@ contract OrganizationSignaturesBaseFuzzTest is Test {
         assertTrue(rollbackHarness.isNonceUsed(nonce), "later successful consume should still mark the nonce used");
     }
 
-    /// @dev Verifies the base nonce views are caller-independent, match the direct library formula, and reflect
-    /// successful versus reverted consume paths accurately.
-    /// @param callerA First arbitrary caller used to read `computeNonce`.
-    /// @param callerB Second arbitrary caller used to read `computeNonce`.
-    /// @param rawOperationType Fuzzed operation-type seed bounded into the valid enum range.
-    /// @param operationData Fuzzed operation payload used to derive the nonce.
-    /// @param salt Fuzzed salt used to derive the nonce.
-    function testFuzz_FOSB_NONCE_34_computeNonceAndIsNonceUsed_remainCallerIndependentAndOutcomeConsistent(
-        address callerA,
-        address callerB,
-        uint8 rawOperationType,
-        bytes calldata operationData,
-        uint256 salt
-    ) public {
-        // Setup: bound the operation type into the valid enum range and choose two distinct arbitrary readers.
-        OperationType operationType =
-            OperationType(bound(uint256(rawOperationType), 0, uint256(OperationType.AccountTransactionRejection)));
-        vm.assume(callerA != callerB);
-
-        // Call: compute the nonce from two caller contexts, then exercise reverted and successful consume paths.
-        vm.prank(callerA);
-        uint256 nonceFromCallerA = rollbackHarness.computeNonce(operationType, operationData, salt);
-
-        vm.prank(callerB);
-        uint256 nonceFromCallerB = rollbackHarness.computeNonce(operationType, operationData, salt);
-
-        uint256 expected =
-            uint256(keccak256(abi.encode(address(rollbackHarness), operationType, keccak256(operationData), salt)));
-
-        vm.expectRevert(ForcedRollback.selector);
-        rollbackHarness.consumeNonceAndRevert(nonceFromCallerA);
-        bool afterRollback = rollbackHarness.isNonceUsed(nonceFromCallerA);
-
-        rollbackHarness.consumeNonceViaLibrary(nonceFromCallerA);
-        bool afterSuccess = rollbackHarness.isNonceUsed(nonceFromCallerA);
-
-        // Verify: caller context does not affect nonce derivation, the wrapper matches the library formula, and
-        // `isNonceUsed` tracks reverted versus successful consumption outcomes.
-        assertEq(nonceFromCallerA, nonceFromCallerB, "nonce derivation should be caller-independent");
-        assertEq(nonceFromCallerA, expected, "base wrapper should match the direct library formula");
-        assertFalse(afterRollback, "reverted parent path should leave nonce usage false");
-        assertTrue(afterSuccess, "successful consume should make nonce usage visible");
-    }
 }

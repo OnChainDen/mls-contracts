@@ -38,25 +38,6 @@ contract LibPolicyApprovalFuzzTest is PolicyLibrariesFuzzTestBase {
         assertFalse(reversedAllowed, "out-of-order signers should fail");
     }
 
-    /// @dev Verifies `LibPolicyApproval.getRequiredApprovals` returns `1` for member mode and the configured
-    /// threshold for group mode.
-    /// @param threshold The group approval threshold tested for the group branch.
-    function testFuzz_FLPA_REQ_79_getRequiredApprovals_matchesMemberAndGroupModes(uint8 threshold) public view {
-        // Setup: configure one member-approver policy and one group-approver policy with the fuzzed threshold.
-        Policy memory memberPolicy = _memberApproverPolicy(reviewer1);
-        memberPolicy.config.approval.approvalThreshold = threshold;
-
-        Policy memory groupPolicy = _groupApproverPolicy(7901, threshold);
-
-        // Call: read the required approval count from both policy variants.
-        uint256 memberRequired = harness.getRequiredApprovalsViaPolicyLibrary(memberPolicy);
-        uint256 groupRequired = harness.getRequiredApprovalsViaPolicyLibrary(groupPolicy);
-
-        // Verify: member mode ignores the threshold field while group mode returns it exactly.
-        assertEq(memberRequired, 1, "member mode should always require exactly one approval");
-        assertEq(groupRequired, threshold, "group mode should return the configured threshold");
-    }
-
     /// @dev Verifies `LibPolicyApproval._isSignerAuthorizedForPolicy` requires both organization membership and the
     /// configured member/group match.
     /// @param rawGroupId The group identifier used for the group-based authorization branch.

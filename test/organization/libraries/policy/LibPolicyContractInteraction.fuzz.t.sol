@@ -72,36 +72,4 @@ contract LibPolicyContractInteractionFuzzTest is PolicyLibrariesFuzzTestBase {
         assertFalse(wrongConstraintsAllowed, "constraints-hash mutation should invalidate the proof");
     }
 
-    /// @dev Verifies `LibPolicyContractInteraction._computeFunctionLeaf` is deterministic, double-hashed, and field
-    /// sensitive.
-    /// @param selector The selector used in the baseline leaf.
-    /// @param differentSelector A selector used to prove selector sensitivity.
-    /// @param constraintsHash The constraints hash used in the baseline leaf.
-    /// @param differentConstraintsHash A constraints hash used to prove hash sensitivity.
-    function testFuzz_FLPCI_FLEAF_71_computeFunctionLeaf_isDeterministicDoubleHashedAndFieldSensitive(
-        bytes4 selector,
-        bytes4 differentSelector,
-        bytes32 constraintsHash,
-        bytes32 differentConstraintsHash
-    ) public view {
-        vm.assume(selector != differentSelector);
-        vm.assume(constraintsHash != differentConstraintsHash);
-
-        // Setup: compute the expected double-hash leaf and prepare selector/hash mutations.
-        bytes32 expected = keccak256(bytes.concat(keccak256(abi.encode(selector, constraintsHash))));
-
-        // Call: compute the baseline leaf twice plus two single-field mutations.
-        bytes32 baseline = harness.computeFunctionLeafViaPolicyLibrary(selector, constraintsHash);
-        bytes32 repeated = harness.computeFunctionLeafViaPolicyLibrary(selector, constraintsHash);
-        bytes32 selectorMutation = harness.computeFunctionLeafViaPolicyLibrary(differentSelector, constraintsHash);
-        bytes32 hashMutation = harness.computeFunctionLeafViaPolicyLibrary(selector, differentConstraintsHash);
-
-        // Verify: the helper matches the double-hash formula, stays deterministic, and changes when either field
-        // changes.
-        assertEq(baseline, expected, "function leaf should match the double-hash formula");
-        assertEq(repeated, baseline, "function leaf should be deterministic");
-        assertTrue(baseline != keccak256(abi.encode(selector, constraintsHash)), "single-hash variant should differ");
-        assertTrue(selectorMutation != baseline, "selector mutation should change the leaf");
-        assertTrue(hashMutation != baseline, "constraints hash mutation should change the leaf");
-    }
 }

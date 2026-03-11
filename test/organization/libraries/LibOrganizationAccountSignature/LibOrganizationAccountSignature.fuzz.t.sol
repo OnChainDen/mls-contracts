@@ -365,7 +365,7 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
     }
 
     /// @dev Verifies that different initiator signatures produce different review hashes.
-    function testFuzz_AS_FUZ_8__FLOAS_RHASH_101_getReviewSignatureHash_differentInitiatorSignatures_returnDifferentHashes(
+    function testFuzz_AS_FUZ_8_getReviewSignatureHash_differentInitiatorSignatures_returnDifferentHashes(
         uint256 initiatorPkARaw,
         uint256 initiatorPkBRaw
     ) public view {

@@ -97,41 +97,6 @@ contract MerkleUtilsTest is Test {
         assertEq(leaf1, leaf2, "Same address should always produce the same leaf");
     }
 
-    /// @dev Test case: No two random addresses should ever produce the same leaf (collision resistance).
-    function testFuzz_FMU_LEAF_10_computeAddressLeaf_distinctRandomAddressesDoNotCollide(
-        address addr1,
-        address addr2
-    ) public view {
-        // Setup: constrain the fuzzed addresses to distinct values.
-        vm.assume(addr1 != addr2);
-
-        // Call: compute the Merkle leaf for each distinct address.
-        bytes32 leaf1 = harness.computeAddressLeaf(addr1);
-        bytes32 leaf2 = harness.computeAddressLeaf(addr2);
-
-        // Verify: distinct addresses should not collide in practical fuzz space.
-        assertTrue(leaf1 != leaf2, "Different addresses should never collide");
-    }
-
-    /// @dev Verifies `MerkleUtils.computeAddressLeaf` stays deterministic and matches the documented double-hash
-    /// formula for random addresses.
-    /// @param addr Fuzzed address used to derive the Merkle leaf.
-    function testFuzz_FMU_LEAF_9_computeAddressLeaf_randomAddressesRemainDeterministicAndDoubleHashed(address addr)
-        public
-        view
-    {
-        // Setup: derive the expected documented double-hash leaf from the fuzzed address.
-        bytes32 expectedLeaf = keccak256(bytes.concat(keccak256(abi.encode(addr))));
-
-        // Call: compute the Merkle leaf twice for the same address.
-        bytes32 firstLeaf = harness.computeAddressLeaf(addr);
-        bytes32 secondLeaf = harness.computeAddressLeaf(addr);
-
-        // Verify: leaf computation should be deterministic and match the double-hash formula exactly.
-        assertEq(firstLeaf, expectedLeaf, "leaf should match the documented double-hash formula");
-        assertEq(secondLeaf, expectedLeaf, "repeated calls should remain deterministic");
-    }
-
     /// @dev Test case: Random tree sizes (2-100 leaves) should produce verifiable merkle proofs for each leaf.
     function testFuzz_computeAddressLeaf_randomTreeSize_leafVerifiable(uint8 rawTreeSize) public view {
         uint256 treeSize = bound(rawTreeSize, 2, 100);

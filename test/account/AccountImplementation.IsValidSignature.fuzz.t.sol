@@ -29,7 +29,7 @@ contract AccountImplementationIsValidSignatureFuzzTest is AccountImplementationS
     }
 
     /// @dev Verifies exact delegation for arbitrary inputs and arbitrary organization `bytes4` results.
-    function testFuzz_ACI_IVS_15__FAI_SIG_147_isValidSignature_delegatesExactTupleAndBubblesConfiguredResult(
+    function testFuzz_ACI_IVS_15_isValidSignature_delegatesExactTupleAndBubblesConfiguredResult(
         address caller,
         bytes32 hash,
         bytes calldata signature,

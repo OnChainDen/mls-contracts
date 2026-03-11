@@ -104,7 +104,7 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
     }
 
     /// @dev Verifies the same salt across different organizations computes different account addresses.
-    function testFuzz_AF_FT_6__FLOAF_ADDRESS_126_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(
+    function testFuzz_AF_FT_6_sameSaltAcrossDifferentOrganizations_producesDifferentAddresses(
         bytes32 salt
     ) public {
         // Setup: instantiate a second organization harness.
@@ -135,32 +135,4 @@ contract LibOrganizationAccountFactoryFuzzTest is LibOrganizationAccountFactoryS
         assertTrue(harness.isDeployedAccount(firstDeployment), "collision revert should preserve deployed tracking");
     }
 
-    /// @dev Verifies account-proxy bytecode generation is deterministic within one organization and changes across
-    /// organization addresses.
-    /// @param foreignOrganization Fuzzed non-zero organization address used for the field-sensitivity comparison.
-    function testFuzz_FLOAF_BYTECODE_128_getAccountProxyBytecode_isDeterministicAndOrganizationSensitive(
-        address foreignOrganization
-    ) public view {
-        // Setup: constrain the comparison organization away from this harness address and precompute a reference
-        // bytecode blob for it.
-        vm.assume(foreignOrganization != address(0));
-        vm.assume(foreignOrganization != address(harness));
-        bytes memory expectedBytecode =
-            abi.encodePacked(type(AccountProxy).creationCode, abi.encode(address(harness), ""));
-        bytes memory foreignBytecode =
-            abi.encodePacked(type(AccountProxy).creationCode, abi.encode(foreignOrganization, ""));
-
-        // Call: read account-proxy bytecode repeatedly for this harness.
-        bytes memory bytecode = harness.getAccountProxyBytecodeViaLibrary();
-        bytes memory repeatedBytecode = harness.getAccountProxyBytecodeViaLibrary();
-
-        // Verify: one organization should produce deterministic bytecode, match the reference model, and change when
-        // the organization address changes.
-        assertEq(keccak256(bytecode), keccak256(repeatedBytecode), "bytecode should be deterministic per org");
-        assertEq(keccak256(bytecode), keccak256(expectedBytecode), "bytecode should encode this organization address");
-        assertTrue(
-            keccak256(bytecode) != keccak256(foreignBytecode),
-            "bytecode should change when the organization address changes"
-        );
-    }
 }

@@ -110,7 +110,7 @@ contract LibOrganizationGuardianFuzzTest is LibOrganizationGuardianSuiteBase {
 
     /// @dev Verifies `LibOrganizationGuardian.initiateGuardianUpdate` stores both the pending guardian and the
     /// finalize timestamp derived from the admin-operation timelock.
-    function testFuzz_GFZ_5__FLOGU_INIT_105_randomTimelockDurations_canFinalizeTimestampMatchesDuration(
+    function testFuzz_GFZ_5_randomTimelockDurations_canFinalizeTimestampMatchesDuration(
         address newGuardian,
         uint256 timelockDuration
     ) public {
