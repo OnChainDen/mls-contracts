@@ -159,4 +159,49 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
         );
         assertTrue(state.isUpdateReadyForAcceptance, "recovery-update ready flag should remain untouched");
     }
+
+    /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` succeeds when
+    /// `block.timestamp` is strictly greater than the pending initialization timestamp.
+    function test_LOGR_AOTFIGR_3_finalizeInitializeGuardianRecovery_afterPendingTimestampSucceeds() public {
+        // Setup: stage a deferred guardian-recovery initialization and advance one second past its pending timestamp.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp + 1);
+
+        // Call: finalize the deferred initialization after the admin-operation timelock has already expired.
+        harness.finalizeInitializeGuardianRecoveryViaLibrary();
+
+        // Verify: finalization succeeds and writes the pending recovery configuration into active storage.
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(state.recoveryAddress, GUARDIAN_RECOVERY_ADDRESS, "post-expiry finalize should configure recovery");
+        assertEq(
+            state.timelockDurationSeconds,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            "post-expiry finalize should configure the pending timelock"
+        );
+    }
+
+    /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` reverts with
+    /// `NoGuardianRecoveryInitializationPending` after cancellation even once the cancelled timestamp has passed.
+    function test_LOGR_AOTFIGR_6_finalizeInitializeGuardianRecovery_afterCancellationAndExpiryRevertsNoPending()
+        public
+    {
+        // Setup: stage and cancel a deferred initialization, then advance past the cancelled pending timestamp.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        uint256 cancelledPendingTimestamp = harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
+        harness.cancelInitializeGuardianRecoveryViaLibrary();
+        vm.warp(cancelledPendingTimestamp + 1);
+
+        // Call: attempt to finalize after the cancelled timestamp has elapsed.
+        vm.expectRevert(IOrganizationGuardianRecovery.NoGuardianRecoveryInitializationPending.selector);
+        harness.finalizeInitializeGuardianRecoveryViaLibrary();
+
+        // Verify: cancellation remains authoritative and leaves the pending-init tuple cleared.
+        assertEq(
+            harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp,
+            0,
+            "cancelled deferred initialization should remain cleared"
+        );
+    }
 }

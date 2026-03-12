@@ -3,6 +3,7 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationTxRecovery} from "interfaces/organization/IOrganizationTxRecovery.sol";
+import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {
     MockAccountForOrganizationTransaction
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
@@ -188,7 +189,10 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` zero deferred-init timestamp implies zero deferred-init tuple.
-    function invariant_TXR_INV_9_TXRC_INV_10_zeroPendingInitTimestampImpliesZeroDeferredInitTuple() public view {
+    function invariant_TXR_INV_9_TXRC_INV_10__AOT_INV_4_zeroPendingInitTimestampImpliesZeroDeferredInitTuple()
+        public
+        view
+    {
         // Setup
 
         // Call: read current tx-recovery state snapshot.
@@ -205,6 +209,33 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
                 state.pendingInit.pendingTimelockDurationSeconds,
                 0,
                 "TXR-INV-9 violated: pending init timelock not cleared"
+            );
+        }
+    }
+
+    /// @dev Verifies the tx-recovery deferred-init tuple is fully well-formed whenever its pending timestamp is
+    /// non-zero.
+    function invariant_AOT_INV_5_pendingInitTimestampImpliesValidTxRecoveryDeferredInitTuple() public view {
+        // Setup
+
+        // Call: read current tx-recovery state snapshot.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+
+        // Verify: non-zero pending timestamps always imply a non-zero address and in-range timelock.
+        if (state.pendingInit.pendingTimestamp != 0) {
+            assertTrue(
+                state.pendingInit.pendingRecoveryAddress != address(0),
+                "AOT-INV-5 violated: pending init timestamp requires a recovery address"
+            );
+            assertGe(
+                state.pendingInit.pendingTimelockDurationSeconds,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                "AOT-INV-5 violated: pending init timelock must be >= min"
+            );
+            assertLe(
+                state.pendingInit.pendingTimelockDurationSeconds,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS,
+                "AOT-INV-5 violated: pending init timelock must be <= max"
             );
         }
     }

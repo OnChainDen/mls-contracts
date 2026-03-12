@@ -25,7 +25,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
     /// @dev Verifies `LibOrganizationInitialization.initialize` happy path configures
     /// members/admins/groups/guardian/recovery state, emits `OrganizationInitialized`, and accepts the min-boundary
     /// guardian recovery timelock. [OI-INIT-8]
-    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4__LOI_REC_5__OI_INIT_8_initializeLibrary_happyPathConfiguresState()
+    function test_LOI_HPS_1__LOI_HPS_2__LOI_HPS_3__LOI_HPS_4__LOI_HPS_5__LOI_HPS_6__LOI_HPS_7__LOI_HPS_9__LOI_REC_1__LOI_REC_2__LOI_REC_3__LOI_REC_4__LOI_REC_5__OI_INIT_8__LOI_AOTINIT_2_initializeLibrary_happyPathConfiguresState()
         public
     {
         // Setup: Deploy a library harness, build valid params, and set the expected initialization event payload.
@@ -165,7 +165,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` reverts for invalid
     /// member/admin/guardian/implementation/timelock inputs. [OI-INIT-6]
-    function test_LOI_VAL_1__LOI_VAL_2__LOI_VAL_3__LOI_VAL_4__LOI_VAL_5__LOI_VAL_6__LOI_VAL_7__LOI_VAL_8__LOI_VAL_9__LOI_VAL_10__LOI_VAL_11__LOI_VAL_12__LOI_VAL_13__LOI_VAL_14__OI_INIT_6_initializeLibrary_validationReverts()
+    function test_LOI_VAL_1__LOI_VAL_2__LOI_VAL_3__LOI_VAL_4__LOI_VAL_5__LOI_VAL_6__LOI_VAL_7__LOI_VAL_8__LOI_VAL_9__LOI_VAL_10__LOI_VAL_11__LOI_VAL_12__LOI_VAL_13__LOI_VAL_14__OI_INIT_6__LOI_AOTINIT_3__LOI_AOTINIT_4_initializeLibrary_validationReverts()
         public
     {
         // Setup: Prepare reusable params and instantiate a fresh harness per validation failure branch.
@@ -471,7 +471,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies library deployer/view helpers plus guardian-revert atomicity, event suppression on revert, and
     /// one-way initialization transition. [OI-INIT-6, OI-INIT-9]
-    function test_LOI_AOG_1__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5__OI_INIT_6__OI_INIT_9_initializeLibrary_atomicityAndViewGuards()
+    function test_LOI_AOG_1__LOI_AOG_4__LOI_AOG_5__LOI_AOG_6__LOI_VIEW_1__LOI_VIEW_2__LOI_VIEW_3__LOI_VIEW_4__LOI_VIEW_5__OI_INIT_6__OI_INIT_9__LOI_AOTINIT_7_initializeLibrary_atomicityAndViewGuards()
         public
     {
         // Setup: Deploy a harness and seed deployer storage for enforce-only-deployer checks.
@@ -510,9 +510,57 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
         assertTrue(harness.isInitializedViaLibrary(), "successful init should flip initialized sentinel once");
         assertTrue(harness.getMemberStatus(ADMIN_1), "admins should remain members after success");
+        assertEq(
+            harness.getAdminOperationTimelockStorage(),
+            valid.adminOperationTimelockDurationSeconds,
+            "successful init should persist the admin-operation timelock"
+        );
 
         vm.expectRevert(IOrganizationInitialization.AlreadyInitialized.selector);
         harness.initializeViaLibrary(valid);
+        assertEq(
+            harness.getAdminOperationTimelockStorage(),
+            valid.adminOperationTimelockDurationSeconds,
+            "reinitialize revert must not change the stored admin-operation timelock"
+        );
+    }
+
+    /// @dev Verifies `LibOrganizationInitialization.initialize` fully rolls back organization state when the
+    /// admin-operation timelock is invalid.
+    function test_LOI_AOTINIT_5_initialize_invalidAdminOperationTimelock_rollsBackAllInitializationState() public {
+        // Setup: build otherwise-valid initialization params with an out-of-range admin-operation timelock.
+        LibOrganizationInitializationHarness harness = _newLibraryHarness();
+        InitializationParams memory params = _defaultInitializationParams();
+        params.adminOperationTimelockDurationSeconds = TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1;
+
+        // Call: attempt initialization and expect the exact invalid-timelock revert from the timelock validator.
+        vm.recordLogs();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockUtils.InvalidTimelockDuration.selector,
+                params.adminOperationTimelockDurationSeconds,
+                TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
+                TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
+            )
+        );
+        harness.initializeViaLibrary(params);
+
+        // Verify: the reverted initialization leaves no persisted sentinel, membership, guardian, timelock, or event.
+        assertFalse(harness.isInitializedViaLibrary(), "invalid admin-operation timelock should leave init unset");
+        assertFalse(harness.getMemberStatus(MEMBER_1), "invalid admin-operation timelock should roll back members");
+        assertFalse(harness.getAdminStatus(ADMIN_1), "invalid admin-operation timelock should roll back admins");
+        assertFalse(harness.getGroupStatus(GROUP_ID), "invalid admin-operation timelock should roll back groups");
+        assertEq(harness.getGuardianStorage(), address(0), "invalid admin-operation timelock should roll back guardian");
+        assertEq(
+            harness.getAdminOperationTimelockStorage(),
+            0,
+            "invalid admin-operation timelock should not persist the timelock value"
+        );
+        assertEq(
+            _countTopic(vm.getRecordedLogs(), ORG_INITIALIZED_TOPIC),
+            0,
+            "invalid admin-operation timelock must not emit initialized event"
+        );
     }
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back member/admin writes when the groups step
@@ -548,7 +596,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
 
     /// @dev Verifies `LibOrganizationInitialization.initialize` rolls back all prior writes (members, admins, groups,
     /// guardian, timelock) when recovery setup reverts.
-    function test_INIT_STATE_6_B__LOI_AOG_3_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites()
+    function test_INIT_STATE_6_B__LOI_AOG_3__LOI_AOTINIT_6_initializeLibrary_revertInRecoverySetup_rollsBackAllPriorWrites()
         public
     {
         // Setup: Build params with valid members/admins/groups/guardian but an invalid guardian recovery timelock to
@@ -576,6 +624,11 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         assertFalse(harness.getAdminStatus(ADMIN_1), "admin writes should roll back on recovery revert");
         assertFalse(harness.getGroupStatus(GROUP_ID), "group writes should roll back on recovery revert");
         assertEq(harness.getGuardianStorage(), address(0), "guardian write should roll back on recovery revert");
+        assertEq(
+            harness.getAdminOperationTimelockStorage(),
+            0,
+            "admin-operation timelock write should roll back on recovery revert"
+        );
         assertEq(
             _countTopic(vm.getRecordedLogs(), ORG_INITIALIZED_TOPIC),
             0,

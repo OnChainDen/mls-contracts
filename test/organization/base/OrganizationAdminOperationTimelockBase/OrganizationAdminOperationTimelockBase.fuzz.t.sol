@@ -102,4 +102,32 @@ contract OrganizationAdminOperationTimelockBaseFuzzTest is Test {
         harness = new OrganizationAdminOperationTimelockBaseFlowHarness();
     }
 
+    /// @dev Verifies `OrganizationAdminOperationTimelockBase.adminOperationTimelockDurationSeconds` returns the value
+    /// stored through `LibOrganizationAdminOperationTimelock`.
+    function test_OAOTB_AOTDS_1_adminOperationTimelockDurationSeconds_returnsStoredLibraryValue() public {
+        // Setup: persist a valid admin-operation timelock duration through the shared library helper.
+        uint256 configuredDuration = 11 days;
+        harness.initializeAdminOperationTimelockViaLibrary(configuredDuration);
+
+        // Call: read the external base getter.
+        uint256 durationSeconds = harness.adminOperationTimelockDurationSeconds();
+
+        // Verify: the base getter returns the exact persisted timelock duration.
+        assertEq(durationSeconds, configuredDuration, "base getter should return the stored timelock duration");
+    }
+
+    /// @dev Verifies `OrganizationAdminOperationTimelockBase.adminOperationTimelockDurationSeconds` is permissionless.
+    function test_OAOTB_AOTDS_2_adminOperationTimelockDurationSeconds_callableByAnyAddress() public {
+        // Setup: persist a valid admin-operation timelock duration through the shared library helper.
+        uint256 configuredDuration = TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS + 1;
+        address randomCaller = address(0xA0A7);
+        harness.initializeAdminOperationTimelockViaLibrary(configuredDuration);
+
+        // Call: read the external base getter from a non-privileged caller address.
+        vm.prank(randomCaller);
+        uint256 durationSeconds = harness.adminOperationTimelockDurationSeconds();
+
+        // Verify: arbitrary callers can read the stored timelock duration without authorization checks.
+        assertEq(durationSeconds, configuredDuration, "permissionless getter should return the configured duration");
+    }
 }

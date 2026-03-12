@@ -100,4 +100,49 @@ contract LibOrganizationGuardianRecoveryCancelInitializeGuardianRecoveryTest is
             "pending-init should remain cleared after second cancel"
         );
     }
+
+    /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` succeeds after the admin-op
+    /// timelock has expired as long as finalization has not occurred yet.
+    function test_LOGR_AOTCIGR_2_cancelInitializeGuardianRecovery_afterPendingTimestampStillSucceeds() public {
+        // Setup: stage a deferred initialization and advance one second past its pending timestamp without finalizing.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp + 1);
+
+        // Call: cancel the deferred initialization after expiry but before finalization.
+        harness.cancelInitializeGuardianRecoveryViaLibrary();
+
+        // Verify: cancellation after expiry still clears the staged deferred-init tuple.
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "post-expiry cancel should clear address");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "post-expiry cancel should clear timelock");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "post-expiry cancel should clear timestamp");
+    }
+
+    /// @dev Verifies `LibOrganizationGuardianRecovery.cancelInitializeGuardianRecovery` allows a later re-initiation
+    /// to compute a fresh admin-operation timelock timestamp from the new start time.
+    function test_LOGR_AOTCIGR_4_cancelInitializeGuardianRecovery_reinitiationComputesFreshPendingTimestamp() public {
+        // Setup: stage and cancel one deferred initialization, then move time forward before re-initiating.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        harness.cancelInitializeGuardianRecoveryViaLibrary();
+        vm.warp(block.timestamp + 4 days);
+        uint256 expectedFreshPendingTimestamp = block.timestamp + ADMIN_OPERATION_TIMELOCK;
+
+        // Call: initiate the deferred initialization again after the prior pending tuple was cancelled.
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS_B, 4 days);
+
+        // Verify: the new pending timestamp is recomputed from the new start time rather than reusing stale state.
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(
+            state.pendingInit.pendingTimestamp,
+            expectedFreshPendingTimestamp,
+            "re-initiation should compute a fresh pending timestamp"
+        );
+        assertEq(
+            state.pendingInit.pendingRecoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS_B,
+            "re-initiation should store the new pending recovery address"
+        );
+    }
 }

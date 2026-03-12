@@ -136,4 +136,22 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
             "pending guardian should remain unchanged after second finalize"
         );
     }
+
+    /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` succeeds when
+    /// `block.timestamp` is strictly greater than the pending guardian timestamp.
+    function test_LOGR_AOTFRGU_3_finalizeRecoveryGuardianUpdate_afterPendingTimestampSucceeds() public {
+        // Setup: configure guardian recovery, stage a recovery guardian update, and advance one second past expiry.
+        _resetAndConfigureRecovery();
+        harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_C);
+        vm.warp(harness.getGuardianRecoveryStateViaStorage().pendingGuardianTimestamp + 1);
+
+        // Call: finalize the recovery guardian update after the timelock has already expired.
+        harness.finalizeRecoveryGuardianUpdateViaLibrary();
+
+        // Verify: post-expiry finalization succeeds and marks the recovery update ready for acceptance.
+        assertTrue(
+            harness.getGuardianRecoveryStateViaStorage().isUpdateReadyForAcceptance,
+            "post-expiry recovery finalize should succeed"
+        );
+    }
 }

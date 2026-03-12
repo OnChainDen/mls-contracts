@@ -1547,12 +1547,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify: finalize succeeds only after the admin timelock and promotes the pending tuple into active config.
         TxRecoveryState memory finalizedState = harness.getTxRecoveryState();
         assertEq(finalizedState.recoveryAddress, pendingRecovery, "finalize should configure recovery address");
-        assertEq(
-            finalizedState.timelockDurationSeconds, boundedPendingTimelock, "finalize should configure timelock"
-        );
-        assertEq(
-            finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address"
-        );
+        assertEq(finalizedState.timelockDurationSeconds, boundedPendingTimelock, "finalize should configure timelock");
+        assertEq(finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address");
         assertEq(finalizedState.pendingInit.pendingTimestamp, 0, "finalize should clear pending timestamp");
         assertFalse(finalizedState.isEnabled, "finalize initialization should not auto-enable tx recovery");
     }
@@ -1756,5 +1752,101 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         // Verify: the configured signer validates only for the exact signed hash.
         assertTrue(originalValid, "configured recovery signer should validate the original hash");
         assertFalse(replayValid, "same signature must fail when replayed against a different hash");
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.finalizeInitializeTxRecovery` succeeds when `block.timestamp` is
+    /// strictly greater than the pending initialization timestamp.
+    function test_LOTR_AOTFITR_3_finalizeInitializeTxRecovery_afterPendingTimestampSucceeds() public {
+        // Setup: reset to an unconfigured state, stage a deferred tx-recovery initialization, and advance past expiry.
+        harness.resetTxRecoveryState();
+        harness.initiateInitializeTxRecovery(otherSigner, 5 days);
+        vm.warp(harness.getTxRecoveryState().pendingInit.pendingTimestamp + 1);
+
+        // Call: finalize the deferred tx-recovery initialization after the admin-op timelock has already expired.
+        harness.finalizeInitializeTxRecovery();
+
+        // Verify: post-expiry finalization succeeds and installs the pending recovery configuration.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.recoveryAddress, otherSigner, "post-expiry finalize should configure the recovery address");
+        assertEq(state.timelockDurationSeconds, 5 days, "post-expiry finalize should configure the pending timelock");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "post-expiry finalize should clear the pending timestamp");
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.finalizeInitializeTxRecovery` reverts with
+    /// `NoTxRecoveryInitializationPending` after cancellation even once the cancelled timestamp has passed.
+    function test_LOTR_AOTFITR_6_finalizeInitializeTxRecovery_afterCancellationAndExpiryRevertsNoPending() public {
+        // Setup: reset to an unconfigured state, stage and cancel a deferred init, then advance past the old expiry.
+        harness.resetTxRecoveryState();
+        harness.initiateInitializeTxRecovery(otherSigner, 5 days);
+        uint256 cancelledPendingTimestamp = harness.getTxRecoveryState().pendingInit.pendingTimestamp;
+        harness.cancelInitializeTxRecovery();
+        vm.warp(cancelledPendingTimestamp + 1);
+
+        // Call: attempt to finalize the cancelled deferred initialization after the old timestamp has elapsed.
+        vm.expectRevert(IOrganizationTxRecovery.NoTxRecoveryInitializationPending.selector);
+        harness.finalizeInitializeTxRecovery();
+
+        // Verify: cancellation remains authoritative and leaves the pending tuple cleared.
+        assertEq(
+            harness.getTxRecoveryState().pendingInit.pendingTimestamp, 0, "cancelled pending init should stay zero"
+        );
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.cancelInitializeTxRecovery` succeeds after the admin-op timelock has
+    /// expired as long as finalization has not occurred yet.
+    function test_LOTR_AOTCITR_2_cancelInitializeTxRecovery_afterPendingTimestampStillSucceeds() public {
+        // Setup: reset to an unconfigured state, stage a deferred init, and advance one second past its expiry.
+        harness.resetTxRecoveryState();
+        harness.initiateInitializeTxRecovery(otherSigner, 5 days);
+        vm.warp(harness.getTxRecoveryState().pendingInit.pendingTimestamp + 1);
+
+        // Call: cancel the deferred initialization after expiry but before any finalize call.
+        harness.cancelInitializeTxRecovery();
+
+        // Verify: post-expiry cancel still clears the staged pending tuple.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(state.pendingInit.pendingRecoveryAddress, address(0), "post-expiry cancel should clear address");
+        assertEq(state.pendingInit.pendingTimelockDurationSeconds, 0, "post-expiry cancel should clear timelock");
+        assertEq(state.pendingInit.pendingTimestamp, 0, "post-expiry cancel should clear timestamp");
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.cancelInitializeTxRecovery` allows a later re-initiation to compute a
+    /// fresh admin-operation timelock timestamp from the new start time.
+    function test_LOTR_AOTCITR_4_cancelInitializeTxRecovery_reinitiationComputesFreshPendingTimestamp() public {
+        // Setup: reset to an unconfigured state, stage and cancel one deferred init, then move time forward.
+        harness.resetTxRecoveryState();
+        harness.initiateInitializeTxRecovery(otherSigner, 5 days);
+        harness.cancelInitializeTxRecovery();
+        vm.warp(block.timestamp + 4 days);
+        uint256 expectedFreshPendingTimestamp = block.timestamp + ADMIN_OPERATION_TIMELOCK;
+
+        // Call: initiate the deferred tx-recovery configuration again after the cancellation.
+        harness.initiateInitializeTxRecovery(recoveryAddress, TX_TIMELOCK);
+
+        // Verify: the new pending timestamp is recomputed from the new start time instead of reusing stale state.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(
+            state.pendingInit.pendingTimestamp,
+            expectedFreshPendingTimestamp,
+            "re-initiation should compute a fresh pending timestamp"
+        );
+        assertEq(
+            state.pendingInit.pendingRecoveryAddress,
+            recoveryAddress,
+            "re-initiation should store the new pending recovery address"
+        );
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery._validateTxRecoveryParamsOrRevert` accepts non-boundary in-range
+    /// timelock durations for non-zero recovery addresses.
+    function test_LOTR_VTRPOR_5_validateTxRecoveryParams_nonBoundaryInRangeTimelockSucceeds() public view {
+        // Setup: choose a non-zero recovery address and an in-range timelock strictly between the min and max bounds.
+        uint256 inRangeTimelock = 7 days;
+
+        // Call: validate the in-range recovery parameters through the internal-helper harness wrapper.
+        harness.validateTxRecoveryParamsOrRevertViaHarness(recoveryAddress, inRangeTimelock);
+
+        // Verify: in-range non-boundary recovery params return successfully.
+        assertTrue(true, "in-range non-boundary tx-recovery params should be accepted");
     }
 }

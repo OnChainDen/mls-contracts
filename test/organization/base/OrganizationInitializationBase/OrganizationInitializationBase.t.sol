@@ -40,7 +40,7 @@ contract OrganizationInitializationBaseTest is InitializationSuiteBase {
 
     /// @dev Verifies `OrganizationInitializationBase.initialize` succeeds for the deployer, preserves deployer
     /// storage, transitions initialized state, and emits one initialization event. [OI-INIT-1, OI-GDI-1]
-    function test_OIB_INIT_2__OIB_INIT_6__OIB_VIEW_1__OIB_VIEW_2__OIB_VIEW_3__OIB_VIEW_4__OIB_VIEW_5__CFI_FLOW_6__OI_INIT_1__OI_GDI_1_validInitialize_setsStateAndEmitsOneInitializedEvent()
+    function test_OIB_INIT_2__OIB_INIT_6__OIB_VIEW_1__OIB_VIEW_2__OIB_VIEW_3__OIB_VIEW_4__OIB_VIEW_5__CFI_FLOW_6__OI_INIT_1__OI_GDI_1__OAOTB_AOTDS_3__LOI_AOTINIT_1_validInitialize_setsStateAndEmitsOneInitializedEvent()
         public
     {
         // Setup: Deploy a proxy, prepare valid params, assert pre-init views, and begin log recording.

@@ -52,7 +52,7 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
     }
 
     /// @dev Verifies LOG-IGU-4: `canFinalizeAtTimestamp` equals `block.timestamp + timelockDuration`.
-    function test_LOG_IGU_4_canFinalizeTimestamp_equalsBlockTimestampPlusTimelockDuration() public {
+    function test_LOG_IGU_4__LOG_AOTIGU_1_canFinalizeTimestamp_equalsBlockTimestampPlusTimelockDuration() public {
         // Setup
         _clearPendingGuardianState();
         uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
@@ -98,6 +98,27 @@ contract LibOrganizationGuardianInitiateGuardianUpdateTest is LibOrganizationGua
 
         // Verify
         assertEq(harness.getPendingGuardianViaLibrary(), NEW_GUARDIAN_A, "pending guardian should be set");
+    }
+
+    /// @dev Verifies `LibOrganizationGuardian.initiateGuardianUpdate` emits the same `canFinalizeAtTimestamp` that it
+    /// persists in storage for the pending guardian update.
+    function test_LOG_AOTIGU_2_initiateGuardianUpdate_eventTimestampMatchesPersistedPendingTimestamp() public {
+        // Setup: clear any pending guardian state and precompute the expected finalize timestamp from the admin-op
+        // timelock.
+        _clearPendingGuardianState();
+        uint256 expectedCanFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
+
+        // Call: initiate the guardian update while asserting the emitted event payload.
+        vm.expectEmit(true, true, false, true);
+        emit IOrganizationGuardian.GuardianUpdateInitiated(GUARDIAN, NEW_GUARDIAN_A, expectedCanFinalizeAt);
+        harness.initiateGuardianUpdateViaLibrary(NEW_GUARDIAN_A);
+
+        // Verify: the stored pending timestamp matches the exact timestamp emitted in the event.
+        assertEq(
+            harness.getPendingGuardianUpdateTimestampViaLibrary(),
+            expectedCanFinalizeAt,
+            "event timestamp should match the persisted pending timestamp"
+        );
     }
 
     /// @dev Verifies LOG-IGU-7: initiating update does not change current guardian.
