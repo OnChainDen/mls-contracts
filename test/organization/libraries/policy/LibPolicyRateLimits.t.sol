@@ -35,45 +35,44 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 0, "limitType None should not write usage");
     }
 
-    /// @dev Verifies `timeIntervalHours == 0` succeeds without writing usage. [TXRL-INV-10]
-    function test_TXRL_INV_10_checkAndUpdateRateLimit_zeroIntervalHours_returnsTrueAndDoesNotWriteUsage() public {
-        // Setup: configure a valid fixture for `timeIntervalHours == 0` returns true and does not write usage.
+    /// @dev Verifies `timeIntervalHours == 0` returns false without writing usage.
+    function test_checkAndUpdateRateLimit_zeroIntervalHours_returnsFalseAndDoesNotWriteUsage() public {
+        // Setup: configure a time-interval policy whose zero-hour configuration should fail closed without writes.
         uint256 policyId = 9002;
         Policy memory policy = _timeIntervalPolicy(0, 100);
 
         bytes32 key =
             harness.computeUsageKeyViaPolicyLibrary(policyId, policy, address(0xA2), address(0xB2), address(0xC2));
 
-        // Call: execute `checkAndUpdateRateLimitViaPolicyLibrary` with the happy-path payload.
+        // Call: execute `checkAndUpdateRateLimitViaPolicyLibrary` under the zero-hour configuration.
         bool ok = harness.checkAndUpdateRateLimitViaPolicyLibrary(
             policyId, policy, address(0xA2), address(0xB2), address(0xC2), 10
         );
         uint256 usage = policyStateHarness.getPolicyUsage(key, 0);
 
-        // Verify: assert the expected success result and state updates.
-        assertTrue(ok, "zero interval-hours should bypass rate limit");
+        // Verify: zero-hour configs should fail closed and leave usage storage untouched.
+        assertFalse(ok, "zero interval-hours should return false");
         assertEq(usage, 0, "zero interval-hours should not write usage");
     }
 
-    // LPRL-ACAURL-6
-    /// @dev Verifies `checkAndUpdateRateLimit` fails closed when `timeIntervalHours` is zero.
-    function test_LPRL_ACAURL_6_checkAndUpdateRateLimit_zeroIntervalHours_failsClosed_desired() public {
-        // Setup: configure a time-interval policy whose zero-hour window should deny usage instead of bypassing.
-        uint256 policyId = 9002_006;
+    /// @dev Verifies `checkAndUpdateRateLimit` returns false when `timeIntervalHours` is zero.
+    function test_LPRL_ACAURL_6_checkAndUpdateRateLimit_zeroIntervalHours_returnsFalse_desired() public {
+        // Setup: configure a time-interval policy whose zero-hour window should reject usage without writing state.
+        uint256 policyId = 9_002_006;
         Policy memory policy = _timeIntervalPolicy(0, 100);
 
-        bytes32 key =
-            harness.computeUsageKeyViaPolicyLibrary(policyId, policy, address(0xA206), address(0xB206), address(0xC206));
+        bytes32 key = harness.computeUsageKeyViaPolicyLibrary(
+            policyId, policy, address(0xA206), address(0xB206), address(0xC206)
+        );
 
         // Call: execute `checkAndUpdateRateLimitViaPolicyLibrary` for a positive usage amount under zero-hour config.
         bool ok = harness.checkAndUpdateRateLimitViaPolicyLibrary(
             policyId, policy, address(0xA206), address(0xB206), address(0xC206), 10
         );
-        uint256 usage = policyStateHarness.getPolicyUsage(key, 0);
 
-        // Verify: zero-hour configs should fail closed and leave usage storage untouched.
-        assertFalse(ok, "zero interval-hours should reject usage instead of bypassing");
-        assertEq(usage, 0, "zero interval-hours should not mutate usage storage");
+        // Verify: zero-hour configs should fail closed with `false` and leave usage storage untouched.
+        assertFalse(ok, "zero interval-hours should return false instead of bypassing");
+        assertEq(policyStateHarness.getPolicyUsage(key, 0), 0, "zero interval-hours should not write usage");
     }
 
     /// @dev Verifies successful updates write the exact usage amount once. [TXRL-INV-5, TXRL-INV-7]

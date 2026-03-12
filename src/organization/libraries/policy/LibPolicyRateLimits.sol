@@ -43,8 +43,8 @@ library LibPolicyRateLimits {
         // Case: Unknown rate-limit enum values fail closed.
         if (policy.config.rateLimit.limitType != RateLimitType.TimeInterval) return false;
 
-        // Skip if time interval is not configured (0 hours)
-        if (policy.config.rateLimit.timeIntervalHours == 0) return true;
+        // Fail closed if the time interval is not configured (0 hours).
+        if (policy.config.rateLimit.timeIntervalHours == 0) return false;
 
         LibOrganizationPolicyStorage.Layout storage policyLayout = LibOrganizationPolicyStorage.layout();
 

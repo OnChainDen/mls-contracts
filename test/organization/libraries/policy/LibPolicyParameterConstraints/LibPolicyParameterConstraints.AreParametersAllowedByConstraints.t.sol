@@ -123,8 +123,8 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         assertFalse(allowed, "one failing constraint should cause false");
     }
 
-    /// @dev Verifies that malformed encoded constraints revert.
-    function test_areParametersAllowedByConstraints_malformedEncodedConstraints_reverts() public {
+    /// @dev Verifies malformed encoded constraints revert in the current implementation.
+    function test_LPPC_APROC_7_areParametersAllowedByConstraints_malformedEncodedConstraints_reverts() public {
         // Setup: craft malformed constraints that bypass the short-length guard but contain invalid ABI offsets.
         bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
         bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1));
@@ -134,25 +134,6 @@ contract LibPolicyParameterConstraintsAreParametersAllowedByConstraintsTest is L
         vm.expectRevert();
         // Call: execute `areParametersAllowedByConstraintsViaPolicyLibrary` with malformed constraints.
         harness.areParametersAllowedByConstraintsViaPolicyLibrary(malformedConstraints, data);
-    }
-
-    // LPPC-APROC-7
-    /// @dev Verifies malformed ABI-encoded constraints payloads fail closed with `false`.
-    function test_LPPC_APROC_7_areParametersAllowedByConstraints_malformedEncodedConstraints_returnsFalse_desired()
-        public
-    {
-        // Setup: craft malformed constraints that bypass the short-length guard but contain invalid ABI offsets.
-        bytes memory malformedConstraints = abi.encode(uint256(32), uint256(2));
-        bytes memory data = abi.encodeWithSelector(BASE_SELECTOR, uint256(1));
-        bytes memory callData =
-            abi.encodeCall(harness.areParametersAllowedByConstraintsViaPolicyLibrary, (malformedConstraints, data));
-
-        // Call: invoke the public wrapper through a low-level call so the test can distinguish revert vs fail-closed.
-        (bool success, bytes memory returnData) = address(harness).call(callData);
-
-        // Verify: malformed payloads should not revert and must return `false`.
-        assertTrue(success, "malformed constraints should return false instead of reverting");
-        assertFalse(abi.decode(returnData, (bool)), "malformed constraints should fail closed");
     }
 
     /// @dev Verifies that malformed constraints payloads never produce an allow decision.

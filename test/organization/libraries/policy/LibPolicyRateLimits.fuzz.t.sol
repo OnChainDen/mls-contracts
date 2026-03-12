@@ -9,14 +9,14 @@ import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
  * @dev Fuzz tests for `LibPolicyRateLimits`.
  */
 contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
-    /// @dev Verifies `LibPolicyRateLimits.checkAndUpdateRateLimit` treats `None` and zero-hour interval modes as
-    /// no-op success paths.
+    /// @dev Verifies `LibPolicyRateLimits.checkAndUpdateRateLimit` keeps `None` as a no-op success path while
+    /// zero-hour interval mode fails closed without writing usage.
     /// @param policyId The base policy identifier used to derive distinct usage domains.
     /// @param account The source account for rate-limit tracking.
     /// @param destination The destination account for rate-limit tracking.
     /// @param initiator The initiator account for rate-limit tracking.
     /// @param usageAmount The attempted usage increment.
-    function testFuzz_FLPRL_RATE_82_checkAndUpdateRateLimit_noneAndZeroHourModesAreNoOpSuccess(
+    function testFuzz_checkAndUpdateRateLimit_noneAndZeroHourModes_applyConfiguredBehavior(
         uint256 policyId,
         address account,
         address destination,
@@ -32,19 +32,21 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         Policy memory zeroHoursPolicy = _timeIntervalPolicy(0, type(uint128).max);
         uint256 zeroHoursPolicyId = policyId ^ uint256(1);
 
-        // Call: execute both no-op branches against arbitrary usage amounts.
-        bool noneAllowed =
-            harness.checkAndUpdateRateLimitViaPolicyLibrary(policyId, nonePolicy, account, destination, initiator, usageAmount);
+        // Call: execute the disabled-rate-limit branch and the zero-hour fail-closed branch.
+        bool noneAllowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, nonePolicy, account, destination, initiator, usageAmount
+        );
         bool zeroHoursAllowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
             zeroHoursPolicyId, zeroHoursPolicy, account, destination, initiator, usageAmount
         );
 
-        // Verify: both branches succeed without writing any usage into storage.
+        // Verify: disabled limits succeed, zero-hour limits fail closed, and neither branch writes usage.
         bytes32 noneKey = harness.computeUsageKeyViaPolicyLibrary(policyId, nonePolicy, account, destination, initiator);
-        bytes32 zeroHoursKey =
-            harness.computeUsageKeyViaPolicyLibrary(zeroHoursPolicyId, zeroHoursPolicy, account, destination, initiator);
+        bytes32 zeroHoursKey = harness.computeUsageKeyViaPolicyLibrary(
+            zeroHoursPolicyId, zeroHoursPolicy, account, destination, initiator
+        );
         assertTrue(noneAllowed, "limitType None should always succeed");
-        assertTrue(zeroHoursAllowed, "zero-hour intervals should always succeed");
+        assertFalse(zeroHoursAllowed, "zero-hour intervals should fail closed");
         assertEq(policyStateHarness.getPolicyUsage(noneKey, harness.computeTimeWindowViaPolicyLibrary(nonePolicy)), 0);
         assertEq(policyStateHarness.getPolicyUsage(zeroHoursKey, 0), 0);
     }
@@ -72,8 +74,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         policyStateHarness.setPolicyUsage(usageKey, window, currentUsage);
 
         // Call: apply a within-limit increment to the seeded usage bucket.
-        bool allowed =
-            harness.checkAndUpdateRateLimitViaPolicyLibrary(policyId, policy, account, destination, initiator, usageAmount);
+        bool allowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
 
         // Verify: the call succeeds and stored usage increases by exactly `usageAmount`.
         assertTrue(allowed, "within-limit usage should succeed");
@@ -103,8 +106,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         policyStateHarness.setPolicyUsage(usageKey, window, currentUsage);
 
         // Call: attempt the over-limit increment.
-        bool allowed =
-            harness.checkAndUpdateRateLimitViaPolicyLibrary(policyId, policy, account, destination, initiator, usageAmount);
+        bool allowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
 
         // Verify: the call fails and leaves the tracked usage unchanged.
         assertFalse(allowed, "over-limit usage should fail");
@@ -134,8 +138,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         vm.warp(10_000);
 
         // Call: consume the full budget in one window, advance exactly one interval, and consume it again.
-        bool firstAllowed =
-            harness.checkAndUpdateRateLimitViaPolicyLibrary(policyId, policy, account, destination, initiator, usageAmount);
+        bool firstAllowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
         uint256 firstWindow = harness.computeTimeWindowViaPolicyLibrary(policy);
         uint256 firstVisibleUsage =
             harness.getCurrentUsageViaPolicyLibrary(policyId, policy, account, destination, initiator);
@@ -144,8 +149,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         uint256 secondWindow = harness.computeTimeWindowViaPolicyLibrary(policy);
         uint256 preSecondUsage =
             harness.getCurrentUsageViaPolicyLibrary(policyId, policy, account, destination, initiator);
-        bool secondAllowed =
-            harness.checkAndUpdateRateLimitViaPolicyLibrary(policyId, policy, account, destination, initiator, usageAmount);
+        bool secondAllowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
         uint256 secondVisibleUsage =
             harness.getCurrentUsageViaPolicyLibrary(policyId, policy, account, destination, initiator);
 
@@ -182,8 +188,9 @@ contract LibPolicyRateLimitsFuzzTest is PolicyLibrariesFuzzTestBase {
         policyStateHarness.setPolicyUsage(usageKey, window, currentUsage);
 
         // Call: attempt an increment that would overflow the cumulative usage arithmetic.
-        bool allowed =
-            harness.checkAndUpdateRateLimitViaPolicyLibrary(policyId, policy, account, destination, initiator, usageAmount);
+        bool allowed = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, account, destination, initiator, usageAmount
+        );
 
         // Verify: the helper returns `false` and preserves the original tracked usage instead of panicking.
         assertFalse(allowed, "near-overflow arithmetic should fail closed");

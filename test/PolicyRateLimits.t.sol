@@ -127,14 +127,16 @@ contract PolicyRateLimitsTest is Test {
         assertTrue(withinLimit, "Should return true when no limitation");
     }
 
-    function test_checkAndUpdateRateLimit_skipIfZeroHours() public {
+    function test_checkAndUpdateRateLimit_zeroHours_returnsFalseWithoutWritingUsage() public {
         Policy memory policy = _createPolicy(0, 1000, RateLimitType.TimeInterval);
 
         bool withinLimit = LibOrganizationPolicy.checkAndUpdateRateLimit(
             POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 1000
         );
+        uint256 usage = LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
 
-        assertTrue(withinLimit, "Should return true when timeIntervalHours is 0");
+        assertFalse(withinLimit, "Should return false when timeIntervalHours is 0");
+        assertEq(usage, 0, "Zero-hour configuration should not write usage");
     }
 
     function test_checkAndUpdateRateLimit_withinLimit() public {

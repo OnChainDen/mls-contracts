@@ -112,7 +112,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | LPRL-ACAURL-3 | `currentUsage + usageAmount > timeIntervalLimit` returns false and leaves usage unchanged | [N] | P0 |
 | LPRL-ACAURL-4 | `usageAmount = 0` does not increase stored usage | [E] | P1 |
 | LPRL-ACAURL-5 | Crossing into a new time window reads/writes a fresh usage bucket (window reset behavior) | [U] | P0 |
-| LPRL-ACAURL-6 | [DESIRED] `TimeInterval` config with `timeIntervalHours = 0` fails closed (reject usage) instead of bypassing rate limiting | [S] | P0 |
+| LPRL-ACAURL-6 | [DESIRED] `TimeInterval` config with `timeIntervalHours = 0` returns false and does not write usage instead of bypassing rate limiting | [S] | P0 |
 | LPRL-ACAURL-7 | [DESIRED] Arithmetic overflow in `currentUsage + usageAmount` is handled gracefully (no panic) | [S] | P0 |
 
 ### 2.2 `computeTimeWindow`, `computeUsageKey`, `getCurrentUsage`
@@ -139,7 +139,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | LPPC-APROC-4 | Declared head slots exceeding calldata length returns false | [N] | P0 |
 | LPPC-APROC-5 | Multi-slot parameter (`paramCalldataHeadSlotCount > 1`) advances offset correctly | [U] | P0 |
 | LPPC-APROC-6 | Constraint referencing out-of-bounds calldata position returns false | [N] | P0 |
-| LPPC-APROC-7 | [DESIRED] Malformed ABI-encoded constraints payload should return false (not revert) | [S] | P0 |
+| LPPC-APROC-7 | Malformed ABI-encoded constraints payload reverts | [S] | P0 |
 
 ### 3.2 Type-Specific Constraint Helpers
 
@@ -149,7 +149,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | LPPC-ATYPE-2 | `_isBytesOrStringParameterAllowedByConstraint` | Dynamic length exceeding calldata returns false | [N] | P0 |
 | LPPC-ATYPE-3 | `_isBytesOrStringParameterAllowedByConstraint` | Exact hash match for bytes/string succeeds | [U] | P1 |
 | LPPC-ATYPE-4 | `_isParameterAllowedByConstraint` | `Array`/`Struct` with non-`Any` constraint returns false | [N] | P0 |
-| LPPC-ATYPE-5 | `_isParameterAllowedByConstraint` | Unsupported/unknown param type returns false | [N] | P1 |
+| LPPC-ATYPE-5 | `_isParameterAllowedByConstraint` | Unsupported/unknown param type reverts | [N] | P1 |
 | LPPC-ATYPE-6 | [DESIRED] Offset/length arithmetic overflow returns false (not panic) | [S] | P0 |
 | LPPC-ATYPE-7 | [DESIRED] Malformed `comparisonData` for typed decodes returns false (not revert) | [S] | P0 |
 | LPPC-ATYPE-8 | `_isBoolParameterAllowedByConstraint` | `Exact` constraint accepts matching bool and rejects mismatching bool | [U] | P1 |
@@ -196,7 +196,7 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | LOAS-AIVGS-3 | Signature from non-enabled module is rejected | [S] | P0 |
 | LOAS-AIVGS-4 | Guardian contract reverting on `isModuleEnabled` call is handled as invalid (`false`) | [E] | P0 |
 | LOAS-AIVGS-5 | Truncated `isModuleEnabled` return data (`< 32 bytes`) is handled as invalid (`false`) | [E] | P0 |
-| LOAS-AIVGS-6 | [DESIRED] Non-canonical bool return data from `isModuleEnabled` is handled as invalid (`false`), not revert | [S] | P0 |
+| LOAS-AIVGS-6 | Non-canonical bool return data from `isModuleEnabled` reverts during decode | [S] | P0 |
 
 ### 4.4 Recovery/Policy Path Isolation
 

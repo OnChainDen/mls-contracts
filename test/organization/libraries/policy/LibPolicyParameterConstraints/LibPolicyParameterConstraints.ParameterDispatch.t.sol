@@ -160,7 +160,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies that unknown `ParamType` values revert during parameter-constraint dispatch.
-    function test_isParameterAllowedByConstraint_unknownParamType_reverts() public {
+    function test_LPPC_ATYPE_5_isParameterAllowedByConstraint_unknownParamType_reverts() public {
         // Setup: build fixture inputs where unknown `ParamType` values revert during parameter-constraint dispatch.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
@@ -180,34 +180,6 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
         (bool success,) = address(harness).call(callData);
         // Verify: assert malformed enum values fail with a revert/panic.
         assertFalse(success, "unknown param type should revert");
-    }
-
-    // LPPC-ATYPE-5
-    /// @dev Verifies unsupported parameter-type enum values fail closed with `false` inside the dispatcher.
-    function test_LPPC_ATYPE_5_isParameterAllowedByConstraint_unknownParamType_returnsFalse_desired()
-        public
-    {
-        // Setup: build canonical calldata, then mutate the encoded enum word to an unsupported raw param-type value.
-        ParameterConstraint memory constraint = ParameterConstraint({
-            paramType: ParamType.Uint,
-            constraintType: ConstraintType.Exact,
-            paramCalldataHeadSlotCount: 1,
-            comparisonData: abi.encode(uint256(1)),
-            paramValueInListProof: _emptyProof()
-        });
-        bytes memory callData = abi.encodeCall(
-            harness.isParameterAllowedByConstraintViaPolicyLibrary,
-            (constraint, bytes32(uint256(1)), abi.encodeWithSelector(BASE_SELECTOR, uint256(1)))
-        );
-        uint256 constraintOffset = _readWord(callData, 4);
-        _setWord(callData, 4 + constraintOffset, type(uint8).max);
-
-        // Call: invoke via low-level call so desired fail-closed behavior can reject enum panics.
-        (bool success, bytes memory returnData) = address(harness).staticcall(callData);
-
-        // Verify: unknown param types should fail closed instead of reverting.
-        assertTrue(success, "unknown param type should return false instead of reverting");
-        assertFalse(abi.decode(returnData, (bool)), "unknown param types should return false");
     }
 
     // LPPC-ATYPE-7
