@@ -608,7 +608,8 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
      * @dev Verifies that mixed EOA/ERC-1271 signature streams accept sorted admin signers and reject ordering/admin
      * violations while parsing variable inner-signature lengths.
      */
-    function testFuzz_NMFZ_5__FLOA_SIGS_40_areAdminSignaturesValid_mixedEOAAndERC1271StreamsEnforceOrderingAndAdminChecks(
+    /// SAG-FUZ-4
+    function testFuzz_NMFZ_5__FLOA_SIGS_40__SAG_FUZ_4_areAdminSignaturesValid_mixedEOAAndERC1271StreamsEnforceOrderingAndAdminChecks(
         bytes calldata innerSig,
         uint8 rawMode,
         bool useNonAdminContract

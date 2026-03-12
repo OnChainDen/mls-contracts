@@ -165,7 +165,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that toggling `isApproval` produces a different hash.
-    function test_E712_HASH_3_A_NMADM_HASH_2_LOADM_GAOH_6_getAdminOperationHash_differentIsApproval_producesDifferentHash()
+    function test_E712_HASH_3_A_NMADM_HASH_2_LOADM_GAOH_6__LOA_AADMIN_6_getAdminOperationHash_differentIsApproval_producesDifferentHash()
         public
         view
     {
@@ -194,7 +194,9 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different chain ID produces a different hash.
-    function test_NMADM_HASH_7_LOADM_GAOH_7_getAdminOperationHash_differentChainId_producesDifferentHash() public {
+    function test_NMADM_HASH_7_LOADM_GAOH_7__LOA_AADMIN_7_getAdminOperationHash_differentChainId_producesDifferentHash()
+        public
+    {
         // Setup: define one payload and keep all signed fields constant.
         bytes memory operationData = abi.encode("op74");
 
@@ -223,7 +225,7 @@ contract LibOrganizationAdminHashingTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies that a different contract address produces a different hash.
-    function test_NMADM_HASH_8_LOADM_GAOH_8_getAdminOperationHash_differentContractAddress_producesDifferentHash()
+    function test_NMADM_HASH_8_LOADM_GAOH_8__LOA_AADMIN_7_getAdminOperationHash_differentContractAddress_producesDifferentHash()
         public
     {
         // Setup: define one payload and deploy a second harness address.

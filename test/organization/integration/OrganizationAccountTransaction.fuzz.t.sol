@@ -116,7 +116,8 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies replaying a nonce across execute and reject entry points always reverts once either path succeeds.
-    function testFuzz_NMFZ_3__FOATB_ENTRY_95_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(
+    /// SAG-FUZ-6
+    function testFuzz_NMFZ_3__FOATB_ENTRY_95__SAG_FUZ_6_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(
         uint256 saltRaw,
         bool rejectFirst
     )

@@ -280,7 +280,9 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     }
 
     /// @dev Verifies recovery and policy type-prefixed signatures cannot authorize each other's validation routes.
-    function test_E712_MTI_6_isValidSignature_rejectsRecoveryAndPolicyFlowPrefixReplay() public {
+    function test_E712_MTI_6__LOAS_AISO_1__LOAS_AISO_2_isValidSignature_rejectsRecoveryAndPolicyFlowPrefixReplay()
+        public
+    {
         // Setup: configure valid recovery and valid policy-signature fixtures.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));

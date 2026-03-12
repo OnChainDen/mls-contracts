@@ -338,7 +338,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies malformed guardian module return data fails closed without reverting. [OAS-IVGS-6]
-    function test_OAS_IVGS_6_guardianModuleShortReturn_failsClosed() public {
+    function test_OAS_IVGS_6__LOAS_AIVGS_5_guardianModuleShortReturn_failsClosed() public {
         // Setup: configure a valid fixture for guardian module short return fails closed.
         MockGuardianSafeShortReturn shortReturnGuardian = new MockGuardianSafeShortReturn();
         policyStateHarness.setGuardian(address(shortReturnGuardian));

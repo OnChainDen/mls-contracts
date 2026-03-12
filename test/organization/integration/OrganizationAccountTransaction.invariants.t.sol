@@ -147,7 +147,10 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: consumed nonce cannot be reused for execution or rejection.
-    function invariant_AT_INV_1__NMINV_2__NMSIG_INV_2_nonceConsumption_preventsExecuteAndRejectReplay() public {
+    /// SAG-INV-3
+    function invariant_AT_INV_1__NMINV_2__NMSIG_INV_2__SAG_INV_3_nonceConsumption_preventsExecuteAndRejectReplay()
+        public
+    {
         // Verify: execute replay fails on consumed nonce.
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, executedNonce));
         vm.prank(GUARDIAN);
@@ -193,7 +196,8 @@ contract OrganizationAccountTransactionInvariants is OrganizationAccountTransact
     }
 
     /// @dev Verifies invariant: rate-limit usage changes atomically (exact increment or full rollback).
-    function invariant_AT_INV_2__TXRL_INV_6_rateLimitAtomicity_noPartialUsageMutations() public view {
+    /// SAG-INV-4
+    function invariant_AT_INV_2__TXRL_INV_6__SAG_INV_4_rateLimitAtomicity_noPartialUsageMutations() public view {
         assertEq(
             harness.getPolicyUsage(usageKey, usageWindow), usageAfterSuccess, "usage must remain exact after revert"
         );

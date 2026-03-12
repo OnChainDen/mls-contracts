@@ -13,7 +13,7 @@ import {
  */
 contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrganizationAccountSignatureTestBase {
     /// @dev Verifies unconfigured recovery returns invalid value instead of magic. [ASIG-INV-2]
-    function test_OAS_VRS_1__ASIG_INV_2_A_LOAS_VRS_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue()
+    function test_OAS_VRS_1__ASIG_INV_2_A_LOAS_VRS_1__LOAS_AHELP_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue()
         public
     {
         // Setup: configure recovery as enabled but with zero recovery address.
@@ -74,7 +74,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
-    function test_ASIG_INV_2_D_LOAS_VRS_5_LOACS_VRS_2__OAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
+    function test_ASIG_INV_2_D_LOAS_VRS_5_LOACS_VRS_2__OAS_VRS_5_LOAS_AHELP_1_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
         public
     {
         // Setup: configure enabled recovery for `initiator2` and sign as guardian.
@@ -117,7 +117,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that malformed recovery signature bytes fail closed with ERC-1271 invalid value.
-    function test_LOAS_VRS_8__OAS_VRS_6_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue()
+    function test_LOAS_VRS_8__OAS_VRS_6__LOAS_AHELP_1_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue()
         public
     {
         // Setup: configure enabled recovery and build malformed packed signature bytes.

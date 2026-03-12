@@ -169,7 +169,6 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | LOAS-AIVS-2 | Unknown signature type byte returns ERC-1271 invalid value | [N] | P0 |
 | LOAS-AIVS-3 | Recovery signature type (`0x00`) with valid recovery signer and enabled recovery returns magic value | [U] | P0 |
 | LOAS-AIVS-4 | Recovery signature type (`0x00`) while recovery disabled/not configured returns invalid value | [S] | P0 |
-| LOAS-AIVS-5 | [DESIRED] Policy signature type (`0x01`) with malformed ABI payload returns invalid value (not revert) | [S] | P0 |
 | LOAS-AIVS-6 | Repeated calls with the same valid packed signature are deterministic and stateless (no nonce/rate-limit mutation side effects) | [S] | P0 |
 
 ### 4.2 `_validatePolicyBasedSignature`
@@ -282,12 +281,10 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | AI-AENT-2 | Organization caller + successful downstream call emits `TransactionExecuted` with exact forwarded `to/value/data/nonce/policyId` | [U][EV] | P0 |
 | AI-AENT-3 | Low-level call returning `false` causes `TransactionExecutionFailed` revert | [N] | P0 |
 | AI-AENT-4 | Reverting callee also surfaces as `TransactionExecutionFailed` (revert data not bubbled) | [E] | P0 |
-| AI-AENT-5 | Insufficient-gas call path fails with `TransactionExecutionFailed` | [S] | P0 |
 | AI-AENT-6 | `receive()` emits `MLSWalletAccountNativeTokenReceived(sender, value)` with exact caller/value | [U][EV] | P1 |
 | AI-AENT-7 | `receive()` cannot be used to bypass `onlyOrganization` and re-enter privileged execution | [S] | P0 |
 | AI-AENT-8 | `isValidSignature` always forwards `address(this)` as account to Organization signature validation | [U] | P0 |
 | AI-AENT-9 | `isValidSignature` returns exactly the value produced by Organization validation (magic/invalid passthrough) | [U] | P1 |
-| AI-AENT-10 | [DESIRED] Executing a call that attempts account self-destruction does not destroy the account | [S] | P1 |
 
 ### 8.2 Private Helpers
 
@@ -309,7 +306,6 @@ In the test branch, temporarily change each listed helper to `internal` and expo
 | OI-AUPG-1 | Direct call to inherited `upgradeToAndCall` (without wrapper flow) reverts `UnauthorizedUpgrade` | [S] | P0 |
 | OI-AUPG-2 | Failed upgrade/migration path does not leave authorization flag stuck true | [S] | P0 |
 | OI-AUPG-3 | Whitelist validation failure occurs before auth flag is set | [S] | P0 |
-| OI-AUPG-4 | `_authorizeUpgrade` is flag-gated and does not re-validate `newImplementation` parameter | [U] | P1 |
 | OI-AUPG-5 | [DESIRED] Admin authorization must bind migration `data` payload (not only `newImplementation`) | [S] | P0 |
 | OI-AUPG-6 | [DESIRED] Migration `data` cannot trigger nested second upgrade to bypass whitelist/admin checks | [S] | P0 |
 
@@ -437,15 +433,6 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 | OMOD-AFUZ-1 | [AUDIT-FUZZ] Random `msg.sender` against each of the 6 modifiers always reverts unless caller exactly equals stored role address | 10000 | [F] | P0 |
 | OMOD-AFUZ-2 | [AUDIT-FUZZ] Random role address written to storage followed by random callers: only exact address match passes, all others revert with correct typed error | 10000 | [F] | P0 |
 
-### 11.11 Access-Control Invariant Tests
-
-| ID | Invariant | Type | Priority |
-|---|-----------|------|----------|
-| OMOD-AINV-1 | **Single-holder exclusivity:** at most one address can pass each access-control modifier at any given storage state (zero addresses pass when role is unset) | [INV] | P0 |
-| OMOD-AINV-2 | **Cross-role exclusion:** after any sequence of role mutations, no address can pass a modifier for a role it does not currently hold | [INV] | P0 |
-
----
-
 ## 12. Additional Invariants
 
 | ID | Invariant | Priority |
@@ -465,7 +452,6 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 |---|-----------|------|----------|
 | SAG-FUZ-1 | [AUDIT-FUZZ] Random parameter constraints (offset/head/length permutations) never panic and terminate safely | 10000 | P0 |
 | SAG-FUZ-2 | [AUDIT-FUZZ] Random malformed policy-signature payloads (`0x01`) return invalid (no revert) | 10000 | P0 |
-| SAG-FUZ-3 | [AUDIT-FUZZ] Random guardian module behaviors (EOA/contract/revert/truncated return data) never cause signature-validation revert | 5000 | P0 |
 | SAG-FUZ-4 | [AUDIT-FUZZ] Random mixed admin signature streams preserve strict ordering and threshold rules | 5000 | P0 |
 | SAG-FUZ-5 | [AUDIT-FUZZ] Random rate-limit scope configs produce expected key sharing/isolation | 10000 | P0 |
 | SAG-FUZ-6 | [AUDIT-FUZZ] Random execute/reject ordering preserves shared nonce replay protection | 5000 | P0 |
@@ -477,7 +463,7 @@ Each test sets the stored role address to `address(0)` and calls the guarded fun
 
 | Category | Tests | Priority |
 |----------|-------|----------|
-| File/function scoped security gap cases | 179 | P0-P1 |
-| Invariants | 8 | P0 |
-| Fuzz tests | 9 | P0 |
-| **Total** | **196** | |
+| File/function scoped security gap cases | 175 | P0-P1 |
+| Invariants | 6 | P0 |
+| Fuzz tests | 8 | P0 |
+| **Total** | **189** | |

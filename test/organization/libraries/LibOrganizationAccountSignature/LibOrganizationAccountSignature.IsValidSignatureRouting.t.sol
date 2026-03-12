@@ -13,7 +13,7 @@ import {PolicyType} from "types/PolicyTypes.sol";
  */
 contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrganizationAccountSignatureTestBase {
     /// @dev Verifies that empty top-level signatures return ERC-1271 invalid value.
-    function test_LOAS_IVS_1_LOACS_IVS_1_isValidSignature_emptySignature_returnsInvalidValue() public {
+    function test_LOAS_IVS_1_LOACS_IVS_1__LOAS_AIVS_1_isValidSignature_emptySignature_returnsInvalidValue() public {
         // Setup: use the default seeded member fixture and an empty signature payload.
 
         // Call: execute `isValidSignatureViaLibrary` with an empty top-level signature.
@@ -24,7 +24,9 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     }
 
     /// @dev Verifies that recovery-prefixed signatures route to recovery validation. [ASIG-INV-1]
-    function test_ASIG_INV_1_A_LOAS_IVS_2_isValidSignature_recoveryTypePrefix_routesToRecoveryValidation() public {
+    function test_ASIG_INV_1_A_LOAS_IVS_2__LOAS_AIVS_3_isValidSignature_recoveryTypePrefix_routesToRecoveryValidation()
+        public
+    {
         // Setup: configure enabled recovery and build a valid recovery payload.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
@@ -34,6 +36,23 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
 
         // Verify: recovery branch should return magic for a valid recovery signer.
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "recovery prefix should route to recovery branch");
+    }
+
+    // LOAS-AIVS-4
+    /// @dev Verifies recovery-prefixed signatures return invalid when recovery is disabled or not configured.
+    function test_LOAS_AIVS_4_isValidSignature_recoveryPrefixDisabledOrUnconfigured_returnsInvalidValue() public {
+        // Setup: build one valid recovery payload and apply disabled / zero-address recovery configurations.
+        bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
+
+        _setTxRecoveryState(address(0), true);
+        bytes4 unconfiguredResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
+
+        _setTxRecoveryState(guardianSigner, false);
+        bytes4 disabledResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, recoverySignature);
+
+        // Verify: recovery-path routing should fail closed when recovery cannot authorize.
+        assertEq(unconfiguredResult, SignatureUtils.ERC1271_INVALID_VALUE, "unconfigured recovery should be invalid");
+        assertEq(disabledResult, SignatureUtils.ERC1271_INVALID_VALUE, "disabled recovery should be invalid");
     }
 
     /// @dev Verifies that policy-prefixed signatures route to policy-based validation. [ASIG-INV-1]
@@ -51,7 +70,9 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     }
 
     /// @dev Verifies that unknown type prefix `0x02` returns ERC-1271 invalid value. [ASIG-INV-1]
-    function test_ASIG_INV_1_C_LOAS_IVS_4_LOACS_IVS_2_isValidSignature_unknownType02_returnsInvalidValue() public {
+    function test_ASIG_INV_1_C_LOAS_IVS_4_LOACS_IVS_2__LOAS_AIVS_2_isValidSignature_unknownType02_returnsInvalidValue()
+        public
+    {
         // Setup: create a payload with unsupported type prefix `0x02`.
         bytes memory signature = abi.encodePacked(uint8(0x02), hex"AABBCC");
 
@@ -63,7 +84,9 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
     }
 
     /// @dev Verifies that unknown type prefix `0xFF` returns ERC-1271 invalid value. [ASIG-INV-1]
-    function test_ASIG_INV_1_D_LOAS_IVS_5_LOACS_IVS_2_isValidSignature_unknownTypeFF_returnsInvalidValue() public {
+    function test_ASIG_INV_1_D_LOAS_IVS_5_LOACS_IVS_2__LOAS_AIVS_2_isValidSignature_unknownTypeFF_returnsInvalidValue()
+        public
+    {
         // Setup: create a payload with unsupported type prefix `0xFF`.
         bytes memory signature = abi.encodePacked(uint8(0xFF), hex"11223344");
 
@@ -97,5 +120,21 @@ contract LibOrganizationAccountSignatureIsValidSignatureRoutingTest is LibOrgani
             SignatureUtils.ERC1271_INVALID_VALUE,
             "same payload with recovery prefix should route away from policy branch"
         );
+    }
+
+    // LOAS-AISO-2
+    /// @dev Verifies recovery payloads are not accepted when forced through the policy path.
+    function test_LOAS_AISO_2_isValidSignature_recoveryPayloadForcedThroughPolicyPath_returnsInvalidValue() public {
+        // Setup: build a valid recovery payload, then mutate only the leading type byte to the policy prefix.
+        _setTxRecoveryState(guardianSigner, true);
+        bytes memory recoverySignature = _buildRecoverySignature(_signHash(GUARDIAN_PK, MESSAGE_HASH));
+        bytes memory forcedPolicySignature = bytes.concat(recoverySignature);
+        forcedPolicySignature[0] = bytes1(uint8(0x01));
+
+        // Call: validate the recovery-shaped payload through the policy branch.
+        bytes4 actual = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, forcedPolicySignature);
+
+        // Verify: recovery payloads must not be accepted through policy-path logic.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "forced policy-path recovery payload should be invalid");
     }
 }

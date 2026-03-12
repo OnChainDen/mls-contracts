@@ -389,7 +389,8 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
     }
 
     /// @dev Verifies that rate limit scope collision matches scope model.
-    function testFuzz_rateLimitScopeCollisionMatchesScopeModel(
+    /// SAG-FUZ-5
+    function testFuzz_SAG_FUZ_5_rateLimitScopeCollisionMatchesScopeModel(
         // Setup: configure a valid fixture for rate limit scope collision matches scope model.
         uint8 sourceScopeSeed,
         uint8 destinationScopeSeed,

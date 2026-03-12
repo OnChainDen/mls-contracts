@@ -28,7 +28,7 @@ contract LibPolicyParameterConstraintsUintConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that range bounds are inclusive.
-    function test_isUintParameterAllowedByConstraint_rangeInclusiveAtBounds() public view {
+    function test_LPPC_ATYPE_9_isUintParameterAllowedByConstraint_rangeInclusiveAtBounds() public view {
         // Setup: configure a valid fixture for range bounds are inclusive.
         bytes memory rangeData = abi.encode(uint256(10), uint256(20));
 

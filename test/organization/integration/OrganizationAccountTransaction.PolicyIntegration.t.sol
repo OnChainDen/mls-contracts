@@ -85,7 +85,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that policy proof tampering reverts policy does not apply.
-    function test_policyProofTampering_revertsPolicyDoesNotApply() public {
+    function test_LOAT_AVTAOR_5_policyProofTampering_revertsPolicyDoesNotApply() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy proof tampering reverts policy
         // does not apply.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -172,7 +172,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that manual approval without reviewers reverts insufficient approvals.
-    function test_manualApprovalWithoutReviewers_revertsInsufficientApprovals() public {
+    function test_LOAT_AVTAOR_9_manualApprovalWithoutReviewers_revertsInsufficientApprovals() public {
         // Setup: assemble inputs expected to hit the guarded failure path for manual approval without reviewers reverts
         // insufficient approvals.
         Policy memory policy =
@@ -1059,7 +1059,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that policy does not apply does not mutate rate usage.
-    function test_policyDoesNotApply_doesNotMutateRateUsage() public {
+    function test_LOAT_AVTAOR_10_A_policyDoesNotApply_doesNotMutateRateUsage() public {
         // Setup: assemble inputs expected to hit the guarded failure path for policy does not apply does not mutate
         // rate usage.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -1117,7 +1117,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that insufficient approvals does not mutate rate usage.
-    function test_insufficientApprovals_doesNotMutateRateUsage() public {
+    function test_LOAT_AVTAOR_10_B_insufficientApprovals_doesNotMutateRateUsage() public {
         // Setup: assemble inputs expected to hit the guarded failure path for insufficient approvals does not mutate
         // rate usage.
         Policy memory policy =

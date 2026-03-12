@@ -208,7 +208,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies initiator hash stays distinct whenever any bound field is mutated.
-    function test_E712_HASH_7_A_LOACT_CIHFP_2__LOACT_CIHFP_3__LOACT_CIHFP_4__LOACT_CIHFP_5__LOACT_CIHFP_6__LOACT_CIHFP_7__LOACT_CIHFP_8__LOACT_CIHFP_9__LOACT_CIHFP_10__NMATL_RHB_2_computeInitiatorHash_boundFieldMutationsRemainDistinct()
+    function test_E712_HASH_7_A_LOACT_CIHFP_2__LOACT_CIHFP_3__LOACT_CIHFP_4__LOACT_CIHFP_5__LOACT_CIHFP_6__LOACT_CIHFP_7__LOACT_CIHFP_8__LOACT_CIHFP_9__LOACT_CIHFP_10__NMATL_RHB_2__LOAT_AHELP_7_computeInitiatorHash_boundFieldMutationsRemainDistinct()
         public
     {
         // Setup: compute a baseline initiator hash and deploy a second harness for organization binding checks.
@@ -419,7 +419,7 @@ contract LibOrganizationAccountTransactionHashesTest is LibOrganizationAccountTr
     }
 
     /// @dev Verifies review hash includes `keccak256(initiatorSignature)` binding.
-    function test_LOACT_CRHFP_2__LOAT_CRHFP_10__LOAT_CRHFP_11_computeReviewHash_initiatorSignatureBinding_changesHash()
+    function test_LOACT_CRHFP_2__LOAT_CRHFP_10__LOAT_CRHFP_11__LOAT_AHELP_8_computeReviewHash_initiatorSignatureBinding_changesHash()
         public
         view
     {

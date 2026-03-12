@@ -25,7 +25,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies expired approval transactions revert `TransactionExpired`.
-    function test_LOAT_VTAOR_1__LOAT_VTAOR_3_validateApproval_expired_revertsTransactionExpired() public {
+    function test_LOAT_VTAOR_1__LOAT_VTAOR_3__LOAT_AVTAOR_1_validateApproval_expired_revertsTransactionExpired()
+        public
+    {
         // Setup: build approval payload with expiration in the past.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -48,7 +50,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies approval expiration equal to block timestamp succeeds (strict `>` check).
-    function test_LOACT_VTAORVTROR_9__LOAT_VTAOR_2_validateApproval_expirationEqualsTimestamp_succeeds() public {
+    function test_LOACT_VTAORVTROR_9__LOAT_VTAOR_2__LOAT_AVTAOR_2_validateApproval_expirationEqualsTimestamp_succeeds()
+        public
+    {
         // Setup: build approval payload with expiration equal to current block timestamp.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -65,7 +69,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies empty initiator signature reverts `InsufficientSignaturesLength`.
-    function test_LOAT_VTAOR_4_validateApproval_emptyInitiatorSignature_revertsInsufficientSignaturesLength() public {
+    function test_LOAT_VTAOR_4__LOAT_AVTAOR_3_validateApproval_emptyInitiatorSignature_revertsInsufficientSignaturesLength()
+        public
+    {
         // Setup: valid proof payload with empty initiator signature.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -109,7 +115,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies EOA initiator signature is recovered and accepted in approval flow.
-    function test_LOACT_VTAORVTROR_1__LOAT_VTAOR_6__LOAT_VTAOR_10_validateApproval_eoaInitiatorSignature_succeeds()
+    function test_LOACT_VTAORVTROR_1__LOAT_VTAOR_6__LOAT_VTAOR_10__LOAT_AVTAOR_8_validateApproval_eoaInitiatorSignature_succeeds()
         public
     {
         // Setup: valid auto-approve policy and EOA initiator signature.
@@ -283,7 +289,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies manual confirmation binds reviewer signatures to the exact initiator signature bytes.
-    function test_LOACT_VTAORVTROR_6__NMATL_RHB_8_validateManualConfirmation_reviewerSignaturesBindInitiatorSignature()
+    function test_LOACT_VTAORVTROR_6__NMATL_RHB_8__LOAT_AVTAOR_6_validateManualConfirmation_reviewerSignaturesBindInitiatorSignature()
         public
     {
         // Setup: configure a manual-approval policy and build two distinct initiator signatures for one tuple.
@@ -330,7 +336,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies successful manual/auto approval paths both update rate-limit usage.
-    function test_LOAT_VTAOR_13_validateApproval_rateLimitUpdatesAcrossPolicyTypes() public {
+    function test_LOAT_VTAOR_13__LOAT_AVTAOR_10_validateApproval_rateLimitUpdatesAcrossPolicyTypes() public {
         // Setup: configure auto + manual policies with enabled rate-limit.
         bytes memory data = abi.encodeWithSelector(bytes4(0x17171717), uint256(7));
         uint256 expiration = block.timestamp + 1 days;
@@ -415,7 +421,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies non-empty malformed initiator signature reverts in approval flow.
-    function test_LOAT_VTAOR_16_validateApproval_malformedInitiatorSignature_reverts() public {
+    function test_LOAT_VTAOR_16__LOAT_AVTAOR_4_validateApproval_malformedInitiatorSignature_reverts() public {
         // Setup: valid policy proof and malformed non-empty signature bytes.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -438,7 +444,9 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies expired rejection transactions revert `TransactionExpired`.
-    function test_LOAT_VTROR_1__LOAT_VTROR_3_validateRejection_expired_revertsTransactionExpired() public {
+    function test_LOAT_VTROR_1__LOAT_VTROR_3__LOAT_AVTROR_1_validateRejection_expired_revertsTransactionExpired()
+        public
+    {
         // Setup: build rejection payload with expiration in the past.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
@@ -600,8 +608,32 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
         );
     }
 
+    // LOAT-AVTROR-3
+    /// @dev Verifies rejection flow rejects an approval-domain signature replayed as the rejection authorization.
+    function test_LOAT_AVTROR_3_validateRejection_replayedApprovalSignatureFailsRejectionDomainSeparation()
+        public
+    {
+        // Setup: build a valid auto-approve rejection context, then reuse the approval-domain signature as the
+        // rejection authorization.
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory data = abi.encodeWithSelector(bytes4(0x27262626), uint256(61));
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSig = _signInitiatorTx(
+            address(harness), INITIATOR_PK_1, ACCOUNT, DESTINATION, 0, data, 18_1, expiration, DEFAULT_POLICY_ID, true
+        );
+
+        // Verify: replaying an approval-domain signature as the rejection authorization must fail closed.
+        vm.expectRevert(IOrganizationAccountTransaction.TransactionRejectionNotAllowed.selector);
+        // Call: validate rejection while reusing the approval signature bytes for the rejection path.
+        harness.validateTransactionRejectionOrRevertViaLibrary(
+            ACCOUNT, DESTINATION, 0, data, 18_1, expiration, DEFAULT_POLICY_ID, initiatorSig, initiatorSig, proofs
+        );
+    }
+
+    // LOAT-AVTROR-4
     /// @dev Verifies manual rejection uses `isApproval=false` review hash.
-    function test_LOACT_VTAORVTROR_4__LOACT_VTAORVTROR_5__LOAT_VTROR_10__LOAT_VMCOR_4_validateRejection_manualReviewUsesRejectionFlagFalse()
+    function test_LOACT_VTAORVTROR_4__LOACT_VTAORVTROR_5__LOAT_VTROR_10__LOAT_VMCOR_4__LOAT_AVTROR_4_validateRejection_manualReviewUsesRejectionFlagFalse()
         public
     {
         // Setup: manual policy and initiator signature.
@@ -635,7 +667,7 @@ contract LibOrganizationAccountTransactionValidationTest is LibOrganizationAccou
     }
 
     /// @dev Verifies rejection path is view-only and does not mutate rate-limit usage.
-    function test_LOAT_VTROR_11_validateRejection_isView_doesNotUpdateRateLimitUsage() public {
+    function test_LOAT_VTROR_11__LOAT_AVTROR_5_validateRejection_isView_doesNotUpdateRateLimitUsage() public {
         // Setup: configure rate-limited policy and valid auto-rejection payload.
         Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;

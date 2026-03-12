@@ -4,6 +4,7 @@ pragma solidity 0.8.33;
 
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
+import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountSignature} from "interfaces/organization/IOrganizationAccountSignature.sol";
 
 /**
@@ -152,6 +153,25 @@ contract AccountCallRecorderTarget {
 
     function fail() external pure {
         revert("forced target revert");
+    }
+}
+
+/**
+ * @dev Target that bounces ETH into the account `receive` hook and then attempts an unauthorized privileged reentry.
+ */
+contract AccountReceiveReentrancyAttacker {
+    bool public receiveCallSucceeded;
+    bytes public privilegedRevertData;
+
+    function bounceAndReenter(address payable account, address to, uint256 value, bytes calldata data) external payable {
+        (bool receiveOk,) = account.call{value: msg.value}("");
+        require(receiveOk, "receive bounce failed");
+        receiveCallSucceeded = true;
+
+        (bool privilegedOk, bytes memory revertData) =
+            account.call(abi.encodeCall(IAccount.executeTransaction, (to, value, data, 901, 902)));
+        require(!privilegedOk, "privileged reentry unexpectedly succeeded");
+        privilegedRevertData = revertData;
     }
 }
 

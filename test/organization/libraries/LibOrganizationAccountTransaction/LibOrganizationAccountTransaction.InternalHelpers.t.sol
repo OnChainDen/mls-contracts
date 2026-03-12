@@ -43,7 +43,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies token-transfer rate usage uses extracted transfer amount and recipient destination.
-    function test_LOAT_VAURLOR_2__LOAT_VAURLOR_4__LOAT_VAURLOR_6__LOAT_VAURLOR_12__OAT_PH_1_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination()
+    function test_LOAT_VAURLOR_2__LOAT_VAURLOR_4__LOAT_VAURLOR_6__LOAT_VAURLOR_12__OAT_PH_1__LOAT_AHELP_1__LOAT_AHELP_3_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination()
         public
     {
         // Setup: token-transfer policy with enabled rate-limit and scoped usage key.
@@ -70,7 +70,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies contract-interaction usage is count-based (`usageAmount = 1`).
-    function test_LOAT_VAURLOR_3__LOAT_VAURLOR_7__LOAT_VAURLOR_9_validateAndUpdateRateLimit_nonTokenTransfer_usesCountBasedUsage()
+    function test_LOAT_VAURLOR_3__LOAT_VAURLOR_7__LOAT_VAURLOR_9__LOAT_AHELP_2_validateAndUpdateRateLimit_nonTokenTransfer_usesCountBasedUsage()
         public
     {
         // Setup: contract-interaction policy with enabled rate-limit.
@@ -120,7 +120,9 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies rate-limit exceedance reverts `RateLimitExceeded`.
-    function test_LOAT_VAURLOR_8_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded() public {
+    function test_LOAT_VAURLOR_8__LOAT_AHELP_4_validateAndUpdateRateLimit_exceeded_revertsRateLimitExceeded()
+        public
+    {
         // Setup: low interval limit and oversized token transfer amount.
         Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -196,7 +198,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection requires non-empty review signature.
-    function test_LOAT_VAAROR_2_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
+    function test_LOAT_VAAROR_2__LOAT_AHELP_5_validateAutoApproveRejection_emptyReviewSignature_revertsTransactionRejectionNotAllowed()
         public
     {
         // Setup: valid auto-approve rejection context with empty review signatures.
@@ -220,7 +222,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection succeeds for authorized initiator signatures.
-    function test_LOACT_VAAROR_1__LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5__OAT_PH_1_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
+    function test_LOACT_VAAROR_1__LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5__OAT_PH_1__LOAT_AVTROR_2_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
         public
     {
         // Setup: auto-approve policy and rejection signature from authorized initiator.
@@ -261,7 +263,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies manual-confirmation helper uses policy threshold and rejects below-threshold approvals.
-    function test_LOACT_VMCOR_1__LOAT_VMCOR_1__LOAT_VMCOR_5__LOAT_VMCOR_6_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals()
+    function test_LOACT_VMCOR_1__LOAT_VMCOR_1__LOAT_VMCOR_5__LOAT_VMCOR_6__LOAT_AVTAOR_9_validateManualConfirmation_belowThreshold_revertsInsufficientApprovals()
         public
     {
         // Setup: group approver threshold=2 with one valid review signature.
@@ -364,7 +366,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies review-hash binding changes when initiator signature bytes change.
-    function test_LOACT_VMCOR_2__LOAT_VMCOR_2__LOAT_VMCOR_8_validateManualConfirmation_reviewHashBindsInitiatorSignature()
+    function test_LOACT_VMCOR_2__LOAT_VMCOR_2__LOAT_VMCOR_8__LOAT_AHELP_6__LOAT_AVTAOR_7_validateManualConfirmation_reviewHashBindsInitiatorSignature()
         public
     {
         // Setup: derive two initiator signatures for the same transaction hash from different keys.

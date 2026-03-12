@@ -250,7 +250,9 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies AI-PH-1: `_onlyOrganization` reverts for non-organization caller.
      */
-    function test_AI_PH_1__OAT_PH_1_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_AHELP_3__AI_PH_1__OAT_PH_1__onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization()
+        public
+    {
         // Setup
 
         // Call
@@ -264,7 +266,8 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies AI-PH-2: `_onlyOrganization` succeeds for configured organization caller.
      */
-    function test_AI_PH_2_onlyOrganizationInternal_configuredOrganizationCaller_succeeds() public {
+    /// AI-AHELP-4
+    function test_AI_AHELP_4__AI_PH_2_onlyOrganizationInternal_configuredOrganizationCaller_succeeds() public {
         // Setup
 
         // Call
@@ -277,7 +280,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies AI-PH-3: `_execute` returns true for successful call and forwards exact tuple.
      */
-    function test_AI_PH_3__OAT_PH_1_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
+    function test_AI_AHELP_1__AI_PH_3__OAT_PH_1_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
         // Setup
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ai-ph"), uint256(303));
@@ -296,7 +299,8 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies AI-PH-4: `_execute` returns false when downstream call fails.
      */
-    function test_AI_PH_4_executeInternal_failedInnerCall_returnsFalseWithoutReverting() public {
+    /// AI-AHELP-2
+    function test_AI_AHELP_2__AI_PH_4_executeInternal_failedInnerCall_returnsFalseWithoutReverting() public {
         // Setup
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.fail.selector);

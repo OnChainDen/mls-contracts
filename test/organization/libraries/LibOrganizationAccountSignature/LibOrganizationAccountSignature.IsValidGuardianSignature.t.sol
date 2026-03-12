@@ -4,8 +4,11 @@ pragma solidity 0.8.33;
 
 import {BatchedTransaction} from "../../../../src/safe-module/BatchedTransaction.sol";
 import {SafeExecutorModule} from "../../../../src/safe-module/SafeExecutorModule.sol";
-import {MockGuardianSafe} from "test/helpers/MockGuardianSafe.sol";
-import {MockGuardianModuleReverter} from "test/helpers/MockGuardianSignatureValidation.sol";
+import {MockGuardianSafe, MockGuardianSafeShortReturn} from "test/helpers/MockGuardianSafe.sol";
+import {
+    MockGuardianModuleReverter,
+    MockGuardianModuleUnexpectedReturn
+} from "test/helpers/MockGuardianSignatureValidation.sol";
 import {
     LibOrganizationAccountSignatureTestBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureTestBase.sol";
@@ -27,7 +30,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` returns true for a direct guardian EOA signature. [ASIG-INV-5]
-    function test_ASIG_INV_5_A_LOAS_IVGS_1_LOACS_IVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue()
+    function test_ASIG_INV_5_A_LOAS_IVGS_1_LOACS_IVGS_1__LOAS_AIVGS_1_isValidGuardianSignature_directGuardianSignature_returnsTrue()
         public
     {
         // Setup: configure the guardian as a deterministic EOA and sign the tracked message hash.
@@ -43,7 +46,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
 
     /// @dev Verifies `_isValidGuardianSignature` accepts an enabled `SafeExecutorModule` contract signature.
     ///      [ASIG-INV-5]
-    function test_ASIG_INV_5_B_LOAS_IVGS_2_LOACS_IVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue()
+    function test_ASIG_INV_5_B_LOAS_IVGS_2_LOACS_IVGS_2__LOAS_AIVGS_2_isValidGuardianSignature_enabledModuleContractSignature_returnsTrue()
         public
     {
         // Setup: configure a guardian Safe with an enabled executor module and sign through the authorized executor.
@@ -63,7 +66,7 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
 
     /// @dev Verifies `_isValidGuardianSignature` rejects valid module signatures from non-enabled modules.
     ///      [ASIG-INV-5]
-    function test_ASIG_INV_5_C_LOAS_IVGS_3_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse()
+    function test_ASIG_INV_5_C_LOAS_IVGS_3__LOAS_AIVGS_3_isValidGuardianSignature_disabledModuleContractSignature_returnsFalse()
         public
     {
         // Setup: configure a guardian Safe without enabling the module that produced the contract signature.
@@ -173,7 +176,9 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
     }
 
     /// @dev Verifies `_isValidGuardianSignature` fails closed when guardian module checks revert.
-    function test_LOAS_IVGS_7_isValidGuardianSignature_revertingGuardianModuleCheck_returnsFalse() public {
+    function test_LOAS_IVGS_7__LOAS_AIVGS_4_isValidGuardianSignature_revertingGuardianModuleCheck_returnsFalse()
+        public
+    {
         // Setup: configure a reverting guardian contract and sign through a module that points at it.
         MockGuardianModuleReverter guardian = new MockGuardianModuleReverter();
         SafeExecutorModule module = _deployModule(address(guardian), AUTHORIZED_EXECUTOR_PK);
@@ -186,6 +191,43 @@ contract LibOrganizationAccountSignatureIsValidGuardianSignatureTest is LibOrgan
 
         // Verify: reverting module lookups fail closed.
         assertFalse(actual, "reverting guardian module checks should be invalid");
+    }
+
+    // LOAS-AIVGS-5
+    /// @dev Verifies `_isValidGuardianSignature` treats truncated module-check return data as invalid.
+    function test_LOAS_AIVGS_5_isValidGuardianSignature_shortModuleReturn_returnsFalse() public {
+        // Setup: configure a guardian contract that returns fewer than 32 bytes from `isModuleEnabled(address)`.
+        MockGuardianSafeShortReturn guardian = new MockGuardianSafeShortReturn();
+        SafeExecutorModule module = _deployModule(address(guardian), AUTHORIZED_EXECUTOR_PK);
+        policyStateHarness.setGuardian(address(guardian));
+
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+
+        // Call: validate the module-backed guardian signature.
+        bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
+
+        // Verify: truncated return data must fail closed.
+        assertFalse(actual, "short-return module check should be invalid");
+    }
+
+    // LOAS-AIVGS-6
+    /// @dev Verifies `_isValidGuardianSignature` treats non-canonical module-check bool returns as invalid.
+    function test_LOAS_AIVGS_6_isValidGuardianSignature_nonCanonicalModuleBool_returnsFalse_desired() public {
+        // Setup: configure a guardian contract whose `isModuleEnabled` staticcall returns non-canonical 32-byte data.
+        MockGuardianModuleUnexpectedReturn guardian = new MockGuardianModuleUnexpectedReturn();
+        SafeExecutorModule module = _deployModule(address(guardian), AUTHORIZED_EXECUTOR_PK);
+        policyStateHarness.setGuardian(address(guardian));
+
+        bytes memory guardianSignature = _buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
+        bytes memory callData =
+            abi.encodeCall(harness.isValidGuardianSignatureViaLibrary, (guardianSignature, MESSAGE_HASH));
+
+        // Call: execute the wrapper via low-level `staticcall` so revert behavior is distinguishable from `false`.
+        (bool success, bytes memory returnData) = address(harness).staticcall(callData);
+
+        // Verify: non-canonical bool return data should fail closed to `false` without reverting.
+        assertTrue(success, "non-canonical module bool should return false instead of reverting");
+        assertFalse(abi.decode(returnData, (bool)), "non-canonical module bool should be treated as invalid");
     }
 
     /// @dev Verifies `_isValidGuardianSignature` fails gracefully when the guardian is an EOA and signer mismatches.

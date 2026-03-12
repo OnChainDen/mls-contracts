@@ -93,7 +93,8 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
      * @dev Verifies reject nonce matches execute nonce for the same operation tuple by going
      *      through the actual execute and reject paths.
      */
-    function test_OATB_RAT_3__NMATB_RAT_1__NMATB_RAT_7_rejectAccountTransaction_nonceMatchesExecuteForSameTuple()
+    /// OATB-AXACT-5
+    function test_OATB_AXACT_5__OATB_RAT_3__NMATB_RAT_1__NMATB_RAT_7_rejectAccountTransaction_nonceMatchesExecuteForSameTuple()
         public
     {
         // Setup: deploy account and build shared payload with both approval and rejection signatures.
@@ -401,7 +402,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies execute then reject with identical tuple reverts due to shared nonce space.
      */
-    function test_OATB_RAT_8__OAT_RAT_3__NMATB_RAT_5__NMATB_RAT_7_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed()
+    function test_OATB_AXACT_6_A__OATB_RAT_8__OAT_RAT_3__NMATB_RAT_5__NMATB_RAT_7_rejectAccountTransaction_executeThenRejectSameTuple_revertsNonceAlreadyUsed()
         public
     {
         // Setup: deploy account and build one shared payload tuple.
@@ -452,7 +453,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies reject then execute with identical tuple reverts due to shared nonce space.
      */
-    function test_OATB_RAT_9__OAT_RAT_3__NMATB_RAT_4__NMATB_RAT_7_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed()
+    function test_OATB_AXACT_6_B__OATB_RAT_9__OAT_RAT_3__NMATB_RAT_4__NMATB_RAT_7_rejectAccountTransaction_rejectThenExecuteSameTuple_revertsNonceAlreadyUsed()
         public
     {
         // Setup: deploy account and build one shared payload tuple.
@@ -503,7 +504,7 @@ contract OrganizationAccountTransactionBaseRejectAccountTransactionTest is Organ
     /**
      * @dev Verifies failed rejection validation does not burn nonce; fixed retry can succeed.
      */
-    function test_OATB_RAT_10__OAT_RAT_5__NMATB_RAT_6_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+    function test_OATB_AXACT_7_B__OATB_RAT_10__OAT_RAT_5__NMATB_RAT_6_rejectAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
         public
     {
         // Setup: configure auto-approve rejection where first review signature is unauthorized.

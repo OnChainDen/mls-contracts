@@ -10,7 +10,9 @@ import {Policy, RateLimitScope, RateLimitType} from "types/PolicyTypes.sol";
  */
 contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     /// @dev Verifies disabled `limitType == None` succeeds without writing usage. [TXRL-INV-10]
-    function test_TXRL_INV_10_checkAndUpdateRateLimit_limitTypeNone_returnsTrueAndDoesNotWriteUsage() public {
+    function test_TXRL_INV_10__LPRL_ACAURL_1_checkAndUpdateRateLimit_limitTypeNone_returnsTrueAndDoesNotWriteUsage()
+        public
+    {
         // Setup: configure a valid fixture for `limitType == None` returns true and does not write usage.
         uint256 policyId = 9001;
         Policy memory policy = _buildBasePolicy();
@@ -53,6 +55,27 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(usage, 0, "zero interval-hours should not write usage");
     }
 
+    // LPRL-ACAURL-6
+    /// @dev Verifies `checkAndUpdateRateLimit` fails closed when `timeIntervalHours` is zero.
+    function test_LPRL_ACAURL_6_checkAndUpdateRateLimit_zeroIntervalHours_failsClosed_desired() public {
+        // Setup: configure a time-interval policy whose zero-hour window should deny usage instead of bypassing.
+        uint256 policyId = 9002_006;
+        Policy memory policy = _timeIntervalPolicy(0, 100);
+
+        bytes32 key =
+            harness.computeUsageKeyViaPolicyLibrary(policyId, policy, address(0xA206), address(0xB206), address(0xC206));
+
+        // Call: execute `checkAndUpdateRateLimitViaPolicyLibrary` for a positive usage amount under zero-hour config.
+        bool ok = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA206), address(0xB206), address(0xC206), 10
+        );
+        uint256 usage = policyStateHarness.getPolicyUsage(key, 0);
+
+        // Verify: zero-hour configs should fail closed and leave usage storage untouched.
+        assertFalse(ok, "zero interval-hours should reject usage instead of bypassing");
+        assertEq(usage, 0, "zero interval-hours should not mutate usage storage");
+    }
+
     /// @dev Verifies successful updates write the exact usage amount once. [TXRL-INV-5, TXRL-INV-7]
     function test_TXRL_INV_5__TXRL_INV_7_checkAndUpdateRateLimit_usageBelowLimit_returnsTrueAndWritesUsage() public {
         // Setup: configure a valid fixture for usage below limit returns true and writes updated usage.
@@ -75,7 +98,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that usage exactly at limit returns true and writes updated usage.
-    function test_checkAndUpdateRateLimit_usageExactlyAtLimit_returnsTrueAndWritesUsage() public {
+    function test_LPRL_ACAURL_2_checkAndUpdateRateLimit_usageExactlyAtLimit_returnsTrueAndWritesUsage() public {
         // Setup: configure a valid fixture for usage exactly at limit returns true and writes updated usage.
         uint256 policyId = 9004;
         Policy memory policy = _timeIntervalPolicy(1, 10);
@@ -96,7 +119,9 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that usage above limit returns false and does not update usage.
-    function test_TXRL_INV_7_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage() public {
+    function test_TXRL_INV_7__LPRL_ACAURL_3_checkAndUpdateRateLimit_usageAboveLimit_returnsFalseAndDoesNotWriteUsage()
+        public
+    {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for usage above limit returns false
         // and does not update usage.
         uint256 policyId = 9005;
@@ -145,7 +170,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies a new time window starts with an independent usage budget. [TXRL-INV-2]
-    function test_TXRL_INV_2_checkAndUpdateRateLimit_newWindowResetsUsageBudget() public {
+    function test_TXRL_INV_2__LPRL_ACAURL_5_checkAndUpdateRateLimit_newWindowResetsUsageBudget() public {
         // Setup: configure a valid fixture for new time window resets effective usage budget.
         uint256 policyId = 9007;
         Policy memory policy = _timeIntervalPolicy(1, 5);
@@ -206,7 +231,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that `usageAmount == 0` is a no-op success.
-    function test_checkAndUpdateRateLimit_zeroUsageAmount_noOpSuccess() public {
+    function test_LPRL_ACAURL_4_checkAndUpdateRateLimit_zeroUsageAmount_noOpSuccess() public {
         // Setup: configure a valid fixture for `usageAmount == 0` is a no-op success.
         uint256 policyId = 9009;
         Policy memory policy = _timeIntervalPolicy(1, 10);
@@ -228,7 +253,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies usage overflow fails closed without mutating tracked usage. [TXRL-INV-8]
-    function test_TXRL_INV_8_checkAndUpdateRateLimit_additionOverflow_failsClosed_desired() public {
+    function test_TXRL_INV_8__LPRL_ACAURL_7_checkAndUpdateRateLimit_additionOverflow_failsClosed_desired() public {
         // Setup: build fixture inputs where desired behavior: usage overflow fails closed (`false`) rather than
         // reverting should be denied.
         uint256 policyId = 9010;
@@ -320,7 +345,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that `timeIntervalHours == 0` returns window 0.
-    function test_computeTimeWindow_zeroHours_returnsZero() public {
+    function test_LPRL_AHELP_2_computeTimeWindow_zeroHours_returnsZero() public {
         // Setup: configure a valid fixture for `timeIntervalHours == 0` returns window 0.
         Policy memory policy = _timeIntervalPolicy(0, 100);
         // Call: execute `computeTimeWindowViaPolicyLibrary` with the happy-path payload.
@@ -330,7 +355,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that computes `block.timestamp / (hours * 3600)` exactly.
-    function test_computeTimeWindow_matchesExactFormula() public {
+    function test_LPRL_AHELP_1_computeTimeWindow_matchesExactFormula() public {
         // Setup: configure a valid fixture for computes `block.timestamp / (hours * 3600)` exactly.
         Policy memory policy = _timeIntervalPolicy(3, 100);
         vm.warp(39_999);
@@ -377,7 +402,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that returns 0 when no active time-interval limit.
-    function test_getCurrentUsage_noActiveTimeIntervalLimit_returnsZero() public {
+    function test_LPRL_AHELP_5_getCurrentUsage_noActiveTimeIntervalLimit_returnsZero() public {
         // Setup: configure a valid fixture for returns 0 when no active time-interval limit.
         uint256 policyId = 9101;
         Policy memory policy = _buildBasePolicy();
@@ -454,7 +479,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that acrossAll scopes ignore account/destination/initiator differences.
-    function test_TXRL_INV_3_computeUsageKey_allAcrossAllScopes_ignoresEntityDifferences() public {
+    function test_LPRL_AHELP_3_TXRL_INV_3_computeUsageKey_allAcrossAllScopes_ignoresEntityDifferences() public {
         // Setup: configure a valid fixture for acrossAll scopes ignore account/destination/initiator differences.
         Policy memory policy = _timeIntervalPolicy(1, 100);
 
@@ -532,7 +557,7 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that mixed scope combinations produce expected collisions and separations.
-    function test_computeUsageKey_mixedScopes_expectedCollisionsAndSeparations() public {
+    function test_LPRL_AHELP_4_computeUsageKey_mixedScopes_expectedCollisionsAndSeparations() public {
         // Setup: configure a valid fixture for mixed scope combinations produce expected collisions and separations.
         Policy memory policy = _timeIntervalPolicy(1, 100);
         policy.config.rateLimit.sourceScope = RateLimitScope.PerEntity;

@@ -48,7 +48,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that expired policy-signature requests return ERC-1271 invalid value.
-    function test_LOAS_VPBS_2_LOACS_VPBS_8_validatePolicyBasedSignature_expiredRequest_returnsInvalidValue() public {
+    function test_LOAS_VPBS_2_LOACS_VPBS_8__LOAS_AVPBS_1_validatePolicyBasedSignature_expiredRequest_returnsInvalidValue()
+        public
+    {
         // Setup: build a fixture with expiration strictly before current block timestamp.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp - 1
@@ -91,7 +93,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that empty initiator signatures return ERC-1271 invalid value.
-    function test_LOAS_VPBS_5_validatePolicyBasedSignature_emptyInitiatorSignature_returnsInvalidValue() public {
+    function test_LOAS_VPBS_5__LOAS_AVPBS_2_validatePolicyBasedSignature_emptyInitiatorSignature_returnsInvalidValue()
+        public
+    {
         // Setup: build a valid fixture and clear initiator signature bytes.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -113,7 +117,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that malformed initiator signatures fail closed. [ASIG-INV-13]
-    function test_ASIG_INV_13_A_LOAS_VPBS_6_validatePolicyBasedSignature_malformedInitiatorSignature_returnsInvalidValue()
+    function test_ASIG_INV_13_A_LOAS_VPBS_6__LOAS_AVPBS_3_validatePolicyBasedSignature_malformedInitiatorSignature_returnsInvalidValue()
         public
     {
         // Setup: build a valid fixture and replace initiator signature with malformed bytes.
@@ -149,7 +153,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that invalid guardian signatures return ERC-1271 invalid value.
-    function test_LOAS_VPBS_7_validatePolicyBasedSignature_invalidGuardianSignature_returnsInvalidValue() public {
+    function test_LOAS_VPBS_7__LOAS_AVPBS_4_validatePolicyBasedSignature_invalidGuardianSignature_returnsInvalidValue()
+        public
+    {
         // Setup: build a valid fixture and replace guardian signature with wrong signer.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -179,6 +185,45 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
 
         // Verify: invalid guardian signatures must be rejected.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "invalid guardian signature should be rejected");
+    }
+
+    // LOAS-AVPBS-4
+    /// @dev Verifies missing or malformed guardian signature bytes return ERC-1271 invalid value.
+    function test_LOAS_AVPBS_4_validatePolicyBasedSignature_missingOrMalformedGuardianSignature_returnsInvalidValue()
+        public
+    {
+        // Setup: build a valid auto-approve fixture, then replace guardian signatures with empty and malformed bytes.
+        PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
+            approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
+        });
+
+        bytes memory emptyGuardianPayload = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: bytes(""),
+            proofs: fixture.proofs
+        });
+        bytes memory malformedGuardianPayload = _buildPolicySignatureData({
+            policyId: fixture.policyId,
+            expirationTimestamp: fixture.expirationTimestamp,
+            initiatorSignature: fixture.initiatorSignature,
+            reviewSignatures: fixture.reviewSignatures,
+            guardianSignature: hex"1b",
+            proofs: fixture.proofs
+        });
+
+        // Call: execute validation for both malformed guardian-signature variants.
+        bytes4 emptyResult = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, emptyGuardianPayload);
+        bytes4 malformedResult =
+            harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, malformedGuardianPayload);
+
+        // Verify: guardian-signature decoding failures should fail closed.
+        assertEq(emptyResult, SignatureUtils.ERC1271_INVALID_VALUE, "empty guardian signature should be invalid");
+        assertEq(
+            malformedResult, SignatureUtils.ERC1271_INVALID_VALUE, "malformed guardian signature should be invalid"
+        );
     }
 
     /// @dev Verifies guardian signatures must be over the review hash, not the initiator hash.
@@ -451,7 +496,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that payloads not allowed by policy checks return ERC-1271 invalid value.
-    function test_LOAS_VPBS_8_validatePolicyBasedSignature_policyNotAllowed_returnsInvalidValue() public {
+    function test_LOAS_VPBS_8__LOAS_AVPBS_5_validatePolicyBasedSignature_policyNotAllowed_returnsInvalidValue()
+        public
+    {
         // Setup: build a valid fixture and tamper the policy proof to fail policy-in-org validation.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -476,8 +523,121 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "policy disallow should be invalid");
     }
 
+    // LOAS-AVPBS-5
+    /// @dev Verifies policy-proof and source-account-proof mismatches return ERC-1271 invalid value.
+    function test_LOAS_AVPBS_5_validatePolicyBasedSignature_policyOrSourceAccountMismatch_returnsInvalidValue()
+        public
+    {
+        // Setup: build one fixture with a tampered policy proof and one with a mismatched source-account proof.
+        PolicyValidationFixture memory policyProofFixture = _buildPolicyValidationFixture({
+            approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
+        });
+        policyProofFixture.proofs.policyProof = new bytes32[](1);
+        policyProofFixture.proofs.policyProof[0] = keccak256("tampered-proof");
+        bytes memory policyProofPayload = _buildPolicySignatureData({
+            policyId: policyProofFixture.policyId,
+            expirationTimestamp: policyProofFixture.expirationTimestamp,
+            initiatorSignature: policyProofFixture.initiatorSignature,
+            reviewSignatures: policyProofFixture.reviewSignatures,
+            guardianSignature: policyProofFixture.guardianSignature,
+            proofs: policyProofFixture.proofs
+        });
+
+        policyStateHarness.setGuardian(guardianSigner);
+        Policy memory sourceRestrictedPolicy = _buildSignaturePolicy(PolicyType.AutoApprove);
+        ValidationProofs memory sourceMismatchProofs = _buildSpecificSourceProofs(sourceRestrictedPolicy, ACCOUNT);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: OTHER_ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: OTHER_ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+        bytes memory sourceProofPayload = _buildPolicySignatureData({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: guardianSignature,
+            proofs: sourceMismatchProofs
+        });
+
+        // Call: validate both proof-mismatch variants.
+        bytes4 policyProofResult =
+            harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, policyProofPayload);
+        bytes4 sourceProofResult =
+            harness.validatePolicyBasedSignatureViaLibrary(OTHER_ACCOUNT, MESSAGE_HASH, sourceProofPayload);
+
+        // Verify: both proof mismatches should fail closed.
+        assertEq(policyProofResult, SignatureUtils.ERC1271_INVALID_VALUE, "policy-proof mismatch should be invalid");
+        assertEq(
+            sourceProofResult, SignatureUtils.ERC1271_INVALID_VALUE, "source-account-proof mismatch should be invalid"
+        );
+    }
+
+    // LOAS-AVPBS-6
+    /// @dev Verifies non-signature policies return ERC-1271 invalid value through policy validation.
+    function test_LOAS_AVPBS_6_validatePolicyBasedSignature_nonSignaturePolicy_returnsInvalidValue() public {
+        // Setup: build a policy-proof fixture whose transaction type is not `Signatures`.
+        policyStateHarness.setGuardian(guardianSigner);
+
+        Policy memory policy = _buildBasePolicy();
+        policy.config.transactionType = TransactionType.TokenTransfers;
+        policy.config.initiator.anyInitiator = false;
+        policy.config.initiator.initiatorType = ApproverType.Member;
+        policy.config.initiator.initiatorMember = initiator1;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 expiration = block.timestamp + 1 days;
+
+        bytes memory initiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration
+        });
+        bytes memory guardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature
+        });
+        bytes memory signatureData = _buildPolicySignatureData({
+            policyId: DEFAULT_POLICY_ID,
+            expirationTimestamp: expiration,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: guardianSignature,
+            proofs: proofs
+        });
+
+        // Call: validate the non-signature policy payload.
+        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signatureData);
+
+        // Verify: policies for other transaction classes must not authorize ERC-1271 validation.
+        assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "non-signature policy should be invalid");
+    }
+
     /// @dev Verifies that valid auto-approve policy signatures return ERC-1271 magic value.
-    function test_LOAS_VPBS_9_validatePolicyBasedSignature_autoApproveValidSignatures_returnsMagicValue() public {
+    function test_LOAS_VPBS_9__LOAS_AVPBS_8_validatePolicyBasedSignature_autoApproveValidSignatures_returnsMagicValue()
+        public
+    {
         // Setup: build a valid auto-approve fixture.
         PolicyValidationFixture memory fixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp + 1 days
@@ -569,7 +729,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that manual-approval payloads with insufficient reviewer signatures return invalid value.
-    function test_LOAS_VPBS_11_validatePolicyBasedSignature_manualApprovalInsufficientReviews_returnsInvalidValue()
+    function test_LOAS_VPBS_11__LOAS_AVPBS_9_validatePolicyBasedSignature_manualApprovalInsufficientReviews_returnsInvalidValue()
         public
     {
         // Setup: build a valid manual fixture and clear review signatures.
@@ -627,7 +787,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that review hash derivation is bound to the initiator signature bytes.
-    function test_LOAS_VPBS_13_validatePolicyBasedSignature_reviewHashBindsInitiatorSignatureBytes() public {
+    function test_LOAS_VPBS_13__LOAS_AVPBS_10_validatePolicyBasedSignature_reviewHashBindsInitiatorSignatureBytes()
+        public
+    {
         // Setup: compute review hashes for two different initiator signature byte arrays.
         uint256 expiration = block.timestamp + 1 days;
         bytes memory initiatorA = _signInitiatorSignature({
@@ -668,7 +830,10 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that representative failure paths return invalid without reverting.
-    function test_LOAS_VPBS_14_validatePolicyBasedSignature_failurePaths_failClosedWithoutRevert() public {
+    /// LOAS-AVPBS-7
+    function test_LOAS_VPBS_14__LOAS_AVPBS_7_validatePolicyBasedSignature_failurePaths_failClosedWithoutRevert()
+        public
+    {
         // Setup: build three failing fixtures (expired, empty initiator, unauthorized initiator) for graceful handling.
         PolicyValidationFixture memory expiredFixture = _buildPolicyValidationFixture({
             approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp - 1
@@ -904,7 +1069,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
 
     /// @dev Verifies that malformed packed reviewer signature bytes fail closed with invalid value.
     ///      [ASIG-INV-10] [ASIG-INV-13]
-    function test_ASIG_INV_10__ASIG_INV_13_B_LOAS_VPBS_20_LOACS_VPBS_10_validatePolicyBasedSignature_malformedReviewSignatureBytes_returnsInvalidValue()
+    function test_ASIG_INV_10__ASIG_INV_13_B_LOAS_VPBS_20_LOACS_VPBS_10__LOAS_AVPBS_11_validatePolicyBasedSignature_malformedReviewSignatureBytes_returnsInvalidValue()
         public
     {
         // Setup: build manual fixture and replace packed reviewer signatures with malformed bytes.

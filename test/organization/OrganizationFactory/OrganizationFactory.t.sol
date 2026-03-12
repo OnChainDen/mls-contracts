@@ -38,8 +38,9 @@ interface IWhitelistUUPSUpgradeEntrypoints {
  * @dev Factory-level tests for initialization and deployment flows.
  */
 contract OrganizationFactoryTest is InitializationSuiteBase {
+    /// OF-ADEP-1
     /// @dev Verifies `OrganizationFactory.constructor` reverts with `ZeroAddress` when the deployer is zero.
-    function test_OF_CTOR_1_constructor_zeroDeployer_revertsZeroAddress() public {
+    function test_OF_ADEP_1__OF_CTOR_1_constructor_zeroDeployer_revertsZeroAddress() public {
         // Setup: Prepare a zero deployer address for constructor input.
         address zeroDeployer = address(0);
 
@@ -50,9 +51,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: The constructor guard is enforced by the expected `ZeroAddress` revert.
     }
 
+    /// OF-ADEP-6
     /// @dev Verifies `OrganizationFactory.constructor` stores a non-zero deployer in `DEPLOYER_ADDRESS` and keeps it
     /// immutable.
-    function test_OF_CTOR_2__OF_CTOR_3_constructor_nonZeroStoresAndRemainsImmutable() public {
+    function test_OF_ADEP_6__OF_CTOR_2__OF_CTOR_3_constructor_nonZeroStoresAndRemainsImmutable() public {
         // Setup: Deploy a local factory with a custom deployer and valid initialization params.
         address deployer = address(0xDEAD01);
         OrganizationFactoryHarness localFactory = new OrganizationFactoryHarness(deployer);
@@ -150,9 +152,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         _assertInitializedState(IOrganization(deployed), params);
     }
 
+    /// OF-ADEP-2
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts with `UnauthorizedDeployer` for non-authorized
     /// callers. [OF-DO-1, IOF-DO-2]
-    function test_ACCF_INV_9__OF_DO_4__OF_DO_1__IOF_DO_2_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer()
+    function test_OF_ADEP_2__ACCF_INV_9__OF_DO_4__OF_DO_1__IOF_DO_2_deployOrganization_unauthorizedCaller_revertsUnauthorizedDeployer()
         public
     {
         // Setup: Prepare valid initialization params for an unauthorized caller attempt.
@@ -235,9 +238,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Reaching the expected revert confirms the factory passed the intended whitelist validation inputs.
     }
 
+    /// OF-ADEP-8
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `implementationAddress == address(0)`. [OF-DO-11,
     /// IOF-DO-8]
-    function test_UPG_CTRL_8_C__OF_DO_8__OF_DO_11__IOF_DO_8_deployOrganization_zeroImplementation_reverts()
+    function test_OF_ADEP_8_A__UPG_CTRL_8_C__OF_DO_8__OF_DO_11__IOF_DO_8_deployOrganization_zeroImplementation_reverts()
         public
     {
         // Setup: Prepare deployment inputs with a zero implementation while keeping whitelist checks enabled.
@@ -254,9 +258,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Invalid implementation inputs are rejected by the expected revert.
     }
 
+    /// OF-ADEP-8
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects an EOA implementation address. [OF-DO-10,
     /// IOF-DO-9]
-    function test_OF_DO_9__OF_DO_10__IOF_DO_9_deployOrganization_eoaImplementation_revertsInvalidImplementation()
+    function test_OF_ADEP_8_B__OF_DO_9__OF_DO_10__IOF_DO_9_deployOrganization_eoaImplementation_revertsInvalidImplementation()
         public
     {
         // Setup: Use an EOA as the implementation address and whitelist it to isolate proxy safety validation.
@@ -274,9 +279,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Non-contract implementation addresses are rejected by the expected revert.
     }
 
+    /// OF-ADEP-7
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects `whitelistAddress == address(0)`. [OF-DO-7,
     /// IOF-DO-10]
-    function test_OF_DO_10__OF_DO_7__IOF_DO_10_deployOrganization_zeroWhitelist_reverts() public {
+    function test_OF_ADEP_7_A__OF_DO_10__OF_DO_7__IOF_DO_10_deployOrganization_zeroWhitelist_reverts() public {
         // Setup: Prepare valid deployment inputs except for a zero whitelist address.
         bytes32 salt = bytes32(uint256(2006));
         InitializationParams memory params = _defaultInitializationParams();
@@ -290,9 +296,12 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         // Verify: Zero whitelist input is rejected by the deployment path.
     }
 
+    /// OF-ADEP-7
     /// @dev Verifies `OrganizationFactory.deployOrganization` rejects an EOA whitelist address as a safety
     /// requirement. [OF-DO-6, IOF-DO-11]
-    function test_OF_DO_11__OF_DO_6__IOF_DO_11_deployOrganization_eoaWhitelist_revertsDesiredBehavior() public {
+    function test_OF_ADEP_7_B__OF_DO_11__OF_DO_6__IOF_DO_11_deployOrganization_eoaWhitelist_revertsDesiredBehavior()
+        public
+    {
         // Setup: Prepare valid deployment params with an EOA used as whitelist address.
         bytes32 salt = bytes32(uint256(2007));
         InitializationParams memory params = _defaultInitializationParams();
@@ -331,9 +340,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         assertEq(_countTopic(logs, ORG_DEPLOYED_TOPIC), 0, "whitelist revert should not emit OrganizationDeployed");
     }
 
+    /// OF-ADEP-3
     /// @dev Verifies `OrganizationFactory.deployOrganization` reverts on a second deployment of the same CREATE2
     /// tuple. [OF-DO-14, IOF-DO-7]
-    function test_OF_DO_12__OF_DO_14__IOF_DO_7_deployOrganization_sameTupleTwice_secondDeployRevertsCreate2Collision()
+    function test_OF_ADEP_3__OF_DO_12__OF_DO_14__IOF_DO_7_deployOrganization_sameTupleTwice_secondDeployRevertsCreate2Collision()
         public
     {
         // Setup: Deploy once with a fixed tuple to consume the CREATE2 address.
@@ -399,9 +409,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         assertGt(deployedB.code.length, 0, "second deployment should have code");
     }
 
+    /// OF-ADEP-4
     /// @dev Verifies `OrganizationFactory.deployOrganization` rolls back atomically when initialization parameters are
     /// invalid. [OF-DO-12, IOF-DO-4]
-    function test_ACCF_INV_7__INIT_STATE_6_A__OF_DO_15__CFI_FLOW_2__OF_DO_12__IOF_DO_4_deployOrganization_invalidInitParams_revertAndLeaveNoCode()
+    function test_OF_ADEP_4__ACCF_INV_7__INIT_STATE_6_A__OF_DO_15__CFI_FLOW_2__OF_DO_12__IOF_DO_4_deployOrganization_invalidInitParams_revertAndLeaveNoCode()
         public
     {
         // Setup: Build three invalid initialization variants and precompute each target deployment address.
@@ -620,9 +631,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         assertEq(computedA, computedB, "same inputs should return deterministic address");
     }
 
+    /// OF-ADEP-5
     /// @dev Verifies `OrganizationFactory.computeOrganizationAddress` changes when salt, implementation, whitelist, or
     /// factory address changes. [IOF-COA-2]
-    function test_OF_COA_2__OF_COA_3__OF_COA_4__OF_COA_5__IOF_COA_2_computeOrganizationAddress_changesAcrossTupleDimensions()
+    function test_OF_ADEP_5__OF_COA_2__OF_COA_3__OF_COA_4__OF_COA_5__IOF_COA_2_computeOrganizationAddress_changesAcrossTupleDimensions()
         public
     {
         // Setup: Build alternate salt, implementation, whitelist, and factory inputs for tuple dimension checks.
@@ -682,9 +694,10 @@ contract OrganizationFactoryTest is InitializationSuiteBase {
         assertEq(computedAfter, computedBefore, "compute should remain unchanged after deployment");
     }
 
+    /// OF-ADEP-9
     /// @dev Verifies `OrganizationFactory.getOrganizationProxyBytecode` returns deterministic constructor-encoded
     /// bytecode and stable init-code hashes. [IOF-GOPB-1]
-    function test_OF_GOPB_1__OF_GOPB_2__OF_GOPB_3__OF_GOPB_4__OF_GOPB_5__IOF_GOPB_1_getOrganizationProxyBytecode_matchesExpectedEncodingAndHashBehavior()
+    function test_OF_ADEP_9__OF_GOPB_1__OF_GOPB_2__OF_GOPB_3__OF_GOPB_4__OF_GOPB_5__IOF_GOPB_1_getOrganizationProxyBytecode_matchesExpectedEncodingAndHashBehavior()
         public
     {
         // Setup: Prepare baseline and variant implementation/whitelist addresses for bytecode comparisons.

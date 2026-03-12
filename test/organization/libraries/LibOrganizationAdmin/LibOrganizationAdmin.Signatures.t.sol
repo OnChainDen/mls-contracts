@@ -51,7 +51,9 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` returns `true` once the admin threshold is met.
-    function test_L_59__NMADM_SIG_6_LOADM_AASV_1_areAdminSignaturesValid_exactThreshold_returnsTrue() public {
+    function test_L_59__NMADM_SIG_6_LOADM_AASV_1__LOA_AADMIN_3_areAdminSignaturesValid_exactThreshold_returnsTrue()
+        public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -97,7 +99,9 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for duplicate admin signers.
-    function test_L_62__NMADM_SIG_2_areAdminSignaturesValid_duplicateSigner_revertsDuplicateOrOutOfOrder() public {
+    function test_L_62__NMADM_SIG_2__LOA_AADMIN_1_areAdminSignaturesValid_duplicateSigner_revertsDuplicateOrOutOfOrder()
+        public
+    {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
         _setMembersAndAdmins({members: buildArray(admin1, admin2), admins: buildArray(admin1, admin2), threshold: 2});
 
@@ -115,7 +119,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts for out-of-order admin signers.
-    function test_L_63__NMADM_SIG_3_areAdminSignaturesValid_outOfOrderSigner_revertsDuplicateOrOutOfOrder()
+    function test_L_63__NMADM_SIG_3__LOA_AADMIN_1_areAdminSignaturesValid_outOfOrderSigner_revertsDuplicateOrOutOfOrder()
         public
     {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.
@@ -149,7 +153,7 @@ contract LibOrganizationAdminSignaturesTest is LibOrganizationAdminSuiteBase {
     }
 
     /// @dev Verifies `LibOrganizationAdmin._areAdminSignaturesValid` reverts when a recovered signer is not an admin.
-    function test_L_64__NMADM_SIG_5_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin()
+    function test_L_64__NMADM_SIG_5__LOA_AADMIN_2_areAdminSignaturesValid_nonAdminNonMemberSigner_revertsSignerIsNotAdmin()
         public
     {
         // Setup: configure members, admins, and voting threshold for the branch being exercised.

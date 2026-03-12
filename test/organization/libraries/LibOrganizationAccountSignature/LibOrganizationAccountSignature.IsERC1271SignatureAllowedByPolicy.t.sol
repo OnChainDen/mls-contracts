@@ -122,7 +122,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that all policy checks passing returns true.
-    function test_LOAS_IESABP_8_LOACS_IESABP_1__OAS_IESABP_6_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue()
+    function test_LOAS_IESABP_8_LOACS_IESABP_1__OAS_IESABP_6_LOAS_AHELP_2_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue()
         public
     {
         // Setup: build fully valid baseline fixture.
@@ -137,7 +137,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that policy-proof failure short-circuits composite failing inputs.
-    function test_LOAS_IESABP_9_LOACS_IESABP_2_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed()
+    function test_LOAS_IESABP_9_LOACS_IESABP_2__LOAS_AHELP_3_isERC1271SignatureAllowedByPolicy_firstCheckPolicyProofFailure_failsClosed()
         public
     {
         // Setup: build fixture with multiple failing conditions, including invalid policy proof.

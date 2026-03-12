@@ -292,7 +292,8 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @dev Verifies `_processConstraints` terminates without panic across random head-slot counts and calldata sizes.
     /// @param headSlots The declared number of 32-byte head slots for the fuzzed constraint.
     /// @param dataSlots The number of 32-byte words appended after the selector.
-    function testFuzz_FLPPC_PROCESS_77_processConstraints_randomOffsetsAndHeadSizesTerminateWithoutPanic(
+    /// SAG-FUZ-1
+    function testFuzz_FLPPC_PROCESS_77__SAG_FUZ_1_processConstraints_randomOffsetsAndHeadSizesTerminateWithoutPanic(
         uint8 headSlots,
         uint8 dataSlots
     ) public {

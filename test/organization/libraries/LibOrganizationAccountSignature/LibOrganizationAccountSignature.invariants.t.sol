@@ -80,7 +80,8 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that signatures valid in one organization are invalid in another organization.
-    function invariant_AS_INV_3_crossOrganizationReplay_isRejected() public {
+    /// SAG-INV-1
+    function invariant_AS_INV_3__SAG_INV_1_crossOrganizationReplay_isRejected() public {
         // Setup: build valid signature on organization A and mirror policy/root/member config on organization B.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
@@ -136,7 +137,8 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that signature validation remains view-only and does not mutate storage usage state.
-    function invariant_AS_INV_5_signatureValidation_isViewAndDoesNotMutateUsage() public {
+    /// SAG-INV-6
+    function invariant_AS_INV_5__SAG_INV_6_signatureValidation_isViewAndDoesNotMutateUsage() public {
         // Setup: restore signer membership assumptions and build valid policy signature fixture.
         _seedDefaultMembers();
         (bytes memory signature,,,,,) =
@@ -173,7 +175,8 @@ contract LibOrganizationAccountSignatureInvariants is LibOrganizationAccountSign
     }
 
     /// @dev Verifies that repeated validation with fixed pre-expiration inputs is stable and stateless.
-    function invariant_AS_INV_7_repeatedValidation_preExpiration_isStableAndStateless() public {
+    /// LOAS-AIVS-6
+    function invariant_AS_INV_7__LOAS_AIVS_6_repeatedValidation_preExpiration_isStableAndStateless() public {
         // Setup: prepare valid pre-expiration policy signature fixture and snapshot storage.
         (bytes memory signature,,,,,) =
             _buildValidPolicySignature(PolicyType.AutoApprove, DEFAULT_POLICY_ID, block.timestamp + 1 days);

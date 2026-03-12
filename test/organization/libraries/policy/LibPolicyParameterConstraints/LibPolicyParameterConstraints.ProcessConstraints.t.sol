@@ -26,7 +26,7 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
 
     /// @dev Verifies `_processConstraints` walks parameter heads using the correct cumulative calldata offsets.
     /// [POL-INV-11]
-    function test_POL_INV_11_processConstraints_mixedHeadSlots_advancesOffsetsCorrectly() public view {
+    function test_POL_INV_11_LPPC_APROC_5_processConstraints_mixedHeadSlots_advancesOffsetsCorrectly() public view {
         // Setup: configure a valid fixture for mixed head slot counts advance offsets correctly.
         bytes32[2] memory staticArray = [bytes32(uint256(11)), bytes32(uint256(22))];
 
@@ -64,7 +64,7 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
     }
 
     /// @dev Verifies that zero `paramCalldataHeadSlotCount` fails with false.
-    function test_processConstraints_zeroHeadSlotCount_returnsFalse() public view {
+    function test_LPPC_APROC_3_processConstraints_zeroHeadSlotCount_returnsFalse() public view {
         // Setup: build fixture inputs where zero `paramCalldataHeadSlotCount` fails with false should be denied.
         ParameterConstraint memory invalidConstraint = ParameterConstraint({
             paramType: ParamType.Uint,
@@ -85,7 +85,10 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
 
     /// @dev Verifies `_processConstraints` returns false when calldata is too short for a declared head slot.
     /// [POL-INV-12]
-    function test_POL_INV_12_processConstraints_dataShorterThanRequiredHead_returnsFalse() public view {
+    function test_POL_INV_12_LPPC_APROC_4_processConstraints_dataShorterThanRequiredHead_returnsFalse()
+        public
+        view
+    {
         // Setup: build fixture inputs where insufficient head bytes in calldata returns false should be denied.
         ParameterConstraint memory constraint = ParameterConstraint({
             paramType: ParamType.Uint,
@@ -175,7 +178,7 @@ contract LibPolicyParameterConstraintsProcessConstraintsTest is LibPolicyParamet
 
     /// @dev Verifies later constraints fail closed once offset walking exhausts available calldata head bytes.
     /// [POL-INV-11, POL-INV-12]
-    function test_POL_INV_11__POL_INV_12_processConstraints_secondConstraintHeadOutOfBoundsAfterOffsetAdvance_returnsFalse()
+    function test_POL_INV_11__POL_INV_12__LPPC_APROC_6_processConstraints_secondConstraintHeadOutOfBoundsAfterOffsetAdvance_returnsFalse()
         public
         view
     {

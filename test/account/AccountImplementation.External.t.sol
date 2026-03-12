@@ -6,7 +6,11 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 import {IAccount} from "interfaces/IAccount.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
-import {AccountCallRecorderTarget, AccountNativeReceiver} from "test/account/AccountImplementationMocks.sol";
+import {
+    AccountCallRecorderTarget,
+    AccountNativeReceiver,
+    AccountReceiveReentrancyAttacker
+} from "test/account/AccountImplementationMocks.sol";
 import {AccountImplementationSuiteBase} from "test/account/AccountImplementationSuiteBase.sol";
 
 /**
@@ -34,7 +38,8 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies receive emits `MLSWalletAccountNativeTokenReceived` with sender/value.
      */
-    function test_AI_RCV_2__OAT_AI_4_receive_emitsNativeTokenReceivedEvent() public {
+    /// AI-AENT-6
+    function test_AI_AENT_6__AI_RCV_2__OAT_AI_4_receive_emitsNativeTokenReceivedEvent() public {
         // Setup: fund sender and configure event expectation.
         address sender = address(0xA102);
         uint256 value = 0.3 ether;
@@ -70,7 +75,8 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies non-organization caller reverts with `OnlyOrganization`.
      */
-    function testFuzz_AI_INV_1__AI_ET_1__OAT_AI_1__FAI_ORG_145_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(
+    /// AI-AENT-1
+    function testFuzz_AI_AENT_1__AI_INV_1__AI_ET_1__OAT_AI_1__FAI_ORG_145_executeTransaction_nonOrganizationCaller_revertsOnlyOrganization(
         address caller
     ) public {
         vm.assume(caller != address(beacon));
@@ -109,7 +115,9 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies failed downstream call reverts with `TransactionExecutionFailed`.
      */
-    function test_AI_INV_4__AI_ET_4__OAT_AI_2_executeTransaction_failedCall_revertsTransactionExecutionFailed()
+    /// AI-AENT-3
+    /// AI-AENT-4
+    function test_AI_AENT_3__AI_AENT_4__AI_INV_4__AI_ET_4__OAT_AI_2_executeTransaction_failedCall_revertsTransactionExecutionFailed()
         public
     {
         // Setup: deploy target and build reverting calldata.
@@ -164,7 +172,8 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies emitted `TransactionExecuted` carries exact `(to,value,data,nonce,policyId)`.
      */
-    function test_AI_ET_7_executeTransaction_emitsTransactionExecutedWithExpectedTuple() public {
+    /// AI-AENT-2
+    function test_AI_AENT_2__AI_ET_7_executeTransaction_emitsTransactionExecutedWithExpectedTuple() public {
         // Setup: deploy target and deterministic tuple.
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("tuple"), 90);
@@ -228,7 +237,8 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns ERC-1271 magic value when organization approves.
      */
-    function test_AI_IVS_2__OAT_AI_5_isValidSignature_organizationApproves_returnsMagicValue() public {
+    /// AI-AENT-9
+    function test_AI_AENT_9_A__AI_IVS_2__OAT_AI_5_isValidSignature_organizationApproves_returnsMagicValue() public {
         // Setup: configure organization to approve.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(IERC1271.isValidSignature.selector);
@@ -243,7 +253,8 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
     /**
      * @dev Verifies isValidSignature returns non-magic value when organization rejects.
      */
-    function test_AI_IVS_3__OAT_AI_5_isValidSignature_organizationRejects_returnsNonMagicValue() public {
+    /// AI-AENT-9
+    function test_AI_AENT_9_B__AI_IVS_3__OAT_AI_5_isValidSignature_organizationRejects_returnsNonMagicValue() public {
         // Setup: configure organization to reject.
         beacon.clearExpectedSignatureValidation();
         beacon.setSignatureResult(0xffffffff);
@@ -253,6 +264,36 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
 
         // Verify: account returns rejection code from organization.
         assertEq(result, bytes4(0xffffffff), "rejected signature should return non-magic value");
+    }
+
+    /**
+     * @dev Verifies bouncing ETH into `receive()` does not let an arbitrary contract bypass `onlyOrganization`.
+     */
+    /// AI-AENT-7
+    function test_AI_AENT_7_receiveBounce_cannotBypassOnlyOrganizationForPrivilegedExecution() public {
+        // Setup: deploy a target that sends ETH into the account receive path and then attempts privileged reentry.
+        AccountReceiveReentrancyAttacker attacker = new AccountReceiveReentrancyAttacker();
+        AccountCallRecorderTarget downstream = new AccountCallRecorderTarget();
+        bytes memory nestedPayload = abi.encodeWithSelector(downstream.record.selector, bytes("nested"), uint256(77));
+        bytes memory payload =
+            abi.encodeCall(attacker.bounceAndReenter, (payable(address(account)), address(downstream), 0, nestedPayload));
+
+        vm.deal(address(account), 0.25 ether);
+        uint256 balanceBefore = address(account).balance;
+
+        vm.prank(address(beacon));
+        // Call: execute the attacker flow through the bound organization caller.
+        account.executeTransaction(address(attacker), 0.05 ether, payload, 16, 27);
+
+        // Verify: the receive hop succeeds, but the follow-up privileged reentry is rejected.
+        assertTrue(attacker.receiveCallSucceeded(), "attacker should successfully hit the account receive path");
+        assertEq(
+            attacker.privilegedRevertData(),
+            abi.encodeWithSelector(IAccount.OnlyOrganization.selector),
+            "privileged reentry should still fail with only-organization guard"
+        );
+        assertEq(address(account).balance, balanceBefore, "receive bounce should return value back to the account");
+        assertEq(downstream.calls(), 0, "unauthorized reentry must not execute downstream target");
     }
 
     /**
@@ -301,5 +342,4 @@ contract AccountImplementationExternalTest is AccountImplementationSuiteBase {
         // Verify: caller is unrestricted and response is returned.
         assertEq(result, IERC1271.isValidSignature.selector, "isValidSignature should be publicly callable");
     }
-
 }

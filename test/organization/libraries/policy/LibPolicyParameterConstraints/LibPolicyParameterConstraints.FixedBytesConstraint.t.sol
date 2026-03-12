@@ -12,7 +12,7 @@ import {ConstraintType, ParamType, ParameterConstraint} from "types/PolicyTypes.
  */
 contract LibPolicyParameterConstraintsFixedBytesConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact bytes32 match passes and mismatch fails.
-    function test_isFixedBytesParameterAllowedByConstraint_exactMatchAndMismatch() public view {
+    function test_LPPC_ATYPE_11_isFixedBytesParameterAllowedByConstraint_exactMatchAndMismatch() public view {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for exact bytes32 match passes and
         // mismatch fails.
         bytes32 expected = keccak256("fixed-bytes");

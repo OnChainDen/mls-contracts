@@ -12,7 +12,10 @@ import {ConstraintType, ParamType, ParameterConstraint} from "types/PolicyTypes.
  */
 contract LibPolicyParameterConstraintsIntConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that exact matches for positive and negative values pass.
-    function test_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue() public view {
+    function test_LPPC_ATYPE_10_isIntParameterAllowedByConstraint_exactPositiveAndNegativeMatch_returnsTrue()
+        public
+        view
+    {
         // Setup: configure a valid fixture for exact matches for positive and negative values pass.
         // Call: execute `isIntParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
         bool positiveAllowed = harness.isIntParameterAllowedByConstraintViaPolicyLibrary(

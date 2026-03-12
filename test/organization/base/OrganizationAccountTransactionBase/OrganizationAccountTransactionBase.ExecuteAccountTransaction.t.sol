@@ -20,6 +20,9 @@ import {
     MockNativeReceiver
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
 import {
+    OrganizationAccountTransactionBaseHarness
+} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseHarness.sol";
+import {
     OrganizationAccountTransactionBaseSuiteBase
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseSuiteBase.sol";
 import {OperationType} from "types/CommonTypes.sol";
@@ -89,6 +92,71 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
             policyId: DEFAULT_POLICY_ID,
             initiatorSignature: hex"01",
             reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+    }
+
+    /**
+     * @dev Verifies cross-organization accounts are rejected by both execute and reject entrypoints.
+     */
+    /// OATB-AXACT-1
+    function test_OATB_AXACT_1_crossOrganizationAccount_revertsAccountNotDeployedByOrganization() public {
+        // Setup: deploy an account bound to a different organization and mark it as deployed only there.
+        OrganizationAccountTransactionBaseHarness otherHarness = new OrganizationAccountTransactionBaseHarness();
+        MockAccountForOrganizationTransaction foreignAccount =
+            new MockAccountForOrganizationTransaction(address(otherHarness));
+        otherHarness.setDeployedAccount(address(foreignAccount), true);
+
+        bytes memory data = abi.encodeWithSelector(bytes4(0x01020304), uint256(201));
+        (, ValidationProofs memory proofs, bytes memory initiatorSignature, uint256 expiration) =
+            _buildAutoApprovePayload(address(foreignAccount), DESTINATION, 0, data, 201, DEFAULT_POLICY_ID);
+        bytes memory rejectionSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: address(foreignAccount),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 201,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: false
+        });
+
+        bytes memory expectedRevertData = abi.encodeWithSelector(
+            IOrganizationAccountFactory.AccountNotDeployedByOrganization.selector, address(foreignAccount)
+        );
+
+        // Verify: both base entrypoints fail closed against an account deployed by another organization.
+        vm.expectRevert(expectedRevertData);
+        vm.prank(GUARDIAN);
+        // Call: attempt execute against the foreign account.
+        harness.executeAccountTransaction({
+            account: address(foreignAccount),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 201,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        vm.expectRevert(expectedRevertData);
+        vm.prank(GUARDIAN);
+        // Call: attempt reject against the same foreign account tuple.
+        harness.rejectAccountTransaction({
+            account: address(foreignAccount),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 201,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: rejectionSignature,
             proofs: proofs
         });
     }
@@ -193,7 +261,8 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies nonce is consumed before entering the account external call (CEI ordering).
      */
-    function test_OATB_EAT_4_executeAccountTransaction_nonceConsumedBeforeAccountCall() public {
+    /// OATB-AXACT-2
+    function test_OATB_AXACT_2__OATB_EAT_4_executeAccountTransaction_nonceConsumedBeforeAccountCall() public {
         // Setup: deploy account fixture configured to assert nonce usage at entry.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setAssertNonceConsumedOnEntry(true);
@@ -307,7 +376,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` blocks same-tuple reentry after
      * nonce consumption.
      */
-    function test_NMATB_EAT_6__OAT_EAT_5_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
+    function test_OATB_AXACT_3__NMATB_EAT_6__OAT_EAT_5_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
         public
     {
         // Setup: make the account itself the guardian, then configure a nested replay call with the exact same tuple.
@@ -598,7 +667,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
      */
-    function test_OATB_EAT_10__OAT_EAT_6__NMATB_EAT_8__OAT_AI_2_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
+    function test_OATB_AXACT_4__OATB_EAT_10__OAT_EAT_6__NMATB_EAT_8__OAT_AI_2_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
         public
     {
         // Setup: deploy account configured to revert on execute.
@@ -1005,7 +1074,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies failed pre-validation does not permanently burn nonce; fixed retry can succeed.
      */
-    function test_OATB_EAT_17__OAT_EAT_6__LOAT_VTAOR_14__NMATB_EAT_7_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+    function test_OATB_AXACT_7__OATB_EAT_17__OAT_EAT_6__LOAT_VTAOR_14__NMATB_EAT_7_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
         public
     {
         // Setup: deploy account and build payload with first attempt signed by unauthorized initiator.
@@ -1083,9 +1152,61 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
+     * @dev Verifies execute-path validation reverts cannot leave partial rate-limit usage behind.
+     */
+    /// OATB-AXACT-8
+    function test_OATB_AXACT_8_executeAccountTransaction_validationRevert_rollsBackRateLimitUsage() public {
+        // Setup: deploy an account and configure a manual-approval policy with active time-interval rate limiting.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        bytes memory data = abi.encodeWithSelector(bytes4(0x1616A8A8), uint256(168));
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 25;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 168,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+
+        bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, address(account), DESTINATION, initiator1);
+        uint256 window = _computeTimeWindow(policy);
+
+        // Verify: the execute-path validation revert leaves the tracked usage bucket untouched.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
+        vm.prank(GUARDIAN);
+        // Call: attempt execution without the required reviewer signatures.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 168,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        assertEq(harness.getPolicyUsage(usageKey, window), 0, "validation revert must not persist rate-limit usage");
+    }
+
+    /**
      * @dev Verifies external-call failure rolls back prior rate-limit usage updates.
      */
-    function test_OATB_EAT_18__OAT_EAT_10_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage()
+    function test_OATB_AXACT_4_B__OATB_EAT_18__OAT_EAT_10_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage()
         public
     {
         // Setup: deploy account configured to revert after validation and use rate-limited policy.

@@ -405,7 +405,10 @@ contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuite
     }
 
     /// @dev Verifies `OrganizationTxRecoveryBase` tx-recovery transitions never mutate guardian-recovery state.
-    function invariant_TXR_INV_20_TXRC_INV_7_txRecoveryTransitionsNeverMutateGuardianRecoveryState() public {
+    /// SAG-INV-2
+    function invariant_TXR_INV_20_TXRC_INV_7__SAG_INV_2_txRecoveryTransitionsNeverMutateGuardianRecoveryState()
+        public
+    {
         // Setup: execute representative tx-recovery transitions.
         handler.initiateEnable();
         handler.finalizeEnable(true);

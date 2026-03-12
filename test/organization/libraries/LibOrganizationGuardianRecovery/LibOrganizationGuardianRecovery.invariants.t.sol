@@ -126,7 +126,11 @@ contract LibOrganizationGuardianRecoveryInvariants is LibOrganizationGuardianRec
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery` guardian-recovery operations never mutate tx-recovery state.
-    function invariant_OGR_INV_8_GREC_INV_8_txRecoveryIsolation_neverMutatedByGuardianRecoveryOps() public view {
+    /// SAG-INV-2
+    function invariant_OGR_INV_8_GREC_INV_8__SAG_INV_2_txRecoveryIsolation_neverMutatedByGuardianRecoveryOps()
+        public
+        view
+    {
         // Setup: reuse suite baseline where recovery is preconfigured.
 
         // Call: evaluate invariant predicate on current state.

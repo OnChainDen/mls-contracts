@@ -12,7 +12,7 @@ import {ConstraintType, ParamType, ParameterConstraint} from "types/PolicyTypes.
  */
 contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterConstraintsSuiteBase {
     /// @dev Verifies that canonical true word with exact true passes.
-    function test_isBoolParameterAllowedByConstraint_exactTrueCanonicalWord_returnsTrue() public view {
+    function test_LPPC_ATYPE_8_isBoolParameterAllowedByConstraint_exactTrueCanonicalWord_returnsTrue() public view {
         // Setup: configure a valid fixture for canonical true word with exact true passes.
         // Call: execute `isBoolParameterAllowedByConstraintViaPolicyLibrary` with the happy-path payload.
         bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(
@@ -36,7 +36,7 @@ contract LibPolicyParameterConstraintsBoolConstraintTest is LibPolicyParameterCo
     }
 
     /// @dev Verifies that exact mismatch returns false.
-    function test_isBoolParameterAllowedByConstraint_exactMismatch_returnsFalse() public view {
+    function test_LPPC_ATYPE_8_isBoolParameterAllowedByConstraint_exactMismatch_returnsFalse() public view {
         // Setup: build fixture inputs where exact mismatch returns false should be denied.
         // Call: execute `isBoolParameterAllowedByConstraintViaPolicyLibrary` and capture the authorization decision.
         bool allowed = harness.isBoolParameterAllowedByConstraintViaPolicyLibrary(

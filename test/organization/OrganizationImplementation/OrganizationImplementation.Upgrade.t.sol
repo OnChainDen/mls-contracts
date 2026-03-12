@@ -806,7 +806,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies failed upgrade paths never leave authorized-upgrade target stuck set.
     /// [OI-UTCWA-7, OI-UTCWA-9, OIMP-UCA-5]
-    function test_UPG_CTRL_9_B__OI_UTACWA_22__OI_UTCWA_7__OI_UTCWA_9__OIMP_UCA_5_failedUpgrade_neverLeavesAuthorizationFlagTrue()
+    /// OI-AUPG-2
+    function test_OI_AUPG_2__UPG_CTRL_9_B__OI_UTACWA_22__OI_UTCWA_7__OI_UTCWA_9__OIMP_UCA_5_failedUpgrade_neverLeavesAuthorizationFlagTrue()
         public
     {
         // Setup: use reverting migration payload to force rollback path.
@@ -834,7 +835,10 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies direct calls to inherited `upgradeToAndCall` always revert `UnauthorizedUpgrade`.
     /// [OI-UTCWA-10, OIMP-UCA-2]
-    function test_OI_UTACWA_23__OI_UTCWA_10__OIMP_UCA_2_directUpgradeToAndCall_revertsUnauthorizedUpgrade() public {
+    /// OI-AUPG-1
+    function test_OI_AUPG_1__OI_UTACWA_23__OI_UTCWA_10__OIMP_UCA_2_directUpgradeToAndCall_revertsUnauthorizedUpgrade()
+        public
+    {
         // Setup: ensure target is UUPS-compatible and whitelisted to isolate bypass check.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
@@ -860,7 +864,8 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies `upgradeToAndCallWithAuthorization` binds signatures to both `newImplementation` and migration
     /// `data`. [OI-UTCWA-12, OIMP-UCA-7]
-    function test_UPG_CTRL_7__OI_UTACWA_25__OI_UTCWA_12__NMOI_UTACWA_3__OIMP_UCA_7_adminAuthMustBindMigrationData()
+    /// OI-AUPG-5
+    function test_OI_AUPG_5__UPG_CTRL_7__OI_UTACWA_25__OI_UTCWA_12__NMOI_UTACWA_3__OIMP_UCA_7_adminAuthMustBindMigrationData()
         public
     {
         // Setup: build auth for target implementation and then mutate only migration calldata at execution time.
@@ -885,7 +890,10 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies migration calldata cannot trigger a nested second upgrade without fresh authorization.
     /// [OI-UTCWA-13, OIMP-UCA-8]
-    function test_OI_UTACWA_26__OI_UTCWA_13__OIMP_UCA_8_nestedSecondUpgradeFromMigration_reverts() public {
+    /// OI-AUPG-6
+    function test_OI_AUPG_6__OI_UTACWA_26__OI_UTCWA_13__OIMP_UCA_8_nestedSecondUpgradeFromMigration_reverts()
+        public
+    {
         // Setup: whitelist first target only, then craft migration payload to attempt nested upgrade to un-whitelisted
         // V3.
         _setSingleAdminThresholdOne();
@@ -994,7 +1002,10 @@ contract OrganizationImplementationUpgradeTest is OrganizationImplementationSuit
 
     /// @dev Verifies whitelist validation runs before the authorization target is exposed in upgrade storage.
     /// [OI-UTCWA-6, OI-UTCWA-7]
-    function test_OI_UTACWA_31__OI_UTCWA_6__OI_UTCWA_7_whitelistValidation_runsBeforeAuthorizationFlagIsSet() public {
+    /// OI-AUPG-3
+    function test_OI_AUPG_3__OI_UTACWA_31__OI_UTCWA_6__OI_UTCWA_7_whitelistValidation_runsBeforeAuthorizationFlagIsSet()
+        public
+    {
         // Setup: route validation through a mock that inspects upgrade storage during the whitelist call.
         _setSingleAdminThresholdOne();
         ValidationOrderWhitelistMock validatingWhitelist = new ValidationOrderWhitelistMock(organizationProxy);

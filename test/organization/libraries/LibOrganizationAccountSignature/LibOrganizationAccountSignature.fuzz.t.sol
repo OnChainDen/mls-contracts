@@ -199,6 +199,34 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "valid policy proof fixture should return magic");
     }
 
+    /**
+     * @dev Verifies malformed `0x01` policy payloads fail closed without reverting.
+     * @param malformedPayload Arbitrary malformed ABI body placed after the policy-type prefix.
+     */
+    /// SAG-FUZ-2
+    function testFuzz_SAG_FUZ_2_isValidSignature_randomMalformedPolicyPayloads_returnInvalidNoRevert(bytes calldata malformedPayload)
+        public
+    {
+        vm.assume(malformedPayload.length > 0);
+        vm.assume(malformedPayload.length < 32);
+
+        // Setup: prefix arbitrary short bytes with `0x01` so routing enters policy-signature decoding.
+        bytes memory signature = abi.encodePacked(uint8(0x01), malformedPayload);
+
+        // Call: execute the top-level validator through a low-level `staticcall` to observe revert-vs-invalid
+        // behavior.
+        (bool success, bytes memory returnData) = address(harness)
+            .staticcall(abi.encodeCall(harness.isValidSignatureViaLibrary, (ACCOUNT, MESSAGE_HASH, signature)));
+
+        // Verify: malformed policy payloads should fail closed to the ERC-1271 invalid value.
+        assertTrue(success, "malformed policy payload should not revert");
+        assertEq(
+            abi.decode(returnData, (bytes4)),
+            SignatureUtils.ERC1271_INVALID_VALUE,
+            "malformed policy payload should return invalid"
+        );
+    }
+
     /// @dev Verifies that random guardian EOA keys are accepted when signer matches configured guardian.
     function testFuzz_AS_FUZ_5__FLOAS_GUARD_100_isValidGuardianSignature_randomGuardianEOAKeyMatchingSigner_returnsTrue(uint256 guardianPkRaw)
         public

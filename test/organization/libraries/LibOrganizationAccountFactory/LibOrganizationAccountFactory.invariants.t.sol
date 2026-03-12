@@ -55,7 +55,8 @@ contract LibOrganizationAccountFactoryInvariants is LibOrganizationAccountFactor
     }
 
     /// @dev Verifies invariant: deployed account beacon binding (organization address) never changes.
-    function invariant_AI_INV_2_AF_IT_2_deployedAccount_beaconBindingRemainsOrganization() public view {
+    /// SAG-INV-5
+    function invariant_AI_INV_2_AF_IT_2__SAG_INV_5_deployedAccount_beaconBindingRemainsOrganization() public view {
         // Setup: read tracked successful deployment count from invariant handler.
         uint256 length = handler.trackedDeployedAccountsLength();
         // Call: iterate tracked deployed accounts and read organization binding through proxy.
