@@ -488,11 +488,12 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         MockAccountForOrganizationTransaction account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
 
-        bytes memory trackedOperationData = abi.encode(address(0xAA01), uint256(77));
+        bytes memory trackedOperationData =
+            abi.encode(address(account), DESTINATION, uint256(0), keccak256(bytes("txrc-inv-8")), uint256(0));
         uint256 untouchedNonce =
-            harness.computeNonce(OperationType.InitiateInitializeTransactionRecovery, trackedOperationData, 8081);
+            harness.computeNonce(OperationType.AccountTransaction, trackedOperationData, 8081);
         uint256 controlUsedNonce =
-            harness.computeNonce(OperationType.CancelInitializeTransactionRecovery, trackedOperationData, 8082);
+            harness.computeNonce(OperationType.AccountTransaction, trackedOperationData, 8082);
         harness.setUsedNonce(controlUsedNonce, true);
 
         // Call: execute a successful recovery transaction through the tx-recovery path.
