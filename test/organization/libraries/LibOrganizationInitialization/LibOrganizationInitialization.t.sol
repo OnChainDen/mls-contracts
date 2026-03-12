@@ -532,6 +532,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
         InitializationParams memory params = _defaultInitializationParams();
         params.adminOperationTimelockDurationSeconds = TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS - 1;
+        uint256 timelockBeforeCall = harness.getAdminOperationTimelockStorage();
 
         // Call: attempt initialization and expect the exact invalid-timelock revert from the timelock validator.
         vm.recordLogs();
@@ -553,8 +554,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         assertEq(harness.getGuardianStorage(), address(0), "invalid admin-operation timelock should roll back guardian");
         assertEq(
             harness.getAdminOperationTimelockStorage(),
-            0,
-            "invalid admin-operation timelock should not persist the timelock value"
+            timelockBeforeCall,
+            "invalid admin-operation timelock should roll back to the pre-call timelock value"
         );
         assertEq(
             _countTopic(vm.getRecordedLogs(), ORG_INITIALIZED_TOPIC),
@@ -604,6 +605,7 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         LibOrganizationInitializationHarness harness = _newLibraryHarness();
         InitializationParams memory params = _defaultInitializationParams();
         params.guardianRecoveryTimelockDurationSeconds = 2 days - 1;
+        uint256 timelockBeforeCall = harness.getAdminOperationTimelockStorage();
 
         // Call: Attempt initialization that succeeds through all steps up to recovery but reverts at guardian recovery
         // timelock validation.
@@ -626,8 +628,8 @@ contract LibOrganizationInitializationTest is InitializationSuiteBase {
         assertEq(harness.getGuardianStorage(), address(0), "guardian write should roll back on recovery revert");
         assertEq(
             harness.getAdminOperationTimelockStorage(),
-            0,
-            "admin-operation timelock write should roll back on recovery revert"
+            timelockBeforeCall,
+            "admin-operation timelock write should roll back to the pre-call value on recovery revert"
         );
         assertEq(
             _countTopic(vm.getRecordedLogs(), ORG_INITIALIZED_TOPIC),
