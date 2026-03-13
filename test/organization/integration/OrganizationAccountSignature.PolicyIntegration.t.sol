@@ -4,6 +4,8 @@ pragma solidity 0.8.33;
 
 import {MerkleUtils} from "libraries/MerkleUtils.sol";
 import {SignatureUtils} from "libraries/SignatureUtils.sol";
+import {OrganizationGroupsBase} from "organization/base/OrganizationGroupsBase.sol";
+import {OrganizationMembersBase} from "organization/base/OrganizationMembersBase.sol";
 
 import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {MockGuardianSafe, MockGuardianSafeShortReturn} from "test/helpers/MockGuardianSafe.sol";
@@ -13,7 +15,20 @@ import {
 import {
     LibOrganizationAccountSignatureSuiteBase
 } from "test/organization/libraries/LibOrganizationAccountSignature/LibOrganizationAccountSignatureSuiteBase.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 import {ApproverType, Policy, PolicyType, TransactionType, ValidationProofs} from "types/PolicyTypes.sol";
+
+/**
+ * @dev Test-local composite harness that combines ERC-1271 validation wrappers with the real group/member mutation
+ *      entrypoints used to create stale membership state.
+ */
+contract OrganizationAccountSignaturePolicyIntegrationHarness is
+    LibOrganizationAccountSignatureHarness,
+    OrganizationMembersBase,
+    OrganizationGroupsBase
+{}
 
 /**
  * @dev Policy-coupled ERC-1271 integration tests for `LibOrganizationAccountSignature`.
@@ -24,6 +39,15 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
 
     address internal constant ACCOUNT = address(0xAA7701);
     bytes32 internal constant MESSAGE_HASH = keccak256("policy-signature-message");
+
+    /**
+     * @dev Deploys the composite harness so this suite can use real mutation entrypoints and ERC-1271 wrappers
+     *      against the same storage.
+     */
+    function _deployHarness() internal override returns (OrganizationAdminStateHarness) {
+        harness = new OrganizationAccountSignaturePolicyIntegrationHarness();
+        return OrganizationAdminStateHarness(address(harness));
+    }
 
     function setUp() public override {
         super.setUp();
@@ -461,9 +485,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that non signature transaction type policy returns invalid value.
-    function test_OAS_VSFA_6__OAS_IESABP_2__POL_INV_5_nonSignatureTransactionTypePolicy_returnsInvalidValue()
-        public
-    {
+    function test_OAS_VSFA_6__OAS_IESABP_2__POL_INV_5_nonSignatureTransactionTypePolicy_returnsInvalidValue() public {
         // Setup: configure a valid fixture for non signature transaction type policy returns invalid value.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1002,6 +1024,213 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
 
         // Verify: all-ERC-1271 reviewer bundles that meet threshold must still return the ERC-1271 magic value.
         assertEq(actual, SignatureUtils.ERC1271_MAGIC_VALUE, "all-contract reviewer bundles should satisfy approval");
+    }
+
+    /// @dev Verifies `isValidSignature` group initiator authorization uses current organization membership instead of
+    /// stale group bits. [OAS-VPBS-13]
+    function test_OAS_VPBS_13_isValidSignature_groupInitiatorRequiresCurrentOrgMembership() public {
+        // Setup: configure a real admin-auth mutation path, create a two-member initiator group, remove one
+        // initiator from the organization while preserving its stale group bit, and prepare fresh policy signatures
+        // for both the active and removed initiators.
+        policyStateHarness.setGuardian(guardianSigner);
+        _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
+
+        uint256 initiatorGroupId = 9153;
+        _createGroupViaGuardian(initiatorGroupId, buildArray(initiator1, initiator2), 9301);
+        _removeMemberViaGuardian(initiator2, 9302);
+
+        assertTrue(
+            _policyIntegrationHarness().getGroupMemberStatus(initiatorGroupId, initiator2),
+            "removed initiator should keep stale group bit"
+        );
+        assertFalse(
+            _policyIntegrationHarness().isMember(initiator2), "removed initiator should no longer be an org member"
+        );
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.AutoApprove);
+        policy.config.initiator.initiatorType = ApproverType.Group;
+        policy.config.initiator.initiatorGroupId = initiatorGroupId;
+
+        ValidationProofs memory activeProofs = _setSinglePolicyRootAndBuildProofs(178, policy);
+        uint256 activeExpiration = block.timestamp + 1 days;
+        bytes memory activeInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 178,
+            expirationTimestamp: activeExpiration
+        });
+        bytes memory activeGuardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 178,
+            expirationTimestamp: activeExpiration,
+            initiatorSignature: activeInitiatorSignature
+        });
+        bytes memory activeSignature = _buildPolicySignature({
+            policyId: 178,
+            expirationTimestamp: activeExpiration,
+            initiatorSignature: activeInitiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: activeGuardianSignature,
+            proofs: activeProofs
+        });
+
+        // Call: validate the still-active initiator through the current policy root before rotating the root for the
+        // removed-member branch.
+        bytes4 activeResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, activeSignature);
+
+        ValidationProofs memory removedProofs = _setSinglePolicyRootAndBuildProofs(179, policy);
+        uint256 removedExpiration = block.timestamp + 1 days;
+        bytes memory removedInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_2,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 179,
+            expirationTimestamp: removedExpiration
+        });
+        bytes memory removedGuardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 179,
+            expirationTimestamp: removedExpiration,
+            initiatorSignature: removedInitiatorSignature
+        });
+        bytes memory removedSignature = _buildPolicySignature({
+            policyId: 179,
+            expirationTimestamp: removedExpiration,
+            initiatorSignature: removedInitiatorSignature,
+            reviewSignatures: bytes(""),
+            guardianSignature: removedGuardianSignature,
+            proofs: removedProofs
+        });
+
+        // Call: validate one fresh full signature from the removed initiator through the rotated policy root.
+        bytes4 removedResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, removedSignature);
+
+        // Verify: current org membership determines authorization even when the removed initiator still appears in the
+        // group mapping.
+        assertEq(activeResult, SignatureUtils.ERC1271_MAGIC_VALUE, "active group initiator should remain authorized");
+        assertEq(removedResult, SignatureUtils.ERC1271_INVALID_VALUE, "removed group initiator should become invalid");
+    }
+
+    /// @dev Verifies `isValidSignature` group reviewer authorization uses current organization membership instead of
+    /// stale group bits. [OAS-VPBS-14]
+    function test_OAS_VPBS_14_isValidSignature_groupApproverRequiresCurrentOrgMembership() public {
+        // Setup: configure a real admin-auth mutation path, create a threshold-one reviewer group, remove one
+        // reviewer from the organization while preserving its stale group bit, and prepare fresh policy signatures for
+        // both the active and removed reviewer branches.
+        policyStateHarness.setGuardian(guardianSigner);
+        _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
+
+        uint256 reviewerGroupId = 9154;
+        _createGroupViaGuardian(reviewerGroupId, buildArray(reviewer1, reviewer2), 9303);
+        _removeMemberViaGuardian(reviewer2, 9304);
+
+        assertTrue(
+            _policyIntegrationHarness().getGroupMemberStatus(reviewerGroupId, reviewer2),
+            "removed reviewer should keep stale group bit"
+        );
+        assertFalse(
+            _policyIntegrationHarness().isMember(reviewer2), "removed reviewer should no longer be an org member"
+        );
+
+        Policy memory policy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = reviewerGroupId;
+        policy.config.approval.approvalThreshold = 1;
+
+        ValidationProofs memory activeProofs = _setSinglePolicyRootAndBuildProofs(180, policy);
+        uint256 activeExpiration = block.timestamp + 1 days;
+        bytes memory activeInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 180,
+            expirationTimestamp: activeExpiration
+        });
+        bytes memory activeReviewSignature = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: REVIEWER_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 180,
+            expirationTimestamp: activeExpiration,
+            initiatorSignature: activeInitiatorSignature
+        });
+        bytes memory activeGuardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 180,
+            expirationTimestamp: activeExpiration,
+            initiatorSignature: activeInitiatorSignature
+        });
+        bytes memory activeSignature = _buildPolicySignature({
+            policyId: 180,
+            expirationTimestamp: activeExpiration,
+            initiatorSignature: activeInitiatorSignature,
+            reviewSignatures: activeReviewSignature,
+            guardianSignature: activeGuardianSignature,
+            proofs: activeProofs
+        });
+
+        // Call: validate the still-active reviewer bundle through the current policy root before rotating the root for
+        // the removed-reviewer branch.
+        bytes4 activeResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, activeSignature);
+
+        ValidationProofs memory removedProofs = _setSinglePolicyRootAndBuildProofs(181, policy);
+        uint256 removedExpiration = block.timestamp + 1 days;
+        bytes memory removedInitiatorSignature = _signInitiatorSignature({
+            sigHarness: harness,
+            privateKey: INITIATOR_PK_1,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 181,
+            expirationTimestamp: removedExpiration
+        });
+        bytes memory removedReviewSignature = _signReviewSignature({
+            sigHarness: harness,
+            privateKey: REVIEWER_PK_2,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 181,
+            expirationTimestamp: removedExpiration,
+            initiatorSignature: removedInitiatorSignature
+        });
+        bytes memory removedGuardianSignature = _signGuardianReviewHash({
+            sigHarness: harness,
+            privateKey: GUARDIAN_PK,
+            account: ACCOUNT,
+            hash: MESSAGE_HASH,
+            policyId: 181,
+            expirationTimestamp: removedExpiration,
+            initiatorSignature: removedInitiatorSignature
+        });
+        bytes memory removedSignature = _buildPolicySignature({
+            policyId: 181,
+            expirationTimestamp: removedExpiration,
+            initiatorSignature: removedInitiatorSignature,
+            reviewSignatures: removedReviewSignature,
+            guardianSignature: removedGuardianSignature,
+            proofs: removedProofs
+        });
+
+        // Call: validate one fresh bundle from the removed reviewer through the rotated policy root.
+        bytes4 removedResult = harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, removedSignature);
+
+        // Verify: current org membership determines reviewer authorization even when the removed reviewer still
+        // appears in the group mapping.
+        assertEq(activeResult, SignatureUtils.ERC1271_MAGIC_VALUE, "active group reviewer should remain authorized");
+        assertEq(removedResult, SignatureUtils.ERC1271_INVALID_VALUE, "removed group reviewer should become invalid");
     }
 
     /// @dev Verifies that reviewer approvals bound to initiator signature bytes.
@@ -1789,6 +2018,60 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
         uint256 proofsOffset = _readWord(signature, 1 + 5 * 32);
         // Within `ValidationProofs`, `Policy.config.approval.policyType` is slot 4.
         _setWord(signature, 1 + proofsOffset + 4 * 32, rawValue);
+    }
+
+    /// @dev Returns the local composite harness with real member/group mutation entrypoints.
+    function _policyIntegrationHarness() internal view returns (OrganizationAccountSignaturePolicyIntegrationHarness) {
+        return OrganizationAccountSignaturePolicyIntegrationHarness(address(harness));
+    }
+
+    /// @dev Creates one organization group through the real guardian + admin-auth path.
+    function _createGroupViaGuardian(uint256 groupId, address[] memory members, uint256 salt) internal {
+        (AdminAuthParams memory auth,) = _buildModifyGroupsAuth({
+            modifications: _buildModificationsArray(_createModification(groupId, members)),
+            salt: salt,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(guardianSigner);
+        _policyIntegrationHarness().modifyGroups(_buildModificationsArray(_createModification(groupId, members)), auth);
+    }
+
+    /// @dev Removes one organization member through the real guardian + admin-auth path.
+    function _removeMemberViaGuardian(address member, uint256 salt) internal {
+        (AdminAuthParams memory auth,) = _buildModifyMembersAuth(
+            buildEmptyAddressArray(),
+            buildArray(member),
+            salt,
+            block.timestamp + 1 days,
+            true,
+            buildUint256Array(ADMIN_PK_1)
+        );
+
+        vm.prank(guardianSigner);
+        _policyIntegrationHarness().modifyMembers(buildEmptyAddressArray(), buildArray(member), auth);
+    }
+
+    /// @dev Builds auth for `modifyMembers` using the base-contract operation-data encoding.
+    function _buildModifyMembersAuth(
+        address[] memory membersToAdd,
+        address[] memory membersToRemove,
+        uint256 salt,
+        uint256 expiration,
+        bool isApproval,
+        uint256[] memory privateKeys
+    ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
+        operationData = _encodeOperationDataForModifyMembers(membersToAdd, membersToRemove);
+        auth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyMembers,
+            operationData: operationData,
+            isApproval: isApproval,
+            salt: salt,
+            expirationTimestamp: expiration,
+            privateKeys: privateKeys
+        });
     }
 
     function _seedMembers(address target) internal {

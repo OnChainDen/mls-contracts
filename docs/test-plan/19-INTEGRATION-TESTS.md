@@ -212,6 +212,8 @@ Note: Destination, token, function, parameter-constraint, and rate-limit checks 
 | OPB-AIA-1 | [DESIRED] `executeAccountTransaction`: ManualApproval policy with group approver whose `approvalThreshold=0` is rejected (zero threshold must not allow zero-signature approval) | [DESIRED][S] | P0 |
 | OPB-AIA-2 | [DESIRED] `executeAccountTransaction`: `anyInitiator=true` policy — non-member initiator reverts (org membership is always required even when `anyInitiator` is set) | [DESIRED][S] | P0 |
 | OPB-AIA-3 | [DESIRED] `isValidSignature`: `anyInitiator=true` policy — non-member initiator returns invalid | [DESIRED][S] | P0 |
+| OPB-AIA-4 | `executeAccountTransaction`: group initiator authorization uses current org membership, not stale group bits left behind after `modifyMembers` removal | [I][S] | P0 |
+| OPB-AIA-5 | `executeAccountTransaction`: group reviewer authorization uses current org membership, not stale group bits left behind after `modifyMembers` removal | [I][S] | P0 |
 
 #### Policy/group mutation invalidates pre-collected signatures
 
@@ -361,6 +363,8 @@ Critical: Test these through high-level external functions on our Base contracts
 | OAS-VPBS-10 | AutoApprove succeeds with ERC-1271 contract initiator + EOA guardian (mixed signer types across roles) | [I] | P1 |
 | OAS-VPBS-11 | ManualApproval succeeds with EOA initiator + Safe-module guardian + mix of EOA and ERC-1271 contract reviewers | [I] | P0 |
 | OAS-VPBS-12 | ManualApproval succeeds when all reviewers are ERC-1271 contract signers (no EOA reviewers) | [I] | P1 |
+| OAS-VPBS-13 | AutoApprove policy with group initiator uses current org membership, not stale group bits left behind after `modifyMembers` removal | [I][S] | P0 |
+| OAS-VPBS-14 | ManualApproval policy with group reviewer uses current org membership, not stale group bits left behind after `modifyMembers` removal | [I][S] | P0 |
 
 #### 9.2.3 `_isValidGuardianSignature`
 

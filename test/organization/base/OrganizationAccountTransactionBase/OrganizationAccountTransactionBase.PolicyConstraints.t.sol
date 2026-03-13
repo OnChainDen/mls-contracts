@@ -3,6 +3,11 @@
 pragma solidity 0.8.33;
 
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
+import {OrganizationGroupsBase} from "organization/base/OrganizationGroupsBase.sol";
+import {OrganizationMembersBase} from "organization/base/OrganizationMembersBase.sol";
+import {
+    OrganizationAccountTransactionBaseHarness
+} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseHarness.sol";
 import {
     MockAccountForOrganizationTransaction,
     MockERC20ForAccountTransaction,
@@ -10,8 +15,11 @@ import {
     MockNativeReceiver
 } from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseMocks.sol";
 import {
-    OrganizationAccountTransactionBaseSuiteBase
-} from "test/organization/base/OrganizationAccountTransactionBase/OrganizationAccountTransactionBaseSuiteBase.sol";
+    OrganizationAccountTransactionTestBase
+} from "test/organization/shared/OrganizationAccountTransactionTestBase.sol";
+import {OrganizationAdminStateHarness} from "test/organization/shared/OrganizationAdminStateHarness.sol";
+import {AdminAuthParams} from "types/AdminTypes.sol";
+import {OperationType} from "types/CommonTypes.sol";
 import {
     ApproverType,
     ConstraintType,
@@ -27,10 +35,32 @@ import {
 } from "types/PolicyTypes.sol";
 
 /**
+ * @dev Test-local composite harness that combines account-transaction validation wrappers with the real group/member
+ *      mutation entrypoints used to create stale membership state.
+ */
+contract OrganizationAccountTransactionPolicyConstraintsHarness is
+    OrganizationAccountTransactionBaseHarness,
+    OrganizationMembersBase,
+    OrganizationGroupsBase
+{}
+
+/**
  * @dev Direct execute/reject-path policy constraint tests for `OrganizationAccountTransactionBase`.
  */
-contract OrganizationAccountTransactionBasePolicyConstraintsTest is OrganizationAccountTransactionBaseSuiteBase {
+contract OrganizationAccountTransactionBasePolicyConstraintsTest is OrganizationAccountTransactionTestBase {
     uint256 internal constant NON_MEMBER_PK = 0xD15EA5E;
+
+    /// @dev Concrete harness used by this suite.
+    OrganizationAccountTransactionBaseHarness internal harness;
+
+    /**
+     * @dev Deploys the composite harness so this suite can use real mutation entrypoints and account-transaction
+     *      execution against the same storage.
+     */
+    function _deployHarness() internal override returns (OrganizationAdminStateHarness) {
+        harness = new OrganizationAccountTransactionPolicyConstraintsHarness();
+        return OrganizationAdminStateHarness(address(harness));
+    }
 
     /**
      * @dev Verifies `executeAccountTransaction` rejects disallowed source accounts and allows any-source policies
@@ -364,9 +394,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies `DestinationType.Any` allows a native transfer to any destination without requiring a destination
      * proof. [OPB-DV-4]
      */
-    function test_OPB_DV_4_executeAccountTransaction_destinationTypeAny_allowsUnlistedDestinationWithoutProof()
-        public
-    {
+    function test_OPB_DV_4_executeAccountTransaction_destinationTypeAny_allowsUnlistedDestinationWithoutProof() public {
         // Setup: fund one deployed account and build a native-transfer policy that leaves destination checks fully
         // open.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
@@ -379,9 +407,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = address(0);
 
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_023, policy);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9023, policy);
         (bytes memory signature, uint256 expirationTimestamp) =
-            _signExecution(INITIATOR_PK_1, address(account), address(receiver), transferValue, bytes(""), 23, 9_023);
+            _signExecution(INITIATOR_PK_1, address(account), address(receiver), transferValue, bytes(""), 23, 9023);
 
         // Call: execute the ETH transfer without supplying any destination proof.
         _executeAsGuardian(
@@ -391,7 +419,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             23,
             expirationTimestamp,
-            9_023,
+            9023,
             signature,
             bytes(""),
             proofs
@@ -419,9 +447,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         policy.config.token.hasAmountThreshold = false;
         policy.config.token.amountThreshold = 1;
 
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_024, policy);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9024, policy);
         (bytes memory signature, uint256 expirationTimestamp) =
-            _signExecution(INITIATOR_PK_1, address(account), address(receiver), transferValue, bytes(""), 24, 9_024);
+            _signExecution(INITIATOR_PK_1, address(account), address(receiver), transferValue, bytes(""), 24, 9024);
 
         // Call: execute a large native transfer that would exceed the stored threshold if threshold checks were
         // enabled.
@@ -432,7 +460,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             24,
             expirationTimestamp,
-            9_024,
+            9024,
             signature,
             bytes(""),
             proofs
@@ -679,22 +707,13 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         policy.config.destinationType = DestinationType.Any;
         policy.config.anyFunction = true;
 
-        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_051, policy);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9051, policy);
         (bytes memory signature, uint256 expirationTimestamp) =
-            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 54, 9_051);
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 54, 9051);
 
         // Call: execute an arbitrary selector with arbitrary calldata and no function proof.
         _executeAsGuardian(
-            address(account),
-            address(target),
-            0,
-            data,
-            54,
-            expirationTimestamp,
-            9_051,
-            signature,
-            bytes(""),
-            proofs
+            address(account), address(target), 0, data, 54, expirationTimestamp, 9051, signature, bytes(""), proofs
         );
 
         // Verify: the interaction succeeds and the unconstrained payload reaches the target unchanged.
@@ -1173,6 +1192,264 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
     }
 
     /**
+     * @dev Verifies `executeAccountTransaction` group initiator authorization uses current organization membership
+     *      instead of stale group bits. [OPB-AIA-4]
+     */
+    function test_OPB_AIA_4_executeAccountTransaction_groupInitiatorRequiresCurrentOrgMembership() public {
+        // Setup: deploy one account plus one interaction target, configure a single admin signer for real
+        // `modifyGroups/modifyMembers` calls, create a two-member initiator group, and then remove one initiator from
+        // the organization without touching the existing group membership bit.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        bytes memory activeData = abi.encodeWithSelector(target.ping.selector, uint256(41));
+        bytes memory removedData = abi.encodeWithSelector(target.ping.selector, uint256(42));
+        uint256 initiatorGroupId = 882;
+
+        _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
+        _createGroupViaGuardian(initiatorGroupId, buildArray(initiator1, initiator2), 9201);
+        _removeMemberViaGuardian(initiator2, 9202);
+
+        assertTrue(
+            _policyConstraintsHarness().getGroupMemberStatus(initiatorGroupId, initiator2),
+            "removed initiator should keep stale group bit"
+        );
+        assertFalse(
+            _policyConstraintsHarness().isMember(initiator2), "removed initiator should no longer be an org member"
+        );
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.initiator.initiatorType = ApproverType.Group;
+        policy.config.initiator.initiatorGroupId = initiatorGroupId;
+
+        ValidationProofs memory activeProofs = _setSinglePolicyRootAndBuildProofs(9092, policy);
+        (bytes memory activeSig, uint256 activeExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, activeData, 92, 9092);
+
+        // Call: execute once with the still-active initiator through the real group-initiator policy path.
+        _executeAsGuardian(
+            address(account),
+            address(target),
+            0,
+            activeData,
+            92,
+            activeExpiration,
+            9092,
+            activeSig,
+            bytes(""),
+            activeProofs
+        );
+
+        ValidationProofs memory removedProofs = _setSinglePolicyRootAndBuildProofs(9093, policy);
+        (bytes memory removedSig, uint256 removedExpiration) =
+            _signExecution(INITIATOR_PK_2, address(account), address(target), 0, removedData, 93, 9093);
+
+        // Call: retry with the removed initiator on a fresh signed payload, expecting current org membership to win
+        // over the stale group bit.
+        _expectPolicyDoesNotApply(9093);
+        _executeAsGuardian(
+            address(account),
+            address(target),
+            0,
+            removedData,
+            93,
+            removedExpiration,
+            9093,
+            removedSig,
+            bytes(""),
+            removedProofs
+        );
+
+        // Verify: only the still-active initiator execution reaches the downstream target.
+        assertEq(target.calls(), 1, "only the active initiator should execute");
+        assertEq(target.total(), 41, "failing stale-initiator branch must not mutate the target");
+    }
+
+    /**
+     * @dev Verifies `executeAccountTransaction` group reviewer authorization uses current organization membership
+     *      instead of stale group bits. [OPB-AIA-5]
+     */
+    function test_OPB_AIA_5_executeAccountTransaction_groupApproverRequiresCurrentOrgMembership() public {
+        // Setup: deploy one account plus one interaction target, configure a single admin signer for real
+        // `modifyGroups/modifyMembers` calls, create a two-reviewer group with threshold one, and then remove one
+        // reviewer from the organization while leaving the existing group bit in place.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        bytes memory activeData = abi.encodeWithSelector(target.ping.selector, uint256(51));
+        bytes memory removedData = abi.encodeWithSelector(target.ping.selector, uint256(52));
+        uint256 reviewerGroupId = 883;
+
+        _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
+        _createGroupViaGuardian(reviewerGroupId, buildArray(reviewer1, reviewer2), 9203);
+        _removeMemberViaGuardian(reviewer2, 9204);
+
+        assertTrue(
+            _policyConstraintsHarness().getGroupMemberStatus(reviewerGroupId, reviewer2),
+            "removed reviewer should keep stale group bit"
+        );
+        assertFalse(
+            _policyConstraintsHarness().isMember(reviewer2), "removed reviewer should no longer be an org member"
+        );
+
+        Policy memory policy =
+            _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = reviewerGroupId;
+        policy.config.approval.approvalThreshold = 1;
+
+        ValidationProofs memory activeProofs = _setSinglePolicyRootAndBuildProofs(9094, policy);
+        (bytes memory activeInitiatorSig, uint256 activeExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, activeData, 94, 9094);
+        bytes memory activeReviewSig = _signReview(
+            INITIATOR_PK_1, REVIEWER_PK_1, address(account), address(target), 0, activeData, 94, activeExpiration, 9094
+        );
+
+        // Call: execute once with the still-active reviewer signature satisfying the threshold-one group policy.
+        _executeAsGuardian(
+            address(account),
+            address(target),
+            0,
+            activeData,
+            94,
+            activeExpiration,
+            9094,
+            activeInitiatorSig,
+            activeReviewSig,
+            activeProofs
+        );
+
+        ValidationProofs memory removedProofs = _setSinglePolicyRootAndBuildProofs(9095, policy);
+        (bytes memory removedInitiatorSig, uint256 removedExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, removedData, 95, 9095);
+        bytes memory removedReviewSig = _signReview(
+            INITIATOR_PK_1,
+            REVIEWER_PK_2,
+            address(account),
+            address(target),
+            0,
+            removedData,
+            95,
+            removedExpiration,
+            9095
+        );
+
+        // Call: retry with the removed reviewer on a fresh signed payload, expecting zero valid approvals after
+        // membership revalidation.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
+        _executeAsGuardian(
+            address(account),
+            address(target),
+            0,
+            removedData,
+            95,
+            removedExpiration,
+            9095,
+            removedInitiatorSig,
+            removedReviewSig,
+            removedProofs
+        );
+
+        // Verify: the successful active-reviewer execution is the only call that reaches the target.
+        assertEq(target.calls(), 1, "only the active reviewer branch should execute");
+        assertEq(target.total(), 51, "failing stale-reviewer branch must not mutate the target");
+    }
+
+    /**
+     * @dev Verifies `rejectAccountTransaction` group reviewer authorization uses current organization membership
+     *      instead of stale group bits.
+     */
+    function test_rejectAccountTransaction_groupReviewerRequiresCurrentOrgMembership() public {
+        // Setup: deploy one account plus one interaction target, configure a single admin signer for real
+        // `modifyGroups/modifyMembers` calls, create a two-reviewer group with threshold one, and then remove one
+        // reviewer from the organization while leaving the existing group bit in place.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        bytes memory activeData = abi.encodeWithSelector(target.ping.selector, uint256(61));
+        bytes memory removedData = abi.encodeWithSelector(target.ping.selector, uint256(62));
+        uint256 reviewerGroupId = 884;
+
+        _setMembersAndAdmins(buildArray(admin1), buildArray(admin1), 1);
+        _createGroupViaGuardian(reviewerGroupId, buildArray(reviewer1, reviewer2), 9205);
+        _removeMemberViaGuardian(reviewer2, 9206);
+
+        assertTrue(
+            _policyConstraintsHarness().getGroupMemberStatus(reviewerGroupId, reviewer2),
+            "removed reviewer should keep stale group bit"
+        );
+        assertFalse(
+            _policyConstraintsHarness().isMember(reviewer2), "removed reviewer should no longer be an org member"
+        );
+
+        Policy memory policy =
+            _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
+        policy.config.approval.approverType = ApproverType.Group;
+        policy.config.approval.approverGroupId = reviewerGroupId;
+        policy.config.approval.approvalThreshold = 1;
+
+        ValidationProofs memory activeProofs = _setSinglePolicyRootAndBuildProofs(9096, policy);
+        (bytes memory activeInitiatorSig, uint256 activeExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, activeData, 96, 9096);
+        bytes memory activeRejectionReviewSig = _signRejectionReview(
+            INITIATOR_PK_1, REVIEWER_PK_1, address(account), address(target), 0, activeData, 96, activeExpiration, 9096
+        );
+        uint256 activeNonce =
+            _computeAccountTransactionNonce(address(account), address(target), 0, activeData, 9096, 96);
+
+        // Call: reject once with the still-active reviewer signature satisfying the threshold-one group policy.
+        vm.prank(GUARDIAN);
+        harness.rejectAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: activeData,
+            salt: 96,
+            expirationTimestamp: activeExpiration,
+            policyId: 9096,
+            initiatorSignature: activeInitiatorSig,
+            reviewSignatures: activeRejectionReviewSig,
+            proofs: activeProofs
+        });
+
+        ValidationProofs memory removedProofs = _setSinglePolicyRootAndBuildProofs(9097, policy);
+        (bytes memory removedInitiatorSig, uint256 removedExpiration) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, removedData, 97, 9097);
+        bytes memory removedRejectionReviewSig = _signRejectionReview(
+            INITIATOR_PK_1,
+            REVIEWER_PK_2,
+            address(account),
+            address(target),
+            0,
+            removedData,
+            97,
+            removedExpiration,
+            9097
+        );
+        uint256 removedNonce =
+            _computeAccountTransactionNonce(address(account), address(target), 0, removedData, 9097, 97);
+
+        // Call: retry with the removed reviewer on a fresh rejection payload, expecting zero valid approvals after
+        // membership revalidation.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
+        vm.prank(GUARDIAN);
+        harness.rejectAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: removedData,
+            salt: 97,
+            expirationTimestamp: removedExpiration,
+            policyId: 9097,
+            initiatorSignature: removedInitiatorSig,
+            reviewSignatures: removedRejectionReviewSig,
+            proofs: removedProofs
+        });
+
+        // Verify: only the active-reviewer rejection consumes its nonce; the stale-reviewer branch rolls back.
+        assertTrue(harness.getUsedNonce(activeNonce), "active reviewer rejection should consume nonce");
+        assertFalse(harness.getUsedNonce(removedNonce), "failing stale-reviewer rejection must not consume nonce");
+        assertEq(target.calls(), 0, "reject path should never reach the downstream target");
+    }
+
+    /**
      * @dev Verifies policy-root updates invalidate previously collected signatures and group membership drops can make
      *      pre-collected manual approvals fall below threshold. [OPB-PGM-1, OPB-PGM-2]
      */
@@ -1252,6 +1529,86 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
     function _deployMockAccount() internal returns (MockAccountForOrganizationTransaction account) {
         account = new MockAccountForOrganizationTransaction(address(harness));
         harness.setDeployedAccount(address(account), true);
+    }
+
+    /**
+     * @dev Returns the local composite harness with real member/group mutation entrypoints.
+     * @return policyHarness Composite harness used by this suite.
+     */
+    function _policyConstraintsHarness()
+        internal
+        view
+        returns (OrganizationAccountTransactionPolicyConstraintsHarness policyHarness)
+    {
+        return OrganizationAccountTransactionPolicyConstraintsHarness(address(harness));
+    }
+
+    /**
+     * @dev Creates one organization group through the real guardian + admin-auth path.
+     * @param groupId Group ID assigned to the new group.
+     * @param members Initial members added during group creation.
+     * @param salt Salt bound into the signed admin authorization payload.
+     */
+    function _createGroupViaGuardian(uint256 groupId, address[] memory members, uint256 salt) internal {
+        (AdminAuthParams memory auth,) = _buildModifyGroupsAuth({
+            modifications: _buildModificationsArray(_createModification(groupId, members)),
+            salt: salt,
+            expiration: block.timestamp + 1 days,
+            isApproval: true,
+            privateKeys: buildUint256Array(ADMIN_PK_1)
+        });
+
+        vm.prank(GUARDIAN);
+        _policyConstraintsHarness().modifyGroups(_buildModificationsArray(_createModification(groupId, members)), auth);
+    }
+
+    /**
+     * @dev Removes one organization member through the real guardian + admin-auth path.
+     * @param member Address removed from organization membership while leaving any group bits untouched.
+     * @param salt Salt bound into the signed admin authorization payload.
+     */
+    function _removeMemberViaGuardian(address member, uint256 salt) internal {
+        (AdminAuthParams memory auth,) = _buildModifyMembersAuth(
+            buildEmptyAddressArray(),
+            buildArray(member),
+            salt,
+            block.timestamp + 1 days,
+            true,
+            buildUint256Array(ADMIN_PK_1)
+        );
+
+        vm.prank(GUARDIAN);
+        _policyConstraintsHarness().modifyMembers(buildEmptyAddressArray(), buildArray(member), auth);
+    }
+
+    /**
+     * @dev Builds auth for `modifyMembers` using the base-contract operation-data encoding.
+     * @param membersToAdd Members added by the authenticated operation.
+     * @param membersToRemove Members removed by the authenticated operation.
+     * @param salt Salt bound into the signed admin authorization payload.
+     * @param expiration Expiration timestamp bound into the signed admin authorization payload.
+     * @param isApproval Whether the signed admin payload authorizes execution or rejection.
+     * @param privateKeys Admin private keys used to sign the operation hash.
+     * @return auth Signed admin authorization params for `modifyMembers`.
+     * @return operationData Encoded `modifyMembers` operation data matched by the signatures.
+     */
+    function _buildModifyMembersAuth(
+        address[] memory membersToAdd,
+        address[] memory membersToRemove,
+        uint256 salt,
+        uint256 expiration,
+        bool isApproval,
+        uint256[] memory privateKeys
+    ) internal view returns (AdminAuthParams memory auth, bytes memory operationData) {
+        operationData = _encodeOperationDataForModifyMembers(membersToAdd, membersToRemove);
+        auth = _buildAdminAuthParamsForEOA({
+            operationType: OperationType.ModifyMembers,
+            operationData: operationData,
+            isApproval: isApproval,
+            salt: salt,
+            expirationTimestamp: expiration,
+            privateKeys: privateKeys
+        });
     }
 
     /**
@@ -1378,6 +1735,58 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
     }
 
     /**
+     * @dev Signs one manual-review rejection for the requested tuple.
+     * @param initiatorPrivateKey Private key used for the approval-path initiator signature embedded into the review
+     *        hash.
+     * @param reviewerPrivateKey Private key used for the reviewer signature.
+     * @param account Source account bound into the signed tuple.
+     * @param to Destination address bound into the signed tuple.
+     * @param value Native token value bound into the signed tuple.
+     * @param data Calldata bound into the signed tuple.
+     * @param salt Salt bound into the signed tuple.
+     * @param expirationTimestamp Expiration timestamp bound into the signed tuple.
+     * @param policyId Policy ID bound into the signed tuple.
+     * @return signature Encoded reviewer signature for the rejection path.
+     */
+    function _signRejectionReview(
+        uint256 initiatorPrivateKey,
+        uint256 reviewerPrivateKey,
+        address account,
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        uint256 policyId
+    ) internal view returns (bytes memory signature) {
+        bytes memory initiatorSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: initiatorPrivateKey,
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            isApproval: true
+        });
+        signature = _signReviewTx({
+            txHarness: address(harness),
+            privateKey: reviewerPrivateKey,
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            isApproval: false,
+            initiatorSignature: initiatorSignature
+        });
+    }
+
+    /**
      * @dev Executes `executeAccountTransaction` as the guardian caller.
      * @param account Source account passed into `executeAccountTransaction`.
      * @param to Destination address passed into `executeAccountTransaction`.
@@ -1472,6 +1881,28 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         policy.config.rateLimit.initiatorScope = initiatorScope;
         policy.config.rateLimit.sourceScope = sourceScope;
         policy.config.rateLimit.destinationScope = destinationScope;
+    }
+
+    /**
+     * @dev Computes the nonce for one account-transaction tuple.
+     * @param account Source account bound into the nonce tuple.
+     * @param to Destination address bound into the nonce tuple.
+     * @param value Native token value bound into the nonce tuple.
+     * @param data Calldata bound into the nonce tuple.
+     * @param policyId Policy ID bound into the nonce tuple.
+     * @param salt Salt bound into the nonce tuple.
+     * @return nonce Derived nonce used by both execute and reject paths.
+     */
+    function _computeAccountTransactionNonce(
+        address account,
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 policyId,
+        uint256 salt
+    ) internal view returns (uint256 nonce) {
+        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
+        nonce = harness.computeNonce(OperationType.AccountTransaction, operationData, salt);
     }
 
     /**
