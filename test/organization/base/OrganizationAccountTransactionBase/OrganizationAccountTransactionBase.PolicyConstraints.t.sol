@@ -1052,7 +1052,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 100, 9_100);
         harness.setPoliciesRoot(bytes32(0));
 
-        // Call: execute with signatures collected before the policy root dropped the policy.
+        // Call: execute after the policy root was cleared; signatures were collected before the drop.
         _expectPolicyDoesNotApply(9_100);
         _executeAsGuardian(
             address(account),
