@@ -31,32 +31,9 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
-        // Verify the account is deployed by this organization
-        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
-
-        // Encode operation data for nonce computation
-        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
-
-        // Compute nonce
-        uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
-
-        // Validate and consume nonce (will revert if already used)
-        // REPLAY PROTECTION: Nonce is consumed BEFORE the external call to prevent reentrancy.
-        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
-
-        // Validate the transaction against the policy and signatures
-        LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert({
-            account: account,
-            to: to,
-            value: value,
-            data: data,
-            salt: salt,
-            expirationTimestamp: expirationTimestamp,
-            policyId: policyId,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: reviewSignatures,
-            proofs: proofs
-        });
+        uint256 nonce = _validateApprovalAndConsumeNonce(
+            account, to, value, data, salt, expirationTimestamp, policyId, initiatorSignature, reviewSignatures, proofs
+        );
 
         // Emit event before external call (CEI pattern) - if execution fails, transaction reverts
         emit AccountTransactionExecuted({
@@ -67,9 +44,9 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         // forgefmt: disable-next-item
         IAccount(payable(account)).executeTransaction({
             to: to,
-            value: value, 
-            data: data, 
-            nonce: nonce, 
+            value: value,
+            data: data,
+            nonce: nonce,
             policyId: policyId
         });
     }
@@ -87,20 +64,38 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
         bytes calldata reviewSignatures,
         ValidationProofs calldata proofs
     ) external override onlyGuardian {
+        uint256 nonce = _validateRejectionAndConsumeNonce(
+            account, to, value, data, salt, expirationTimestamp, policyId, initiatorSignature, reviewSignatures, proofs
+        );
+
+        emit AccountTransactionRejected({
+            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
+        });
+    }
+
+    function _validateApprovalAndConsumeNonce(
+        address account,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        uint256 policyId,
+        bytes calldata initiatorSignature,
+        bytes calldata reviewSignatures,
+        ValidationProofs calldata proofs
+    ) internal returns (uint256 nonce) {
         // Verify the account is deployed by this organization
         LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
 
-        // Encode operation data for nonce computation (same as executeAccountTransaction)
-        bytes memory operationData = abi.encode(account, to, value, keccak256(data), policyId);
+        bytes32 dataHash = keccak256(data);
+        bytes memory operationData = abi.encode(account, to, value, dataHash, policyId);
 
-        // Compute nonce (same as for execution)
-        uint256 nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
-
-        // Validate and consume nonce (will revert if already used)
+        // Compute nonce and consume it before any external execution path.
+        nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
         LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
 
-        // Validate the rejection authorization
-        LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert({
+        LibOrganizationAccountTransaction.validateTransactionApprovalOrRevert({
             account: account,
             to: to,
             value: value,
@@ -112,9 +107,40 @@ abstract contract OrganizationAccountTransactionBase is OrganizationModifiers, I
             reviewSignatures: reviewSignatures,
             proofs: proofs
         });
+    }
 
-        emit AccountTransactionRejected({
-            account: account, to: to, value: value, data: data, nonce: nonce, policyId: policyId
+    function _validateRejectionAndConsumeNonce(
+        address account,
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint256 salt,
+        uint256 expirationTimestamp,
+        uint256 policyId,
+        bytes calldata initiatorSignature,
+        bytes calldata reviewSignatures,
+        ValidationProofs calldata proofs
+    ) internal returns (uint256 nonce) {
+        // Verify the account is deployed by this organization
+        LibOrganizationAccountFactory.validateIsAccountDeployedByOrgOrRevert(account);
+
+        bytes32 dataHash = keccak256(data);
+        bytes memory operationData = abi.encode(account, to, value, dataHash, policyId);
+
+        nonce = LibOrganizationSignatures.computeNonce(OperationType.AccountTransaction, operationData, salt);
+        LibOrganizationSignatures.validateAndConsumeNonceOrRevert(nonce);
+
+        LibOrganizationAccountTransaction.validateTransactionRejectionOrRevert({
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            initiatorSignature: initiatorSignature,
+            reviewSignatures: reviewSignatures,
+            proofs: proofs
         });
     }
 }
