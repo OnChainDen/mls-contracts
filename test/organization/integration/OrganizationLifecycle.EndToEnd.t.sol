@@ -153,96 +153,103 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         address account = _deployAccount(organization, bytes32(uint256(15_103)), 15_104);
         vm.deal(account, 1 ether);
 
-        bytes memory executeData = bytes("");
         uint256 executeValue = 0.25 ether;
-        uint256 executeSalt = 15_105;
-        uint256 executeExpiration = block.timestamp + 1 days;
-        bytes memory initiatorApprovalSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: executeValue,
-            data: executeData,
-            salt: executeSalt,
-            expirationTimestamp: executeExpiration,
-            policyId: POLICY_ID,
-            isApproval: true
-        });
-        uint256 executeNonce = _computeAccountTransactionNonce({
-            organization: organization,
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: executeValue,
-            data: executeData,
-            policyId: POLICY_ID,
-            salt: executeSalt
-        });
-
-        bytes memory rejectData = bytes("");
-        uint256 rejectValue = 0.1 ether;
-        uint256 rejectSalt = 15_106;
-        uint256 rejectExpiration = block.timestamp + 1 days;
-        bytes memory rejectionInitiatorSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: REJECTION_RECIPIENT,
-            value: rejectValue,
-            data: rejectData,
-            salt: rejectSalt,
-            expirationTimestamp: rejectExpiration,
-            policyId: POLICY_ID,
-            isApproval: true
-        });
-        bytes memory rejectionAuthorizationSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: REJECTION_RECIPIENT,
-            value: rejectValue,
-            data: rejectData,
-            salt: rejectSalt,
-            expirationTimestamp: rejectExpiration,
-            policyId: POLICY_ID,
-            isApproval: false
-        });
-        uint256 rejectNonce = _computeAccountTransactionNonce({
-            organization: organization,
-            account: account,
-            to: REJECTION_RECIPIENT,
-            value: rejectValue,
-            data: rejectData,
-            policyId: POLICY_ID,
-            salt: rejectSalt
-        });
+        uint256 executeNonce;
+        uint256 rejectNonce;
 
         // Call: execute one approved account transaction, then reject a second signed variant that shares the same
         // policy set but a distinct transaction tuple.
-        vm.prank(GUARDIAN);
-        organization.executeAccountTransaction({
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: executeValue,
-            data: executeData,
-            salt: executeSalt,
-            expirationTimestamp: executeExpiration,
-            policyId: POLICY_ID,
-            initiatorSignature: initiatorApprovalSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        {
+            bytes memory executeData = bytes("");
+            uint256 executeSalt = 15_105;
+            uint256 executeExpiration = block.timestamp + 1 days;
+            bytes memory initiatorApprovalSignature = _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: executeValue,
+                data: executeData,
+                salt: executeSalt,
+                expirationTimestamp: executeExpiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            });
+            executeNonce = _computeAccountTransactionNonce({
+                organization: organization,
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: executeValue,
+                data: executeData,
+                policyId: POLICY_ID,
+                salt: executeSalt
+            });
 
-        vm.prank(GUARDIAN);
-        organization.rejectAccountTransaction({
-            account: account,
-            to: REJECTION_RECIPIENT,
-            value: rejectValue,
-            data: rejectData,
-            salt: rejectSalt,
-            expirationTimestamp: rejectExpiration,
-            policyId: POLICY_ID,
-            initiatorSignature: rejectionInitiatorSignature,
-            reviewSignatures: rejectionAuthorizationSignature,
-            proofs: proofs
-        });
+            vm.prank(GUARDIAN);
+            organization.executeAccountTransaction({
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: executeValue,
+                data: executeData,
+                salt: executeSalt,
+                expirationTimestamp: executeExpiration,
+                policyId: POLICY_ID,
+                initiatorSignature: initiatorApprovalSignature,
+                reviewSignatures: bytes(""),
+                proofs: proofs
+            });
+        }
+
+        {
+            bytes memory rejectData = bytes("");
+            uint256 rejectValue = 0.1 ether;
+            uint256 rejectSalt = 15_106;
+            uint256 rejectExpiration = block.timestamp + 1 days;
+            bytes memory rejectionInitiatorSignature = _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: REJECTION_RECIPIENT,
+                value: rejectValue,
+                data: rejectData,
+                salt: rejectSalt,
+                expirationTimestamp: rejectExpiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            });
+            bytes memory rejectionAuthorizationSignature = _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: REJECTION_RECIPIENT,
+                value: rejectValue,
+                data: rejectData,
+                salt: rejectSalt,
+                expirationTimestamp: rejectExpiration,
+                policyId: POLICY_ID,
+                isApproval: false
+            });
+            rejectNonce = _computeAccountTransactionNonce({
+                organization: organization,
+                account: account,
+                to: REJECTION_RECIPIENT,
+                value: rejectValue,
+                data: rejectData,
+                policyId: POLICY_ID,
+                salt: rejectSalt
+            });
+
+            vm.prank(GUARDIAN);
+            organization.rejectAccountTransaction({
+                account: account,
+                to: REJECTION_RECIPIENT,
+                value: rejectValue,
+                data: rejectData,
+                salt: rejectSalt,
+                expirationTimestamp: rejectExpiration,
+                policyId: POLICY_ID,
+                initiatorSignature: rejectionInitiatorSignature,
+                reviewSignatures: rejectionAuthorizationSignature,
+                proofs: proofs
+            });
+        }
 
         // Verify: the organization stays initialized, the execution path transfers value and consumes its nonce, the
         // rejection path consumes only its nonce, and policy usage increases only for the executed transaction.
@@ -470,80 +477,87 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         // account for the success path, and prepare a reverting receiver for the rollback path.
         OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(15_501)));
 
-        Policy memory rejectedPolicy = _buildAutoApprovePolicy(initiatorSigner);
-        bytes32 rejectedRoot = _computePolicyLeaf(POLICY_ID, rejectedPolicy);
-        bytes memory rejectedSetPoliciesData = abi.encode(rejectedRoot, keccak256(bytes("ipfs://rejected-policy")));
-        uint256 rejectedSetPoliciesSalt = 15_502;
-        uint256 rejectedSetPoliciesNonce =
-            organization.computeNonce(OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt);
-        AdminAuthParams memory rejectedSetPoliciesAuth = _buildOperationAuth(
-            organization, OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt, false
-        );
-        AdminAuthParams memory blockedSetPoliciesApproval = _buildOperationAuth(
-            organization, OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt, true
-        );
-
         Policy memory activePolicy = _buildAutoApprovePolicy(initiatorSigner);
         ValidationProofs memory activeProofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, activePolicy, 15_503);
 
         bytes32 deploySalt = bytes32(uint256(15_504));
-        bytes memory deployAccountData = abi.encode(deploySalt);
-        uint256 deployAccountNonce = organization.computeNonce(OperationType.DeployAccount, deployAccountData, 15_505);
+        uint256 deployAccountNonce = organization.computeNonce(OperationType.DeployAccount, abi.encode(deploySalt), 15_505);
         address account = _deployAccount(organization, deploySalt, 15_505);
         vm.deal(account, 1 ether);
 
         RevertingNativeReceiver revertingReceiver = new RevertingNativeReceiver();
-        bytes memory failingData = bytes("");
-        uint256 failingExecutionSalt = 15_506;
-        uint256 failingExecutionExpiration = block.timestamp + 1 days;
-        uint256 failingExecutionNonce = _computeAccountTransactionNonce({
-            organization: organization,
-            account: account,
-            to: address(revertingReceiver),
-            value: 0.1 ether,
-            data: failingData,
-            policyId: POLICY_ID,
-            salt: failingExecutionSalt
-        });
-        bytes memory failingExecutionSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(revertingReceiver),
-            value: 0.1 ether,
-            data: failingData,
-            salt: failingExecutionSalt,
-            expirationTimestamp: failingExecutionExpiration,
-            policyId: POLICY_ID,
-            isApproval: true
-        });
+        uint256 rejectedSetPoliciesNonce;
+        uint256 failingExecutionNonce;
 
         // Call: consume the policy-update nonce via rejection, consume the deploy-account nonce via success, and then
         // force an account-transaction execution revert after its nonce has been computed.
-        vm.prank(GUARDIAN);
-        organization.rejectAdminOperation(
-            OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesAuth
-        );
+        {
+            Policy memory rejectedPolicy = _buildAutoApprovePolicy(initiatorSigner);
+            bytes32 rejectedRoot = _computePolicyLeaf(POLICY_ID, rejectedPolicy);
+            bytes memory rejectedSetPoliciesData =
+                abi.encode(rejectedRoot, keccak256(bytes("ipfs://rejected-policy")));
+            uint256 rejectedSetPoliciesSalt = 15_502;
+            rejectedSetPoliciesNonce =
+                organization.computeNonce(OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt);
+            AdminAuthParams memory rejectedSetPoliciesAuth = _buildOperationAuth(
+                organization, OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt, false
+            );
+            AdminAuthParams memory blockedSetPoliciesApproval = _buildOperationAuth(
+                organization, OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesSalt, true
+            );
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, rejectedSetPoliciesNonce)
-        );
-        vm.prank(GUARDIAN);
-        organization.setPolicies(rejectedRoot, "ipfs://rejected-policy", blockedSetPoliciesApproval);
+            vm.prank(GUARDIAN);
+            organization.rejectAdminOperation(
+                OperationType.ModifyPolicies, rejectedSetPoliciesData, rejectedSetPoliciesAuth
+            );
 
-        vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
-        vm.prank(GUARDIAN);
-        organization.executeAccountTransaction({
-            account: account,
-            to: address(revertingReceiver),
-            value: 0.1 ether,
-            data: failingData,
-            salt: failingExecutionSalt,
-            expirationTimestamp: failingExecutionExpiration,
-            policyId: POLICY_ID,
-            initiatorSignature: failingExecutionSignature,
-            reviewSignatures: bytes(""),
-            proofs: activeProofs
-        });
+            vm.expectRevert(
+                abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, rejectedSetPoliciesNonce)
+            );
+            vm.prank(GUARDIAN);
+            organization.setPolicies(rejectedRoot, "ipfs://rejected-policy", blockedSetPoliciesApproval);
+        }
+
+        {
+            bytes memory failingData = bytes("");
+            uint256 failingExecutionSalt = 15_506;
+            uint256 failingExecutionExpiration = block.timestamp + 1 days;
+            failingExecutionNonce = _computeAccountTransactionNonce({
+                organization: organization,
+                account: account,
+                to: address(revertingReceiver),
+                value: 0.1 ether,
+                data: failingData,
+                policyId: POLICY_ID,
+                salt: failingExecutionSalt
+            });
+            bytes memory failingExecutionSignature = _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: address(revertingReceiver),
+                value: 0.1 ether,
+                data: failingData,
+                salt: failingExecutionSalt,
+                expirationTimestamp: failingExecutionExpiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            });
+
+            vm.expectRevert(IAccount.TransactionExecutionFailed.selector);
+            vm.prank(GUARDIAN);
+            organization.executeAccountTransaction({
+                account: account,
+                to: address(revertingReceiver),
+                value: 0.1 ether,
+                data: failingData,
+                salt: failingExecutionSalt,
+                expirationTimestamp: failingExecutionExpiration,
+                policyId: POLICY_ID,
+                initiatorSignature: failingExecutionSignature,
+                reviewSignatures: bytes(""),
+                proofs: activeProofs
+            });
+        }
 
         // Verify: the public nonce views report rejected admin operations as consumed, successful deploy-account
         // operations as consumed, and reverted account transactions as rolled back to unused.
@@ -575,31 +589,25 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         _upgradeOrganization(organization, 15_605);
         _completeGuardianUpdate(organization, UPDATED_GUARDIAN, 15_606, 15_607);
 
-        AdminAuthParams memory upgradedAccountAuth = _buildOperationAuth(
-            organization,
-            OperationType.UpgradeAccount,
-            abi.encode(address(versionedAccountImplementationV2)),
-            15_608,
-            true
-        );
-        vm.prank(UPDATED_GUARDIAN);
-        organization.setAccountImplementation(
-            address(versionedAccountImplementationV2), upgradedAccountAuth
-        );
+        {
+            AdminAuthParams memory upgradedAccountAuth = _buildOperationAuth(
+                organization,
+                OperationType.UpgradeAccount,
+                abi.encode(address(versionedAccountImplementationV2)),
+                15_608,
+                true
+            );
+            vm.prank(UPDATED_GUARDIAN);
+            organization.setAccountImplementation(
+                address(versionedAccountImplementationV2), upgradedAccountAuth
+            );
+        }
 
-        bytes memory data = bytes("");
-        uint256 expiration = block.timestamp + 1 days;
-        vm.prank(UPDATED_GUARDIAN);
-        organization.executeAccountTransaction({
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: 0.2 ether,
-            data: data,
-            salt: 15_609,
-            expirationTimestamp: expiration,
-            policyId: POLICY_ID,
-            initiatorSignature: _signInitiatorTransaction({
-                organization: address(organization),
+        {
+            bytes memory data = bytes("");
+            uint256 expiration = block.timestamp + 1 days;
+            vm.prank(UPDATED_GUARDIAN);
+            organization.executeAccountTransaction({
                 account: account,
                 to: EXECUTION_RECIPIENT,
                 value: 0.2 ether,
@@ -607,11 +615,21 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 salt: 15_609,
                 expirationTimestamp: expiration,
                 policyId: POLICY_ID,
-                isApproval: true
-            }),
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+                initiatorSignature: _signInitiatorTransaction({
+                    organization: address(organization),
+                    account: account,
+                    to: EXECUTION_RECIPIENT,
+                    value: 0.2 ether,
+                    data: data,
+                    salt: 15_609,
+                    expirationTimestamp: expiration,
+                    policyId: POLICY_ID,
+                    isApproval: true
+                }),
+                reviewSignatures: bytes(""),
+                proofs: proofs
+            });
+        }
 
         // Verify: the proxy now resolves to the upgraded organization logic, the guardian has rotated, the account
         // proxy resolves to the upgraded account logic, and transaction execution still works through the upgraded

@@ -47,62 +47,70 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
         address accountImplV2 = address(new AccountImplementationVersion2());
+        address accountA;
+        address accountB;
         _setAccountImplementationWhitelisted(accountImplV1, true);
         _setAccountImplementationWhitelisted(accountImplV2, true);
 
-        (AdminAuthParams memory setV1Auth,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.UpgradeAccount,
-            operationData: abi.encode(accountImplV1),
-            isApproval: true,
-            salt: 141_002,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
+        {
+            (AdminAuthParams memory setV1Auth,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.UpgradeAccount,
+                operationData: abi.encode(accountImplV1),
+                isApproval: true,
+                salt: 141_002,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
 
-        vm.prank(GUARDIAN);
-        organizationProxy.setAccountImplementation(accountImplV1, setV1Auth);
+            vm.prank(GUARDIAN);
+            organizationProxy.setAccountImplementation(accountImplV1, setV1Auth);
+        }
 
-        (AdminAuthParams memory deployAuthA,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.DeployAccount,
-            operationData: abi.encode(bytes32(uint256(1))),
-            isApproval: true,
-            salt: 141_003,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        (AdminAuthParams memory deployAuthB,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.DeployAccount,
-            operationData: abi.encode(bytes32(uint256(2))),
-            isApproval: true,
-            salt: 141_004,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
+        {
+            (AdminAuthParams memory deployAuthA,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.DeployAccount,
+                operationData: abi.encode(bytes32(uint256(1))),
+                isApproval: true,
+                salt: 141_003,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+            (AdminAuthParams memory deployAuthB,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.DeployAccount,
+                operationData: abi.encode(bytes32(uint256(2))),
+                isApproval: true,
+                salt: 141_004,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
 
-        vm.prank(GUARDIAN);
-        address accountA = organizationProxy.deployAccount(bytes32(uint256(1)), deployAuthA);
-        vm.prank(GUARDIAN);
-        address accountB = organizationProxy.deployAccount(bytes32(uint256(2)), deployAuthB);
+            vm.prank(GUARDIAN);
+            accountA = organizationProxy.deployAccount(bytes32(uint256(1)), deployAuthA);
+            vm.prank(GUARDIAN);
+            accountB = organizationProxy.deployAccount(bytes32(uint256(2)), deployAuthB);
+        }
 
         assertEq(IVersionedAccount(accountA).version(), 1, "account A should start on v1");
         assertEq(IVersionedAccount(accountB).version(), 1, "account B should start on v1");
 
-        (AdminAuthParams memory setV2Auth,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.UpgradeAccount,
-            operationData: abi.encode(accountImplV2),
-            isApproval: true,
-            salt: 141_005,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
+        {
+            (AdminAuthParams memory setV2Auth,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.UpgradeAccount,
+                operationData: abi.encode(accountImplV2),
+                isApproval: true,
+                salt: 141_005,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
 
-        // Call: switch account implementation pointer to v2.
-        vm.prank(GUARDIAN);
-        organizationProxy.setAccountImplementation(accountImplV2, setV2Auth);
+            // Call: switch account implementation pointer to v2.
+            vm.prank(GUARDIAN);
+            organizationProxy.setAccountImplementation(accountImplV2, setV2Auth);
+        }
 
         // Verify: both previously deployed accounts now execute v2 code.
         assertEq(IVersionedAccount(accountA).version(), 2, "account A should resolve to v2");
@@ -114,42 +122,49 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         // Setup: activate Organization V2 and Account implementation V1 while both are whitelisted.
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
+        address deployedAccount;
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
         _setAccountImplementationWhitelisted(accountImplV1, true);
 
-        (AdminAuthParams memory orgUpgradeAuth,) = _buildUpgradeAuth({
-            newImplementation: address(implementationV2),
-            salt: 141_006,
-            expiration: block.timestamp + 1 hours,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        vm.prank(GUARDIAN);
-        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), orgUpgradeAuth);
+        {
+            (AdminAuthParams memory orgUpgradeAuth,) = _buildUpgradeAuth({
+                newImplementation: address(implementationV2),
+                salt: 141_006,
+                expiration: block.timestamp + 1 hours,
+                isApproval: true,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+            vm.prank(GUARDIAN);
+            organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), orgUpgradeAuth);
+        }
 
-        (AdminAuthParams memory setAccountAuth,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.UpgradeAccount,
-            operationData: abi.encode(accountImplV1),
-            isApproval: true,
-            salt: 141_007,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        vm.prank(GUARDIAN);
-        organizationProxy.setAccountImplementation(accountImplV1, setAccountAuth);
+        {
+            (AdminAuthParams memory setAccountAuth,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.UpgradeAccount,
+                operationData: abi.encode(accountImplV1),
+                isApproval: true,
+                salt: 141_007,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+            vm.prank(GUARDIAN);
+            organizationProxy.setAccountImplementation(accountImplV1, setAccountAuth);
+        }
 
-        (AdminAuthParams memory deployAccountAuth,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.DeployAccount,
-            operationData: abi.encode(bytes32(uint256(3))),
-            isApproval: true,
-            salt: 141_010,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        vm.prank(GUARDIAN);
-        address deployedAccount = organizationProxy.deployAccount(bytes32(uint256(3)), deployAccountAuth);
+        {
+            (AdminAuthParams memory deployAccountAuth,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.DeployAccount,
+                operationData: abi.encode(bytes32(uint256(3))),
+                isApproval: true,
+                salt: 141_010,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+            vm.prank(GUARDIAN);
+            deployedAccount = organizationProxy.deployAccount(bytes32(uint256(3)), deployAccountAuth);
+        }
 
         // Setup: unwhitelist both active targets.
         _setOrganizationImplementationWhitelisted(address(implementationV2), false);
@@ -366,13 +381,16 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         // Setup: collect auth, force initial failure by unwhitelisting, then let auth expire before retry.
         _setSingleAdminThresholdOne();
         _setOrganizationImplementationWhitelisted(address(implementationV2), true);
-        (AdminAuthParams memory oldAuth,) = _buildUpgradeAuth({
-            newImplementation: address(implementationV2),
-            salt: 141_017,
-            expiration: block.timestamp + 1,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
+        AdminAuthParams memory oldAuth;
+        {
+            (oldAuth,) = _buildUpgradeAuth({
+                newImplementation: address(implementationV2),
+                salt: 141_017,
+                expiration: block.timestamp + 1,
+                isApproval: true,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+        }
 
         _setOrganizationImplementationWhitelisted(address(implementationV2), false);
         vm.expectRevert(
@@ -390,17 +408,19 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         vm.prank(GUARDIAN);
         organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), oldAuth);
 
-        (AdminAuthParams memory freshAuth,) = _buildUpgradeAuth({
-            newImplementation: address(implementationV2),
-            salt: 141_018,
-            expiration: block.timestamp + 1 hours,
-            isApproval: true,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
+        {
+            (AdminAuthParams memory freshAuth,) = _buildUpgradeAuth({
+                newImplementation: address(implementationV2),
+                salt: 141_018,
+                expiration: block.timestamp + 1 hours,
+                isApproval: true,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
 
-        // Call: execute with fresh valid auth after re-whitelisting.
-        vm.prank(GUARDIAN);
-        organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), freshAuth);
+            // Call: execute with fresh valid auth after re-whitelisting.
+            vm.prank(GUARDIAN);
+            organizationProxy.upgradeToAndCallWithAuthorization(address(implementationV2), bytes(""), freshAuth);
+        }
 
         // Verify: fresh auth succeeds.
         assertEq(
@@ -414,30 +434,35 @@ contract OrganizationUpgradesCrossFileTest is OrganizationUpgradesCrossFileSuite
         _setSingleAdminThresholdOne();
         address accountImplV1 = address(new AccountImplementationVersion1());
         address accountImplV2 = address(new AccountImplementationVersion2());
+        AdminAuthParams memory setV2Auth;
         _setAccountImplementationWhitelisted(accountImplV1, true);
         _setAccountImplementationWhitelisted(accountImplV2, true);
 
-        (AdminAuthParams memory setV1Auth,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.UpgradeAccount,
-            operationData: abi.encode(accountImplV1),
-            isApproval: true,
-            salt: 141_020,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
-        vm.prank(GUARDIAN);
-        organizationProxy.setAccountImplementation(accountImplV1, setV1Auth);
+        {
+            (AdminAuthParams memory setV1Auth,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.UpgradeAccount,
+                operationData: abi.encode(accountImplV1),
+                isApproval: true,
+                salt: 141_020,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+            vm.prank(GUARDIAN);
+            organizationProxy.setAccountImplementation(accountImplV1, setV1Auth);
+        }
 
-        (AdminAuthParams memory setV2Auth,) = _buildAuthForOrganization({
-            organization: address(organizationProxy),
-            operationType: OperationType.UpgradeAccount,
-            operationData: abi.encode(accountImplV2),
-            isApproval: true,
-            salt: 141_021,
-            expirationTimestamp: block.timestamp + 1 hours,
-            privateKeys: buildUint256Array(ADMIN_PK_1)
-        });
+        {
+            (setV2Auth,) = _buildAuthForOrganization({
+                organization: address(organizationProxy),
+                operationType: OperationType.UpgradeAccount,
+                operationData: abi.encode(accountImplV2),
+                isApproval: true,
+                salt: 141_021,
+                expirationTimestamp: block.timestamp + 1 hours,
+                privateKeys: buildUint256Array(ADMIN_PK_1)
+            });
+        }
         _setAccountImplementationWhitelisted(accountImplV2, false);
 
         // Call: fail once while V2 is unwhitelisted, then re-whitelist and retry with the same auth payload.

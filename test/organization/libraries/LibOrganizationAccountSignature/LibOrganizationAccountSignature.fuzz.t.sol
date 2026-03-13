@@ -21,6 +21,42 @@ import {ApproverType, Policy, PolicyType, ValidationProofs} from "types/PolicyTy
 contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignatureTestBase {
     uint256 internal constant AUTHORIZED_EXECUTOR_PK = 0xA11CE;
 
+    function _buildBelowThresholdReviewSignatures(uint256 signerCount, uint256 expiration, bytes memory initiatorSignature)
+        internal
+        view
+        returns (bytes memory reviewSignatures)
+    {
+        address[] memory signers = new address[](signerCount);
+        bytes[] memory signatures = new bytes[](signerCount);
+
+        if (signerCount > 0) {
+            signers[0] = reviewer1;
+            signatures[0] = _signReviewSignature({
+                sigHarness: harness,
+                privateKey: REVIEWER_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: DEFAULT_POLICY_ID,
+                expirationTimestamp: expiration,
+                initiatorSignature: initiatorSignature
+            });
+        }
+        if (signerCount > 1) {
+            signers[1] = reviewer2;
+            signatures[1] = _signReviewSignature({
+                sigHarness: harness,
+                privateKey: REVIEWER_PK_2,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: DEFAULT_POLICY_ID,
+                expirationTimestamp: expiration,
+                initiatorSignature: initiatorSignature
+            });
+        }
+
+        reviewSignatures = _sortAndConcatSignatures(signers, signatures);
+    }
+
     /// @dev Verifies that random message hashes validate under a fully valid policy-signature fixture.
     function testFuzz_AS_FUZ_1__FLOAS_SIG_97_isValidSignature_randomHashesWithValidPolicySignature_prefix01ReturnsMagic(bytes32 randomMessageHash)
         public
@@ -275,35 +311,9 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
             expirationTimestamp: expiration
         });
 
-        address[] memory signers = new address[](signerCount);
-        bytes[] memory signatures = new bytes[](signerCount);
-
-        if (signerCount > 0) {
-            signers[0] = reviewer1;
-            signatures[0] = _signReviewSignature({
-                sigHarness: harness,
-                privateKey: REVIEWER_PK_1,
-                account: ACCOUNT,
-                hash: MESSAGE_HASH,
-                policyId: DEFAULT_POLICY_ID,
-                expirationTimestamp: expiration,
-                initiatorSignature: initiatorSignature
-            });
-        }
-        if (signerCount > 1) {
-            signers[1] = reviewer2;
-            signatures[1] = _signReviewSignature({
-                sigHarness: harness,
-                privateKey: REVIEWER_PK_2,
-                account: ACCOUNT,
-                hash: MESSAGE_HASH,
-                policyId: DEFAULT_POLICY_ID,
-                expirationTimestamp: expiration,
-                initiatorSignature: initiatorSignature
-            });
-        }
-
-        bytes memory reviewSignatures = _sortAndConcatSignatures(signers, signatures);
+        bytes memory reviewSignatures = _buildBelowThresholdReviewSignatures(
+            signerCount, expiration, initiatorSignature
+        );
         bytes memory guardianSignature = _signGuardianReviewHash({
             sigHarness: harness,
             privateKey: GUARDIAN_PK,
@@ -820,28 +830,9 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         policyStateHarness.setGuardian(address(guardianSafe));
 
         caseSelector = uint8(bound(caseSelector, 0, 3));
-        bytes memory innerSignature;
-        bool expected;
-
-        if (caseSelector == 0) {
-            innerSignature = _signHash(AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH);
-            expected = true;
-        } else if (caseSelector == 1) {
-            uint256 alternateSignerPk = bound(alternateSignerPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
-            vm.assume(alternateSignerPk != AUTHORIZED_EXECUTOR_PK);
-            innerSignature = _signHash(alternateSignerPk, MESSAGE_HASH);
-            expected = false;
-        } else if (caseSelector == 2) {
-            vm.assume(wrongHash != MESSAGE_HASH);
-            innerSignature = _signHash(AUTHORIZED_EXECUTOR_PK, wrongHash);
-            expected = false;
-        } else {
-            vm.assume(malformedInnerSignature.length != 65);
-            innerSignature = malformedInnerSignature;
-            expected = false;
-        }
-
-        bytes memory guardianSignature = _buildContractSignature(address(module), innerSignature);
+        (bytes memory guardianSignature, bool expected) = _buildGuardianSignatureCase(
+            module, caseSelector, alternateSignerPkRaw, wrongHash, malformedInnerSignature
+        );
 
         // Call: validate the fuzzed module inner-signature variant.
         bool actual = harness.isValidGuardianSignatureViaLibrary(guardianSignature, MESSAGE_HASH);
@@ -881,5 +872,31 @@ contract LibOrganizationAccountSignatureFuzzTest is LibOrganizationAccountSignat
         returns (bytes memory guardianSignature)
     {
         guardianSignature = _buildContractSignature(address(module), _signHash(executorPk, messageHash));
+    }
+
+    function _buildGuardianSignatureCase(
+        SafeExecutorModule module,
+        uint8 caseSelector,
+        uint256 alternateSignerPkRaw,
+        bytes32 wrongHash,
+        bytes calldata malformedInnerSignature
+    ) internal view returns (bytes memory guardianSignature, bool expected) {
+        if (caseSelector == 0) {
+            return (_buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, MESSAGE_HASH), true);
+        }
+
+        if (caseSelector == 1) {
+            uint256 alternateSignerPk = bound(alternateSignerPkRaw, 1, SECP256K1_CURVE_ORDER - 1);
+            vm.assume(alternateSignerPk != AUTHORIZED_EXECUTOR_PK);
+            return (_buildModuleGuardianSignature(module, alternateSignerPk, MESSAGE_HASH), false);
+        }
+
+        if (caseSelector == 2) {
+            vm.assume(wrongHash != MESSAGE_HASH);
+            return (_buildModuleGuardianSignature(module, AUTHORIZED_EXECUTOR_PK, wrongHash), false);
+        }
+
+        vm.assume(malformedInnerSignature.length != 65);
+        return (_buildContractSignature(address(module), malformedInnerSignature), false);
     }
 }

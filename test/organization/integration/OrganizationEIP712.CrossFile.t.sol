@@ -111,39 +111,41 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     function test_E712_MTI_3_validatePolicyBasedSignature_rejectsInitiatorSignatureReplayAsReviewSignature() public {
         // Setup: configure a manual-approval signature policy with a valid guardian signature over the review hash.
         policyStateHarness.setGuardian(guardianSigner);
+        bytes4 actual;
+        {
+            Policy memory sigPolicy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
+            ValidationProofs memory sigProofs = _setSinglePolicyRootAndBuildProofs(SIG_POLICY_ID, sigPolicy);
 
-        Policy memory sigPolicy = _buildSignaturePolicy(PolicyType.RequireManualApproval);
-        ValidationProofs memory sigProofs = _setSinglePolicyRootAndBuildProofs(SIG_POLICY_ID, sigPolicy);
+            uint256 expiration = block.timestamp + 1 days;
+            bytes memory initiatorSignature = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: expiration
+            });
+            bytes memory guardianSignature = _signGuardianReviewHash({
+                sigHarness: harness,
+                privateKey: GUARDIAN_PK,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: expiration,
+                initiatorSignature: initiatorSignature
+            });
+            bytes memory signatureData = _buildPolicySignatureData({
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: expiration,
+                initiatorSignature: initiatorSignature,
+                reviewSignatures: initiatorSignature,
+                guardianSignature: guardianSignature,
+                proofs: sigProofs
+            });
 
-        uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorSignature({
-            sigHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: expiration
-        });
-        bytes memory guardianSignature = _signGuardianReviewHash({
-            sigHarness: harness,
-            privateKey: GUARDIAN_PK,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: expiration,
-            initiatorSignature: initiatorSignature
-        });
-        bytes memory signatureData = _buildPolicySignatureData({
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: expiration,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: initiatorSignature,
-            guardianSignature: guardianSignature,
-            proofs: sigProofs
-        });
-
-        // Call: validate the ERC-1271 policy payload while replaying the initiator signature in the review slot.
-        bytes4 actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signatureData);
+            // Call: validate the ERC-1271 policy payload while replaying the initiator signature in the review slot.
+            actual = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, signatureData);
+        }
 
         // Verify: the wrong-domain review signature fails closed with ERC-1271 invalid value.
         assertEq(actual, SignatureUtils.ERC1271_INVALID_VALUE, "initiator signature should not authorize review flow");
@@ -152,49 +154,55 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
     /// @dev Verifies account-transaction and ERC-1271 signatures cannot be replayed across each other's flows.
     function test_E712_MTI_4_crossFlowReplay_rejectsTransactionAndPolicySignaturesAcrossFlows() public {
         // Setup: configure valid transaction and signature policies on their respective harnesses.
-        Policy memory txPolicy = _buildTxPolicy(PolicyType.AutoApprove, initiator1, reviewer1);
-        ValidationProofs memory txProofs =
-            _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
-
+        ValidationProofs memory txProofs;
         policyStateHarness.setGuardian(guardianSigner);
-        Policy memory sigPolicy = _buildSignaturePolicy(PolicyType.AutoApprove);
-        ValidationProofs memory sigProofs = _setSinglePolicyRootAndBuildProofs(SIG_POLICY_ID, sigPolicy);
-
         bytes memory txData = abi.encodeWithSelector(bytes4(0x33333333), uint256(3));
         uint256 txExpiration = block.timestamp + 1 days;
-        bytes memory transactionSignature =
-            _signTxInitiator(TX_ACCOUNT, TX_DESTINATION, 0, txData, 3, txExpiration, TX_POLICY_ID, true);
+        bytes memory policyInitiatorSignature;
+        bytes4 policyReplayResult;
 
-        uint256 sigExpiration = block.timestamp + 2 days;
-        bytes memory policyInitiatorSignature = _signInitiatorSignature({
-            sigHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: sigExpiration
-        });
-        bytes memory guardianSignature = _signGuardianReviewHash({
-            sigHarness: harness,
-            privateKey: GUARDIAN_PK,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: sigExpiration,
-            initiatorSignature: transactionSignature
-        });
-        bytes memory policySignatureData = _buildPolicySignatureData({
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: sigExpiration,
-            initiatorSignature: transactionSignature,
-            reviewSignatures: bytes(""),
-            guardianSignature: guardianSignature,
-            proofs: sigProofs
-        });
+        {
+            Policy memory txPolicy = _buildTxPolicy(PolicyType.AutoApprove, initiator1, reviewer1);
+            txProofs = _setSinglePolicyRootAndBuildProofsForHarness(txHarness, TX_POLICY_ID, txPolicy);
+        }
 
-        // Call: replay the transaction signature through the ERC-1271 policy flow.
-        bytes4 policyReplayResult =
-            harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, policySignatureData);
+        {
+            Policy memory sigPolicy = _buildSignaturePolicy(PolicyType.AutoApprove);
+            ValidationProofs memory sigProofs = _setSinglePolicyRootAndBuildProofs(SIG_POLICY_ID, sigPolicy);
+
+            bytes memory transactionSignature =
+                _signTxInitiator(TX_ACCOUNT, TX_DESTINATION, 0, txData, 3, txExpiration, TX_POLICY_ID, true);
+
+            uint256 sigExpiration = block.timestamp + 2 days;
+            policyInitiatorSignature = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: sigExpiration
+            });
+            bytes memory guardianSignature = _signGuardianReviewHash({
+                sigHarness: harness,
+                privateKey: GUARDIAN_PK,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: sigExpiration,
+                initiatorSignature: transactionSignature
+            });
+            bytes memory policySignatureData = _buildPolicySignatureData({
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: sigExpiration,
+                initiatorSignature: transactionSignature,
+                reviewSignatures: bytes(""),
+                guardianSignature: guardianSignature,
+                proofs: sigProofs
+            });
+
+            // Call: replay the transaction signature through the ERC-1271 policy flow.
+            policyReplayResult = harness.validatePolicyBasedSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, policySignatureData);
+        }
 
         // Verify: the transaction-domain signature is rejected by the ERC-1271 policy flow.
         assertEq(
@@ -228,52 +236,49 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
         // Setup: derive one deterministic admin hash, transaction initiator/review hash pair, and signature
         // initiator/review hash pair over aligned seeded inputs.
         _configureAdminHarness(admin1);
-
-        bytes memory txData = abi.encodeWithSelector(bytes4(0x44444444), uint256(4));
-        bytes memory adminOperationData = abi.encode(bytes32("cross-file-admin-seed"), uint256(4));
-        uint256 expiration = block.timestamp + 1 days;
-
-        bytes32 adminHash = adminHarness.getAdminOperationHash({
-            operationType: OperationType.ModifyPolicies,
-            operationData: adminOperationData,
-            salt: 5,
-            expirationTimestamp: expiration,
-            isApproval: true
-        });
-
-        bytes memory txInitiatorSignature =
-            _signTxInitiator(TX_ACCOUNT, TX_DESTINATION, 0, txData, 5, expiration, TX_POLICY_ID, true);
-        bytes32 txInitiatorHash = txHarness.computeInitiatorHashFromParamsViaLibrary(
-            TX_ACCOUNT, TX_DESTINATION, 0, 5, expiration, TX_POLICY_ID, txData, true
-        );
-        bytes32 txReviewHash = txHarness.computeReviewHashFromParamsViaLibrary(
-            TX_ACCOUNT, TX_DESTINATION, 0, 5, expiration, TX_POLICY_ID, txData, true, txInitiatorSignature
-        );
-
-        bytes memory sigInitiatorSignature = _signInitiatorSignature({
-            sigHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: expiration
-        });
-        bytes32 sigInitiatorHash =
-            harness.getInitiatorSignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, SIG_POLICY_ID, expiration);
-        bytes32 sigReviewHash = harness.getReviewSignatureHashViaLibrary({
-            account: ACCOUNT,
-            hash: MESSAGE_HASH,
-            policyId: SIG_POLICY_ID,
-            expirationTimestamp: expiration,
-            initiatorSignature: sigInitiatorSignature
-        });
-
         bytes32[] memory hashes = new bytes32[](5);
-        hashes[0] = adminHash;
-        hashes[1] = txInitiatorHash;
-        hashes[2] = txReviewHash;
-        hashes[3] = sigInitiatorHash;
-        hashes[4] = sigReviewHash;
+        {
+            bytes memory adminOperationData = abi.encode(bytes32("cross-file-admin-seed"), uint256(4));
+            uint256 expiration = block.timestamp + 1 days;
+            hashes[0] = adminHarness.getAdminOperationHash({
+                operationType: OperationType.ModifyPolicies,
+                operationData: adminOperationData,
+                salt: 5,
+                expirationTimestamp: expiration,
+                isApproval: true
+            });
+        }
+        {
+            bytes memory txData = abi.encodeWithSelector(bytes4(0x44444444), uint256(4));
+            uint256 expiration = block.timestamp + 1 days;
+            bytes memory txInitiatorSignature =
+                _signTxInitiator(TX_ACCOUNT, TX_DESTINATION, 0, txData, 5, expiration, TX_POLICY_ID, true);
+            hashes[1] = txHarness.computeInitiatorHashFromParamsViaLibrary(
+                TX_ACCOUNT, TX_DESTINATION, 0, 5, expiration, TX_POLICY_ID, txData, true
+            );
+            hashes[2] = txHarness.computeReviewHashFromParamsViaLibrary(
+                TX_ACCOUNT, TX_DESTINATION, 0, 5, expiration, TX_POLICY_ID, txData, true, txInitiatorSignature
+            );
+        }
+        {
+            uint256 expiration = block.timestamp + 1 days;
+            bytes memory sigInitiatorSignature = _signInitiatorSignature({
+                sigHarness: harness,
+                privateKey: INITIATOR_PK_1,
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: expiration
+            });
+            hashes[3] = harness.getInitiatorSignatureHashViaLibrary(ACCOUNT, MESSAGE_HASH, SIG_POLICY_ID, expiration);
+            hashes[4] = harness.getReviewSignatureHashViaLibrary({
+                account: ACCOUNT,
+                hash: MESSAGE_HASH,
+                policyId: SIG_POLICY_ID,
+                expirationTimestamp: expiration,
+                initiatorSignature: sigInitiatorSignature
+            });
+        }
 
         // Verify: all system-defined message hashes remain distinct because each typehash and field layout is unique.
         _assertDistinctHashes(hashes);

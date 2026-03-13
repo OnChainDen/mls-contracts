@@ -143,7 +143,8 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
         // Setup: start from clean recovery state, seed pending deferred-init tuple, and seed pending recovery-guardian
         // update.
         harness.resetGuardianRecoveryStorageViaHarness();
-        recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, block.timestamp + 10 days, true);
+        uint256 expectedPendingGuardianTimestamp = block.timestamp + 10 days;
+        recoveryStateHarness.setGuardianRecoveryPendingUpdate(NEW_GUARDIAN_B, expectedPendingGuardianTimestamp, true);
         harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
         uint256 canFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
 
@@ -159,7 +160,7 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
         assertEq(state.pendingGuardian, NEW_GUARDIAN_B, "recovery-update pending guardian should remain untouched");
         assertEq(
             state.pendingGuardianTimestamp,
-            block.timestamp + 10 days,
+            expectedPendingGuardianTimestamp,
             "recovery-update pending timestamp should remain untouched"
         );
         assertTrue(state.isUpdateReadyForAcceptance, "recovery-update ready flag should remain untouched");

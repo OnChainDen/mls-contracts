@@ -13,6 +13,57 @@ import {OperationType} from "types/CommonTypes.sol";
  * @dev Fuzz tests for `OrganizationAdminBase`.
  */
 contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
+    function _invokeModifyAdminsPath(
+        bool useRejectPath,
+        bytes memory operationData,
+        address[] memory adminsToAdd,
+        address[] memory adminsToRemove,
+        uint256 newVotingThreshold,
+        AdminAuthParams memory auth
+    ) internal {
+        if (useRejectPath) {
+            harness.rejectAdminOperation(OperationType.ModifyAdmins, operationData, auth);
+        } else {
+            harness.modifyAdmins({
+                adminsToAdd: adminsToAdd,
+                adminsToRemove: adminsToRemove,
+                newVotingThreshold: newVotingThreshold,
+                authParams: auth
+            });
+        }
+    }
+
+    function _buildMutatedModifyAdminsPayload(
+        uint8 mode,
+        address[] memory signedAdds,
+        address[] memory signedRemoves,
+        uint256 signedThreshold,
+        address mutatedAdmin
+    )
+        internal
+        view
+        returns (
+            address[] memory mutatedAdds,
+            address[] memory mutatedRemoves,
+            uint256 mutatedThreshold,
+            bytes memory mutatedOperationData
+        )
+    {
+        mutatedAdds = signedAdds;
+        mutatedRemoves = signedRemoves;
+        mutatedThreshold = signedThreshold;
+
+        if (mode == 0) {
+            mutatedAdds = buildArray(mutatedAdmin);
+        } else if (mode == 1) {
+            mutatedRemoves = buildArray(admin1);
+        } else {
+            mutatedThreshold = 2;
+        }
+
+        mutatedOperationData = _encodeOperationDataForModifyAdmins(mutatedAdds, mutatedRemoves, mutatedThreshold);
+    }
+
     /**
      * @dev Verifies `OrganizationAdminBase.modifyAdmins` and `OrganizationAdminBase.rejectAdminOperation` remain
      *      guardian-only entry points.
@@ -46,16 +97,9 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
         // Call: invoke the selected base entry point from a non-guardian caller.
         _expectOnlyGuardianRevert(NON_GUARDIAN);
         vm.prank(NON_GUARDIAN);
-        if (useRejectPath) {
-            harness.rejectAdminOperation(OperationType.ModifyAdmins, operationData, auth);
-        } else {
-            harness.modifyAdmins({
-                adminsToAdd: buildArray(candidate),
-                adminsToRemove: buildEmptyAddressArray(),
-                newVotingThreshold: 1,
-                authParams: auth
-            });
-        }
+        _invokeModifyAdminsPath(
+            useRejectPath, operationData, buildArray(candidate), buildEmptyAddressArray(), 1, auth
+        );
 
         // Verify: the caller gate should reject the call before consuming the bound nonce or mutating admin state.
         assertFalse(harness.getUsedNonce(nonce), "guardian gate should leave nonce unused");
@@ -99,20 +143,12 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
         });
 
         uint8 mode = uint8(mutationSelector % 3);
-        address[] memory mutatedAdds = signedAdds;
-        address[] memory mutatedRemoves = signedRemoves;
-        uint256 mutatedThreshold = signedThreshold;
-
-        if (mode == 0) {
-            mutatedAdds = buildArray(mutatedAdmin);
-        } else if (mode == 1) {
-            mutatedRemoves = buildArray(admin1);
-        } else {
-            mutatedThreshold = 2;
-        }
-
-        bytes memory mutatedOperationData =
-            _encodeOperationDataForModifyAdmins(mutatedAdds, mutatedRemoves, mutatedThreshold);
+        (
+            address[] memory mutatedAdds,
+            address[] memory mutatedRemoves,
+            uint256 mutatedThreshold,
+            bytes memory mutatedOperationData
+        ) = _buildMutatedModifyAdminsPayload(mode, signedAdds, signedRemoves, signedThreshold, mutatedAdmin);
         uint256 signedNonce = harness.computeNonce({
             operationType: OperationType.ModifyAdmins, operationData: signedOperationData, salt: salt
         });
@@ -123,16 +159,9 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
         // Call: replay the signed auth against an altered base-contract payload.
         vm.expectPartialRevert(IOrganizationAdmin.SignerIsNotAdmin.selector);
         vm.prank(GUARDIAN);
-        if (useRejectPath) {
-            harness.rejectAdminOperation(OperationType.ModifyAdmins, mutatedOperationData, auth);
-        } else {
-            harness.modifyAdmins({
-                adminsToAdd: mutatedAdds,
-                adminsToRemove: mutatedRemoves,
-                newVotingThreshold: mutatedThreshold,
-                authParams: auth
-            });
-        }
+        _invokeModifyAdminsPath(
+            useRejectPath, mutatedOperationData, mutatedAdds, mutatedRemoves, mutatedThreshold, auth
+        );
 
         // Verify: altered payloads should not consume either the replay nonce or the originally signed nonce.
         assertFalse(harness.getUsedNonce(mutatedNonce), "altered payload should not consume its nonce");
@@ -140,16 +169,7 @@ contract OrganizationAdminBaseFuzzTest is OrganizationAdminBaseSuiteBase {
 
         // Call: execute the original signed payload through the same entry point.
         vm.prank(GUARDIAN);
-        if (useRejectPath) {
-            harness.rejectAdminOperation(OperationType.ModifyAdmins, signedOperationData, auth);
-        } else {
-            harness.modifyAdmins({
-                adminsToAdd: signedAdds,
-                adminsToRemove: signedRemoves,
-                newVotingThreshold: signedThreshold,
-                authParams: auth
-            });
-        }
+        _invokeModifyAdminsPath(useRejectPath, signedOperationData, signedAdds, signedRemoves, signedThreshold, auth);
 
         // Verify: only the exact signed payload should authorize successfully.
         assertTrue(harness.getUsedNonce(signedNonce), "exact payload should consume the signed nonce");

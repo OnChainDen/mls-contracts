@@ -628,9 +628,11 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
 
         uint256 salt = 4010;
         uint256 expiration = block.timestamp + 1 hours;
+        bytes32 innerSigHash = keccak256(innerSig);
+        bytes memory operationData = abi.encode("fuzz-f5", innerSigHash);
         bytes32 operationHash = harness.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
-            operationData: abi.encode("fuzz-f5", keccak256(innerSig)),
+            operationData: operationData,
             salt: salt,
             expirationTimestamp: expiration,
             isApproval: true
@@ -668,7 +670,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
             // Call: validate the malformed mixed signature stream.
             harness.validateAdminAuthAndConsumeNonceOrRevert({
                 operationType: OperationType.ModifyAdmins,
-                operationData: abi.encode("fuzz-f5", keccak256(innerSig)),
+                operationData: operationData,
                 isApproval: true,
                 authParams: auth
             });
@@ -678,7 +680,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
             // Call: validate the mixed stream with a non-admin contract signer.
             harness.validateAdminAuthAndConsumeNonceOrRevert({
                 operationType: OperationType.ModifyAdmins,
-                operationData: abi.encode("fuzz-f5", keccak256(innerSig)),
+                operationData: operationData,
                 isApproval: true,
                 authParams: auth
             });
@@ -686,7 +688,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
             // Call: validate the sorted mixed stream with both signer classes authorized.
             harness.validateAdminAuthAndConsumeNonceOrRevert({
                 operationType: OperationType.ModifyAdmins,
-                operationData: abi.encode("fuzz-f5", keccak256(innerSig)),
+                operationData: operationData,
                 isApproval: true,
                 authParams: auth
             });
