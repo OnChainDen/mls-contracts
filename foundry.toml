@@ -32,6 +32,8 @@ remappings = [
 ]
 # Lighter local default for stateful invariant testing. CI profile is stricter.
 invariant = { runs = 32, depth = 100 }
+# Skip scripts and tests when generating test coverage reports (only check source contract coverage)
+no_match_coverage = "^(script|test)/.*"
 
 # ------------------------------------------------------------------------------
 # RPC ENDPOINTS (Network Aliases)
