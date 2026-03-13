@@ -70,7 +70,10 @@ contract LibOrganizationGuardianRecoveryFinalizeRecoveryGuardianUpdateTest is Li
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeRecoveryGuardianUpdate` finalize reverts before expiry
     /// and succeeds exactly at expiry.
-    function test_LOGR_FRGU_2__LOGR_FRGU_3_beforeExpiryReverts_exactlyAtExpirySucceeds() public {
+    /// Plan rows: LOGR-AOTFRGU-1, LOGR-AOTFRGU-2.
+    function test_LOGR_FRGU_2__LOGR_FRGU_3__LOGR_AOTFRGU_1__LOGR_AOTFRGU_2_beforeExpiryReverts_exactlyAtExpirySucceeds()
+        public
+    {
         // Setup: reconfigure baseline recovery address and timelock and seed pending recovery-guardian update.
         _resetAndConfigureRecovery();
         harness.initiateRecoveryGuardianUpdateViaLibrary(NEW_GUARDIAN_A);

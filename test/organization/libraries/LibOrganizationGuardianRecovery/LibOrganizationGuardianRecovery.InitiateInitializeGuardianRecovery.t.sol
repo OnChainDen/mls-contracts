@@ -2,6 +2,7 @@
 // Copyright (c) 2026 Den Technologies Inc. All rights reserved.
 pragma solidity 0.8.33;
 
+import {IOrganizationAdminOperationTimelock} from "interfaces/organization/IOrganizationAdminOperationTimelock.sol";
 import {IOrganizationGuardianRecovery} from "interfaces/organization/IOrganizationGuardianRecovery.sol";
 import {TimelockUtils} from "libraries/TimelockUtils.sol";
 import {
@@ -17,7 +18,8 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` valid initiate-init writes
     /// pending tuple, computes timestamp, and emits event.
-    function test_LOGR_IIGR_1__LOGR_IIGR_2__LOGR_IIGR_3__LOGR_IIGR_9_validInitiateInit_writesPendingTupleAndEmits()
+    /// Plan rows: LOGR-AOTIIGR-1, LOGR-AOTIIGR-2, LOGR-AOTIIGR-3, LOGR-AOTIIGR-4.
+    function test_LOGR_IIGR_1__LOGR_IIGR_2__LOGR_IIGR_3__LOGR_IIGR_9__LOGR_AOTIIGR_1__LOGR_AOTIIGR_2__LOGR_AOTIIGR_3__LOGR_AOTIIGR_4_validInitiateInit_writesPendingTupleAndEmits()
         public
     {
         // Setup: start from clean recovery state.
@@ -42,6 +44,42 @@ contract LibOrganizationGuardianRecoveryInitiateInitializeGuardianRecoveryTest i
             "pending init timelock should be set"
         );
         assertEq(state.pendingInit.pendingTimestamp, expectedCanFinalizeAt, "pending init timestamp should be computed");
+    }
+
+    /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` reverts in the same block
+    /// the deferred initialization was initiated.
+    /// Plan rows: LOGR-AOTIIGR-5.
+    function test_LOGR_AOTIIGR_5_finalizeInitializeGuardianRecovery_sameBlockRevertsTimelockNotExpired() public {
+        // Setup: start from clean recovery state and stage a deferred initialization in the current block.
+        harness.resetGuardianRecoveryStorageViaHarness();
+        harness.initiateInitializeGuardianRecoveryViaLibrary(GUARDIAN_RECOVERY_ADDRESS, GUARDIAN_RECOVERY_TIMELOCK);
+        uint256 canFinalizeAt = harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
+
+        // Call: finalize immediately in the same block, expecting the shared timelock-not-expired revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, canFinalizeAt, block.timestamp
+            )
+        );
+        harness.finalizeInitializeGuardianRecoveryViaLibrary();
+
+        // Verify: same-block finalization leaves the deferred-init tuple untouched.
+        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        assertEq(
+            state.pendingInit.pendingRecoveryAddress,
+            GUARDIAN_RECOVERY_ADDRESS,
+            "same-block finalize should preserve the pending recovery address"
+        );
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds,
+            GUARDIAN_RECOVERY_TIMELOCK,
+            "same-block finalize should preserve the pending timelock"
+        );
+        assertEq(
+            state.pendingInit.pendingTimestamp,
+            canFinalizeAt,
+            "same-block finalize should preserve the pending timestamp"
+        );
     }
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.initiateInitializeGuardianRecovery` validation order checks

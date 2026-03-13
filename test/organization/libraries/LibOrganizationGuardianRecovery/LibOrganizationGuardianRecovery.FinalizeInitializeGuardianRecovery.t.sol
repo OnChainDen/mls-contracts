@@ -17,7 +17,8 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 {
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` finalize after timelock
     /// configures state, clears pending-init, and emits event.
-    function test_LOGR_FIGR_1__LOGR_FIGR_4__LOGR_FIGR_5__LOGR_FIGR_6__LOGR_FIGR_7_finalizeAfterTimelock_configuresAndClearsPendingInit()
+    /// Plan rows: LOGR-AOTFIGR-2, LOGR-AOTFIGR-4, LOGR-AOTFIGR-5.
+    function test_LOGR_FIGR_1__LOGR_FIGR_4__LOGR_FIGR_5__LOGR_FIGR_6__LOGR_FIGR_7__LOGR_AOTFIGR_2__LOGR_AOTFIGR_4__LOGR_AOTFIGR_5_finalizeAfterTimelock_configuresAndClearsPendingInit()
         public
     {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
@@ -44,7 +45,10 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` no-pending and
     /// timelock-not-expired paths revert without mutating pending/config state.
-    function test_LOGR_FIGR_2__LOGR_FIGR_3__LOGR_FIGR_12_revertPaths_preservePendingAndConfigState() public {
+    /// Plan rows: LOGR-AOTFIGR-1.
+    function test_LOGR_FIGR_2__LOGR_FIGR_3__LOGR_FIGR_12__LOGR_AOTFIGR_1_revertPaths_preservePendingAndConfigState()
+        public
+    {
         // Setup: start from clean recovery state.
         harness.resetGuardianRecoveryStorageViaHarness();
 
@@ -106,7 +110,8 @@ contract LibOrganizationGuardianRecoveryFinalizeInitializeGuardianRecoveryTest i
 
     /// @dev Verifies `LibOrganizationGuardianRecovery.finalizeInitializeGuardianRecovery` malformed pending tuple
     /// revert is atomic and rolls back pending-init clearing.
-    function test_LOGR_FIGR_9_malformedPendingTupleRevert_isAtomic() public {
+    /// Plan rows: LOGR-AOTFIGR-7.
+    function test_LOGR_FIGR_9__LOGR_AOTFIGR_7_malformedPendingTupleRevert_isAtomic() public {
         // Setup: start from clean recovery state and seed pending deferred-init tuple.
         harness.resetGuardianRecoveryStorageViaHarness();
         recoveryStateHarness.setGuardianRecoveryPendingInit(address(0), GUARDIAN_RECOVERY_TIMELOCK, block.timestamp);

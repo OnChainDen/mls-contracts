@@ -603,7 +603,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-IITR-1, LOTR-IITR-2, LOTR-IITR-3, and LOTR-IITR-4: deferred-init initiation writes pending
     /// fields and emits expected event tuple.
-    function test_LOTR_IITR_1__LOTR_IITR_2__LOTR_IITR_3__LOTR_IITR_4_initiateInitialize_writesPendingAndEmits() public {
+    /// Plan rows: LOTR-AOTIITR-1, LOTR-AOTIITR-2, LOTR-AOTIITR-3, LOTR-AOTIITR-4.
+    function test_LOTR_IITR_1__LOTR_IITR_2__LOTR_IITR_3__LOTR_IITR_4__LOTR_AOTIITR_1__LOTR_AOTIITR_2__LOTR_AOTIITR_3__LOTR_AOTIITR_4_initiateInitialize_writesPendingAndEmits()
+        public
+    {
         // Setup
         harness.resetTxRecoveryState();
         uint256 expectedFinalizeAt = block.timestamp + ADMIN_OPERATION_TIMELOCK;
@@ -619,6 +622,42 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertEq(state.pendingInit.pendingRecoveryAddress, recoveryAddress, "pending recovery address mismatch");
         assertEq(state.pendingInit.pendingTimelockDurationSeconds, TX_TIMELOCK, "pending timelock duration mismatch");
         assertEq(state.pendingInit.pendingTimestamp, expectedFinalizeAt, "pending finalize timestamp mismatch");
+    }
+
+    /// @dev Verifies `LibOrganizationTxRecovery.finalizeInitializeTxRecovery` reverts in the same block the deferred
+    /// initialization was initiated.
+    /// Plan rows: LOTR-AOTIITR-5.
+    function test_LOTR_AOTIITR_5_finalizeInitializeTxRecovery_sameBlockRevertsTimelockNotExpired() public {
+        // Setup: reset to an unconfigured state and stage a deferred initialization in the current block.
+        harness.resetTxRecoveryState();
+        harness.initiateInitializeTxRecovery(recoveryAddress, TX_TIMELOCK);
+        uint256 pendingTimestamp = harness.getTxRecoveryState().pendingInit.pendingTimestamp;
+
+        // Call: finalize immediately in the same block, expecting the shared timelock-not-expired revert.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAdminOperationTimelock.TimelockNotExpired.selector, pendingTimestamp, block.timestamp
+            )
+        );
+        harness.finalizeInitializeTxRecovery();
+
+        // Verify: same-block finalization leaves the deferred-init tuple untouched.
+        TxRecoveryState memory state = harness.getTxRecoveryState();
+        assertEq(
+            state.pendingInit.pendingRecoveryAddress,
+            recoveryAddress,
+            "same-block finalize should preserve the pending recovery address"
+        );
+        assertEq(
+            state.pendingInit.pendingTimelockDurationSeconds,
+            TX_TIMELOCK,
+            "same-block finalize should preserve the pending timelock"
+        );
+        assertEq(
+            state.pendingInit.pendingTimestamp,
+            pendingTimestamp,
+            "same-block finalize should preserve the pending timestamp"
+        );
     }
 
     /// @dev Verifies LOTR-IITR-5, LOTR-IITR-6, LOTR-IITR-7, LOTR-IITR-8, and LOTR-IITR-9: deferred-init initiation
@@ -717,7 +756,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-FITR-1 and LOTR-FITR-2: finalize-deferred-init reverts when no pending init exists or
     /// timelock has not expired.
-    function test_LOTR_FITR_1__LOTR_FITR_2_finalizeInitialize_noPendingOrPreExpiry_reverts() public {
+    /// Plan rows: LOTR-AOTFITR-1.
+    function test_LOTR_FITR_1__LOTR_FITR_2__LOTR_AOTFITR_1_finalizeInitialize_noPendingOrPreExpiry_reverts() public {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -740,7 +780,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-FITR-3, LOTR-FITR-4, LOTR-FITR-5, LOTR-FITR-6, and LOTR-FITR-7: finalize-deferred-init
     /// succeeds at boundary, writes config, clears pending, emits event, and leaves recovery disabled.
-    function test_LOTR_FITR_3__LOTR_FITR_4__LOTR_FITR_5__LOTR_FITR_6__LOTR_FITR_7_finalizeInitialize_successSemantics()
+    /// Plan rows: LOTR-AOTFITR-2, LOTR-AOTFITR-4, LOTR-AOTFITR-5.
+    function test_LOTR_FITR_3__LOTR_FITR_4__LOTR_FITR_5__LOTR_FITR_6__LOTR_FITR_7__LOTR_AOTFITR_2__LOTR_AOTFITR_4__LOTR_AOTFITR_5_finalizeInitialize_successSemantics()
         public
     {
         // Setup
@@ -784,7 +825,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-FITR-9 and LOTR-FITR-10: if downstream initialize reverts, pending init remains unchanged and
     /// finalization event is not emitted.
-    function test_LOTR_FITR_9__LOTR_FITR_10_finalizeInitialize_downstreamRevert_keepsPendingAndNoEvent() public {
+    /// Plan rows: LOTR-AOTFITR-7.
+    function test_LOTR_FITR_9__LOTR_FITR_10__LOTR_AOTFITR_7_finalizeInitialize_downstreamRevert_keepsPendingAndNoEvent()
+        public
+    {
         // Setup
         uint256 pendingTimestamp = block.timestamp + ADMIN_OPERATION_TIMELOCK;
         harness.setTxRecoveryState(
@@ -832,7 +876,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     }
 
     /// @dev Verifies LOTR-CITR-1: cancel-deferred-init reverts when no pending init exists.
-    function test_LOTR_CITR_1_cancelInitialize_withoutPending_revertsNoTxRecoveryInitializationPending() public {
+    /// Plan rows: LOTR-AOTCITR-3.
+    function test_LOTR_CITR_1__LOTR_AOTCITR_3_cancelInitialize_withoutPending_revertsNoTxRecoveryInitializationPending()
+        public
+    {
         // Setup
 
         // Call
@@ -844,7 +891,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-CITR-2, LOTR-CITR-3, LOTR-CITR-4, LOTR-CITR-5, LOTR-CITR-6, and LOTR-CITR-7:
     /// cancel-deferred-init clears pending fields, emits event, preserves active config, and allows re-initiation.
-    function test_LOTR_CITR_2__LOTR_CITR_3__LOTR_CITR_4__LOTR_CITR_5__LOTR_CITR_6__LOTR_CITR_7_cancelInitialize_successSemantics()
+    /// Plan rows: LOTR-AOTCITR-1.
+    function test_LOTR_CITR_2__LOTR_CITR_3__LOTR_CITR_4__LOTR_CITR_5__LOTR_CITR_6__LOTR_CITR_7__LOTR_AOTCITR_1_cancelInitialize_successSemantics()
         public
     {
         // Setup
@@ -1183,7 +1231,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-CPTRI-1, LOTR-CPTRI-2, LOTR-CPTRI-3, and LOTR-CPTRI-4: internal clear-pending helper zeros
     /// all fields and is idempotent.
-    function test_LOTR_CPTRI_1__LOTR_CPTRI_2__LOTR_CPTRI_3__LOTR_CPTRI_4_clearPendingTxRecoveryInitTimelock_internalHelper()
+    /// Plan rows: LOTR-CPTRIT-1, LOTR-CPTRIT-2.
+    function test_LOTR_CPTRI_1__LOTR_CPTRI_2__LOTR_CPTRI_3__LOTR_CPTRI_4__LOTR_CPTRIT_1__LOTR_CPTRIT_2_clearPendingTxRecoveryInitTimelock_internalHelper()
         public
     {
         // Setup
@@ -1219,7 +1268,10 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-VTNCR-1, LOTR-VTNCR-2, LOTR-VTNCR-3, and LOTR-VTNCR-4: helper reverts whenever either/both
     /// config fields are non-zero.
-    function test_LOTR_VTNCR_1__LOTR_VTNCR_2__LOTR_VTNCR_3__LOTR_VTNCR_4_validateNotConfigured_internalHelper() public {
+    /// Plan rows: LOTR-VTRNCOR-1, LOTR-VTRNCOR-2, LOTR-VTRNCOR-3, LOTR-VTRNCOR-4.
+    function test_LOTR_VTNCR_1__LOTR_VTNCR_2__LOTR_VTNCR_3__LOTR_VTNCR_4__LOTR_VTRNCOR_1__LOTR_VTRNCOR_2__LOTR_VTRNCOR_3__LOTR_VTRNCOR_4_validateNotConfigured_internalHelper()
+        public
+    {
         // Setup
         harness.resetTxRecoveryState();
 
@@ -1273,7 +1325,8 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
 
     /// @dev Verifies LOTR-VTPR-1, LOTR-VTPR-2, LOTR-VTPR-3, LOTR-VTPR-4, LOTR-VTPR-5, and LOTR-VTPR-6: internal param
     /// helper accepts valid boundaries and rejects zero-address/out-of-range timelocks.
-    function test_LOTR_VTPR_1__LOTR_VTPR_2__LOTR_VTPR_3__LOTR_VTPR_4__LOTR_VTPR_5__LOTR_VTPR_6_validateParams_internalHelper()
+    /// Plan rows: LOTR-VTRPOR-1, LOTR-VTRPOR-2, LOTR-VTRPOR-3, LOTR-VTRPOR-4, LOTR-VTRPOR-5, LOTR-VTRPOR-6.
+    function test_LOTR_VTPR_1__LOTR_VTPR_2__LOTR_VTPR_3__LOTR_VTPR_4__LOTR_VTPR_5__LOTR_VTPR_6__LOTR_VTRPOR_1__LOTR_VTRPOR_2__LOTR_VTRPOR_3__LOTR_VTRPOR_4__LOTR_VTRPOR_5__LOTR_VTRPOR_6_validateParams_internalHelper()
         public
     {
         // Setup
