@@ -62,7 +62,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that expiration exactly at `block.timestamp` is accepted.
-    function test_LOAS_VPBS_3_LOACS_VPBS_7_validatePolicyBasedSignature_expirationAtCurrentTimestamp_succeeds() public {
+    function test_LOAS_VPBS_3_LOACS_VPBS_7__OAS_VPBS_2_validatePolicyBasedSignature_expirationAtCurrentTimestamp_succeeds()
+        public
+    {
         // Setup: build a fixture where expiration equals `block.timestamp`.
         PolicyValidationFixture memory fixture =
             _buildPolicyValidationFixture({approvalType: PolicyType.AutoApprove, expirationTimestamp: block.timestamp});
@@ -751,7 +753,9 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies that authorized ERC-1271 initiator contracts are accepted.
-    function test_LOAS_VPBS_16_validatePolicyBasedSignature_authorizedERC1271Initiator_returnsMagicValue() public {
+    function test_LOAS_VPBS_16__OAS_VPBS_10_validatePolicyBasedSignature_authorizedERC1271Initiator_returnsMagicValue()
+        public
+    {
         // Setup: configure policy with ERC-1271 initiator member and valid guardian approval.
         policyStateHarness.setGuardian(guardianSigner);
 
@@ -1235,7 +1239,7 @@ contract LibOrganizationAccountSignatureValidatePolicyBasedSignatureTest is LibO
     }
 
     /// @dev Verifies `_validatePolicyBasedSignature` accepts enabled module guardian signatures for auto-approve.
-    function test_LOAS_VPBS_1_B_validatePolicyBasedSignature_enabledModuleGuardianAutoApprove_returnsMagicValue()
+    function test_LOAS_VPBS_1_B__OAS_VPBS_9_validatePolicyBasedSignature_enabledModuleGuardianAutoApprove_returnsMagicValue()
         public
     {
         // Setup: build an auto-approve fixture and replace the guardian with an enabled SafeExecutorModule.

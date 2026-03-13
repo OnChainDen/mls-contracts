@@ -125,7 +125,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that specific native-token policy allows only native transfers.
-    function test_isTokenTransferAllowed_specificNativeTokenPolicy_allowsOnlyNative() public {
+    function test_isTokenTransferAllowed__OPB_PH_4_specificNativeTokenPolicy_allowsOnlyNative() public {
         // Setup: prepare contrasting fixtures to cover both pass and fail branches for specific native-token policy
         // allows only native transfers.
         address nativeRecipient = address(0xA606);
@@ -283,7 +283,7 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that `hasAmountThreshold == false` always returns true.
-    function test_isTokenAmountAllowedByPolicy_thresholdDisabled_alwaysTrue() public {
+    function test_isTokenAmountAllowedByPolicy__OPB_PH_4_thresholdDisabled_alwaysTrue() public {
         // Setup: configure a valid fixture for `hasAmountThreshold == false` always returns true.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = false;

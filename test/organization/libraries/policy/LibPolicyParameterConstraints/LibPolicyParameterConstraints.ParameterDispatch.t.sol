@@ -45,7 +45,7 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies that unsupported constraint type for a parameter kind returns false.
-    function test_isParameterAllowedByConstraint_unsupportedConstraintForType_returnsFalse() public view {
+    function test_isParameterAllowedByConstraint__OPB_PH_5_unsupportedConstraintForType_returnsFalse() public view {
         // Setup: build fixture inputs where unsupported constraint type for a parameter kind returns false should be
         // denied.
         ParameterConstraint memory invalidConstraint = ParameterConstraint({
@@ -226,7 +226,10 @@ contract LibPolicyParameterConstraintsParameterDispatchTest is LibPolicyParamete
     }
 
     /// @dev Verifies that bytes/string dispatch uses dynamic offset and content hash correctly.
-    function test_isParameterAllowedByConstraint_bytesAndString_dispatchPath_usesOffsetAndHash() public view {
+    function test_isParameterAllowedByConstraint__OPB_PH_5_bytesAndString_dispatchPath_usesOffsetAndHash()
+        public
+        view
+    {
         // Setup: configure a valid fixture for bytes/string dispatch uses dynamic offset and content hash correctly.
         bytes memory expectedBytes = hex"AABBCCDD";
         bytes memory bytesData = _encodeSingleBytesArg(expectedBytes);

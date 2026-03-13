@@ -93,7 +93,7 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that `anySourceAccount=true` bypasses source-account proof checks.
-    function test_LOAS_IESABP_6_isERC1271SignatureAllowedByPolicy_anySourceAccountBypassesSourceProof_returnsTrue()
+    function test_LOAS_IESABP_6__OAS_IESABP_4_isERC1271SignatureAllowedByPolicy_anySourceAccountBypassesSourceProof_returnsTrue()
         public
     {
         // Setup: build valid fixture with permissive `anySourceAccount=true` and empty source proof.
@@ -122,7 +122,9 @@ contract LibOrganizationAccountSignatureIsERC1271SignatureAllowedByPolicyTest is
     }
 
     /// @dev Verifies that all policy checks passing returns true.
-    function test_LOAS_IESABP_8_LOACS_IESABP_1_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue() public {
+    function test_LOAS_IESABP_8_LOACS_IESABP_1__OAS_IESABP_6_isERC1271SignatureAllowedByPolicy_allChecksPass_returnsTrue()
+        public
+    {
         // Setup: build fully valid baseline fixture.
         (, ValidationProofs memory proofs) = _buildAllowedFixture();
 

@@ -494,7 +494,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that auto reject requires authorized initiator signature.
-    function test_LOAT_VAAROR_4_autoRejectRequiresAuthorizedInitiatorSignature() public {
+    function test_LOAT_VAAROR_4__OAT_RAT_1_autoRejectRequiresAuthorizedInitiatorSignature() public {
         // Setup: assemble inputs expected to hit the guarded failure path for auto reject requires authorized initiator
         // signature.
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
@@ -549,7 +549,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that manual reject without threshold approvals reverts insufficient approvals.
-    function test_manualRejectWithoutThresholdApprovals_revertsInsufficientApprovals() public {
+    function test_OAT_RAT_2_manualRejectWithoutThresholdApprovals_revertsInsufficientApprovals() public {
         // Setup: assemble inputs expected to hit the guarded failure path for manual reject without threshold approvals
         // reverts insufficient approvals.
         Policy memory policy =
@@ -648,7 +648,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that hash builders are deterministic and field bound.
-    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10_hashBuildersAreDeterministicAndFieldBound()
+    function test_LOAT_CIHFP_5__LOAT_CIHFP_6__LOAT_CIHFP_7__LOAT_CIHFP_8__LOAT_CIHFP_9__LOAT_CIHFP_10__OAT_PH_1_hashBuildersAreDeterministicAndFieldBound()
         public
     {
         // Setup: configure a valid fixture for hash builders are deterministic and field bound.
@@ -1684,7 +1684,7 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross organization replay initiator signature fails.
-    function test_crossOrganizationReplayInitiatorSignatureFails() public {
+    function test_OAT_RAT_1__INT_ETE_3_crossOrganizationReplayInitiatorSignatureFails() public {
         // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay initiator
         // signature fails.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();
@@ -1733,7 +1733,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     }
 
     /// @dev Verifies that cross organization replay reviewer signatures fail with valid org b initiator.
-    function test_LOAT_CRHFP_1_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator() public {
+    function test_LOAT_CRHFP_1__INT_ETE_3_crossOrganizationReplayReviewerSignaturesFailWithValidOrgBInitiator()
+        public
+    {
         // Setup: assemble inputs expected to hit the guarded failure path for cross organization replay reviewer
         // signatures fail with valid org b initiator.
         LibOrganizationAccountTransactionHarness orgB = new LibOrganizationAccountTransactionHarness();

@@ -10,6 +10,7 @@ import {IAccount} from "interfaces/IAccount.sol";
 import {IOrganizationAccountFactory} from "interfaces/organization/IOrganizationAccountFactory.sol";
 import {IOrganizationAccountTransaction} from "interfaces/organization/IOrganizationAccountTransaction.sol";
 import {IOrganizationSignatures} from "interfaces/organization/IOrganizationSignatures.sol";
+import {MockERC1271ValidSigner} from "test/helpers/MockERC1271Signers.sol";
 import {
     MockAccountForOrganizationTransaction,
     MockERC1271NonceConsumedSigner,
@@ -60,7 +61,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies that an account not deployed by this organization reverts.
      */
-    function test_OATB_EAT_2_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
+    function test_OATB_EAT_2__OAT_EAT_8_executeAccountTransaction_accountNotDeployed_revertsAccountNotDeployedByOrganization()
         public
     {
         // Setup: use a random non-deployed account address.
@@ -94,7 +95,10 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies nonce computation is deterministic for `(account,to,value,keccak256(data),policyId,salt)`.
      */
-    function test_OATB_EAT_3_executeAccountTransaction_nonceComputedDeterministicallyFromParams() public view {
+    function test_OATB_EAT_3__OAT_EAT_4_executeAccountTransaction_nonceComputedDeterministicallyFromParams()
+        public
+        view
+    {
         // Setup: define a deterministic operation tuple.
         address account = address(0xAAAA01);
         address to = address(0xBBBB02);
@@ -302,7 +306,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
      * @dev Verifies `OrganizationAccountTransactionBase.executeAccountTransaction` blocks same-tuple reentry after
      * nonce consumption.
      */
-    function test_NMATB_EAT_6_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
+    function test_NMATB_EAT_6__OAT_EAT_5_executeAccountTransaction_reentrantSameNonceAttemptInSameTransaction_revertsNonceAlreadyUsed()
         public
     {
         // Setup: make the account itself the guardian, then configure a nested replay call with the exact same tuple.
@@ -519,7 +523,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies account execution revert bubbles and nonce usage is rolled back.
      */
-    function test_OATB_EAT_10_NMATB_EAT_8__OAT_AI_2_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
+    function test_OATB_EAT_10__OAT_EAT_6__NMATB_EAT_8__OAT_AI_2_executeAccountTransaction_accountExecutionReverts_rollsBackNonceUsage()
         public
     {
         // Setup: deploy account configured to revert on execute.
@@ -832,9 +836,101 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     }
 
     /**
+     * @dev Verifies manual-approval review signatures are bound to the exact initiator signature bytes used during
+     * execution.
+     */
+    function test_OAT_EAT_7_executeAccountTransaction_manualApprovalReviewSignaturesBindInitiatorSignature()
+        public
+    {
+        // Setup: deploy an account, authorize one ERC-1271 initiator member, and prepare two different valid
+        // initiator-signature byte arrays for the same transaction tuple.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        MockERC1271ValidSigner contractInitiator = new MockERC1271ValidSigner();
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.RequireManualApproval);
+        policy.config.initiator.initiatorMember = address(contractInitiator);
+        harness.setMemberStatus(address(contractInitiator), true);
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+        bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(17));
+        uint256 expiration = block.timestamp + 1 days;
+        uint256 nonce = _computeNonce(address(account), address(target), 0, data, DEFAULT_POLICY_ID, 151);
+
+        bytes memory initiatorSignatureA = _buildContractSignature(address(contractInitiator), hex"CAFE");
+        bytes memory initiatorSignatureB = _buildContractSignature(address(contractInitiator), hex"BEEF");
+        bytes memory reviewSignatureForA = _signReviewTx({
+            txHarness: address(harness),
+            privateKey: REVIEWER_PK_1,
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: data,
+            salt: 151,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true,
+            initiatorSignature: initiatorSignatureA
+        });
+
+        // Verify: reusing approvals collected for one initiator-signature byte array fails once the initiator
+        // signature changes.
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.InsufficientApprovals.selector, 1, 0));
+        vm.prank(GUARDIAN);
+        // Call: execute the tuple with a different initiator signature while replaying stale review signatures.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: data,
+            salt: 151,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignatureB,
+            reviewSignatures: reviewSignatureForA,
+            proofs: proofs
+        });
+
+        assertFalse(harness.getUsedNonce(nonce), "stale review signatures must not consume the shared nonce");
+
+        bytes memory reviewSignatureForB = _signReviewTx({
+            txHarness: address(harness),
+            privateKey: REVIEWER_PK_1,
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: data,
+            salt: 151,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true,
+            initiatorSignature: initiatorSignatureB
+        });
+
+        vm.prank(GUARDIAN);
+        // Call: execute again with freshly collected review signatures bound to the new initiator signature bytes.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: address(target),
+            value: 0,
+            data: data,
+            salt: 151,
+            expirationTimestamp: expiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: initiatorSignatureB,
+            reviewSignatures: reviewSignatureForB,
+            proofs: proofs
+        });
+
+        // Verify: the correctly rebound approvals execute successfully and consume the nonce exactly once.
+        assertEq(target.calls(), 1, "only the rebound manual approval should reach the target");
+        assertTrue(harness.getUsedNonce(nonce), "successful rebound execution should consume the nonce");
+    }
+
+    /**
      * @dev Verifies failed pre-validation does not permanently burn nonce; fixed retry can succeed.
      */
-    function test_OATB_EAT_17__LOAT_VTAOR_14__NMATB_EAT_7_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
+    function test_OATB_EAT_17__OAT_EAT_6__LOAT_VTAOR_14__NMATB_EAT_7_executeAccountTransaction_failedValidationDoesNotBurnNonce_sameSaltCanSucceed()
         public
     {
         // Setup: deploy account and build payload with first attempt signed by unauthorized initiator.
@@ -914,7 +1010,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
     /**
      * @dev Verifies external-call failure rolls back prior rate-limit usage updates.
      */
-    function test_OATB_EAT_18_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage() public {
+    function test_OATB_EAT_18__OAT_EAT_10_executeAccountTransaction_executionFailure_rollsBackRateLimitUsage()
+        public
+    {
         // Setup: deploy account configured to revert after validation and use rate-limited policy.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         account.setShouldRevertExecution(true);
@@ -961,6 +1059,89 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
 
         // Verify: usage mutation is rolled back with full transaction revert.
         assertEq(harness.getPolicyUsage(usageKey, window), 0, "rate-limit usage must rollback on revert");
+    }
+
+    /**
+     * @dev Verifies expired execute-path signatures fail closed without burning the nonce, so the same tuple can be
+     * retried successfully with a fresh expiration.
+     */
+    function test_OAT_EAT_9_executeAccountTransaction_expiredSignatureRejectsAndFreshRetrySucceeds() public {
+        // Setup: deploy an account and prepare one transaction tuple with both expired and fresh initiator
+        // signatures.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        bytes memory data = abi.encodeWithSelector(bytes4(0x19191919), uint256(19));
+        Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.AutoApprove);
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        uint256 expiredExpiration = block.timestamp - 1;
+        uint256 freshExpiration = block.timestamp + 1 days;
+        uint256 nonce = _computeNonce(address(account), DESTINATION, 0, data, DEFAULT_POLICY_ID, 191);
+        bytes memory expiredInitiatorSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 191,
+            expirationTimestamp: expiredExpiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+        bytes memory freshInitiatorSignature = _signInitiatorTx({
+            txHarness: address(harness),
+            privateKey: INITIATOR_PK_1,
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 191,
+            expirationTimestamp: freshExpiration,
+            policyId: DEFAULT_POLICY_ID,
+            isApproval: true
+        });
+
+        // Verify: the expired signature path reverts before the nonce is burned.
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOrganizationAccountTransaction.TransactionExpired.selector, expiredExpiration, block.timestamp
+            )
+        );
+        vm.prank(GUARDIAN);
+        // Call: execute with the expired initiator signature.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 191,
+            expirationTimestamp: expiredExpiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: expiredInitiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        assertFalse(harness.getUsedNonce(nonce), "expired execution must leave the nonce reusable");
+
+        vm.prank(GUARDIAN);
+        // Call: retry the exact same tuple and salt with a fresh expiration/signature.
+        harness.executeAccountTransaction({
+            account: address(account),
+            to: DESTINATION,
+            value: 0,
+            data: data,
+            salt: 191,
+            expirationTimestamp: freshExpiration,
+            policyId: DEFAULT_POLICY_ID,
+            initiatorSignature: freshInitiatorSignature,
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Verify: the fresh retry succeeds and consumes the nonce on the successful path.
+        assertTrue(harness.getUsedNonce(nonce), "fresh retry should consume the nonce");
+        assertEq(account.executionCount(), 1, "only the fresh execution should reach the account");
     }
 
     /**

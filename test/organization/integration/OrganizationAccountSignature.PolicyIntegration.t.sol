@@ -1560,7 +1560,9 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross organization replay initiator signature returns invalid value.
-    function test_OAS_VSFA_9__OAS_SH_1_crossOrganizationReplayInitiatorSignature_returnsInvalidValue() public {
+    function test_OAS_VSFA_9__OAS_SH_1__INT_ETE_3_crossOrganizationReplayInitiatorSignature_returnsInvalidValue()
+        public
+    {
         // Setup: configure a valid fixture for cross organization replay initiator signature returns invalid value.
         LibOrganizationAccountSignatureHarness orgB = new LibOrganizationAccountSignatureHarness();
         _seedMembers(address(orgB));
@@ -1609,7 +1611,7 @@ contract OrganizationAccountSignaturePolicyIntegrationTest is LibOrganizationAcc
     }
 
     /// @dev Verifies that cross organization replay guardian and reviewer signatures returns invalid value.
-    function test_OAS_VSFA_9__OAS_SH_1_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue()
+    function test_OAS_VSFA_9__OAS_SH_1__INT_ETE_3_crossOrganizationReplayGuardianAndReviewerSignatures_returnsInvalidValue()
         public
     {
         // Setup: configure a valid fixture for cross organization replay guardian and reviewer signatures returns

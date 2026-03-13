@@ -100,7 +100,7 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
     }
 
     /// @dev Verifies that changing any policy field invalidates proof.
-    function test_isPolicyInOrg_mutatedPolicyField_invalidatesProof() public {
+    function test_isPolicyInOrg_mutatedPolicyField__OPB_PH_1_invalidatesProof() public {
         // Setup: build fixture inputs where changing any policy field invalidates proof should be denied.
         Policy memory originalPolicy = _buildBasePolicy();
         Policy memory mutatedPolicy = _buildBasePolicy();
@@ -262,7 +262,7 @@ contract LibOrganizationPolicySetPoliciesMerkleLeafTest is LibOrganizationPolicy
     }
 
     /// @dev Verifies that changing `policyId` or any policy field changes leaf.
-    function test_computePolicyLeaf_changingPolicyIdOrField_changesLeaf() public {
+    function test_computePolicyLeaf__OPB_PH_1_changingPolicyIdOrField_changesLeaf() public {
         // Setup: configure a valid fixture for changing `policyId` or any policy field changes leaf.
         Policy memory policy = _buildBasePolicy();
         Policy memory mutatedPolicy = _buildBasePolicy();

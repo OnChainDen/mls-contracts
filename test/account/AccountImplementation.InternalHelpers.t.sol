@@ -196,7 +196,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies AI-PH-1: `_onlyOrganization` reverts for non-organization caller.
      */
-    function test_AI_PH_1_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
+    function test_AI_PH_1__OAT_PH_1_onlyOrganizationInternal_nonOrganizationCaller_revertsOnlyOrganization() public {
         // Setup
 
         // Call
@@ -223,7 +223,7 @@ contract AccountImplementationInternalHelpersTest is AccountImplementationSuiteB
     /**
      * @dev Verifies AI-PH-3: `_execute` returns true for successful call and forwards exact tuple.
      */
-    function test_AI_PH_3_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
+    function test_AI_PH_3__OAT_PH_1_executeInternal_success_returnsTrueAndForwardsExactTuple() public {
         // Setup
         AccountCallRecorderTarget target = new AccountCallRecorderTarget();
         bytes memory payload = abi.encodeWithSelector(target.record.selector, bytes("ai-ph"), uint256(303));

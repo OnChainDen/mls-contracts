@@ -135,7 +135,7 @@ contract SafeModuleAccountSignatureE2ETest is LibOrganizationAccountSignatureTes
     }
 
     /// @dev Verifies module rotation makes old signatures fail and new signatures pass through the full account path.
-    function test_SMI_ETE_3_accountIsValidSignature_moduleRotationOldFailsNewPasses() public {
+    function test_SMI_ETE_3__INT_ETE_7_accountIsValidSignature_moduleRotationOldFailsNewPasses() public {
         // Setup: deploy old and new modules on the same guardian Safe; enable the old module first.
         MockGuardianSafe guardianSafe = new MockGuardianSafe();
         SafeExecutorModule oldModule =

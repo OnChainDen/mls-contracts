@@ -136,7 +136,9 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that same selector with different constraints hash must not validate with old proof.
-    function test_isContractInteractionAllowed_sameSelectorDifferentConstraintsHash_invalidatesProof() public {
+    function test_isContractInteractionAllowed__OPB_PH_2_sameSelectorDifferentConstraintsHash_invalidatesProof()
+        public
+    {
         // Setup: build fixture inputs where same selector with different constraints hash must not validate with old
         // proof should be denied.
         address target = address(0xC707);
@@ -209,7 +211,7 @@ contract LibPolicyContractInteractionTest is PolicyLibrariesSuiteBase {
     }
 
     /// @dev Verifies that `anyFunction == false` and `data.length < 4` returns false.
-    function test_isFunctionAllowed_anyFunctionFalseAndShortData_returnsFalse() public {
+    function test_isFunctionAllowed__OPB_PH_2_anyFunctionFalseAndShortData_returnsFalse() public {
         // Setup: build fixture inputs where `anyFunction == false` and `data.length < 4` returns false should be
         // denied.
         Policy memory policy = _buildBasePolicy();

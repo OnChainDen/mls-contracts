@@ -107,7 +107,7 @@ contract OrganizationAccountSignatureBaseIsValidSignatureForAccountTest is Organ
     }
 
     /// @dev Verifies that the base entry point returns the ERC-1271 magic value when validation succeeds.
-    function test_OASB_ISFA_5_isValidSignatureForAccount_libraryMagicResult_returnsMagicValue() public {
+    function test_OASB_ISFA_5__OAS_VSFA_3_isValidSignatureForAccount_libraryMagicResult_returnsMagicValue() public {
         // Setup: configure deployed-account + enabled recovery signer and build a valid recovery payload.
         harness.setDeployedAccount(ACCOUNT, true);
         _setRecoveryState(harness, guardianSigner, true);

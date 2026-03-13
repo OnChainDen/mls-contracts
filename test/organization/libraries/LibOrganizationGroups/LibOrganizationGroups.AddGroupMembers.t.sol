@@ -14,7 +14,7 @@ import {
  */
 contract LibOrganizationGroupsAddGroupMembersTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies new members are added and marked true in `isGroupMember`.
-    function test_addGroupMembers_addsNewMembers_setsMembershipTrue() public {
+    function test_addGroupMembers__OGB_PH_1_addsNewMembers_setsMembershipTrue() public {
         uint256 groupId = 7701;
         groupsStateHarness.setGroupStatus(groupId, true);
 

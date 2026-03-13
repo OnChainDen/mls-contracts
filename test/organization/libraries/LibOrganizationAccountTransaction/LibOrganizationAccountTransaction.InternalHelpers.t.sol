@@ -43,7 +43,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies token-transfer rate usage uses extracted transfer amount and recipient destination.
-    function test_LOAT_VAURLOR_2__LOAT_VAURLOR_4__LOAT_VAURLOR_6__LOAT_VAURLOR_12_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination()
+    function test_LOAT_VAURLOR_2__LOAT_VAURLOR_4__LOAT_VAURLOR_6__LOAT_VAURLOR_12__OAT_PH_1_validateAndUpdateRateLimit_tokenTransfer_usesTransferAmountAndRecipientDestination()
         public
     {
         // Setup: token-transfer policy with enabled rate-limit and scoped usage key.
@@ -220,7 +220,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies auto-approve rejection succeeds for authorized initiator signatures.
-    function test_LOACT_VAAROR_1__LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
+    function test_LOACT_VAAROR_1__LOAT_VAAROR_1__LOAT_VAAROR_3__LOAT_VAAROR_5__OAT_PH_1_validateAutoApproveRejection_authorizedInitiatorSigner_succeeds()
         public
     {
         // Setup: auto-approve policy and rejection signature from authorized initiator.
@@ -302,7 +302,7 @@ contract LibOrganizationAccountTransactionInternalHelpersTest is LibOrganization
     }
 
     /// @dev Verifies manual-confirmation succeeds with sufficient approvals.
-    function test_LOAT_VMCOR_7_validateManualConfirmation_sufficientApprovals_succeeds() public {
+    function test_LOAT_VMCOR_7__OAT_PH_1_validateManualConfirmation_sufficientApprovals_succeeds() public {
         // Setup: group approver threshold=2 with two valid review signatures.
         Policy memory policy = _buildApprovalPolicy(TransactionType.Any, PolicyType.RequireManualApproval);
         policy.config.approval.approverType = ApproverType.Group;

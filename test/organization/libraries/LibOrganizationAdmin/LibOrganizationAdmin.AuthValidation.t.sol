@@ -598,7 +598,7 @@ contract LibOrganizationAdminAuthValidationTest is LibOrganizationAdminSuiteBase
     }
 
     /// @dev Verifies that the same operation and salt produce different nonces across different organization addresses.
-    function test_validateAdminAuth_differentOrganizationAddresses_produceDifferentNonces() public {
+    function test_INT_ETE_3_validateAdminAuth_differentOrganizationAddresses_produceDifferentNonces() public {
         // Setup: deploy a second harness to change the organization address component.
         LibOrganizationAdminHarness secondHarness = new LibOrganizationAdminHarness();
 

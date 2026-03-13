@@ -338,6 +338,88 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
     }
 
     /**
+     * @dev Verifies `DestinationType.Any` allows a native transfer to any destination without requiring a destination
+     * proof. [OPB-DV-4]
+     */
+    function test_OPB_DV_4_executeAccountTransaction_destinationTypeAny_allowsUnlistedDestinationWithoutProof()
+        public
+    {
+        // Setup: fund one deployed account and build a native-transfer policy that leaves destination checks fully
+        // open.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockNativeReceiver receiver = new MockNativeReceiver();
+        uint256 transferValue = 0.35 ether;
+        vm.deal(address(account), 1 ether);
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
+        policy.config.destinationType = DestinationType.Any;
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = address(0);
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_023, policy);
+        (bytes memory signature, uint256 expirationTimestamp) =
+            _signExecution(INITIATOR_PK_1, address(account), address(receiver), transferValue, bytes(""), 23, 9_023);
+
+        // Call: execute the ETH transfer without supplying any destination proof.
+        _executeAsGuardian(
+            address(account),
+            address(receiver),
+            transferValue,
+            bytes(""),
+            23,
+            expirationTimestamp,
+            9_023,
+            signature,
+            bytes(""),
+            proofs
+        );
+
+        // Verify: the unconstrained destination branch succeeds and transfers ETH to the arbitrary receiver.
+        assertEq(receiver.totalReceived(), transferValue, "destinationType any should not require a destination proof");
+    }
+
+    /**
+     * @dev Verifies disabling the token-amount threshold allows any transfer amount that otherwise matches the
+     * policy. [OPB-TAT-4]
+     */
+    function test_OPB_TAT_4_executeAccountTransaction_amountThresholdDisabled_allowsAnyAmount() public {
+        // Setup: fund one deployed account and build a native-transfer policy with threshold enforcement disabled.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockNativeReceiver receiver = new MockNativeReceiver();
+        uint256 transferValue = 0.9 ether;
+        vm.deal(address(account), 1 ether);
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
+        policy.config.destinationType = DestinationType.Any;
+        policy.config.token.anyToken = false;
+        policy.config.token.tokenAddress = address(0);
+        policy.config.token.hasAmountThreshold = false;
+        policy.config.token.amountThreshold = 1;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_024, policy);
+        (bytes memory signature, uint256 expirationTimestamp) =
+            _signExecution(INITIATOR_PK_1, address(account), address(receiver), transferValue, bytes(""), 24, 9_024);
+
+        // Call: execute a large native transfer that would exceed the stored threshold if threshold checks were
+        // enabled.
+        _executeAsGuardian(
+            address(account),
+            address(receiver),
+            transferValue,
+            bytes(""),
+            24,
+            expirationTimestamp,
+            9_024,
+            signature,
+            bytes(""),
+            proofs
+        );
+
+        // Verify: disabling the threshold lets the transfer succeed for the full requested amount.
+        assertEq(receiver.totalReceived(), transferValue, "disabled amount threshold should allow any transfer value");
+    }
+
+    /**
      * @dev Verifies function allowlists bind selector plus constraint hash, reject calldata shorter than 4 bytes,
      *      and enforce exact static-parameter matches. [OPB-FAPC-1, OPB-FAPC-3, OPB-FAPC-4]
      */
@@ -548,6 +630,44 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             proofs
         );
+    }
+
+    /**
+     * @dev Verifies `anyFunction=true` allows arbitrary selectors and calldata without requiring a function proof.
+     * [OPB-FAPC-2]
+     */
+    function test_OPB_FAPC_2_executeAccountTransaction_anyFunction_allowsAnySelectorAndCalldata() public {
+        // Setup: deploy one account plus one interaction target and build a contract-interaction policy with
+        // `anyFunction=true`.
+        MockAccountForOrganizationTransaction account = _deployMockAccount();
+        MockInteractionTarget target = new MockInteractionTarget();
+        bytes memory data = abi.encodeWithSelector(target.storePayload.selector, hex"CAFECAFE");
+
+        Policy memory policy = _buildApprovalPolicy(TransactionType.ContractInteractions, PolicyType.AutoApprove);
+        policy.config.destinationType = DestinationType.Any;
+        policy.config.anyFunction = true;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(9_051, policy);
+        (bytes memory signature, uint256 expirationTimestamp) =
+            _signExecution(INITIATOR_PK_1, address(account), address(target), 0, data, 54, 9_051);
+
+        // Call: execute an arbitrary selector with arbitrary calldata and no function proof.
+        _executeAsGuardian(
+            address(account),
+            address(target),
+            0,
+            data,
+            54,
+            expirationTimestamp,
+            9_051,
+            signature,
+            bytes(""),
+            proofs
+        );
+
+        // Verify: the interaction succeeds and the unconstrained payload reaches the target unchanged.
+        assertEq(target.calls(), 1, "anyFunction should allow arbitrary selector execution");
+        assertEq(target.payloadHash(), keccak256(hex"CAFECAFE"), "arbitrary calldata should reach the target");
     }
 
     /**
@@ -773,7 +893,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
      * @dev Verifies rejection does not mutate rate-limit usage and rate-limit overflows fail closed with
      *      `RateLimitExceeded`. [OPB-RL-7, OPB-RL-8]
      */
-    function test_OPB_RL_7__OPB_RL_8_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe() public {
+    function test_OPB_RL_7__OPB_RL_8__OAT_RAT_4_executeAccountTransaction_rejectionAndOverflow_leaveUsageSafe()
+        public
+    {
         // Setup: deploy one account plus one interaction target, then prepare one rate-limited auto-approve policy.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockInteractionTarget target = new MockInteractionTarget();

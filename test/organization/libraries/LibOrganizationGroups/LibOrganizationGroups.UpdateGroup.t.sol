@@ -16,7 +16,7 @@ import {GroupModification} from "types/CommonTypes.sol";
  */
 contract LibOrganizationGroupsUpdateGroupTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies updating an existing group with additions succeeds and leaves unrelated members unchanged.
-    function test_updateGroup_addMembers_succeedsAndKeepsUnrelatedMembersUnchanged() public {
+    function test_updateGroup__OGB_PH_1_addMembers_succeedsAndKeepsUnrelatedMembersUnchanged() public {
         uint256 groupId = 7501;
 
         // Setup: active group with two pre-existing members.

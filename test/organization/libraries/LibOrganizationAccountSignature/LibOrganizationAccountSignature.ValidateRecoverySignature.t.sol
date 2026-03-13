@@ -13,7 +13,9 @@ import {
  */
 contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrganizationAccountSignatureTestBase {
     /// @dev Verifies LOAS-VRS-1: unconfigured recovery returns invalid value (not revert).
-    function test_LOAS_VRS_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue() public {
+    function test_LOAS_VRS_1__OAS_VRS_1_validateRecoverySignature_recoveryAddressNotConfigured_returnsInvalidValue()
+        public
+    {
         // Setup: configure recovery as enabled but with zero recovery address.
         _setTxRecoveryState(address(0), true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -41,7 +43,9 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies LOAS-VRS-3: configured but disabled recovery returns invalid value.
-    function test_LOAS_VRS_3_LOACS_VRS_2_validateRecoverySignature_recoveryDisabled_returnsInvalidValue() public {
+    function test_LOAS_VRS_3_LOACS_VRS_2__OAS_VRS_2_validateRecoverySignature_recoveryDisabled_returnsInvalidValue()
+        public
+    {
         // Setup: configure recovery address with `isEnabled=false`.
         _setTxRecoveryState(guardianSigner, false);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -70,7 +74,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that a signature from a different configured recovery address is rejected.
-    function test_LOAS_VRS_5_LOACS_VRS_2_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
+    function test_LOAS_VRS_5_LOACS_VRS_2__OAS_VRS_5_validateRecoverySignature_wrongConfiguredRecoveryAddressSigner_returnsInvalidValue()
         public
     {
         // Setup: configure enabled recovery for `initiator2` and sign as guardian.
@@ -85,7 +89,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that valid EOA recovery signatures are accepted.
-    function test_LOAS_VRS_6_validateRecoverySignature_validEOASignature_returnsMagicValue() public {
+    function test_LOAS_VRS_6__OAS_VRS_3_validateRecoverySignature_validEOASignature_returnsMagicValue() public {
         // Setup: configure enabled recovery for deterministic guardian signer.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory signatureData = _signHash(GUARDIAN_PK, MESSAGE_HASH);
@@ -98,7 +102,7 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that valid ERC-1271 recovery signatures are accepted.
-    function test_LOAS_VRS_7_validateRecoverySignature_validERC1271Signature_returnsMagicValue() public {
+    function test_LOAS_VRS_7__OAS_VRS_4_validateRecoverySignature_validERC1271Signature_returnsMagicValue() public {
         // Setup: configure enabled recovery for an ERC-1271 signer contract.
         MockERC1271ValidSigner contractRecovery = new MockERC1271ValidSigner();
         _setTxRecoveryState(address(contractRecovery), true);
@@ -113,7 +117,9 @@ contract LibOrganizationAccountSignatureValidateRecoverySignatureTest is LibOrga
     }
 
     /// @dev Verifies that malformed recovery signature bytes fail closed with ERC-1271 invalid value.
-    function test_LOAS_VRS_8_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue() public {
+    function test_LOAS_VRS_8__OAS_VRS_6_validateRecoverySignature_malformedSignatureBytes_returnsInvalidValue()
+        public
+    {
         // Setup: configure enabled recovery and build malformed packed signature bytes.
         _setTxRecoveryState(guardianSigner, true);
         bytes memory malformed = hex"1b";

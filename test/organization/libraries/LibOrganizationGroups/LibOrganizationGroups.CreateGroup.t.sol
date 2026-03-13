@@ -16,7 +16,7 @@ import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationGroupsCreateGroupTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies create succeeds for a new group ID with valid members.
-    function test_createGroup_validNewIdAndMembers_succeedsAndSetsState() public {
+    function test_createGroup__OGB_PH_1_validNewIdAndMembers_succeedsAndSetsState() public {
         uint256 groupId = 7401;
         _setMembers(buildArray(admin1, admin2), true);
 

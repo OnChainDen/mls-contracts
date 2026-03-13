@@ -15,7 +15,7 @@ import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationGroupsDeleteGroupTest is LibOrganizationGroupsSuiteBase {
     /// @dev Verifies deleting an existing group succeeds and sets `isGroup[groupId] = false`.
-    function test_deleteGroup_existingGroup_succeedsAndSetsIsGroupFalse() public {
+    function test_deleteGroup__OGB_PH_1_existingGroup_succeedsAndSetsIsGroupFalse() public {
         uint256 groupId = 7601;
         groupsStateHarness.setGroupStatus(groupId, true);
 
