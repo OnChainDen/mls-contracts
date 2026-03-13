@@ -316,9 +316,10 @@ contract OrganizationEIP712CrossFileTest is LibOrganizationAccountSignatureTestB
             "policy payload should not authorize recovery flow"
         );
 
-        // Verify: recovery data forced through the policy path reverts (too short for abi.decode).
-        vm.expectRevert();
-        harness.isValidSignatureViaLibrary(ACCOUNT, MESSAGE_HASH, forcedPolicySignature);
+        // Verify: recovery data forced through the policy path reverts with empty data because the payload is too
+        // short for the policy `abi.decode` shape.
+        vm.expectRevert(bytes(""));
+        harness.isValidSignatureUnsafe(ACCOUNT, MESSAGE_HASH, forcedPolicySignature);
     }
 
     /// @dev Verifies fuzzed initiator-signature byte mutations always alter both transaction and ERC-1271 review hashes.
