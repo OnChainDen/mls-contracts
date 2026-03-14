@@ -131,6 +131,7 @@ contract OrganizationModifiersTest is Test {
         vm.prank(PENDING_GUARDIAN);
         // Call: pending guardian passes the modifier and accepts the transition.
         harness.acceptPendingGuardianAction();
+        assertEq(harness.lastModifierId(), 7, "pending guardian should pass acceptance action");
 
         // Verify: the accepted address can no longer satisfy `onlyPendingGuardian` after state clears.
         vm.expectRevert(
@@ -339,6 +340,7 @@ contract OrganizationModifiersTest is Test {
         vm.prank(RECOVERY_PENDING_GUARDIAN);
         // Call: accept the recovery-pending-guardian transition.
         harness.acceptRecoveryPendingGuardianAction();
+        assertEq(harness.lastModifierId(), 8, "recovery pending guardian should pass acceptance action");
 
         // Verify: the accepted address no longer passes the recovery-pending-guardian modifier after state clears.
         vm.expectRevert(
