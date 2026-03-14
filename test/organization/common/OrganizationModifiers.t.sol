@@ -176,7 +176,7 @@ contract OrganizationModifiersTest is Test {
     }
 
     /**
-     * @dev Verifies `onlyGuardianRecoveryAddress` fails closed with `expected = 0` when unset.
+     * @dev Verifies `onlyGuardianRecoveryAddress` reverts when guaridan recovery address is unset (is address(0))
      */
     /// OMOD-AZERO-4
     function test_OMOD_AZERO_4_onlyGuardianRecovery_zeroRecoveryAddress_rejectsNonZeroCaller() public {
