@@ -97,6 +97,14 @@ contract MerkleUtilsTest is Test {
         assertEq(leaf1, leaf2, "Same address should always produce the same leaf");
     }
 
+    /// @dev Test case: No two random addresses should ever produce the same leaf (collision resistance).
+    function testFuzz_computeAddressLeaf_noCollisions(address addr1, address addr2) public view {
+        vm.assume(addr1 != addr2);
+        bytes32 leaf1 = harness.computeAddressLeaf(addr1);
+        bytes32 leaf2 = harness.computeAddressLeaf(addr2);
+        assertTrue(leaf1 != leaf2, "Different addresses should never collide");
+    }
+
     /// @dev Test case: Random tree sizes (2-100 leaves) should produce verifiable merkle proofs for each leaf.
     function testFuzz_computeAddressLeaf_randomTreeSize_leafVerifiable(uint8 rawTreeSize) public view {
         uint256 treeSize = bound(rawTreeSize, 2, 100);
