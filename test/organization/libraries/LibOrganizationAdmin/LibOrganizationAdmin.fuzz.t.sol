@@ -853,7 +853,7 @@ contract LibOrganizationAdminFuzzTest is LibOrganizationAdminSuiteBase {
             // Verify: reverting mutations should roll back to the original non-zero admin configuration.
             assertEq(harness.adminCount(), initialAdminCount, "reverting call should preserve original admin count");
             assertEq(harness.votingThreshold(), initialThreshold, "reverting call should preserve threshold");
-            assertGe(harness.adminCount(), 1, "reverting call should not leave zero admins");
+            assertEq(harness.adminCount(), 3, "reverting call should not leave zero admins");
         }
     }
 
