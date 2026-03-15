@@ -1551,6 +1551,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             finalizedState.pendingInit.pendingRecoveryAddress, address(0), "finalize should clear pending address"
         );
         assertEq(finalizedState.pendingInit.pendingTimestamp, 0, "finalize should clear pending timestamp");
+        assertFalse(finalizedState.isEnabled, "finalize initialization should not auto-enable tx recovery");
     }
 
     /// @dev Verifies `LibOrganizationTxRecovery` requires the enable timelock to expire and makes disable immediate
