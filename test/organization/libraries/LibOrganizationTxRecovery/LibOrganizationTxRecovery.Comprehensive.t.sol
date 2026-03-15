@@ -1641,16 +1641,19 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     }
 
     /// @dev Verifies `LibOrganizationTxRecovery.isValidRecoverySignature` accepts both EOA and ERC-1271 recovery
-    /// signers and does not depend on the enabled flag.
+    /// signers, rejects wrong signers for both paths, and does not depend on the enabled flag.
     /// @param startEnabled The initial enabled flag used for the first validation branch.
     function testFuzz_FLOTR_SIG_116_isValidRecoverySignature_supportsEOAAndERC1271IndependentOfEnabledFlag(
         bool startEnabled
     ) public {
-        // Setup: build valid EOA and ERC-1271 recovery signers plus a wrong EOA signature for the negative branch.
+        // Setup: build valid EOA and ERC-1271 recovery signers plus wrong EOA and wrong contract signers for the
+        // negative branches.
         bytes memory validEOASignature = _signHash(RECOVERY_PK, MESSAGE_HASH);
         bytes memory wrongEOASignature = _signHash(OTHER_PK, MESSAGE_HASH);
         MockERC1271ValidSigner validContract = new MockERC1271ValidSigner();
         bytes memory validContractSignature = _buildContractSignature(address(validContract), hex"CAFE");
+        MockERC1271ValidSigner wrongContract = new MockERC1271ValidSigner();
+        bytes memory wrongContractSignature = _buildContractSignature(address(wrongContract), hex"CAFE");
 
         // Call: validate the EOA path with both enabled states.
         harness.setTxRecoveryState(
@@ -1693,6 +1696,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
             })
         );
         bool contractFirst = harness.isValidRecoverySignature(MESSAGE_HASH, validContractSignature);
+        bool contractWrong = harness.isValidRecoverySignature(MESSAGE_HASH, wrongContractSignature);
 
         harness.setTxRecoveryState(
             TxRecoveryState({
@@ -1714,6 +1718,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         assertFalse(eoaWrong, "wrong EOA signer should fail");
         assertTrue(contractFirst, "valid ERC1271 recovery signature should pass");
         assertTrue(contractSecond, "valid ERC1271 recovery signature should be independent of enabled state");
+        assertFalse(contractWrong, "wrong contract signer should fail");
     }
 
     /// @dev Verifies recovery signatures cannot replay across a different signed hash even when the signer stays
