@@ -1874,6 +1874,7 @@ contract SignatureUtilsTest is SignatureTestHelpers {
 
         // Verify: the wrapper should preserve the success tuple from the try-variant exactly.
         assertTrue(trySuccess, "valid signatures should succeed through tryRecoverSignerAtOffset");
+        assertEq(wrapperSigner, vm.addr(privateKey), "recovered signer should match the signing key");
         assertEq(wrapperSigner, trySigner, "wrapper signer should match try-variant signer");
         assertEq(wrapperNextOffset, tryNextOffset, "wrapper nextOffset should match try-variant nextOffset");
     }
