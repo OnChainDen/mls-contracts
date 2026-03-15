@@ -87,6 +87,24 @@ contract RevertingNativeReceiver {
  * upgrades, and recovery flows.
  */
 contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase, SignatureTestHelpers {
+    /// @dev Encapsulates the transaction fixture used by policy-usage execution tests.
+    struct PolicyUsageScenario {
+        TransactionType transactionType;
+        address to;
+        uint256 value;
+        bytes data;
+        address destinationForUsage;
+        uint256 expectedUsage;
+    }
+
+    /// @dev Encapsulates the signatures and nonce shared by replay-order tests.
+    struct ReplayTransactionContext {
+        uint256 expirationTimestamp;
+        bytes approvalSignature;
+        bytes rejectionSignature;
+        uint256 nonce;
+    }
+
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant INITIATE_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
@@ -778,35 +796,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         policy.config.rateLimit.destinationScope = RateLimitScope.PerEntity;
         policy.config.rateLimit.initiatorScope = RateLimitScope.PerEntity;
 
-        address to;
-        uint256 value;
-        bytes memory data;
-        address destinationForUsage;
-        uint256 expectedUsage;
-
-        if (useTokenTransfer) {
-            uint256 amount = bound(uint256(amountRaw), 1, 1_000_000);
-            address token = address(
-                uint160(uint256(keccak256(abi.encodePacked("fcf-rate-163-token", organizationSalt, accountSalt))))
-            );
-            address recipient = address(
-                uint160(uint256(keccak256(abi.encodePacked("fcf-rate-163-recipient", organizationSalt, accountSalt))))
-            );
-
-            policy.config.transactionType = TransactionType.TokenTransfers;
-            to = token;
-            value = 0;
-            data = abi.encodeWithSelector(bytes4(0xa9059cbb), recipient, amount);
-            destinationForUsage = recipient;
-            expectedUsage = amount;
-        } else {
-            policy.config.transactionType = TransactionType.ContractInteractions;
-            to = EXECUTION_RECIPIENT;
-            value = 0;
-            data = abi.encodeWithSelector(bytes4(0x51515151), uint256(amountRaw));
-            destinationForUsage = EXECUTION_RECIPIENT;
-            expectedUsage = 1;
-        }
+        PolicyUsageScenario memory scenario =
+            _buildPolicyUsageScenario(organizationSalt, accountSalt, amountRaw, useTokenTransfer);
+        policy.config.transactionType = scenario.transactionType;
 
         ValidationProofs memory proofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, policy, 16_301);
         ValidationProofs memory executionProofs = _buildEmptyProofs(policy);
@@ -814,9 +806,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         bytes memory initiatorSignature = _signInitiatorTransaction({
             organization: address(organization),
             account: account,
-            to: to,
-            value: value,
-            data: data,
+            to: scenario.to,
+            value: scenario.value,
+            data: scenario.data,
             salt: 16_302,
             expirationTimestamp: expiration,
             policyId: POLICY_ID,
@@ -827,9 +819,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         vm.prank(GUARDIAN);
         organization.executeAccountTransaction({
             account: account,
-            to: to,
-            value: value,
-            data: data,
+            to: scenario.to,
+            value: scenario.value,
+            data: scenario.data,
             salt: 16_302,
             expirationTimestamp: expiration,
             policyId: POLICY_ID,
@@ -838,11 +830,12 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             proofs: executionProofs
         });
 
-        uint256 observedUsage =
-            organization.getPolicyUsage(POLICY_ID, policy, account, destinationForUsage, initiatorSigner, proofs.policyProof);
+        uint256 observedUsage = organization.getPolicyUsage(
+            POLICY_ID, policy, account, scenario.destinationForUsage, initiatorSigner, proofs.policyProof
+        );
 
         // Verify: the public usage getter matches the amount/count written by the execution path.
-        assertEq(observedUsage, expectedUsage, "policy usage getter should match execution-path accounting");
+        assertEq(observedUsage, scenario.expectedUsage, "policy usage getter should match execution-path accounting");
     }
 
     /// @dev Verifies execute/reject nonce consumption is unaffected by interleaved recovery executions.
@@ -875,38 +868,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         organization.finalizeEnableTransactionAndERC1271Recovery();
 
         uint256 txSalt = bound(txSaltRaw, 1, type(uint96).max);
-        uint256 expiration = block.timestamp + 1 days;
-        bytes memory approvalSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: 0.2 ether,
-            data: bytes(""),
-            salt: txSalt,
-            expirationTimestamp: expiration,
-            policyId: POLICY_ID,
-            isApproval: true
-        });
-        bytes memory rejectionSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: 0.2 ether,
-            data: bytes(""),
-            salt: txSalt,
-            expirationTimestamp: expiration,
-            policyId: POLICY_ID,
-            isApproval: false
-        });
-        uint256 nonce = _computeAccountTransactionNonce({
-            organization: organization,
-            account: account,
-            to: EXECUTION_RECIPIENT,
-            value: 0.2 ether,
-            data: bytes(""),
-            policyId: POLICY_ID,
-            salt: txSalt
-        });
+        ReplayTransactionContext memory txContext = _buildReplayTransactionContext(organization, account, txSalt);
 
         if (recoveryBeforeReplay) {
             vm.prank(TX_RECOVERY);
@@ -922,10 +884,10 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 value: 0.2 ether,
                 data: bytes(""),
                 salt: txSalt,
-                expirationTimestamp: expiration,
+                expirationTimestamp: txContext.expirationTimestamp,
                 policyId: POLICY_ID,
-                initiatorSignature: approvalSignature,
-                reviewSignatures: rejectionSignature,
+                initiatorSignature: txContext.approvalSignature,
+                reviewSignatures: txContext.rejectionSignature,
                 proofs: proofs
             });
         } else {
@@ -936,9 +898,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 value: 0.2 ether,
                 data: bytes(""),
                 salt: txSalt,
-                expirationTimestamp: expiration,
+                expirationTimestamp: txContext.expirationTimestamp,
                 policyId: POLICY_ID,
-                initiatorSignature: approvalSignature,
+                initiatorSignature: txContext.approvalSignature,
                 reviewSignatures: bytes(""),
                 proofs: proofs
             });
@@ -949,7 +911,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
             organization.executeRecoveryAccountTransaction(account, EXECUTION_RECIPIENT, 0.2 ether, bytes(""));
         }
 
-        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, txContext.nonce));
         if (rejectFirst) {
             vm.prank(GUARDIAN);
             organization.executeAccountTransaction({
@@ -958,9 +920,9 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 value: 0.2 ether,
                 data: bytes(""),
                 salt: txSalt,
-                expirationTimestamp: expiration,
+                expirationTimestamp: txContext.expirationTimestamp,
                 policyId: POLICY_ID,
-                initiatorSignature: approvalSignature,
+                initiatorSignature: txContext.approvalSignature,
                 reviewSignatures: bytes(""),
                 proofs: proofs
             });
@@ -972,16 +934,16 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                 value: 0.2 ether,
                 data: bytes(""),
                 salt: txSalt,
-                expirationTimestamp: expiration,
+                expirationTimestamp: txContext.expirationTimestamp,
                 policyId: POLICY_ID,
-                initiatorSignature: approvalSignature,
-                reviewSignatures: rejectionSignature,
+                initiatorSignature: txContext.approvalSignature,
+                reviewSignatures: txContext.rejectionSignature,
                 proofs: proofs
             });
         }
 
         // Verify: recovery ordering never clears the consumed nonce or re-enables replay.
-        assertTrue(organization.getUsedNonce(nonce), "consumed account-transaction nonce must stay used");
+        assertTrue(organization.getUsedNonce(txContext.nonce), "consumed account-transaction nonce must stay used");
         assertEq(
             RECOVERY_RECIPIENT.balance + SECOND_RECIPIENT.balance,
             0.2 ether,
@@ -1302,6 +1264,98 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         nonce = organization.computeNonce(
             OperationType.AccountTransaction, abi.encode(account, to, value, keccak256(data), policyId), salt
         );
+    }
+
+    /// @dev Builds the transaction fixture used by the policy-usage fuzz test.
+    /// @param organizationSalt CREATE2 salt used for deterministic address derivation.
+    /// @param accountSalt CREATE2 salt used for deterministic address derivation.
+    /// @param amountRaw Fuzzed amount seed used to build calldata and expected usage.
+    /// @param useTokenTransfer Whether to build a token-transfer or contract-interaction scenario.
+    /// @return scenario The prepared transaction fixture and expected usage result.
+    function _buildPolicyUsageScenario(
+        bytes32 organizationSalt,
+        bytes32 accountSalt,
+        uint96 amountRaw,
+        bool useTokenTransfer
+    ) internal pure returns (PolicyUsageScenario memory scenario) {
+        if (useTokenTransfer) {
+            address token = address(
+                uint160(uint256(keccak256(abi.encodePacked("fcf-rate-163-token", organizationSalt, accountSalt))))
+            );
+            address recipient = address(
+                uint160(uint256(keccak256(abi.encodePacked("fcf-rate-163-recipient", organizationSalt, accountSalt))))
+            );
+
+            scenario = PolicyUsageScenario({
+                transactionType: TransactionType.TokenTransfers,
+                to: token,
+                value: 0,
+                data: abi.encodeWithSelector(
+                    bytes4(0xa9059cbb), recipient, uint256(bound(uint256(amountRaw), 1, 1_000_000))
+                ),
+                destinationForUsage: recipient,
+                expectedUsage: uint256(bound(uint256(amountRaw), 1, 1_000_000))
+            });
+            return scenario;
+        }
+
+        scenario = PolicyUsageScenario({
+            transactionType: TransactionType.ContractInteractions,
+            to: EXECUTION_RECIPIENT,
+            value: 0,
+            data: abi.encodeWithSelector(bytes4(0x51515151), uint256(amountRaw)),
+            destinationForUsage: EXECUTION_RECIPIENT,
+            expectedUsage: 1
+        });
+    }
+
+    /// @dev Builds the shared signatures and nonce used by the replay-order fuzz test.
+    /// @param organization The organization whose account-transaction domain is being exercised.
+    /// @param account The account whose transaction tuple is being signed.
+    /// @param txSalt The salt bound into the approval, rejection, and nonce tuple.
+    /// @return txContext The prepared approval signature, rejection signature, expiration, and nonce.
+    function _buildReplayTransactionContext(
+        OrganizationImplementationHarness organization,
+        address account,
+        uint256 txSalt
+    ) internal view returns (ReplayTransactionContext memory txContext) {
+        bytes memory data = bytes("");
+        uint256 expirationTimestamp = block.timestamp + 1 days;
+
+        txContext = ReplayTransactionContext({
+            expirationTimestamp: expirationTimestamp,
+            approvalSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: data,
+                salt: txSalt,
+                expirationTimestamp: expirationTimestamp,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            rejectionSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: data,
+                salt: txSalt,
+                expirationTimestamp: expirationTimestamp,
+                policyId: POLICY_ID,
+                isApproval: false
+            }),
+            nonce: _computeAccountTransactionNonce({
+                organization: organization,
+                account: account,
+                to: EXECUTION_RECIPIENT,
+                value: 0.2 ether,
+                data: data,
+                policyId: POLICY_ID,
+                salt: txSalt
+            })
+        });
     }
 
     /// @dev Builds the baseline auto-approve policy used by this suite's real end-to-end account-transaction flows.

@@ -739,10 +739,9 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         // Setup: deploy account + token and fund account token balance.
         MockAccountForOrganizationTransaction account = _deployMockAccount();
         MockERC20ForAccountTransaction token = new MockERC20ForAccountTransaction();
-        uint256 amount = 250;
-        token.mint(address(account), amount);
+        token.mint(address(account), 250);
 
-        bytes memory data = abi.encodeWithSelector(token.transfer.selector, RECIPIENT, amount);
+        bytes memory data = abi.encodeWithSelector(token.transfer.selector, RECIPIENT, 250);
         (, ValidationProofs memory proofs, bytes memory initiatorSignature, uint256 expiration) =
             _buildAutoApprovePayload(address(account), address(token), 0, data, 12, DEFAULT_POLICY_ID);
 
@@ -762,7 +761,7 @@ contract OrganizationAccountTransactionBaseExecuteAccountTransactionTest is
         });
 
         // Verify: recipient receives transferred token amount.
-        assertEq(token.balanceOf(RECIPIENT), amount, "recipient token balance should increase");
+        assertEq(token.balanceOf(RECIPIENT), 250, "recipient token balance should increase");
     }
 
     /**

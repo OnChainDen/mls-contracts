@@ -100,6 +100,13 @@ interface ISafeProxyFactory {
  * @dev Real Safe-module end-to-end tests for Organization account-transaction flows.
  */
 contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteBase, SignatureTestHelpers {
+    /// @dev Encapsulates the approval payload required to execute one account transaction through the module path.
+    struct ModuleExecutionAuth {
+        uint256 expirationTimestamp;
+        bytes initiatorSignature;
+        bytes reviewSignature;
+    }
+
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant INITIATE_ACCOUNT_TRANSACTION_TYPEHASH = keccak256(
@@ -165,30 +172,9 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         uint256 transferValue = 0.4 ether;
         vm.deal(account, 1 ether);
 
-        uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(receiver),
-            value: transferValue,
-            data: bytes(""),
-            salt: 19_806,
-            expirationTimestamp: expiration,
-            policyId: ETH_POLICY_ID,
-            isApproval: true
-        });
-        bytes memory reviewSignature = _signReviewTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(receiver),
-            value: transferValue,
-            data: bytes(""),
-            salt: 19_806,
-            expirationTimestamp: expiration,
-            policyId: ETH_POLICY_ID,
-            isApproval: true,
-            initiatorSignature: initiatorSignature
-        });
+        ModuleExecutionAuth memory auth = _buildModuleExecutionAuth(
+            organization, account, address(receiver), transferValue, bytes(""), 19_806, ETH_POLICY_ID
+        );
 
         // Call: execute the ETH transfer through `SafeExecutorModule.executeOnBehalf`, so the organization observes
         // the Safe as the guardian caller.
@@ -200,10 +186,10 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
             value: transferValue,
             data: bytes(""),
             salt: 19_806,
-            expirationTimestamp: expiration,
+            expirationTimestamp: auth.expirationTimestamp,
             policyId: ETH_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: reviewSignature,
+            initiatorSignature: auth.initiatorSignature,
+            reviewSignatures: auth.reviewSignature,
             proofs: proofs
         });
 
@@ -225,45 +211,22 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
 
         MockERC20ForAccountTransaction token = new MockERC20ForAccountTransaction();
         address recipient = address(0xD4404);
-        uint256 amount = 250;
 
         Policy memory policy = _buildManualApprovalPolicy(TransactionType.TokenTransfers);
         policy.config.destinationType = DestinationType.CustomList;
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = address(token);
         policy.config.token.hasAmountThreshold = true;
-        policy.config.token.amountThreshold = amount + 1;
+        policy.config.token.amountThreshold = 251;
         (policy.roots.customDestinationsRoot, ) = _buildSingleAddressRootAndProof(recipient);
 
         ValidationProofs memory proofs = _setPoliciesViaModule(organization, module, ERC20_POLICY_ID, policy, 19_823);
         address account = _deployAccountViaModule(organization, module, bytes32(uint256(19_824)), 19_825);
-        token.mint(account, amount);
+        token.mint(account, 250);
 
-        bytes memory data = abi.encodeWithSelector(token.transfer.selector, recipient, amount);
-        uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(token),
-            value: 0,
-            data: data,
-            salt: 19_826,
-            expirationTimestamp: expiration,
-            policyId: ERC20_POLICY_ID,
-            isApproval: true
-        });
-        bytes memory reviewSignature = _signReviewTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(token),
-            value: 0,
-            data: data,
-            salt: 19_826,
-            expirationTimestamp: expiration,
-            policyId: ERC20_POLICY_ID,
-            isApproval: true,
-            initiatorSignature: initiatorSignature
-        });
+        bytes memory data = abi.encodeWithSelector(token.transfer.selector, recipient, 250);
+        ModuleExecutionAuth memory auth =
+            _buildModuleExecutionAuth(organization, account, address(token), 0, data, 19_826, ERC20_POLICY_ID);
 
         // Call: execute the constrained ERC-20 transfer through the Safe-module guardian path.
         _executeAccountTransactionViaModule({
@@ -274,15 +237,15 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
             value: 0,
             data: data,
             salt: 19_826,
-            expirationTimestamp: expiration,
+            expirationTimestamp: auth.expirationTimestamp,
             policyId: ERC20_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: reviewSignature,
+            initiatorSignature: auth.initiatorSignature,
+            reviewSignatures: auth.reviewSignature,
             proofs: proofs
         });
 
         // Verify: the configured recipient receives the exact constrained token amount and the Safe remains guardian.
-        assertEq(token.balanceOf(recipient), amount, "recipient should get the constrained ERC-20 amount");
+        assertEq(token.balanceOf(recipient), 250, "recipient should get the constrained ERC-20 amount");
         assertEq(organization.guardian(), guardianSafe, "guardian should remain the Safe after ERC-20 execution");
     }
 
@@ -315,30 +278,8 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
 
         address account = _deployAccountViaModule(organization, module, bytes32(uint256(19_844)), 19_845);
         bytes memory data = abi.encodeWithSelector(target.ping.selector, uint256(42));
-        uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(target),
-            value: 0,
-            data: data,
-            salt: 19_846,
-            expirationTimestamp: expiration,
-            policyId: INTERACTION_POLICY_ID,
-            isApproval: true
-        });
-        bytes memory reviewSignature = _signReviewTransaction({
-            organization: address(organization),
-            account: account,
-            to: address(target),
-            value: 0,
-            data: data,
-            salt: 19_846,
-            expirationTimestamp: expiration,
-            policyId: INTERACTION_POLICY_ID,
-            isApproval: true,
-            initiatorSignature: initiatorSignature
-        });
+        ModuleExecutionAuth memory auth =
+            _buildModuleExecutionAuth(organization, account, address(target), 0, data, 19_846, INTERACTION_POLICY_ID);
 
         // Call: execute the function-constrained contract interaction through the Safe-module guardian path.
         _executeAccountTransactionViaModule({
@@ -349,10 +290,10 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
             value: 0,
             data: data,
             salt: 19_846,
-            expirationTimestamp: expiration,
+            expirationTimestamp: auth.expirationTimestamp,
             policyId: INTERACTION_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: reviewSignature,
+            initiatorSignature: auth.initiatorSignature,
+            reviewSignatures: auth.reviewSignature,
             proofs: proofs
         });
 
@@ -378,53 +319,9 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
         address proxyFactory = _deployCreationCodeFixture(SAFE_PROXY_FACTORY_CREATION_CODE_PATH);
         BatchedTransaction batchedTransaction = new BatchedTransaction();
 
-        address[] memory owners = new address[](1);
-        owners[0] = adminSigner;
-        bytes memory initializer = abi.encodeWithSelector(
-            ISafeSetup.setup.selector,
-            owners,
-            1,
-            address(0),
-            bytes(""),
-            address(0),
-            address(0),
-            0,
-            payable(address(0))
-        );
-
-        safe = ISafeProxyFactory(proxyFactory).createProxyWithNonce(singleton, initializer, saltNonce);
+        safe = _deploySafe(singleton, proxyFactory, saltNonce);
         module = new SafeExecutorModule(safe, adminSigner, address(batchedTransaction));
-
-        bytes memory enableModuleData = abi.encodeWithSignature("enableModule(address)", address(module));
-        ISafeModuleTx safeProxy = ISafeModuleTx(safe);
-        bytes32 txHash = safeProxy.getTransactionHash(
-            safe,
-            0,
-            enableModuleData,
-            0,
-            0,
-            0,
-            0,
-            address(0),
-            address(0),
-            safeProxy.nonce()
-        );
-
-        bool success = safeProxy.execTransaction(
-            safe,
-            0,
-            enableModuleData,
-            0,
-            0,
-            0,
-            0,
-            address(0),
-            payable(address(0)),
-            _signSafeHash(ADMIN_PK_1, txHash)
-        );
-
-        assertTrue(success, "safe should enable the executor module");
-        assertTrue(safeProxy.isModuleEnabled(address(module)), "module should be enabled on the Safe");
+        _enableModuleOnSafe(safe, module);
     }
 
     /**
@@ -580,6 +477,57 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
     }
 
     /**
+     * @dev Builds the approval payload required for one module-routed account transaction.
+     * @param organization Organization address bound into the EIP-712 hashes.
+     * @param account Source account authorized by the signatures.
+     * @param to Destination authorized by the signatures.
+     * @param value Native-token value bound into the signatures.
+     * @param data Calldata bound into the signatures.
+     * @param salt Salt bound into the signatures and nonce.
+     * @param policyId Policy identifier bound into the signatures.
+     * @return auth Prepared initiator signature, review signature, and shared expiration timestamp.
+     */
+    function _buildModuleExecutionAuth(
+        OrganizationImplementationHarness organization,
+        address account,
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint256 salt,
+        uint256 policyId
+    ) internal view returns (ModuleExecutionAuth memory auth) {
+        uint256 expirationTimestamp = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signInitiatorTransaction({
+            organization: address(organization),
+            account: account,
+            to: to,
+            value: value,
+            data: data,
+            salt: salt,
+            expirationTimestamp: expirationTimestamp,
+            policyId: policyId,
+            isApproval: true
+        });
+
+        auth = ModuleExecutionAuth({
+            expirationTimestamp: expirationTimestamp,
+            initiatorSignature: initiatorSignature,
+            reviewSignature: _signReviewTransaction({
+                organization: address(organization),
+                account: account,
+                to: to,
+                value: value,
+                data: data,
+                salt: salt,
+                expirationTimestamp: expirationTimestamp,
+                policyId: policyId,
+                isApproval: true,
+                initiatorSignature: initiatorSignature
+            })
+        });
+    }
+
+    /**
      * @dev Builds a baseline manual-approval policy for the requested transaction type.
      * @param transactionType Transaction type enforced by the policy.
      * @return policy Manual-approval policy seeded with deterministic initiator/reviewer fixtures.
@@ -620,6 +568,69 @@ contract OrganizationAccountTransactionSafeModuleE2ETest is InitializationSuiteB
                 sourceAccountsRoot: bytes32(0), customDestinationsRoot: bytes32(0), allowedFunctionsRoot: bytes32(0)
             })
         });
+    }
+
+    /**
+     * @dev Deploys one Safe proxy configured with `adminSigner` as its only owner.
+     * @param singleton Safe singleton implementation used by the proxy factory.
+     * @param proxyFactory Safe proxy factory used for deployment.
+     * @param saltNonce Salt used for deterministic Safe proxy deployment.
+     * @return safe Deployed Safe proxy address.
+     */
+    function _deploySafe(address singleton, address proxyFactory, uint256 saltNonce) internal returns (address safe) {
+        address[] memory owners = new address[](1);
+        owners[0] = adminSigner;
+        bytes memory initializer = abi.encodeWithSelector(
+            ISafeSetup.setup.selector,
+            owners,
+            1,
+            address(0),
+            bytes(""),
+            address(0),
+            address(0),
+            0,
+            payable(address(0))
+        );
+
+        safe = ISafeProxyFactory(proxyFactory).createProxyWithNonce(singleton, initializer, saltNonce);
+    }
+
+    /**
+     * @dev Enables the executor module on the Safe through a real owner-signed Safe transaction.
+     * @param safe Safe proxy that should enable the module.
+     * @param module Executor module to enable on the Safe.
+     */
+    function _enableModuleOnSafe(address safe, SafeExecutorModule module) internal {
+        bytes memory enableModuleData = abi.encodeWithSignature("enableModule(address)", address(module));
+        ISafeModuleTx safeProxy = ISafeModuleTx(safe);
+        bytes32 txHash = safeProxy.getTransactionHash(
+            safe,
+            0,
+            enableModuleData,
+            0,
+            0,
+            0,
+            0,
+            address(0),
+            address(0),
+            safeProxy.nonce()
+        );
+
+        bool success = safeProxy.execTransaction(
+            safe,
+            0,
+            enableModuleData,
+            0,
+            0,
+            0,
+            0,
+            address(0),
+            payable(address(0)),
+            _signSafeHash(ADMIN_PK_1, txHash)
+        );
+
+        assertTrue(success, "safe should enable the executor module");
+        assertTrue(safeProxy.isModuleEnabled(address(module)), "module should be enabled on the Safe");
     }
 
     /**

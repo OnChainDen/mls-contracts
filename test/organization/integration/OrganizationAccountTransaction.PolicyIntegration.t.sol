@@ -302,8 +302,6 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     function test_rateLimitExceeded_revertsRateLimitExceeded() public {
         // Setup: assemble inputs expected to hit the guarded failure path for rate limit exceeded reverts rate limit
         // exceeded.
-        uint256 amount = 101;
-
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -312,20 +310,9 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, amount);
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 101);
         uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTx({
-            txHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 7,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            isApproval: true
-        });
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 7, expiration, true);
 
         // Verify: assert that the revert reason matches the policy guard under test.
         vm.expectRevert(
@@ -333,25 +320,12 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         );
         // Call: invoke `validateTransactionApprovalOrRevertViaLibrary` with the failing payload to exercise the revert
         // branch.
-        harness.validateTransactionApprovalOrRevertViaLibrary({
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 7,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        _validateApproval(harness, TOKEN, data, 7, expiration, initiatorSignature, bytes(""), proofs);
     }
 
     /// @dev Verifies that token transfer rate limit usage tracks transfer amount.
     function test_TXRL_INV_5_tokenTransferRateLimitUsageTracksTransferAmount() public {
         // Setup: configure a valid fixture for token transfer rate limit usage tracks transfer amount.
-        uint256 amount = 42;
-
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -360,39 +334,17 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, amount);
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 42);
         uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTx({
-            txHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 8,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            isApproval: true
-        });
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 8, expiration, true);
 
         // Call: execute `validateTransactionApprovalOrRevertViaLibrary` with the happy-path payload.
-        harness.validateTransactionApprovalOrRevertViaLibrary({
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 8,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        _validateApproval(harness, TOKEN, data, 8, expiration, initiatorSignature, bytes(""), proofs);
 
         bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
         uint256 window = _computeTimeWindow(policy);
         // Verify: assert the expected success result and state updates.
-        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), amount, "usage should equal transfer amount");
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 42, "usage should equal transfer amount");
     }
 
     /// @dev Verifies that non token rate limit usage increments by one.
@@ -444,8 +396,6 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     /// @dev Verifies that rate limit key uses erc20 recipient as destination.
     function test_TXRL_INV_11_rateLimitKeyUsesERC20RecipientAsDestination() public {
         // Setup: configure a valid fixture for rate limit key uses erc20 recipient as destination.
-        uint256 amount = 11;
-
         Policy memory policy =
             _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
@@ -455,41 +405,19 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, amount);
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 11);
         uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTx({
-            txHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 10,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            isApproval: true
-        });
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 10, expiration, true);
 
         // Call: execute `validateTransactionApprovalOrRevertViaLibrary` with the happy-path payload.
-        harness.validateTransactionApprovalOrRevertViaLibrary({
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 10,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        _validateApproval(harness, TOKEN, data, 10, expiration, initiatorSignature, bytes(""), proofs);
 
         bytes32 recipientKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
         bytes32 tokenKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, TOKEN, initiator1);
         uint256 window = _computeTimeWindow(policy);
 
         // Verify: assert the expected success result and state updates.
-        assertEq(policyStateHarness.getPolicyUsage(recipientKey, window), amount, "recipient key should be charged");
+        assertEq(policyStateHarness.getPolicyUsage(recipientKey, window), 11, "recipient key should be charged");
         assertEq(policyStateHarness.getPolicyUsage(tokenKey, window), 0, "token-contract key should remain untouched");
     }
 
@@ -687,8 +615,6 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
     /// @dev Verifies that desired any policy token transfers use count based rate usage.
     function test_desired_anyPolicyTokenTransfersUseCountBasedRateUsage() public {
         // Setup: configure a valid fixture for desired any policy token transfers use count based rate usage.
-        uint256 amount = 500;
-
         Policy memory policy = _buildApprovalPolicy({txType: TransactionType.Any, approvalType: PolicyType.AutoApprove});
         policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
         policy.config.rateLimit.timeIntervalHours = 1;
@@ -696,34 +622,12 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
 
         ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
 
-        bytes memory data = _encodeERC20Transfer(RECIPIENT, amount);
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 500);
         uint256 expiration = block.timestamp + 1 days;
-        bytes memory initiatorSignature = _signInitiatorTx({
-            txHarness: harness,
-            privateKey: INITIATOR_PK_1,
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 15,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            isApproval: true
-        });
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 15, expiration, true);
 
         // Call: execute `validateTransactionApprovalOrRevertViaLibrary` with the happy-path payload.
-        harness.validateTransactionApprovalOrRevertViaLibrary({
-            account: ACCOUNT,
-            to: TOKEN,
-            value: 0,
-            data: data,
-            salt: 15,
-            expirationTimestamp: expiration,
-            policyId: DEFAULT_POLICY_ID,
-            initiatorSignature: initiatorSignature,
-            reviewSignatures: bytes(""),
-            proofs: proofs
-        });
+        _validateApproval(harness, TOKEN, data, 15, expiration, initiatorSignature, bytes(""), proofs);
 
         bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
         uint256 window = _computeTimeWindow(policy);

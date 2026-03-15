@@ -22,6 +22,13 @@ import {
  * @dev Cross-file fuzz tests for organization policy behaviors.
  */
 contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
+    /// @dev Encapsulates one concrete transaction case used by policy-evaluation fuzz tests.
+    struct PolicyTransactionCase {
+        address to;
+        uint256 value;
+        bytes data;
+    }
+
     uint256 internal constant DEFAULT_POLICY_ID = 5001;
 
     /**
@@ -500,7 +507,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         vm.assume(tokenContract != address(0));
         vm.assume(tokenContract != address(0xBAD1));
 
-        uint256 amount = bound(uint256(amountRaw), 1, type(uint96).max);
+        uint256 transferAmount = bound(uint256(amountRaw), 1, type(uint96).max);
         (bytes32 destinationRoot, bytes32[] memory destinationProof) =
             _buildAddressRootAndProof(buildArray(allowedDestination, deniedDestination), 0);
 
@@ -521,42 +528,9 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             constraints: bytes("")
         });
 
-        address validTo = useERC20 ? tokenContract : allowedDestination;
-        uint256 validValue = useERC20 ? 0 : amount;
-        bytes memory validData = useERC20 ? _encodeERC20Transfer(allowedDestination, amount) : bytes("");
-        address wrongTokenTo = useERC20 ? address(0xBAD1) : allowedDestination;
-        bytes memory wrongDestinationData = useERC20 ? _encodeERC20Transfer(deniedDestination, amount) : bytes("");
-
         // Verify: only actual token transfers that match both the token filter and the destination proof should pass.
-        assertTrue(
-            harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID, address(0xAA58), validTo, validValue, validData, initiator1, proofs
-            ),
-            "matching token transfer should pass"
-        );
-        assertFalse(
-            harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID,
-                address(0xAA58),
-                wrongTokenTo,
-                0,
-                useERC20 ? validData : abi.encodeWithSelector(bytes4(0x11223344), amount),
-                initiator1,
-                proofs
-            ),
-            "non-transfer or wrong-token inputs should fail the token-transfer policy"
-        );
-        assertFalse(
-            harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID,
-                address(0xAA58),
-                useERC20 ? tokenContract : deniedDestination,
-                useERC20 ? 0 : amount,
-                useERC20 ? wrongDestinationData : bytes(""),
-                initiator1,
-                proofs
-            ),
-            "wrong transfer destination should fail the token-transfer policy"
+        _assertTokenTransferPolicyOutcomes(
+            useERC20, allowedDestination, deniedDestination, tokenContract, transferAmount, proofs
         );
     }
 
@@ -683,7 +657,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         vm.assume(allowedDestination != deniedDestination);
         vm.assume(tokenContract != address(0));
 
-        uint256 amount = bound(uint256(amountRaw), 1, type(uint96).max);
+        uint256 transferAmount = bound(uint256(amountRaw), 1, type(uint96).max);
         (bytes32 destinationRoot, bytes32[] memory destinationProof) =
             _buildAddressRootAndProof(buildArray(allowedDestination, deniedDestination), 0);
 
@@ -702,49 +676,15 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             constraints: bytes("")
         });
 
-        bool allowedResult;
-        bool deniedResult;
-        if (useTokenTransfer) {
-            if (useERC20) {
-                // Call: evaluate the ERC-20 transfer class for both an allowed and disallowed actual recipient.
-                allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                    DEFAULT_POLICY_ID,
-                    address(0xAA60),
-                    tokenContract,
-                    0,
-                    _encodeERC20Transfer(allowedDestination, amount),
-                    initiator1,
-                    proofs
-                );
-                deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                    DEFAULT_POLICY_ID,
-                    address(0xAA60),
-                    tokenContract,
-                    0,
-                    _encodeERC20Transfer(deniedDestination, amount),
-                    initiator1,
-                    proofs
-                );
-            } else {
-                // Call: evaluate the native-transfer class for both an allowed and disallowed actual recipient.
-                allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                    DEFAULT_POLICY_ID, address(0xAA60), allowedDestination, amount, bytes(""), initiator1, proofs
-                );
-                deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                    DEFAULT_POLICY_ID, address(0xAA60), deniedDestination, amount, bytes(""), initiator1, proofs
-                );
-            }
-        } else {
-            bytes memory callData = abi.encodeWithSelector(bytes4(0x88776655), amount);
-
-            // Call: evaluate the contract-interaction class for both an allowed and disallowed actual destination.
-            allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID, address(0xAA60), allowedDestination, 0, callData, initiator1, proofs
-            );
-            deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
-                DEFAULT_POLICY_ID, address(0xAA60), deniedDestination, 0, callData, initiator1, proofs
-            );
-        }
+        (bool allowedResult, bool deniedResult) = _evaluateAnyPolicyTransactionClass(
+            useTokenTransfer,
+            useERC20,
+            allowedDestination,
+            deniedDestination,
+            tokenContract,
+            transferAmount,
+            proofs
+        );
 
         // Verify: both transaction classes should be accepted only when the destination filter matches the actual
         // destination derived by the policy helpers.
@@ -775,7 +715,7 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         vm.assume(destination != address(0));
         vm.assume(tokenContract != address(0));
 
-        uint256 amount = bound(uint256(amountRaw), 1, type(uint96).max);
+        uint256 transferAmount = bound(uint256(amountRaw), 1, type(uint96).max);
         Policy memory policy = _buildBasePolicy();
         policy.config.transactionType = TransactionType.Signatures;
 
@@ -789,28 +729,12 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
             constraints: bytes("")
         });
 
-        address to;
-        uint256 value;
-        bytes memory data;
-        if (useTokenTransfer) {
-            if (useERC20) {
-                to = tokenContract;
-                value = 0;
-                data = _encodeERC20Transfer(destination, amount);
-            } else {
-                to = destination;
-                value = amount;
-                data = bytes("");
-            }
-        } else {
-            to = destination;
-            value = 0;
-            data = abi.encodeWithSelector(bytes4(0x55667788), amount);
-        }
+        PolicyTransactionCase memory txCase =
+            _buildSignaturesPolicyTransactionCase(useTokenTransfer, useERC20, destination, tokenContract, transferAmount);
 
         // Call: evaluate the representative account-transaction path against the signatures-only policy.
         bool allowed = harness.isTransactionAllowedByPolicyViaLibrary(
-            DEFAULT_POLICY_ID, address(0xAA61), to, value, data, initiator1, proofs
+            DEFAULT_POLICY_ID, address(0xAA61), txCase.to, txCase.value, txCase.data, initiator1, proofs
         );
 
         // Verify: signature-validation policies should never authorize account-transaction execution/rejection flows.
@@ -842,5 +766,174 @@ contract OrganizationPolicyCrossFileFuzzTest is LibOrganizationPolicySuiteBase {
         bytes32 root;
         (root, proof) = _buildPolicyRootAndProof(policyIds, policies, 0);
         policyStateHarness.setPoliciesRoot(root);
+    }
+
+    /// @dev Verifies token-transfer policy outcomes for matching, wrong-token, and wrong-destination cases.
+    /// @param useERC20 Whether to evaluate the ERC-20 transfer branch instead of the native-transfer branch.
+    /// @param allowedDestination Allowed destination encoded into the destination proof.
+    /// @param deniedDestination Distinct disallowed destination.
+    /// @param tokenContract ERC-20 token contract used when `useERC20 == true`.
+    /// @param transferAmount Bounded transfer amount used for the token-transfer case.
+    /// @param proofs Validation proofs for the exact policy under test.
+    function _assertTokenTransferPolicyOutcomes(
+        bool useERC20,
+        address allowedDestination,
+        address deniedDestination,
+        address tokenContract,
+        uint256 transferAmount,
+        ValidationProofs memory proofs
+    ) internal view {
+        PolicyTransactionCase memory validCase = PolicyTransactionCase({
+            to: useERC20 ? tokenContract : allowedDestination,
+            value: useERC20 ? 0 : transferAmount,
+            data: useERC20 ? _encodeERC20Transfer(allowedDestination, transferAmount) : bytes("")
+        });
+        PolicyTransactionCase memory wrongDestinationCase = PolicyTransactionCase({
+            to: useERC20 ? tokenContract : deniedDestination,
+            value: useERC20 ? 0 : transferAmount,
+            data: useERC20 ? _encodeERC20Transfer(deniedDestination, transferAmount) : bytes("")
+        });
+
+        assertTrue(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA58),
+                validCase.to,
+                validCase.value,
+                validCase.data,
+                initiator1,
+                proofs
+            ),
+            "matching token transfer should pass"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA58),
+                useERC20 ? address(0xBAD1) : allowedDestination,
+                0,
+                useERC20 ? validCase.data : abi.encodeWithSelector(bytes4(0x11223344), transferAmount),
+                initiator1,
+                proofs
+            ),
+            "non-transfer or wrong-token inputs should fail the token-transfer policy"
+        );
+        assertFalse(
+            harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA58),
+                wrongDestinationCase.to,
+                wrongDestinationCase.value,
+                wrongDestinationCase.data,
+                initiator1,
+                proofs
+            ),
+            "wrong transfer destination should fail the token-transfer policy"
+        );
+    }
+
+    /// @dev Evaluates the allowed and denied transaction-class branches for `TransactionType.Any`.
+    /// @param useTokenTransfer Whether to evaluate a token-transfer class instead of a contract interaction.
+    /// @param useERC20 When `useTokenTransfer == true`, whether to use the ERC-20 branch instead of native transfer.
+    /// @param allowedDestination Allowed destination encoded into the destination proof.
+    /// @param deniedDestination Distinct disallowed destination.
+    /// @param tokenContract ERC-20 token contract used for ERC-20 transfer branches.
+    /// @param transferAmount Bounded transfer amount used for the selected transaction class.
+    /// @param proofs Validation proofs for the exact policy under test.
+    /// @return allowedResult Whether the allowed branch passed policy validation.
+    /// @return deniedResult Whether the denied branch passed policy validation.
+    function _evaluateAnyPolicyTransactionClass(
+        bool useTokenTransfer,
+        bool useERC20,
+        address allowedDestination,
+        address deniedDestination,
+        address tokenContract,
+        uint256 transferAmount,
+        ValidationProofs memory proofs
+    ) internal view returns (bool allowedResult, bool deniedResult) {
+        if (useTokenTransfer) {
+            if (useERC20) {
+                allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                    DEFAULT_POLICY_ID,
+                    address(0xAA60),
+                    tokenContract,
+                    0,
+                    _encodeERC20Transfer(allowedDestination, transferAmount),
+                    initiator1,
+                    proofs
+                );
+                deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                    DEFAULT_POLICY_ID,
+                    address(0xAA60),
+                    tokenContract,
+                    0,
+                    _encodeERC20Transfer(deniedDestination, transferAmount),
+                    initiator1,
+                    proofs
+                );
+                return (allowedResult, deniedResult);
+            }
+
+            allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA60),
+                allowedDestination,
+                transferAmount,
+                bytes(""),
+                initiator1,
+                proofs
+            );
+            deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+                DEFAULT_POLICY_ID,
+                address(0xAA60),
+                deniedDestination,
+                transferAmount,
+                bytes(""),
+                initiator1,
+                proofs
+            );
+            return (allowedResult, deniedResult);
+        }
+
+        bytes memory callData = abi.encodeWithSelector(bytes4(0x88776655), transferAmount);
+        allowedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+            DEFAULT_POLICY_ID, address(0xAA60), allowedDestination, 0, callData, initiator1, proofs
+        );
+        deniedResult = harness.isTransactionAllowedByPolicyViaLibrary(
+            DEFAULT_POLICY_ID, address(0xAA60), deniedDestination, 0, callData, initiator1, proofs
+        );
+    }
+
+    /// @dev Builds one representative transaction case for a signatures-only policy check.
+    /// @param useTokenTransfer Whether to build a token-transfer case instead of a contract interaction.
+    /// @param useERC20 When `useTokenTransfer == true`, whether to use the ERC-20 branch instead of native transfer.
+    /// @param destination Destination used for the native-transfer or contract-interaction branch.
+    /// @param tokenContract ERC-20 token contract used for the ERC-20 transfer branch.
+    /// @param transferAmount Bounded transfer amount used for the representative case.
+    /// @return txCase The representative transaction case that should still be rejected by a signatures-only policy.
+    function _buildSignaturesPolicyTransactionCase(
+        bool useTokenTransfer,
+        bool useERC20,
+        address destination,
+        address tokenContract,
+        uint256 transferAmount
+    ) internal pure returns (PolicyTransactionCase memory txCase) {
+        if (useTokenTransfer) {
+            if (useERC20) {
+                return PolicyTransactionCase({
+                    to: tokenContract,
+                    value: 0,
+                    data: _encodeERC20Transfer(destination, transferAmount)
+                });
+            }
+
+            return PolicyTransactionCase({to: destination, value: transferAmount, data: bytes("")});
+        }
+
+        return PolicyTransactionCase({
+            to: destination,
+            value: 0,
+            data: abi.encodeWithSelector(bytes4(0x55667788), transferAmount)
+        });
     }
 }
