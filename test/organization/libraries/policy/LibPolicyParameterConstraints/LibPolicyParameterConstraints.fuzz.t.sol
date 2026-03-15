@@ -110,7 +110,8 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
     /// @param intValue The int value supplied to the unsupported int-oneOf branch.
     /// @param addressValue The address supplied to the unsupported address-range branch.
     /// @param fixedBytesValue The bytes32 value supplied to the unsupported fixed-bytes-range branch.
-    /// @param payload The dynamic bytes payload supplied to the unsupported bytes-range and dispatch branches.
+    /// @param payload The dynamic bytes payload supplied to the unsupported bytes-range, string-range, and dispatch
+    /// branches.
     function testFuzz_FLPPC_VALID_74_unsupportedConstraintMatrix_alwaysFails(
         uint256 uintValue,
         int256 intValue,
@@ -122,8 +123,22 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
 
         // Setup: prepare representative unsupported combinations across direct validators and dispatcher paths.
         bytes memory bytesData = _encodeSingleBytesArg(payload);
+        ParameterConstraint memory stringConstraint = ParameterConstraint({
+            paramType: ParamType.String,
+            constraintType: ConstraintType.Range,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: abi.encode(keccak256(payload)),
+            paramValueInListProof: _emptyProof()
+        });
         ParameterConstraint memory arrayConstraint = ParameterConstraint({
             paramType: ParamType.Array,
+            constraintType: ConstraintType.Exact,
+            paramCalldataHeadSlotCount: 1,
+            comparisonData: bytes(""),
+            paramValueInListProof: _emptyProof()
+        });
+        ParameterConstraint memory structConstraint = ParameterConstraint({
+            paramType: ParamType.Struct,
             constraintType: ConstraintType.Exact,
             paramCalldataHeadSlotCount: 1,
             comparisonData: bytes(""),
@@ -148,8 +163,12 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         bool bytesRange = harness.isBytesOrStringParameterAllowedByConstraintViaPolicyLibrary(
             ConstraintType.Range, abi.encode(keccak256(payload)), bytes32(uint256(32)), bytesData
         );
+        bool stringRange =
+            harness.isParameterAllowedByConstraintViaPolicyLibrary(stringConstraint, bytes32(uint256(32)), bytesData);
         bool arrayExact =
             harness.isParameterAllowedByConstraintViaPolicyLibrary(arrayConstraint, bytes32(uint256(32)), bytesData);
+        bool structExact =
+            harness.isParameterAllowedByConstraintViaPolicyLibrary(structConstraint, bytes32(uint256(32)), bytesData);
 
         // Verify: every unsupported combination should return false instead of silently accepting.
         assertFalse(uintOneOf, "uint one-of should fail");
@@ -158,7 +177,9 @@ contract LibPolicyParameterConstraintsFuzzTest is LibPolicyParameterConstraintsS
         assertFalse(boolRange, "bool range should fail");
         assertFalse(fixedBytesRange, "fixed-bytes range should fail");
         assertFalse(bytesRange, "bytes range should fail");
+        assertFalse(stringRange, "string range dispatch should fail");
         assertFalse(arrayExact, "array exact dispatch should fail");
+        assertFalse(structExact, "struct exact dispatch should fail");
     }
 
     /// @dev Verifies the address `OneOf` path accepts only the exact `(root, proof, value)` tuple.
