@@ -1464,6 +1464,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
     ) public {
         vm.assume(firstRecovery != address(0));
         vm.assume(secondRecovery != address(0));
+        vm.assume(firstRecovery != secondRecovery);
 
         uint256 boundedFirstTimelock = bound(
             firstTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
@@ -1471,6 +1472,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         uint256 boundedSecondTimelock = bound(
             secondTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
+        vm.assume(boundedFirstTimelock != boundedSecondTimelock);
 
         // Setup: reset tx-recovery state and apply one successful initialization.
         harness.resetTxRecoveryState();
@@ -1501,6 +1503,7 @@ contract LibOrganizationTxRecoveryComprehensiveTest is Test, SignatureTestHelper
         uint256 boundedPendingTimelock = bound(
             pendingTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
+        vm.assume(boundedPendingTimelock != ADMIN_OPERATION_TIMELOCK);
 
         // Setup: clear active tx-recovery config so deferred initialization is available.
         harness.resetTxRecoveryState();

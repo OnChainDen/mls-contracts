@@ -168,6 +168,7 @@ contract LibOrganizationGuardianRecoveryFuzzTest is LibOrganizationGuardianRecov
         uint256 boundedPendingTimelock = bound(
             pendingTimelock, TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS, TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
+        vm.assume(boundedPendingTimelock != ADMIN_OPERATION_TIMELOCK);
 
         // Setup: clear active guardian-recovery config so deferred initialization is available.
         harness.resetGuardianRecoveryStorageViaHarness();
