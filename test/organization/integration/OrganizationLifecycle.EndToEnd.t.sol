@@ -892,7 +892,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
         if (recoveryBeforeReplay) {
             vm.prank(TX_RECOVERY);
-            organization.executeRecoveryAccountTransaction(account, RECOVERY_RECIPIENT, 0.2 ether, bytes(""));
+            organization.executeRecoveryAccountTransaction(account, EXECUTION_RECIPIENT, 0.2 ether, bytes(""));
         }
 
         // Call: consume the shared nonce through one path, optionally run recovery, then replay the opposite path.
@@ -928,7 +928,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
         if (!recoveryBeforeReplay) {
             vm.prank(TX_RECOVERY);
-            organization.executeRecoveryAccountTransaction(account, SECOND_RECIPIENT, 0.2 ether, bytes(""));
+            organization.executeRecoveryAccountTransaction(account, EXECUTION_RECIPIENT, 0.2 ether, bytes(""));
         }
 
         vm.expectRevert(abi.encodeWithSelector(IOrganizationSignatures.NonceAlreadyUsed.selector, nonce));
