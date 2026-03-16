@@ -117,6 +117,7 @@ contract OrganizationPolicyInvariantHandler {
                     limitType: RateLimitType.TimeInterval,
                     timeIntervalHours: 1,
                     timeIntervalLimit: intervalLimit,
+                    anchorTimestamp: 0,
                     initiatorScope: RateLimitScope.PerEntity,
                     sourceScope: RateLimitScope.PerEntity,
                     destinationScope: RateLimitScope.PerEntity

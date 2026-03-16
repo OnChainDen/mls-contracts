@@ -18,9 +18,9 @@ contract PolicyLibrariesHarness is LibOrganizationPolicyHarness {
     uint256 private constant _SLOT_APPROVER_TYPE = 5;
     uint256 private constant _SLOT_INITIATOR_TYPE = 10;
     uint256 private constant _SLOT_RATE_LIMIT_TYPE = 17;
-    uint256 private constant _SLOT_RATE_INITIATOR_SCOPE = 20;
-    uint256 private constant _SLOT_RATE_SOURCE_SCOPE = 21;
-    uint256 private constant _SLOT_RATE_DESTINATION_SCOPE = 22;
+    uint256 private constant _SLOT_RATE_INITIATOR_SCOPE = 21;
+    uint256 private constant _SLOT_RATE_SOURCE_SCOPE = 22;
+    uint256 private constant _SLOT_RATE_DESTINATION_SCOPE = 23;
 
     /**
      * @dev Raw-enum wrapper for `LibPolicyInitiator.isInitiatorAuthorized`.

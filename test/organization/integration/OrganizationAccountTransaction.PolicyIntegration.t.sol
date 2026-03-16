@@ -1420,11 +1420,99 @@ contract OrganizationAccountTransactionPolicyIntegrationTest is LibOrganizationA
         return _signHash(privateKey, hash);
     }
 
+    /// @dev Verifies that a rate limit with a future anchor reverts with RateLimitExceeded.
+    function test_rateLimitWithAnchor_exceedsBeforeAnchor_reverts() public {
+        // Setup: anchor is in the future relative to block.timestamp.
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 1000;
+        policy.config.rateLimit.anchorTimestamp = block.timestamp + 1 days;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 10);
+        uint256 expiration = block.timestamp + 2 days;
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 2001, expiration, true);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
+        );
+        _validateApproval(harness, TOKEN, data, 2001, expiration, initiatorSignature, bytes(""), proofs);
+    }
+
+    /// @dev Verifies that token transfer usage tracks correctly with a non-zero anchor.
+    function test_rateLimitWithAnchor_tokenTransfer_tracksUsageCorrectly() public {
+        // Setup: anchor=500000, warp to 501000, interval=1h, limit=1000.
+        vm.warp(501_000);
+
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 1000;
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        bytes memory data = _encodeERC20Transfer(RECIPIENT, 42);
+        uint256 expiration = block.timestamp + 1 days;
+        bytes memory initiatorSignature = _signDefaultInitiatorTx(harness, TOKEN, data, 2002, expiration, true);
+
+        _validateApproval(harness, TOKEN, data, 2002, expiration, initiatorSignature, bytes(""), proofs);
+
+        bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
+        uint256 window = _computeTimeWindow(policy);
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window), 42, "usage should equal transfer amount");
+    }
+
+    /// @dev Verifies that rate limit resets at the anchor-aligned window boundary.
+    function test_rateLimitWithAnchor_resetsAtAnchorAlignedBoundary() public {
+        // Setup: anchor=500000, interval=1h, limit=100. Window 0=[500000,503600).
+        vm.warp(500_000);
+
+        Policy memory policy =
+            _buildApprovalPolicy({txType: TransactionType.TokenTransfers, approvalType: PolicyType.AutoApprove});
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 1;
+        policy.config.rateLimit.timeIntervalLimit = 100;
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        ValidationProofs memory proofs = _setSinglePolicyRootAndBuildProofs(DEFAULT_POLICY_ID, policy);
+
+        // Exhaust budget in window 0
+        bytes memory data1 = _encodeERC20Transfer(RECIPIENT, 100);
+        uint256 expiration = block.timestamp + 2 days;
+        bytes memory sig1 = _signDefaultInitiatorTx(harness, TOKEN, data1, 2003, expiration, true);
+        _validateApproval(harness, TOKEN, data1, 2003, expiration, sig1, bytes(""), proofs);
+
+        // Second tx in same window should revert
+        bytes memory data2 = _encodeERC20Transfer(RECIPIENT, 1);
+        bytes memory sig2 = _signDefaultInitiatorTx(harness, TOKEN, data2, 2004, expiration, true);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, DEFAULT_POLICY_ID)
+        );
+        _validateApproval(harness, TOKEN, data2, 2004, expiration, sig2, bytes(""), proofs);
+
+        // Warp to next anchor-aligned boundary
+        vm.warp(500_000 + 3600);
+        bytes memory data3 = _encodeERC20Transfer(RECIPIENT, 100);
+        bytes memory sig3 = _signDefaultInitiatorTx(harness, TOKEN, data3, 2005, expiration, true);
+        _validateApproval(harness, TOKEN, data3, 2005, expiration, sig3, bytes(""), proofs);
+
+        bytes32 usageKey = _computeUsageKey(DEFAULT_POLICY_ID, policy, ACCOUNT, RECIPIENT, initiator1);
+        uint256 window1 = (500_000 - 500_000) / 3600;
+        uint256 window2 = (500_000 + 3600 - 500_000) / 3600;
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window1), 100, "window 0 usage should be 100");
+        assertEq(policyStateHarness.getPolicyUsage(usageKey, window2), 100, "window 1 usage should be 100");
+    }
+
     function _computeTimeWindow(Policy memory policy) internal view returns (uint256) {
-        if (policy.config.rateLimit.timeIntervalHours == 0) {
-            return 0;
-        }
-        return block.timestamp / (uint256(policy.config.rateLimit.timeIntervalHours) * 3600);
+        if (policy.config.rateLimit.timeIntervalHours == 0) return 0;
+        uint256 anchor = policy.config.rateLimit.anchorTimestamp;
+        if (block.timestamp < anchor) return 0;
+        return (block.timestamp - anchor) / (uint256(policy.config.rateLimit.timeIntervalHours) * 3600);
     }
 
     function _computeUsageKey(

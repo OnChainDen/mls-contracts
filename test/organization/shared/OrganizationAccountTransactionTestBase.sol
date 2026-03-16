@@ -174,10 +174,10 @@ abstract contract OrganizationAccountTransactionTestBase is OrganizationPolicyTe
      * @dev Computes policy usage window for time-interval rate-limit assertions.
      */
     function _computeTimeWindow(Policy memory policy) internal view returns (uint256) {
-        if (policy.config.rateLimit.timeIntervalHours == 0) {
-            return 0;
-        }
-        return block.timestamp / (uint256(policy.config.rateLimit.timeIntervalHours) * 3600);
+        if (policy.config.rateLimit.timeIntervalHours == 0) return 0;
+        uint256 anchor = policy.config.rateLimit.anchorTimestamp;
+        if (block.timestamp < anchor) return 0;
+        return (block.timestamp - anchor) / (uint256(policy.config.rateLimit.timeIntervalHours) * 3600);
     }
 
     /**

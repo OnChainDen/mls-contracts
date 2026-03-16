@@ -1389,6 +1389,7 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
                     limitType: RateLimitType.None,
                     timeIntervalHours: 0,
                     timeIntervalLimit: 0,
+                    anchorTimestamp: 0,
                     initiatorScope: RateLimitScope.AcrossAll,
                     sourceScope: RateLimitScope.AcrossAll,
                     destinationScope: RateLimitScope.AcrossAll
@@ -1509,6 +1510,229 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
         }
 
         signatures = _concatSignatures(builtSignatures);
+    }
+
+    /// @dev Verifies a weekly rate limit anchored to Monday midnight Eastern Time resets exactly on the
+    ///      anchor-aligned boundary and not a second before.
+    ///      Scenario: "Allow up to 2 transactions per week, refreshing every Monday at midnight ET."
+    function test_anchorTimestamp_weeklyLimitResetsAtMondayMidnightET() public {
+        // Monday March 4, 2024 00:00 ET = 05:00 UTC = 1_709_524_800
+        uint256 anchor = 1_709_524_800;
+        uint256 oneWeek = 604_800; // 168 hours * 3600
+
+        // Step 1: Deploy Organization and Account, fund the Account.
+        OrganizationImplementationHarness organization = _deployOrganizationHarness(bytes32(uint256(16_001)));
+        Policy memory policy = _buildAutoApprovePolicy(initiatorSigner);
+        policy.config.rateLimit.limitType = RateLimitType.TimeInterval;
+        policy.config.rateLimit.timeIntervalHours = 168;
+        policy.config.rateLimit.timeIntervalLimit = 2;
+        policy.config.rateLimit.anchorTimestamp = anchor;
+
+        // Step 2: Set the policy root.
+        ValidationProofs memory proofs = _setPoliciesAndBuildProofs(organization, POLICY_ID, policy, 16_002);
+        address account = _deployAccount(organization, bytes32(uint256(16_003)), 16_004);
+        vm.deal(account, 10 ether);
+
+        uint256 expiration = anchor + 30 days;
+        bytes memory data = bytes("");
+
+        // Step 3: Warp to Monday March 4 00:00 ET (start of window 0).
+        vm.warp(anchor);
+
+        // Step 4: Transaction 1 -- succeeds (usage = 1).
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_005,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_005,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 5: Warp to Thursday March 7 00:00 ET (mid-week, still window 0).
+        vm.warp(anchor + 3 * 86_400);
+
+        // Step 6: Transaction 2 -- succeeds (usage = 2, limit reached).
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_006,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_006,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 7: Transaction 3 -- should revert (limit exhausted within this week).
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, POLICY_ID));
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_007,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_007,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 8: Warp to Sunday March 10 23:59:59 ET (one second before Monday midnight ET).
+        //         The weekly window has NOT reset yet.
+        vm.warp(anchor + oneWeek - 1);
+
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, POLICY_ID));
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_008,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_008,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 9: Warp to Monday March 11 00:00 ET (anchor-aligned boundary, start of window 1).
+        vm.warp(anchor + oneWeek);
+
+        // Step 10: Transaction 4 -- succeeds (new week, usage resets to 1).
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_009,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_009,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 11: Transaction 5 -- succeeds (usage = 2, limit reached again).
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_010,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_010,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 12: Transaction 6 -- should revert (limit exhausted again in the new week).
+        vm.expectRevert(abi.encodeWithSelector(IOrganizationAccountTransaction.RateLimitExceeded.selector, POLICY_ID));
+        vm.prank(GUARDIAN);
+        organization.executeAccountTransaction({
+            account: account,
+            to: SECOND_RECIPIENT,
+            value: 0.1 ether,
+            data: data,
+            salt: 16_011,
+            expirationTimestamp: expiration,
+            policyId: POLICY_ID,
+            initiatorSignature: _signInitiatorTransaction({
+                organization: address(organization),
+                account: account,
+                to: SECOND_RECIPIENT,
+                value: 0.1 ether,
+                data: data,
+                salt: 16_011,
+                expirationTimestamp: expiration,
+                policyId: POLICY_ID,
+                isApproval: true
+            }),
+            reviewSignatures: bytes(""),
+            proofs: proofs
+        });
+
+        // Step 13: Verify usage for both windows.
+        assertEq(
+            organization.getPolicyUsage(POLICY_ID, policy, account, SECOND_RECIPIENT, initiatorSigner, proofs.policyProof),
+            2,
+            "window 1 usage should be 2"
+        );
+        assertEq(SECOND_RECIPIENT.balance, 0.4 ether, "4 successful transactions of 0.1 ether each");
     }
 
     /// @dev Builds a one-element private-key array for single-admin auth helpers.

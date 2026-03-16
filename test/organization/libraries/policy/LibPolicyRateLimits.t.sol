@@ -619,6 +619,147 @@ contract LibPolicyRateLimitsTest is PolicyLibrariesSuiteBase {
         assertEq(invalidScopesKey, expectedAcrossAll, "invalid scope values should collapse to across-all behavior");
     }
 
+    // ========== Anchor Timestamp: computeTimeWindow ==========
+
+    /// @dev Verifies that a non-zero anchor shifts window boundaries relative to the anchor.
+    function test_computeTimeWindow_withAnchor_shiftsWindowBoundaries() public {
+        // Setup: anchor=1800, interval=1h. Window boundary is at anchor+3600=5400.
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+        policy.config.rateLimit.anchorTimestamp = 1800;
+
+        // At 5399 we are still in window 0 relative to anchor: (5399-1800)/3600 = 0
+        vm.warp(5399);
+        assertEq(harness.computeTimeWindowViaPolicyLibrary(policy), 0, "5399 should be window 0 (anchor-relative)");
+
+        // At 5400 we enter window 1 relative to anchor: (5400-1800)/3600 = 1
+        vm.warp(5400);
+        assertEq(harness.computeTimeWindowViaPolicyLibrary(policy), 1, "5400 should be window 1 (anchor-relative)");
+    }
+
+    /// @dev Verifies that computeTimeWindow returns 0 when block.timestamp is before the anchor.
+    function test_computeTimeWindow_withAnchor_returnsZeroBeforeAnchor() public {
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+        policy.config.rateLimit.anchorTimestamp = 10_000;
+
+        vm.warp(9999);
+        assertEq(harness.computeTimeWindowViaPolicyLibrary(policy), 0, "before anchor should return window 0");
+    }
+
+    /// @dev Verifies that computeTimeWindow returns 0 (start of first window) at the exact anchor.
+    function test_computeTimeWindow_withAnchor_returnsZeroAtExactAnchor() public {
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+        policy.config.rateLimit.anchorTimestamp = 10_000;
+
+        vm.warp(10_000);
+        assertEq(harness.computeTimeWindowViaPolicyLibrary(policy), 0, "at exact anchor should be window 0");
+    }
+
+    /// @dev Verifies that anchor=0 produces the same result as the legacy formula.
+    function test_computeTimeWindow_anchorZero_matchesLegacyBehavior() public {
+        Policy memory policy = _timeIntervalPolicy(3, 100);
+        policy.config.rateLimit.anchorTimestamp = 0;
+
+        vm.warp(39_999);
+        uint256 expected = block.timestamp / (uint256(3) * 3600);
+        assertEq(
+            harness.computeTimeWindowViaPolicyLibrary(policy), expected, "anchor 0 should match legacy epoch formula"
+        );
+    }
+
+    // ========== Anchor Timestamp: checkAndUpdateRateLimit ==========
+
+    /// @dev Verifies that checkAndUpdateRateLimit returns false and writes no usage before the anchor.
+    function test_checkAndUpdateRateLimit_beforeAnchor_returnsFalseWithoutWritingUsage() public {
+        uint256 policyId = 9501;
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+        policy.config.rateLimit.anchorTimestamp = 10_000;
+
+        vm.warp(5000);
+
+        bool ok = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 10
+        );
+        assertFalse(ok, "before anchor should return false");
+    }
+
+    /// @dev Verifies that checkAndUpdateRateLimit succeeds at the exact anchor timestamp.
+    function test_checkAndUpdateRateLimit_atAnchor_succeeds() public {
+        uint256 policyId = 9502;
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+        policy.config.rateLimit.anchorTimestamp = 10_000;
+
+        vm.warp(10_000);
+
+        bool ok = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 10
+        );
+        assertTrue(ok, "at exact anchor should succeed");
+    }
+
+    /// @dev Verifies that the anchor shifts where window resets occur.
+    function test_checkAndUpdateRateLimit_anchorShiftsWindowReset() public {
+        // Setup: anchor=1800, interval=1h. Window 0=[1800,5400), Window 1=[5400,9000).
+        uint256 policyId = 9503;
+        Policy memory policy = _timeIntervalPolicy(1, 5);
+        policy.config.rateLimit.anchorTimestamp = 1800;
+
+        // Use full budget in window 0
+        vm.warp(5399);
+        bool first = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 5
+        );
+        assertTrue(first, "usage at end of window 0 should succeed");
+
+        // Still in window 0, should fail
+        bool overflow = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 1
+        );
+        assertFalse(overflow, "over budget in window 0 should fail");
+
+        // Cross into window 1
+        vm.warp(5400);
+        bool second = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 5
+        );
+        assertTrue(second, "new window after anchor-aligned boundary should succeed");
+    }
+
+    /// @dev Verifies cumulative usage enforcement with a non-zero anchor.
+    function test_checkAndUpdateRateLimit_cumulativeUsageWithAnchor_enforced() public {
+        uint256 policyId = 9504;
+        Policy memory policy = _timeIntervalPolicy(1, 10);
+        policy.config.rateLimit.anchorTimestamp = 1000;
+
+        vm.warp(2000);
+
+        bool first = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 4
+        );
+        assertTrue(first, "first update below limit should pass");
+
+        bool second = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+            policyId, policy, address(0xA1), address(0xB1), address(0xC1), 7
+        );
+        assertFalse(second, "second update exceeding cumulative limit should fail");
+    }
+
+    // ========== Anchor Timestamp: getCurrentUsage ==========
+
+    /// @dev Verifies that getCurrentUsage returns 0 before the anchor timestamp.
+    function test_getCurrentUsage_beforeAnchor_returnsZero() public {
+        uint256 policyId = 9505;
+        Policy memory policy = _timeIntervalPolicy(1, 100);
+        policy.config.rateLimit.anchorTimestamp = 10_000;
+
+        vm.warp(5000);
+
+        uint256 usage =
+            harness.getCurrentUsageViaPolicyLibrary(policyId, policy, address(0xA1), address(0xB1), address(0xC1));
+        assertEq(usage, 0, "before anchor should return zero usage");
+    }
+
+    // ========== Helpers ==========
+
     function _timeIntervalPolicy(uint16 intervalHours, uint256 intervalLimit)
         internal
         view
