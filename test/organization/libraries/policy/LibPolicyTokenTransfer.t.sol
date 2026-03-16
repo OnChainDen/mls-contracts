@@ -308,10 +308,9 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         assertTrue(allowed, "amount below threshold should pass");
     }
 
-    /// @dev Verifies that amount equal to threshold fails under exclusive max semantics.
-    function test_isTokenAmountAllowedByPolicy_amountEqualThreshold_returnsFalse() public {
-        // Setup: build fixture inputs where amount equal to threshold fails under exclusive max semantics should be
-        // denied.
+    /// @dev Verifies that amount equal to threshold passes under inclusive max semantics.
+    function test_isTokenAmountAllowedByPolicy_amountEqualThreshold_returnsTrue() public {
+        // Setup: configure a valid fixture for amount equal to threshold returns true.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 100;
@@ -319,8 +318,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         // Call: execute `isTokenAmountAllowedByPolicyViaPolicyLibrary` with the happy-path payload.
         bool allowed =
             harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, _encodeERC20Transfer(address(0xB607), 100), 0);
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(allowed, "amount equal to threshold should fail for exclusive max semantics");
+        // Verify: assert the expected success result and state updates.
+        assertTrue(allowed, "amount equal to threshold should pass");
     }
 
     /// @dev Verifies that amount above threshold returns false.
@@ -337,10 +336,9 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         assertFalse(allowed, "amount above threshold should fail");
     }
 
-    /// @dev Verifies that threshold `0` rejects both zero and non-zero amounts under exclusive max semantics.
-    function test_isTokenAmountAllowedByPolicy_thresholdZero_rejectsZeroAndNonZero() public {
-        // Setup: build fixture inputs where threshold `0` rejects both zero and non-zero amounts under exclusive max
-        // semantics should be denied.
+    /// @dev Verifies that threshold `0` allows zero amounts and rejects non-zero amounts under inclusive max semantics.
+    function test_isTokenAmountAllowedByPolicy_thresholdZero_allowsZeroAndRejectsNonZero() public {
+        // Setup: prepare contrasting fixtures to cover both pass and fail branches for threshold `0`.
         Policy memory policy = _buildBasePolicy();
         policy.config.token.hasAmountThreshold = true;
         policy.config.token.amountThreshold = 0;
@@ -349,8 +347,8 @@ contract LibPolicyTokenTransferTest is PolicyLibrariesSuiteBase {
         bool zeroAmountAllowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, bytes(""), 0);
         bool nonZeroAllowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, bytes(""), 1);
 
-        // Verify: assert that the request is denied and state remains unchanged.
-        assertFalse(zeroAmountAllowed, "zero amount should fail for threshold 0 under exclusive max semantics");
+        // Verify: assert each branch returns the expected inclusive-threshold outcome.
+        assertTrue(zeroAmountAllowed, "zero amount should pass for threshold 0");
         assertFalse(nonZeroAllowed, "non-zero amount should fail for threshold 0");
     }
 

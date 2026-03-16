@@ -286,9 +286,9 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 |---|---|---|---|
 | LPT-AMT-1 | `hasAmountThreshold == false` always returns `true` | [U] | P0 |
 | LPT-AMT-2 | Amount below threshold returns `true` | [U] | P0 |
-| LPT-AMT-3 | Amount exactly equal to threshold returns `false` (exclusive max) | [N] | P0 |
+| LPT-AMT-3 | Amount exactly equal to threshold returns `true` (inclusive max) | [U] | P0 |
 | LPT-AMT-4 | Amount above threshold returns `false` | [N] | P0 |
-| LPT-AMT-5 | Threshold `0`: both zero and non-zero amounts fail under exclusive max semantics | [E] | P1 |
+| LPT-AMT-5 | Threshold `0`: zero amount succeeds and non-zero amounts fail under inclusive max semantics | [E] | P1 |
 | LPT-AMT-6 | Native amount extraction uses `value` | [U] | P1 |
 | LPT-AMT-7 | Precondition: caller invokes this helper only with validated token-transfer payloads (native or ERC-20) | [U] | P1 |
 
@@ -600,5 +600,5 @@ Legend: `[U]` unit, `[N]` negative, `[S]` security, `[E]` edge, `[EV]` event, `[
 | POL-I-6 | Manual-approval policies can never pass with fewer than required valid approvals | P0 |
 | POL-I-7 | Unknown enum values for `ApproverType`, `ConstraintType`, `ParamType`, `RateLimitType`, and `RateLimitScope` revert (panic/custom revert acceptable) across validation paths | P0 |
 | POL-I-8 | `anyInitiator` does not authorize non-members | P0 |
-| POL-I-9 | Token amount threshold acts as exclusive max (`<`) | P0 |
+| POL-I-9 | Token amount threshold acts as inclusive max (`<=`) | P0 |
 | POL-I-10 | Malformed constraint payloads in policy-check paths never authorize and may revert on decode errors | P0 |

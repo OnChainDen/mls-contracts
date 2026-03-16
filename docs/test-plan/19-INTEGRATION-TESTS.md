@@ -177,7 +177,7 @@ Note: Destination, token, function, parameter-constraint, and rate-limit checks 
 |---|-----------|------|----------|
 | OPB-TAT-1 | `executeAccountTransaction` (ETH transfer): policy allows native token — succeeds; policy does not allow native token — reverts | [I] | P0 |
 | OPB-TAT-2 | `executeAccountTransaction` (ERC-20 transfer): policy allows the specific token contract — succeeds; different token contract — reverts | [I] | P0 |
-| OPB-TAT-3 | `executeAccountTransaction`: `hasAmountThreshold=true` with `amountThreshold=N` — transfer of `N-1` succeeds, transfer of exactly `N` reverts (strict `<` boundary) | [E][S] | P0 |
+| OPB-TAT-3 | `executeAccountTransaction`: `hasAmountThreshold=true` with `amountThreshold=N` — transfer of exactly `N` succeeds, transfer of `N+1` reverts (inclusive `<=` boundary) | [E][S] | P0 |
 | OPB-TAT-4 | `executeAccountTransaction`: `hasAmountThreshold=false` — any amount succeeds | [I] | P1 |
 
 #### Function allowlist and parameter constraints

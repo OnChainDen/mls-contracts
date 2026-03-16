@@ -183,7 +183,7 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
 
     /// @dev Verifies that token-transfer policy rejects transfers above configured amount threshold.
     function test_isTransactionAllowed_tokenTransferPolicy_amountAboveThreshold_returnsFalse() public {
-        // Setup: configure a token-transfer policy with a strict amount threshold.
+        // Setup: configure a token-transfer policy with an inclusive amount threshold.
         Policy memory policy = _buildTokenTransferPolicy();
         policy.config.token.anyToken = false;
         policy.config.token.tokenAddress = TOKEN_CONTRACT;
@@ -200,7 +200,10 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             constraints: ""
         });
 
-        // Call: execute `isTransactionAllowedByPolicyViaLibrary` for below-threshold and above-threshold transfers.
+        // Call: execute `isTransactionAllowedByPolicyViaLibrary` for equal-threshold and above-threshold transfers.
+        bool equalThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
+            3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 10), initiator1, proofs
+        );
         bool belowThresholdAllowed = harness.isTransactionAllowedByPolicyViaLibrary(
             3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 9), initiator1, proofs
         );
@@ -208,7 +211,8 @@ contract LibOrganizationPolicyTransactionAllowedTest is LibOrganizationPolicySui
             3015, SOURCE_ACCOUNT, TOKEN_CONTRACT, 0, _encodeERC20Transfer(RECIPIENT, 11), initiator1, proofs
         );
 
-        // Verify: transfers above threshold fail closed in the top-level policy path.
+        // Verify: equality is allowed while transfers above threshold fail closed in the top-level policy path.
+        assertTrue(equalThresholdAllowed, "equal-threshold transfer should be allowed");
         assertTrue(belowThresholdAllowed, "below-threshold transfer should be allowed");
         assertFalse(aboveThresholdAllowed, "above-threshold transfer should fail");
     }

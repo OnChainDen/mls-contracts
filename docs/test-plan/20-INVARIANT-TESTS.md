@@ -110,7 +110,7 @@ Functions: `setPolicies`, `isPolicyInOrg`, `isTransactionAllowedByPolicy`, `isSo
 | POL-INV-6 | **Approval semantics:** member approver always requires exactly one authorized signer; group approver enforces configured threshold | P0 |
 | POL-INV-7 | **Desired behavior:** `anyInitiator=true` should still require initiator to be an Organization member (per docs) | P0 |
 | POL-INV-8 | **Desired behavior fail-closed:** malformed proofs/constraints payloads never authorize an operation | P0 |
-| POL-INV-9 | **(token threshold semantics):** token amount thresholds are exclusive (`amount < threshold`) | P0 |
+| POL-INV-9 | **(token threshold semantics):** token amount thresholds are inclusive (`amount <= threshold`) | P0 |
 | POL-INV-10 | **Function-filter helper correctness:** `_isFunctionAllowedByPolicy` enforces selector/proof checks when `anyFunction=false` and rejects calldata shorter than 4 bytes | P0 |
 | POL-INV-11 | **Constraint calldata walking:** `_processConstraints` reads each parameter at the correct calldata offset `4 + Σ(headSlotCount × 32)` for all preceding params. Fuzz N constraints with varying `paramCalldataHeadSlotCount` and matching calldata; assert the i-th constraint validates against the correct slot | P0 |
 | POL-INV-12 | **Short-calldata constraint rejection:** `areParametersAllowedByConstraints` returns `false` (no revert) when calldata is too short for any declared parameter head. Fuzz valid constraints, truncate calldata before the last parameter | P0 |

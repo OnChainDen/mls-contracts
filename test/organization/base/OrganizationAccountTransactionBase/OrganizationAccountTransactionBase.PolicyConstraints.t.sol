@@ -168,7 +168,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
 
     /**
      * @dev Verifies native-transfer destination custom lists check the `to` address, native-token filters reject
-     *      policies that do not allow ETH, and amount thresholds apply as a strict `<` boundary. [OPB-DV-1,
+     *      policies that do not allow ETH, and amount thresholds apply as an inclusive `<=` boundary. [OPB-DV-1,
      *      OPB-TAT-1, OPB-TAT-3]
      */
     function test_OPB_DV_1__OPB_TAT_1__OPB_TAT_3_executeAccountTransaction_nativeTransferPolicies_checkDestinationTokenAndThreshold()
@@ -217,8 +217,7 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
         (bytes memory thresholdSig, uint256 thresholdExpiration) =
             _signExecution(INITIATOR_PK_1, address(account), address(allowedReceiver), 0.5 ether, bytes(""), 13, 9010);
 
-        // Call: retry at the exact configured threshold, expecting the strict `< threshold` rule to fail closed.
-        _expectPolicyDoesNotApply(9010);
+        // Call: retry at the exact configured threshold, expecting the inclusive `<= threshold` rule to allow it.
         _executeAsGuardian(
             address(account),
             address(allowedReceiver),
@@ -231,6 +230,9 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             bytes(""),
             allowedProofs
         );
+
+        // Verify: the exact-threshold native transfer is also allowed.
+        assertEq(allowedReceiver.totalReceived(), transferValue + 0.5 ether, "threshold amount should be allowed");
 
         Policy memory deniedDestinationPolicy =
             _buildApprovalPolicy(TransactionType.TokenTransfers, PolicyType.AutoApprove);
@@ -286,8 +288,12 @@ contract OrganizationAccountTransactionBasePolicyConstraintsTest is Organization
             deniedTokenProofs
         );
 
-        // Verify: the failed branches do not transfer additional ETH.
-        assertEq(allowedReceiver.totalReceived(), transferValue, "failed native-policy branches must not move ETH");
+        // Verify: only the two allowed branches transfer ETH; the failed branches add nothing further.
+        assertEq(
+            allowedReceiver.totalReceived(),
+            transferValue + 0.5 ether,
+            "failed native-policy branches must not add ETH beyond successful transfers"
+        );
         assertEq(deniedReceiver.totalReceived(), 0, "unlisted receiver should remain unfunded");
     }
 

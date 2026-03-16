@@ -64,7 +64,7 @@ Several cases below target functions currently marked `private`. For implementat
 | FLOP-TX-61 | `src/organization/libraries/LibOrganizationPolicy.sol` | `isTransactionAllowedByPolicy` | `TransactionType.Signatures` never authorizes account transaction execution/rejection path | 10000 | P0 |
 | FOPB-USAGE-63 | `src/organization/base/OrganizationPolicyBase.sol` | `setPolicies`, `getPolicyUsage` | Guardian-only policy updates bind signatures to `(newRoot, keccak256(ipfsCid))`; `getPolicyUsage` always reverts on invalid policy proof | 10000 | P0 |
 | FLPD-DEST-65 | `src/organization/libraries/policy/LibPolicyDestination.sol` | `isDestinationAllowedByPolicy` | Custom destination mode accepts only valid Merkle membership proof | 10000 | P0 |
-| FLPT-AMOUNT-67 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `_isTokenAmountAllowedByPolicy` | Threshold check is exclusive (`amount < threshold`) | 10000 | P0 |
+| FLPT-AMOUNT-67 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `_isTokenAmountAllowedByPolicy` | Threshold check is inclusive (`amount <= threshold`) | 10000 | P0 |
 | FLPT-ALLOW-68 | `src/organization/libraries/policy/LibPolicyTokenTransfer.sol` | `isTokenTransferAllowedByPolicy` | Malformed token calldata cannot bypass token policy checks | 10000 | P0 |
 | FLPCI-FUNC-69 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | `_isFunctionAllowedByPolicy` | `anyFunction=true` bypasses function proof requirements | 10000 | P0 |
 | FLPCI-FUNC-70 | `src/organization/libraries/policy/LibPolicyContractInteraction.sol` | `_isFunctionAllowedByPolicy` | Function membership binds `selector + keccak256(constraints)` exactly | 10000 | P0 |

@@ -944,10 +944,11 @@ contract OrganizationLifecycleEndToEndIntegrationTest is InitializationSuiteBase
 
         // Verify: recovery ordering never clears the consumed nonce or re-enables replay.
         assertTrue(organization.getUsedNonce(txContext.nonce), "consumed account-transaction nonce must stay used");
+        uint256 expectedExecutionRecipientBalance = rejectFirst ? 0.2 ether : 0.4 ether;
         assertEq(
-            RECOVERY_RECIPIENT.balance + SECOND_RECIPIENT.balance,
-            0.2 ether,
-            "exactly one recovery execution should succeed regardless of ordering"
+            EXECUTION_RECIPIENT.balance,
+            expectedExecutionRecipientBalance,
+            "recovery ordering should preserve the expected execute/recovery transfer outcomes"
         );
     }
 

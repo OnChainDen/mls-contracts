@@ -12,11 +12,11 @@ import {DestinationType, Policy} from "types/PolicyTypes.sol";
  * @dev Fuzz tests for `LibPolicyTokenTransfer`.
  */
 contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
-    /// @dev Verifies `LibPolicyTokenTransfer._isTokenAmountAllowedByPolicy` treats the threshold as an exclusive cap.
+    /// @dev Verifies `LibPolicyTokenTransfer._isTokenAmountAllowedByPolicy` treats the threshold as an inclusive cap.
     /// @param threshold The configured threshold and tested transfer amount.
     /// @param recipient The ERC-20 recipient used in the token-transfer branch.
     /// @param useNativeTransfer Whether to exercise the native-transfer amount path.
-    function testFuzz_FLPT_AMOUNT_67_isTokenAmountAllowed_treatsThresholdAsExclusiveUpperBound(
+    function testFuzz_FLPT_AMOUNT_67_isTokenAmountAllowed_treatsThresholdAsInclusiveUpperBound(
         uint256 threshold,
         address recipient,
         bool useNativeTransfer
@@ -32,8 +32,8 @@ contract LibPolicyTokenTransferFuzzTest is PolicyLibrariesFuzzTestBase {
         // Call: evaluate the exact-threshold transfer amount.
         bool allowed = harness.isTokenAmountAllowedByPolicyViaPolicyLibrary(policy, data, value);
 
-        // Verify: exact-threshold transfers should be rejected under exclusive-threshold semantics.
-        assertFalse(allowed, "threshold equality should be rejected");
+        // Verify: exact-threshold transfers should be accepted under inclusive-threshold semantics.
+        assertTrue(allowed, "threshold equality should be accepted");
     }
 
     /// @dev Verifies `LibPolicyTokenTransfer.isTokenTransferAllowedByPolicy` never lets malformed short transfer
