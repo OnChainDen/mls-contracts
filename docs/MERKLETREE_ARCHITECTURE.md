@@ -129,7 +129,7 @@ Organization
         │   ├── ApprovalConfig (policyType, approverType, threshold)
         │   ├── InitiatorConfig (anyInitiator, initiatorType, member/group)
         │   ├── TokenFilter (anyToken, tokenAddress, amountThreshold)
-        │   └── RateLimitConfig (limitType, interval, scopes)
+        │   └── RateLimitConfig (limitType, interval, anchorTimestamp, scopes)
         └── PolicyRoots
             ├── sourceAccountsRoot
             │   └── Address leaves (if !anySourceAccount)
