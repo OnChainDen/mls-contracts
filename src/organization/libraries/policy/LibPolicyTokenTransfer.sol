@@ -74,7 +74,7 @@ library LibPolicyTokenTransfer {
      *      Assumes the caller has already validated that `(value, data)` describes
      *      a token transfer (native or ERC-20).
      *      If hasAmountThreshold is false, always returns true.
-     *      Otherwise, verifies the amount is below the threshold.
+     *      Otherwise, verifies the amount does not exceed the threshold.
      * @param policy The policy to check against
      * @param data The transaction calldata
      * @param value The transaction value in wei
@@ -90,7 +90,7 @@ library LibPolicyTokenTransfer {
 
         uint256 amount = TokenTransferUtils.extractTransferAmount(data, value);
 
-        // Case: The policy has an amount threshold - verify amount is below it (exclusive max).
-        return amount < policy.config.token.amountThreshold;
+        // Case: The policy has an amount threshold - verify amount is at or below it (inclusive max).
+        return amount <= policy.config.token.amountThreshold;
     }
 }
