@@ -183,6 +183,7 @@ library SignatureUtils {
      * @param signature The signature bytes to verify
      * @return True if the contract returns the ERC-1271 magic value
      */
+    // forge-lint: disable-next-line(mixed-case-function)
     function _isValidERC1271SignatureNow(address signer, bytes32 hash, bytes memory signature)
         internal
         view
@@ -242,6 +243,7 @@ library SignatureUtils {
      * @return success True if recovery succeeded
      * @return signer The recovered signer address (address(0) if failed)
      */
+    // forge-lint: disable-next-line(mixed-case-function)
     function _tryRecoverEOASigner(bytes memory signatures, uint256 offset, bytes32 hash, uint8 v)
         internal
         pure

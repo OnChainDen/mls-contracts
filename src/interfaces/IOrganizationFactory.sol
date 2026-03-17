@@ -64,5 +64,6 @@ interface IOrganizationFactory {
      * @notice The address authorized to deploy organization proxies
      * @return The deployer address
      */
+    // solhint-disable-next-line func-name-mixedcase
     function DEPLOYER_ADDRESS() external view returns (address);
 }
