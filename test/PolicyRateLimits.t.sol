@@ -353,6 +353,46 @@ contract PolicyRateLimitsTest is Test {
         assertEq(usage, 42, "Usage should track correctly with non-zero anchor");
     }
 
+    function test_getCurrentUsage_beforeAnchor_returnsZero() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(499_999);
+        uint256 usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(usage, 0, "Usage should be 0 when block.timestamp < anchor");
+    }
+
+    function test_getCurrentUsage_atAnchor_tracksCorrectly() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(500_000);
+        LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 75);
+
+        uint256 usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(usage, 75, "Usage should track correctly at exact anchor timestamp");
+    }
+
+    function test_getCurrentUsage_withAnchor_resetsAcrossWindows() public {
+        Policy memory policy = _createPolicy(1, 1000, RateLimitType.TimeInterval);
+        policy.config.rateLimit.anchorTimestamp = 500_000;
+
+        vm.warp(500_000);
+        LibOrganizationPolicy.checkAndUpdateRateLimit(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1, 600);
+
+        uint256 window0Usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(window0Usage, 600, "Usage should be 600 in window 0");
+
+        // Advance to next anchor-aligned window
+        vm.warp(500_000 + 3600);
+        uint256 window1Usage =
+            LibOrganizationPolicy.getCurrentUsage(POLICY_ID, policy, ACCOUNT_1, DESTINATION_1, INITIATOR_1);
+        assertEq(window1Usage, 0, "Usage should reset to 0 in new anchor-aligned window");
+    }
+
     // ================================
     // Helper Functions - Create policies using new struct format with Merkle-based members
     // ================================
