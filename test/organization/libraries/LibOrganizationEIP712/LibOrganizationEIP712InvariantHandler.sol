@@ -11,21 +11,21 @@ import {
  */
 contract LibOrganizationEIP712InvariantHandler {
     /// @dev Harness whose EIP-712 helper surface is exercised during invariant runs.
-    LibOrganizationEIP712Harness internal immutable harness;
+    LibOrganizationEIP712Harness internal immutable HARNESS;
 
     /**
      * @dev Stores the harness under test.
      * @param harness_ The harness whose helper methods the handler will call.
      */
     constructor(LibOrganizationEIP712Harness harness_) {
-        harness = harness_;
+        HARNESS = harness_;
     }
 
     /**
      * @dev Calls the domain-separator helper with the current domain.
      */
     function callGetDomainSeparator() external {
-        harness.getDomainSeparatorViaLibrary();
+        HARNESS.getDomainSeparatorViaLibrary();
     }
 
     /**
@@ -33,6 +33,6 @@ contract LibOrganizationEIP712InvariantHandler {
      * @param structHash The fuzzed struct hash to wrap.
      */
     function callComputeTypedDataHash(bytes32 structHash) external {
-        harness.computeTypedDataHashViaLibrary(structHash);
+        HARNESS.computeTypedDataHashViaLibrary(structHash);
     }
 }

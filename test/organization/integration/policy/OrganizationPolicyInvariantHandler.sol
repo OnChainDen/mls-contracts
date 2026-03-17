@@ -27,7 +27,7 @@ import {
  */
 contract OrganizationPolicyInvariantHandler {
     /// @dev Harness under invariant testing.
-    LibOrganizationPolicyHarness public immutable harness;
+    LibOrganizationPolicyHarness public immutable HARNESS;
 
     /// @dev Model root updated only via handler `setPolicies` operations.
     bytes32 public modelPoliciesRoot;
@@ -44,8 +44,8 @@ contract OrganizationPolicyInvariantHandler {
     address internal constant TRACKED_INITIATOR = address(0xC901);
 
     constructor(LibOrganizationPolicyHarness harness_) {
-        harness = harness_;
-        modelPoliciesRoot = harness.getPoliciesRoot();
+        HARNESS = harness_;
+        modelPoliciesRoot = HARNESS.getPoliciesRoot();
     }
 
     /**
@@ -53,7 +53,7 @@ contract OrganizationPolicyInvariantHandler {
      */
     function setPolicies(uint256 seed) external {
         bytes32 newRoot = keccak256(abi.encode(seed, address(this)));
-        harness.setPoliciesViaLibrary(newRoot, "policy-invariant-root");
+        HARNESS.setPoliciesViaLibrary(newRoot, "policy-invariant-root");
         modelPoliciesRoot = newRoot;
     }
 
@@ -66,17 +66,17 @@ contract OrganizationPolicyInvariantHandler {
 
         Policy memory policy = _buildRateLimitedPolicy(intervalLimit);
 
-        bytes32 usageKey = harness.computeUsageKeyViaPolicyLibrary(
+        bytes32 usageKey = HARNESS.computeUsageKeyViaPolicyLibrary(
             TRACKED_POLICY_ID, policy, TRACKED_ACCOUNT, TRACKED_DESTINATION, TRACKED_INITIATOR
         );
-        uint256 timeWindow = harness.computeTimeWindowViaPolicyLibrary(policy);
-        uint256 beforeUsage = harness.getPolicyUsage(usageKey, timeWindow);
+        uint256 timeWindow = HARNESS.computeTimeWindowViaPolicyLibrary(policy);
+        uint256 beforeUsage = HARNESS.getPolicyUsage(usageKey, timeWindow);
 
-        bool withinLimit = harness.checkAndUpdateRateLimitViaPolicyLibrary(
+        bool withinLimit = HARNESS.checkAndUpdateRateLimitViaPolicyLibrary(
             TRACKED_POLICY_ID, policy, TRACKED_ACCOUNT, TRACKED_DESTINATION, TRACKED_INITIATOR, usageAmount
         );
 
-        uint256 afterUsage = harness.getPolicyUsage(usageKey, timeWindow);
+        uint256 afterUsage = HARNESS.getPolicyUsage(usageKey, timeWindow);
 
         if (withinLimit && afterUsage < beforeUsage) {
             usageMonotonicViolation = true;

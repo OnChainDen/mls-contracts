@@ -16,7 +16,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
     uint256 internal constant CONFIGURED_ADMIN_TIMELOCK = 3 days;
     uint256 internal constant DEFAULT_RECOVERY_TIMELOCK = 2 days;
 
-    OrganizationAdminOperationTimelockCrossFileHarness public immutable harness;
+    OrganizationAdminOperationTimelockCrossFileHarness public immutable HARNESS;
 
     bool public sameBlockGuardianFinalizeViolation;
     bool public sameBlockGuardianRecoveryFinalizeViolation;
@@ -27,7 +27,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param harness_ Cross-file harness under invariant testing.
      */
     constructor(OrganizationAdminOperationTimelockCrossFileHarness harness_) {
-        harness = harness_;
+        HARNESS = harness_;
         IS_TEST = false;
     }
 
@@ -36,11 +36,11 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param seed Seed used to derive a non-zero pending guardian.
      */
     function initiateGuardianUpdate(uint256 seed) external {
-        if (harness.getPendingGuardianViaLibrary() != address(0)) {
-            address(harness).call(abi.encodeCall(harness.cancelGuardianUpdateViaLibrary, ()));
+        if (HARNESS.getPendingGuardianViaLibrary() != address(0)) {
+            address(HARNESS).call(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
         }
 
-        address(harness).call(abi.encodeCall(harness.initiateGuardianUpdateViaLibrary, (_candidate(seed))));
+        address(HARNESS).call(abi.encodeCall(HARNESS.initiateGuardianUpdateViaLibrary, (_candidate(seed))));
     }
 
     /**
@@ -48,19 +48,19 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param warpToPendingTimestamp Whether to warp forward to the pending finalize timestamp before calling finalize.
      */
     function finalizeGuardianUpdate(bool warpToPendingTimestamp) external {
-        uint256 pendingTimestamp = harness.getPendingGuardianUpdateTimestampViaLibrary();
+        uint256 pendingTimestamp = HARNESS.getPendingGuardianUpdateTimestampViaLibrary();
         if (warpToPendingTimestamp && pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
             vm.warp(pendingTimestamp);
         }
 
-        address(harness).call(abi.encodeCall(harness.finalizeGuardianUpdateViaLibrary, ()));
+        address(HARNESS).call(abi.encodeCall(HARNESS.finalizeGuardianUpdateViaLibrary, ()));
     }
 
     /**
      * @dev Attempts guardian-update cancellation.
      */
     function cancelGuardianUpdate() external {
-        address(harness).call(abi.encodeCall(harness.cancelGuardianUpdateViaLibrary, ()));
+        address(HARNESS).call(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
     }
 
     /**
@@ -69,9 +69,9 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param timelockDurationSeconds Candidate guardian-recovery timelock duration to bind to the pending tuple.
      */
     function initiateGuardianRecoveryDeferredInit(uint256 seed, uint256 timelockDurationSeconds) external {
-        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        GuardianRecoveryState memory state = HARNESS.getGuardianRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
-            address(harness).call(abi.encodeCall(harness.cancelInitializeGuardianRecoveryViaLibrary, ()));
+            address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
         }
 
         uint256 boundedTimelock = bound(
@@ -79,10 +79,10 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
             TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
-        address(harness)
+        address(HARNESS)
             .call(
                 abi.encodeCall(
-                    harness.initiateInitializeGuardianRecoveryViaLibrary, (_candidate(seed), boundedTimelock)
+                    HARNESS.initiateInitializeGuardianRecoveryViaLibrary, (_candidate(seed), boundedTimelock)
                 )
             );
     }
@@ -92,19 +92,19 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param warpToPendingTimestamp Whether to warp forward to the pending finalize timestamp before calling finalize.
      */
     function finalizeGuardianRecoveryDeferredInit(bool warpToPendingTimestamp) external {
-        uint256 pendingTimestamp = harness.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
+        uint256 pendingTimestamp = HARNESS.getGuardianRecoveryStateViaStorage().pendingInit.pendingTimestamp;
         if (warpToPendingTimestamp && pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
             vm.warp(pendingTimestamp);
         }
 
-        address(harness).call(abi.encodeCall(harness.finalizeInitializeGuardianRecoveryViaLibrary, ()));
+        address(HARNESS).call(abi.encodeCall(HARNESS.finalizeInitializeGuardianRecoveryViaLibrary, ()));
     }
 
     /**
      * @dev Attempts deferred guardian-recovery cancellation.
      */
     function cancelGuardianRecoveryDeferredInit() external {
-        address(harness).call(abi.encodeCall(harness.cancelInitializeGuardianRecoveryViaLibrary, ()));
+        address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
     }
 
     /**
@@ -113,9 +113,9 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param timelockDurationSeconds Candidate tx-recovery timelock duration to bind to the pending tuple.
      */
     function initiateTxRecoveryDeferredInit(uint256 seed, uint256 timelockDurationSeconds) external {
-        TxRecoveryState memory state = harness.getTxRecoveryStateViaStorage();
+        TxRecoveryState memory state = HARNESS.getTxRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
-            address(harness).call(abi.encodeCall(harness.cancelInitializeTxRecoveryViaLibrary, ()));
+            address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeTxRecoveryViaLibrary, ()));
         }
 
         uint256 boundedTimelock = bound(
@@ -123,8 +123,8 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
             TimelockUtils.MIN_TIMELOCK_DURATION_SECONDS,
             TimelockUtils.MAX_TIMELOCK_DURATION_SECONDS
         );
-        address(harness)
-            .call(abi.encodeCall(harness.initiateInitializeTxRecoveryViaLibrary, (_candidate(seed), boundedTimelock)));
+        address(HARNESS)
+            .call(abi.encodeCall(HARNESS.initiateInitializeTxRecoveryViaLibrary, (_candidate(seed), boundedTimelock)));
     }
 
     /**
@@ -132,19 +132,19 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param warpToPendingTimestamp Whether to warp forward to the pending finalize timestamp before calling finalize.
      */
     function finalizeTxRecoveryDeferredInit(bool warpToPendingTimestamp) external {
-        uint256 pendingTimestamp = harness.getTxRecoveryStateViaStorage().pendingInit.pendingTimestamp;
+        uint256 pendingTimestamp = HARNESS.getTxRecoveryStateViaStorage().pendingInit.pendingTimestamp;
         if (warpToPendingTimestamp && pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
             vm.warp(pendingTimestamp);
         }
 
-        address(harness).call(abi.encodeCall(harness.finalizeInitializeTxRecoveryViaLibrary, ()));
+        address(HARNESS).call(abi.encodeCall(HARNESS.finalizeInitializeTxRecoveryViaLibrary, ()));
     }
 
     /**
      * @dev Attempts deferred tx-recovery cancellation.
      */
     function cancelTxRecoveryDeferredInit() external {
-        address(harness).call(abi.encodeCall(harness.cancelInitializeTxRecoveryViaLibrary, ()));
+        address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeTxRecoveryViaLibrary, ()));
     }
 
     /**
@@ -152,17 +152,17 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param seed Seed used to derive a non-zero pending guardian.
      */
     function attemptSameBlockGuardianFinalize(uint256 seed) external {
-        if (harness.getPendingGuardianViaLibrary() != address(0)) {
-            address(harness).call(abi.encodeCall(harness.cancelGuardianUpdateViaLibrary, ()));
+        if (HARNESS.getPendingGuardianViaLibrary() != address(0)) {
+            address(HARNESS).call(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
         }
 
         (bool initiated,) =
-            address(harness).call(abi.encodeCall(harness.initiateGuardianUpdateViaLibrary, (_candidate(seed))));
+            address(HARNESS).call(abi.encodeCall(HARNESS.initiateGuardianUpdateViaLibrary, (_candidate(seed))));
         if (!initiated) {
             return;
         }
 
-        (bool finalized,) = address(harness).call(abi.encodeCall(harness.finalizeGuardianUpdateViaLibrary, ()));
+        (bool finalized,) = address(HARNESS).call(abi.encodeCall(HARNESS.finalizeGuardianUpdateViaLibrary, ()));
         if (finalized) {
             sameBlockGuardianFinalizeViolation = true;
         }
@@ -173,15 +173,15 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param seed Seed used to derive a non-zero recovery address.
      */
     function attemptSameBlockGuardianRecoveryFinalize(uint256 seed) external {
-        GuardianRecoveryState memory state = harness.getGuardianRecoveryStateViaStorage();
+        GuardianRecoveryState memory state = HARNESS.getGuardianRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
-            address(harness).call(abi.encodeCall(harness.cancelInitializeGuardianRecoveryViaLibrary, ()));
+            address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeGuardianRecoveryViaLibrary, ()));
         }
 
-        (bool initiated,) = address(harness)
+        (bool initiated,) = address(HARNESS)
             .call(
                 abi.encodeCall(
-                    harness.initiateInitializeGuardianRecoveryViaLibrary, (_candidate(seed), DEFAULT_RECOVERY_TIMELOCK)
+                    HARNESS.initiateInitializeGuardianRecoveryViaLibrary, (_candidate(seed), DEFAULT_RECOVERY_TIMELOCK)
                 )
             );
         if (!initiated) {
@@ -189,7 +189,7 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
         }
 
         (bool finalized,) =
-            address(harness).call(abi.encodeCall(harness.finalizeInitializeGuardianRecoveryViaLibrary, ()));
+            address(HARNESS).call(abi.encodeCall(HARNESS.finalizeInitializeGuardianRecoveryViaLibrary, ()));
         if (finalized) {
             sameBlockGuardianRecoveryFinalizeViolation = true;
         }
@@ -200,22 +200,22 @@ contract OrganizationAdminOperationTimelockCrossFileInvariantHandler is Test {
      * @param seed Seed used to derive a non-zero recovery address.
      */
     function attemptSameBlockTxRecoveryFinalize(uint256 seed) external {
-        TxRecoveryState memory state = harness.getTxRecoveryStateViaStorage();
+        TxRecoveryState memory state = HARNESS.getTxRecoveryStateViaStorage();
         if (state.pendingInit.pendingTimestamp != 0) {
-            address(harness).call(abi.encodeCall(harness.cancelInitializeTxRecoveryViaLibrary, ()));
+            address(HARNESS).call(abi.encodeCall(HARNESS.cancelInitializeTxRecoveryViaLibrary, ()));
         }
 
-        (bool initiated,) = address(harness)
+        (bool initiated,) = address(HARNESS)
             .call(
                 abi.encodeCall(
-                    harness.initiateInitializeTxRecoveryViaLibrary, (_candidate(seed), DEFAULT_RECOVERY_TIMELOCK)
+                    HARNESS.initiateInitializeTxRecoveryViaLibrary, (_candidate(seed), DEFAULT_RECOVERY_TIMELOCK)
                 )
             );
         if (!initiated) {
             return;
         }
 
-        (bool finalized,) = address(harness).call(abi.encodeCall(harness.finalizeInitializeTxRecoveryViaLibrary, ()));
+        (bool finalized,) = address(HARNESS).call(abi.encodeCall(HARNESS.finalizeInitializeTxRecoveryViaLibrary, ()));
         if (finalized) {
             sameBlockTxRecoveryFinalizeViolation = true;
         }

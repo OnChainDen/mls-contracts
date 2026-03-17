@@ -80,12 +80,12 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         TxRecoveryManagement
     }
 
-    OrganizationTxRecoveryBaseHarness public immutable harness;
-    MockAccountForOrganizationTransaction public immutable account;
-    TxRecoveryInvariantReceiver public immutable receiver;
-    address public immutable txRecoveryAddress;
-    address public immutable trackedAdmin1;
-    address public immutable trackedAdmin2;
+    OrganizationTxRecoveryBaseHarness public immutable HARNESS;
+    MockAccountForOrganizationTransaction public immutable ACCOUNT;
+    TxRecoveryInvariantReceiver public immutable RECEIVER;
+    address public immutable TX_RECOVERY_ADDRESS;
+    address public immutable TRACKED_ADMIN1;
+    address public immutable TRACKED_ADMIN2;
 
     bool public unauthorizedTxRecoveryBypassViolation;
     bool public enabledBecameTrueOutsideFinalizeViolation;
@@ -119,12 +119,12 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         address trackedAdmin1_,
         address trackedAdmin2_
     ) {
-        harness = harness_;
-        account = account_;
-        receiver = receiver_;
-        txRecoveryAddress = txRecoveryAddress_;
-        trackedAdmin1 = trackedAdmin1_;
-        trackedAdmin2 = trackedAdmin2_;
+        HARNESS = harness_;
+        ACCOUNT = account_;
+        RECEIVER = receiver_;
+        TX_RECOVERY_ADDRESS = txRecoveryAddress_;
+        TRACKED_ADMIN1 = trackedAdmin1_;
+        TRACKED_ADMIN2 = trackedAdmin2_;
         IS_TEST = false;
     }
 
@@ -139,16 +139,16 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         bytes memory payload;
 
         if (selectorIndex == 0) {
-            payload = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.initiateEnableTransactionAndERC1271Recovery.selector);
         } else if (selectorIndex == 1) {
-            payload = abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.finalizeEnableTransactionAndERC1271Recovery.selector);
         } else if (selectorIndex == 2) {
-            payload = abi.encodeWithSelector(harness.cancelEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.cancelEnableTransactionAndERC1271Recovery.selector);
         } else if (selectorIndex == 3) {
-            payload = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.disableTransactionAndERC1271Recovery.selector);
         } else {
             payload = abi.encodeWithSelector(
-                harness.executeRecoveryAccountTransaction.selector, address(account), address(receiver), 0, bytes("")
+                HARNESS.executeRecoveryAccountTransaction.selector, address(ACCOUNT), address(RECEIVER), 0, bytes("")
             );
         }
 
@@ -163,7 +163,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      */
     function initiateEnable() external {
         _callWithSender(
-            txRecoveryAddress, abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector)
+            TX_RECOVERY_ADDRESS, abi.encodeWithSelector(HARNESS.initiateEnableTransactionAndERC1271Recovery.selector)
         );
     }
 
@@ -173,13 +173,13 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      */
     function finalizeEnable(bool warpToPendingTimestamp) external {
         if (warpToPendingTimestamp) {
-            uint256 pendingTimestamp = harness.getTxRecoveryState().pendingEnableTimestamp;
+            uint256 pendingTimestamp = HARNESS.getTxRecoveryState().pendingEnableTimestamp;
             if (pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
                 vm.warp(pendingTimestamp);
             }
         }
         _callWithSender(
-            txRecoveryAddress, abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector)
+            TX_RECOVERY_ADDRESS, abi.encodeWithSelector(HARNESS.finalizeEnableTransactionAndERC1271Recovery.selector)
         );
     }
 
@@ -188,7 +188,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      */
     function cancelEnable() external {
         _callWithSender(
-            txRecoveryAddress, abi.encodeWithSelector(harness.cancelEnableTransactionAndERC1271Recovery.selector)
+            TX_RECOVERY_ADDRESS, abi.encodeWithSelector(HARNESS.cancelEnableTransactionAndERC1271Recovery.selector)
         );
     }
 
@@ -197,7 +197,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      */
     function disableRecovery() external {
         _callWithSender(
-            txRecoveryAddress, abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector)
+            TX_RECOVERY_ADDRESS, abi.encodeWithSelector(HARNESS.disableTransactionAndERC1271Recovery.selector)
         );
     }
 
@@ -209,8 +209,8 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
     function executeRecoveryToReceiver(uint256 seed, uint96 rawValue) external {
         _ensureRecoveryEnabled();
         uint256 value = bound(uint256(rawValue), 0, 1 ether);
-        vm.deal(address(account), value);
-        _executeRecovery(address(receiver), value, abi.encode(seed));
+        vm.deal(address(ACCOUNT), value);
+        _executeRecovery(address(RECEIVER), value, abi.encode(seed));
     }
 
     /**
@@ -255,13 +255,13 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         uint8 selectorIndex = uint8(bound(rawSelector, 0, 3));
         bytes memory payload;
         if (selectorIndex == 0) {
-            payload = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.initiateEnableTransactionAndERC1271Recovery.selector);
         } else if (selectorIndex == 1) {
-            payload = abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.finalizeEnableTransactionAndERC1271Recovery.selector);
         } else if (selectorIndex == 2) {
-            payload = abi.encodeWithSelector(harness.cancelEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.cancelEnableTransactionAndERC1271Recovery.selector);
         } else {
-            payload = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.disableTransactionAndERC1271Recovery.selector);
         }
         _attemptOrganizationPayload(payload, OrganizationPayloadKind.TxRecoveryManagement);
     }
@@ -280,34 +280,34 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
 
         // IOrganizationTxRecovery (8 selectors)
         if (selectorIndex == 0) {
-            payload = abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.initiateEnableTransactionAndERC1271Recovery.selector);
             kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 1) {
-            payload = abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.finalizeEnableTransactionAndERC1271Recovery.selector);
             kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 2) {
-            payload = abi.encodeWithSelector(harness.cancelEnableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.cancelEnableTransactionAndERC1271Recovery.selector);
             kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 3) {
-            payload = abi.encodeWithSelector(harness.disableTransactionAndERC1271Recovery.selector);
+            payload = abi.encodeWithSelector(HARNESS.disableTransactionAndERC1271Recovery.selector);
             kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 4) {
             payload = abi.encodeWithSelector(
-                harness.executeRecoveryAccountTransaction.selector, address(0), address(0), uint256(0), bytes("")
+                HARNESS.executeRecoveryAccountTransaction.selector, address(0), address(0), uint256(0), bytes("")
             );
             kind = OrganizationPayloadKind.TxRecoveryManagement;
         } else if (selectorIndex == 5) {
             payload = abi.encodeWithSelector(
-                harness.initiateInitializeTransactionAndERC1271Recovery.selector,
+                HARNESS.initiateInitializeTransactionAndERC1271Recovery.selector,
                 // forge-lint: disable-next-line(unsafe-typecast)
                 address(uint160(seed) | 1),
                 2 days,
                 auth
             );
         } else if (selectorIndex == 6) {
-            payload = abi.encodeWithSelector(harness.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
+            payload = abi.encodeWithSelector(HARNESS.finalizeInitializeTransactionAndERC1271Recovery.selector, auth);
         } else if (selectorIndex == 7) {
-            payload = abi.encodeWithSelector(harness.cancelInitializeTransactionAndERC1271Recovery.selector, auth);
+            payload = abi.encodeWithSelector(HARNESS.cancelInitializeTransactionAndERC1271Recovery.selector, auth);
             // IOrganizationAdmin (2 selectors)
         } else if (selectorIndex == 8) {
             payload = abi.encodeWithSelector(IOrganizationAdmin.modifyAdmins.selector, empty, empty, uint256(1), auth);
@@ -411,7 +411,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
             policyId
         );
 
-        bool success = _executeRecovery(address(account), 0, payload);
+        bool success = _executeRecovery(address(ACCOUNT), 0, payload);
         GlobalSnapshot memory afterSnapshot = _snapshotGlobal();
 
         if (success) {
@@ -441,7 +441,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         GlobalSnapshot memory before = _snapshotGlobal();
 
         // Execute the chain and snapshot post-state to detect any drift across organization/account/recovery domains.
-        bool success = _executeRecovery(address(harness), 0, payload);
+        bool success = _executeRecovery(address(HARNESS), 0, payload);
         GlobalSnapshot memory afterSnapshot = _snapshotGlobal();
 
         if (success) {
@@ -493,22 +493,22 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      */
     function _executeRecovery(address to, uint256 value, bytes memory data) internal returns (bool success) {
         // Recovery execution should never mutate tx-recovery configuration or pending state.
-        TxRecoveryState memory before = harness.getTxRecoveryState();
+        TxRecoveryState memory before = HARNESS.getTxRecoveryState();
 
         success = _callWithSender(
-            txRecoveryAddress,
+            TX_RECOVERY_ADDRESS,
             abi.encodeWithSelector(
-                harness.executeRecoveryAccountTransaction.selector, address(account), to, value, data
+                HARNESS.executeRecoveryAccountTransaction.selector, address(ACCOUNT), to, value, data
             )
         );
 
-        TxRecoveryState memory afterState = harness.getTxRecoveryState();
+        TxRecoveryState memory afterState = HARNESS.getTxRecoveryState();
         if (!_sameTxState(before, afterState)) {
             executeMutatedTxRecoveryViolation = true;
         }
 
         // Successful recovery execution must always force nonce=0 and policyId=0.
-        if (success && (account.lastNonce() != 0 || account.lastPolicyId() != 0)) {
+        if (success && (ACCOUNT.lastNonce() != 0 || ACCOUNT.lastPolicyId() != 0)) {
             successfulRecoveryExecutionUsedNonZeroTupleViolation = true;
         }
     }
@@ -517,7 +517,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      * @dev Ensures tx recovery is enabled by driving initiate/finalize steps when required.
      */
     function _ensureRecoveryEnabled() internal {
-        TxRecoveryState memory state = harness.getTxRecoveryState();
+        TxRecoveryState memory state = HARNESS.getTxRecoveryState();
         if (state.isEnabled) {
             return;
         }
@@ -525,9 +525,10 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
         // If no pending enable exists, initiate one first.
         if (state.pendingEnableTimestamp == 0) {
             _callWithSender(
-                txRecoveryAddress, abi.encodeWithSelector(harness.initiateEnableTransactionAndERC1271Recovery.selector)
+                TX_RECOVERY_ADDRESS,
+                abi.encodeWithSelector(HARNESS.initiateEnableTransactionAndERC1271Recovery.selector)
             );
-            state = harness.getTxRecoveryState();
+            state = HARNESS.getTxRecoveryState();
         }
 
         // If enable is pending, warp to timelock and attempt finalize.
@@ -536,7 +537,8 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
                 vm.warp(state.pendingEnableTimestamp);
             }
             _callWithSender(
-                txRecoveryAddress, abi.encodeWithSelector(harness.finalizeEnableTransactionAndERC1271Recovery.selector)
+                TX_RECOVERY_ADDRESS,
+                abi.encodeWithSelector(HARNESS.finalizeEnableTransactionAndERC1271Recovery.selector)
             );
         }
     }
@@ -544,28 +546,28 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
     /**
      * @dev Executes a low-level harness call as `sender` and tracks transition/isolation invariants.
      * @param sender Caller address impersonated for the call.
-     * @param callData ABI-encoded call data sent to the harness.
+     * @param callData ABI-encoded call data sent to the HARNESS.
      * @return success True when the harness call succeeded.
      */
     function _callWithSender(address sender, bytes memory callData) internal returns (bool success) {
         // Capture selector plus pre-state snapshots for transition and isolation checks.
         bytes4 selector = _selector(callData);
-        TxRecoveryState memory beforeTxRecovery = harness.getTxRecoveryState();
-        GuardianRecoveryState memory beforeGuardianRecovery = harness.getGuardianRecoveryState();
+        TxRecoveryState memory beforeTxRecovery = HARNESS.getTxRecoveryState();
+        GuardianRecoveryState memory beforeGuardianRecovery = HARNESS.getGuardianRecoveryState();
 
         // Use low-level call so expected reverts do not abort invariant campaigns.
         vm.prank(sender);
-        (success,) = address(harness).call(callData);
+        (success,) = address(HARNESS).call(callData);
 
-        TxRecoveryState memory afterTxRecovery = harness.getTxRecoveryState();
-        GuardianRecoveryState memory afterGuardianRecovery = harness.getGuardianRecoveryState();
+        TxRecoveryState memory afterTxRecovery = HARNESS.getTxRecoveryState();
+        GuardianRecoveryState memory afterGuardianRecovery = HARNESS.getGuardianRecoveryState();
 
         // Validate enable/disable transition direction rules across the observed state delta.
         _trackEnableTransitions(beforeTxRecovery, afterTxRecovery, selector, success);
 
         // Successful disable must clear pending enable in the same state transition.
         if (
-            selector == harness.disableTransactionAndERC1271Recovery.selector && success
+            selector == HARNESS.disableTransactionAndERC1271Recovery.selector && success
                 && afterTxRecovery.pendingEnableTimestamp != 0
         ) {
             disableDidNotClearPendingEnableViolation = true;
@@ -581,7 +583,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      * @dev Tracks invalid `isEnabled` direction changes relative to the executed selector.
      * @param beforeState Tx-recovery state snapshot before call execution.
      * @param afterState Tx-recovery state snapshot after call execution.
-     * @param selector Selector executed on the harness.
+     * @param selector Selector executed on the HARNESS.
      * @param success Whether the call succeeded.
      */
     function _trackEnableTransitions(
@@ -592,14 +594,14 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
     ) internal {
         if (
             !beforeState.isEnabled && afterState.isEnabled
-                && !(success && selector == harness.finalizeEnableTransactionAndERC1271Recovery.selector)
+                && !(success && selector == HARNESS.finalizeEnableTransactionAndERC1271Recovery.selector)
         ) {
             enabledBecameTrueOutsideFinalizeViolation = true;
         }
 
         if (
             beforeState.isEnabled && !afterState.isEnabled
-                && !(success && selector == harness.disableTransactionAndERC1271Recovery.selector)
+                && !(success && selector == HARNESS.disableTransactionAndERC1271Recovery.selector)
         ) {
             enabledBecameFalseOutsideDisableViolation = true;
         }
@@ -610,15 +612,15 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      * @return snapshot Current global snapshot.
      */
     function _snapshotGlobal() internal view returns (GlobalSnapshot memory snapshot) {
-        snapshot.txRecovery = harness.getTxRecoveryState();
-        snapshot.guardianRecovery = harness.getGuardianRecoveryState();
-        snapshot.admin1IsAdmin = harness.getAdminStatus(trackedAdmin1);
-        snapshot.admin2IsAdmin = harness.getAdminStatus(trackedAdmin2);
-        snapshot.admin1IsMember = harness.getMemberStatus(trackedAdmin1);
-        snapshot.admin2IsMember = harness.getMemberStatus(trackedAdmin2);
-        snapshot.adminCount = harness.getAdminCount();
-        snapshot.votingThreshold = harness.getVotingThreshold();
-        snapshot.policiesRoot = harness.getPoliciesRoot();
+        snapshot.txRecovery = HARNESS.getTxRecoveryState();
+        snapshot.guardianRecovery = HARNESS.getGuardianRecoveryState();
+        snapshot.admin1IsAdmin = HARNESS.getAdminStatus(TRACKED_ADMIN1);
+        snapshot.admin2IsAdmin = HARNESS.getAdminStatus(TRACKED_ADMIN2);
+        snapshot.admin1IsMember = HARNESS.getMemberStatus(TRACKED_ADMIN1);
+        snapshot.admin2IsMember = HARNESS.getMemberStatus(TRACKED_ADMIN2);
+        snapshot.adminCount = HARNESS.getAdminCount();
+        snapshot.votingThreshold = HARNESS.getVotingThreshold();
+        snapshot.policiesRoot = HARNESS.getPoliciesRoot();
         snapshot.account = _snapshotAccount();
     }
 
@@ -627,12 +629,12 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      * @return snapshot Current account snapshot.
      */
     function _snapshotAccount() internal view returns (AccountSnapshot memory snapshot) {
-        snapshot.executionCount = account.executionCount();
-        snapshot.lastTo = account.lastTo();
-        snapshot.lastValue = account.lastValue();
-        snapshot.lastDataHash = keccak256(account.lastData());
-        snapshot.lastNonce = account.lastNonce();
-        snapshot.lastPolicyId = account.lastPolicyId();
+        snapshot.executionCount = ACCOUNT.executionCount();
+        snapshot.lastTo = ACCOUNT.lastTo();
+        snapshot.lastValue = ACCOUNT.lastValue();
+        snapshot.lastDataHash = keccak256(ACCOUNT.lastData());
+        snapshot.lastNonce = ACCOUNT.lastNonce();
+        snapshot.lastPolicyId = ACCOUNT.lastPolicyId();
     }
 
     /**
@@ -713,7 +715,7 @@ contract OrganizationTxRecoveryBaseInvariantHandler is Test {
      * @return caller Unauthorized caller candidate.
      */
     function _unauthorizedCaller(uint256 seed) internal view returns (address caller) {
-        address expected = harness.getTxRecoveryState().recoveryAddress;
+        address expected = HARNESS.getTxRecoveryState().recoveryAddress;
         // Use a deterministic hash-derived address and patch edge cases where it equals expected/zero.
         caller = address(uint160(uint256(keccak256(abi.encode(seed, block.timestamp))) | 1));
         if (caller == expected) {

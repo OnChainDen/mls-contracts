@@ -16,19 +16,19 @@ import {OperationType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHelpers {
     /// @dev Harness under test.
-    LibOrganizationAdminHarness public immutable harness;
+    LibOrganizationAdminHarness public immutable HARNESS;
 
     /// @dev Known private keys that can produce valid EOA signatures during stateful testing.
-    uint256 public immutable adminPk1;
-    uint256 public immutable adminPk2;
+    uint256 public immutable ADMIN_PK1;
+    uint256 public immutable ADMIN_PK2;
 
     /// @dev Known signer addresses derived from admin private keys.
-    address public immutable admin1;
-    address public immutable admin2;
+    address public immutable ADMIN1;
+    address public immutable ADMIN2;
 
     /// @dev Additional tracked member addresses that may be added/removed as admins.
-    address public immutable member3;
-    address public immutable member4;
+    address public immutable MEMBER3;
+    address public immutable MEMBER4;
 
     /// @dev Model: tracked admin mapping.
     mapping(address => bool) public modelIsAdmin;
@@ -56,36 +56,36 @@ contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHe
         address member3_,
         address member4_
     ) {
-        harness = harness_;
+        HARNESS = harness_;
 
-        adminPk1 = adminPk1_;
-        adminPk2 = adminPk2_;
+        ADMIN_PK1 = adminPk1_;
+        ADMIN_PK2 = adminPk2_;
 
-        admin1 = vm.addr(adminPk1_);
-        admin2 = vm.addr(adminPk2_);
+        ADMIN1 = vm.addr(adminPk1_);
+        ADMIN2 = vm.addr(adminPk2_);
 
-        member3 = member3_;
-        member4 = member4_;
+        MEMBER3 = member3_;
+        MEMBER4 = member4_;
 
-        trackedAddresses.push(admin1);
-        trackedAddresses.push(admin2);
-        trackedAddresses.push(member3);
-        trackedAddresses.push(member4);
+        trackedAddresses.push(ADMIN1);
+        trackedAddresses.push(ADMIN2);
+        trackedAddresses.push(MEMBER3);
+        trackedAddresses.push(MEMBER4);
 
         // Keep all tracked addresses as members for admin-membership invariant (admin => member).
-        harness.setMemberStatus(admin1, true);
-        harness.setMemberStatus(admin2, true);
-        harness.setMemberStatus(member3, true);
-        harness.setMemberStatus(member4, true);
+        HARNESS.setMemberStatus(ADMIN1, true);
+        HARNESS.setMemberStatus(ADMIN2, true);
+        HARNESS.setMemberStatus(MEMBER3, true);
+        HARNESS.setMemberStatus(MEMBER4, true);
 
-        // Initial admin set: {admin1, admin2}, threshold = 1.
-        harness.setAdminStatus(admin1, true);
-        harness.setAdminStatus(admin2, true);
-        harness.setAdminCount(2);
-        harness.setVotingThreshold(1);
+        // Initial admin set: {ADMIN1, ADMIN2}, threshold = 1.
+        HARNESS.setAdminStatus(ADMIN1, true);
+        HARNESS.setAdminStatus(ADMIN2, true);
+        HARNESS.setAdminCount(2);
+        HARNESS.setVotingThreshold(1);
 
-        modelIsAdmin[admin1] = true;
-        modelIsAdmin[admin2] = true;
+        modelIsAdmin[ADMIN1] = true;
+        modelIsAdmin[ADMIN2] = true;
         modelAdminCount = 2;
         modelVotingThreshold = 1;
     }
@@ -96,10 +96,10 @@ contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHe
     function modifyAdmins(uint8 addMask, uint8 removeMask, uint8 thresholdSeed) external {
         // Candidate universe is intentionally fixed to keep model comparison simple and explicit.
         address[] memory candidates = new address[](4);
-        candidates[0] = admin1;
-        candidates[1] = admin2;
-        candidates[2] = member3;
-        candidates[3] = member4;
+        candidates[0] = ADMIN1;
+        candidates[1] = ADMIN2;
+        candidates[2] = MEMBER3;
+        candidates[3] = MEMBER4;
 
         uint256 addLength = _popcountLowerBits(addMask, 4);
         uint256 removeLength = _popcountLowerBits(removeMask, 4);
@@ -124,8 +124,8 @@ contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHe
         uint256 newThreshold = thresholdSeed % 6;
 
         // Use low-level call so invariant runs continue even when a mutation intentionally reverts.
-        (bool success,) = address(harness)
-            .call(abi.encodeCall(harness.modifyAdminsViaLibrary, (adminsToAdd, adminsToRemove, newThreshold)));
+        (bool success,) = address(HARNESS)
+            .call(abi.encodeCall(HARNESS.modifyAdminsViaLibrary, (adminsToAdd, adminsToRemove, newThreshold)));
 
         if (success) {
             // Mirror successful mutation in model (same add-first/remove-second ordering as library).
@@ -165,7 +165,7 @@ contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHe
         uint256 expiration = block.timestamp + 1 hours;
 
         // Recompute the exact typed-data hash used by production auth logic.
-        bytes32 operationHash = harness.getAdminOperationHash({
+        bytes32 operationHash = HARNESS.getAdminOperationHash({
             operationType: OperationType.ModifyAdmins,
             operationData: operationData,
             salt: salt,
@@ -182,16 +182,16 @@ contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHe
         AdminAuthParams memory auth = AdminAuthParams({salt: salt, expirationTimestamp: expiration, signatures: packed});
 
         // Same reason as above: absorb expected failures and keep the stateful sequence progressing.
-        (bool success,) = address(harness)
+        (bool success,) = address(HARNESS)
             .call(
                 abi.encodeCall(
-                    harness.validateAdminAuthAndConsumeNonceOrRevert,
+                    HARNESS.validateAdminAuthAndConsumeNonceOrRevert,
                     (OperationType.ModifyAdmins, operationData, isApproval, auth)
                 )
             );
 
         if (success) {
-            uint256 nonce = harness.computeNonce(OperationType.ModifyAdmins, operationData, salt);
+            uint256 nonce = HARNESS.computeNonce(OperationType.ModifyAdmins, operationData, salt);
             if (!modelNonceUsed[nonce]) {
                 modelNonceUsed[nonce] = true;
                 trackedUsedNonces.push(nonce);
@@ -232,22 +232,22 @@ contract LibOrganizationAdminInvariantHandler is BitmaskHelpers, SignatureTestHe
      */
     function _knownSigningAdmins() internal view returns (address[] memory signers, uint256[] memory privateKeys) {
         uint256 count;
-        if (modelIsAdmin[admin1]) count++;
-        if (modelIsAdmin[admin2]) count++;
+        if (modelIsAdmin[ADMIN1]) count++;
+        if (modelIsAdmin[ADMIN2]) count++;
 
         // Return only the currently-active known signers so generated signatures can pass ordering checks.
         signers = new address[](count);
         privateKeys = new uint256[](count);
 
         uint256 index;
-        if (modelIsAdmin[admin1]) {
-            signers[index] = admin1;
-            privateKeys[index] = adminPk1;
+        if (modelIsAdmin[ADMIN1]) {
+            signers[index] = ADMIN1;
+            privateKeys[index] = ADMIN_PK1;
             index++;
         }
-        if (modelIsAdmin[admin2]) {
-            signers[index] = admin2;
-            privateKeys[index] = adminPk2;
+        if (modelIsAdmin[ADMIN2]) {
+            signers[index] = ADMIN2;
+            privateKeys[index] = ADMIN_PK2;
         }
     }
 

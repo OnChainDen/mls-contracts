@@ -249,14 +249,14 @@ contract ValidationOrderWhitelistMock {
     error AuthorizedTargetSetBeforeValidation(address authorizedTarget);
     error ValidationRevertedBeforeFlagSet();
 
-    OrganizationImplementationHarness internal immutable organization;
+    OrganizationImplementationHarness internal immutable ORGANIZATION;
 
     constructor(OrganizationImplementationHarness organization_) {
-        organization = organization_;
+        ORGANIZATION = organization_;
     }
 
     function validateIsImplementationWhitelistedOrRevert(ContractType, address) external view {
-        (, address authorizedTarget) = organization.getUpgradeState();
+        (, address authorizedTarget) = ORGANIZATION.getUpgradeState();
         if (authorizedTarget != address(0)) {
             revert AuthorizedTargetSetBeforeValidation(authorizedTarget);
         }

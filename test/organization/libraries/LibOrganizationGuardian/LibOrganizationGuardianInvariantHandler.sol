@@ -13,7 +13,7 @@ import {
  */
 contract LibOrganizationGuardianInvariantHandler is Test {
     /// @dev Harness under invariant testing.
-    LibOrganizationGuardianHarness public immutable harness;
+    LibOrganizationGuardianHarness public immutable HARNESS;
 
     /// @dev Sticky flag: guardian changed in a non-accept normal-flow operation.
     bool public guardianChangedOutsideAcceptViolation;
@@ -30,7 +30,7 @@ contract LibOrganizationGuardianInvariantHandler is Test {
     address internal constant CANDIDATE_C = address(0xD103);
 
     constructor(LibOrganizationGuardianHarness harness_) {
-        harness = harness_;
+        HARNESS = harness_;
     }
 
     /**
@@ -38,7 +38,7 @@ contract LibOrganizationGuardianInvariantHandler is Test {
      */
     function initiate(uint256 seed) external {
         address newGuardian = _candidateGuardian(seed);
-        _executeNonAcceptMutation(abi.encodeCall(harness.initiateGuardianUpdateViaLibrary, (newGuardian)));
+        _executeNonAcceptMutation(abi.encodeCall(HARNESS.initiateGuardianUpdateViaLibrary, (newGuardian)));
     }
 
     /**
@@ -47,32 +47,32 @@ contract LibOrganizationGuardianInvariantHandler is Test {
      */
     function finalize(bool warpToPendingTimestamp) external {
         if (warpToPendingTimestamp) {
-            uint256 pendingTimestamp = harness.getPendingGuardianUpdateTimestampViaLibrary();
+            uint256 pendingTimestamp = HARNESS.getPendingGuardianUpdateTimestampViaLibrary();
             if (pendingTimestamp != 0 && block.timestamp < pendingTimestamp) {
                 vm.warp(pendingTimestamp);
             }
         }
 
-        _executeNonAcceptMutation(abi.encodeCall(harness.finalizeGuardianUpdateViaLibrary, ()));
+        _executeNonAcceptMutation(abi.encodeCall(HARNESS.finalizeGuardianUpdateViaLibrary, ()));
     }
 
     /**
      * @dev Attempts to cancel the current pending update.
      */
     function cancel() external {
-        _executeNonAcceptMutation(abi.encodeCall(harness.cancelGuardianUpdateViaLibrary, ()));
+        _executeNonAcceptMutation(abi.encodeCall(HARNESS.cancelGuardianUpdateViaLibrary, ()));
     }
 
     /**
      * @dev Attempts to accept the current pending update.
      */
     function accept() external {
-        address pendingGuardianBefore = harness.getPendingGuardianViaLibrary();
-        uint256 pendingTimestampBefore = harness.getPendingGuardianUpdateTimestampViaLibrary();
-        bool isReadyBefore = harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary();
-        address guardianBefore = harness.getGuardianViaLibrary();
-        (bool success,) = address(harness).call(abi.encodeCall(harness.acceptGuardianViaLibrary, ()));
-        address guardianAfter = harness.getGuardianViaLibrary();
+        address pendingGuardianBefore = HARNESS.getPendingGuardianViaLibrary();
+        uint256 pendingTimestampBefore = HARNESS.getPendingGuardianUpdateTimestampViaLibrary();
+        bool isReadyBefore = HARNESS.getIsGuardianUpdateReadyForAcceptanceViaLibrary();
+        address guardianBefore = HARNESS.getGuardianViaLibrary();
+        (bool success,) = address(HARNESS).call(abi.encodeCall(HARNESS.acceptGuardianViaLibrary, ()));
+        address guardianAfter = HARNESS.getGuardianViaLibrary();
 
         if (success) {
             if (
@@ -83,9 +83,9 @@ contract LibOrganizationGuardianInvariantHandler is Test {
             }
 
             if (
-                harness.getPendingGuardianViaLibrary() != address(0)
-                    || harness.getPendingGuardianUpdateTimestampViaLibrary() != 0
-                    || harness.getIsGuardianUpdateReadyForAcceptanceViaLibrary()
+                HARNESS.getPendingGuardianViaLibrary() != address(0)
+                    || HARNESS.getPendingGuardianUpdateTimestampViaLibrary() != 0
+                    || HARNESS.getIsGuardianUpdateReadyForAcceptanceViaLibrary()
             ) {
                 acceptDidNotClearPendingStateViolation = true;
             }
@@ -108,9 +108,9 @@ contract LibOrganizationGuardianInvariantHandler is Test {
      * @dev Executes a non-accept normal-flow mutation and tracks unexpected guardian changes.
      */
     function _executeNonAcceptMutation(bytes memory callData) internal {
-        address guardianBefore = harness.getGuardianViaLibrary();
-        (bool success,) = address(harness).call(callData);
-        address guardianAfter = harness.getGuardianViaLibrary();
+        address guardianBefore = HARNESS.getGuardianViaLibrary();
+        (bool success,) = address(HARNESS).call(callData);
+        address guardianAfter = HARNESS.getGuardianViaLibrary();
 
         if (success && guardianAfter != guardianBefore) {
             guardianChangedOutsideAcceptViolation = true;

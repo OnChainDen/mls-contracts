@@ -14,7 +14,7 @@ import {GroupModification, GroupModificationType} from "types/CommonTypes.sol";
  */
 contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
     /// @dev Harness under test.
-    LibOrganizationGroupsHarness public immutable harness;
+    LibOrganizationGroupsHarness public immutable HARNESS;
 
     /// @dev Tracked group IDs used by stateful operations and invariant checks.
     uint256[] internal trackedGroupIds;
@@ -29,7 +29,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
      * @dev Initializes tracked universe and seeds baseline member status.
      */
     constructor(LibOrganizationGroupsHarness harness_, address member1, address member2, address member3) {
-        harness = harness_;
+        HARNESS = harness_;
 
         trackedGroupIds.push(1);
         trackedGroupIds.push(2);
@@ -41,13 +41,13 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         trackedMembers.push(member3);
 
         // Keep tracked members initially active in org-member mapping.
-        harness.setMemberStatus(member1, true);
-        harness.setMemberStatus(member2, true);
-        harness.setMemberStatus(member3, true);
+        HARNESS.setMemberStatus(member1, true);
+        HARNESS.setMemberStatus(member2, true);
+        HARNESS.setMemberStatus(member3, true);
 
         // Seed one active group/member pair through direct state setup.
-        harness.setGroupStatus(1, true);
-        harness.setGroupMemberStatus(1, member1, true);
+        HARNESS.setGroupStatus(1, true);
+        HARNESS.setGroupMemberStatus(1, member1, true);
     }
 
     /**
@@ -65,7 +65,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         });
 
         // Keep stateful sequences running through expected reverts.
-        _callHarnessIgnoringResult(abi.encodeCall(harness.createGroupViaLibrary, (mod)));
+        _callHarnessIgnoringResult(abi.encodeCall(HARNESS.createGroupViaLibrary, (mod)));
         _refreshDeletedModel();
     }
 
@@ -85,7 +85,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         });
 
         // Keep stateful sequences running through expected reverts.
-        _callHarnessIgnoringResult(abi.encodeCall(harness.updateGroupViaLibrary, (mod)));
+        _callHarnessIgnoringResult(abi.encodeCall(HARNESS.updateGroupViaLibrary, (mod)));
         _refreshDeletedModel();
     }
 
@@ -103,7 +103,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
         });
 
         // Keep stateful sequences running through expected reverts.
-        _callHarnessIgnoringResult(abi.encodeCall(harness.deleteGroupViaLibrary, (mod)));
+        _callHarnessIgnoringResult(abi.encodeCall(HARNESS.deleteGroupViaLibrary, (mod)));
         _refreshDeletedModel();
     }
 
@@ -112,7 +112,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
      */
     function setTrackedOrgMemberStatus(uint8 rawMemberIndex, bool isMember) external {
         address member = trackedMembers[rawMemberIndex % trackedMembers.length];
-        harness.setMemberStatus(member, isMember);
+        HARNESS.setMemberStatus(member, isMember);
     }
 
     /**
@@ -166,7 +166,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
     function _refreshDeletedModel() internal {
         for (uint256 i = 0; i < trackedGroupIds.length; i++) {
             uint256 groupId = trackedGroupIds[i];
-            if (harness.getWasGroupDeletedStatus(groupId)) {
+            if (HARNESS.getWasGroupDeletedStatus(groupId)) {
                 modelWasDeletedEver[groupId] = true;
             }
         }
@@ -177,7 +177,7 @@ contract LibOrganizationGroupsInvariantHandler is BitmaskHelpers {
      *      Handlers must continue across expected reverts during invariant state exploration.
      */
     function _callHarnessIgnoringResult(bytes memory callData) internal {
-        (bool success,) = address(harness).call(callData);
+        (bool success,) = address(HARNESS).call(callData);
         if (!success) {
             // Intentionally swallow revert.
         }
