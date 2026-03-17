@@ -17,7 +17,7 @@ import {
 import {GuardianRecoveryState, PendingRecoveryInitTimelock, TxRecoveryState} from "types/RecoveryTypes.sol";
 
 /**
- * @dev Invariant coverage for tx-recovery plan rows `` through ``.
+ * @dev Invariant coverage for tx-recovery plan rows.
  */
 contract OrganizationTxRecoveryBaseInvariants is OrganizationTxRecoveryBaseSuiteBase {
     MockAccountForOrganizationTransaction internal account;

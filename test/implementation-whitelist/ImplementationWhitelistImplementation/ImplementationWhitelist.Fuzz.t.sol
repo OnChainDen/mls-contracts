@@ -272,7 +272,7 @@ contract ImplementationWhitelistFuzzTest is ImplementationWhitelistSuiteBase {
         assertTrue(computedA1 != differentWhitelist, "different whitelist should change computed address");
     }
 
-    /// @dev : Fuzz proxy initialization inputs — malformed init data never leaves partially initialized
+    /// @dev Fuzz proxy initialization inputs — malformed init data never leaves partially initialized
     /// proxy.
     function test_fuzz_malformedInitData_neverLeavesPartiallyInitializedProxy(bytes calldata randomInitData) public {
         // Setup: filter out valid initialize selector to ensure data is malformed.

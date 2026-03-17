@@ -672,8 +672,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies, and
-    /// across auth binding/replay and successful initiation.
+    /// @dev Verifies `initiateInitializeTransactionAndERC1271Recovery` binds admin auth to the signed
+    /// deferred-init payload, rejects mismatched or replayed auth, and stores the pending initialization on success.
     function test_initiateInitialize_authBindingReplayAndSuccess() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
@@ -1048,21 +1048,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies through : the full auth, timelock, and state lifecycle of
-    /// `finalizeInitializeTransactionAndERC1271Recovery`. Walks through every guard in sequence:
-    ///   - FITR-1:  Non-guardian caller reverts via `onlyGuardian`.
-    ///   - FITR-7:  Guardian with valid auth but no pending init reverts `NoTxRecoveryInitializationPending`.
-    ///   - FITR-3:  `isApproval=false` rejection signatures are rejected.
-    ///   - FITR-4:  Wrong `OperationType` (Cancel instead of Finalize) signatures are rejected.
-    ///   - FITR-5:  Correct `FinalizeInitializeTransactionRecovery` + `isApproval=true` passes auth.
-    ///   - FITR-6:  Auth `operationData` is derived from current pending storage values (stale-value
-    ///              variant tested in dedicated `test_OTRB_FITR_6_*`).
-    ///   - FITR-8:  Valid auth before admin-op timelock expiry reverts `TimelockNotExpired`.
-    ///   - FITR-9:  At exact admin-op timelock expiry, finalize succeeds.
-    ///   - FITR-10: Success writes `recoveryAddress` + `timelockDurationSeconds` and clears all pending fields.
-    ///   - FITR-11: `isEnabled` remains false after finalize (enable flow still required).
-    ///   - FITR-12: Second finalize reverts `NoTxRecoveryInitializationPending` (pending already cleared).
-    ///   - FITR-2:  Insufficient admin threshold variant tested in dedicated `test_OTRB_FITR_2_*`.
+    /// @dev Verifies `finalizeInitializeTransactionAndERC1271Recovery` enforces guardian access, validates
+    /// finalize auth against the current pending-init tuple and admin-op timelock, writes the active recovery
+    /// configuration on success, clears pending init fields, keeps recovery disabled, and consumes the nonce.
     function test_finalizeInitialize_authAndStateSemantics() public {
         // Setup: start from a fully zeroed recovery state (no config, no pending init).
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);
@@ -1585,8 +1573,9 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         assertEq(state.pendingInit.pendingTimestamp, 0, "second cancel should clear pending timestamp");
     }
 
-    /// @dev Verifies,
-    /// , and across cancel auth/state semantics.
+    /// @dev Verifies `cancelInitializeTransactionAndERC1271Recovery` rejects non-guardians, clears the pending
+    /// deferred-init tuple with valid cancel auth, preserves the active recovery configuration, consumes the cancel
+    /// nonce, and allows a fresh deferred-init initiation afterward.
     function test_cancelInitialize_authAndStateSemantics() public {
         // Setup
         _setTxRecoveryState(
@@ -1638,8 +1627,8 @@ contract OrganizationTxRecoveryBaseTxRecoveryEntryPointsTest is OrganizationTxRe
         );
     }
 
-    /// @dev Verifies
-    /// `getTxRecoveryState` returns full snapshots across lifecycle transitions and is callable by anyone.
+    /// @dev Verifies `getTxRecoveryState` returns complete snapshots for zero, pending-enable, pending-init,
+    /// enabled, and disabled states and is callable by non-guardian callers.
     function test_getTxRecoveryState_reflectsLifecycleAndIsPermissionless() public {
         // Setup
         _setTxRecoveryState(address(0), false, 0, 0, address(0), 0, 0);

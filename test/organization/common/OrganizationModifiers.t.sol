@@ -147,7 +147,7 @@ contract OrganizationModifiersTest is Test {
     }
 
     /**
-     * @dev Verifies `onlyGuardianRecoveryAddress` reverts when guaridan recovery address is unset (is address(0))
+     * @dev Verifies `onlyGuardianRecoveryAddress` reverts when guardian recovery address is unset (is address(0))
      */
     function test_onlyGuardianRecovery_zeroRecoveryAddress_rejectsNonZeroCaller() public {
         harness.setGuardianRecoveryState(address(0), RECOVERY_PENDING_GUARDIAN, false);
