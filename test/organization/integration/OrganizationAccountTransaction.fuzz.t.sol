@@ -111,9 +111,7 @@ contract OrganizationAccountTransactionFuzzTest is LibOrganizationAccountTransac
     }
 
     /// @dev Verifies replaying a nonce across execute and reject entry points always reverts once either path succeeds.
-    function testFuzz_NMFZ_3_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(uint256 saltRaw, bool rejectFirst)
-        public
-    {
+    function testFuzz_executeRejectReplayAcrossMixedEntryPointsAlwaysReverts(uint256 saltRaw, bool rejectFirst) public {
         // Setup: deploy a fresh organization/account pair, configure one auto-approve policy, and bind both execute
         // and reject signatures to the same account-transaction tuple under one salt.
         uint256 salt = bound(saltRaw, 1, type(uint256).max);
